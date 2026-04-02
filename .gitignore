@@ -1,0 +1,13 @@
+node_modules/
+build/
+dist/
+coverage/
+.DS_Store
+*.log
+
+# Environment files - never commit
+.env
+.env.local
+.env.*.local
+!.env.example
+!.env.production

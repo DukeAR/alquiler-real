@@ -1,0 +1,333 @@
+import React, { Suspense, useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Icons } from './Icons';
+import { NotificationToast } from './NotificationToast';
+import { AIAssistant } from './AIAssistant';
+import { useAuth } from '../hooks/useAuth';
+import { useFavorites } from '../hooks/useFavorites';
+import { useSocket } from '../hooks/useSocket';
+import { cn } from '../lib/utils';
+import { showToast } from '../lib/toast';
+
+type AppShellProps = {
+  children: React.ReactNode;
+};
+
+type NavAction = {
+  label: string;
+  shortLabel: string;
+  path?: string;
+  icon: React.ComponentType<{ className?: string }>;
+  protected?: boolean;
+  onClick?: () => void;
+  badge?: number;
+};
+
+const matchesPath = (pathname: string, target: string) => {
+  if (target === '/') return pathname === '/' || pathname.startsWith('/explore');
+  return pathname === target || pathname.startsWith(`${target}/`);
+};
+
+const getNavAriaLabel = (action: NavAction) => {
+  if (!action.badge) {
+    return action.label;
+  }
+
+  return `${action.label}, ${action.badge} ${action.badge === 1 ? 'elemento guardado' : 'elementos guardados'}`;
+};
+
+const hiddenHeaderPrefixes = [
+  '/login',
+  '/register',
+  '/verify',
+  '/verification',
+  '/chat',
+  '/profile',
+  '/edit-profile',
+  '/change-password',
+  '/my-bookings',
+  '/host-dashboard',
+  '/tenant-profile',
+  '/host',
+  '/about',
+  '/faq'
+];
+
+const hiddenMobileNavPrefixes = [
+  '/login',
+  '/register',
+  '/verify',
+  '/verification',
+  '/chat',
+  '/about',
+  '/faq',
+  '/edit-profile',
+  '/change-password',
+  '/host-dashboard',
+  '/tenant-profile',
+  '/host'
+];
+
+const hiddenAssistantPrefixes = ['/login', '/register', '/verify', '/verification', '/chat'];
+
+const openLoginModal = async () => {
+  const modal = await import('../lib/modal');
+  modal.showLoginModal();
+};
+
+const LazyLoginModal = React.lazy(() => import('./LoginModal'));
+
+const DesktopNavButton = ({ action, active, onSelect }: { action: NavAction; active: boolean; onSelect: (action: NavAction) => void; }) => (
+  <button
+    type="button"
+    onClick={() => onSelect(action)}
+    aria-label={getNavAriaLabel(action)}
+    aria-current={active ? 'page' : undefined}
+    className={cn(
+      'app-nav-link relative',
+      active && 'app-nav-link-active'
+    )}
+  >
+    <action.icon className="h-4 w-4" />
+    <span>{action.label}</span>
+    {action.badge ? (
+      <span aria-hidden="true" className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-black text-white">
+        {action.badge}
+      </span>
+    ) : null}
+  </button>
+);
+
+const MobileNavButton = ({ action, active, onSelect }: { action: NavAction; active: boolean; onSelect: (action: NavAction) => void; }) => (
+  <button
+    type="button"
+    onClick={() => onSelect(action)}
+    aria-label={getNavAriaLabel(action)}
+    aria-current={active ? 'page' : undefined}
+    className={cn(
+      'relative flex min-w-0 flex-1 flex-col items-center gap-1 rounded-2xl px-2 py-2 text-[11px] font-semibold transition-all duration-200',
+      active ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
+    )}
+  >
+    <action.icon className="h-5 w-5" />
+    <span className="truncate">{action.shortLabel}</span>
+    {action.badge ? (
+      <span aria-hidden="true" className="absolute right-4 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-black text-white">
+        {action.badge}
+      </span>
+    ) : null}
+  </button>
+);
+
+export const AppShell: React.FC<AppShellProps> = ({ children }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { user } = useAuth();
+  const { getFavoritesCount } = useFavorites();
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+
+  useSocket();
+
+  useEffect(() => {
+    const handleNotification = (event: any) => {
+      setNotifications((prev) => [event.detail, ...prev]);
+    };
+
+    window.addEventListener('app-notification', handleNotification);
+    return () => window.removeEventListener('app-notification', handleNotification);
+  }, []);
+
+  useEffect(() => {
+    setShowNotifications(false);
+  }, [location.pathname]);
+
+  const promptAuth = async (message: string) => {
+    showToast('Necesitás iniciar sesión', message, 'warning');
+    await openLoginModal();
+  };
+
+  const onSelect = async (action: NavAction) => {
+    if (action.onClick) {
+      action.onClick();
+      return;
+    }
+
+    if (!action.path) return;
+
+    if (action.protected && !user) {
+      await promptAuth('Iniciá sesión para entrar a esta sección.');
+      return;
+    }
+
+    navigate(action.path);
+  };
+
+  const showHeader = !hiddenHeaderPrefixes.some((prefix) => matchesPath(location.pathname, prefix));
+  const showMobileNav = !hiddenMobileNavPrefixes.some((prefix) => matchesPath(location.pathname, prefix));
+  const showAssistant = !hiddenAssistantPrefixes.some((prefix) => matchesPath(location.pathname, prefix));
+
+  const desktopActions: NavAction[] = [
+    { label: 'Explorar', shortLabel: 'Explorar', path: '/', icon: Icons.Search },
+    { label: 'Guardados', shortLabel: 'Guardados', path: '/favorites', protected: true, icon: Icons.Heart, badge: getFavoritesCount() },
+    { label: 'Cómo funciona', shortLabel: 'Cómo', path: '/about', icon: Icons.Info },
+    { label: 'Ayuda', shortLabel: 'Ayuda', path: '/faq', icon: Icons.Lightbulb }
+  ];
+
+  const mobileActions: NavAction[] = user
+    ? [
+        { label: 'Explorar', shortLabel: 'Explorar', path: '/', icon: Icons.Search },
+        { label: 'Guardados', shortLabel: 'Guardados', path: '/favorites', protected: true, icon: Icons.Heart, badge: getFavoritesCount() },
+        { label: 'Reservas', shortLabel: 'Reservas', path: '/my-bookings', protected: true, icon: Icons.Calendar },
+        { label: 'Perfil', shortLabel: 'Perfil', path: '/profile', protected: true, icon: Icons.User }
+      ]
+    : [
+        { label: 'Explorar', shortLabel: 'Explorar', path: '/', icon: Icons.Search },
+        { label: 'Guardados', shortLabel: 'Guardados', path: '/favorites', protected: true, icon: Icons.Heart, badge: getFavoritesCount() },
+        { label: 'Ayuda', shortLabel: 'Ayuda', path: '/faq', icon: Icons.Lightbulb },
+        { label: 'Ingresá', shortLabel: 'Ingresá', onClick: () => { openLoginModal(); }, icon: Icons.User }
+      ];
+
+  return (
+    <div className="app-shell">
+      <NotificationToast />
+      <Suspense fallback={null}>
+        <LazyLoginModal />
+      </Suspense>
+
+      {showHeader ? (
+        <header className="app-header sticky top-0 z-50">
+          <div className="app-page flex items-center justify-between gap-4 py-4">
+            <button type="button" onClick={() => navigate('/')} aria-label="Ir al inicio de Alquiler Real" className="flex items-center gap-3 rounded-full pr-3 transition-transform duration-200 hover:scale-[1.01]">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-[0_18px_35px_-22px_rgba(15,23,42,0.85)]">
+                <Icons.ShieldCheck className="h-6 w-6" />
+              </div>
+              <div className="text-left">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-brand">Información real</div>
+                <div className="font-display text-[1.2rem] font-semibold tracking-tight text-slate-900">Alquiler Real</div>
+              </div>
+            </button>
+
+            <nav aria-label="Navegación principal" className="hidden items-center gap-2 rounded-full border border-slate-200/80 bg-white/90 p-1 shadow-[0_18px_35px_-28px_rgba(15,23,42,0.35)] lg:flex">
+              {desktopActions.map((action) => (
+                <DesktopNavButton
+                  key={action.label}
+                  action={action}
+                  active={!!action.path && matchesPath(location.pathname, action.path)}
+                  onSelect={onSelect}
+                />
+              ))}
+            </nav>
+
+            <div className="flex items-center gap-2">
+              {user?.role === 'host' ? (
+                <button
+                  type="button"
+                  onClick={() => navigate('/host-dashboard')}
+                  className="app-button-secondary hidden md:inline-flex"
+                >
+                  <Icons.Home className="h-4 w-4" />
+                  Panel anfitrión
+                </button>
+              ) : null}
+
+              {user ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/my-bookings')}
+                    className="app-icon-button hidden md:inline-flex"
+                    aria-label="Mis reservas"
+                  >
+                    <Icons.Calendar className="h-5 w-5" />
+                  </button>
+                  <div className="relative hidden md:block">
+                    <button
+                      type="button"
+                      onClick={() => setShowNotifications((value) => !value)}
+                      className="app-icon-button"
+                      aria-label={notifications.length > 0 ? `Notificaciones, ${notifications.length} nuevas` : 'Notificaciones'}
+                      aria-expanded={showNotifications}
+                      aria-controls="app-notifications-panel"
+                    >
+                      <Icons.Bell className="h-5 w-5" />
+                      {notifications.length > 0 ? (
+                        <span aria-hidden="true" className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-black text-white">
+                          {notifications.length}
+                        </span>
+                      ) : null}
+                    </button>
+                    {showNotifications ? (
+                      <div id="app-notifications-panel" aria-label="Panel de notificaciones" className="absolute right-0 top-14 w-80 overflow-hidden rounded-3xl border border-slate-200 bg-white/95 shadow-[0_30px_60px_-32px_rgba(15,23,42,0.35)] backdrop-blur-xl">
+                        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+                          <h3 className="text-sm font-black tracking-tight text-slate-900">Notificaciones</h3>
+                          <button type="button" onClick={() => setNotifications([])} aria-label="Limpiar notificaciones" className="text-xs font-bold text-brand">Limpiar</button>
+                        </div>
+                        <div className="max-h-72 overflow-y-auto">
+                          {notifications.length === 0 ? (
+                            <div className="px-5 py-10 text-center text-sm text-slate-400">Todavía no tenés novedades.</div>
+                          ) : notifications.map((notification, index) => (
+                            <div key={index} className="border-b border-slate-100 px-5 py-4 last:border-b-0">
+                              <p className="text-sm font-bold text-slate-900">{notification.title}</p>
+                              <p className="mt-1 text-xs text-slate-500">{notification.message}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/profile')}
+                    className="flex items-center gap-3 rounded-full border border-slate-200 bg-white px-2 py-2 shadow-[0_18px_35px_-28px_rgba(15,23,42,0.35)] transition-all duration-200 hover:border-slate-300 hover:shadow-md"
+                    aria-label="Ir al perfil"
+                  >
+                    <div className="hidden text-right md:block">
+                      <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Cuenta</div>
+                      <div className="text-sm font-bold text-slate-900">{user.name}</div>
+                    </div>
+                    <div className="h-10 w-10 overflow-hidden rounded-full bg-slate-100">
+                      <img src={user.profilePhoto || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`} alt={user.name} className="h-full w-full object-cover" />
+                    </div>
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button type="button" onClick={() => openLoginModal()} className="app-button-secondary hidden md:inline-flex">
+                    <Icons.User className="h-4 w-4" />
+                    Ingresá
+                  </button>
+                  <button type="button" onClick={() => navigate('/register')} className="app-button-primary">
+                    <Icons.ArrowRight className="h-4 w-4" />
+                    Creá tu cuenta
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </header>
+      ) : null}
+
+      <div className={cn('min-h-screen', showMobileNav ? 'pb-28 md:pb-10' : '')}>{children}</div>
+
+      {showMobileNav ? (
+        <nav aria-label="Navegación principal" className="fixed inset-x-0 bottom-4 z-50 px-4 md:hidden">
+          <div className="mx-auto flex max-w-md items-center gap-2 rounded-[28px] border border-slate-200/90 bg-white/96 p-2 shadow-[0_24px_50px_-30px_rgba(15,23,42,0.35)] backdrop-blur-xl">
+            {mobileActions.map((action) => (
+              <MobileNavButton
+                key={action.label}
+                action={action}
+                active={!!action.path && matchesPath(location.pathname, action.path)}
+                onSelect={onSelect}
+              />
+            ))}
+          </div>
+        </nav>
+      ) : null}
+
+      {showAssistant ? <AIAssistant /> : null}
+    </div>
+  );
+};
+
+export default AppShell;

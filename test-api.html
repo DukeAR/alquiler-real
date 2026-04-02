@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔧 Test Backend</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 30px 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 { font-size: 2em; margin-bottom: 10px; }
+        .content { padding: 30px; }
+        .test { margin: 20px 0; padding: 20px; border: 2px solid #eee; border-radius: 8px; background: #fafafa; }
+        .test h3 { color: #333; margin-bottom: 10px; }
+        .test p { color: #666; font-size: 14px; margin-bottom: 15px; }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+        button:hover { transform: translateY(-2px); }
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔧 Diagnóstico del Backend</h1>
+            <p>Herramienta para verificar la conectividad y troubleshooting</p>
+        </div>
+        <div class="content">
+            <div class="test">
+                <h3>Test 1: Estado del Servidor</h3>
+                <button onclick="testServer()">Verificar Servidor</button>
+                <div id="result1" class="result"></div>
+            </div>
+            <div class="test">
+                <h3>Test 2: CORS</h3>
+                <button onclick="testCORS()">Verificar CORS</button>
+                <div id="result3" class="result"></div>
+            </div>
+            <div class="test">
+                <h3>Info del Sistema</h3>
+                <div id="browserInfo" class="result info"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API = 'http://localhost:3001';
+        
+        function show(id, msg, type) {
+            document.getElementById(id).className = `result ${type}`;
+            document.getElementById(id).textContent = msg;
+        }
+        
+        async function testServer() {
+            show('result1', 'Probando...', 'info');
+            try {
+                const r = await fetch(`${API}/api/auth/me`, {credentials: 'include'});
+                show('result1', `✓ Conectado!\nStatus: ${r.status}\nURL: ${API}`, 'success');
+            } catch (e) {
+                show('result1', `✗ Error: ${e.message}\n\nAsegúrate de:\n1. npm run server\n2. Puerto 3001 abierto\n3. Firewall permite puerto`, 'error');
+            }
+        }
+        
+        async function testCORS() {
+            show('result3', 'Probando...', 'info');
+            try {
+                const r = await fetch(`${API}/api/login`, {method: 'OPTIONS'});
+                const cors = `Allow-Origin: ${r.headers.get('Access-Control-Allow-Origin') || 'NO'}\nAllow-Methods: ${r.headers.get('Access-Control-Allow-Methods') || 'NO'}\nAllow-Credentials: ${r.headers.get('Access-Control-Allow-Credentials') || 'NO'}`;
+                show('result3', `✓ CORS verificado\n${cors}`, 'success');
+            } catch (e) {
+                show('result3', `⚠️ No se pudo verificar\n${e.message}`, 'error');
+            }
+        }
+        
+        function info() {
+            document.getElementById('browserInfo').textContent = `Frontend: ${window.location.origin}\nBackend: ${API}\nOrigin correcto: ${window.location.origin === 'http://localhost:3000' ? 'Sí ✓' : 'No ✗'}`;
+        }
+        
+        info();
+    </script>
+</body>
+</html>
+
+${Object.entries(corsHeaders)
+    .map(([k, v]) => `${k}: ${v || '(no configurado)'}`)
+    .join('\n')}
+
+Origin actual: ${window.location.origin}`;
+
+                showResult('result3', message, 'success');
+            } catch (error) {
+                showResult('result3', `✗ Error al verificar CORS:\n${error.message}`, 'error');
+            }
+        }
+
+        // Mostrar información del navegador
+        function showBrowserInfo() {
+            const info = `
+Navegador: ${navigator.userAgent}
+Origen: ${window.location.origin}
+API Backend: ${API_URL}`;
+            document.getElementById('browserInfo').textContent = info;
+        }
+
+        // Mostrar info al cargar la página
+        showBrowserInfo();
+    </script>
+</body>
+</html>

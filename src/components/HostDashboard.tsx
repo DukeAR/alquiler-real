@@ -1,0 +1,422 @@
+import React, { useEffect, useState } from 'react';
+import { apiJson } from '../lib/apiConfig';
+import { showToast } from '../lib/toast';
+import { Icons } from './Icons';
+import HostAvailabilityPanel from './HostAvailabilityPanel';
+import { motion } from 'motion/react';
+import { cn } from '../lib/utils';
+import { EmptyState } from './EmptyState';
+import { ErrorState } from './ErrorState';
+import { LoadingState } from './LoadingState';
+import { PropertyUploadForm } from './PropertyUploadForm';
+import { ReviewModal } from './ReviewModal';
+import { Button } from './ui/Button';
+
+interface HostDashboardProps {
+  onBack: () => void;
+}
+
+const dashboardCardClass = 'app-card p-6 dark:border-slate-800 dark:bg-slate-900';
+const dashboardSectionClass = 'app-card p-6 md:p-8 space-y-6 dark:border-slate-800 dark:bg-slate-900';
+const dashboardMutedTileClass = 'rounded-[var(--app-radius-control)] border border-slate-100 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/50';
+
+export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
+  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [isAddingProperty, setIsAddingProperty] = useState(false);
+  const [reviewingBooking, setReviewingBooking] = useState<any>(null);
+  const [availabilityPropertyId, setAvailabilityPropertyId] = useState<string | null>(null);
+
+  useEffect(() => {
+    void fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    setLoadError(null);
+
+    try {
+      const data = await apiJson<any>('/api/host/dashboard', { includeCredentials: true });
+      setDashboardData(data);
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : 'No pudimos cargar el panel del anfitrión.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <LoadingState
+        fullScreen
+        message="Cargando tu panel..."
+        description="Estamos reuniendo propiedades, reservas y señales de confianza para mostrarte todo ordenado."
+      />
+    );
+  }
+
+  if (loadError) {
+    return (
+      <ErrorState
+        fullScreen
+        title="No pudimos cargar el panel del anfitrión"
+        description={loadError}
+        onRetry={() => void fetchData()}
+        onDismiss={onBack}
+        dismissLabel="Volver a explorar"
+      />
+    );
+  }
+
+  if (!dashboardData || dashboardData.properties?.length === 0) {
+    if (isAddingProperty) {
+      return (
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 py-12">
+          <div className="max-w-5xl mx-auto px-4 mb-6">
+            <Button variant="ghost" onClick={() => setIsAddingProperty(false)} className="rounded-full px-3 py-2 text-sm text-slate-600 dark:text-slate-400">
+              <Icons.ArrowLeft className="w-4 h-4" /> Cancelar
+            </Button>
+          </div>
+          <PropertyUploadForm onComplete={() => { setIsAddingProperty(false); void fetchData(); }} />
+        </div>
+      );
+    }
+
+    return (
+      <div className="min-h-screen bg-slate-50 px-6 py-16 dark:bg-slate-950">
+        <div className="mx-auto max-w-3xl">
+          <EmptyState
+            eyebrow="Panel de anfitrión"
+            tone="soft"
+            visual={<Icons.LayoutDashboard className="h-10 w-10" />}
+            title="Todavía no publicaste propiedades"
+            description="Publicá tu primera propiedad con información clara y empezá a recibir consultas con más contexto."
+            action={{
+              label: 'Publicá tu primera propiedad',
+              onClick: () => setIsAddingProperty(true),
+            }}
+            secondaryAction={{
+              label: 'Volver a explorar',
+              onClick: onBack,
+              variant: 'secondary',
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  const handleToggleStatus = async (id: string, currentStatus: string) => {
+    try {
+      const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+      await apiJson(`/api/properties/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ status: newStatus }),
+        includeCredentials: true,
+      });
+      showToast('Publicación actualizada', newStatus === 'active' ? 'La propiedad volvió a quedar visible.' : 'La propiedad quedó pausada y ya no recibe reservas nuevas.', 'success');
+      void fetchData();
+    } catch (err) {
+      console.error(err);
+      showToast('Publicación', err instanceof Error ? err.message : 'No pudimos actualizar el estado de la propiedad.', 'error');
+    }
+  };
+
+
+  return (
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-20">
+      {/* Header */}
+      <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-30">
+        <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
+          <button
+            onClick={onBack}
+            className="app-button-base rounded-full px-3 py-2 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-100 hover:text-brand dark:hover:bg-slate-800"
+          >
+            <Icons.ArrowLeft className="w-4 h-4" />
+            Volver a explorar
+          </button>
+          <div className="flex items-center gap-3">
+            <div className="text-right hidden sm:block">
+              <p className="app-title-4 dark:text-white">Panel de anfitrión</p>
+              <p className="app-eyebrow">Resumen</p>
+            </div>
+            <div className="w-10 h-10 rounded-full bg-brand/10 border border-brand/20 flex items-center justify-center">
+              <Icons.User className="w-5 h-5 text-brand" />
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-5xl mx-auto px-4 py-8 space-y-8">
+        <section className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className={dashboardCardClass}>
+            <p className="app-eyebrow mb-1">Calificación</p>
+            <div className="flex items-center gap-2">
+              <Icons.Star className="w-6 h-6 text-yellow-400 fill-current" />
+              <p className="text-3xl font-semibold text-slate-900 dark:text-white">{dashboardData.stats?.host_rating || '5.0'}</p>
+            </div>
+          </div>
+          <div className={dashboardCardClass}>
+            <p className="app-eyebrow mb-1">Propiedades</p>
+            <p className="text-3xl font-semibold text-brand">{dashboardData.properties?.length || 0}</p>
+          </div>
+          <div className={dashboardCardClass}>
+            <p className="app-eyebrow mb-1">Reservas recibidas</p>
+            <p className="text-3xl font-semibold text-slate-900 dark:text-white">{dashboardData.stats?.total_bookings_hosted || 0}</p>
+          </div>
+          <div className="bg-gradient-to-br from-brand to-brand-dark p-6 rounded-[32px] shadow-lg shadow-brand/20 text-white">
+            <p className="app-eyebrow text-white/60 mb-1">Ingresos estimados</p>
+            <p className="text-3xl font-semibold">${Math.floor(dashboardData.estimatedIncome || 0).toLocaleString()}</p>
+          </div>
+        </section>
+
+        {/* Circular Progress & Trust Card */}
+        <section className={cn(dashboardSectionClass, 'overflow-hidden relative')}>
+          <div className="absolute top-0 right-0 w-64 h-64 bg-brand/5 rounded-full -mr-32 -mt-32 blur-3xl opacity-50" />
+          
+          <div className="relative z-10 flex flex-col md:flex-row gap-8 items-center">
+             <div className="relative w-32 h-32 flex items-center justify-center">
+                <svg className="w-full h-full transform -rotate-90">
+                  <circle cx="64" cy="64" r="58" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-slate-100 dark:text-slate-800" />
+                  <motion.circle
+                    cx="64"
+                    cy="64"
+                    r="58"
+                    stroke="currentColor"
+                    strokeWidth="8"
+                    fill="transparent"
+                    strokeDasharray={364.42}
+                    initial={{ strokeDashoffset: 364.42 }}
+                    animate={{ strokeDashoffset: 364.42 * (1 - (dashboardData.stats?.trust_score || 0) / 100) }}
+                    transition={{ duration: 1.5, ease: "easeOut" }}
+                    className="text-brand"
+                    strokeLinecap="round"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-2xl font-semibold text-slate-900 dark:text-white tracking-tight">{dashboardData.stats?.trust_score || 0}</span>
+                  <span className="app-eyebrow">Confianza</span>
+                </div>
+             </div>
+             
+             <div className="flex-1 space-y-2">
+                <h3 className="app-title-4 dark:text-white">Tu reputación</h3>
+                <p className="app-body-sm app-text-muted">Hoy tu perfil figura como <span className="text-brand font-semibold">{dashboardData.stats?.badge || 'Usuario nuevo'}</span>. Los perfiles con mejor historial suelen recibir consultas más claras.</p>
+                <div className="flex flex-wrap gap-2 pt-2">
+                   <div className={cn(dashboardMutedTileClass, 'px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400')}>
+                     <span className="text-brand mr-1">Calificación:</span> {dashboardData.stats?.host_rating || 5.0}
+                   </div>
+                   <div className={cn(dashboardMutedTileClass, 'px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400')}>
+                     <span className="text-emerald-500 mr-1">Validado:</span> {dashboardData.stats?.host_verified ? 'Sí' : 'Pendiente'}
+                   </div>
+                </div>
+             </div>
+          </div>
+        </section>
+
+        {/* Mis Propiedades Section */}
+        <section className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="app-title-4 dark:text-white flex items-center gap-2">
+              <Icons.Home className="w-5 h-5 text-brand" />
+              Tus propiedades
+            </h2>
+            <button onClick={() => setIsAddingProperty(true)} className="app-button-base rounded-[var(--app-radius-control)] bg-brand px-4 py-2 text-sm text-white hover:-translate-y-px hover:bg-brand-dark hover:shadow-[var(--app-shadow-brand)]">
+              Publicar una propiedad
+            </button>
+          </div>
+
+          <div className="grid gap-4">
+            {dashboardData.properties.map((prop: any) => (
+              <div key={prop.id}>
+                <div className="app-card flex flex-col gap-4 p-4 dark:border-slate-800 dark:bg-slate-900 md:flex-row md:items-center md:justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 rounded-xl bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                      <img src={prop.imageUrl || 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=200'} className="w-full h-full object-cover" />
+                    </div>
+                    <div>
+                      <h3 className="app-title-4 dark:text-white">{prop.title}</h3>
+                      <p className="app-body-sm app-text-muted">${prop.price} / noche • {prop.reviewsCount} reseñas</p>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <button 
+                      onClick={() => handleToggleStatus(prop.id, prop.status)}
+                      className={cn("px-3 py-1.5 rounded-full text-[11px] font-semibold uppercase tracking-[0.14em]", 
+                      prop.status === 'active' ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500")}>
+                      {prop.status === 'active' ? 'Activo' : 'Pausado'}
+                    </button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setAvailabilityPropertyId((currentValue) => currentValue === prop.id ? null : prop.id)}
+                      className="rounded-full"
+                    >
+                      <>
+                        <Icons.Calendar className="w-4 h-4" />
+                        {availabilityPropertyId === prop.id ? 'Ocultar disponibilidad' : 'Disponibilidad'}
+                      </>
+                    </Button>
+                  </div>
+                </div>
+
+                {availabilityPropertyId === prop.id ? (
+                  <HostAvailabilityPanel propertyId={prop.id} propertyTitle={prop.title} />
+                ) : null}
+              </div>
+            ))}
+          </div>
+        </section>
+
+
+        {/* Risk Dashboard Section */}
+        <section className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="app-title-4 dark:text-white flex items-center gap-2">
+              <Icons.ShieldAlert className="w-5 h-5 text-brand" />
+              Señales para revisar
+            </h2>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            <div className={dashboardSectionClass}>
+              <div className="flex items-center justify-between">
+                <h3 className="app-title-4 dark:text-white">Perfiles que te contactaron</h3>
+                <span className="app-eyebrow">Últimas 24 h</span>
+              </div>
+              <div className="space-y-3">
+                {[
+                  { name: 'Juan P.', risk: 'low', score: 92 },
+                  { name: 'Maria S.', risk: 'medium', score: 65 },
+                  { name: 'Anon_88', risk: 'high', score: 12 }
+                ].map((tenant) => (
+                  <div key={tenant.name} className={cn(dashboardMutedTileClass, 'flex items-center justify-between p-3')}>
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[10px] font-bold">
+                        {tenant.name[0]}
+                      </div>
+                      <span className="text-sm font-semibold">{tenant.name}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <p className="app-eyebrow leading-none">Puntaje</p>
+                        <p className={cn(
+                          "text-xs font-semibold",
+                          tenant.risk === 'low' ? 'text-emerald-500' : tenant.risk === 'medium' ? 'text-orange-500' : 'text-red-500'
+                        )}>{tenant.score}%</p>
+                      </div>
+                      <div className={cn(
+                        "w-2 h-2 rounded-full",
+                        tenant.risk === 'low' ? 'bg-emerald-500' : tenant.risk === 'medium' ? 'bg-orange-500' : 'bg-red-500'
+                      )} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-[var(--app-radius-card)] bg-slate-900 dark:bg-slate-800 p-8 text-white space-y-4 flex flex-col justify-center shadow-[var(--app-shadow-soft)]">
+              <div className="w-12 h-12 bg-brand/20 rounded-2xl flex items-center justify-center mb-2">
+                <Icons.Zap className="w-6 h-6 text-brand" />
+              </div>
+              <h3 className="app-title-4 text-white">Contexto para decidir</h3>
+              <p className="app-body-sm text-slate-400">
+                Juntamos señales de comportamiento y validaciones para que decidas mejor con quién hablar.
+              </p>
+              <div className="pt-4">
+                <div className="flex items-center gap-2 app-eyebrow text-emerald-400">
+                  <Icons.CheckCircle2 className="w-3 h-3" /> Identidades verificadas
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Tenant Management Section */}
+        <section className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="app-title-4 dark:text-white flex items-center gap-2">
+              <Icons.UserCheck className="w-5 h-5 text-brand" />
+              Huéspedes
+            </h2>
+          </div>
+
+          <div className="app-card overflow-hidden dark:border-slate-800 dark:bg-slate-900">
+            <div className="p-6 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
+              <p className="app-eyebrow">Estadías recientes</p>
+            </div>
+            <div className="divide-y divide-slate-100 dark:divide-slate-800">
+              {dashboardData.recentBookings.length > 0 ? (
+                dashboardData.recentBookings.map((booking: any) => (
+                  <div key={booking.id} className="p-6 flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                        <Icons.User className="w-6 h-6 text-slate-400" />
+                      </div>
+                      <div>
+                        <p className="app-title-4 dark:text-white">{booking.propertyTitle}</p>
+                        <p className="app-body-sm app-text-muted">{booking.date} • {booking.status}</p>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <button 
+                        onClick={() => setReviewingBooking(booking)}
+                        className="app-button-base rounded-[var(--app-radius-control)] bg-brand px-4 py-2 text-sm text-white hover:-translate-y-px hover:bg-brand-dark hover:shadow-[var(--app-shadow-brand)]"
+                      >
+                        Evaluar huésped
+                      </button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="p-8 text-center app-body-sm app-text-muted">Todavía no hay estadías para revisar.</p>
+              )}
+            </div>
+          </div>
+          <p className="app-form-hint italic px-4">
+            * Solo podés evaluar estadías finalizadas. Las evaluaciones son estructuradas y no permiten texto ofensivo.
+          </p>
+        </section>
+
+        {/* Review Modal Integration */}
+        {reviewingBooking && (
+          <ReviewModal
+            bookingId={reviewingBooking.id}
+            reviewedUserId={reviewingBooking.userId}
+            reviewedUserName={reviewingBooking.userName || 'Huésped'}
+            type="host_to_guest"
+            onClose={() => setReviewingBooking(null)}
+            onComplete={() => {
+              setReviewingBooking(null);
+              fetchData();
+            }}
+          />
+        )}
+
+        {/* Tips / Education */}
+        <section className="grid md:grid-cols-2 gap-6">
+          <div className="app-card p-8 space-y-4 bg-indigo-50 border-indigo-100 dark:border-indigo-800/50 dark:bg-indigo-900/20">
+            <Icons.Lightbulb className="w-8 h-8 text-indigo-600" />
+            <h3 className="app-title-4 text-indigo-900 dark:text-indigo-400">¿Por qué conviene verificar mejor?</h3>
+            <p className="app-body-sm text-indigo-800/70 dark:text-indigo-500/70">
+              Un perfil verificado transmite más confianza. Los huéspedes suelen elegir propiedades donde el anfitrión mostró identidad y ubicación real.
+            </p>
+          </div>
+          <div className="rounded-[var(--app-radius-card)] border border-slate-800 bg-slate-900 dark:bg-slate-800 p-8 text-white space-y-4 shadow-[var(--app-shadow-soft)]">
+            <Icons.Shield className="w-8 h-8 text-brand" />
+            <h3 className="app-title-4 text-white">Información real, mejores decisiones</h3>
+            <p className="app-body-sm text-slate-400">
+              Cuando validás tu identidad también cuidás tu reputación. Una plataforma más transparente mejora la experiencia para ambas partes.
+            </p>
+            <button className="app-button-base justify-start px-0 text-sm text-brand hover:underline">
+              Ver guía para anfitriones
+              <Icons.ExternalLink className="w-4 h-4" />
+            </button>
+          </div>
+        </section>
+      </main>
+    </div>
+  );
+};

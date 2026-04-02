@@ -1,0 +1,5 @@
+{
+  "name": "Alquiler Real",
+  "description": "Plataforma de alquileres temporales con trazabilidad total, validación biométrica Renaper, GPS Proof y detección de fraudes por IA para eliminar estafas en la Costa Atlántica.",
+  "requestFramePermissions": ["camera", "geolocation"]
+}
