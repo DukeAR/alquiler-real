@@ -1,6 +1,15 @@
 import { useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from './useAuth';
+import { emitUserNotification, showToast, type ToastType } from '../lib/toast';
+
+const normalizeNotificationType = (value: string): ToastType => {
+  if (value === 'success' || value === 'warning' || value === 'error') {
+    return value;
+  }
+
+  return 'info';
+};
 
 export function useSocket() {
   const { user } = useAuth();
@@ -17,10 +26,18 @@ export function useSocket() {
       console.log('Connected to WebSocket');
     });
 
-    socket.on('notification', (notification: { title: string; message: string; type: string }) => {
-      // In a real app, we'd use a toast library. For now, we'll use a custom event or just alert.
-      const event = new CustomEvent('app-notification', { detail: notification });
-      window.dispatchEvent(event);
+    socket.on('notification', (notification: { title: string; message: string; type: string; id?: string; createdAt?: string }) => {
+      const type = normalizeNotificationType(notification.type);
+
+      emitUserNotification({
+        id: notification.id,
+        title: notification.title,
+        message: notification.message,
+        type,
+        createdAt: notification.createdAt,
+        unread: true,
+      });
+      showToast(notification.title, notification.message, type);
     });
 
     return () => {

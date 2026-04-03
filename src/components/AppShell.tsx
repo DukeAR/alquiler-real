@@ -1,8 +1,9 @@
-import React, { Suspense, useEffect, useState } from 'react';
+import React, { Suspense } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Icons } from './Icons';
 import { NotificationToast } from './NotificationToast';
 import { AIAssistant } from './AIAssistant';
+import { NotificationsMenu } from './NotificationsMenu';
 import { useAuth } from '../hooks/useAuth';
 import { useFavorites } from '../hooks/useFavorites';
 import { useSocket } from '../hooks/useSocket';
@@ -122,25 +123,10 @@ const MobileNavButton = ({ action, active, onSelect }: { action: NavAction; acti
 export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, loading: authLoading, refresh } = useAuth();
   const { getFavoritesCount } = useFavorites();
-  const [notifications, setNotifications] = useState<any[]>([]);
-  const [showNotifications, setShowNotifications] = useState(false);
 
   useSocket();
-
-  useEffect(() => {
-    const handleNotification = (event: any) => {
-      setNotifications((prev) => [event.detail, ...prev]);
-    };
-
-    window.addEventListener('app-notification', handleNotification);
-    return () => window.removeEventListener('app-notification', handleNotification);
-  }, []);
-
-  useEffect(() => {
-    setShowNotifications(false);
-  }, [location.pathname]);
 
   const promptAuth = async (message: string) => {
     showToast('Necesitás iniciar sesión', message, 'warning');
@@ -154,6 +140,10 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
     }
 
     if (!action.path) return;
+
+    if (authLoading) {
+      return;
+    }
 
     if (action.protected && !user) {
       await promptAuth('Iniciá sesión para entrar a esta sección.');
@@ -220,6 +210,13 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
             </nav>
 
             <div className="flex items-center gap-2">
+              <NotificationsMenu
+                user={user}
+                authLoading={authLoading}
+                refreshSession={refresh}
+                onLoginRequired={openLoginModal}
+              />
+
               {user?.role === 'host' ? (
                 <button
                   type="button"
@@ -241,41 +238,6 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                   >
                     <Icons.Calendar className="h-5 w-5" />
                   </button>
-                  <div className="relative hidden md:block">
-                    <button
-                      type="button"
-                      onClick={() => setShowNotifications((value) => !value)}
-                      className="app-icon-button"
-                      aria-label={notifications.length > 0 ? `Notificaciones, ${notifications.length} nuevas` : 'Notificaciones'}
-                      aria-expanded={showNotifications}
-                      aria-controls="app-notifications-panel"
-                    >
-                      <Icons.Bell className="h-5 w-5" />
-                      {notifications.length > 0 ? (
-                        <span aria-hidden="true" className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-black text-white">
-                          {notifications.length}
-                        </span>
-                      ) : null}
-                    </button>
-                    {showNotifications ? (
-                      <div id="app-notifications-panel" aria-label="Panel de notificaciones" className="absolute right-0 top-14 w-80 overflow-hidden rounded-3xl border border-slate-200 bg-white/95 shadow-[0_30px_60px_-32px_rgba(15,23,42,0.35)] backdrop-blur-xl">
-                        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-                          <h3 className="text-sm font-black tracking-tight text-slate-900">Notificaciones</h3>
-                          <button type="button" onClick={() => setNotifications([])} aria-label="Limpiar notificaciones" className="text-xs font-bold text-brand">Limpiar</button>
-                        </div>
-                        <div className="max-h-72 overflow-y-auto">
-                          {notifications.length === 0 ? (
-                            <div className="px-5 py-10 text-center text-sm text-slate-400">Todavía no tenés novedades.</div>
-                          ) : notifications.map((notification, index) => (
-                            <div key={index} className="border-b border-slate-100 px-5 py-4 last:border-b-0">
-                              <p className="text-sm font-bold text-slate-900">{notification.title}</p>
-                              <p className="mt-1 text-xs text-slate-500">{notification.message}</p>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
                   <button
                     type="button"
                     onClick={() => navigate('/profile')}

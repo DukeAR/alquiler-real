@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Icons } from './Icons';
 import { cn } from '../lib/utils';
-import type { ToastPayload, ToastType } from '../lib/toast';
+import { APP_TOAST_EVENT, type ToastPayload, type ToastType } from '../lib/toast';
 
 type Notification = Required<ToastPayload>;
 
@@ -82,11 +82,11 @@ export const NotificationToast: React.FC = () => {
       }, nextNotification.duration);
     };
 
-    window.addEventListener('app-notification', handleNotification);
+    window.addEventListener(APP_TOAST_EVENT, handleNotification);
 
     return () => {
       clearScheduledDismiss();
-      window.removeEventListener('app-notification', handleNotification);
+      window.removeEventListener(APP_TOAST_EVENT, handleNotification);
     };
   }, []);
 
