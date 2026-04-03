@@ -20,8 +20,6 @@ const MapFallback = () => (
 );
 
 const formatPropertyCount = (count: number) => `${count} ${count === 1 ? 'propiedad' : 'propiedades'}`;
-const formatFeaturedCount = (count: number) => `${count} ${count === 1 ? 'destacada' : 'destacadas'}`;
-
 const renderSkeletons = (count = 6) => Array.from({ length: count }, (_, index) => <SkeletonCard key={`skeleton-${index}`} />);
 
 type ExploreResultsSectionProps = {
@@ -71,38 +69,38 @@ export const ExploreResultsSection = ({
   const showingStaleResults = Boolean(loadError) && !loading && hasAnyResults;
 
   const summaryEyebrow = viewMode === 'map'
-    ? 'Exploración en mapa'
+    ? 'Mapa'
     : hasActiveFilters
-      ? 'Resultados filtrados'
-      : 'Exploración';
+      ? 'Resultados'
+      : 'Propiedades';
 
   const summaryHeading = loading
-    ? 'Buscando propiedades para comparar mejor'
+    ? 'Buscando propiedades'
     : failedToLoadResults
-      ? 'No pudimos actualizar las propiedades ahora'
+      ? 'No pudimos actualizar la búsqueda'
     : hasActiveFilters
       ? hasAnyResults
-        ? 'Resultados listos para decidir con más claridad'
-        : 'No encontramos coincidencias con esa búsqueda'
-      : featuredCount > 0
-        ? 'Empezá por propiedades con mejores señales'
+        ? 'Resultados para comparar'
+        : 'No encontramos coincidencias'
+      : hasAnyResults
+        ? 'Propiedades para comparar con más claridad'
         : 'Todavía no hay propiedades para mostrar';
 
   const summaryDescription = loading
-    ? 'Estamos actualizando precios, ubicación y señales de confianza para mostrarte resultados al día.'
+    ? 'Estamos actualizando precio, ubicación y datos clave.'
     : failedToLoadResults
-      ? 'Puede ser un problema temporal de conexión. Reintentá sin perder el contexto de búsqueda.'
+      ? 'Puede ser un problema momentáneo. Reintentá sin perder tu búsqueda.'
     : hasActiveFilters
       ? hasAnyResults
-        ? `${formatPropertyCount(totalResults)} para revisar ubicación, precio, anfitrión y señales de confianza desde el inicio.`
-        : 'Probá otra ubicación o ajustá filtros para volver a explorar con mejores coincidencias.'
-      : featuredCount > 0
-        ? 'Primero ves una selección destacada y después el resto de las propiedades para seguir comparando sin ruido.'
+        ? `${formatPropertyCount(totalResults)} para revisar con tu búsqueda actual.`
+        : 'Probá otro destino o ajustá los filtros para volver a explorar.'
+      : hasAnyResults
+        ? 'Empezá por una selección destacada y después seguí con el resto de las propiedades.'
         : 'Cuando haya nuevas publicaciones disponibles, van a aparecer acá para seguir explorando.';
 
   const summaryCard = (
-    <Card className="rounded-[32px] border-slate-200/80 bg-white p-6 shadow-[0_28px_70px_-50px_rgba(15,23,42,0.25)] sm:p-7">
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
+    <Card className="rounded-[28px] border-slate-200/80 bg-white p-5 shadow-[0_22px_54px_-42px_rgba(15,23,42,0.22)] sm:p-6">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
         <SectionTitle
           eyebrow={summaryEyebrow}
           heading={summaryHeading}
@@ -111,10 +109,6 @@ export const ExploreResultsSection = ({
         />
 
         <div className="flex flex-wrap gap-2 lg:justify-end">
-          <Badge variant="brand" size="md" className="gap-2">
-            {viewMode === 'map' ? <Icons.Map className="h-3.5 w-3.5" /> : <Icons.LayoutGrid className="h-3.5 w-3.5" />}
-            <span>{viewMode === 'map' ? 'Mapa' : 'Galería'}</span>
-          </Badge>
           <Badge variant="neutral" size="md" className="gap-2">
             <Icons.Home className="h-3.5 w-3.5" />
             <span>{formatPropertyCount(totalResults)}</span>
@@ -130,36 +124,13 @@ export const ExploreResultsSection = ({
               <Icons.SlidersHorizontal className="h-3.5 w-3.5" />
               <span>{appliedFilterCount} {appliedFilterCount === 1 ? 'filtro activo' : 'filtros activos'}</span>
             </Badge>
-          ) : featuredCount > 0 ? (
-            <Badge variant="success" size="md" className="gap-2">
-              <Icons.Star className="h-3.5 w-3.5 fill-current" />
-              <span>{formatFeaturedCount(featuredCount)}</span>
-            </Badge>
           ) : null}
         </div>
       </div>
 
-      {!loading && hasActiveFilters && hasAnyResults ? (
-        <NoticeBanner
-          className="mt-5"
-          tone="info"
-          heading="Compará antes de decidir"
-          description="Abrí el detalle para revisar amenities, confianza y condiciones de reserva antes de avanzar."
-        />
-      ) : null}
-
-      {!loading && !hasActiveFilters && featuredCount > 0 ? (
-        <NoticeBanner
-          className="mt-5"
-          tone="success"
-          heading="La exploración arranca por las mejores señales"
-          description="Primero ves publicaciones con mejor valoración y después el resto de la oferta para seguir comparando con contexto." 
-        />
-      ) : null}
-
       {showingStaleResults ? (
         <NoticeBanner
-          className="mt-5"
+          className="mt-4"
           tone="warning"
           heading="Mostrando la última versión disponible"
           description={`${loadError} Podés seguir comparando con estos resultados o reintentar para traer datos actualizados.`}
@@ -261,27 +232,13 @@ export const ExploreResultsSection = ({
 
       {!hasActiveFilters && (loading || featuredCount > 0) ? (
         <section className="space-y-5 md:space-y-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="flex flex-col gap-3">
             <SectionTitle
               eyebrow="Selección destacada"
-              heading="Propiedades mejor valoradas"
-              description="Una selección breve para arrancar por publicaciones con mejores señales visibles."
+              heading="Propiedades destacadas"
+              description="Una selección breve para empezar a comparar sin ruido." 
               className="max-w-2xl"
             />
-
-            {!loading && featuredCount > 0 ? (
-              <Card padding="sm" variant="muted" className="rounded-[26px] border-slate-200/80 bg-white lg:min-w-52">
-                <div className="flex items-center gap-3">
-                  <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-50 text-amber-600">
-                    <Icons.Star className="h-5 w-5 fill-current" />
-                  </span>
-                  <div>
-                    <div className="text-sm font-semibold text-slate-900">{formatFeaturedCount(featuredCount)}</div>
-                    <div className="text-sm text-slate-500">Elegidas por valoración y señales de confianza.</div>
-                  </div>
-                </div>
-              </Card>
-            ) : null}
           </div>
 
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-7 lg:grid-cols-3">
@@ -305,30 +262,23 @@ export const ExploreResultsSection = ({
           <div className="flex flex-col gap-4 border-b border-slate-200/70 pb-5 lg:flex-row lg:items-end lg:justify-between">
             <SectionTitle
               eyebrow={hasActiveFilters ? 'Resultados para comparar' : 'Más propiedades'}
-              heading={hasActiveFilters ? 'Resultados filtrados' : 'Seguí explorando propiedades'}
+              heading={hasActiveFilters ? 'Más resultados para comparar' : 'Más propiedades para explorar'}
               description={loading
-                ? 'Estamos trayendo las mejores coincidencias para tu búsqueda actual.'
+                ? 'Estamos trayendo resultados para tu búsqueda actual.'
                 : hasActiveFilters
                   ? `${formatPropertyCount(listingProperties.length)} para revisar con tu búsqueda actual.`
                   : listingProperties.length > 0
-                    ? `${formatPropertyCount(listingProperties.length)} adicionales para seguir comparando después de la selección destacada.`
+                    ? `${formatPropertyCount(listingProperties.length)} para seguir comparando después de la selección destacada.`
                     : 'No hay más propiedades para mostrar por ahora.'}
               className="max-w-2xl"
             />
 
             {!loading && listingProperties.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                <Badge variant="neutral" size="md" className="gap-2">
-                  <Icons.LayoutGrid className="h-3.5 w-3.5" />
-                  <span>{visibleCount} visibles</span>
-                </Badge>
-                {remainingResults > 0 ? (
-                  <Badge variant="info" size="md" className="gap-2">
-                    <Icons.ChevronRight className="h-3.5 w-3.5" />
-                    <span>Quedan {remainingResults}</span>
-                  </Badge>
-                ) : null}
-              </div>
+              <p className="text-sm text-slate-500">
+                {remainingResults > 0
+                  ? `Mostrando ${visibleCount}. Quedan ${remainingResults} para seguir explorando.`
+                  : `${visibleCount} visibles en esta búsqueda.`}
+              </p>
             ) : null}
           </div>
 

@@ -66,11 +66,9 @@ describe('ExploreResultsSection', () => {
   test('renders the improved summary and featured hierarchy in gallery mode', () => {
     renderSection();
 
-    expect(screen.getByText('Empezá por propiedades con mejores señales')).toBeInTheDocument();
-    expect(screen.getByText('La exploración arranca por las mejores señales')).toBeInTheDocument();
-    expect(screen.getByText('Propiedades mejor valoradas')).toBeInTheDocument();
-    expect(screen.getAllByText('1 destacada')).toHaveLength(2);
-    expect(screen.getByText('Seguí explorando propiedades')).toBeInTheDocument();
+    expect(screen.getByText('Propiedades para comparar con más claridad')).toBeInTheDocument();
+    expect(screen.getByText('Propiedades destacadas')).toBeInTheDocument();
+    expect(screen.getByText('Más propiedades para explorar')).toBeInTheDocument();
     expect(screen.getByText('Casa frente al mar')).toBeInTheDocument();
     expect(screen.getByText('Departamento luminoso')).toBeInTheDocument();
   });
@@ -89,7 +87,7 @@ describe('ExploreResultsSection', () => {
       onClearFilters,
     });
 
-    expect(screen.getByText('No encontramos coincidencias con esa búsqueda')).toBeInTheDocument();
+    expect(screen.getByText('No encontramos coincidencias')).toBeInTheDocument();
     expect(screen.getByText('No encontramos propiedades con esa combinación')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /limpiar filtros/i }));
