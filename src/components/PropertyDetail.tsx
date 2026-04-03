@@ -263,7 +263,7 @@ const getTraceabilityConfig = (level?: TraceabilityLevel) => {
       noticeTone: 'info' as const,
       description: 'Hay información útil para decidir, aunque conviene revisar detalles y despejar dudas con el anfitrión.',
       noticeHeading: 'La publicación ya tiene una base confiable',
-      noticeDescription: 'Revisá amenities, reseñas y validaciones para terminar de evaluar si te cierra.',
+      noticeDescription: 'Revisá comodidades, reseñas y validaciones para terminar de evaluar si te cierra.',
     };
   }
 
@@ -506,7 +506,7 @@ export const PropertyDetailShell: React.FC<{
   const decisionHighlights = [
     property.location ? `Ubicación: ${property.location}.` : null,
     guestCapacity ? `${guestCapacity}.` : null,
-    decisionAmenityLabel ? `Amenities clave: ${decisionAmenityLabel}.` : null,
+    decisionAmenityLabel ? `Comodidades clave: ${decisionAmenityLabel}.` : null,
     `Tipo de propiedad: ${propertyTypeLabel}.`,
   ].filter(Boolean) as string[];
   const visibleReviews = [...reviews]
@@ -653,7 +653,7 @@ export const PropertyDetailShell: React.FC<{
 
     if (!user) {
       closeBookingConfirmation();
-      showToast('Necesitás iniciar sesión', 'Iniciá sesión para confirmar la reserva.', 'warning');
+      showToast('Necesitás iniciar sesión', 'Iniciá sesión para confirmar la estadía.', 'warning');
       import('../lib/modal').then((m) => m.showLoginModal());
       return;
     }
@@ -674,7 +674,7 @@ export const PropertyDetailShell: React.FC<{
 
       if (result.error.status === 401) {
         closeBookingConfirmation();
-        showToast('Necesitás iniciar sesión', 'Iniciá sesión para confirmar la reserva.', 'warning');
+        showToast('Necesitás iniciar sesión', 'Iniciá sesión para confirmar la estadía.', 'warning');
         import('../lib/modal').then((m) => m.showLoginModal());
         return;
       }
@@ -923,7 +923,7 @@ export const PropertyDetailShell: React.FC<{
               <Card padding="sm" variant="muted" className="mt-5 rounded-[24px] border-emerald-200/80 bg-emerald-50/80">
                 <NoticeBanner
                   tone="success"
-                  heading="La reserva ya quedó confirmada"
+                  heading="La estadía ya quedó confirmada"
                   description={`Guardamos ${bookingSuccess.nights} ${bookingSuccess.nights === 1 ? 'noche' : 'noches'} para ${bookingSuccess.guestSummary} por ${formatCurrency(bookingSuccess.total)}. Desde Mis reservas podés revisar fechas, estado y condiciones.`}
                   className="border-emerald-200 bg-white/85 text-emerald-700 shadow-none"
                 />
@@ -1194,8 +1194,8 @@ export const PropertyDetailShell: React.FC<{
           {hasAmenities ? (
             <Card className="rounded-[32px] border-slate-200/80 bg-white p-6 shadow-[0_28px_70px_-50px_rgba(15,23,42,0.25)] sm:p-7">
               <SectionTitle
-                eyebrow="Amenities"
-                heading="Amenities clave"
+                eyebrow="Comodidades"
+                heading="Comodidades clave"
                 description="Lo que más pesa en la decisión, sin vueltas."
               />
               <ul className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">

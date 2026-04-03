@@ -170,7 +170,7 @@ describe('PropertyDetail', () => {
     await waitFor(() => expect(screen.getByText('Casa de prueba')).toBeDefined());
 
     expect(screen.getByText('Lo importante para decidir')).toBeDefined();
-    expect(screen.getByText('Amenities clave')).toBeDefined();
+    expect(screen.getByText('Comodidades clave')).toBeDefined();
     expect(screen.getByText('Wifi rápido')).toBeDefined();
     expect(screen.getByText('Señales para decidir con más claridad')).toBeDefined();
     expect(screen.getByText('Ubicación: Ciudad Test.')).toBeDefined();
