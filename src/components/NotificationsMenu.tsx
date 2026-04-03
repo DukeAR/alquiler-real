@@ -251,16 +251,21 @@ export const NotificationsMenu: React.FC<NotificationsMenuProps> = ({
   const panelBody = useMemo(() => {
     if (status === 'auth-loading' || status === 'loading') {
       return (
-        <div className="flex flex-col items-center gap-3 px-5 py-10 text-center text-sm text-slate-500">
-          <Icons.Loader2 className="h-5 w-5 animate-spin text-slate-400" />
-          <p>Cargando notificaciones…</p>
+        <div className="flex flex-col items-center gap-3 px-6 py-10 text-center">
+          <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
+            <Icons.Loader2 className="h-4 w-4 animate-spin" />
+          </span>
+          <p className="text-sm font-medium text-slate-600">Cargando notificaciones…</p>
         </div>
       );
     }
 
     if (status === 'logged-out') {
       return (
-        <div className="space-y-4 px-5 py-8 text-center">
+        <div className="space-y-4 px-6 py-8 text-center">
+          <span className="mx-auto flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
+            <Icons.User className="h-4 w-4" />
+          </span>
           <p className="text-sm font-medium text-slate-700">Iniciá sesión para ver tus notificaciones</p>
           <Button type="button" size="sm" variant="secondary" onClick={() => void onLoginRequired()}>
             Ingresá
@@ -271,7 +276,10 @@ export const NotificationsMenu: React.FC<NotificationsMenuProps> = ({
 
     if (status === 'error') {
       return (
-        <div className="space-y-4 px-5 py-8 text-center">
+        <div className="space-y-4 px-6 py-8 text-center">
+          <span className="mx-auto flex h-10 w-10 items-center justify-center rounded-2xl bg-red-50 text-red-500">
+            <Icons.AlertTriangle className="h-4 w-4" />
+          </span>
           <p className="text-sm font-medium text-slate-700">{errorMessage || 'No pudimos cargar las notificaciones. Reintentá.'}</p>
           <Button type="button" size="sm" variant="secondary" onClick={() => void loadNotifications()}>
             Reintentar
@@ -281,13 +289,20 @@ export const NotificationsMenu: React.FC<NotificationsMenuProps> = ({
     }
 
     if (notifications.length === 0) {
-      return <div className="px-5 py-10 text-center text-sm text-slate-500">No tenés notificaciones nuevas</div>;
+      return (
+        <div className="space-y-3 px-6 py-10 text-center">
+          <span className="mx-auto flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
+            <Icons.Bell className="h-4 w-4" />
+          </span>
+          <p className="text-sm font-medium text-slate-600">No tenés notificaciones nuevas</p>
+        </div>
+      );
     }
 
     return (
       <div className="max-h-72 overflow-y-auto">
         {notifications.map((notification) => (
-          <div key={notification.id} className="border-b border-slate-100 px-5 py-4 last:border-b-0">
+          <div key={notification.id} className="border-b border-slate-100/90 px-5 py-4 transition-colors hover:bg-slate-50/70 last:border-b-0">
             <div className="flex items-start gap-3">
               <span className={cn(
                 'mt-1 h-2.5 w-2.5 shrink-0 rounded-full',
@@ -296,8 +311,8 @@ export const NotificationsMenu: React.FC<NotificationsMenuProps> = ({
 
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-3">
-                  <p className="text-sm font-bold text-slate-900">{notification.title}</p>
-                  <span className="shrink-0 text-[11px] font-medium text-slate-400">{formatNotificationDate(notification.createdAt)}</span>
+                  <p className="text-sm font-semibold text-slate-900">{notification.title}</p>
+                  <span className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">{formatNotificationDate(notification.createdAt)}</span>
                 </div>
                 <p className="mt-1 text-xs leading-5 text-slate-500">{notification.message}</p>
               </div>
@@ -327,14 +342,17 @@ export const NotificationsMenu: React.FC<NotificationsMenuProps> = ({
       </button>
 
       {isOpen ? (
-        <div id="app-notifications-panel" aria-label="Panel de notificaciones" className="absolute right-0 top-14 w-80 overflow-hidden rounded-3xl border border-slate-200 bg-white/95 shadow-[0_30px_60px_-32px_rgba(15,23,42,0.35)] backdrop-blur-xl">
-          <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-            <h3 className="text-sm font-black tracking-tight text-slate-900">Notificaciones</h3>
+        <div id="app-notifications-panel" aria-label="Panel de notificaciones" className="absolute right-0 top-14 w-[22rem] overflow-hidden rounded-[28px] border border-slate-200/90 bg-white/98 shadow-[0_24px_50px_-30px_rgba(15,23,42,0.28)] backdrop-blur-xl">
+          <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/70 px-5 py-4">
+            <div>
+              <h3 className="text-sm font-semibold tracking-tight text-slate-900">Notificaciones</h3>
+              <p className="mt-1 text-[11px] font-medium text-slate-500">Tu actividad reciente</p>
+            </div>
             {user ? (
               <button
                 type="button"
                 onClick={() => void loadNotifications()}
-                className="text-xs font-bold text-brand"
+                className="rounded-full px-2.5 py-1 text-xs font-semibold text-slate-500 transition-colors hover:bg-white hover:text-slate-900"
               >
                 Actualizar
               </button>
