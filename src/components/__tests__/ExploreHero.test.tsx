@@ -16,9 +16,9 @@ describe('ExploreHero', () => {
     );
 
     expect(screen.getByRole('heading', { name: /Reservar es fácil\.?\s*Elegir bien no siempre\./i })).toBeInTheDocument();
-    expect(screen.getByText('Tomá decisiones con información clara desde el inicio.')).toBeInTheDocument();
-    expect(screen.getByLabelText('Destino')).toHaveAttribute('placeholder', 'Ej: Pinamar, Cariló, San Clemente');
+    expect(screen.getByText('Elegí con información clara desde el inicio: ubicación, verificación y reseñas reales antes de decidir.')).toBeInTheDocument();
+    expect(screen.getByLabelText('Destino')).toHaveAttribute('placeholder', '¿Dónde querés alojarte?');
     expect(screen.getByRole('button', { name: 'Ver opciones' })).toBeInTheDocument();
-    expect(screen.getByText('Propiedades verificadas • reseñas reales • datos claros')).toBeInTheDocument();
+    expect(screen.getByText('Propiedades verificadas • reseñas reales • información clara antes de reservar')).toBeInTheDocument();
   });
 });

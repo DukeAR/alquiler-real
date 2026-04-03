@@ -35,7 +35,7 @@ interface LocationAutocompleteProps {
 export const LocationAutocomplete = ({
   value,
   onChange,
-  placeholder = 'Ej: Pinamar, Cariló, San Clemente',
+  placeholder = '¿Dónde querés alojarte?',
   onSelect,
   onSubmitValue,
   suggestions: availableSuggestions = EMPTY_LOCATION_SUGGESTIONS,
@@ -178,7 +178,7 @@ export const LocationAutocomplete = ({
             </button>
           ) : null}
           className={cn(
-            'min-h-14 rounded-[16px] border-slate-300/90 bg-white py-3.5 text-base font-semibold text-slate-900 shadow-none placeholder:text-slate-500 focus:border-slate-500 focus:shadow-[0_0_0_3px_rgba(15,23,42,0.06)] md:py-4',
+            'min-h-14 rounded-[14px] border-slate-200 bg-white py-3.5 text-base font-medium text-slate-900 shadow-none placeholder:text-slate-400 focus:border-slate-400 focus:shadow-[0_0_0_3px_rgba(15,23,42,0.05)] md:py-4',
             showSuggestions || showEmptyState ? 'rounded-b-[12px] border-b-transparent md:rounded-b-[14px]' : ''
           )}
         />
@@ -194,7 +194,7 @@ export const LocationAutocomplete = ({
             role="listbox"
             aria-label="Sugerencias de destino"
             transition={{ duration: 0.15 }}
-            className="absolute top-full left-0 right-0 z-50 mt-1 overflow-hidden rounded-[18px] border border-slate-200 bg-white shadow-[0_18px_36px_-24px_rgba(15,23,42,0.16)]"
+            className="absolute top-full left-0 right-0 z-50 mt-1 overflow-hidden rounded-[16px] border border-slate-200 bg-white shadow-[0_14px_28px_-20px_rgba(15,23,42,0.14)]"
           >
             <div className="max-h-80 overflow-y-auto py-1.5">
             {filteredSuggestions.map((location, index) => (
@@ -208,46 +208,23 @@ export const LocationAutocomplete = ({
                 onClick={() => handleSelectLocation(location)}
                 onMouseEnter={() => setSelectedIndex(index)}
                 className={cn(
-                  'group flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors md:px-5 md:py-4',
+                  'group flex w-full items-start gap-3 px-4 py-3.5 text-left transition-colors md:px-5 md:py-4',
                   selectedIndex === index
                     ? 'bg-slate-50'
                     : 'hover:bg-slate-50'
                 )}
               >
-                <span
-                  className={cn(
-                    'flex h-10 w-10 shrink-0 items-center justify-center rounded-[16px] border transition-colors',
-                    selectedIndex === index
-                      ? 'border-slate-300 bg-white text-slate-700'
-                      : 'border-slate-200 bg-slate-50 text-slate-500 group-hover:border-slate-300 group-hover:bg-white group-hover:text-slate-700'
-                  )}
-                >
-                  <Icons.MapPin className="h-4 w-4" />
-                </span>
+                <Icons.MapPin className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
 
                 <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="truncate text-sm font-semibold text-slate-900 md:text-[15px]">
-                      {location.name}
-                    </p>
-                    <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600">
-                      {formatPropertyCount(location.propertyCount)}
-                    </span>
-                  </div>
+                  <p className="truncate text-sm font-semibold text-slate-900 md:text-[15px]">
+                    {location.name}
+                  </p>
 
                   <p className="mt-1 text-xs leading-5 text-slate-500 md:text-sm">
-                    {location.region ? `Zona: ${location.region}` : 'Zona disponible.'}
+                    {location.region ? `Zona: ${location.region}` : 'Zona disponible'} • {formatPropertyCount(location.propertyCount)}
                   </p>
                 </div>
-
-                <Icons.ChevronRight
-                  className={cn(
-                    'h-4 w-4 shrink-0 transition-all',
-                    selectedIndex === index
-                      ? 'translate-x-0 text-slate-600'
-                      : 'text-slate-300 group-hover:translate-x-0.5 group-hover:text-slate-500'
-                  )}
-                />
               </motion.button>
             ))}
             </div>
@@ -263,13 +240,10 @@ export const LocationAutocomplete = ({
             exit={{ opacity: 0, y: -8 }}
             role="status"
             aria-live="polite"
-            className="absolute top-full left-0 right-0 z-50 mt-1 rounded-[18px] border border-slate-200 bg-white p-5 shadow-[0_18px_36px_-24px_rgba(15,23,42,0.16)] md:p-6"
+            className="absolute top-full left-0 right-0 z-50 mt-1 rounded-[16px] border border-slate-200 bg-white p-5 shadow-[0_14px_28px_-20px_rgba(15,23,42,0.14)] md:p-6"
           >
             <div className="flex items-start gap-3">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[16px] border border-slate-200 bg-slate-50 text-slate-500">
-                <Icons.Search className="h-4 w-4" />
-              </span>
-
+              <Icons.Search className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
               <div className="min-w-0 flex-1 text-left">
                 <p className="text-sm font-semibold text-slate-900 md:text-[15px]">
                   {`No hay coincidencias para "${normalizedValue}".`}
