@@ -31,8 +31,8 @@ export const ExploreFiltersBar = ({
 }: ExploreFiltersBarProps) => {
   return (
     <section className="sticky top-20 z-40">
-      <Card padding="sm" className="app-surface border-slate-200/80 bg-white/92 p-4 shadow-[0_18px_35px_-28px_rgba(15,23,42,0.18)] backdrop-blur-xl md:p-5">
-        <div className="flex flex-col gap-4 lg:flex-row lg:flex-wrap lg:items-center lg:gap-4">
+      <Card padding="none" className="app-surface border-slate-200/85 bg-white/94 p-4 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.22)] backdrop-blur-xl md:p-5">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex w-fit items-center rounded-2xl bg-slate-100 p-1">
             {(['grid', 'map'] as const).map((mode) => (
               <button
@@ -40,25 +40,23 @@ export const ExploreFiltersBar = ({
                 type="button"
                 onClick={() => onViewModeChange(mode)}
                 className={cn(
-                  'flex items-center gap-2 rounded-xl px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] transition-all',
-                  viewMode === mode ? 'bg-white text-brand shadow-sm' : 'text-slate-500 hover:text-slate-700',
+                  'flex items-center gap-2 rounded-xl px-3.5 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] transition-all',
+                  viewMode === mode ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700',
                 )}
               >
                 {mode === 'grid' ? <Icons.LayoutGrid className="h-4 w-4" /> : <Icons.Map className="h-4 w-4" />}
-                {mode === 'grid' ? 'Galería' : 'Mapa'}
+                {mode === 'grid' ? 'Alojamientos' : 'Mapa'}
               </button>
             ))}
           </div>
-
-          <div className="hidden h-8 w-px bg-slate-200 lg:block" />
 
           <div className="flex flex-wrap items-center gap-2.5 md:gap-3">
             <select
               value={filters.type}
               onChange={(event) => onFiltersChange({ ...filters, type: event.target.value })}
-              className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 outline-none transition-all focus:border-brand focus:ring-2 focus:ring-brand/20"
+              className="h-10 min-w-[158px] rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 outline-none transition-all focus:border-brand focus:ring-2 focus:ring-brand/20"
             >
-              <option value="">Tipo</option>
+              <option value="">Tipo de alojamiento</option>
               <option value="house">Casas</option>
               <option value="apartment">Dptos</option>
               <option value="cabin">Cabañas</option>
@@ -93,7 +91,7 @@ export const ExploreFiltersBar = ({
                 onChange={(event) => onFiltersChange({ ...filters, verifiedOnly: event.target.checked })}
                 className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-brand"
               />
-              <span>Solo propiedades verificadas</span>
+              <span>Solo verificadas</span>
             </label>
 
             {hasActiveFilters ? (

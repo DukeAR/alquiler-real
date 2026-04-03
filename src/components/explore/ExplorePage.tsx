@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { apiJson } from '../../lib/apiConfig';
-import { useAuth } from '../../hooks/useAuth';
 import { useFavorites } from '../../hooks/useFavorites';
 import type { Property } from '../../services/geminiService';
 import type { LocationSuggestion } from '../LocationAutocomplete';
@@ -62,9 +61,26 @@ const buildLocationSuggestions = (items: Property[]): LocationSuggestion[] => {
   });
 };
 
+const getFeaturedPropertyScore = (property: Property) => {
+  const ratingScore = Number(property.rating || 0) * 12;
+  const reviewScore = Math.min(Number(property.reviewsCount || 0), 18);
+  const consistencyScore = Math.min(Number(property.historicalConsistency || 0) / 5, 18);
+  const experienceScore = Math.min(Number(property.hostExperienceYears || 0) * 1.5, 12);
+  const verificationScore = [
+    property.identityValidated,
+    property.locationVerified,
+    property.videoValidated,
+    property.isVerifiedProperty,
+    property.hasDigitalVerification,
+    property.hasPresencialVerification,
+  ].filter(Boolean).length * 8;
+  const penalty = Number(property.unresolvedReviewsCount || 0) * 18;
+
+  return ratingScore + reviewScore + consistencyScore + experienceScore + verificationScore - penalty;
+};
+
 export const ExplorePage = () => {
   const { toggleFavorite, isFavorite } = useFavorites();
-  const { user } = useAuth();
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -101,7 +117,7 @@ export const ExplorePage = () => {
         }
       } catch (error) {
         console.error(error);
-        setLoadError(error instanceof Error ? error.message : 'No pudimos actualizar las propiedades ahora.');
+        setLoadError(error instanceof Error ? error.message : 'No pudimos actualizar los alojamientos ahora.');
       } finally {
         setLoading(false);
       }
@@ -114,11 +130,23 @@ export const ExplorePage = () => {
     setVisibleCount(9);
   }, [filters, searchQuery]);
 
-  const topRated = [...properties]
-    .sort((left, right) => Number(right.rating || 0) - Number(left.rating || 0))
-    .slice(0, 6);
+  const featuredProperties = [...properties]
+    .sort((left, right) => {
+      const scoreDifference = getFeaturedPropertyScore(right) - getFeaturedPropertyScore(left);
+      if (scoreDifference !== 0) {
+        return scoreDifference;
+      }
 
-  const featuredIds = new Set(topRated.map((property) => property.id));
+      const ratingDifference = Number(right.rating || 0) - Number(left.rating || 0);
+      if (ratingDifference !== 0) {
+        return ratingDifference;
+      }
+
+      return Number(right.reviewsCount || 0) - Number(left.reviewsCount || 0);
+    })
+    .slice(0, 3);
+
+  const featuredIds = new Set(featuredProperties.map((property) => property.id));
   const hasActiveFilters = Boolean(searchQuery || filters.minPrice || filters.maxPrice || filters.type || filters.verifiedOnly);
   const appliedFilterCount = [
     Boolean(searchQuery),
@@ -167,7 +195,6 @@ export const ExplorePage = () => {
     <div className="pb-28">
       <main className="app-page space-y-10 py-8 md:space-y-14 md:py-12">
         <ExploreHero
-          user={user}
           searchValue={searchInput}
           locationSuggestions={locationSuggestions}
           onSearchChange={handleSearchChange}
@@ -193,7 +220,7 @@ export const ExplorePage = () => {
           searchQuery={searchQuery}
           appliedFilterCount={appliedFilterCount}
           filteredProperties={properties}
-          topRated={topRated}
+          featuredProperties={featuredProperties}
           listingProperties={listingProperties}
           visibleProperties={visibleProperties}
           hasMoreResults={hasMoreResults}

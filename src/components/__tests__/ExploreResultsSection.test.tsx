@@ -44,7 +44,7 @@ const renderSection = (props?: Partial<React.ComponentProps<typeof ExploreResult
     searchQuery: '',
     appliedFilterCount: 0,
     filteredProperties: sampleProperties,
-    topRated: [sampleProperties[0]],
+    featuredProperties: [sampleProperties[0]],
     listingProperties: [sampleProperties[1], sampleProperties[2]],
     visibleProperties: [sampleProperties[1], sampleProperties[2]],
     hasMoreResults: false,
@@ -63,12 +63,13 @@ const renderSection = (props?: Partial<React.ComponentProps<typeof ExploreResult
 };
 
 describe('ExploreResultsSection', () => {
-  test('renders the improved summary and featured hierarchy in gallery mode', () => {
+  test('renders the decision-oriented hierarchy on the home results view', () => {
     renderSection();
 
-    expect(screen.getByText('Propiedades para comparar con más claridad')).toBeInTheDocument();
-    expect(screen.getByText('Propiedades destacadas')).toBeInTheDocument();
-    expect(screen.getByText('Más propiedades para explorar')).toBeInTheDocument();
+    expect(screen.getByText('Cómo te ayudamos a elegir mejor')).toBeInTheDocument();
+    expect(screen.getByText('Opciones para decidir mejor')).toBeInTheDocument();
+    expect(screen.getByText('Tomar una buena decisión cambia todo.')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Más alojamientos' })).toBeInTheDocument();
     expect(screen.getByText('Casa frente al mar')).toBeInTheDocument();
     expect(screen.getByText('Departamento luminoso')).toBeInTheDocument();
   });
@@ -81,14 +82,14 @@ describe('ExploreResultsSection', () => {
       searchQuery: 'Villa Gesell',
       appliedFilterCount: 2,
       filteredProperties: [],
-      topRated: [],
+      featuredProperties: [],
       listingProperties: [],
       visibleProperties: [],
       onClearFilters,
     });
 
     expect(screen.getByText('No encontramos coincidencias')).toBeInTheDocument();
-    expect(screen.getByText('No encontramos propiedades con esa combinación')).toBeInTheDocument();
+    expect(screen.getByText('No encontramos alojamientos para esa búsqueda')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /limpiar filtros/i }));
     expect(onClearFilters).toHaveBeenCalledTimes(1);

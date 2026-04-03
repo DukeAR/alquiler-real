@@ -21,7 +21,7 @@ describe('LocationAutocomplete', () => {
 
     render(<Harness onSubmitValue={submitSpy} />);
 
-    const input = screen.getByRole('combobox', { name: /buscar ubicación/i });
+    const input = screen.getByRole('combobox', { name: /buscar destino/i });
     fireEvent.change(input, { target: { value: 'Ushuaia' } });
     fireEvent.keyDown(input, { key: 'Enter' });
 

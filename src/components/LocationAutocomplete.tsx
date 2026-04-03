@@ -33,7 +33,7 @@ interface LocationAutocompleteProps {
 export const LocationAutocomplete = ({
   value,
   onChange,
-  placeholder = 'Elegí ciudad, playa o zona',
+  placeholder = '¿A dónde querés ir?',
   onSelect,
   onSubmitValue,
   suggestions: availableSuggestions = EMPTY_LOCATION_SUGGESTIONS,
@@ -150,7 +150,7 @@ export const LocationAutocomplete = ({
           onFocus={() => hasTypedValue && setIsOpen(true)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          aria-label="Buscar ubicación"
+          aria-label="Buscar destino"
           role="combobox"
           aria-autocomplete="list"
           aria-expanded={isOpen}
@@ -168,13 +168,13 @@ export const LocationAutocomplete = ({
                 inputRef.current?.focus();
               }}
               className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition-colors hover:bg-slate-200 hover:text-slate-700 dark:bg-slate-700/80 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white"
-              aria-label="Borrar búsqueda de ubicación"
+              aria-label="Borrar destino"
             >
               <Icons.X className="h-4 w-4" />
             </button>
           ) : null}
           className={cn(
-            'min-h-14 rounded-[24px] border-slate-200/90 bg-white py-3 text-[15px] font-medium text-slate-900 shadow-[0_20px_36px_-30px_rgba(15,23,42,0.55)] placeholder:text-slate-400 focus:border-brand/40 focus:shadow-[0_0_0_4px_rgba(14,116,144,0.12)] md:py-3.5',
+            'min-h-16 rounded-[22px] border-slate-200/90 bg-white/98 py-3.5 text-[15px] font-medium text-slate-900 shadow-[0_20px_36px_-30px_rgba(15,23,42,0.4)] placeholder:text-slate-500/70 focus:border-brand/40 focus:shadow-[0_0_0_4px_rgba(79,70,229,0.14)] md:py-4',
             showSuggestions || showEmptyState ? 'rounded-b-[14px] border-b-transparent shadow-[0_20px_36px_-30px_rgba(15,23,42,0.4)] md:rounded-b-[16px]' : ''
           )}
         />
@@ -196,17 +196,17 @@ export const LocationAutocomplete = ({
             <div className="flex items-center justify-between gap-3 border-b border-slate-200/80 px-4 py-3 md:px-5">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-                  Sugerencias para tu búsqueda
+                  Destinos
                 </p>
                 <p className="mt-1 text-sm text-slate-600">
                   {filteredSuggestions.length === 1
-                    ? '1 opción para revisar'
-                    : `${filteredSuggestions.length} opciones para revisar`}
+                    ? '1 opción'
+                    : `${filteredSuggestions.length} opciones`}
                 </p>
               </div>
 
               <span className="hidden rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold text-slate-500 md:inline-flex">
-                Enter para buscar igual
+                Enter para continuar
               </span>
             </div>
 
@@ -251,7 +251,7 @@ export const LocationAutocomplete = ({
                   </div>
 
                   <p className="mt-1 text-xs leading-5 text-slate-500 md:text-sm">
-                    {location.region ? `Zona: ${location.region}` : 'Explorá propiedades en esta zona.'}
+                    {location.region ? `Zona: ${location.region}` : 'Ver alojamientos en esta zona.'}
                   </p>
                 </div>
 
@@ -289,20 +289,20 @@ export const LocationAutocomplete = ({
               <div className="min-w-0 flex-1 text-left">
                 <p className="text-sm font-semibold text-slate-900 md:text-[15px]">
                   {hasIndexedSuggestions
-                    ? `No encontramos coincidencias para "${normalizedValue}"`
-                    : 'Todavía no hay sugerencias para esta búsqueda'}
+                    ? `No encontramos "${normalizedValue}"`
+                    : 'No hay destinos sugeridos todavía'}
                 </p>
                 <p className="mt-1 text-sm leading-6 text-slate-600">
                   {hasIndexedSuggestions
-                    ? 'Podés buscar igual y después filtrar en resultados.'
-                    : 'Escribí una ciudad, un barrio o una zona y buscá igual.'}
+                    ? 'Podés buscar igual.'
+                    : 'Escribí un lugar y seguí.'}
                 </p>
               </div>
             </div>
 
             <div className="mt-4 rounded-2xl border border-slate-200/80 bg-slate-50 px-4 py-3 text-left">
               <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-                Para seguir
+                Continuar
               </p>
               <p className="mt-1 text-sm text-slate-700">
                 Presioná Enter para buscar <span className="font-semibold text-slate-900">"{normalizedValue}"</span>.
