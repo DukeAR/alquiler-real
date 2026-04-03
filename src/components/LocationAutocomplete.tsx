@@ -178,7 +178,7 @@ export const LocationAutocomplete = ({
             </button>
           ) : null}
           className={cn(
-            'min-h-14 rounded-[18px] border-slate-200 bg-white py-3.5 text-base font-medium text-slate-900 shadow-none placeholder:text-slate-400 focus:border-slate-400 focus:shadow-[0_0_0_3px_rgba(15,23,42,0.08)] md:py-4',
+            'min-h-14 rounded-[16px] border-slate-300/90 bg-white py-3.5 text-base font-semibold text-slate-900 shadow-none placeholder:text-slate-500 focus:border-slate-500 focus:shadow-[0_0_0_3px_rgba(15,23,42,0.06)] md:py-4',
             showSuggestions || showEmptyState ? 'rounded-b-[12px] border-b-transparent md:rounded-b-[14px]' : ''
           )}
         />
@@ -194,7 +194,7 @@ export const LocationAutocomplete = ({
             role="listbox"
             aria-label="Sugerencias de destino"
             transition={{ duration: 0.15 }}
-            className="absolute top-full left-0 right-0 z-50 mt-1 overflow-hidden rounded-[20px] border border-slate-200 bg-white shadow-[0_22px_48px_-32px_rgba(15,23,42,0.22)]"
+            className="absolute top-full left-0 right-0 z-50 mt-1 overflow-hidden rounded-[18px] border border-slate-200 bg-white shadow-[0_18px_36px_-24px_rgba(15,23,42,0.16)]"
           >
             <div className="max-h-80 overflow-y-auto py-1.5">
             {filteredSuggestions.map((location, index) => (
@@ -263,7 +263,7 @@ export const LocationAutocomplete = ({
             exit={{ opacity: 0, y: -8 }}
             role="status"
             aria-live="polite"
-            className="absolute top-full left-0 right-0 z-50 mt-1 rounded-[20px] border border-slate-200 bg-white p-5 shadow-[0_22px_48px_-32px_rgba(15,23,42,0.22)] md:p-6"
+            className="absolute top-full left-0 right-0 z-50 mt-1 rounded-[18px] border border-slate-200 bg-white p-5 shadow-[0_18px_36px_-24px_rgba(15,23,42,0.16)] md:p-6"
           >
             <div className="flex items-start gap-3">
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[16px] border border-slate-200 bg-slate-50 text-slate-500">

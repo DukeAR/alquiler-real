@@ -220,7 +220,7 @@ export const ExplorePage = () => {
 
   return (
     <div className="pb-28">
-      <main className="app-page space-y-10 py-8 md:space-y-14 md:py-12">
+      <main className="app-page space-y-8 py-8 md:space-y-10 md:py-12">
         <ExploreHero
           searchValue={searchInput}
           locationSuggestions={locationSuggestions}
