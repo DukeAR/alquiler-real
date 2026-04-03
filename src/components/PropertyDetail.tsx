@@ -237,7 +237,7 @@ const getDecisionAmenityLabel = (amenities?: string[]) => {
 
 const getReviewUsefulnessScore = (review: PropertyReviewItem) => {
   const comment = review.comment.toLowerCase();
-  const usefulKeywords = ['ubic', 'wifi', 'limp', 'ruido', 'tranqui', 'céntr', 'parrilla', 'cochera', 'playa', 'precio', 'anfitri', 'detalle'];
+  const usefulKeywords = ['ubic', 'wifi', 'limp', 'silenc', 'tranqui', 'céntr', 'parrilla', 'cochera', 'playa', 'precio', 'anfitri', 'detalle'];
 
   return usefulKeywords.reduce((score, keyword) => score + (comment.includes(keyword) ? 20 : 0), Math.min(review.comment.length, 140))
     + (comment.split(/\s+/).length >= 12 ? 20 : 0)

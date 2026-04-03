@@ -121,11 +121,11 @@ const verificationLevels: VerificationLevel[] = [
   },
   {
     title: 'Verificación digital',
-    description: 'Sirve para sumar contexto, pero no reemplaza una revisión presencial.',
+    description: 'La validación fue online. Sirve para revisar algunos datos antes de avanzar.',
     bullets: [
       'La identidad fue validada online.',
       'Hay señal de ubicación en ese momento.',
-      'Aporta contexto, pero no reemplaza una visita real.',
+      'No reemplaza una visita real.',
     ],
     icon: Icons.Shield,
     cardClassName: 'rounded-[28px] border-blue-200/80 bg-blue-50/92 p-6 dark:border-blue-900/30 dark:bg-blue-900/20 md:p-7',
@@ -144,7 +144,7 @@ const futureCards: FutureCard[] = [
   },
   {
     title: 'Más claridad al reservar',
-    description: 'Seguimos trabajando en instancias que den más contexto antes de cerrar una reserva.',
+    description: 'Más adelante puede haber una seña resguardada para ordenar mejor el momento del pago.',
     icon: Icons.Lock,
   },
   {
@@ -157,7 +157,7 @@ const futureCards: FutureCard[] = [
 const hostBenefits: RoleBenefit[] = [
   {
     title: 'Menos dudas básicas',
-    description: 'Si el aviso explica lo importante, la consulta arranca con más contexto.',
+    description: 'Si el aviso explica lo importante, la otra persona ya sabe qué está viendo.',
     icon: Icons.MessageSquare,
   },
   {
@@ -185,7 +185,7 @@ const guestBenefits: RoleBenefit[] = [
   },
   {
     title: 'Qué dijeron otros',
-    description: 'Las reseñas suman contexto de personas que ya estuvieron ahí.',
+    description: 'Las reseñas muestran cómo fue la estadía para otras personas.',
     icon: Icons.Search,
   },
 ];
@@ -213,7 +213,7 @@ const guestSteps: StepCard = {
     'Elegí la zona y compará propiedades.',
     'Revisá quién publica, qué verificación tiene y qué reseñas hay.',
     'Hacé preguntas concretas antes de avanzar.',
-    'Coordiná el pago cuando ya tengas contexto suficiente.',
+    'Coordiná el pago cuando ya hayas revisado ubicación, reseñas y reglas básicas.',
   ],
   tone: 'emerald',
 };
@@ -425,7 +425,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                         Acá ordenamos lo que se puede comprobar antes de avanzar: <strong>quién publica, si el lugar coincide y qué experiencia tuvieron otros.</strong>
                       </p>
                       <p className="app-body text-slate-700 dark:text-slate-300">
-                        No reemplazamos tu criterio. Te damos contexto para usarlo mejor.
+                        No reemplazamos tu criterio. Mostramos datos concretos para que decidas con más base.
                       </p>
                     </div>
                   </div>
@@ -472,7 +472,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                   eyebrow="Próximo paso"
                   as="h2"
                   heading="Lo que seguimos sumando"
-                  description="La idea es ampliar cobertura y sumar contexto útil sin volver pesada la experiencia."
+                  description="Queremos sumar más zonas y seguir mostrando solo lo importante antes de reservar."
                 />
 
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -509,7 +509,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                     eyebrow="Anfitriones"
                     as="h2"
                     heading="Publicá con información que se pueda revisar"
-                    description="Si el aviso deja claro quién publica, dónde está el lugar y qué parte fue validada, la conversación arranca mejor."
+                    description="Si el aviso deja claro quién publica, dónde está el lugar y qué parte fue validada, la otra persona entiende mejor qué está viendo."
                     className="max-w-2xl"
                   />
 
@@ -596,7 +596,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                       eyebrow="Listo para explorar"
                       as="h3"
                       heading="Explorá con la información a la vista"
-                      description="No reemplaza una visita ni una charla. Sirve para llegar a esa charla con menos dudas."
+                      description="No reemplaza una visita ni una charla. Sirve para llegar a esa charla sabiendo qué se pudo comprobar y qué no."
                       className="max-w-sm"
                     />
 
