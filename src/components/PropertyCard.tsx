@@ -104,7 +104,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
       onKeyDown={handleCardKeyDown}
       className={cn(
         'group flex h-full flex-col overflow-hidden border-slate-200/80 bg-white/98 transition-[transform,box-shadow,border-color,background-color] duration-200 ease-out',
-        onClick && 'cursor-pointer hover:-translate-y-0.5 hover:border-slate-300/90 hover:shadow-[0_28px_58px_-40px_rgba(15,23,42,0.28)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/15',
+        onClick && 'cursor-pointer hover:-translate-y-[1px] hover:border-slate-300/90 hover:shadow-[0_24px_46px_-34px_rgba(15,23,42,0.24)] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-slate-900/10',
         isFavoritesVariant && 'bg-white shadow-[var(--app-shadow-soft)]',
       )}
     >
@@ -112,7 +112,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         <img 
           src={imageSrc} 
           alt={property.title}
-          className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.025]"
+          className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.018]"
           referrerPolicy="no-referrer"
         />
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-slate-950/18 via-slate-950/5 to-transparent" />
@@ -135,7 +135,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
             aria-pressed={isFavorite}
             aria-label={isFavorite ? 'Quitar de guardados' : 'Guardar propiedad'}
             className={cn(
-              'h-10 w-10 rounded-full border-white/70 bg-white/92 text-slate-700 shadow-[var(--app-shadow-subtle)] backdrop-blur-sm',
+              'h-10 w-10 rounded-full border-white/80 bg-white/94 text-slate-700 shadow-[0_16px_30px_-22px_rgba(15,23,42,0.24)] backdrop-blur-sm transition-[background-color,border-color,color,box-shadow,transform] duration-150 active:scale-[0.98]',
               isFavorite
                 ? 'border-red-500 bg-red-500 text-white hover:border-red-500 hover:bg-red-500 hover:text-white'
                 : 'hover:border-red-200 hover:bg-white hover:text-red-500',
@@ -148,36 +148,36 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
 
       <div className="flex flex-1 flex-col gap-4 p-4 sm:p-5 md:p-6">
         <div className="space-y-2">
-          <p className="flex items-center gap-1.5 text-sm font-medium text-slate-600">
+          <p className="flex items-center gap-1.5 text-[13px] font-semibold leading-5 tracking-[0.01em] text-slate-600">
             <Icons.MapPin className="h-4 w-4 shrink-0 text-brand" />
             <span className="truncate">{property.location}</span>
           </p>
-          <h3 className="line-clamp-2 text-[1.03rem] font-semibold leading-6 tracking-tight text-slate-950 transition-colors duration-200 group-hover:text-slate-900 sm:text-[1.08rem] md:text-lg">{property.title}</h3>
+          <h3 className="line-clamp-2 text-[1.04rem] font-semibold leading-[1.35] tracking-[-0.02em] text-slate-950 transition-colors duration-150 group-hover:text-slate-950 sm:text-[1.08rem] md:text-[1.12rem]">{property.title}</h3>
         </div>
 
-        <Card padding="sm" variant="muted" className="rounded-[24px] border-slate-200/80 bg-slate-50/80">
+        <Card padding="sm" variant="muted" className="rounded-[22px] border-slate-200/80 bg-slate-50/80">
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-1">
-              <span className="block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Precio por noche</span>
+              <span className="block text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Precio por noche</span>
               <div className="flex items-end gap-2">
-                <span className="block text-[1.35rem] font-semibold tracking-tight text-slate-950 md:text-[1.5rem]">
+                <span className="block text-[1.32rem] font-semibold tracking-[-0.03em] text-slate-950 md:text-[1.46rem]">
                   {formatCurrency(Number(property.price) || 0)}
                 </span>
-                <span className="pb-1 text-sm text-slate-500">/ noche</span>
+                <span className="pb-1 text-xs font-medium text-slate-500">/ noche</span>
               </div>
             </div>
 
-            <div className="shrink-0 rounded-2xl border border-slate-200/80 bg-white px-3 py-2 text-right shadow-[var(--app-shadow-subtle)]">
+            <div className="shrink-0 rounded-[20px] border border-slate-200/80 bg-white/96 px-3 py-2 text-right shadow-[0_12px_24px_-18px_rgba(15,23,42,0.18)]">
               <div className="flex items-center justify-end gap-1.5 text-sm font-semibold text-slate-900">
                 <Icons.Star className="h-4 w-4 fill-amber-500 text-amber-500" />
                 {ratingLabel}
               </div>
-              <p className="mt-0.5 text-[11px] font-medium text-slate-500">{reviewLabel}</p>
+              <p className="mt-0.5 text-[10.5px] font-medium text-slate-500">{reviewLabel}</p>
             </div>
           </div>
 
           {guestLabel || property.hostName ? (
-            <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-slate-500">
+            <div className="mt-3 flex flex-wrap items-center gap-3 text-[13px] text-slate-500">
               {guestLabel ? (
                 <span className="inline-flex items-center gap-1.5">
                   <Icons.Users className="h-4 w-4 text-slate-400" />
@@ -206,11 +206,11 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         ) : null}
 
         <div className="mt-auto flex items-end justify-between gap-4 border-t border-slate-100/90 pt-4">
-          <p className="text-sm font-medium text-slate-500">Datos claros para decidir antes de reservar.</p>
+          <p className="text-[13px] font-medium leading-6 text-slate-500">Datos claros para decidir antes de reservar.</p>
           {onClick ? (
-            <div className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700 transition-colors duration-200 group-hover:text-brand">
+            <div className="inline-flex items-center gap-2 text-[13.5px] font-semibold tracking-[-0.01em] text-slate-700 transition-colors duration-150 group-hover:text-slate-950">
               <span>{isFavoritesVariant ? 'Abrir detalle' : 'Ver detalle'}</span>
-              <span className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-[var(--app-shadow-subtle)] transition-[transform,border-color,color] duration-200 group-hover:translate-x-0.5 group-hover:border-brand/30 group-hover:text-brand">
+              <span className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200/90 bg-white text-slate-700 shadow-[0_12px_24px_-18px_rgba(15,23,42,0.18)] transition-[transform,border-color,color,box-shadow] duration-150 group-hover:translate-x-0.5 group-hover:border-slate-300 group-hover:text-slate-950 group-hover:shadow-[0_16px_28px_-22px_rgba(15,23,42,0.22)]">
                 <Icons.ArrowRight className="h-4 w-4" />
               </span>
             </div>

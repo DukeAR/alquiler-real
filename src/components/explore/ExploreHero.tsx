@@ -32,27 +32,27 @@ export const ExploreHero = ({
       </div>
 
       <div className="relative z-10 mx-auto w-full max-w-5xl">
-        <div className="max-w-[46rem] space-y-8 md:space-y-9">
+        <div className="space-y-10 md:space-y-12 lg:space-y-14">
           <div className="space-y-4 md:space-y-5">
-            <h1 className="max-w-[40rem] text-balance text-[2.95rem] font-bold leading-[0.96] text-white md:text-[4.55rem]">
+            <h1 className="font-display max-w-[41rem] text-balance text-[2.78rem] font-semibold leading-[1.02] tracking-[-0.035em] text-white md:text-[4.15rem] lg:text-[4.45rem]">
               Reservar es fácil.
               <br />
               Elegir bien no siempre.
             </h1>
-            <p className="max-w-[42rem] text-base leading-7 text-slate-100/92 md:text-[1.1rem] md:leading-8">
+            <p className="max-w-[41rem] text-[0.98rem] leading-7 text-slate-100/86 md:text-[1.08rem] md:leading-8">
               Elegí con información clara desde el inicio: ubicación, verificación y reseñas reales antes de decidir.
             </p>
           </div>
           <form
-            className="max-w-[42rem] rounded-[20px] border border-white/70 bg-white/96 p-4 shadow-[0_14px_36px_-28px_rgba(15,23,42,0.18)] md:p-5"
+            className="mx-auto w-full rounded-[24px] border border-white/75 bg-white/97 p-5 shadow-[0_24px_54px_-34px_rgba(15,23,42,0.26)] md:p-6 lg:w-[70%] xl:w-[66%]"
             onSubmit={(event) => {
               event.preventDefault();
               onSearchSubmit();
             }}
           >
-            <div className="space-y-4">
-              <div className="space-y-2.5">
-                <label htmlFor="explore-destination" className="block text-sm font-semibold text-slate-800">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:gap-5">
+              <div className="flex-1 space-y-3">
+                <label htmlFor="explore-destination" className="app-form-label block text-slate-500">
                   Destino
                 </label>
                 <LocationAutocomplete
@@ -69,14 +69,14 @@ export const ExploreHero = ({
               <Button
                 type="submit"
                 size="lg"
-                className="h-14 w-full rounded-[14px] bg-slate-950 px-6 text-base font-semibold text-white shadow-none hover:translate-y-0 hover:bg-slate-900 hover:shadow-none active:scale-[0.99] md:w-auto md:min-w-[188px]"
+                className="h-16 w-full rounded-[16px] bg-slate-950 px-6 text-[0.98rem] font-semibold tracking-[-0.01em] text-white shadow-[0_18px_36px_-28px_rgba(15,23,42,0.42)] hover:-translate-y-[1px] hover:bg-slate-900 hover:shadow-[0_22px_44px_-30px_rgba(15,23,42,0.48)] active:translate-y-0 active:scale-[0.995] lg:w-auto lg:min-w-[192px] lg:flex-none"
               >
                 Ver opciones
               </Button>
             </div>
           </form>
 
-          <p className="text-sm font-medium text-slate-100/88 md:text-[15px]">
+          <p className="mx-auto max-w-[48rem] text-[13px] font-semibold leading-6 tracking-[0.01em] text-slate-100/78 md:text-center md:text-[14px]">
             {trustLine}
           </p>
         </div>

@@ -106,8 +106,8 @@ const MobileNavButton = ({ action, active, onSelect }: { action: NavAction; acti
     aria-label={getNavAriaLabel(action)}
     aria-current={active ? 'page' : undefined}
     className={cn(
-      'relative flex min-w-0 flex-1 flex-col items-center gap-1 rounded-2xl px-2 py-2 text-[11px] font-semibold transition-all duration-200',
-      active ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
+      'relative flex min-w-0 flex-1 flex-col items-center gap-1 rounded-[20px] border px-2.5 py-2.5 text-[11px] font-semibold tracking-[0.01em] transition-[background-color,border-color,color,box-shadow,transform] duration-150',
+      active ? 'border-slate-900 bg-slate-950 text-white shadow-[0_18px_32px_-24px_rgba(15,23,42,0.42)]' : 'border-transparent text-slate-500 hover:border-slate-200 hover:bg-white hover:text-slate-900'
     )}
   >
     <action.icon className="h-5 w-5" />
@@ -125,6 +125,14 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   const location = useLocation();
   const { user, loading: authLoading, refresh } = useAuth();
   const { getFavoritesCount } = useFavorites();
+  const favoritesAction: NavAction = {
+    label: 'Guardados',
+    shortLabel: 'Guardados',
+    path: '/favorites',
+    protected: true,
+    icon: Icons.Heart,
+    badge: getFavoritesCount(),
+  };
 
   useSocket();
 
@@ -159,7 +167,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
 
   const desktopActions: NavAction[] = [
     { label: 'Explorar', shortLabel: 'Explorar', path: '/', icon: Icons.Search },
-    { label: 'Guardados', shortLabel: 'Guardados', path: '/favorites', protected: true, icon: Icons.Heart, badge: getFavoritesCount() },
+    ...(user ? [favoritesAction] : []),
     { label: 'Cómo funciona', shortLabel: 'Cómo', path: '/about', icon: Icons.Info },
     { label: 'Ayuda', shortLabel: 'Ayuda', path: '/faq', icon: Icons.Lightbulb }
   ];
@@ -167,13 +175,12 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   const mobileActions: NavAction[] = user
     ? [
         { label: 'Explorar', shortLabel: 'Explorar', path: '/', icon: Icons.Search },
-        { label: 'Guardados', shortLabel: 'Guardados', path: '/favorites', protected: true, icon: Icons.Heart, badge: getFavoritesCount() },
+        favoritesAction,
         { label: 'Reservas', shortLabel: 'Reservas', path: '/my-bookings', protected: true, icon: Icons.Calendar },
         { label: 'Perfil', shortLabel: 'Perfil', path: '/profile', protected: true, icon: Icons.User }
       ]
     : [
         { label: 'Explorar', shortLabel: 'Explorar', path: '/', icon: Icons.Search },
-        { label: 'Guardados', shortLabel: 'Guardados', path: '/favorites', protected: true, icon: Icons.Heart, badge: getFavoritesCount() },
         { label: 'Ayuda', shortLabel: 'Ayuda', path: '/faq', icon: Icons.Lightbulb },
         { label: 'Ingresá', shortLabel: 'Ingresá', onClick: () => { openLoginModal(); }, icon: Icons.User }
       ];
@@ -198,7 +205,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
               </div>
             </button>
 
-            <nav aria-label="Navegación principal" className="hidden items-center gap-2 rounded-full border border-slate-200/80 bg-white/90 p-1 shadow-[0_18px_35px_-28px_rgba(15,23,42,0.35)] lg:flex">
+            <nav aria-label="Navegación principal" className="hidden items-center gap-2 rounded-full border border-slate-200/80 bg-white/92 p-1.5 shadow-[0_20px_36px_-28px_rgba(15,23,42,0.24)] lg:flex">
               {desktopActions.map((action) => (
                 <DesktopNavButton
                   key={action.label}
@@ -241,7 +248,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                   <button
                     type="button"
                     onClick={() => navigate('/profile')}
-                    className="flex items-center gap-3 rounded-full border border-slate-200 bg-white px-2 py-2 shadow-[0_18px_35px_-28px_rgba(15,23,42,0.35)] transition-all duration-200 hover:border-slate-300 hover:shadow-md"
+                    className="flex items-center gap-3 rounded-full border border-slate-200/90 bg-white/96 px-2 py-2 shadow-[0_18px_35px_-28px_rgba(15,23,42,0.24)] transition-[background-color,border-color,box-shadow,transform] duration-150 hover:border-slate-300 hover:bg-white hover:shadow-[0_22px_40px_-28px_rgba(15,23,42,0.24)]"
                     aria-label="Ir al perfil"
                   >
                     <div className="hidden text-right md:block">
@@ -274,7 +281,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
 
       {showMobileNav ? (
         <nav aria-label="Navegación principal" className="fixed inset-x-0 bottom-4 z-50 px-4 md:hidden">
-          <div className="mx-auto flex max-w-md items-center gap-2 rounded-[28px] border border-slate-200/90 bg-white/96 p-2 shadow-[0_24px_50px_-30px_rgba(15,23,42,0.35)] backdrop-blur-xl">
+          <div className="mx-auto flex max-w-md items-center gap-2 rounded-[30px] border border-slate-200/90 bg-white/98 p-2.5 shadow-[0_24px_50px_-30px_rgba(15,23,42,0.28)] backdrop-blur-xl">
             {mobileActions.map((action) => (
               <MobileNavButton
                 key={action.label}

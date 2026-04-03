@@ -30,6 +30,7 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
         className={cn(
           variantClasses[variant],
           paddingClasses[padding],
+          'transition-[background-color,border-color,box-shadow,transform] duration-200 ease-out',
           className,
         )}
         {...props}

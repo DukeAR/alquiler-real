@@ -37,17 +37,17 @@ export const ExploreFiltersBar = ({
 }: ExploreFiltersBarProps) => {
   return (
     <section className="sticky top-20 z-40">
-      <Card padding="none" className="app-surface border-slate-200/85 bg-white/94 p-4 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.22)] backdrop-blur-xl md:p-5">
+      <Card padding="none" className="app-surface border-slate-200/85 bg-white/94 p-4 shadow-[0_18px_38px_-28px_rgba(15,23,42,0.2)] backdrop-blur-xl md:p-5">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-          <div className="flex w-fit items-center rounded-2xl bg-slate-100 p-1">
+          <div className="flex w-fit items-center rounded-[18px] border border-slate-200/80 bg-slate-100/80 p-1">
             {(['grid', 'map'] as const).map((mode) => (
               <button
                 key={mode}
                 type="button"
                 onClick={() => onViewModeChange(mode)}
                 className={cn(
-                  'flex items-center gap-2 rounded-xl px-3.5 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] transition-all',
-                  viewMode === mode ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700',
+                  'flex items-center gap-2 rounded-[14px] px-3.5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.12em] transition-[background-color,color,box-shadow,transform] duration-150',
+                  viewMode === mode ? 'bg-white text-slate-900 shadow-[0_14px_24px_-18px_rgba(15,23,42,0.18)]' : 'text-slate-500 hover:bg-white/75 hover:text-slate-700',
                 )}
               >
                 {mode === 'grid' ? <Icons.LayoutGrid className="h-4 w-4" /> : <Icons.Map className="h-4 w-4" />}
@@ -60,7 +60,7 @@ export const ExploreFiltersBar = ({
             <select
               value={sortBy}
               onChange={(event) => onSortChange(event.target.value as ExploreSort)}
-              className="h-10 min-w-[158px] rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 outline-none transition-all focus:border-brand focus:ring-2 focus:ring-brand/20"
+              className="app-control h-11 min-w-[170px] rounded-[14px] bg-white px-4 text-[0.94rem] font-semibold tracking-[-0.01em] text-slate-700 outline-none shadow-none"
             >
               <option value="recommended">Mejor opción</option>
               <option value="rating">Mejor rating</option>
@@ -75,7 +75,7 @@ export const ExploreFiltersBar = ({
                 onChange={(event) => onFiltersChange({ ...filters, minPrice: event.target.value })}
                 placeholder="Desde"
                 icon={<span className="text-xs font-medium">$</span>}
-                className="h-10 w-24 rounded-xl border-slate-200 bg-white py-2 pl-9 pr-3 text-sm font-medium shadow-none"
+                className="h-11 w-28 rounded-[14px] border-slate-200 bg-white py-2.5 pl-9 pr-3 text-[0.94rem] font-semibold tracking-[-0.01em] shadow-none"
               />
 
               <Input
@@ -85,7 +85,7 @@ export const ExploreFiltersBar = ({
                 onChange={(event) => onFiltersChange({ ...filters, maxPrice: event.target.value })}
                 placeholder="Hasta"
                 icon={<span className="text-xs font-medium">$</span>}
-                className="h-10 w-24 rounded-xl border-slate-200 bg-white py-2 pl-9 pr-3 text-sm font-medium shadow-none"
+                className="h-11 w-28 rounded-[14px] border-slate-200 bg-white py-2.5 pl-9 pr-3 text-[0.94rem] font-semibold tracking-[-0.01em] shadow-none"
               />
             </div>
 
@@ -95,7 +95,7 @@ export const ExploreFiltersBar = ({
                 onClick={onClear}
                 variant="ghost"
                 size="sm"
-                className="rounded-xl px-3 text-sm text-brand hover:bg-brand/5 hover:text-brand"
+                className="rounded-[14px] px-3.5 text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900"
               >
                 <Icons.X className="h-4 w-4" />
                 Limpiar filtros

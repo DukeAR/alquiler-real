@@ -171,15 +171,16 @@ export const LocationAutocomplete = ({
                 setIsOpen(false);
                 inputRef.current?.focus();
               }}
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition-colors hover:bg-slate-200 hover:text-slate-700 dark:bg-slate-700/80 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white"
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100/90 text-slate-500 transition-[background-color,color,transform] duration-150 hover:bg-slate-200 hover:text-slate-700 active:scale-[0.98] dark:bg-slate-700/80 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white"
               aria-label="Borrar destino"
             >
               <Icons.X className="h-4 w-4" />
             </button>
           ) : null}
           className={cn(
-            'min-h-14 rounded-[14px] border-slate-200 bg-white py-3.5 text-base font-medium text-slate-900 shadow-none placeholder:text-slate-400 focus:border-slate-400 focus:shadow-[0_0_0_3px_rgba(15,23,42,0.05)] md:py-4',
-            showSuggestions || showEmptyState ? 'rounded-b-[12px] border-b-transparent md:rounded-b-[14px]' : ''
+            'min-h-16 rounded-[18px] border-slate-200/90 bg-white py-4 pl-14 text-[1rem] font-semibold tracking-[-0.01em] text-slate-900 shadow-none placeholder:text-slate-400 focus:border-slate-300 focus:shadow-[0_0_0_4px_rgba(15,23,42,0.06)] md:py-5 md:pl-16',
+            value ? 'pr-14 md:pr-16' : 'pr-5 md:pr-6',
+            showSuggestions || showEmptyState ? 'rounded-b-[14px] border-b-transparent md:rounded-b-[16px]' : ''
           )}
         />
       </div>
@@ -194,7 +195,7 @@ export const LocationAutocomplete = ({
             role="listbox"
             aria-label="Sugerencias de destino"
             transition={{ duration: 0.15 }}
-            className="absolute top-full left-0 right-0 z-50 mt-1 overflow-hidden rounded-[16px] border border-slate-200 bg-white shadow-[0_14px_28px_-20px_rgba(15,23,42,0.14)]"
+            className="absolute top-full left-0 right-0 z-50 mt-2 overflow-hidden rounded-[20px] border border-slate-200/90 bg-white/98 shadow-[0_20px_40px_-28px_rgba(15,23,42,0.2)]"
           >
             <div className="max-h-80 overflow-y-auto py-1.5">
             {filteredSuggestions.map((location, index) => (
@@ -208,20 +209,20 @@ export const LocationAutocomplete = ({
                 onClick={() => handleSelectLocation(location)}
                 onMouseEnter={() => setSelectedIndex(index)}
                 className={cn(
-                  'group flex w-full items-start gap-3 px-4 py-3.5 text-left transition-colors md:px-5 md:py-4',
+                  'group mx-1.5 my-0.5 flex w-[calc(100%-0.75rem)] items-start gap-3 rounded-[14px] px-4 py-3.5 text-left transition-[background-color,transform] duration-150 md:px-5 md:py-4',
                   selectedIndex === index
                     ? 'bg-slate-50'
-                    : 'hover:bg-slate-50'
+                    : 'hover:bg-slate-50/90'
                 )}
               >
-                <Icons.MapPin className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                <Icons.MapPin className="mt-0.5 h-4 w-4 shrink-0 text-slate-400 transition-colors duration-150 group-hover:text-slate-500" />
 
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-slate-900 md:text-[15px]">
+                  <p className="truncate text-[0.94rem] font-semibold leading-5 tracking-[-0.01em] text-slate-900 md:text-[15px]">
                     {location.name}
                   </p>
 
-                  <p className="mt-1 text-xs leading-5 text-slate-500 md:text-sm">
+                  <p className="mt-1 text-[13px] leading-5 text-slate-500 md:text-[13.5px]">
                     {location.region ? `Zona: ${location.region}` : 'Zona disponible'} • {formatPropertyCount(location.propertyCount)}
                   </p>
                 </div>
@@ -240,15 +241,15 @@ export const LocationAutocomplete = ({
             exit={{ opacity: 0, y: -8 }}
             role="status"
             aria-live="polite"
-            className="absolute top-full left-0 right-0 z-50 mt-1 rounded-[16px] border border-slate-200 bg-white p-5 shadow-[0_14px_28px_-20px_rgba(15,23,42,0.14)] md:p-6"
+            className="absolute top-full left-0 right-0 z-50 mt-2 rounded-[20px] border border-slate-200/90 bg-white/98 p-5 shadow-[0_20px_40px_-28px_rgba(15,23,42,0.2)] md:p-6"
           >
             <div className="flex items-start gap-3">
               <Icons.Search className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
               <div className="min-w-0 flex-1 text-left">
-                <p className="text-sm font-semibold text-slate-900 md:text-[15px]">
+                <p className="text-[0.94rem] font-semibold leading-5 tracking-[-0.01em] text-slate-900 md:text-[15px]">
                   {`No hay coincidencias para "${normalizedValue}".`}
                 </p>
-                <p className="mt-1 text-sm leading-6 text-slate-600">
+                <p className="mt-1 text-[0.9rem] leading-6 text-slate-600">
                   Probá con otra zona.
                 </p>
               </div>

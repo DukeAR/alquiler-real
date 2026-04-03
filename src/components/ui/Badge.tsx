@@ -5,17 +5,17 @@ type BadgeVariant = 'neutral' | 'brand' | 'success' | 'warning' | 'danger' | 'in
 type BadgeSize = 'sm' | 'md';
 
 const variantClasses: Record<BadgeVariant, string> = {
-  neutral: 'border-slate-200/80 bg-slate-50 text-slate-600 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-300',
-  brand: 'border-brand/20 bg-brand/10 text-brand dark:border-brand/20 dark:bg-brand/15 dark:text-brand-light',
-  success: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-900/20 dark:text-emerald-400',
-  warning: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/30 dark:bg-amber-900/20 dark:text-amber-400',
-  danger: 'border-red-200 bg-red-50 text-red-700 dark:border-red-900/30 dark:bg-red-900/20 dark:text-red-400',
-  info: 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-900/30 dark:bg-sky-900/20 dark:text-sky-400',
+  neutral: 'border-slate-200/90 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-300',
+  brand: 'border-brand/15 bg-brand/10 text-brand-dark dark:border-brand/20 dark:bg-brand/15 dark:text-brand-light',
+  success: 'border-emerald-200/80 bg-emerald-50 text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-900/20 dark:text-emerald-400',
+  warning: 'border-amber-200/80 bg-amber-50 text-amber-700 dark:border-amber-900/30 dark:bg-amber-900/20 dark:text-amber-400',
+  danger: 'border-red-200/80 bg-red-50 text-red-700 dark:border-red-900/30 dark:bg-red-900/20 dark:text-red-400',
+  info: 'border-sky-200/80 bg-sky-50 text-sky-700 dark:border-sky-900/30 dark:bg-sky-900/20 dark:text-sky-400',
 };
 
 const sizeClasses: Record<BadgeSize, string> = {
   sm: 'min-h-6 px-2.5 text-[11px]',
-  md: 'min-h-7 px-3 text-xs',
+  md: 'min-h-7 px-3.5 text-[11.5px]',
 };
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
@@ -27,7 +27,7 @@ export const Badge: React.FC<BadgeProps> = ({ className, variant = 'neutral', si
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-full border font-medium leading-none tracking-[0.01em]',
+        'inline-flex items-center gap-1.5 rounded-full border font-semibold leading-none tracking-[0.015em]',
         variantClasses[variant],
         sizeClasses[size],
         className,
