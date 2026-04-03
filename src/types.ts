@@ -16,6 +16,7 @@ export interface Property {
   id: string;
   title: string;
   location: string;
+  propertyType?: string;
   price: number;
   hostName: string;
   hostId: string;

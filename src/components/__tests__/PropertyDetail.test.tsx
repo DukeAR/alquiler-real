@@ -169,10 +169,11 @@ describe('PropertyDetail', () => {
 
     await waitFor(() => expect(screen.getByText('Casa de prueba')).toBeDefined());
 
-    expect(screen.getByText('Lo importante, sin rodeos')).toBeDefined();
-    expect(screen.getByText('Qué ofrece este lugar')).toBeDefined();
+    expect(screen.getByText('Lo importante para decidir')).toBeDefined();
+    expect(screen.getByText('Amenities clave')).toBeDefined();
     expect(screen.getByText('Wifi rápido')).toBeDefined();
     expect(screen.getByText('Señales para decidir con más claridad')).toBeDefined();
+    expect(screen.getByText('Ubicación: Ciudad Test.')).toBeDefined();
     expect(screen.getAllByText('Propiedad verificada').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Ubicación verificada').length).toBeGreaterThan(0);
     expect(screen.getByText('Mariana')).toBeDefined();
@@ -183,7 +184,7 @@ describe('PropertyDetail', () => {
 
     await waitFor(() => expect(screen.getByText('Casa de prueba')).toBeDefined());
 
-    expect(screen.getByText('Elegí ingreso y salida para ver el total estimado')).toBeDefined();
+    expect(screen.getByText('Elegí ingreso y salida para ver el resumen')).toBeDefined();
 
     const addAdultButton = screen.getByRole('button', { name: /sumar adulto/i });
     const addChildButton = screen.getByRole('button', { name: /sumar menor/i });
@@ -211,9 +212,9 @@ describe('PropertyDetail', () => {
     fireEvent.click(screen.getByRole('button', { name: new RegExp(checkInIso) }));
     fireEvent.click(screen.getByRole('button', { name: new RegExp(checkOutIso) }));
 
-    fireEvent.click(screen.getByRole('button', { name: /revisar reserva/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^continuar$/i }));
 
-    await waitFor(() => expect(screen.getByText('Confirmá tu reserva', { selector: 'h3' })).toBeDefined());
+    await waitFor(() => expect(screen.getByText('Confirmá tu estadía', { selector: 'h3' })).toBeDefined());
 
     const bookingCalls: Array<{ url: string; options: RequestInit }> = [];
     (apiFetch as any).mockImplementation(async (url: string, options: RequestInit = {}) => {
@@ -253,7 +254,7 @@ describe('PropertyDetail', () => {
     });
 
     const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
-    fireEvent.click(screen.getByRole('button', { name: /confirmar reserva/i }));
+    fireEvent.click(screen.getByRole('button', { name: /confirmar estadía/i }));
 
     await waitFor(() => expect(dispatchSpy).toHaveBeenCalled());
     expect(bookingCalls).toHaveLength(1);
@@ -268,7 +269,7 @@ describe('PropertyDetail', () => {
       dispatchSpy.mock.calls.some(([event]) => event instanceof CustomEvent && event.type === 'app-notification')
     ).toBe(true);
 
-    await waitFor(() => expect(screen.queryByText('Confirmá tu reserva', { selector: 'h3' })).toBeNull());
+    await waitFor(() => expect(screen.queryByText('Confirmá tu estadía', { selector: 'h3' })).toBeNull());
   });
 
   test('smoke: keeps the booking CTA disabled until dates are complete', async () => {
@@ -279,10 +280,10 @@ describe('PropertyDetail', () => {
     const reserveButton = screen.getByRole('button', { name: /elegí fechas para continuar/i });
 
     expect(reserveButton).toBeDisabled();
-    expect(screen.getByText('Elegí ingreso y salida para ver el total estimado')).toBeInTheDocument();
-    expect(screen.getByText('Cuando completes las fechas, la sidebar te va a mostrar la estadía y el total antes de revisar la reserva.')).toBeInTheDocument();
+    expect(screen.getByText('Elegí ingreso y salida para ver el resumen')).toBeInTheDocument();
+    expect(screen.getByText('Cuando completes las fechas, vas a ver la propiedad, el anfitrión y el total antes de confirmar la estadía.')).toBeInTheDocument();
 
-    expect(screen.queryByText('Confirmá tu reserva', { selector: 'h3' })).toBeNull();
+    expect(screen.queryByText('Confirmá tu estadía', { selector: 'h3' })).toBeNull();
   });
 
   test('asks for login when trying to confirm a reservation without a session', async () => {
@@ -310,13 +311,13 @@ describe('PropertyDetail', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: new RegExp(checkInIso) })).toBeDefined());
     fireEvent.click(screen.getByRole('button', { name: new RegExp(checkInIso) }));
     fireEvent.click(screen.getByRole('button', { name: new RegExp(checkOutIso) }));
-    fireEvent.click(screen.getByRole('button', { name: /revisar reserva/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^continuar$/i }));
 
-    await waitFor(() => expect(screen.getByText('Confirmá tu reserva', { selector: 'h3' })).toBeDefined());
+    await waitFor(() => expect(screen.getByText('Confirmá tu estadía', { selector: 'h3' })).toBeDefined());
 
-    fireEvent.click(screen.getByRole('button', { name: /confirmar reserva/i }));
+    fireEvent.click(screen.getByRole('button', { name: /confirmar estadía/i }));
 
     await waitFor(() => expect(showLoginModal).toHaveBeenCalledTimes(1));
-    await waitFor(() => expect(screen.queryByText('Confirmá tu reserva', { selector: 'h3' })).toBeNull());
+    await waitFor(() => expect(screen.queryByText('Confirmá tu estadía', { selector: 'h3' })).toBeNull());
   });
 });

@@ -69,6 +69,7 @@ describe('ExploreResultsSection', () => {
     expect(screen.getByText('Cómo te ayudamos a elegir mejor')).toBeInTheDocument();
     expect(screen.getByText('Opciones para decidir mejor')).toBeInTheDocument();
     expect(screen.getByText('Tomar una buena decisión cambia todo.')).toBeInTheDocument();
+    expect(screen.getByText('Elegí con información clara, no a ciegas.')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Más alojamientos' })).toBeInTheDocument();
     expect(screen.getByText('Casa frente al mar')).toBeInTheDocument();
     expect(screen.getByText('Departamento luminoso')).toBeInTheDocument();

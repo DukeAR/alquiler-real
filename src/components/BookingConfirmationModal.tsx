@@ -8,11 +8,20 @@ import { NoticeBanner } from './ui/NoticeBanner';
 import { SectionTitle } from './ui/SectionTitle';
 import { formatBookingDateOnly, formatBookingDateTime, getCancellationDeadlineFromStartDate } from '../lib/bookingDates';
 
+type DecisionItemProps = {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: string;
+  helper: string;
+  accent?: boolean;
+};
+
 interface Props {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
   propertyTitle: string;
+  hostName: string;
   checkIn: string;
   checkOut: string;
   nights: number;
@@ -39,11 +48,29 @@ const formatGuestSummary = (adults: number, children: number) => {
   return `${adultsLabel} • ${childrenLabel}`;
 };
 
+const DecisionItemCard: React.FC<DecisionItemProps> = ({ icon: Icon, label, value, helper, accent = false }) => {
+  return (
+    <Card padding="sm" variant="muted" className={`rounded-[24px] border-slate-200/80 ${accent ? 'bg-brand/5' : 'bg-white'}`}>
+      <div className="flex items-start gap-3">
+        <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${accent ? 'bg-brand text-white' : 'bg-slate-100 text-slate-700'}`}>
+          <Icon className="h-4 w-4" />
+        </span>
+        <div>
+          <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">{label}</div>
+          <div className="mt-1 text-sm font-semibold text-slate-900">{value}</div>
+          <div className="mt-1 text-xs leading-5 text-slate-500">{helper}</div>
+        </div>
+      </div>
+    </Card>
+  );
+};
+
 const BookingConfirmationModal: React.FC<Props> = ({
   isOpen,
   onClose,
   onConfirm,
   propertyTitle,
+  hostName,
   checkIn,
   checkOut,
   nights,
@@ -59,10 +86,37 @@ const BookingConfirmationModal: React.FC<Props> = ({
   const titleId = useId();
   const descriptionId = useId();
   const cancellationDeadlineLabel = formatBookingDateTime(getCancellationDeadlineFromStartDate(checkIn));
+  const decisionItems: DecisionItemProps[] = [
+    {
+      icon: Icons.Home,
+      label: 'Propiedad',
+      value: propertyTitle,
+      helper: 'La opción que estás por confirmar.',
+    },
+    {
+      icon: Icons.UserCheck,
+      label: 'Anfitrión',
+      value: hostName,
+      helper: 'Con quién vas a coordinar la estadía.',
+    },
+    {
+      icon: Icons.Calendar,
+      label: 'Fechas',
+      value: `${formatDate(checkIn)} al ${formatDate(checkOut)}`,
+      helper: formatGuestSummary(adults, children),
+    },
+    {
+      icon: Icons.FileSpreadsheet,
+      label: 'Total',
+      value: formatCurrency(total),
+      helper: `${nights} ${nights === 1 ? 'noche' : 'noches'} × ${formatCurrency(nightly)}`,
+      accent: true,
+    },
+  ];
 
   const activeNotice = submitNotice ?? {
     tone: 'info' as const,
-    heading: 'Revisá todo antes de confirmar',
+    heading: 'Revisá la decisión antes de confirmar',
     description: cancellationDeadlineLabel
       ? `Las fechas, la cantidad de huéspedes y el total ya reflejan tu selección actual. Si confirmás ahora, vas a poder cancelarla desde la app hasta el ${cancellationDeadlineLabel}.`
       : 'Las fechas, la cantidad de huéspedes y el total ya reflejan tu selección actual. Después vas a poder cancelar solo hasta 24 horas antes del ingreso.',
@@ -119,7 +173,7 @@ const BookingConfirmationModal: React.FC<Props> = ({
               <div className="flex flex-wrap gap-2">
                 <Badge variant="brand" size="md" className="gap-2">
                   <Icons.Calendar className="h-3.5 w-3.5" />
-                  <span>Reserva lista para confirmar</span>
+                  <span>Estadía lista para confirmar</span>
                 </Badge>
                 <Badge variant="neutral" size="md" className="gap-2">
                   <Icons.Clock className="h-3.5 w-3.5" />
@@ -130,87 +184,36 @@ const BookingConfirmationModal: React.FC<Props> = ({
               <SectionTitle
                 as="h3"
                 visualLevel="h3"
-                heading="Confirmá tu reserva"
-                description="Revisá fechas, huéspedes y total antes de confirmar."
+                heading="Confirmá tu estadía"
+                description="Revisá la decisión final antes de confirmarla."
                 headingClassName="font-semibold tracking-tight"
                 className="pr-2"
               />
             </div>
 
-            <Button onClick={onClose} variant="ghost" size="icon" aria-label="Cerrar confirmación de reserva" className="h-10 w-10 rounded-full p-0 text-slate-500 hover:bg-slate-100 hover:text-slate-700" disabled={confirmLoading}>
+            <Button onClick={onClose} variant="ghost" size="icon" aria-label="Cerrar confirmación de estadía" className="h-10 w-10 rounded-full p-0 text-slate-500 hover:bg-slate-100 hover:text-slate-700" disabled={confirmLoading}>
               <Icons.X className="h-5 w-5" />
             </Button>
           </div>
         </div>
 
         <div className="space-y-5 p-6 text-slate-700 sm:p-7">
-          <Card padding="sm" variant="muted" className="rounded-[26px] border-slate-200/80 bg-slate-50/80">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Propiedad</div>
-                <div id={titleId} className="mt-1 text-lg font-semibold tracking-tight text-slate-900">{propertyTitle}</div>
-              </div>
-              <div className="text-right">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Por noche</div>
-                <div className="mt-1 text-lg font-bold text-slate-950">{formatCurrency(nightly)}</div>
-              </div>
-            </div>
-          </Card>
-
-          <div id={descriptionId} className="grid gap-3 sm:grid-cols-3">
-            <Card padding="sm" variant="muted" className="rounded-[24px] border-slate-200/80 bg-white">
-              <div className="flex items-start gap-3">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-brand/10 text-brand">
-                  <Icons.Calendar className="h-4 w-4" />
-                </span>
-                <div>
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Ingreso</div>
-                  <div className="mt-1 text-sm font-semibold text-slate-900">{formatDate(checkIn)}</div>
-                </div>
-              </div>
-            </Card>
-
-            <Card padding="sm" variant="muted" className="rounded-[24px] border-slate-200/80 bg-white">
-              <div className="flex items-start gap-3">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
-                  <Icons.Calendar className="h-4 w-4" />
-                </span>
-                <div>
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Salida</div>
-                  <div className="mt-1 text-sm font-semibold text-slate-900">{formatDate(checkOut)}</div>
-                </div>
-              </div>
-            </Card>
-
-            <Card padding="sm" variant="muted" className="rounded-[24px] border-slate-200/80 bg-white">
-              <div className="flex items-start gap-3">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-amber-50 text-amber-700">
-                  <Icons.Users className="h-4 w-4" />
-                </span>
-                <div>
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Huéspedes</div>
-                  <div className="mt-1 text-sm font-semibold text-slate-900">{formatGuestSummary(adults, children)}</div>
-                </div>
-              </div>
-            </Card>
+          <div id={titleId} className="sr-only">{propertyTitle}</div>
+          <div id={descriptionId} className="grid gap-3 sm:grid-cols-2">
+            {decisionItems.map((item) => (
+              <DecisionItemCard key={item.label} {...item} />
+            ))}
           </div>
-
-          <Card padding="sm" variant="muted" className="rounded-[26px] border-slate-200/80 bg-slate-50/80">
-            <div className="flex items-center justify-between text-sm text-slate-600">
-              <div>{nights} {nights === 1 ? 'noche' : 'noches'} × {formatCurrency(nightly)}</div>
-              <div>{formatCurrency(nightly * nights)}</div>
-            </div>
-            <div className="mt-3 flex items-center justify-between text-lg font-bold text-slate-950">
-              <div>Total estimado</div>
-              <div>{formatCurrency(total)}</div>
-            </div>
-          </Card>
 
           <NoticeBanner tone={activeNotice.tone} heading={activeNotice.heading} description={activeNotice.description} />
 
+          <p className="text-sm font-medium text-slate-600">
+            Vas a ver todos los detalles antes de finalizar.
+          </p>
+
           <div className="flex flex-col-reverse gap-3 sm:flex-row">
             <Button onClick={onClose} variant="secondary" size="lg" className="flex-1 rounded-2xl" disabled={confirmLoading}>Seguir revisando</Button>
-            <Button onClick={onConfirm} variant="primary" size="lg" className="flex-1 rounded-2xl" loading={confirmLoading} loadingLabel="Confirmando reserva...">Confirmar reserva</Button>
+            <Button onClick={onConfirm} variant="primary" size="lg" className="flex-1 rounded-2xl" loading={confirmLoading} loadingLabel="Confirmando estadía...">Confirmar estadía</Button>
           </div>
         </div>
       </Card>

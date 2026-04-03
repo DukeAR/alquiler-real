@@ -327,18 +327,21 @@ export const ExploreResultsSection = ({
       {loading || hasActiveFilters || listingProperties.length > 0 || !hasAnyResults ? (
         <section className="space-y-6 pt-2 md:space-y-8">
           <div className="flex flex-col gap-4 border-b border-slate-200/70 pb-5 lg:flex-row lg:items-end lg:justify-between">
-            <SectionTitle
-              eyebrow={hasActiveFilters ? 'Resultados' : 'Más alojamientos'}
-              heading={hasActiveFilters ? 'Resultados para tu búsqueda' : 'Más alojamientos'}
-              description={loading
-                ? 'Estamos trayendo resultados para tu búsqueda actual.'
-                : hasActiveFilters
-                  ? `${formatPropertyCount(listingProperties.length)} para revisar con tu búsqueda actual.`
-                  : listingProperties.length > 0
-                    ? `${formatPropertyCount(listingProperties.length)} para seguir si querés ver más opciones.`
-                    : 'No hay más alojamientos para mostrar por ahora.'}
-              className="max-w-2xl"
-            />
+            <div className="space-y-3 max-w-2xl">
+              <p className="text-sm font-medium text-slate-600">Elegí con información clara, no a ciegas.</p>
+              <SectionTitle
+                eyebrow={hasActiveFilters ? 'Resultados' : 'Más alojamientos'}
+                heading={hasActiveFilters ? 'Resultados para tu búsqueda' : 'Más alojamientos'}
+                description={loading
+                  ? 'Estamos trayendo resultados para tu búsqueda actual.'
+                  : hasActiveFilters
+                    ? `${formatPropertyCount(listingProperties.length)} para revisar con tu búsqueda actual.`
+                    : listingProperties.length > 0
+                      ? `${formatPropertyCount(listingProperties.length)} para seguir si querés ver más opciones.`
+                      : 'No hay más alojamientos para mostrar por ahora.'}
+                className="max-w-2xl"
+              />
+            </div>
 
             {!loading && listingProperties.length > 0 ? (
               <p className="text-sm text-slate-500">

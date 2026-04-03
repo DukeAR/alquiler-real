@@ -16,6 +16,7 @@ describe('BookingConfirmationModal', () => {
         onClose={onClose}
         onConfirm={onConfirm}
         propertyTitle="Casa frente al mar"
+        hostName="Laura"
         checkIn="2026-04-10"
         checkOut="2026-04-13"
         nights={3}
@@ -27,12 +28,13 @@ describe('BookingConfirmationModal', () => {
     );
 
     expect(screen.getByRole('dialog')).toBeInTheDocument();
-    expect(screen.getByText('Reserva lista para confirmar')).toBeInTheDocument();
-    expect(screen.getByText('Casa frente al mar')).toBeInTheDocument();
-    expect(screen.getByText('Total estimado')).toBeInTheDocument();
+    expect(screen.getByText('Estadía lista para confirmar')).toBeInTheDocument();
+    expect(screen.getAllByText('Casa frente al mar').length).toBeGreaterThan(0);
+    expect(screen.getByText('Laura')).toBeInTheDocument();
+    expect(screen.getByText('Vas a ver todos los detalles antes de finalizar.')).toBeInTheDocument();
     expect(screen.getByText(new RegExp(`hasta el ${cancellationDeadlineLabel}`))).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /confirmar reserva/i }));
+    fireEvent.click(screen.getByRole('button', { name: /confirmar estadía/i }));
     expect(onConfirm).toHaveBeenCalledTimes(1);
   });
 
@@ -45,6 +47,7 @@ describe('BookingConfirmationModal', () => {
         onClose={onClose}
         onConfirm={vi.fn()}
         propertyTitle="Casa frente al mar"
+        hostName="Laura"
         checkIn="2026-04-10"
         checkOut="2026-04-13"
         nights={3}

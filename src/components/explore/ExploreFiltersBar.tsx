@@ -4,6 +4,8 @@ import { Card } from '../ui/Card';
 import { Input } from '../ui/Input';
 import { cn } from '../../lib/utils';
 
+export type ExploreSort = 'recommended' | 'rating' | 'price-asc';
+
 export type ExploreFilters = {
   minPrice: string;
   maxPrice: string;
@@ -16,6 +18,8 @@ type ExploreFiltersBarProps = {
   viewMode: 'grid' | 'map';
   onViewModeChange: (mode: 'grid' | 'map') => void;
   filters: ExploreFilters;
+  sortBy: ExploreSort;
+  onSortChange: (next: ExploreSort) => void;
   onFiltersChange: (next: ExploreFilters) => void;
   hasActiveFilters: boolean;
   onClear: () => void;
@@ -25,6 +29,8 @@ export const ExploreFiltersBar = ({
   viewMode,
   onViewModeChange,
   filters,
+  sortBy,
+  onSortChange,
   onFiltersChange,
   hasActiveFilters,
   onClear,
@@ -52,14 +58,13 @@ export const ExploreFiltersBar = ({
 
           <div className="flex flex-wrap items-center gap-2.5 md:gap-3">
             <select
-              value={filters.type}
-              onChange={(event) => onFiltersChange({ ...filters, type: event.target.value })}
+              value={sortBy}
+              onChange={(event) => onSortChange(event.target.value as ExploreSort)}
               className="h-10 min-w-[158px] rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 outline-none transition-all focus:border-brand focus:ring-2 focus:ring-brand/20"
             >
-              <option value="">Tipo de alojamiento</option>
-              <option value="house">Casas</option>
-              <option value="apartment">Dptos</option>
-              <option value="cabin">Cabañas</option>
+              <option value="recommended">Mejor opción</option>
+              <option value="rating">Mejor rating</option>
+              <option value="price-asc">Menor precio</option>
             </select>
 
             <div className="flex items-center gap-2">
@@ -83,16 +88,6 @@ export const ExploreFiltersBar = ({
                 className="h-10 w-24 rounded-xl border-slate-200 bg-white py-2 pl-9 pr-3 text-sm font-medium shadow-none"
               />
             </div>
-
-            <label className="inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-3.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50">
-              <input
-                type="checkbox"
-                checked={filters.verifiedOnly}
-                onChange={(event) => onFiltersChange({ ...filters, verifiedOnly: event.target.checked })}
-                className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-brand"
-              />
-              <span>Solo verificadas</span>
-            </label>
 
             {hasActiveFilters ? (
               <Button

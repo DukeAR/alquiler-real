@@ -3,7 +3,7 @@ import { apiJson } from '../../lib/apiConfig';
 import { useFavorites } from '../../hooks/useFavorites';
 import type { Property } from '../../services/geminiService';
 import type { LocationSuggestion } from '../LocationAutocomplete';
-import { ExploreFiltersBar, type ExploreFilters } from './ExploreFiltersBar';
+import { ExploreFiltersBar, type ExploreFilters, type ExploreSort } from './ExploreFiltersBar';
 import { ExploreHero } from './ExploreHero';
 import { ExploreResultsSection } from './ExploreResultsSection';
 
@@ -79,6 +79,44 @@ const getFeaturedPropertyScore = (property: Property) => {
   return ratingScore + reviewScore + consistencyScore + experienceScore + verificationScore - penalty;
 };
 
+const sortProperties = (items: Property[], sortBy: ExploreSort) => {
+  const sortedItems = [...items];
+
+  sortedItems.sort((left, right) => {
+    if (sortBy === 'price-asc') {
+      const priceDifference = Number(left.price || 0) - Number(right.price || 0);
+      if (priceDifference !== 0) {
+        return priceDifference;
+      }
+
+      return Number(right.rating || 0) - Number(left.rating || 0);
+    }
+
+    if (sortBy === 'rating') {
+      const ratingDifference = Number(right.rating || 0) - Number(left.rating || 0);
+      if (ratingDifference !== 0) {
+        return ratingDifference;
+      }
+
+      return Number(right.reviewsCount || 0) - Number(left.reviewsCount || 0);
+    }
+
+    const scoreDifference = getFeaturedPropertyScore(right) - getFeaturedPropertyScore(left);
+    if (scoreDifference !== 0) {
+      return scoreDifference;
+    }
+
+    const ratingDifference = Number(right.rating || 0) - Number(left.rating || 0);
+    if (ratingDifference !== 0) {
+      return ratingDifference;
+    }
+
+    return Number(right.reviewsCount || 0) - Number(left.reviewsCount || 0);
+  });
+
+  return sortedItems;
+};
+
 export const ExplorePage = () => {
   const { toggleFavorite, isFavorite } = useFavorites();
   const [properties, setProperties] = useState<Property[]>([]);
@@ -87,6 +125,7 @@ export const ExplorePage = () => {
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
+  const [sortBy, setSortBy] = useState<ExploreSort>('recommended');
   const [visibleCount, setVisibleCount] = useState(9);
   const [filters, setFilters] = useState<ExploreFilters>(defaultFilters);
   const [locationSuggestions, setLocationSuggestions] = useState<LocationSuggestion[]>([]);
@@ -128,23 +167,11 @@ export const ExplorePage = () => {
 
   useEffect(() => {
     setVisibleCount(9);
-  }, [filters, searchQuery]);
+  }, [filters, searchQuery, sortBy]);
 
-  const featuredProperties = [...properties]
-    .sort((left, right) => {
-      const scoreDifference = getFeaturedPropertyScore(right) - getFeaturedPropertyScore(left);
-      if (scoreDifference !== 0) {
-        return scoreDifference;
-      }
-
-      const ratingDifference = Number(right.rating || 0) - Number(left.rating || 0);
-      if (ratingDifference !== 0) {
-        return ratingDifference;
-      }
-
-      return Number(right.reviewsCount || 0) - Number(left.reviewsCount || 0);
-    })
+  const featuredProperties = sortProperties(properties, 'recommended')
     .slice(0, 3);
+  const orderedProperties = sortProperties(properties, sortBy);
 
   const featuredIds = new Set(featuredProperties.map((property) => property.id));
   const hasActiveFilters = Boolean(searchQuery || filters.minPrice || filters.maxPrice || filters.type || filters.verifiedOnly);
@@ -157,8 +184,8 @@ export const ExplorePage = () => {
     filters.verifiedOnly,
   ].filter(Boolean).length;
   const listingProperties = hasActiveFilters
-    ? properties
-    : properties.filter((property) => !featuredIds.has(property.id));
+    ? orderedProperties
+    : orderedProperties.filter((property) => !featuredIds.has(property.id));
   const visibleProperties = listingProperties.slice(0, visibleCount);
   const hasMoreResults = visibleProperties.length < listingProperties.length;
 
@@ -207,6 +234,8 @@ export const ExplorePage = () => {
           viewMode={viewMode}
           onViewModeChange={setViewMode}
           filters={filters}
+          sortBy={sortBy}
+          onSortChange={setSortBy}
           onFiltersChange={setFilters}
           hasActiveFilters={hasActiveFilters}
           onClear={clearAllFilters}

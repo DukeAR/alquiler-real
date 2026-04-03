@@ -44,17 +44,18 @@ describe('PropertyCard', () => {
     useAuthMock.mockReturnValue({ user: { id: 'u1' } });
   });
 
-  test('renders premium hierarchy with trust signals and implicit CTA', () => {
+  test('renders decision-first hierarchy with trust signals and clearer CTA', () => {
     render(<PropertyCard property={sampleProperty} onClick={vi.fn()} />);
 
     expect(screen.getByText('Casa frente al mar')).toBeInTheDocument();
     expect(screen.getByText('Santa Teresita')).toBeInTheDocument();
     expect(screen.getByText('Verificada')).toBeInTheDocument();
-    expect(screen.getByText('Superhost')).toBeInTheDocument();
+    expect(screen.getByText('Superanfitrión')).toBeInTheDocument();
     expect(screen.getByText('5 huéspedes')).toBeInTheDocument();
-    expect(screen.getByText('3 años en la plataforma')).toBeInTheDocument();
-    expect(screen.getByText('Por noche')).toBeInTheDocument();
+    expect(screen.getByText('Laura')).toBeInTheDocument();
+    expect(screen.getByText('Precio por noche')).toBeInTheDocument();
     expect(screen.getByText('/ noche')).toBeInTheDocument();
+    expect(screen.getByText('Datos claros para decidir antes de reservar.')).toBeInTheDocument();
     expect(screen.getByText('Ver detalle')).toBeInTheDocument();
   });
 
