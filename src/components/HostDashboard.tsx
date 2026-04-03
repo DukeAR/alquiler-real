@@ -123,6 +123,8 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
     }
   };
 
+  const contactedGuests = Array.isArray(dashboardData?.contactedGuests) ? dashboardData.contactedGuests : [];
+
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-20">
@@ -284,24 +286,20 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
             <div className={dashboardSectionClass}>
               <div className="flex items-center justify-between">
                 <h3 className="app-title-4 dark:text-white">Perfiles que te contactaron</h3>
-                <span className="app-eyebrow">Últimas 24 h</span>
+                <span className="app-eyebrow">Recientes</span>
               </div>
               <div className="space-y-3">
-                {[
-                  { name: 'Juan P.', risk: 'low', score: 92 },
-                  { name: 'Maria S.', risk: 'medium', score: 65 },
-                  { name: 'Anon_88', risk: 'high', score: 12 }
-                ].map((tenant) => (
-                  <div key={tenant.name} className={cn(dashboardMutedTileClass, 'flex items-center justify-between p-3')}>
+                {contactedGuests.length > 0 ? contactedGuests.map((tenant: any) => (
+                  <div key={tenant.id || tenant.name} className={cn(dashboardMutedTileClass, 'flex items-center justify-between p-3')}>
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[10px] font-bold">
-                        {tenant.name[0]}
+                      <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[10px] font-bold uppercase">
+                        {String(tenant.name || 'H').slice(0, 1)}
                       </div>
                       <span className="text-sm font-semibold">{tenant.name}</span>
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="text-right">
-                        <p className="app-eyebrow leading-none">Puntaje</p>
+                        <p className="app-eyebrow leading-none">Confianza</p>
                         <p className={cn(
                           "text-xs font-semibold",
                           tenant.risk === 'low' ? 'text-emerald-500' : tenant.risk === 'medium' ? 'text-orange-500' : 'text-red-500'
@@ -313,7 +311,9 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
                       )} />
                     </div>
                   </div>
-                ))}
+                )) : (
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Todavía no hay huéspedes recientes para mostrar.</p>
+                )}
               </div>
             </div>
 

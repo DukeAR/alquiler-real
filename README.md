@@ -2,19 +2,31 @@
 <img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
 </div>
 
-# Run and deploy your AI Studio app
+# Alquiler Real
 
-This contains everything you need to run your app locally.
+Demo de reservas con foco en confianza, trazabilidad y señales reales para tomar mejores decisiones antes de alquilar.
 
-View your app in AI Studio: https://ai.studio/apps/a463ff09-dab6-4cdc-b877-2ef292a4c25e
+## Demo
+
+Credenciales listas para probar los dos recorridos principales:
+
+- Huésped: lucia@demo.com / 123456
+- Anfitrión: valeria@demo.com / 123456
+
+La seed demo se carga desde el backend al iniciar y deja pobladas propiedades, reservas, reseñas, conversaciones, favoritos, preferencias y panel de anfitrión.
 
 ## Run Locally
 
-**Prerequisites:**  Node.js
+Prerequisites: Node.js
 
+1. Install dependencies: `npm install`
+2. Configurá las variables de entorno necesarias para backend y frontend
+3. Iniciá la app: `npm run dev`
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## Validación
+
+Antes de subir cambios o preparar deploy:
+
+1. `npm run lint`
+2. `npm test -- --run`
+3. `npm run build`

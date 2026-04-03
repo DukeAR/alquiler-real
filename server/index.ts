@@ -660,13 +660,21 @@ app.get('/api/users/activity', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: AUTH_REQUIRED_ERROR });
   try {
     const activityResult = await db.query('SELECT * FROM user_activity WHERE user_id = $1', [req.session.userId]);
-    const bookingsResult = await db.query('SELECT COUNT(*) as count FROM bookings WHERE "userId" = $1', [req.session.userId]);
-    const reviewsResult = await db.query('SELECT COUNT(*) as count FROM reviews WHERE user_id = $1', [req.session.userId]);
+    const bookingsResult = await db.query(
+      `SELECT COUNT(*) as count, MAX(end_date) as last_booking_date
+       FROM bookings
+       WHERE "userId" = $1`,
+      [req.session.userId],
+    );
+    const writtenReviewsResult = await db.query('SELECT COUNT(*) as count FROM reviews WHERE reviewer_id = $1', [req.session.userId]);
+    const receivedReviewsResult = await db.query('SELECT COUNT(*) as count FROM reviews WHERE reviewed_user_id = $1', [req.session.userId]);
     
     res.json({
       ...(activityResult.rows[0] || {}),
       total_bookings: parseInt(bookingsResult.rows[0].count),
-      total_reviews_written: parseInt(reviewsResult.rows[0].count)
+      total_reviews_written: parseInt(writtenReviewsResult.rows[0].count),
+      total_reviews_received: parseInt(receivedReviewsResult.rows[0].count),
+      last_booking_date: bookingsResult.rows[0]?.last_booking_date || null,
     });
   } catch (err) {
     res.status(500).json({ error: 'No pudimos cargar tu actividad.' });
@@ -678,16 +686,21 @@ app.get('/api/users/reviews', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: AUTH_REQUIRED_ERROR });
   try {
     const written = await db.query(
-      `SELECT r.*, p.title as "propertyTitle" FROM reviews r 
-       JOIN properties p ON r.property_id = p.id 
-       WHERE r.user_id = $1 ORDER BY r.created_at DESC`,
+      `SELECT r.*, p.title as "propertyTitle", u.name as "userName"
+       FROM reviews r
+       LEFT JOIN properties p ON r.property_id = p.id
+       LEFT JOIN users u ON r.reviewed_user_id = u.id
+       WHERE r.reviewer_id = $1
+       ORDER BY r.created_at DESC`,
       [req.session.userId]
     );
     const received = await db.query(
-      `SELECT r.*, u.name as "userName" FROM reviews r 
-       JOIN users u ON r.user_id = u.id 
-       JOIN properties p ON r.property_id = p.id 
-       WHERE p."hostId" = $1 ORDER BY r.created_at DESC`,
+      `SELECT r.*, u.name as "userName", p.title as "propertyTitle"
+       FROM reviews r
+       LEFT JOIN users u ON r.reviewer_id = u.id
+       LEFT JOIN properties p ON r.property_id = p.id
+       WHERE r.reviewed_user_id = $1
+       ORDER BY r.created_at DESC`,
       [req.session.userId]
     );
     res.json({ written: written.rows, received: received.rows });
@@ -713,6 +726,206 @@ app.post('/api/users/documents', async (req, res) => {
   }
 });
 
+const toSafeNumber = (value: unknown) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const roundToWhole = (value: number) => Math.round(value);
+
+const roundToOneDecimal = (value: number) => Math.round(value * 10) / 10;
+
+const getAverageHostResponseTimeMinutes = async (hostId: string) => {
+  const result = await db.query(
+    `SELECT c.id as conversation_id, m.sender_id, m.created_at
+     FROM conversations c
+     JOIN messages m ON m.conversation_id = c.id
+     WHERE c.host_id = $1
+     ORDER BY c.id ASC, m.created_at ASC`,
+    [hostId],
+  );
+
+  const responseTimes: number[] = [];
+  const waitingMessages = new Map<string, number>();
+
+  for (const row of result.rows) {
+    const conversationId = row.conversation_id as string;
+    const messageTime = new Date(row.created_at).getTime();
+
+    if (row.sender_id === hostId) {
+      const pendingTenantMessage = waitingMessages.get(conversationId);
+      if (pendingTenantMessage) {
+        responseTimes.push((messageTime - pendingTenantMessage) / (1000 * 60));
+        waitingMessages.delete(conversationId);
+      }
+      continue;
+    }
+
+    if (!waitingMessages.has(conversationId)) {
+      waitingMessages.set(conversationId, messageTime);
+    }
+  }
+
+  if (responseTimes.length === 0) {
+    return 0;
+  }
+
+  return roundToWhole(responseTimes.reduce((total, minutes) => total + minutes, 0) / responseTimes.length);
+};
+
+const getHostProfileData = async (hostId: string) => {
+  const [hostResult, propertiesResult, bookingsResult, reviewsResult, conversationsResult, avgResponseTimeMinutes] = await Promise.all([
+    db.query(
+      `SELECT id, name, email,
+              email_verified as "emailVerified",
+              identity_validated as "identityValidated",
+              member_since as "memberSince",
+              risk_score as "riskScore"
+       FROM users
+       WHERE id = $1 AND role = 'host'`,
+      [hostId],
+    ),
+    db.query(
+      `SELECT id, status, created_at as "createdAt",
+              "hasPresencialVerification", "locationVerified", "videoValidated"
+       FROM properties
+       WHERE "hostId" = $1`,
+      [hostId],
+    ),
+    db.query(
+      `SELECT b.id, b.status, b.total_price as "totalPrice", b.contract_accepted as "contractAccepted",
+              b.created_at as "createdAt", b.start_date as "startDate", b.end_date as "endDate"
+       FROM bookings b
+       JOIN properties p ON p.id = b."propertyId"
+       WHERE p."hostId" = $1`,
+      [hostId],
+    ),
+    db.query(
+      `SELECT r.rating,
+              r.photos_match_reality as "photosMatchReality",
+              r.pressure_to_book_fast as "pressureToBookFast",
+              r.created_at as "createdAt"
+       FROM reviews r
+       JOIN properties p ON p.id = r.property_id
+       WHERE p."hostId" = $1
+         AND r.type = 'guest_to_host'`,
+      [hostId],
+    ),
+    db.query(
+      `SELECT c.id, c.created_at as "createdAt", c.updated_at as "updatedAt", COUNT(m.id)::int as "messageCount"
+       FROM conversations c
+       LEFT JOIN messages m ON m.conversation_id = c.id
+       WHERE c.host_id = $1
+       GROUP BY c.id, c.created_at, c.updated_at`,
+      [hostId],
+    ),
+    getAverageHostResponseTimeMinutes(hostId),
+  ]);
+
+  if (hostResult.rows.length === 0) {
+    return null;
+  }
+
+  const host = hostResult.rows[0];
+  const properties = propertiesResult.rows;
+  const bookings = bookingsResult.rows;
+  const guestReviews = reviewsResult.rows;
+  const conversations = conversationsResult.rows;
+  const activePropertiesCount = properties.filter((property) => property.status === 'active').length;
+  const nonCancelledBookings = bookings.filter((booking) => booking.status !== 'cancelled');
+  const completedStaysCount = bookings.filter((booking) => booking.status === 'completed').length;
+  const hostCancellationsCount = bookings.filter((booking) => booking.status === 'cancelled').length;
+  const stayCompletionRate = nonCancelledBookings.length > 0
+    ? roundToWhole((completedStaysCount / nonCancelledBookings.length) * 100)
+    : 0;
+  const avgPublicationAgeMonths = properties.length > 0
+    ? roundToWhole(
+        properties.reduce((total, property) => total + ((Date.now() - new Date(property.createdAt).getTime()) / (1000 * 60 * 60 * 24 * 30.4)), 0) /
+          properties.length,
+      )
+    : 0;
+  const queryCount = conversations.length;
+  const chatsStartedCount = conversations.filter((conversation) => toSafeNumber(conversation.messageCount) > 0).length;
+  const agreementsFinalizedCount = bookings.filter((booking) => booking.status === 'completed' || booking.contractAccepted).length;
+  const photosMatchRealityRate = guestReviews.length > 0
+    ? roundToWhole((guestReviews.filter((review) => !!review.photosMatchReality).length / guestReviews.length) * 100)
+    : 0;
+  const noPressureRate = guestReviews.length > 0
+    ? roundToWhole((guestReviews.filter((review) => !review.pressureToBookFast).length / guestReviews.length) * 100)
+    : 0;
+  const avgRatingPercent = guestReviews.length > 0
+    ? roundToWhole((guestReviews.reduce((total, review) => total + toSafeNumber(review.rating), 0) / guestReviews.length / 5) * 100)
+    : 0;
+  const attemptsToChangeConditionsOutside = guestReviews.some((review) => !!review.pressureToBookFast);
+  const latestActivityDate = [
+    ...properties.map((property) => property.createdAt),
+    ...bookings.map((booking) => booking.createdAt),
+    ...guestReviews.map((review) => review.createdAt),
+    ...conversations.map((conversation) => conversation.updatedAt),
+  ]
+    .filter(Boolean)
+    .sort()
+    .at(-1);
+
+  const alerts: string[] = [];
+  if (attemptsToChangeConditionsOutside) {
+    alerts.push('Algunas reseñas marcaron intentos de cambiar condiciones por fuera de la plataforma.');
+  }
+  if (hostCancellationsCount > 0) {
+    alerts.push('El historial registra reservas canceladas asociadas a este perfil.');
+  }
+  if (guestReviews.length > 0 && avgRatingPercent < 84) {
+    alerts.push('Las ultimas reseñas muestran una experiencia menos consistente que la de otros anfitriones destacados.');
+  }
+
+  let status: 'new' | 'active' | 'with_history' | 'highly_traceable' | 'with_warnings' = 'active';
+  if (alerts.length > 0) {
+    status = 'with_warnings';
+  } else if (host.identityValidated && activePropertiesCount >= 3 && avgRatingPercent >= 90) {
+    status = 'highly_traceable';
+  } else if (completedStaysCount >= 3) {
+    status = 'with_history';
+  } else if (properties.length <= 1) {
+    status = 'new';
+  }
+
+  return {
+    id: host.id,
+    name: host.name || 'Anfitrion',
+    email: host.email,
+    emailVerified: !!host.emailVerified,
+    identityValidated: !!host.identityValidated,
+    memberSince: host.memberSince,
+    verificationMethod: properties.some((property) => !!property.hasPresencialVerification) ? 'presencial' : 'digital',
+    status,
+    publishedPropertiesCount: properties.length,
+    activePropertiesCount,
+    avgPublicationAgeMonths,
+    completedStaysCount,
+    stayCompletionRate,
+    lastVerifiedActivityDate: latestActivityDate,
+    queriesReceivedCount: queryCount,
+    chatsStartedCount,
+    agreementsFinalizedCount,
+    avgResponseTimeMinutes,
+    hostCancellationsCount,
+    reputation: {
+      photosMatchRealityRate,
+      infoClarityRate: guestReviews.length > 0 ? roundToWhole((avgRatingPercent + photosMatchRealityRate) / 2) : 0,
+      agreementComplianceRate: noPressureRate,
+      communicationRate: guestReviews.length > 0 ? roundToWhole((avgRatingPercent + noPressureRate) / 2) : 0,
+      attemptsToChangeConditionsOutside,
+    },
+    verificationsSummary: {
+      presencialCount: properties.filter((property) => !!property.hasPresencialVerification).length,
+      gpsProofCount: properties.filter((property) => !!property.locationVerified).length,
+      videoValidationCount: properties.filter((property) => !!property.videoValidated).length,
+    },
+    alerts,
+    riskScore: toSafeNumber(host.riskScore),
+  };
+};
+
 // ==========================================
 // HOST DASHBOARD & PROPERTY MANAGEMENT
 // ==========================================
@@ -720,35 +933,87 @@ app.post('/api/users/documents', async (req, res) => {
 app.get('/api/host/dashboard', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: AUTH_REQUIRED_ERROR });
   try {
-    const stats = await db.query(
-      `SELECT host_rating, total_properties, total_bookings_hosted, host_verified 
-       FROM users WHERE id = $1`,
-      [req.session.userId]
-    );
-    const properties = await db.query(
-      `SELECT id, title, price, status, "reviewsCount", rating, "imageUrl" FROM properties WHERE "hostId" = $1`,
-      [req.session.userId]
-    );
-    const bookings = await db.query(
-      `SELECT b.*, p.title as "propertyTitle" FROM bookings b 
-       JOIN properties p ON b."propertyId" = p.id 
-       WHERE p."hostId" = $1 ORDER BY b.date DESC LIMIT 5`,
-      [req.session.userId]
-    );
-    
-    // Estimación básica de ingresos
-    const incomeResult = await db.query(
-      `SELECT SUM(p.price) as total FROM bookings b 
-       JOIN properties p ON b."propertyId" = p.id 
-       WHERE p."hostId" = $1 AND b.status = 'confirmed'`,
-      [req.session.userId]
-    );
+    const [statsResult, propertiesResult, recentBookingsResult, totalsResult, contactedGuestsResult] = await Promise.all([
+      db.query(
+        `SELECT host_rating, host_verified, trust_score, badge
+         FROM users
+         WHERE id = $1`,
+        [req.session.userId],
+      ),
+      db.query(
+        `SELECT id, title, price, status, "reviewsCount", rating, "imageUrl"
+         FROM properties
+         WHERE "hostId" = $1
+         ORDER BY created_at DESC`,
+        [req.session.userId],
+      ),
+      db.query(
+        `SELECT b.id, b.status, TO_CHAR(b.start_date, 'DD/MM/YYYY') as date, b."userId",
+                guest.name as "userName", p.title as "propertyTitle"
+         FROM bookings b
+         JOIN properties p ON b."propertyId" = p.id
+         LEFT JOIN users guest ON guest.id = b."userId"
+         WHERE p."hostId" = $1
+           AND b.status <> 'cancelled'
+         ORDER BY b.start_date DESC NULLS LAST, b.created_at DESC
+         LIMIT 5`,
+        [req.session.userId],
+      ),
+      db.query(
+        `SELECT COUNT(*) FILTER (WHERE b.status <> 'cancelled')::int as total_bookings_hosted,
+                COALESCE(SUM(b.total_price) FILTER (WHERE b.status IN ('confirmed', 'completed')), 0) as estimated_income
+         FROM bookings b
+         JOIN properties p ON b."propertyId" = p.id
+         WHERE p."hostId" = $1`,
+        [req.session.userId],
+      ),
+      db.query(
+        `SELECT *
+         FROM (
+           SELECT DISTINCT ON (guest.id)
+                  guest.id,
+                  guest.name,
+                  guest.trust_score,
+                  guest.risk_score,
+                  b.created_at
+           FROM bookings b
+           JOIN properties p ON p.id = b."propertyId"
+           JOIN users guest ON guest.id = b."userId"
+           WHERE p."hostId" = $1
+           ORDER BY guest.id, b.created_at DESC
+         ) recent_guests
+         ORDER BY created_at DESC
+         LIMIT 3`,
+        [req.session.userId],
+      ),
+    ]);
+
+    const stats = statsResult.rows[0] || {};
+    const totals = totalsResult.rows[0] || {};
 
     res.json({
-      stats: stats.rows[0],
-      properties: properties.rows,
-      recentBookings: bookings.rows,
-      estimatedIncome: parseFloat(incomeResult.rows[0]?.total || 0)
+      stats: {
+        host_rating: roundToOneDecimal(toSafeNumber(stats.host_rating)),
+        total_properties: propertiesResult.rows.length,
+        total_bookings_hosted: toSafeNumber(totals.total_bookings_hosted),
+        host_verified: !!stats.host_verified,
+        trust_score: toSafeNumber(stats.trust_score),
+        badge: stats.badge || 'Nuevo usuario',
+      },
+      properties: propertiesResult.rows.map((property) => ({
+        ...property,
+        price: toSafeNumber(property.price),
+        rating: roundToOneDecimal(toSafeNumber(property.rating)),
+        reviewsCount: toSafeNumber(property.reviewsCount),
+      })),
+      recentBookings: recentBookingsResult.rows,
+      contactedGuests: contactedGuestsResult.rows.map((guest) => ({
+        id: guest.id,
+        name: guest.name || 'Huesped',
+        score: toSafeNumber(guest.trust_score),
+        risk: toSafeNumber(guest.risk_score) >= 40 ? 'high' : toSafeNumber(guest.risk_score) >= 20 ? 'medium' : 'low',
+      })),
+      estimatedIncome: toSafeNumber(totals.estimated_income),
     });
   } catch (err) {
     res.status(500).json({ error: 'No pudimos cargar tu panel de anfitrión.' });
@@ -1509,7 +1774,14 @@ app.post('/api/messages', filterChatMiddleware, async (req, res) => {
 
     await db.query(`UPDATE conversations SET last_message = $1, updated_at = NOW() WHERE id = $2`, [content, conversation_id]);
 
-    res.status(201).json({ id, content, created_at: new Date() });
+    res.status(201).json({
+      id,
+      conversation_id,
+      sender_id: userId,
+      receiver_id,
+      content,
+      created_at: new Date().toISOString(),
+    });
   } catch (err) {
     res.status(500).json({ error: 'No pudimos enviar el mensaje. Intentá de nuevo.' });
   }
@@ -1554,8 +1826,9 @@ app.get('/api/reviews/:propertyId', async (req, res) => {
     const result = await db.query(
       `SELECT r.*, u.name as "userName"
        FROM reviews r
-       LEFT JOIN users u ON r.user_id = u.id
+       LEFT JOIN users u ON r.reviewer_id = u.id
        WHERE r.property_id = $1
+         AND r.type = 'guest_to_host'
        ORDER BY r.created_at DESC`,
       [req.params.propertyId]
     );
@@ -1567,39 +1840,90 @@ app.get('/api/reviews/:propertyId', async (req, res) => {
 
 app.post('/api/reviews', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: AUTH_REQUIRED_ERROR });
-  const { bookingId, reviewedUserId, rating, comment, type } = req.body;
+  const bookingId = typeof req.body?.bookingId === 'string' ? req.body.bookingId : req.body?.booking_id;
+  const reviewedUserId = typeof req.body?.reviewedUserId === 'string' ? req.body.reviewedUserId : req.body?.reviewed_user_id;
+  const rating = Number(req.body?.rating);
+  const comment = typeof req.body?.comment === 'string' ? req.body.comment.trim() : '';
+  const type = req.body?.type;
+  const photosMatchReality = typeof req.body?.photos_match_reality === 'boolean' ? req.body.photos_match_reality : true;
+  const pressureToBookFast = typeof req.body?.pressure_to_book_fast === 'boolean' ? req.body.pressure_to_book_fast : false;
+
+  if (!bookingId || !reviewedUserId || (type !== 'host_to_guest' && type !== 'guest_to_host') || !Number.isInteger(rating) || rating < 1 || rating > 5) {
+    return res.status(422).json({ error: 'Revisá los datos de la reseña antes de enviarla.' });
+  }
   
   try {
     // Verificar que exista la reserva y el usuario sea parte
-    const booking = await db.query('SELECT * FROM bookings WHERE id = $1', [bookingId]);
+    const booking = await db.query(
+      `SELECT b.id, b."propertyId", b."userId", p."hostId"
+       FROM bookings b
+       JOIN properties p ON p.id = b."propertyId"
+       WHERE b.id = $1`,
+      [bookingId],
+    );
     if (booking.rows.length === 0) return res.status(404).json({ error: 'No encontramos esa reserva.' });
+
+    const bookingRow = booking.rows[0];
+    const expectedReviewerId = type === 'host_to_guest' ? bookingRow.hostId : bookingRow.userId;
+    const normalizedReviewedUserId = type === 'host_to_guest' ? bookingRow.userId : bookingRow.hostId;
+
+    if (req.session.userId !== expectedReviewerId) {
+      return res.status(403).json({ error: 'No podés dejar una reseña para esta reserva.' });
+    }
+
+    if (normalizedReviewedUserId !== reviewedUserId) {
+      return res.status(422).json({ error: 'La reseña no coincide con las personas involucradas en la reserva.' });
+    }
     
     const id = `rev_${Date.now()}`;
     const result = await db.query(
-      `INSERT INTO reviews (id, booking_id, reviewer_id, reviewed_user_id, rating, comment, type)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-      [id, bookingId, req.session.userId, reviewedUserId, rating, comment, type]
+      `INSERT INTO reviews (
+         id, booking_id, reviewer_id, reviewed_user_id, property_id,
+         rating, comment, type, photos_match_reality, pressure_to_book_fast
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       RETURNING *`,
+      [
+        id,
+        bookingId,
+        req.session.userId,
+        normalizedReviewedUserId,
+        bookingRow.propertyId,
+        rating,
+        comment,
+        type,
+        photosMatchReality,
+        pressureToBookFast,
+      ]
     );
     
     // Actualizar rating del usuario reseñado
     const updateField = type === 'host_to_guest' ? 'rating' : 'host_rating';
     await db.query(
-      `UPDATE users SET ${updateField} = (SELECT AVG(rating) FROM reviews WHERE reviewed_user_id = $1 AND type = $2),
-       total_reviews = total_reviews + 1,
-       trust_score = trust_score + 10
+      `UPDATE users SET ${updateField} = COALESCE((SELECT ROUND(AVG(rating)::numeric, 1) FROM reviews WHERE reviewed_user_id = $1 AND type = $2), 0),
+       total_reviews = COALESCE((SELECT COUNT(*) FROM reviews WHERE reviewed_user_id = $1), 0),
+       trust_score = LEAST(100, COALESCE(trust_score, 0) + 10)
        WHERE id = $1`,
-      [reviewedUserId, type]
+      [normalizedReviewedUserId, type]
+    );
+
+    await db.query(
+      `UPDATE properties
+       SET rating = COALESCE((SELECT ROUND(AVG(rating)::numeric, 1) FROM reviews WHERE property_id = $1 AND type = 'guest_to_host'), 0),
+           "reviewsCount" = COALESCE((SELECT COUNT(*) FROM reviews WHERE property_id = $1 AND type = 'guest_to_host'), 0)
+       WHERE id = $1`,
+      [bookingRow.propertyId],
     );
     
     // Lógica Simple de Insignias
     await db.query(
       `UPDATE users SET badge = CASE 
-        WHEN trust_score > 100 AND rating > 4.5 THEN 'Super Anfitrión'
-        WHEN trust_score > 50 THEN 'Buen Huésped'
+        WHEN role = 'host' AND host_rating >= 4.7 AND total_properties >= 3 THEN 'Anfitrion destacado'
+        WHEN role = 'tenant' AND rating >= 4.5 THEN 'Huesped confiable'
         WHEN identity_validated THEN 'Verificado'
         ELSE 'Nuevo usuario'
       END WHERE id = $1`,
-      [reviewedUserId]
+      [normalizedReviewedUserId]
     );
 
     res.status(201).json(result.rows[0]);
@@ -1614,43 +1938,9 @@ app.post('/api/reviews', async (req, res) => {
 
 app.get('/api/hosts/:id', async (req, res) => {
   try {
-    const result = await db.query(
-      `SELECT id, name, email, email_verified as "emailVerified", identity_validated as "identityValidated", 
-              member_since as "memberSince"
-       FROM users WHERE id = $1 AND role = 'host'`,
-      [req.params.id]
-    );
-    if (result.rows.length === 0) return res.status(404).json({ error: 'No encontramos a ese anfitrión.' });
-    const host = result.rows[0];
-    // Return a complete HostProfile-compatible object
-    res.json({
-      id: host.id,
-      name: host.name || 'Anfitrión',
-      email: host.email,
-      emailVerified: !!host.emailVerified,
-      identityValidated: !!host.identityValidated,
-      memberSince: host.memberSince,
-      status: 'active',
-      publishedPropertiesCount: 0,
-      activePropertiesCount: 0,
-      avgPublicationAgeMonths: 0,
-      completedStaysCount: 0,
-      stayCompletionRate: 0,
-      queriesReceivedCount: 0,
-      chatsStartedCount: 0,
-      agreementsFinalizedCount: 0,
-      avgResponseTimeMinutes: 0,
-      hostCancellationsCount: 0,
-      reputation: {
-        photosMatchRealityRate: 0,
-        infoClarityRate: 0,
-        agreementComplianceRate: 0,
-        communicationRate: 0,
-        attemptsToChangeConditionsOutside: false
-      },
-      verificationsSummary: { presencialCount: 0, gpsProofCount: 0, videoValidationCount: 0 },
-      alerts: []
-    });
+    const hostProfile = await getHostProfileData(req.params.id);
+    if (!hostProfile) return res.status(404).json({ error: 'No encontramos a ese anfitrión.' });
+    res.json(hostProfile);
   } catch (err) {
     res.status(500).json({ error: 'No pudimos cargar el perfil del anfitrión.' });
   }
@@ -1764,7 +2054,12 @@ app.post('/api/leads', async (req, res) => {
 app.get('/api/properties/:id/reviews', async (req, res) => {
   try {
     const result = await db.query(
-      `SELECT id, reviewer_id, rating, comment, created_at FROM reviews WHERE property_id = $1 ORDER BY created_at DESC LIMIT 20`,
+      `SELECT id, reviewer_id, rating, comment, created_at
+       FROM reviews
+       WHERE property_id = $1
+         AND type = 'guest_to_host'
+       ORDER BY created_at DESC
+       LIMIT 20`,
       [req.params.id]
     );
     res.json(result.rows);

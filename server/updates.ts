@@ -1,4 +1,501 @@
+import bcrypt from 'bcrypt';
 import { db } from './config/db';
+import { buildDemoData } from './demoData';
+
+type QueryRunner = {
+  query: (text: string, params?: any[]) => Promise<{ rows: any[]; rowCount?: number }>;
+};
+
+const LEGACY_PROPERTY_IDS = ['prop_1', 'prop_2', 'prop_3'];
+
+const recalculateDerivedMetrics = async (runner: QueryRunner) => {
+  await runner.query(`
+    UPDATE properties
+    SET rating = 0,
+        "reviewsCount" = 0;
+  `);
+
+  await runner.query(`
+    UPDATE properties p
+    SET "hostName" = COALESCE(u.name, p."hostName")
+    FROM users u
+    WHERE p."hostId" = u.id;
+  `);
+
+  await runner.query(`
+    UPDATE properties p
+    SET rating = stats.avg_rating,
+        "reviewsCount" = stats.review_count
+    FROM (
+      SELECT property_id,
+             ROUND(AVG(rating)::numeric, 1) as avg_rating,
+             COUNT(*)::int as review_count
+      FROM reviews
+      WHERE type = 'guest_to_host'
+        AND property_id IS NOT NULL
+      GROUP BY property_id
+    ) stats
+    WHERE p.id = stats.property_id;
+  `);
+
+  await runner.query(`
+    UPDATE users
+    SET rating = 0,
+        host_rating = 0,
+        total_reviews = 0,
+        total_properties = 0,
+        total_bookings_hosted = 0;
+  `);
+
+  await runner.query(`
+    UPDATE users u
+    SET total_reviews = stats.total_reviews
+    FROM (
+      SELECT reviewed_user_id as user_id,
+             COUNT(*)::int as total_reviews
+      FROM reviews
+      WHERE reviewed_user_id IS NOT NULL
+      GROUP BY reviewed_user_id
+    ) stats
+    WHERE u.id = stats.user_id;
+  `);
+
+  await runner.query(`
+    UPDATE users u
+    SET rating = stats.avg_rating
+    FROM (
+      SELECT reviewed_user_id as user_id,
+             ROUND(AVG(rating)::numeric, 1) as avg_rating
+      FROM reviews
+      WHERE type = 'host_to_guest'
+      GROUP BY reviewed_user_id
+    ) stats
+    WHERE u.id = stats.user_id;
+  `);
+
+  await runner.query(`
+    UPDATE users u
+    SET host_rating = stats.avg_rating
+    FROM (
+      SELECT reviewed_user_id as user_id,
+             ROUND(AVG(rating)::numeric, 1) as avg_rating
+      FROM reviews
+      WHERE type = 'guest_to_host'
+      GROUP BY reviewed_user_id
+    ) stats
+    WHERE u.id = stats.user_id;
+  `);
+
+  await runner.query(`
+    UPDATE users u
+    SET total_properties = stats.total_properties
+    FROM (
+      SELECT "hostId" as host_id,
+             COUNT(*)::int as total_properties
+      FROM properties
+      WHERE "hostId" IS NOT NULL
+      GROUP BY "hostId"
+    ) stats
+    WHERE u.id = stats.host_id;
+  `);
+
+  await runner.query(`
+    UPDATE users u
+    SET total_bookings_hosted = stats.total_bookings_hosted
+    FROM (
+      SELECT p."hostId" as host_id,
+             COUNT(*)::int as total_bookings_hosted
+      FROM bookings b
+      JOIN properties p ON p.id = b."propertyId"
+      WHERE p."hostId" IS NOT NULL
+        AND b.status <> 'cancelled'
+      GROUP BY p."hostId"
+    ) stats
+    WHERE u.id = stats.host_id;
+  `);
+
+  await runner.query(`
+    UPDATE users
+    SET is_host = role = 'host',
+        host_verified = CASE
+          WHEN role = 'host' THEN COALESCE(is_identity_verified, FALSE) OR COALESCE(identity_validated, FALSE)
+          ELSE host_verified
+        END,
+        trust_score = LEAST(
+          100,
+          GREATEST(
+            0,
+            (CASE WHEN COALESCE(email_verified, FALSE) OR COALESCE(is_email_verified, FALSE) THEN 18 ELSE 0 END) +
+            (CASE WHEN COALESCE(phone_verified, FALSE) OR COALESCE(is_phone_verified, FALSE) THEN 12 ELSE 0 END) +
+            (CASE WHEN COALESCE(identity_validated, FALSE) OR COALESCE(is_identity_verified, FALSE) THEN 28 ELSE 0 END) +
+            LEAST(COALESCE(total_reviews, 0) * 5, 20) +
+            LEAST(COALESCE(total_properties, 0) * 4, 12) +
+            ROUND((CASE WHEN role = 'host' THEN COALESCE(host_rating, 0) ELSE COALESCE(rating, 0) END) * 5) -
+            LEAST(COALESCE(risk_score, 0), 20)
+          )
+        ),
+        badge = CASE
+          WHEN role = 'host' AND COALESCE(host_rating, 0) >= 4.7 AND COALESCE(total_properties, 0) >= 3 THEN 'Anfitrion destacado'
+          WHEN role = 'tenant' AND COALESCE(rating, 0) >= 4.5 AND COALESCE(total_reviews, 0) >= 2 THEN 'Huesped confiable'
+          WHEN COALESCE(identity_validated, FALSE) OR COALESCE(is_identity_verified, FALSE) THEN 'Perfil verificado'
+          ELSE 'Nuevo usuario'
+        END;
+  `);
+
+  await runner.query(`
+    UPDATE user_activity ua
+    SET total_bookings = stats.total_bookings,
+        total_reviews_written = stats.total_reviews_written,
+        updated_at = NOW()
+    FROM (
+      SELECT u.id as user_id,
+             COALESCE(bookings.total_bookings, 0) as total_bookings,
+             COALESCE(reviews.total_reviews_written, 0) as total_reviews_written
+      FROM users u
+      LEFT JOIN (
+        SELECT "userId" as user_id,
+               COUNT(*)::int as total_bookings
+        FROM bookings
+        GROUP BY "userId"
+      ) bookings ON bookings.user_id = u.id
+      LEFT JOIN (
+        SELECT reviewer_id as user_id,
+               COUNT(*)::int as total_reviews_written
+        FROM reviews
+        GROUP BY reviewer_id
+      ) reviews ON reviews.user_id = u.id
+    ) stats
+    WHERE ua.user_id = stats.user_id;
+  `);
+};
+
+const seedDemoCatalog = async () => {
+  const demoData = buildDemoData();
+  const passwordHashes = new Map<string, string>();
+
+  for (const user of demoData.users) {
+    passwordHashes.set(user.id, await bcrypt.hash(user.password, 10));
+  }
+
+  const client = await db.getClient();
+
+  try {
+    await client.query('BEGIN');
+
+    await client.query(`DELETE FROM messages WHERE conversation_id IN (SELECT id FROM conversations WHERE property_id = ANY($1::text[]))`, [LEGACY_PROPERTY_IDS]);
+    await client.query(`DELETE FROM conversations WHERE property_id = ANY($1::text[])`, [LEGACY_PROPERTY_IDS]);
+    await client.query(`DELETE FROM favorites WHERE property_id = ANY($1::text[])`, [LEGACY_PROPERTY_IDS]);
+    await client.query(`DELETE FROM leads WHERE property_id = ANY($1::text[])`, [LEGACY_PROPERTY_IDS]);
+    await client.query(`DELETE FROM reviews WHERE property_id = ANY($1::text[])`, [LEGACY_PROPERTY_IDS]);
+    await client.query(`DELETE FROM bookings WHERE "propertyId" = ANY($1::text[])`, [LEGACY_PROPERTY_IDS]);
+    await client.query(`DELETE FROM properties WHERE id = ANY($1::text[])`, [LEGACY_PROPERTY_IDS]);
+
+    for (const user of demoData.users) {
+      await client.query(
+        `INSERT INTO users (
+          id, email, password_hash, role, name, zone, phone, bio, interests,
+          member_since, created_at, identity_validated, email_verified, phone_verified,
+          validation_level, profile_photo, rating, total_reviews, is_host, host_verified,
+          host_rating, total_properties, total_bookings_hosted, badge, trust_score, risk_score,
+          is_email_verified, is_phone_verified, is_identity_verified
+        )
+        VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9,
+          $10, $11, $12, $13, $14,
+          $15, $16, 0, 0, $17, $18,
+          0, 0, 0, $19, $20, $21,
+          $22, $23, $24
+        )
+        ON CONFLICT (id) DO UPDATE SET
+          email = EXCLUDED.email,
+          password_hash = EXCLUDED.password_hash,
+          role = EXCLUDED.role,
+          name = EXCLUDED.name,
+          zone = EXCLUDED.zone,
+          phone = EXCLUDED.phone,
+          bio = EXCLUDED.bio,
+          interests = EXCLUDED.interests,
+          member_since = EXCLUDED.member_since,
+          created_at = EXCLUDED.created_at,
+          identity_validated = EXCLUDED.identity_validated,
+          email_verified = EXCLUDED.email_verified,
+          phone_verified = EXCLUDED.phone_verified,
+          validation_level = EXCLUDED.validation_level,
+          profile_photo = EXCLUDED.profile_photo,
+          is_host = EXCLUDED.is_host,
+          host_verified = EXCLUDED.host_verified,
+          badge = EXCLUDED.badge,
+          trust_score = EXCLUDED.trust_score,
+          risk_score = EXCLUDED.risk_score,
+          is_email_verified = EXCLUDED.is_email_verified,
+          is_phone_verified = EXCLUDED.is_phone_verified,
+          is_identity_verified = EXCLUDED.is_identity_verified`,
+        [
+          user.id,
+          user.email,
+          passwordHashes.get(user.id) ?? '',
+          user.role,
+          user.name,
+          user.zone,
+          user.phone,
+          user.bio,
+          JSON.stringify(user.interests),
+          user.memberSince,
+          user.createdAt,
+          user.identityValidated,
+          user.emailVerified,
+          user.phoneVerified,
+          user.validationLevel,
+          user.profilePhoto,
+          user.role === 'host',
+          user.role === 'host' && user.identityValidated,
+          user.badge,
+          user.trustScore,
+          user.riskScore,
+          user.emailVerified,
+          user.phoneVerified,
+          user.identityValidated,
+        ],
+      );
+    }
+
+    for (const preference of demoData.userPreferences) {
+      await client.query(
+        `INSERT INTO user_preferences (user_id, preferred_zone, max_price, preferred_property_type, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         ON CONFLICT (user_id) DO UPDATE SET
+           preferred_zone = EXCLUDED.preferred_zone,
+           max_price = EXCLUDED.max_price,
+           preferred_property_type = EXCLUDED.preferred_property_type,
+           created_at = EXCLUDED.created_at,
+           updated_at = EXCLUDED.updated_at`,
+        [
+          preference.userId,
+          preference.preferredZone,
+          preference.maxPrice,
+          preference.preferredPropertyType,
+          preference.createdAt,
+          preference.updatedAt,
+        ],
+      );
+    }
+
+    for (const activity of demoData.userActivity) {
+      await client.query(
+        `INSERT INTO user_activity (user_id, last_login, total_bookings, total_reviews_written, updated_at)
+         VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (user_id) DO UPDATE SET
+           last_login = EXCLUDED.last_login,
+           total_bookings = EXCLUDED.total_bookings,
+           total_reviews_written = EXCLUDED.total_reviews_written,
+           updated_at = EXCLUDED.updated_at`,
+        [activity.userId, activity.lastLogin, activity.totalBookings, activity.totalReviewsWritten, activity.updatedAt],
+      );
+    }
+
+    for (const property of demoData.properties) {
+      await client.query(
+        `INSERT INTO properties (
+          id, title, location, price, "hostId", "hostName", description, "imageUrl",
+          rating, "reviewsCount", "identityValidated", "locationVerified", "videoValidated",
+          "traceabilityLevel", "maxGuests", "hasPresencialVerification", "hasDigitalVerification",
+          lat, lng, status, is_verified_property, bedrooms, bathrooms, property_type, created_at, manual_blocked_dates
+        )
+        VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8,
+          0, 0, $9, $10, $11,
+          $12, $13, $14, $15,
+          $16, $17, $18, $19, $20, $21, $22, $23, $24
+        )
+        ON CONFLICT (id) DO UPDATE SET
+          title = EXCLUDED.title,
+          location = EXCLUDED.location,
+          price = EXCLUDED.price,
+          "hostId" = EXCLUDED."hostId",
+          "hostName" = EXCLUDED."hostName",
+          description = EXCLUDED.description,
+          "imageUrl" = EXCLUDED."imageUrl",
+          "identityValidated" = EXCLUDED."identityValidated",
+          "locationVerified" = EXCLUDED."locationVerified",
+          "videoValidated" = EXCLUDED."videoValidated",
+          "traceabilityLevel" = EXCLUDED."traceabilityLevel",
+          "maxGuests" = EXCLUDED."maxGuests",
+          "hasPresencialVerification" = EXCLUDED."hasPresencialVerification",
+          "hasDigitalVerification" = EXCLUDED."hasDigitalVerification",
+          lat = EXCLUDED.lat,
+          lng = EXCLUDED.lng,
+          status = EXCLUDED.status,
+          is_verified_property = EXCLUDED.is_verified_property,
+          bedrooms = EXCLUDED.bedrooms,
+          bathrooms = EXCLUDED.bathrooms,
+          property_type = EXCLUDED.property_type,
+          created_at = EXCLUDED.created_at,
+          manual_blocked_dates = EXCLUDED.manual_blocked_dates`,
+        [
+          property.id,
+          property.title,
+          property.location,
+          property.price,
+          property.hostId,
+          property.hostName,
+          property.description,
+          property.imageUrl,
+          property.identityValidated ? 1 : 0,
+          property.locationVerified ? 1 : 0,
+          property.videoValidated ? 1 : 0,
+          property.traceabilityLevel,
+          property.maxGuests,
+          property.hasPresencialVerification ? 1 : 0,
+          property.hasDigitalVerification ? 1 : 0,
+          property.lat,
+          property.lng,
+          property.status,
+          property.isVerifiedProperty,
+          property.bedrooms,
+          property.bathrooms,
+          property.propertyType,
+          property.createdAt,
+          JSON.stringify(property.manualBlockedDates),
+        ],
+      );
+    }
+
+    for (const booking of demoData.bookings) {
+      await client.query(
+        `INSERT INTO bookings (
+          id, "propertyId", "userId", status, start_date, end_date,
+          total_price, guests, date, stay_code, verified, created_at,
+          contract_accepted, contract_json
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        ON CONFLICT (id) DO UPDATE SET
+          "propertyId" = EXCLUDED."propertyId",
+          "userId" = EXCLUDED."userId",
+          status = EXCLUDED.status,
+          start_date = EXCLUDED.start_date,
+          end_date = EXCLUDED.end_date,
+          total_price = EXCLUDED.total_price,
+          guests = EXCLUDED.guests,
+          date = EXCLUDED.date,
+          stay_code = EXCLUDED.stay_code,
+          verified = EXCLUDED.verified,
+          created_at = EXCLUDED.created_at,
+          contract_accepted = EXCLUDED.contract_accepted,
+          contract_json = EXCLUDED.contract_json`,
+        [
+          booking.id,
+          booking.propertyId,
+          booking.userId,
+          booking.status,
+          booking.startDate,
+          booking.endDate,
+          booking.totalPrice,
+          booking.guests,
+          booking.date,
+          booking.stayCode,
+          booking.verified,
+          booking.createdAt,
+          booking.contractAccepted,
+          booking.contractJson,
+        ],
+      );
+    }
+
+    for (const review of demoData.reviews) {
+      await client.query(
+        `INSERT INTO reviews (
+          id, booking_id, reviewer_id, reviewed_user_id, property_id,
+          rating, comment, type, photos_match_reality, pressure_to_book_fast, created_at
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        ON CONFLICT (id) DO UPDATE SET
+          booking_id = EXCLUDED.booking_id,
+          reviewer_id = EXCLUDED.reviewer_id,
+          reviewed_user_id = EXCLUDED.reviewed_user_id,
+          property_id = EXCLUDED.property_id,
+          rating = EXCLUDED.rating,
+          comment = EXCLUDED.comment,
+          type = EXCLUDED.type,
+          photos_match_reality = EXCLUDED.photos_match_reality,
+          pressure_to_book_fast = EXCLUDED.pressure_to_book_fast,
+          created_at = EXCLUDED.created_at`,
+        [
+          review.id,
+          review.bookingId,
+          review.reviewerId,
+          review.reviewedUserId,
+          review.propertyId,
+          review.rating,
+          review.comment,
+          review.type,
+          review.photosMatchReality,
+          review.pressureToBookFast,
+          review.createdAt,
+        ],
+      );
+    }
+
+    for (const conversation of demoData.conversations) {
+      await client.query(
+        `INSERT INTO conversations (id, property_id, booking_id, tenant_id, host_id, last_message, updated_at, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         ON CONFLICT (id) DO UPDATE SET
+           property_id = EXCLUDED.property_id,
+           booking_id = EXCLUDED.booking_id,
+           tenant_id = EXCLUDED.tenant_id,
+           host_id = EXCLUDED.host_id,
+           last_message = EXCLUDED.last_message,
+           updated_at = EXCLUDED.updated_at,
+           created_at = EXCLUDED.created_at`,
+        [
+          conversation.id,
+          conversation.propertyId,
+          conversation.bookingId || null,
+          conversation.tenantId,
+          conversation.hostId,
+          conversation.lastMessage,
+          conversation.updatedAt,
+          conversation.createdAt,
+        ],
+      );
+    }
+
+    for (const message of demoData.messages) {
+      await client.query(
+        `INSERT INTO messages (id, conversation_id, sender_id, receiver_id, content, is_system, is_suspicious, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         ON CONFLICT (id) DO UPDATE SET
+           conversation_id = EXCLUDED.conversation_id,
+           sender_id = EXCLUDED.sender_id,
+           receiver_id = EXCLUDED.receiver_id,
+           content = EXCLUDED.content,
+           is_system = EXCLUDED.is_system,
+           is_suspicious = EXCLUDED.is_suspicious,
+           created_at = EXCLUDED.created_at`,
+        [message.id, message.conversationId, message.senderId, message.receiverId, message.content, message.isSystem, message.isSuspicious, message.createdAt],
+      );
+    }
+
+    for (const favorite of demoData.favorites) {
+      await client.query(
+        `INSERT INTO favorites (user_id, property_id, created_at)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (user_id, property_id) DO UPDATE SET
+           created_at = EXCLUDED.created_at`,
+        [favorite.userId, favorite.propertyId, favorite.createdAt],
+      );
+    }
+
+    await recalculateDerivedMetrics(client);
+    await client.query('COMMIT');
+    console.log('Demo data synced');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+};
 
 export const initDB = async () => {
   // ============================================================
@@ -337,18 +834,5 @@ export const initDB = async () => {
     CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON session ("expire");
   `);
 
-  // ============================================================
-  // SEED PROPERTIES (if none exist)
-  // ============================================================
-  const { rows } = await db.query('SELECT COUNT(*) as count FROM properties');
-  if (parseInt(rows[0].count) === 0) {
-    await db.query(`
-      INSERT INTO properties (id, title, location, price, "hostName", description, "imageUrl", rating, "reviewsCount", "identityValidated", "locationVerified", "traceabilityLevel", lat, lng)
-      VALUES
-        ('prop_1', 'Casa con pileta a 3 cuadras del mar', 'San Clemente del Tuyú', 18000, 'Carlos Pereira', 'Amplia casa con pileta, jardín y quincho. A 3 cuadras de la playa principal.', 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800', 4.5, 12, 1, 1, 'high', -36.3536, -56.7196),
-        ('prop_2', 'Departamento frente al mar', 'San Clemente del Tuyú', 12000, 'Ana Torres', 'Moderno departamento con vista al mar, cocina equipada y balcón privado.', 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800', 4.2, 8, 1, 0, 'medium', -36.3656, -56.7256),
-        ('prop_3', 'Cabaña familiar con jardín', 'San Clemente del Tuyú', 9500, 'Marcos Ruiz', 'Cabaña acogedora a 5 cuadras del mar. Ideal para familias con niños.', 'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=800', 3.9, 5, 0, 0, 'low', -36.3450, -56.7100)
-    `);
-    console.log('Seed properties created');
-  }
+  await seedDemoCatalog();
 };
