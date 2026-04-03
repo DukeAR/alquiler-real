@@ -376,8 +376,8 @@ export const PropertyUploadForm: React.FC<{ onComplete: () => void }> = ({ onCom
                             <p className="text-xs text-slate-400">El video suma contexto y confianza</p>
                         </div>
 
-                        <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-100 dark:border-blue-900/50 text-sm text-blue-800 dark:text-blue-300 flex gap-3">
-                            <Icons.ShieldCheck className="w-5 h-5 flex-shrink-0" />
+                        <div className="bg-brand/5 dark:bg-brand/10 p-4 rounded-xl border border-brand/10 dark:border-brand/20 text-sm text-slate-700 dark:text-slate-200 flex gap-3">
+                            <Icons.ShieldCheck className="w-5 h-5 flex-shrink-0 text-brand" />
                             <p><strong>Tip de confianza:</strong> Un video corto mostrando la propiedad reduce dudas y mejora la calidad de las consultas.</p>
                         </div>
                     </motion.div>
@@ -400,7 +400,7 @@ export const PropertyUploadForm: React.FC<{ onComplete: () => void }> = ({ onCom
                                         </div>
                                         <span className="font-bold text-lg text-slate-900 dark:text-white">Validación digital</span>
                                     </div>
-                                    <span className="text-sm font-bold text-green-600 dark:text-green-400">GRATIS</span>
+                                    <span className="text-sm font-bold text-brand dark:text-brand-light">GRATIS</span>
                                 </div>
                                 <p className="text-sm text-slate-500 mt-2 ml-7">
                                     Validamos tu DNI y un comprobante de domicilio. Demora estimada: 24 a 48 h.
@@ -425,12 +425,12 @@ export const PropertyUploadForm: React.FC<{ onComplete: () => void }> = ({ onCom
                                 </p>
 
                                 {formData.verificationType === 'presencial' && formData.selectedSlots.length > 0 && (
-                                    <div className="mt-3 ml-7 p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-200 dark:border-emerald-800">
-                                        <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-300 text-sm">
+                                    <div className="mt-3 ml-7 p-3 bg-brand/5 dark:bg-brand/10 rounded-xl border border-brand/10 dark:border-brand/20">
+                                        <div className="flex items-center gap-2 text-brand dark:text-brand-light text-sm">
                                             <Icons.CheckCircle2 className="w-4 h-4" />
                                             <span className="font-bold">{formData.selectedSlots.length} horarios elegidos</span>
                                         </div>
-                                        <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">
+                                        <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">
                                             Pago: {formData.paymentMethod === 'efectivo' ? 'Efectivo' : formData.paymentMethod === 'transferencia' ? 'Transferencia' : 'Mercado Pago'}
                                         </p>
                                     </div>
@@ -445,11 +445,11 @@ export const PropertyUploadForm: React.FC<{ onComplete: () => void }> = ({ onCom
                     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
                         <div className="flex items-center justify-between">
                             <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Ubicación de la propiedad</h2>
-                            <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full font-bold">OBLIGATORIO</span>
+                            <span className="text-xs bg-brand/10 text-brand dark:bg-brand/15 dark:text-brand-light px-2 py-1 rounded-full font-bold">OBLIGATORIO</span>
                         </div>
 
-                        <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-xl border border-red-200 dark:border-red-800/30">
-                            <p className="text-sm text-red-800 dark:text-red-300">
+                        <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+                            <p className="text-sm text-slate-700 dark:text-slate-300">
                                 <strong>Importante:</strong> La ubicación es obligatoria para publicar tu propiedad. Nos ayuda a confirmar que el lugar existe y a sumar confianza.
                             </p>
                         </div>
@@ -548,7 +548,7 @@ export const PropertyUploadForm: React.FC<{ onComplete: () => void }> = ({ onCom
                             onClick={handleSubmit}
                             disabled={!legalAccepted || !formData.locationSet}
                             className={`flex-1 py-3 rounded-xl font-bold transition-all outline-none ${legalAccepted && formData.locationSet
-                                ? 'bg-green-600 text-white shadow-lg shadow-green-200 hover:scale-[1.02]'
+                                ? 'bg-brand text-white shadow-lg shadow-brand/20 hover:scale-[1.02] hover:bg-brand-dark'
                                 : 'bg-slate-200 dark:bg-slate-700 text-slate-400 cursor-not-allowed'
                                 }`}
                         >

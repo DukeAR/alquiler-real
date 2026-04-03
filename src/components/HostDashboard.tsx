@@ -155,7 +155,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
           <div className={dashboardCardClass}>
             <p className="app-eyebrow mb-1">Calificación</p>
             <div className="flex items-center gap-2">
-              <Icons.Star className="w-6 h-6 text-yellow-400 fill-current" />
+              <Icons.Star className="w-6 h-6 text-brand fill-current" />
               <p className="text-3xl font-semibold text-slate-900 dark:text-white">{dashboardData.stats?.host_rating || '5.0'}</p>
             </div>
           </div>
@@ -210,7 +210,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
                      <span className="text-brand mr-1">Calificación:</span> {dashboardData.stats?.host_rating || 5.0}
                    </div>
                    <div className={cn(dashboardMutedTileClass, 'px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400')}>
-                     <span className="text-emerald-500 mr-1">Validado:</span> {dashboardData.stats?.host_verified ? 'Sí' : 'Pendiente'}
+                     <span className={cn('mr-1', dashboardData.stats?.host_verified ? 'text-emerald-500' : 'text-slate-400')}>Validado:</span> {dashboardData.stats?.host_verified ? 'Sí' : 'Pendiente'}
                    </div>
                 </div>
              </div>
@@ -245,8 +245,12 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
                   <div className="flex flex-wrap items-center gap-3">
                     <button 
                       onClick={() => handleToggleStatus(prop.id, prop.status)}
-                      className={cn("px-3 py-1.5 rounded-full text-[11px] font-semibold uppercase tracking-[0.14em]", 
-                      prop.status === 'active' ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500")}>
+                      className={cn(
+                        'px-3 py-1.5 rounded-full text-[11px] font-semibold uppercase tracking-[0.14em]',
+                        prop.status === 'active'
+                          ? 'bg-brand/10 text-brand dark:bg-brand/15 dark:text-brand-light'
+                          : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400',
+                      )}>
                       {prop.status === 'active' ? 'Activo' : 'Pausado'}
                     </button>
                     <Button
@@ -302,12 +306,20 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
                         <p className="app-eyebrow leading-none">Confianza</p>
                         <p className={cn(
                           "text-xs font-semibold",
-                          tenant.risk === 'low' ? 'text-emerald-500' : tenant.risk === 'medium' ? 'text-orange-500' : 'text-red-500'
+                          tenant.risk === 'low'
+                            ? 'text-brand dark:text-brand-light'
+                            : tenant.risk === 'medium'
+                              ? 'text-slate-600 dark:text-slate-300'
+                              : 'text-slate-400 dark:text-slate-500'
                         )}>{tenant.score}%</p>
                       </div>
                       <div className={cn(
                         "w-2 h-2 rounded-full",
-                        tenant.risk === 'low' ? 'bg-emerald-500' : tenant.risk === 'medium' ? 'bg-orange-500' : 'bg-red-500'
+                        tenant.risk === 'low'
+                          ? 'bg-brand'
+                          : tenant.risk === 'medium'
+                            ? 'bg-slate-500 dark:bg-slate-400'
+                            : 'bg-slate-300 dark:bg-slate-600'
                       )} />
                     </div>
                   </div>
@@ -326,7 +338,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
                 Juntamos señales de comportamiento y validaciones para que decidas mejor con quién hablar.
               </p>
               <div className="pt-4">
-                <div className="flex items-center gap-2 app-eyebrow text-emerald-400">
+                <div className="flex items-center gap-2 app-eyebrow text-emerald-300">
                   <Icons.CheckCircle2 className="w-3 h-3" /> Identidades verificadas
                 </div>
               </div>
@@ -397,10 +409,10 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
 
         {/* Tips / Education */}
         <section className="grid md:grid-cols-2 gap-6">
-          <div className="app-card p-8 space-y-4 bg-indigo-50 border-indigo-100 dark:border-indigo-800/50 dark:bg-indigo-900/20">
-            <Icons.Lightbulb className="w-8 h-8 text-indigo-600" />
-            <h3 className="app-title-4 text-indigo-900 dark:text-indigo-400">¿Por qué conviene verificar mejor?</h3>
-            <p className="app-body-sm text-indigo-800/70 dark:text-indigo-500/70">
+          <div className="app-card border-brand/10 bg-brand/5 p-8 space-y-4 dark:border-brand/20 dark:bg-brand/10">
+            <Icons.Lightbulb className="w-8 h-8 text-brand" />
+            <h3 className="app-title-4 text-slate-950 dark:text-slate-50">¿Por qué conviene verificar mejor?</h3>
+            <p className="app-body-sm text-slate-700/80 dark:text-slate-300/80">
               Un perfil verificado transmite más confianza. Los huéspedes suelen elegir propiedades donde el anfitrión mostró identidad y ubicación real.
             </p>
           </div>

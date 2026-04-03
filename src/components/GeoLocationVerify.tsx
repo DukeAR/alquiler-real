@@ -83,8 +83,8 @@ export const GeoLocationVerify: React.FC<GeoLocationVerifyProps> = ({ onVerified
 
       {status === 'idle' && (
         <div className="space-y-4">
-          <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-2xl border border-blue-100 dark:border-blue-800/30">
-            <p className="text-sm text-blue-800 dark:text-blue-300">
+          <div className="bg-brand/5 dark:bg-brand/10 p-4 rounded-2xl border border-brand/10 dark:border-brand/20">
+            <p className="text-sm text-slate-700 dark:text-slate-200">
               <strong>¿Cómo funciona?</strong><br />
               Vamos a tomar tu ubicación actual usando el GPS del dispositivo. Esa coordenada se guarda como señal de que estuviste en el lugar.
             </p>
@@ -137,10 +137,10 @@ export const GeoLocationVerify: React.FC<GeoLocationVerifyProps> = ({ onVerified
 
       {status === 'error' && (
         <div className="space-y-4">
-          <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-2xl border border-red-200 dark:border-red-800/30">
+          <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-200 dark:border-slate-700">
             <div className="flex items-center gap-3">
-              <Icons.AlertTriangle className="w-6 h-6 text-red-500" />
-              <span className="text-red-800 dark:text-red-300">{error}</span>
+              <Icons.AlertTriangle className="w-6 h-6 text-slate-500" />
+              <span className="text-slate-700 dark:text-slate-300">{error}</span>
             </div>
           </div>
           <button

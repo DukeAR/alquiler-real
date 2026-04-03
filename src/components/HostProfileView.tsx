@@ -24,8 +24,8 @@ export const HostProfileView: React.FC<HostProfileViewProps> = ({ profile, onBac
   const getStatusColor = (status: HostProfile['status']) => {
     switch (status) {
       case 'highly_traceable': return 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20';
-      case 'with_warnings': return 'bg-red-500/10 text-red-600 border-red-500/20';
-      case 'new': return 'bg-blue-500/10 text-blue-600 border-blue-500/20';
+      case 'with_warnings': return 'bg-slate-200/80 text-slate-700 border-slate-300/80 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700';
+      case 'new': return 'bg-brand/10 text-brand border-brand/15 dark:bg-brand/15 dark:text-brand-light dark:border-brand/20';
       default: return 'bg-slate-500/10 text-slate-600 border-slate-500/20';
     }
   };
@@ -67,20 +67,20 @@ export const HostProfileView: React.FC<HostProfileViewProps> = ({ profile, onBac
         </div>
 
         {profile.alerts.length > 0 && (
-          <div className="p-5 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-900/30 rounded-[24px] space-y-3">
-            <div className="flex items-center gap-3 text-amber-700 dark:text-amber-400">
+          <div className="p-5 bg-slate-100/90 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-[24px] space-y-3">
+            <div className="flex items-center gap-3 text-slate-700 dark:text-slate-300">
               <Icons.AlertTriangle className="w-5 h-5 shrink-0" />
               <p className="text-sm font-bold uppercase tracking-tight">Señales para revisar</p>
             </div>
             <ul className="space-y-2">
               {profile.alerts.map((alert, i) => (
-                <li key={i} className="text-xs text-amber-600/80 dark:text-amber-400/70 flex items-start gap-2">
-                  <span className="mt-1.5 w-1 h-1 bg-amber-400 rounded-full shrink-0" />
+                <li key={i} className="text-xs text-slate-600/80 dark:text-slate-400/80 flex items-start gap-2">
+                  <span className="mt-1.5 w-1 h-1 bg-slate-400 rounded-full shrink-0" />
                   {alert}
                 </li>
               ))}
             </ul>
-            <p className="text-[10px] text-amber-500/60 italic font-medium pt-1">
+            <p className="text-[10px] text-slate-500/70 italic font-medium pt-1">
               Este perfil registra señales que conviene revisar con más atención.
             </p>
           </div>
@@ -116,8 +116,8 @@ export const HostProfileView: React.FC<HostProfileViewProps> = ({ profile, onBac
               </div>
             )}
           </div>
-          <div className="p-4 bg-blue-50 dark:bg-blue-900/10 rounded-2xl border border-blue-100 dark:border-blue-900/20">
-            <p className="text-[10px] text-blue-700 dark:text-blue-300 leading-relaxed font-medium italic">
+          <div className="p-4 bg-brand/5 dark:bg-brand/10 rounded-2xl border border-brand/10 dark:border-brand/20">
+            <p className="text-[10px] text-slate-600 dark:text-slate-300 leading-relaxed font-medium italic">
               “La identidad del anfitrión se validó digitalmente. Alquiler Real no certifica la titularidad, el estado físico ni los servicios del inmueble.”
             </p>
           </div>
@@ -158,7 +158,7 @@ export const HostProfileView: React.FC<HostProfileViewProps> = ({ profile, onBac
               </div>
               <div className="flex justify-between items-center text-sm">
                 <span className="text-slate-500 font-medium">Cancelaciones del anfitrión</span>
-                <span className={cn("font-bold", profile.hostCancellationsCount > 0 ? "text-red-500" : "text-emerald-500")}>
+                <span className={cn("font-bold", profile.hostCancellationsCount > 0 ? "text-slate-900 dark:text-slate-100" : "text-brand dark:text-brand-light")}>
                   {profile.hostCancellationsCount}
                 </span>
               </div>
@@ -214,9 +214,9 @@ export const HostProfileView: React.FC<HostProfileViewProps> = ({ profile, onBac
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Cambios de condiciones fuera de plataforma</span>
               {profile.reputation.attemptsToChangeConditionsOutside ? (
-                <span className="px-2 py-1 bg-red-500/10 text-red-600 text-[10px] font-black rounded-lg border border-red-500/20">REPORTADO</span>
+                <span className="px-2 py-1 bg-slate-200/80 text-slate-700 text-[10px] font-black rounded-lg border border-slate-300/80 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700">REPORTADO</span>
               ) : (
-                <span className="px-2 py-1 bg-emerald-500/10 text-emerald-600 text-[10px] font-black rounded-lg border border-emerald-500/20">SIN REPORTES</span>
+                <span className="px-2 py-1 bg-brand/10 text-brand text-[10px] font-black rounded-lg border border-brand/15 dark:bg-brand/15 dark:text-brand-light dark:border-brand/20">SIN REPORTES</span>
               )}
             </div>
           </div>

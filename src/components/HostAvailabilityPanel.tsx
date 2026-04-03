@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { apiJson } from '../lib/apiConfig';
 import { showToast } from '../lib/toast';
 import DateRangePicker from './DateRangePicker';
+import { Icons } from './Icons';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
@@ -162,7 +163,13 @@ export const HostAvailabilityPanel = ({ propertyId, propertyTitle }: Props) => {
 
         {loadError ? (
           <div className="space-y-3">
-            <NoticeBanner tone="warning" heading="No pudimos cargar este calendario" description={loadError} />
+            <NoticeBanner
+              tone="warning"
+              icon={<Icons.ShieldAlert className="h-5 w-5" />}
+              heading="No pudimos cargar este calendario"
+              description={loadError}
+              className="border-slate-200/90 bg-slate-50/92 text-slate-700 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-300"
+            />
             <Button type="button" variant="secondary" size="sm" onClick={() => void loadAvailability()} className="rounded-full px-3 text-xs">
               Reintentar
             </Button>
@@ -173,8 +180,10 @@ export const HostAvailabilityPanel = ({ propertyId, propertyTitle }: Props) => {
           <div className="space-y-4">
             <NoticeBanner
               tone="info"
+              icon={<Icons.Calendar className="h-5 w-5" />}
               heading="Bloqueos manuales y reservas reales"
               description="Las reservas confirmadas se bloquean solas. Además podés cerrar fechas libres desde acá para que no aparezcan disponibles en el calendario público."
+              className="border-brand/10 bg-brand/5 text-slate-700 dark:border-brand/20 dark:bg-brand/10 dark:text-slate-200"
             />
 
             <DateRangePicker
@@ -219,7 +228,7 @@ export const HostAvailabilityPanel = ({ propertyId, propertyTitle }: Props) => {
                   <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Bloqueos manuales</p>
                   <p className="text-xs text-slate-500 dark:text-slate-400">Fechas que cerraste vos desde este calendario.</p>
                 </div>
-                <Badge variant="warning">{manualBlocks.length}</Badge>
+                <Badge variant="neutral">{manualBlocks.length}</Badge>
               </div>
 
               {loading ? (
@@ -230,10 +239,10 @@ export const HostAvailabilityPanel = ({ propertyId, propertyTitle }: Props) => {
                     const entryKey = `${entry.start}-${entry.end}`;
 
                     return (
-                      <div key={entryKey} className="flex items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-3 dark:border-amber-900/40 dark:bg-amber-900/20">
+                      <div key={entryKey} className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-3 dark:border-slate-700 dark:bg-slate-900/60">
                         <div>
-                          <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">{formatRange(entry.start, entry.end)}</p>
-                          <p className="text-xs text-amber-700/80 dark:text-amber-300/70">Bloqueado manualmente</p>
+                          <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{formatRange(entry.start, entry.end)}</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">Bloqueado manualmente</p>
                         </div>
                         <Button
                           type="button"
@@ -261,7 +270,7 @@ export const HostAvailabilityPanel = ({ propertyId, propertyTitle }: Props) => {
                   <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Reservas ya tomadas</p>
                   <p className="text-xs text-slate-500 dark:text-slate-400">Rangos ocupados por reservas activas o completadas.</p>
                 </div>
-                <Badge variant="success">{bookedRanges.length}</Badge>
+                <Badge variant="brand">{bookedRanges.length}</Badge>
               </div>
 
               {loading ? (
@@ -269,9 +278,9 @@ export const HostAvailabilityPanel = ({ propertyId, propertyTitle }: Props) => {
               ) : bookedRanges.length > 0 ? (
                 <div className="space-y-3">
                   {bookedRanges.map((entry) => (
-                    <div key={`${entry.start}-${entry.end}-${entry.status}`} className="rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-3 dark:border-emerald-900/40 dark:bg-emerald-900/20">
-                      <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">{formatRange(entry.start, entry.end)}</p>
-                      <p className="text-xs text-emerald-700/80 dark:text-emerald-300/70">
+                    <div key={`${entry.start}-${entry.end}-${entry.status}`} className="rounded-2xl border border-brand/10 bg-brand/5 px-3 py-3 dark:border-brand/20 dark:bg-brand/10">
+                      <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{formatRange(entry.start, entry.end)}</p>
+                      <p className="text-xs text-slate-600/80 dark:text-slate-300/80">
                         {entry.status === 'completed' ? 'Estadía finalizada' : 'Reserva activa'}
                       </p>
                     </div>
