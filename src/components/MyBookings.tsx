@@ -109,9 +109,9 @@ export const MyBookings = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'confirmed': return 'success';
-      case 'pending': return 'warning';
-      case 'cancelled': return 'danger';
+      case 'confirmed': return 'brand';
+      case 'pending': return 'neutral';
+      case 'cancelled': return 'neutral';
       case 'completed': return 'brand';
       default: return 'neutral';
     }
@@ -235,7 +235,7 @@ export const MyBookings = () => {
                           className={cn(
                             "px-4 py-2 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center gap-2",
                             booking.contractAccepted 
-                              ? "bg-emerald-50 dark:bg-emerald-900/10 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/30"
+                              ? "bg-brand/10 text-brand dark:bg-brand/15 dark:text-brand-light border border-brand/15 dark:border-brand/20"
                               : "bg-brand/10 text-brand hover:bg-brand hover:text-white"
                           )}
                         >
@@ -266,7 +266,7 @@ export const MyBookings = () => {
                   <div className={cn(
                     'rounded-2xl border px-4 py-3 text-xs font-semibold leading-5',
                     isCancelable
-                      ? 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-900/40 dark:bg-sky-900/20 dark:text-sky-300'
+                      ? 'border-brand/10 bg-brand/5 text-slate-700 dark:border-brand/20 dark:bg-brand/10 dark:text-slate-200'
                       : 'border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-800 dark:bg-slate-800/40 dark:text-slate-300',
                   )}>
                     {isCancelable && cancellationDeadlineLabel
@@ -278,23 +278,23 @@ export const MyBookings = () => {
                 ) : null}
 
                 {booking.status === 'confirmed' && (
-                  <div className="p-4 bg-emerald-50 dark:bg-emerald-900/10 rounded-2xl border border-emerald-100 dark:border-emerald-900/30 flex items-center justify-between">
+                  <div className="p-4 bg-brand/5 dark:bg-brand/10 rounded-2xl border border-brand/10 dark:border-brand/20 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <Icons.CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                      <Icons.CheckCircle2 className="w-5 h-5 text-brand" />
                       <div>
-                        <p className="text-[10px] font-black text-emerald-700 dark:text-emerald-400 uppercase tracking-widest">Datos para el ingreso</p>
-                        <p className="text-xs font-bold text-emerald-900/60 dark:text-emerald-300/60">Código de ingreso: {booking.stay_code}</p>
+                        <p className="text-[10px] font-black text-brand dark:text-brand-light uppercase tracking-widest">Datos para el ingreso</p>
+                        <p className="text-xs font-bold text-slate-700/80 dark:text-slate-300/80">Código de ingreso: {booking.stay_code}</p>
                       </div>
                     </div>
                   </div>
                 )}
 
                 {booking.status === 'cancelled' && (
-                  <div className="p-4 bg-rose-50 dark:bg-rose-900/10 rounded-2xl border border-rose-100 dark:border-rose-900/30 flex items-center gap-3">
-                    <Icons.AlertTriangle className="w-5 h-5 text-rose-500" />
+                  <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center gap-3">
+                    <Icons.AlertTriangle className="w-5 h-5 text-slate-500" />
                     <div>
-                      <p className="text-[10px] font-black text-rose-700 dark:text-rose-400 uppercase tracking-widest">Reserva cancelada</p>
-                      <p className="text-xs font-bold text-rose-900/60 dark:text-rose-300/60">Las fechas se liberaron y ya no hay ingreso asociado a esta estadía.</p>
+                      <p className="text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Reserva cancelada</p>
+                      <p className="text-xs font-bold text-slate-600 dark:text-slate-400">Las fechas se liberaron y ya no hay ingreso asociado a esta estadía.</p>
                     </div>
                   </div>
                 )}
@@ -339,7 +339,7 @@ export const MyBookings = () => {
                        <ul className="space-y-3">
                           {(selectedContract.rules || []).map((rule: string, i: number) => (
                              <li key={i} className="flex gap-3 text-xs font-bold leading-relaxed text-slate-600 dark:text-slate-400">
-                                <Icons.Check className="w-4 h-4 text-emerald-500 shrink-0" />
+                                <Icons.Check className="w-4 h-4 text-slate-400 shrink-0" />
                                 {rule}
                              </li>
                           ))}
@@ -369,7 +369,7 @@ export const MyBookings = () => {
                       </>
                     </Button>
                  ) : (
-                    <div className="w-full py-6 bg-emerald-500 text-white rounded-[32px] font-black text-lg tracking-widest uppercase flex items-center justify-center gap-3 shadow-xl shadow-emerald-500/20">
+                    <div className="w-full py-6 bg-brand text-white rounded-[32px] font-black text-lg tracking-widest uppercase flex items-center justify-center gap-3 shadow-xl shadow-brand/20">
                        <Icons.CheckCircle2 className="w-6 h-6" />
                         Condiciones aceptadas
                     </div>

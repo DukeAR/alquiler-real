@@ -282,9 +282,9 @@ const getTraceabilityConfig = (level?: TraceabilityLevel) => {
 };
 
 const factorImpactClasses = {
-  positive: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-  negative: 'border-red-200 bg-red-50 text-red-700',
-  neutral: 'border-slate-200 bg-slate-100 text-slate-600',
+  positive: 'border-brand/15 bg-brand/5 text-brand',
+  negative: 'border-slate-200 bg-slate-100 text-slate-700',
+  neutral: 'border-slate-200 bg-slate-50 text-slate-600',
 } as const;
 
 const factorImpactLabels = {
@@ -340,7 +340,7 @@ const ReviewPreviewCard: React.FC<{ review: PropertyReviewItem }> = ({ review })
             <p className="text-xs text-slate-500">{formatReviewDate(review.date)}</p>
           </div>
         </div>
-        <div className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1.5 text-sm font-semibold text-amber-700">
+        <div className="inline-flex items-center gap-1.5 rounded-full bg-brand/10 px-3 py-1.5 text-sm font-semibold text-brand">
           <Icons.Star className="h-4 w-4 fill-current" />
           <span>{review.rating.toFixed(1)}</span>
         </div>
@@ -884,7 +884,7 @@ export const PropertyDetailShell: React.FC<{
                 </div>
                 <p className="text-sm leading-6 text-slate-500">Revisá fechas, anfitrión y total antes de confirmar la estadía.</p>
                 <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600">
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1.5 font-semibold text-amber-700">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-brand/10 px-3 py-1.5 font-semibold text-brand">
                     <Icons.Star className="h-4 w-4 fill-current" />
                     <span>{ratingValue > 0 ? ratingValue.toFixed(1) : 'Nuevo'}</span>
                   </span>
@@ -898,7 +898,7 @@ export const PropertyDetailShell: React.FC<{
                 aria-label={isFav ? 'Quitar de guardados' : 'Guardar en guardados'}
                 variant="secondary"
                 size="icon"
-                className={isFav ? 'border-red-500 bg-red-500 text-white hover:border-red-500 hover:bg-red-500 hover:text-white' : 'border-slate-200 bg-white text-slate-700'}
+                className={isFav ? 'border-brand bg-brand text-white hover:border-brand hover:bg-brand-dark hover:text-white' : 'border-slate-200 bg-white text-slate-700 hover:border-brand/30 hover:text-brand'}
               >
                 <Icons.Heart className="h-5 w-5" />
               </Button>
@@ -920,16 +920,16 @@ export const PropertyDetailShell: React.FC<{
             ) : null}
 
             {bookingSuccess ? (
-              <Card padding="sm" variant="muted" className="mt-5 rounded-[24px] border-emerald-200/80 bg-emerald-50/80">
+              <Card padding="sm" variant="muted" className="mt-5 rounded-[24px] border-brand/10 bg-brand/5">
                 <NoticeBanner
-                  tone="success"
+                  tone="info"
                   heading="La estadía ya quedó confirmada"
                   description={`Guardamos ${bookingSuccess.nights} ${bookingSuccess.nights === 1 ? 'noche' : 'noches'} para ${bookingSuccess.guestSummary} por ${formatCurrency(bookingSuccess.total)}. Desde Mis reservas podés revisar fechas, estado y condiciones.`}
-                  className="border-emerald-200 bg-white/85 text-emerald-700 shadow-none"
+                  className="border-brand/15 bg-white/85 text-slate-700 shadow-none dark:border-brand/20 dark:bg-slate-900/85 dark:text-slate-100"
                 />
 
                 {bookingSuccess.stayCode ? (
-                  <Badge variant="success" size="md" className="mt-4 gap-2">
+                  <Badge variant="brand" size="md" className="mt-4 gap-2">
                     <Icons.CheckCircle2 className="h-3.5 w-3.5" />
                     <span>Código de ingreso: {bookingSuccess.stayCode}</span>
                   </Badge>
@@ -1281,7 +1281,7 @@ export const PropertyDetailShell: React.FC<{
 
               <Card padding="sm" variant="muted" className="w-full rounded-[28px] border-slate-200/80 bg-white lg:max-w-xs">
                 <div className="flex items-center gap-3">
-                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-600">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand/10 text-brand">
                     <Icons.Star className="h-5 w-5 fill-current" />
                   </span>
                   <div>

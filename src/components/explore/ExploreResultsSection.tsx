@@ -121,7 +121,7 @@ export const ExploreResultsSection = ({
             </Badge>
           ) : null}
           {appliedFilterCount > 0 ? (
-            <Badge variant="warning" size="md" className="gap-2">
+            <Badge variant="brand" size="md" className="gap-2">
               <Icons.SlidersHorizontal className="h-3.5 w-3.5" />
               <span>{appliedFilterCount} {appliedFilterCount === 1 ? 'filtro activo' : 'filtros activos'}</span>
             </Badge>

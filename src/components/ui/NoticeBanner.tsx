@@ -7,8 +7,8 @@ type NoticeTone = 'success' | 'error' | 'info' | 'warning';
 const toneClasses: Record<NoticeTone, string> = {
   success: 'border-emerald-200/80 bg-emerald-50/92 text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-900/20 dark:text-emerald-400',
   error: 'border-red-200/80 bg-red-50/92 text-red-700 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-400',
-  info: 'border-blue-200/80 bg-blue-50/92 text-blue-700 dark:border-blue-900/40 dark:bg-blue-900/20 dark:text-blue-400',
-  warning: 'border-amber-200/80 bg-amber-50/92 text-amber-700 dark:border-amber-900/40 dark:bg-amber-900/20 dark:text-amber-400',
+  info: 'border-brand/15 bg-brand/5 text-slate-700 dark:border-brand/20 dark:bg-brand/10 dark:text-slate-200',
+  warning: 'border-slate-200/90 bg-slate-50/92 text-slate-700 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-300',
 };
 
 const toneIcons: Record<NoticeTone, React.ReactNode> = {

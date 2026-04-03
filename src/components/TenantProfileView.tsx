@@ -128,15 +128,15 @@ export const TenantProfileView: React.FC<TenantProfileViewProps> = ({ onBack }) 
 
         {/* ERROR STATE */}
         {error && !loading && (
-          <div className="p-6 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 rounded-[24px] space-y-4">
+          <div className="p-6 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-[24px] space-y-4">
             <div className="flex items-start gap-4">
-              <Icons.AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400 shrink-0 mt-1" />
+              <Icons.AlertTriangle className="w-6 h-6 text-slate-500 dark:text-slate-400 shrink-0 mt-1" />
               <div className="flex-1">
-                <h3 className="font-bold text-red-800 dark:text-red-300 mb-2">No pudimos cargar tu verificación</h3>
-                <p className="text-sm text-red-700 dark:text-red-400 mb-4">{error}</p>
+                <h3 className="font-bold text-slate-900 dark:text-slate-100 mb-2">No pudimos cargar tu verificación</h3>
+                <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">{error}</p>
                 <button
                   onClick={fetchValidationStatus}
-                  className="px-4 py-2 bg-red-600 text-white rounded-xl font-semibold text-sm hover:bg-red-700 transition-colors flex items-center gap-2"
+                  className="px-4 py-2 bg-brand text-white rounded-xl font-semibold text-sm hover:bg-brand-dark transition-colors flex items-center gap-2"
                 >
                   <Icons.ArrowRight className="w-4 h-4" />
                   Intentar de nuevo
@@ -182,16 +182,16 @@ export const TenantProfileView: React.FC<TenantProfileViewProps> = ({ onBack }) 
 
             {/* Explicación del nivel según el usuario */}
             {validationStatus.level === 'DESTACADO' && (
-              <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-2xl border border-amber-200 dark:border-amber-800">
-                <p className="text-sm text-amber-800 dark:text-amber-300">
+              <div className="p-4 bg-brand/5 dark:bg-brand/10 rounded-2xl border border-brand/10 dark:border-brand/20">
+                <p className="text-sm text-slate-700 dark:text-slate-200">
                   <strong>⭐ Nivel destacado:</strong> Llegaste a este nivel por las reseñas positivas que recibiste de los anfitriones. Seguí construyendo ese historial.
                 </p>
               </div>
             )}
 
             {validationStatus.level === 'VERIFICADO' && (
-              <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-2xl border border-blue-200 dark:border-blue-800">
-                <p className="text-sm text-blue-800 dark:text-blue-300">
+              <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl border border-emerald-200 dark:border-emerald-800">
+                <p className="text-sm text-emerald-800 dark:text-emerald-300">
                   <strong>✅ Identidad verificada:</strong> Validamos tu identidad con tu DNI. Los anfitriones pueden confiar en que sos quien decís ser.
                 </p>
               </div>

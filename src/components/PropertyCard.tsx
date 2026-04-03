@@ -31,9 +31,9 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   const imageBadge = property.isVerifiedProperty
     ? {
         label: 'Verificada',
-        variant: 'brand' as const,
+        variant: 'success' as const,
         icon: <Icons.ShieldCheck className="h-3.5 w-3.5" />,
-        className: 'border-white/70 bg-white/95 text-brand shadow-sm',
+        className: 'border-emerald-200/80 bg-white/95 text-emerald-700 shadow-sm',
       }
     : null;
 
@@ -41,25 +41,25 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
     property.isSuperHost
       ? {
           label: 'Superanfitrión',
-          variant: 'success' as const,
+          variant: 'brand' as const,
           icon: <Icons.Award className="h-3.5 w-3.5" />,
-          className: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+          className: 'border-brand/15 bg-brand/10 text-brand-dark dark:border-brand/20 dark:bg-brand/15 dark:text-brand-light',
         }
       : null,
     !property.isVerifiedProperty && property.identityValidated
       ? {
           label: 'Anfitrión validado',
-          variant: 'neutral' as const,
+          variant: 'success' as const,
           icon: <Icons.BadgeCheck className="h-3.5 w-3.5" />,
-          className: 'border-slate-200 bg-slate-50 text-slate-700',
+          className: 'border-emerald-200 bg-emerald-50 text-emerald-700',
         }
       : null,
     !property.isVerifiedProperty && !property.identityValidated && property.locationVerified
       ? {
           label: 'Ubicación verificada',
-          variant: 'info' as const,
+          variant: 'success' as const,
           icon: <Icons.MapPin className="h-3.5 w-3.5" />,
-          className: 'border-sky-200 bg-sky-50 text-sky-700',
+          className: 'border-emerald-200 bg-emerald-50 text-emerald-700',
         }
       : null,
   ].filter(Boolean) as Array<{
@@ -137,8 +137,8 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
             className={cn(
               'h-10 w-10 rounded-full border-white/80 bg-white/94 text-slate-700 shadow-[0_16px_30px_-22px_rgba(15,23,42,0.24)] backdrop-blur-sm transition-[background-color,border-color,color,box-shadow,transform] duration-150 active:scale-[0.98]',
               isFavorite
-                ? 'border-red-500 bg-red-500 text-white hover:border-red-500 hover:bg-red-500 hover:text-white'
-                : 'hover:border-red-200 hover:bg-white hover:text-red-500',
+                ? 'border-brand bg-brand text-white hover:border-brand hover:bg-brand-dark hover:text-white'
+                : 'hover:border-brand/30 hover:bg-white hover:text-brand',
             )}
           >
             <Icons.Heart className={`h-4 w-4 ${isFavorite ? 'fill-current' : ''}`} />
@@ -169,7 +169,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
 
             <div className="shrink-0 rounded-[20px] border border-slate-200/80 bg-white/96 px-3 py-2 text-right shadow-[0_12px_24px_-18px_rgba(15,23,42,0.18)]">
               <div className="flex items-center justify-end gap-1.5 text-sm font-semibold text-slate-900">
-                <Icons.Star className="h-4 w-4 fill-amber-500 text-amber-500" />
+                <Icons.Star className="h-4 w-4 fill-brand text-brand" />
                 {ratingLabel}
               </div>
               <p className="mt-0.5 text-[10.5px] font-medium text-slate-500">{reviewLabel}</p>

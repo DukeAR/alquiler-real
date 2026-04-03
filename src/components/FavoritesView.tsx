@@ -187,11 +187,11 @@ export const FavoritesView: React.FC = () => {
             padding="none"
             role="status"
             aria-live="polite"
-            className="border-emerald-200/80 bg-emerald-50/75 p-4 shadow-[var(--app-shadow-subtle)]"
+            className="border-brand/10 bg-brand/5 p-4 shadow-[var(--app-shadow-subtle)]"
           >
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white text-emerald-600 shadow-[var(--app-shadow-subtle)]">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white text-brand shadow-[var(--app-shadow-subtle)]">
                   <Icons.Check className="h-5 w-5" />
                 </div>
                 <div className="min-w-0 space-y-1">

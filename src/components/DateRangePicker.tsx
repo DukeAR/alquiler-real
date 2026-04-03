@@ -673,7 +673,7 @@ const DateRangePicker: React.FC<Props> = ({ checkIn, checkOut, setCheckIn, setCh
                             const buttonBase = 'relative z-10 h-11 w-11 rounded-full text-sm transition-[transform,background-color,color,box-shadow,border-color] duration-150 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-white';
                             const buttonState = disabled
                               ? blockedByAvailability
-                                ? 'cursor-not-allowed border border-amber-200 bg-amber-50 text-amber-700 opacity-90'
+                                ? 'cursor-not-allowed border border-slate-200 bg-slate-100 text-slate-500 opacity-90'
                                 : 'cursor-not-allowed text-slate-300 opacity-70'
                               : 'text-slate-700 hover:scale-[1.03] hover:bg-slate-100 active:scale-[0.97]';
 
