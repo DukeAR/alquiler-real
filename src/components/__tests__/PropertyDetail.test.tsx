@@ -271,16 +271,16 @@ describe('PropertyDetail', () => {
     await waitFor(() => expect(screen.queryByText('Confirmá tu reserva', { selector: 'h3' })).toBeNull());
   });
 
-  test('smoke: shows inline error when trying to reserve without dates', async () => {
+  test('smoke: keeps the booking CTA disabled until dates are complete', async () => {
     renderPropertyDetail();
 
     await waitFor(() => expect(screen.getByText('Casa de prueba')).toBeDefined());
 
-    fireEvent.click(screen.getByRole('button', { name: /elegí fechas para continuar/i }));
+    const reserveButton = screen.getByRole('button', { name: /elegí fechas para continuar/i });
 
-    await waitFor(() => {
-      expect(screen.getAllByText('Elegí fecha de ingreso y salida para revisar el total antes de reservar.')).toHaveLength(2);
-    });
+    expect(reserveButton).toBeDisabled();
+    expect(screen.getByText('Elegí ingreso y salida para ver el total estimado')).toBeInTheDocument();
+    expect(screen.getByText('Cuando completes las fechas, la sidebar te va a mostrar la estadía y el total antes de revisar la reserva.')).toBeInTheDocument();
 
     expect(screen.queryByText('Confirmá tu reserva', { selector: 'h3' })).toBeNull();
   });

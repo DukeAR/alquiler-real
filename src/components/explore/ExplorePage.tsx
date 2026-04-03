@@ -16,20 +16,71 @@ const defaultFilters: ExploreFilters = {
   verifiedOnly: false,
 };
 
+const hasCatalogSuggestionContext = (filters: ExploreFilters, searchQuery: string) => (
+  !searchQuery &&
+  !filters.minPrice &&
+  !filters.maxPrice &&
+  !filters.type &&
+  !filters.verifiedOnly
+);
+
+const buildLocationSuggestions = (items: Property[]): LocationSuggestion[] => {
+  const locations = new Map<string, LocationSuggestion>();
+
+  items.forEach((property) => {
+    const rawLocation = property.location?.trim();
+    if (!rawLocation) {
+      return;
+    }
+
+    const [name, ...regionParts] = rawLocation
+      .split(',')
+      .map((part) => part.trim())
+      .filter(Boolean);
+    const key = rawLocation.toLowerCase();
+    const current = locations.get(key);
+
+    if (current) {
+      current.propertyCount += 1;
+      return;
+    }
+
+    locations.set(key, {
+      id: `location-${key.replace(/[^a-z0-9]+/g, '-')}`,
+      name: name || rawLocation,
+      region: regionParts.join(', ') || undefined,
+      propertyCount: 1,
+    });
+  });
+
+  return Array.from(locations.values()).sort((left, right) => {
+    if (right.propertyCount !== left.propertyCount) {
+      return right.propertyCount - left.propertyCount;
+    }
+
+    return left.name.localeCompare(right.name, 'es');
+  });
+};
+
 export const ExplorePage = () => {
   const { toggleFavorite, isFavorite } = useFavorites();
   const { user } = useAuth();
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
   const [visibleCount, setVisibleCount] = useState(9);
   const [filters, setFilters] = useState<ExploreFilters>(defaultFilters);
+  const [locationSuggestions, setLocationSuggestions] = useState<LocationSuggestion[]>([]);
+  const [refreshToken, setRefreshToken] = useState(0);
 
   useEffect(() => {
     const fetchProperties = async () => {
       setLoading(true);
+      setLoadError(null);
+
       try {
         const params = new URLSearchParams();
         if (filters.minPrice) params.append('minPrice', filters.minPrice);
@@ -40,17 +91,24 @@ export const ExplorePage = () => {
         if (searchQuery) params.append('location', searchQuery);
 
         const data = await apiJson<Property[]>(`/api/properties?${params.toString()}`);
-        setProperties(data || []);
+        const nextProperties = data || [];
+        setProperties(nextProperties);
+
+        if (hasCatalogSuggestionContext(filters, searchQuery)) {
+          setLocationSuggestions(buildLocationSuggestions(nextProperties));
+        } else {
+          setLocationSuggestions((current) => current.length > 0 ? current : buildLocationSuggestions(nextProperties));
+        }
       } catch (error) {
         console.error(error);
-        setProperties([]);
+        setLoadError(error instanceof Error ? error.message : 'No pudimos actualizar las propiedades ahora.');
       } finally {
         setLoading(false);
       }
     };
 
     void fetchProperties();
-  }, [filters, searchQuery]);
+  }, [filters, refreshToken, searchQuery]);
 
   useEffect(() => {
     setVisibleCount(9);
@@ -111,6 +169,7 @@ export const ExplorePage = () => {
         <ExploreHero
           user={user}
           searchValue={searchInput}
+          locationSuggestions={locationSuggestions}
           onSearchChange={handleSearchChange}
           onSearchSubmit={applySearch}
           onSearchSubmitValue={applySearchValue}
@@ -128,6 +187,7 @@ export const ExplorePage = () => {
 
         <ExploreResultsSection
           loading={loading}
+          loadError={loadError}
           viewMode={viewMode}
           hasActiveFilters={hasActiveFilters}
           searchQuery={searchQuery}
@@ -138,6 +198,7 @@ export const ExplorePage = () => {
           visibleProperties={visibleProperties}
           hasMoreResults={hasMoreResults}
           onLoadMore={() => setVisibleCount((current) => current + 9)}
+          onRetry={() => setRefreshToken((current) => current + 1)}
           onClearFilters={clearAllFilters}
           onFavoriteToggle={toggleFavorite}
           isFavorite={isFavorite}

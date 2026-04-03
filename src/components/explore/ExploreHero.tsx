@@ -9,6 +9,7 @@ import type { User } from '../../hooks/useAuth';
 type ExploreHeroProps = {
   user: User | null;
   searchValue: string;
+  locationSuggestions: LocationSuggestion[];
   onSearchChange: (value: string) => void;
   onSearchSubmit: () => void;
   onSearchSubmitValue: (value: string) => void;
@@ -18,6 +19,7 @@ type ExploreHeroProps = {
 export const ExploreHero = ({
   user,
   searchValue,
+  locationSuggestions,
   onSearchChange,
   onSearchSubmit,
   onSearchSubmitValue,
@@ -117,6 +119,7 @@ export const ExploreHero = ({
                   <div className="app-eyebrow mb-2 hidden pl-1 md:block">Destino</div>
                   <LocationAutocomplete
                     value={searchValue}
+                    suggestions={locationSuggestions}
                     onChange={onSearchChange}
                     placeholder="¿Dónde querés alojarte?"
                     onSelect={onLocationSelect}

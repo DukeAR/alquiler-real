@@ -101,6 +101,14 @@ type BookingConfirmationNotice = {
   description: string;
 };
 
+type BookingSuccessState = {
+  bookingId: string;
+  nights: number;
+  total: number;
+  guestSummary: string;
+  stayCode?: string;
+};
+
 const formatMonthYear = (value?: string) => {
   if (!value) return null;
 
@@ -386,6 +394,7 @@ export const PropertyDetailShell: React.FC<{
   const [confirmOpen, setConfirmOpen] = useState<boolean>(false);
   const [bookingSubmitting, setBookingSubmitting] = useState(false);
   const [bookingSubmitNotice, setBookingSubmitNotice] = useState<BookingConfirmationNotice | null>(null);
+  const [bookingSuccess, setBookingSuccess] = useState<BookingSuccessState | null>(null);
   const [availabilityRefreshToken, setAvailabilityRefreshToken] = useState(0);
 
   const reviewCount = Math.max(Number(property.reviewsCount) || 0, reviews.length);
@@ -530,6 +539,12 @@ export const PropertyDetailShell: React.FC<{
     setBookingSubmitNotice(null);
   };
 
+  const clearBookingFeedback = () => {
+    setBookingError(null);
+    setBookingSubmitNotice(null);
+    setBookingSuccess(null);
+  };
+
   const closeBookingConfirmation = () => {
     if (bookingSubmitting) return;
     setConfirmOpen(false);
@@ -538,14 +553,12 @@ export const PropertyDetailShell: React.FC<{
 
   const handleAdultsChange = (nextValue: number) => {
     setAdults(Math.max(1, nextValue));
-    setBookingError(null);
-    setBookingSubmitNotice(null);
+    clearBookingFeedback();
   };
 
   const handleChildrenChange = (nextValue: number) => {
     setChildrenCount(Math.max(0, nextValue));
-    setBookingError(null);
-    setBookingSubmitNotice(null);
+    clearBookingFeedback();
   };
 
   const handleReserve = (e: React.FormEvent) => {
@@ -637,18 +650,28 @@ export const PropertyDetailShell: React.FC<{
       return;
     }
 
+    const bookedTotal = result.data.booking?.totalPrice ?? result.data.pricing.total ?? total;
+
     setBookingSubmitting(false);
     setBookingError(null);
     setConfirmOpen(false);
     setBookingSubmitNotice(null);
+    setBookingSuccess({
+      bookingId: result.data.booking.id,
+      nights: result.data.pricing.nights,
+      total: bookedTotal,
+      guestSummary: formatGuestSelection(adults, childrenCount),
+      stayCode: result.data.booking.stay_code,
+    });
     setCheckIn('');
     setCheckOut('');
+    setAdults(1);
+    setChildrenCount(0);
     setAvailabilityRefreshToken((currentValue) => currentValue + 1);
 
-    const bookedTotal = result.data.booking?.totalPrice ?? result.data.pricing.total ?? total;
     showToast(
       'Reserva confirmada',
-      `Reservaste ${result.data.pricing.nights} ${result.data.pricing.nights === 1 ? 'noche' : 'noches'} por ${formatCurrency(bookedTotal)}.`,
+      `Reservaste ${result.data.pricing.nights} ${result.data.pricing.nights === 1 ? 'noche' : 'noches'} por ${formatCurrency(bookedTotal)}. Ya la podés ver en Mis reservas.`,
       'success',
     );
   };
@@ -869,6 +892,38 @@ export const PropertyDetailShell: React.FC<{
               </div>
             ) : null}
 
+            {bookingSuccess ? (
+              <Card padding="sm" variant="muted" className="mt-5 rounded-[24px] border-emerald-200/80 bg-emerald-50/80">
+                <NoticeBanner
+                  tone="success"
+                  heading="La reserva ya quedó confirmada"
+                  description={`Guardamos ${bookingSuccess.nights} ${bookingSuccess.nights === 1 ? 'noche' : 'noches'} para ${bookingSuccess.guestSummary} por ${formatCurrency(bookingSuccess.total)}. Desde Mis reservas podés revisar fechas, estado y condiciones.`}
+                  className="border-emerald-200 bg-white/85 text-emerald-700 shadow-none"
+                />
+
+                {bookingSuccess.stayCode ? (
+                  <Badge variant="success" size="md" className="mt-4 gap-2">
+                    <Icons.CheckCircle2 className="h-3.5 w-3.5" />
+                    <span>Código de ingreso: {bookingSuccess.stayCode}</span>
+                  </Badge>
+                ) : null}
+
+                <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                  <Button type="button" onClick={() => navigate('/my-bookings')} className="sm:flex-1">
+                    <Icons.Calendar className="h-4 w-4" />
+                    Ver mis reservas
+                  </Button>
+                  <Button type="button" variant="secondary" onClick={onContact} className="sm:flex-1">
+                    <Icons.MessageSquare className="h-4 w-4" />
+                    Escribir al anfitrión
+                  </Button>
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setBookingSuccess(null)}>
+                    Cerrar aviso
+                  </Button>
+                </div>
+              </Card>
+            ) : null}
+
             <div className="mt-5 flex flex-wrap gap-2">
               <BookingStepBadge icon={Icons.Calendar} label="Fechas" complete={hasCompleteDates} active={!checkIn || hasPartialDates} />
               <BookingStepBadge icon={Icons.Users} label="Huéspedes" complete={guestCount > 0} active={hasCompleteDates && !canReserve} />
@@ -908,12 +963,12 @@ export const PropertyDetailShell: React.FC<{
                 <DateRangePicker
                   checkIn={checkIn}
                   checkOut={checkOut}
-                  setCheckIn={(v) => { setCheckIn(v); setBookingError(null); setBookingSubmitNotice(null); }}
-                  setCheckOut={(v) => { setCheckOut(v); setBookingError(null); setBookingSubmitNotice(null); }}
+                  setCheckIn={(v) => { setCheckIn(v); clearBookingFeedback(); }}
+                  setCheckOut={(v) => { setCheckOut(v); clearBookingFeedback(); }}
                   propertyId={property.id}
                   availabilityRefreshToken={availabilityRefreshToken}
                   minDate={todayISO}
-                  onChange={() => { setBookingError(null); setBookingSubmitNotice(null); }}
+                  onChange={clearBookingFeedback}
                 />
               </FormField>
 
@@ -1013,8 +1068,9 @@ export const PropertyDetailShell: React.FC<{
                 variant="primary"
                 size="lg"
                 fullWidth
+                disabled={!canReserve}
                 aria-disabled={!canReserve}
-                className={`rounded-2xl ${!canReserve ? 'bg-slate-200 text-slate-500 hover:translate-y-0 hover:bg-slate-300/80 hover:shadow-none' : ''}`}
+                className="rounded-2xl"
               >
                 {reserveButtonLabel}
               </Button>

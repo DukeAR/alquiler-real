@@ -26,6 +26,7 @@ const renderSkeletons = (count = 6) => Array.from({ length: count }, (_, index) 
 
 type ExploreResultsSectionProps = {
   loading: boolean;
+  loadError: string | null;
   viewMode: 'grid' | 'map';
   hasActiveFilters: boolean;
   searchQuery: string;
@@ -36,6 +37,7 @@ type ExploreResultsSectionProps = {
   visibleProperties: Property[];
   hasMoreResults: boolean;
   onLoadMore: () => void;
+  onRetry: () => void;
   onClearFilters: () => void;
   onFavoriteToggle: (propertyId: string, isFavorite: boolean) => void;
   isFavorite: (propertyId: string) => boolean;
@@ -43,6 +45,7 @@ type ExploreResultsSectionProps = {
 
 export const ExploreResultsSection = ({
   loading,
+  loadError,
   viewMode,
   hasActiveFilters,
   searchQuery,
@@ -53,6 +56,7 @@ export const ExploreResultsSection = ({
   visibleProperties,
   hasMoreResults,
   onLoadMore,
+  onRetry,
   onClearFilters,
   onFavoriteToggle,
   isFavorite,
@@ -63,6 +67,8 @@ export const ExploreResultsSection = ({
   const visibleCount = visibleProperties.length;
   const remainingResults = Math.max(listingProperties.length - visibleCount, 0);
   const hasAnyResults = totalResults > 0;
+  const failedToLoadResults = Boolean(loadError) && !loading && !hasAnyResults;
+  const showingStaleResults = Boolean(loadError) && !loading && hasAnyResults;
 
   const summaryEyebrow = viewMode === 'map'
     ? 'Exploración en mapa'
@@ -72,6 +78,8 @@ export const ExploreResultsSection = ({
 
   const summaryHeading = loading
     ? 'Buscando propiedades para comparar mejor'
+    : failedToLoadResults
+      ? 'No pudimos actualizar las propiedades ahora'
     : hasActiveFilters
       ? hasAnyResults
         ? 'Resultados listos para decidir con más claridad'
@@ -82,6 +90,8 @@ export const ExploreResultsSection = ({
 
   const summaryDescription = loading
     ? 'Estamos actualizando precios, ubicación y señales de confianza para mostrarte resultados al día.'
+    : failedToLoadResults
+      ? 'Puede ser un problema temporal de conexión. Reintentá sin perder el contexto de búsqueda.'
     : hasActiveFilters
       ? hasAnyResults
         ? `${formatPropertyCount(totalResults)} para revisar ubicación, precio, anfitrión y señales de confianza desde el inicio.`
@@ -146,8 +156,46 @@ export const ExploreResultsSection = ({
           description="Primero ves publicaciones con mejor valoración y después el resto de la oferta para seguir comparando con contexto." 
         />
       ) : null}
+
+      {showingStaleResults ? (
+        <NoticeBanner
+          className="mt-5"
+          tone="warning"
+          heading="Mostrando la última versión disponible"
+          description={`${loadError} Podés seguir comparando con estos resultados o reintentar para traer datos actualizados.`}
+        />
+      ) : null}
     </Card>
   );
+
+  if (failedToLoadResults) {
+    return (
+      <section className="space-y-6 md:space-y-8">
+        {summaryCard}
+
+        <Card className="rounded-[32px] border-slate-200/80 bg-white p-6 shadow-[0_28px_70px_-50px_rgba(15,23,42,0.25)] sm:p-7">
+          <NoticeBanner
+            tone="error"
+            heading="No pudimos cargar propiedades en este momento"
+            description={loadError || 'Probá de nuevo en unos segundos.'}
+          />
+
+          <div className="mt-5 flex flex-wrap gap-3">
+            <Button type="button" onClick={onRetry}>
+                <Icons.Loader2 className="h-4 w-4" />
+              Reintentar
+            </Button>
+            {hasActiveFilters ? (
+              <Button type="button" variant="secondary" onClick={onClearFilters}>
+                <Icons.X className="h-4 w-4" />
+                Limpiar filtros
+              </Button>
+            ) : null}
+          </div>
+        </Card>
+      </section>
+    );
+  }
 
   if (viewMode === 'map') {
     if (!loading && !hasAnyResults) {

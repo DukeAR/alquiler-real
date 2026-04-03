@@ -38,6 +38,7 @@ const sampleProperties = [
 const renderSection = (props?: Partial<React.ComponentProps<typeof ExploreResultsSection>>) => {
   const defaultProps: React.ComponentProps<typeof ExploreResultsSection> = {
     loading: false,
+    loadError: null,
     viewMode: 'grid',
     hasActiveFilters: false,
     searchQuery: '',
@@ -48,6 +49,7 @@ const renderSection = (props?: Partial<React.ComponentProps<typeof ExploreResult
     visibleProperties: [sampleProperties[1], sampleProperties[2]],
     hasMoreResults: false,
     onLoadMore: vi.fn(),
+    onRetry: vi.fn(),
     onClearFilters: vi.fn(),
     onFavoriteToggle: vi.fn(),
     isFavorite: vi.fn(() => false),
