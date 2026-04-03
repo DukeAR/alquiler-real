@@ -55,24 +55,25 @@ type RoleGuide = {
 const validationBuckets: ValidationBucket[] = [
   {
     eyebrow: 'Sí validamos',
-    title: 'Señales concretas para darte contexto',
+    title: 'Qué podés revisar antes de avanzar',
     icon: Icons.ShieldCheck,
     tone: 'positive',
     items: [
-      'La identidad del anfitrión cuando pasó por verificación.',
-      'La existencia del lugar a partir de registro visual o ubicación, cuando esa señal está disponible.',
-      'La información visible de la publicación para comparar antes de hablar o pagar.',
+      'Quién publica, cuando esa identidad ya fue validada.',
+      'Si la ubicación coincide con el lugar.',
+      'Qué reseñas o registro real hay de la propiedad.',
+      'Qué parte del aviso ya está clara antes de hablar o pagar.',
     ],
   },
   {
     eyebrow: 'No validamos',
-    title: 'Límites que conviene tener claros',
+    title: 'Qué no garantiza la app',
     icon: Icons.ShieldAlert,
     tone: 'neutral',
     items: [
-      'La limpieza, el mantenimiento o el estado técnico del inmueble.',
-      'La titularidad legal, los contratos o la calidad de los servicios.',
-      'Toda la experiencia de la estadía ni la conducta futura de las partes.',
+      'El estado del lugar, la limpieza o los servicios.',
+      'Aspectos legales, contratos o titularidad.',
+      'Que la estadía salga bien en todos los casos.',
     ],
   },
 ];
@@ -80,8 +81,8 @@ const validationBuckets: ValidationBucket[] = [
 const supportCards: SupportCard[] = [
   {
     eyebrow: 'Pagos directos',
-    title: 'El acuerdo económico va por fuera de la plataforma',
-    description: 'El pago se coordina entre anfitrión y huésped. Alquiler Real no retiene dinero, no cobra por reservar y no actúa como intermediario financiero.',
+    title: 'El pago va por fuera de la app',
+    description: 'Se coordina entre anfitrión y huésped. Alquiler Real no procesa pagos ni retiene dinero.',
     icon: Icons.FileText,
     className: 'border-slate-200/85 bg-white/98 shadow-[0_18px_38px_-30px_rgba(15,23,42,0.18)] dark:border-slate-800 dark:bg-slate-900',
     iconWrapClassName: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200',
@@ -90,8 +91,8 @@ const supportCards: SupportCard[] = [
   },
   {
     eyebrow: 'Hoy y lo que viene',
-    title: 'Estamos en San Clemente y seguimos sumando tranquilidad',
-    description: 'Hoy operamos en San Clemente del Tuyú. También estamos trabajando en una seña resguardada para sumar más claridad en próximas etapas.',
+    title: 'Hoy operamos en San Clemente',
+    description: 'Ese es el alcance actual. Más adelante puede haber una seña resguardada, pero hoy no forma parte del flujo.',
     icon: Icons.MapPin,
     className: 'border-brand/15 bg-[radial-gradient(circle_at_top_right,rgba(67,56,202,0.12),transparent_42%),linear-gradient(180deg,rgba(255,255,255,0.99),rgba(248,250,252,0.98))] shadow-[0_18px_38px_-30px_rgba(15,23,42,0.18)] dark:border-brand/20 dark:bg-slate-900',
     iconWrapClassName: 'bg-brand/10 text-brand dark:bg-brand/15 dark:text-brand-light',
@@ -103,28 +104,28 @@ const supportCards: SupportCard[] = [
 const faqGroups: FAQGroup[] = [
   {
     eyebrow: 'Antes de reservar',
-    description: 'Qué información conviene mirar antes de avanzar y qué límites no conviene perder de vista.',
+    description: 'Qué mirar antes de avanzar y qué no conviene dar por hecho.',
     items: [
       {
         question: '¿Qué me aporta una propiedad verificada?',
-        answer: 'Te da señales concretas sobre el anfitrión y el lugar. No reemplaza tu criterio, pero sí baja dudas antes de avanzar.',
+        answer: 'Sirve para saber qué parte del aviso se pudo comprobar antes de hablar o pagar.',
         bullets: [
-          'Podés ver identidad validada, registro visual o ubicación cuando esa señal está disponible.',
-          'Te ayuda a comparar con más contexto antes de hablar o pagar.',
+          'Quién publica, si la ubicación coincide y si hay registro real del lugar.',
+          'No reemplaza una visita, pero evita decidir solo por promesas.',
         ],
         icon: Icons.ShieldCheck,
       },
       {
         question: '¿La publicación garantiza la calidad de la estadía?',
-        answer: 'No. La publicación ordena información real, pero no garantiza limpieza, servicios, estado del inmueble ni toda la experiencia de la estadía.',
+        answer: 'No. Verificado no significa que garanticemos limpieza, estado del lugar ni funcionamiento de los servicios.',
         icon: Icons.Home,
       },
       {
         question: '¿Qué conviene revisar igual antes de pagar?',
-        answer: 'La plataforma te ayuda a filtrar mejor, pero la decisión final sigue siendo tuya.',
+        answer: 'Además de la verificación, conviene revisar lo básico de la publicación.',
         bullets: [
-          'Revisá reseñas, ubicación, fotos y condiciones de la propiedad.',
-          'Hablá con el anfitrión para despejar dudas concretas antes de avanzar.',
+          'Reseñas, fotos, ubicación y reglas de la propiedad.',
+          'Lo que no esté claro, preguntalo antes de pagar.',
         ],
         icon: Icons.Search,
       },
@@ -132,16 +133,16 @@ const faqGroups: FAQGroup[] = [
   },
   {
     eyebrow: 'Pagos y alcance',
-    description: 'Dónde termina el rol de la plataforma y qué pasa si algo no sale como esperabas.',
+    description: 'Qué hace la app y qué queda por fuera.',
     items: [
       {
         question: '¿Quién maneja el pago?',
-        answer: 'El acuerdo económico es directo entre anfitrión y huésped. Alquiler Real no procesa pagos, no retiene plata y no cobra comisiones por reservar.',
+        answer: 'El pago lo coordinan anfitrión y huésped. La app no procesa pagos, no retiene plata y no cobra por reservar.',
         icon: Icons.FileSpreadsheet,
       },
       {
         question: '¿Qué pasa si hay un conflicto?',
-        answer: 'La plataforma sirve para ordenar información y reputación. Si aparece un problema por la propiedad o por un incumplimiento, la resolución corre por cuenta de las partes.',
+        answer: 'La app no interviene ni decide quién tiene razón. Si hay un problema, lo resuelven las partes por fuera de la plataforma.',
         icon: Icons.MessageSquare,
       },
     ],
@@ -151,24 +152,24 @@ const faqGroups: FAQGroup[] = [
 const roleGuides: RoleGuide[] = [
   {
     eyebrow: 'Para anfitriones',
-    title: 'Mostrá información real desde el inicio',
-    description: 'Cuando tu perfil y tu propiedad muestran señales claras, las consultas llegan con menos dudas y más contexto.',
+    title: 'Mostrá lo importante desde el inicio',
+    description: 'Si el aviso deja claro quién publica, dónde está el lugar y qué parte fue validada, la consulta llega mejor.',
     points: [
-      'La publicación se entiende más rápido y transmite más criterio.',
-      'La verificación te diferencia de perfiles dudosos sin volver pesado el proceso.',
-      'El trato sigue siendo directo: no hay comisiones ni intermediación financiera.',
+      'La otra persona entiende más rápido qué ofrecés.',
+      'Bajan las preguntas que se resuelven leyendo.',
+      'El trato sigue siendo directo y el pago va por fuera de la app.',
     ],
     icon: Icons.Home,
     tone: 'dark',
   },
   {
     eyebrow: 'Para huéspedes',
-    title: 'Reservá con más criterio',
-    description: 'Podés revisar señales concretas antes de avanzar y decidir con menos improvisación.',
+    title: 'Revisá antes de reservar',
+    description: 'Podés ver quién publica, si la ubicación coincide y qué dijeron otras personas.',
     points: [
-      'Ves identidad, registro visual y ubicación cuando esa verificación está disponible.',
-      'Comparás propiedades con más contexto antes de hablar o pagar.',
-      'La decisión final sigue siendo tuya, pero con información mejor ordenada.',
+      'No arrancás solo con fotos y promesas.',
+      'Podés comparar propiedades con más contexto.',
+      'La decisión sigue siendo tuya.',
     ],
     icon: Icons.UserCheck,
     tone: 'light',
@@ -279,7 +280,7 @@ export const FAQPage: React.FC<FAQPageProps> = ({ onBack }) => {
         onBack={onBack}
         eyebrow="Ayuda"
         heading="Preguntas frecuentes"
-        description="Lo esencial para entender qué información ves, qué valida la plataforma y dónde termina nuestro alcance."
+        description="Qué valida la app, qué no y qué conviene mirar antes de reservar o publicar."
         contentClassName="mx-auto w-full max-w-5xl"
       />
 
@@ -299,7 +300,7 @@ export const FAQPage: React.FC<FAQPageProps> = ({ onBack }) => {
                 eyebrow="Transparencia"
                 as="h2"
                 heading="Qué validamos y qué no"
-                description="La app ordena señales concretas para que decidas con más contexto. No promete más de lo que puede comprobar."
+                description="Mostramos qué parte del aviso se pudo comprobar y qué queda fuera de la app."
                 className="max-w-2xl"
               />
 
@@ -389,7 +390,7 @@ export const FAQPage: React.FC<FAQPageProps> = ({ onBack }) => {
             eyebrow="FAQ principal"
             as="h2"
             heading="Preguntas que conviene resolver antes de avanzar"
-            description="Respuestas cortas para entender el alcance de la plataforma sin leer una pared de texto."
+            description="Respuestas cortas sobre verificación, pagos y alcance."
             className="max-w-3xl"
           />
 
@@ -415,8 +416,8 @@ export const FAQPage: React.FC<FAQPageProps> = ({ onBack }) => {
           <SectionTitle
             eyebrow="Para cada rol"
             as="h2"
-            heading="La parte útil según cómo usás la app"
-            description="La misma lógica de transparencia resuelve problemas distintos para quien publica y para quien reserva."
+            heading="Qué cambia si publicás o reservás"
+            description="La misma información sirve para publicar mejor o para reservar con menos dudas."
             className="max-w-3xl"
           />
 

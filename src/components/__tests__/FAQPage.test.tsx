@@ -11,8 +11,8 @@ describe('FAQPage', () => {
     expect(screen.getByRole('heading', { name: 'Preguntas frecuentes' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Qué validamos y qué no' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Preguntas que conviene resolver antes de avanzar' })).toBeInTheDocument();
-    expect(screen.getByText('Mostrá información real desde el inicio')).toBeInTheDocument();
-    expect(screen.getByText('Reservá con más criterio')).toBeInTheDocument();
+    expect(screen.getByText('Mostrá lo importante desde el inicio')).toBeInTheDocument();
+    expect(screen.getByText('Revisá antes de reservar')).toBeInTheDocument();
     expect(screen.getByText('¿Quién maneja el pago?')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Volver' }));
