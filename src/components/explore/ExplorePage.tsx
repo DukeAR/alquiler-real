@@ -156,7 +156,7 @@ export const ExplorePage = () => {
         }
       } catch (error) {
         console.error(error);
-        setLoadError(error instanceof Error ? error.message : 'No pudimos actualizar los alojamientos ahora.');
+        setLoadError('No hay resultados disponibles ahora.');
       } finally {
         setLoading(false);
       }

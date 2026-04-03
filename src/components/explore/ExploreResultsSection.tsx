@@ -19,26 +19,8 @@ const MapFallback = () => (
   </div>
 );
 
-const formatPropertyCount = (count: number) => `${count} ${count === 1 ? 'alojamiento' : 'alojamientos'}`;
+const formatPropertyCount = (count: number) => `${count} ${count === 1 ? 'propiedad' : 'propiedades'}`;
 const renderSkeletons = (count = 6) => Array.from({ length: count }, (_, index) => <SkeletonCard key={`skeleton-${index}`} />);
-
-const decisionPillars = [
-  {
-    icon: Icons.FileText,
-    title: 'Información clara',
-    description: 'Lo importante, sin vueltas.',
-  },
-  {
-    icon: Icons.BadgeCheck,
-    title: 'Señales verificadas',
-    description: 'Datos reales, no suposiciones.',
-  },
-  {
-    icon: Icons.Target,
-    title: 'Contexto antes de reservar',
-    description: 'Para decidir con criterio.',
-  },
-] as const;
 
 type ExploreResultsSectionProps = {
   loading: boolean;
@@ -87,34 +69,35 @@ export const ExploreResultsSection = ({
   const showingStaleResults = Boolean(loadError) && !loading && hasAnyResults;
   const showHomeBlocks = !hasActiveFilters && viewMode === 'grid';
   const showSummaryCard = viewMode === 'map' || hasActiveFilters || failedToLoadResults;
+  const showFeaturedSection = showHomeBlocks && (loading || featuredCount > 0);
 
   const summaryEyebrow = viewMode === 'map'
     ? 'Mapa'
     : 'Resultados';
 
   const summaryHeading = loading
-    ? 'Buscando alojamientos'
+    ? 'Actualizando opciones'
     : failedToLoadResults
-      ? 'No pudimos cargar los alojamientos'
+      ? 'No hay resultados disponibles ahora.'
     : hasActiveFilters
       ? hasAnyResults
-        ? 'Resultados para tu búsqueda'
+        ? 'Resultados'
         : 'No encontramos coincidencias'
       : hasAnyResults
-        ? 'Alojamientos disponibles'
-        : 'Todavía no hay alojamientos para mostrar';
+        ? 'Propiedades disponibles'
+        : 'No hay propiedades disponibles ahora.';
 
   const summaryDescription = loading
-    ? 'Estamos revisando ubicación, verificación y datos clave.'
+    ? 'Estamos actualizando las opciones disponibles.'
     : failedToLoadResults
-      ? 'Puede ser un problema momentáneo. Reintentá sin perder tu búsqueda.'
+      ? 'Probá con otra zona o volvé a intentar en unos segundos.'
     : hasActiveFilters
       ? hasAnyResults
-        ? `${formatPropertyCount(totalResults)} para revisar con tu búsqueda actual.`
-        : 'Probá otro destino o ajustá los filtros para seguir.'
+        ? `${formatPropertyCount(totalResults)} para esta búsqueda.`
+        : 'Probá con otra zona o limpiá los filtros.'
       : hasAnyResults
-        ? `${formatPropertyCount(totalResults)} disponibles para empezar con más claridad.`
-        : 'Cuando haya nuevos alojamientos, van a aparecer acá.';
+        ? `${formatPropertyCount(totalResults)} disponibles ahora.`
+        : 'Volvé a revisar más tarde.';
 
   const summaryCard = (
     <Card className="rounded-[28px] border-slate-200/80 bg-white p-5 shadow-[0_22px_54px_-42px_rgba(15,23,42,0.22)] sm:p-6">
@@ -151,7 +134,7 @@ export const ExploreResultsSection = ({
           className="mt-4"
           tone="warning"
           heading="Mostrando la última versión disponible"
-          description={`${loadError} Podés seguir con estos resultados o reintentar para traer datos actualizados.`}
+          description="Volvé a intentar en unos segundos si querés actualizar los resultados."
         />
       ) : null}
     </Card>
@@ -160,19 +143,17 @@ export const ExploreResultsSection = ({
   if (failedToLoadResults) {
     return (
       <section className="space-y-6 md:space-y-8">
-        {summaryCard}
-
         <Card className="rounded-[32px] border-slate-200/80 bg-white p-6 shadow-[0_28px_70px_-50px_rgba(15,23,42,0.25)] sm:p-7">
           <NoticeBanner
             tone="error"
-            heading="No pudimos cargar alojamientos en este momento"
-            description={loadError || 'Probá de nuevo en unos segundos.'}
+            heading="No hay resultados disponibles ahora."
+            description="Probá con otra zona o volvé a intentar en unos segundos."
           />
 
           <div className="mt-5 flex flex-wrap gap-3">
             <Button type="button" onClick={onRetry}>
-                <Icons.Loader2 className="h-4 w-4" />
-              Reintentar
+              <Icons.Loader2 className="h-4 w-4" />
+              Volver a intentar
             </Button>
             {hasActiveFilters ? (
               <Button type="button" variant="secondary" onClick={onClearFilters}>
@@ -194,8 +175,8 @@ export const ExploreResultsSection = ({
           <EmptyState
             eyebrow="Mapa"
             icon={<Icons.Map className="h-10 w-10 text-slate-400" />}
-            title={hasActiveFilters ? 'No encontramos alojamientos para mostrar en el mapa' : 'Todavía no hay alojamientos para mostrar'}
-            description={hasActiveFilters ? 'Probá otra búsqueda o limpiá los filtros para volver a ver opciones.' : 'Cuando se publiquen nuevos alojamientos, también van a aparecer en el mapa.'}
+            title={hasActiveFilters ? 'No encontramos propiedades para esa zona' : 'No hay propiedades disponibles ahora.'}
+            description={hasActiveFilters ? 'Probá con otra zona o limpiá los filtros.' : 'Volvé a revisar más tarde.'}
             action={hasActiveFilters ? { label: 'Limpiar filtros', onClick: onClearFilters } : undefined}
           />
         </section>
@@ -248,52 +229,20 @@ export const ExploreResultsSection = ({
     <section className="space-y-8 md:space-y-10">
       {showSummaryCard ? summaryCard : null}
 
-      {showHomeBlocks ? (
-        <section className="space-y-5 md:space-y-6">
-          <SectionTitle
-            heading="Cómo te ayudamos a elegir mejor"
-            className="max-w-2xl"
-          />
-
-          <div className="grid gap-4 md:grid-cols-3">
-            {decisionPillars.map((pillar) => {
-              const PillarIcon = pillar.icon;
-
-              return (
-                <Card key={pillar.title} className="rounded-[24px] border-slate-200/80 bg-white p-5 shadow-[0_18px_42px_-34px_rgba(15,23,42,0.16)] md:p-6">
-                  <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
-                    <PillarIcon className="h-5 w-5" />
-                  </span>
-                  <h3 className="mt-4 text-lg font-semibold tracking-[-0.02em] text-slate-900">
-                    {pillar.title}
-                  </h3>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">
-                    {pillar.description}
-                  </p>
-                </Card>
-              );
-            })}
-          </div>
-        </section>
-      ) : null}
-
       {showHomeBlocks && showingStaleResults ? (
         <NoticeBanner
           tone="warning"
           heading="Mostrando la última versión disponible"
-          description={`${loadError} Podés seguir con estos resultados mientras actualizamos.`}
+          description="Volvé a intentar en unos segundos si querés actualizar los resultados."
         />
       ) : null}
 
-      {showHomeBlocks && (loading || featuredCount > 0) ? (
+      {showFeaturedSection ? (
         <section className="space-y-5 md:space-y-6">
-          <div className="flex flex-col gap-3">
-            <p className="app-eyebrow">Elegidas por claridad, ubicación y confianza.</p>
-            <SectionTitle
-              heading="Opciones para decidir mejor"
-              className="max-w-2xl"
-            />
-          </div>
+          <SectionTitle
+            heading="Opciones destacadas"
+            className="max-w-2xl"
+          />
 
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-7 lg:grid-cols-3">
             {loading
@@ -311,34 +260,19 @@ export const ExploreResultsSection = ({
         </section>
       ) : null}
 
-      {showHomeBlocks ? (
-        <Card className="rounded-[32px] border-slate-200/80 bg-slate-950 px-6 py-8 shadow-[0_28px_70px_-48px_rgba(15,23,42,0.34)] sm:px-8 sm:py-10">
-          <div className="max-w-2xl space-y-3">
-            <h2 className="font-display text-[2rem] font-semibold leading-[1.02] tracking-[-0.04em] text-white md:text-[2.6rem]">
-              Tomar una buena decisión cambia todo.
-            </h2>
-            <p className="text-base leading-7 text-slate-300 md:text-lg md:leading-8">
-              Cuando la información es clara, elegir deja de ser una apuesta.
-            </p>
-          </div>
-        </Card>
-      ) : null}
-
       {loading || hasActiveFilters || listingProperties.length > 0 || !hasAnyResults ? (
         <section className="space-y-6 pt-2 md:space-y-8">
           <div className="flex flex-col gap-4 border-b border-slate-200/70 pb-5 lg:flex-row lg:items-end lg:justify-between">
-            <div className="space-y-3 max-w-2xl">
-              <p className="text-sm font-medium text-slate-600">Elegí con información clara, no a ciegas.</p>
+            <div className="max-w-2xl">
               <SectionTitle
-                eyebrow={hasActiveFilters ? 'Resultados' : 'Más alojamientos'}
-                heading={hasActiveFilters ? 'Resultados para tu búsqueda' : 'Más alojamientos'}
+                heading={hasActiveFilters ? 'Resultados' : 'Más opciones'}
                 description={loading
-                  ? 'Estamos trayendo resultados para tu búsqueda actual.'
+                  ? 'Estamos actualizando las opciones disponibles.'
                   : hasActiveFilters
-                    ? `${formatPropertyCount(listingProperties.length)} para revisar con tu búsqueda actual.`
+                    ? `${formatPropertyCount(listingProperties.length)} para esta búsqueda.`
                     : listingProperties.length > 0
-                      ? `${formatPropertyCount(listingProperties.length)} para seguir si querés ver más opciones.`
-                      : 'No hay más alojamientos para mostrar por ahora.'}
+                      ? `${formatPropertyCount(listingProperties.length)} disponibles ahora.`
+                      : 'No hay más propiedades disponibles por ahora.'}
                 className="max-w-2xl"
               />
             </div>
@@ -361,8 +295,8 @@ export const ExploreResultsSection = ({
                   tone={hasActiveFilters ? 'default' : 'soft'}
                   eyebrow="Resultados"
                   icon={<Icons.Search className="h-10 w-10 text-slate-400" />}
-                  title={hasActiveFilters ? 'No encontramos alojamientos para esa búsqueda' : 'No hay más alojamientos por ahora'}
-                  description={hasActiveFilters ? 'Probá otro destino o ajustá los filtros.' : 'Cuando aparezcan nuevas opciones, las vas a ver acá.'}
+                  title={hasActiveFilters ? 'No encontramos propiedades para esa zona' : 'No hay más propiedades por ahora'}
+                  description={hasActiveFilters ? 'Probá con otra zona o limpiá los filtros.' : 'Volvé a revisar más tarde.'}
                   action={hasActiveFilters ? { label: 'Limpiar filtros', onClick: onClearFilters } : undefined}
                 />
               </div>
@@ -381,9 +315,9 @@ export const ExploreResultsSection = ({
 
           {!loading && hasMoreResults ? (
             <div className="flex flex-col items-center gap-4 pt-4 md:pt-6">
-              <p className="text-sm text-slate-500">Mostrando {visibleCount} de {listingProperties.length} alojamientos.</p>
+              <p className="text-sm text-slate-500">Mostrando {visibleCount} de {listingProperties.length} propiedades.</p>
               <Button type="button" className="rounded-full px-6 md:px-8" onClick={onLoadMore}>
-                Ver alojamientos
+                Ver más opciones
               </Button>
             </div>
           ) : null}

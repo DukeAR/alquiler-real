@@ -28,15 +28,19 @@ interface LocationAutocompleteProps {
   onSelect?: (location: LocationSuggestion) => void;
   onSubmitValue?: (value: string) => void;
   suggestions?: LocationSuggestion[];
+  inputId?: string;
+  ariaLabel?: string;
 }
 
 export const LocationAutocomplete = ({
   value,
   onChange,
-  placeholder = '¿A dónde querés ir?',
+  placeholder = 'Ej: Pinamar, Cariló, San Clemente',
   onSelect,
   onSubmitValue,
   suggestions: availableSuggestions = EMPTY_LOCATION_SUGGESTIONS,
+  inputId,
+  ariaLabel = 'Destino',
 }: LocationAutocompleteProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [filteredSuggestions, setFilteredSuggestions] = useState<LocationSuggestion[]>([]);
@@ -47,7 +51,7 @@ export const LocationAutocomplete = ({
   const hasIndexedSuggestions = availableSuggestions.length > 0;
   const hasTypedValue = normalizedValue.length > 0;
   const showSuggestions = isOpen && filteredSuggestions.length > 0;
-  const showEmptyState = isOpen && hasTypedValue && filteredSuggestions.length === 0;
+  const showEmptyState = isOpen && hasIndexedSuggestions && hasTypedValue && filteredSuggestions.length === 0;
 
   useEffect(() => {
     if (!value.trim()) {
@@ -140,17 +144,17 @@ export const LocationAutocomplete = ({
 
   return (
     <div ref={containerRef} className="relative w-full">
-      {/* Input */}
       <div className="relative">
         <Input
           ref={inputRef}
+          id={inputId}
           type="text"
           value={value}
           onChange={handleInputChange}
           onFocus={() => hasTypedValue && setIsOpen(true)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          aria-label="Buscar destino"
+          aria-label={ariaLabel}
           role="combobox"
           aria-autocomplete="list"
           aria-expanded={isOpen}
@@ -174,13 +178,12 @@ export const LocationAutocomplete = ({
             </button>
           ) : null}
           className={cn(
-            'min-h-16 rounded-[22px] border-slate-200/90 bg-white/98 py-3.5 text-[15px] font-medium text-slate-900 shadow-[0_20px_36px_-30px_rgba(15,23,42,0.4)] placeholder:text-slate-500/70 focus:border-brand/40 focus:shadow-[0_0_0_4px_rgba(79,70,229,0.14)] md:py-4',
-            showSuggestions || showEmptyState ? 'rounded-b-[14px] border-b-transparent shadow-[0_20px_36px_-30px_rgba(15,23,42,0.4)] md:rounded-b-[16px]' : ''
+            'min-h-14 rounded-[18px] border-slate-200 bg-white py-3.5 text-base font-medium text-slate-900 shadow-none placeholder:text-slate-400 focus:border-slate-400 focus:shadow-[0_0_0_3px_rgba(15,23,42,0.08)] md:py-4',
+            showSuggestions || showEmptyState ? 'rounded-b-[12px] border-b-transparent md:rounded-b-[14px]' : ''
           )}
         />
       </div>
 
-      {/* Dropdown */}
       <AnimatePresence>
         {showSuggestions && (
           <motion.div
@@ -189,27 +192,10 @@ export const LocationAutocomplete = ({
             exit={{ opacity: 0, y: -8 }}
             id="location-suggestions"
             role="listbox"
-            aria-label="Sugerencias de ubicación"
+            aria-label="Sugerencias de destino"
             transition={{ duration: 0.15 }}
-            className="absolute top-full left-0 right-0 z-50 mt-1 overflow-hidden rounded-[24px] border border-slate-200/90 bg-white shadow-[0_30px_70px_-38px_rgba(15,23,42,0.38)]"
+            className="absolute top-full left-0 right-0 z-50 mt-1 overflow-hidden rounded-[20px] border border-slate-200 bg-white shadow-[0_22px_48px_-32px_rgba(15,23,42,0.22)]"
           >
-            <div className="flex items-center justify-between gap-3 border-b border-slate-200/80 px-4 py-3 md:px-5">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-                  Destinos
-                </p>
-                <p className="mt-1 text-sm text-slate-600">
-                  {filteredSuggestions.length === 1
-                    ? '1 opción'
-                    : `${filteredSuggestions.length} opciones`}
-                </p>
-              </div>
-
-              <span className="hidden rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold text-slate-500 md:inline-flex">
-                Enter para continuar
-              </span>
-            </div>
-
             <div className="max-h-80 overflow-y-auto py-1.5">
             {filteredSuggestions.map((location, index) => (
               <motion.button
@@ -224,16 +210,15 @@ export const LocationAutocomplete = ({
                 className={cn(
                   'group flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors md:px-5 md:py-4',
                   selectedIndex === index
-                    ? 'bg-brand/6'
+                    ? 'bg-slate-50'
                     : 'hover:bg-slate-50'
                 )}
-                whileHover={{ x: 2 }}
               >
                 <span
                   className={cn(
-                    'flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border transition-colors',
+                    'flex h-10 w-10 shrink-0 items-center justify-center rounded-[16px] border transition-colors',
                     selectedIndex === index
-                      ? 'border-brand/15 bg-brand text-white'
+                      ? 'border-slate-300 bg-white text-slate-700'
                       : 'border-slate-200 bg-slate-50 text-slate-500 group-hover:border-slate-300 group-hover:bg-white group-hover:text-slate-700'
                   )}
                 >
@@ -251,7 +236,7 @@ export const LocationAutocomplete = ({
                   </div>
 
                   <p className="mt-1 text-xs leading-5 text-slate-500 md:text-sm">
-                    {location.region ? `Zona: ${location.region}` : 'Ver alojamientos en esta zona.'}
+                    {location.region ? `Zona: ${location.region}` : 'Zona disponible.'}
                   </p>
                 </div>
 
@@ -259,7 +244,7 @@ export const LocationAutocomplete = ({
                   className={cn(
                     'h-4 w-4 shrink-0 transition-all',
                     selectedIndex === index
-                      ? 'translate-x-0 text-brand'
+                      ? 'translate-x-0 text-slate-600'
                       : 'text-slate-300 group-hover:translate-x-0.5 group-hover:text-slate-500'
                   )}
                 />
@@ -270,7 +255,6 @@ export const LocationAutocomplete = ({
         )}
       </AnimatePresence>
 
-      {/* Empty state */}
       <AnimatePresence>
         {showEmptyState && (
           <motion.div
@@ -279,34 +263,21 @@ export const LocationAutocomplete = ({
             exit={{ opacity: 0, y: -8 }}
             role="status"
             aria-live="polite"
-            className="absolute top-full left-0 right-0 z-50 mt-1 rounded-[24px] border border-slate-200/90 bg-white p-5 shadow-[0_30px_70px_-38px_rgba(15,23,42,0.38)] md:p-6"
+            className="absolute top-full left-0 right-0 z-50 mt-1 rounded-[20px] border border-slate-200 bg-white p-5 shadow-[0_22px_48px_-32px_rgba(15,23,42,0.22)] md:p-6"
           >
             <div className="flex items-start gap-3">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-slate-500">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[16px] border border-slate-200 bg-slate-50 text-slate-500">
                 <Icons.Search className="h-4 w-4" />
               </span>
 
               <div className="min-w-0 flex-1 text-left">
                 <p className="text-sm font-semibold text-slate-900 md:text-[15px]">
-                  {hasIndexedSuggestions
-                    ? `No encontramos "${normalizedValue}"`
-                    : 'No hay destinos sugeridos todavía'}
+                  {`No hay coincidencias para "${normalizedValue}".`}
                 </p>
                 <p className="mt-1 text-sm leading-6 text-slate-600">
-                  {hasIndexedSuggestions
-                    ? 'Podés buscar igual.'
-                    : 'Escribí un lugar y seguí.'}
+                  Probá con otra zona.
                 </p>
               </div>
-            </div>
-
-            <div className="mt-4 rounded-2xl border border-slate-200/80 bg-slate-50 px-4 py-3 text-left">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-                Continuar
-              </p>
-              <p className="mt-1 text-sm text-slate-700">
-                Presioná Enter para buscar <span className="font-semibold text-slate-900">"{normalizedValue}"</span>.
-              </p>
             </div>
           </motion.div>
         )}
