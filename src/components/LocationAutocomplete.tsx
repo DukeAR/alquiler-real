@@ -33,7 +33,7 @@ interface LocationAutocompleteProps {
 export const LocationAutocomplete = ({
   value,
   onChange,
-  placeholder = '¿Dónde querés alojarte?',
+  placeholder = 'Elegí ciudad, playa o zona',
   onSelect,
   onSubmitValue,
   suggestions: availableSuggestions = EMPTY_LOCATION_SUGGESTIONS,
@@ -196,17 +196,17 @@ export const LocationAutocomplete = ({
             <div className="flex items-center justify-between gap-3 border-b border-slate-200/80 px-4 py-3 md:px-5">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-                  Sugerencias de destino
+                  Sugerencias para tu búsqueda
                 </p>
                 <p className="mt-1 text-sm text-slate-600">
                   {filteredSuggestions.length === 1
-                    ? '1 zona para revisar con más contexto'
-                    : `${filteredSuggestions.length} zonas para comparar con más claridad`}
+                    ? '1 opción para revisar'
+                    : `${filteredSuggestions.length} opciones para revisar`}
                 </p>
               </div>
 
               <span className="hidden rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold text-slate-500 md:inline-flex">
-                Enter busca igual
+                Enter para buscar igual
               </span>
             </div>
 
@@ -251,7 +251,7 @@ export const LocationAutocomplete = ({
                   </div>
 
                   <p className="mt-1 text-xs leading-5 text-slate-500 md:text-sm">
-                    {location.region ? `Zona: ${location.region}` : 'Buscá propiedades en esta zona.'}
+                    {location.region ? `Zona: ${location.region}` : 'Explorá propiedades en esta zona.'}
                   </p>
                 </div>
 
@@ -289,20 +289,20 @@ export const LocationAutocomplete = ({
               <div className="min-w-0 flex-1 text-left">
                 <p className="text-sm font-semibold text-slate-900 md:text-[15px]">
                   {hasIndexedSuggestions
-                    ? `No vimos coincidencias exactas para "${normalizedValue}"`
-                    : 'Todavía no hay sugerencias cargadas para esta búsqueda'}
+                    ? `No encontramos coincidencias para "${normalizedValue}"`
+                    : 'Todavía no hay sugerencias para esta búsqueda'}
                 </p>
                 <p className="mt-1 text-sm leading-6 text-slate-600">
                   {hasIndexedSuggestions
-                    ? 'Igual podés buscar directo y después filtrar con más contexto en resultados.'
-                    : 'Podés escribir una ciudad, un barrio o una zona y buscar igual.'}
+                    ? 'Podés buscar igual y después filtrar en resultados.'
+                    : 'Escribí una ciudad, un barrio o una zona y buscá igual.'}
                 </p>
               </div>
             </div>
 
             <div className="mt-4 rounded-2xl border border-slate-200/80 bg-slate-50 px-4 py-3 text-left">
               <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-                Siguiente paso
+                Para seguir
               </p>
               <p className="mt-1 text-sm text-slate-700">
                 Presioná Enter para buscar <span className="font-semibold text-slate-900">"{normalizedValue}"</span>.

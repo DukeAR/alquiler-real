@@ -28,30 +28,30 @@ export const ExploreHero = ({
   const navigate = useNavigate();
 
   const heroTitle = user
-    ? 'Retomá tu próxima estadía con información clara desde el primer vistazo.'
-    : 'Encontrá Propiedades en la Costa Atlántica con información real desde el primer vistazo.';
+    ? 'Seguí tu búsqueda con información clara desde el inicio.'
+    : 'Encontrá dónde alojarte con información clara desde el inicio.';
 
   const heroDescription = user
-    ? 'Volvé a tus búsquedas, compará zonas y revisá guardados, mensajes y Reservas sin perder el contexto.'
-    : 'Explorá Propiedades frente al mar, compará zonas con más contexto y conocé al Anfitrión antes de Reservar.';
+    ? 'Volvé a tus búsquedas, revisá Guardados y seguí tus Reservas sin perder contexto.'
+    : 'Explorá propiedades, compará zonas y revisá al anfitrión antes de reservar.';
 
   const heroHighlights = user
-    ? ['Guardados al día', 'Reservas en contexto', 'Comparación más clara']
-    : ['Ubicación visible', 'Señales verificadas', 'Más contexto antes de Reservar'];
+    ? ['Guardados al día', 'Reservas en un solo lugar', 'Comparación más clara']
+    : ['Ubicación clara', 'Señales verificadas', 'Más contexto para decidir'];
 
   const searchExamples = ['Pinamar', 'La Perla', 'Cariló'];
 
   const heroSignals = user
     ? [
         {
-          label: 'Todo donde lo dejaste',
-          detail: 'Guardados, mensajes y Reservas reunidos para seguir decidiendo sin fricción.',
+          label: 'Todo a mano',
+          detail: 'Guardados, mensajes y Reservas listos para seguir sin vueltas.',
           icon: Icons.Heart,
           iconClassName: 'bg-rose-100 text-rose-600',
         },
         {
-          label: 'Compará con más contexto',
-          detail: 'Ubicación, Anfitrión y señales verificadas visibles antes de volver a Reservar.',
+          label: 'Compará mejor',
+          detail: 'Ubicación, anfitrión y señales verificadas visibles antes de reservar.',
           icon: Icons.Search,
           iconClassName: 'bg-sky-100 text-sky-700',
         },
@@ -59,21 +59,21 @@ export const ExploreHero = ({
     : [
         {
           label: 'Propiedades verificadas',
-          detail: 'Información real para tomar mejores decisiones desde el primer vistazo.',
+          detail: 'Información real para decidir con más confianza.',
           icon: Icons.ShieldCheck,
           iconClassName: 'bg-emerald-100 text-emerald-700',
         },
         {
           label: 'Señales claras',
-          detail: 'Ubicación, reseñas y contexto del Anfitrión visibles desde el inicio.',
+          detail: 'Ubicación, reseñas y datos del anfitrión visibles desde el inicio.',
           icon: Icons.MapPin,
           iconClassName: 'bg-amber-100 text-amber-700',
         },
       ];
 
   const comparisonChecklist = user
-    ? ['Volvé a una zona sin perder contexto', 'Revisá señales reales antes de decidir', 'Seguí desde tus Reservas o guardados']
-    : ['Ciudad, playa o zona en una sola búsqueda', 'Más señales visibles del Anfitrión y la Propiedad', 'Más contexto antes de pasar a Reservar'];
+    ? ['Volvé a una zona sin perder contexto', 'Revisá señales reales antes de decidir', 'Seguí desde Guardados o Reservas']
+    : ['Ciudad, playa o zona en una sola búsqueda', 'Ubicación, anfitrión y señales verificadas', 'Más contexto antes de reservar'];
 
   return (
     <section className="relative overflow-hidden rounded-[36px] border border-slate-200/80 bg-slate-950 px-6 py-8 shadow-[0_34px_80px_-46px_rgba(15,23,42,0.32)] md:px-10 md:py-12 lg:px-12 lg:py-14">
@@ -97,11 +97,11 @@ export const ExploreHero = ({
         >
           <div className="inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/82 px-3.5 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-700 backdrop-blur-md">
             <Icons.ShieldCheck className="h-4 w-4 text-brand" />
-            Información real para decidir mejor
+            Información real para tomar mejores decisiones
           </div>
 
           <div className="space-y-4">
-            <div className="app-eyebrow">Costa Atlántica argentina, Propiedades verificadas y más contexto para decidir</div>
+            <div className="app-eyebrow">Costa Atlántica argentina</div>
             <h2 className="app-title-1 max-w-3xl">{heroTitle}</h2>
             <p className="max-w-2xl text-[15px] leading-7 text-slate-700 md:text-base md:leading-8">
               {heroDescription}
@@ -126,7 +126,7 @@ export const ExploreHero = ({
               className="rounded-full px-6 shadow-[0_22px_50px_-30px_rgba(79,70,229,0.7)]"
             >
               {user ? <Icons.Calendar className="h-4 w-4" /> : <Icons.ArrowRight className="h-4 w-4" />}
-              {user ? 'Mis Reservas' : 'Creá tu cuenta'}
+              {user ? 'Ver mis reservas' : 'Creá tu cuenta'}
             </Button>
 
             <Button
@@ -136,7 +136,7 @@ export const ExploreHero = ({
               className="rounded-full border-white/80 bg-white/76 px-5 text-slate-800 hover:border-white hover:bg-white"
             >
               <Icons.Info className="h-4 w-4" />
-              Así funciona
+              Cómo funciona
             </Button>
           </div>
 
@@ -144,17 +144,17 @@ export const ExploreHero = ({
             <div className="flex flex-col gap-5">
               <div className="flex flex-col gap-3 border-b border-slate-200/80 pb-4 md:flex-row md:items-start md:justify-between">
                 <div>
-                  <div className="app-eyebrow">Búsqueda inicial</div>
+                  <div className="app-eyebrow">Empezá por el destino</div>
                   <h3 className="mt-2 text-lg font-semibold tracking-[-0.02em] text-slate-900 md:text-xl">
-                    Buscá por ciudad, playa o zona
+                    Elegí ciudad, playa o zona
                   </h3>
                   <p className="mt-1 text-sm leading-6 text-slate-600 md:text-[15px]">
-                    Empezá por el lugar que te interesa y después ajustá filtros para comparar mejor.
+                    Escribí un destino y después filtrá para comparar mejor.
                   </p>
                 </div>
 
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-semibold text-slate-600">
-                  Más claridad desde el primer paso
+                  Más claridad para decidir
                 </div>
               </div>
 
@@ -171,7 +171,7 @@ export const ExploreHero = ({
                     value={searchValue}
                     suggestions={locationSuggestions}
                     onChange={onSearchChange}
-                    placeholder="¿Dónde querés alojarte?"
+                    placeholder="Elegí ciudad, playa o zona"
                     onSelect={onLocationSelect}
                     onSubmitValue={onSearchSubmitValue}
                   />
@@ -179,13 +179,13 @@ export const ExploreHero = ({
 
                 <Button type="submit" className="w-full rounded-[22px] px-6 md:h-14 md:w-auto md:min-w-[220px]">
                   <Icons.Search className="h-5 w-5" />
-                  Buscar Propiedades
+                  Buscar propiedades
                 </Button>
               </form>
 
               <div className="flex flex-col gap-2 border-t border-slate-200/70 pt-4 md:flex-row md:items-center md:justify-between">
                 <p className="text-sm text-slate-600">
-                  Escribí un destino y después filtrá por precio, tipo de propiedad o verificación.
+                  Buscá por destino y después filtrá por precio, tipo de propiedad o verificación.
                 </p>
 
                 <div className="flex flex-wrap gap-2">
