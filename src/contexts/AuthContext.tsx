@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { apiFetch } from '../lib/apiConfig';
 
 export interface User {
@@ -32,15 +32,25 @@ export interface UpdateProfilePayload {
     phone?: string | null;
 }
 
+export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated' | 'error';
+
+export interface AuthRefreshResult {
+    user: User | null;
+    status: Exclude<AuthStatus, 'loading'>;
+    error: string | null;
+}
+
 interface AuthContextType {
     user: User | null;
     loading: boolean;
     isAuthenticated: boolean;
+    status: AuthStatus;
     error: string | null;
+    sessionError: string | null;
     login: (email: string, password: string) => Promise<boolean>;
     register: (email: string, password: string, role: User['role'], fullName: string, zone: string, phone?: string, bio?: string, interests?: string[]) => Promise<boolean>;
     logout: () => Promise<void>;
-    refresh: () => Promise<void>;
+    refresh: () => Promise<AuthRefreshResult>;
     updateProfile: (payload: UpdateProfilePayload) => Promise<boolean>;
     clearError: () => void;
 }
@@ -132,35 +142,109 @@ const getRegisterFallbackMessage = (status: number) => {
     }
 };
 
+type SessionFetchResult = {
+    user: User | null;
+    status: Exclude<AuthStatus, 'loading'>;
+    error: string | null;
+};
+
+const DEFAULT_SESSION_ERROR = 'No pudimos recuperar tu sesión. Intentá de nuevo.';
+
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
+    const [status, setStatus] = useState<AuthStatus>('loading');
     const [error, setError] = useState<string | null>(null);
+    const [sessionError, setSessionError] = useState<string | null>(null);
+    const userRef = useRef<User | null>(null);
 
-    const loadCurrentUser = useCallback(async (): Promise<User | null> => {
+    useEffect(() => {
+        userRef.current = user;
+    }, [user]);
+
+    const loadCurrentUser = useCallback(async (): Promise<SessionFetchResult> => {
         try {
             const response = await apiFetch('/api/auth/me', { includeCredentials: true });
             if (!response.ok) {
-                return null;
+                const errorMessage = await getAuthErrorMessage(response, DEFAULT_SESSION_ERROR);
+                return {
+                    user: null,
+                    status: 'error',
+                    error: errorMessage,
+                };
             }
 
             const data = await response.json();
-            return data.user ? normalizeUser(data.user) : null;
+            if (!data.user) {
+                return {
+                    user: null,
+                    status: 'unauthenticated',
+                    error: null,
+                };
+            }
+
+            return {
+                user: normalizeUser(data.user),
+                status: 'authenticated',
+                error: null,
+            };
         } catch (err) {
             console.error('Fetch me error:', err);
-            return null;
+            return {
+                user: null,
+                status: 'error',
+                error: err instanceof Error ? err.message : DEFAULT_SESSION_ERROR,
+            };
         }
     }, []);
 
-    const fetchMe = useCallback(async () => {
+    const syncSession = useCallback(async ({ initial = false, preserveUserOnError = false }: { initial?: boolean; preserveUserOnError?: boolean } = {}): Promise<AuthRefreshResult> => {
+        if (initial) {
+            setLoading(true);
+            setStatus('loading');
+        }
+
         try {
-            const nextUser = await loadCurrentUser();
-            if (nextUser) {
-                console.log('DEBUG [AuthContext]: User data fetched:', nextUser);
+            const nextSession = await loadCurrentUser();
+
+            if (nextSession.status === 'authenticated' && nextSession.user) {
+                console.log('DEBUG [AuthContext]: User data fetched:', nextSession.user);
+                setUser(nextSession.user);
+                setStatus('authenticated');
+                setSessionError(null);
+                return nextSession;
             }
-            setUser(nextUser);
+
+            if (nextSession.status === 'unauthenticated') {
+                setUser(null);
+                setStatus('unauthenticated');
+                setSessionError(null);
+                return nextSession;
+            }
+
+            setSessionError(nextSession.error || DEFAULT_SESSION_ERROR);
+
+            if (preserveUserOnError && userRef.current) {
+                setStatus('authenticated');
+                return {
+                    user: userRef.current,
+                    status: 'authenticated',
+                    error: nextSession.error,
+                };
+            }
+
+            setUser(null);
+            setStatus('error');
+
+            return {
+                user: null,
+                status: 'error',
+                error: nextSession.error,
+            };
         } finally {
-            setLoading(false);
+            if (initial) {
+                setLoading(false);
+            }
         }
     }, [loadCurrentUser]);
 
@@ -169,15 +253,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         if (nextUser) {
             setUser(nextUser);
-            return;
+            setStatus('authenticated');
+            setSessionError(null);
+            return {
+                user: nextUser,
+                status: 'authenticated' as const,
+                error: null,
+            };
         }
 
-        await fetchMe();
-    }, [fetchMe]);
+        return syncSession({ preserveUserOnError: source === 'profile' });
+    }, [syncSession]);
 
     useEffect(() => {
-        void fetchMe();
-    }, [fetchMe]);
+        void syncSession({ initial: true });
+    }, [syncSession]);
 
     const login = async (email: string, password: string) => {
         setError(null);
@@ -191,11 +281,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             });
             
             if (response.ok) {
-                await syncUserFromResponse(response, 'login');
+                const session = await syncUserFromResponse(response, 'login');
+                if (session.status !== 'authenticated') {
+                    setError(session.error || 'No pudimos confirmar tu sesión. Intentá de nuevo.');
+                    return false;
+                }
                 return true;
             } else {
                 const errorMsg = await getAuthErrorMessage(response, getLoginFallbackMessage(response.status));
                 console.log('[AuthContext] Login failed:', errorMsg);
+                if (!user) {
+                    setStatus('unauthenticated');
+                }
                 setError(errorMsg);
                 return false;
             }
@@ -218,10 +315,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 includeCredentials: true
             });
             if (response.ok) {
-                await syncUserFromResponse(response, 'register');
+                const session = await syncUserFromResponse(response, 'register');
+                if (session.status !== 'authenticated') {
+                    setError(session.error || 'No pudimos confirmar tu cuenta. Intentá de nuevo.');
+                    return false;
+                }
                 return true;
             } else {
                 const errorMsg = await getAuthErrorMessage(response, getRegisterFallbackMessage(response.status));
+                if (!user) {
+                    setStatus('unauthenticated');
+                }
                 setError(errorMsg);
                 return false;
             }
@@ -244,7 +348,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             });
 
             if (response.ok) {
-                await syncUserFromResponse(response, 'profile');
+                const session = await syncUserFromResponse(response, 'profile');
+                if (session.status !== 'authenticated') {
+                    setError(session.error || 'No pudimos confirmar tu perfil actualizado. Intentá de nuevo.');
+                    return false;
+                }
                 return true;
             }
 
@@ -263,6 +371,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         try {
             await apiFetch('/api/auth/logout', { method: 'POST', includeCredentials: true });
             setUser(null);
+            setStatus('unauthenticated');
+            setSessionError(null);
         } catch (err) {
             console.error('[AuthContext] Logout error:', err);
             setError('No pudimos cerrar tu sesión. Intentá de nuevo.');
@@ -272,7 +382,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const clearError = () => setError(null);
 
     return (
-        <AuthContext.Provider value={{ user, loading, isAuthenticated: Boolean(user), error, login, logout, register, refresh: fetchMe, updateProfile, clearError }}>
+        <AuthContext.Provider value={{ user, loading, isAuthenticated: Boolean(user), status, error, sessionError, login, logout, register, refresh: () => syncSession({ preserveUserOnError: true }), updateProfile, clearError }}>
             {children}
         </AuthContext.Provider>
     );

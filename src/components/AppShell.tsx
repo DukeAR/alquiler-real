@@ -6,6 +6,7 @@ import { AIAssistant } from './AIAssistant';
 import { NotificationsMenu } from './NotificationsMenu';
 import { useAuth } from '../hooks/useAuth';
 import { useFavorites } from '../hooks/useFavorites';
+import { useNotifications } from '../hooks/useNotifications';
 import { useSocket } from '../hooks/useSocket';
 import { cn } from '../lib/utils';
 import { showToast } from '../lib/toast';
@@ -123,8 +124,9 @@ const MobileNavButton = ({ action, active, onSelect }: { action: NavAction; acti
 export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, loading: authLoading, refresh } = useAuth();
+  const { user, loading: authLoading, status: authStatus, refresh } = useAuth();
   const { getFavoritesCount } = useFavorites();
+  const notifications = useNotifications();
   const favoritesAction: NavAction = {
     label: 'Guardados',
     shortLabel: 'Guardados',
@@ -150,6 +152,12 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
     if (!action.path) return;
 
     if (authLoading) {
+      return;
+    }
+
+    if (action.protected && authStatus === 'error' && !user) {
+      showToast('No pudimos verificar tu sesión', 'Reintentá antes de entrar a esta sección.', 'error');
+      void refresh();
       return;
     }
 
@@ -218,9 +226,13 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
 
             <div className="flex items-center gap-2">
               <NotificationsMenu
-                user={user}
-                authLoading={authLoading}
-                refreshSession={refresh}
+                status={notifications.status}
+                notifications={notifications.notifications}
+                unreadCount={notifications.unreadCount}
+                errorMessage={notifications.errorMessage}
+                isMarkingAllRead={notifications.isMarkingAllRead}
+                onRefresh={notifications.loadNotifications}
+                onMarkAllAsRead={notifications.markAllAsRead}
                 onLoginRequired={openLoginModal}
               />
 

@@ -1,96 +1,19 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { apiFetch } from '../lib/apiConfig';
-import { APP_USER_NOTIFICATION_EVENT, type ToastPayload, type ToastType } from '../lib/toast';
-import type { User } from '../hooks/useAuth';
+import type { NotificationItem, NotificationStatus } from '../hooks/useNotifications';
 import { cn } from '../lib/utils';
 import { Icons } from './Icons';
 import { Button } from './ui/Button';
 
-type NotificationItem = {
-  id: string;
-  title: string;
-  message: string;
-  type: ToastType;
-  createdAt: string;
-  unread: boolean;
-};
-
-type NotificationStatus = 'auth-loading' | 'logged-out' | 'loading' | 'ready' | 'error';
-
 type NotificationsMenuProps = {
-  user: User | null;
-  authLoading: boolean;
-  refreshSession: () => Promise<void>;
+  status: NotificationStatus;
+  notifications: NotificationItem[];
+  unreadCount: number;
+  errorMessage: string | null;
+  isMarkingAllRead: boolean;
+  onRefresh: () => Promise<void>;
+  onMarkAllAsRead: () => Promise<boolean>;
   onLoginRequired: () => Promise<void> | void;
-};
-
-type NotificationResponseShape = {
-  notifications?: unknown;
-  items?: unknown;
-  unread_count?: unknown;
-  unreadCount?: unknown;
-};
-
-const normalizeNotificationType = (value: unknown): ToastType => {
-  if (value === 'success' || value === 'warning' || value === 'error') {
-    return value;
-  }
-
-  return 'info';
-};
-
-const normalizeNotificationItem = (
-  value: Record<string, unknown>,
-  index: number,
-  defaultUnread: boolean,
-): NotificationItem => ({
-  id: typeof value.id === 'string' && value.id.trim()
-    ? value.id
-    : `notification-${index}-${typeof value.createdAt === 'string' ? value.createdAt : Date.now()}`,
-  title: typeof value.title === 'string' && value.title.trim()
-    ? value.title
-    : 'Notificación',
-  message: typeof value.message === 'string' && value.message.trim()
-    ? value.message
-    : typeof value.body === 'string' && value.body.trim()
-      ? value.body
-      : 'Tenemos una actualización para vos.',
-  type: normalizeNotificationType(value.type),
-  createdAt: typeof value.createdAt === 'string'
-    ? value.createdAt
-    : typeof value.created_at === 'string'
-      ? value.created_at
-      : new Date().toISOString(),
-  unread: typeof value.unread === 'boolean'
-    ? value.unread
-    : typeof value.read === 'boolean'
-      ? !value.read
-      : defaultUnread,
-});
-
-const parseNotificationResponse = (payload: unknown) => {
-  const response = (payload && typeof payload === 'object' ? payload : {}) as NotificationResponseShape;
-  const rawItems = Array.isArray(payload)
-    ? payload
-    : Array.isArray(response.notifications)
-      ? response.notifications
-      : Array.isArray(response.items)
-        ? response.items
-        : [];
-
-  const items = rawItems
-    .filter((item): item is Record<string, unknown> => Boolean(item && typeof item === 'object'))
-    .map((item, index) => normalizeNotificationItem(item, index, false))
-    .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime());
-
-  const unreadCount = typeof response.unread_count === 'number'
-    ? response.unread_count
-    : typeof response.unreadCount === 'number'
-      ? response.unreadCount
-      : items.filter((item) => item.unread).length;
-
-  return { items, unreadCount };
 };
 
 const formatNotificationDate = (value: string) => {
@@ -108,142 +31,24 @@ const formatNotificationDate = (value: string) => {
 };
 
 export const NotificationsMenu: React.FC<NotificationsMenuProps> = ({
-  user,
-  authLoading,
-  refreshSession,
+  status,
+  notifications,
+  unreadCount,
+  errorMessage,
+  isMarkingAllRead,
+  onRefresh,
+  onMarkAllAsRead,
   onLoginRequired,
 }) => {
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
-  const [status, setStatus] = useState<NotificationStatus>(authLoading ? 'auth-loading' : user ? 'ready' : 'logged-out');
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [hasLoaded, setHasLoaded] = useState(false);
-  const [notificationsApiAvailable, setNotificationsApiAvailable] = useState<boolean | null>(null);
 
   useEffect(() => {
     setIsOpen(false);
   }, [location.pathname]);
 
-  useEffect(() => {
-    if (authLoading) {
-      setStatus('auth-loading');
-      return;
-    }
-
-    if (!user) {
-      setStatus('logged-out');
-      setNotifications([]);
-      setUnreadCount(0);
-      setErrorMessage(null);
-      setHasLoaded(false);
-      setNotificationsApiAvailable(null);
-      return;
-    }
-
-    setStatus(errorMessage ? 'error' : 'ready');
-  }, [authLoading, errorMessage, user]);
-
-  useEffect(() => {
-    if (!user) {
-      return;
-    }
-
-    const handleNotification = (event: Event) => {
-      const detail = (event as CustomEvent<ToastPayload & { id?: string; createdAt?: string; unread?: boolean }>).detail;
-      const nextNotification = normalizeNotificationItem(detail as unknown as Record<string, unknown>, 0, true);
-
-      setNotifications((current) => {
-        const alreadyPresent = current.some((item) => item.id === nextNotification.id);
-        if (!alreadyPresent && nextNotification.unread) {
-          setUnreadCount((count) => count + 1);
-        }
-
-        return [nextNotification, ...current.filter((item) => item.id !== nextNotification.id)];
-      });
-      setHasLoaded(true);
-      setStatus('ready');
-      setErrorMessage(null);
-    };
-
-    window.addEventListener(APP_USER_NOTIFICATION_EVENT, handleNotification);
-    return () => window.removeEventListener(APP_USER_NOTIFICATION_EVENT, handleNotification);
-  }, [user]);
-
-  const loadNotifications = useCallback(async () => {
-    if (authLoading) {
-      setStatus('auth-loading');
-      return;
-    }
-
-    if (!user) {
-      setStatus('logged-out');
-      return;
-    }
-
-    setStatus('loading');
-    setErrorMessage(null);
-
-    try {
-      const response = await apiFetch('/api/notifications', { includeCredentials: true });
-
-      if (response.status === 404) {
-        setNotificationsApiAvailable(false);
-        setHasLoaded(true);
-        setStatus('ready');
-        return;
-      }
-
-      if (response.status === 401 || response.status === 403) {
-        await refreshSession();
-        setNotifications([]);
-        setUnreadCount(0);
-        setHasLoaded(false);
-        setStatus('logged-out');
-        return;
-      }
-
-      if (!response.ok) {
-        setStatus('error');
-        setErrorMessage('No pudimos cargar las notificaciones. Reintentá.');
-        return;
-      }
-
-      const payload = await response.json();
-      const nextState = parseNotificationResponse(payload);
-      setNotifications(nextState.items);
-      setUnreadCount(nextState.unreadCount);
-      setNotificationsApiAvailable(true);
-      setHasLoaded(true);
-      setStatus('ready');
-    } catch (error) {
-      console.error('[NotificationsMenu] Failed to load notifications:', error);
-      setStatus('error');
-      setErrorMessage('No pudimos cargar las notificaciones. Reintentá.');
-    }
-  }, [authLoading, refreshSession, user]);
-
   const handleToggle = () => {
-    setIsOpen((current) => {
-      const nextOpen = !current;
-
-      if (nextOpen) {
-        if (authLoading) {
-          setStatus('auth-loading');
-        } else if (!user) {
-          setStatus('logged-out');
-        } else if (!hasLoaded && notificationsApiAvailable !== false) {
-          void loadNotifications();
-        } else if (errorMessage) {
-          setStatus('error');
-        } else {
-          setStatus('ready');
-        }
-      }
-
-      return nextOpen;
-    });
+    setIsOpen((current) => !current);
   };
 
   const buttonLabel = unreadCount > 0 ? `Notificaciones, ${unreadCount} nuevas` : 'Notificaciones';
@@ -281,7 +86,7 @@ export const NotificationsMenu: React.FC<NotificationsMenuProps> = ({
             <Icons.AlertTriangle className="h-4 w-4" />
           </span>
           <p className="text-sm font-medium text-slate-700">{errorMessage || 'No pudimos cargar las notificaciones. Reintentá.'}</p>
-          <Button type="button" size="sm" variant="secondary" onClick={() => void loadNotifications()}>
+          <Button type="button" size="sm" variant="secondary" onClick={() => void onRefresh()}>
             Reintentar
           </Button>
         </div>
@@ -321,7 +126,7 @@ export const NotificationsMenu: React.FC<NotificationsMenuProps> = ({
         ))}
       </div>
     );
-  }, [errorMessage, loadNotifications, notifications, onLoginRequired, status]);
+  }, [errorMessage, notifications, onLoginRequired, onRefresh, status]);
 
   return (
     <div className="relative hidden md:block">
@@ -348,15 +153,27 @@ export const NotificationsMenu: React.FC<NotificationsMenuProps> = ({
               <h3 className="text-sm font-semibold tracking-tight text-slate-900">Notificaciones</h3>
               <p className="mt-1 text-[11px] font-medium text-slate-500">Tu actividad reciente</p>
             </div>
-            {user ? (
-              <button
-                type="button"
-                onClick={() => void loadNotifications()}
-                className="rounded-full px-2.5 py-1 text-xs font-semibold text-slate-500 transition-colors hover:bg-white hover:text-slate-900"
-              >
-                Actualizar
-              </button>
-            ) : null}
+            <div className="flex items-center gap-2">
+              {status !== 'logged-out' ? (
+                <button
+                  type="button"
+                  onClick={() => void onRefresh()}
+                  className="rounded-full px-2.5 py-1 text-xs font-semibold text-slate-500 transition-colors hover:bg-white hover:text-slate-900"
+                >
+                  Actualizar
+                </button>
+              ) : null}
+              {status === 'ready' && unreadCount > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => void onMarkAllAsRead()}
+                  disabled={isMarkingAllRead}
+                  className="rounded-full px-2.5 py-1 text-xs font-semibold text-slate-500 transition-colors hover:bg-white hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isMarkingAllRead ? 'Marcando...' : 'Marcar leídas'}
+                </button>
+              ) : null}
+            </div>
           </div>
           {panelBody}
         </div>

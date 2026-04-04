@@ -86,6 +86,101 @@ const logActivity = async (userId: string, action: string, metadata: any = {}, i
 
 const AUTH_REQUIRED_ERROR = 'Necesitás iniciar sesión para seguir.';
 
+const NOTIFIABLE_ACTIVITY_ACTIONS = [
+  'PASSWORD_CHANGED',
+  'IDENTITY_VERIFIED',
+  'IDENTITY_DOCUMENTS_SUBMITTED',
+  'PROPERTY_AVAILABILITY_UPDATED',
+  'BOOKING_CREATED',
+  'BOOKING_CANCELLED',
+] as const;
+
+const normalizeActivityMetadata = (value: unknown): Record<string, unknown> => {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+        ? parsed as Record<string, unknown>
+        : {};
+    } catch {
+      return {};
+    }
+  }
+
+  return {};
+};
+
+const mapActivityLogToNotification = (row: any) => {
+  const metadata = normalizeActivityMetadata(row?.metadata);
+  const createdAt = row?.createdAt || row?.created_at || new Date().toISOString();
+  const unread = !row?.readAt && !row?.read_at;
+
+  switch (row?.action) {
+    case 'PASSWORD_CHANGED':
+      return {
+        id: row.id,
+        title: 'Contraseña actualizada',
+        message: 'Tu contraseña se actualizó correctamente.',
+        type: 'success',
+        createdAt,
+        unread,
+      };
+    case 'IDENTITY_VERIFIED':
+      return {
+        id: row.id,
+        title: 'Verificación completada',
+        message: 'Tu identidad ya quedó validada.',
+        type: 'success',
+        createdAt,
+        unread,
+      };
+    case 'IDENTITY_DOCUMENTS_SUBMITTED':
+      return {
+        id: row.id,
+        title: 'Documentación enviada',
+        message: metadata.hasProofOfAddress
+          ? 'Recibimos tu documentación y el comprobante de domicilio.'
+          : 'Recibimos tu documentación para revisar la verificación.',
+        type: 'info',
+        createdAt,
+        unread,
+      };
+    case 'PROPERTY_AVAILABILITY_UPDATED':
+      return {
+        id: row.id,
+        title: 'Disponibilidad actualizada',
+        message: 'Guardamos los cambios de disponibilidad de tu publicación.',
+        type: 'info',
+        createdAt,
+        unread,
+      };
+    case 'BOOKING_CREATED':
+      return {
+        id: row.id,
+        title: 'Reserva confirmada',
+        message: 'Registramos tu reserva. Revisá las fechas y los próximos pasos en Mis reservas.',
+        type: 'success',
+        createdAt,
+        unread,
+      };
+    case 'BOOKING_CANCELLED':
+      return {
+        id: row.id,
+        title: 'Reserva cancelada',
+        message: 'La cancelación quedó registrada correctamente.',
+        type: 'warning',
+        createdAt,
+        unread,
+      };
+    default:
+      return null;
+  }
+};
+
 // ==========================================
 // ANTI-FRAUDE & RISK SYSTEM
 // ==========================================
@@ -678,6 +773,62 @@ app.get('/api/users/activity', async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ error: 'No pudimos cargar tu actividad.' });
+  }
+});
+
+// GET /api/notifications
+app.get('/api/notifications', async (req, res) => {
+  const userId = req.session.userId;
+  if (!userId) return res.status(401).json({ error: AUTH_REQUIRED_ERROR });
+
+  try {
+    const result = await db.query(
+      `SELECT id,
+              action,
+              metadata,
+              read_at as "readAt",
+              created_at as "createdAt"
+       FROM user_activity_logs
+       WHERE user_id = $1
+         AND action = ANY($2::text[])
+       ORDER BY created_at DESC
+       LIMIT 20`,
+      [userId, [...NOTIFIABLE_ACTIVITY_ACTIONS]],
+    );
+
+    const notifications = result.rows
+      .map((row) => mapActivityLogToNotification(row))
+      .filter(Boolean);
+
+    res.json({
+      items: notifications,
+      unread_count: notifications.filter((notification) => notification?.unread).length,
+    });
+  } catch (err) {
+    console.error('Error loading notifications:', err);
+    res.status(500).json({ error: 'No pudimos cargar las notificaciones. Reintentá.' });
+  }
+});
+
+// POST /api/notifications/read-all
+app.post('/api/notifications/read-all', async (req, res) => {
+  const userId = req.session.userId;
+  if (!userId) return res.status(401).json({ error: AUTH_REQUIRED_ERROR });
+
+  try {
+    await db.query(
+      `UPDATE user_activity_logs
+       SET read_at = COALESCE(read_at, NOW())
+       WHERE user_id = $1
+         AND action = ANY($2::text[])
+         AND read_at IS NULL`,
+      [userId, [...NOTIFIABLE_ACTIVITY_ACTIONS]],
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Error marking notifications as read:', err);
+    res.status(500).json({ error: 'No pudimos actualizar tus notificaciones. Reintentá.' });
   }
 });
 

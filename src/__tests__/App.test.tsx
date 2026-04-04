@@ -112,7 +112,7 @@ describe('App routing states', () => {
     useAuthMock.mockReset();
     apiJsonMock.mockReset();
     consoleErrorMock.mockClear();
-    useAuthMock.mockReturnValue({ loading: false, user: null });
+    useAuthMock.mockReturnValue({ loading: false, user: null, status: 'unauthenticated', refresh: vi.fn(async () => ({ user: null, status: 'unauthenticated', error: null })) });
   });
 
   afterEach(() => {
@@ -120,7 +120,7 @@ describe('App routing states', () => {
   });
 
   test('shows the shared loading state while auth is bootstrapping', () => {
-    useAuthMock.mockReturnValue({ loading: true, user: null });
+    useAuthMock.mockReturnValue({ loading: true, user: null, status: 'loading', refresh: vi.fn(async () => ({ user: null, status: 'unauthenticated', error: null })) });
 
     render(
       <MemoryRouter initialEntries={['/']}>
@@ -190,6 +190,17 @@ describe('App routing states', () => {
         email: 'tenant@test.com',
         role: 'tenant',
       },
+      status: 'authenticated',
+      refresh: vi.fn(async () => ({
+        user: {
+          id: 'tenant-1',
+          name: 'Tenant User',
+          email: 'tenant@test.com',
+          role: 'tenant',
+        },
+        status: 'authenticated',
+        error: null,
+      })),
     });
 
     render(
@@ -210,6 +221,17 @@ describe('App routing states', () => {
         email: 'host@test.com',
         role: 'host',
       },
+      status: 'authenticated',
+      refresh: vi.fn(async () => ({
+        user: {
+          id: 'host-1',
+          name: 'Host User',
+          email: 'host@test.com',
+          role: 'host',
+        },
+        status: 'authenticated',
+        error: null,
+      })),
     });
 
     render(

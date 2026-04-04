@@ -11,7 +11,7 @@ import { apiFetch } from '../../lib/apiConfig';
 const mockedApiFetch = vi.mocked(apiFetch);
 
 const AuthHarness = () => {
-  const { login, updateProfile, user, error, loading } = useAuthContext();
+  const { login, updateProfile, user, error, loading, status, sessionError, refresh } = useAuthContext();
 
   return (
     <div>
@@ -21,12 +21,17 @@ const AuthHarness = () => {
       <button type="button" onClick={() => void updateProfile({ name: 'Nuevo Nombre', zone: 'Costa del Este' })}>
         Guardar perfil
       </button>
+      <button type="button" onClick={() => void refresh()}>
+        Refrescar sesión
+      </button>
       <div data-testid="user-email">{user?.email || 'guest'}</div>
       <div data-testid="user-name">{user?.name || 'guest'}</div>
       <div data-testid="user-role">{user?.role || 'guest'}</div>
       <div data-testid="user-interests">{user?.interests || ''}</div>
       <div data-testid="loading">{String(loading)}</div>
+      <div data-testid="status">{status}</div>
       <div data-testid="error">{error || ''}</div>
+      <div data-testid="session-error">{sessionError || ''}</div>
     </div>
   );
 };
@@ -39,9 +44,9 @@ describe('AuthProvider', () => {
   test('uses the login response user directly', async () => {
     mockedApiFetch
       .mockResolvedValueOnce({
-        ok: false,
-        status: 401,
-        json: async () => ({ error: 'No session' })
+        ok: true,
+        status: 200,
+        json: async () => ({ user: null })
       } as Response)
       .mockResolvedValueOnce({
         ok: true,
@@ -64,6 +69,7 @@ describe('AuthProvider', () => {
     );
 
     await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('false'));
+    expect(screen.getByTestId('status')).toHaveTextContent('unauthenticated');
 
     fireEvent.click(screen.getByRole('button', { name: 'Ingresar' }));
 
@@ -71,6 +77,7 @@ describe('AuthProvider', () => {
     expect(screen.getByTestId('user-name')).toHaveTextContent('Test User');
     expect(screen.getByTestId('user-role')).toHaveTextContent('tenant');
     expect(screen.getByTestId('user-interests')).toHaveTextContent('["mate","futbol"]');
+    expect(screen.getByTestId('status')).toHaveTextContent('authenticated');
     expect(screen.getByTestId('error')).toHaveTextContent('');
     expect(mockedApiFetch).toHaveBeenCalledTimes(2);
 
@@ -85,9 +92,9 @@ describe('AuthProvider', () => {
   test('falls back to session sync when the login response has no user payload', async () => {
     mockedApiFetch
       .mockResolvedValueOnce({
-        ok: false,
-        status: 401,
-        json: async () => ({ error: 'No session' })
+        ok: true,
+        status: 200,
+        json: async () => ({ user: null })
       } as Response)
       .mockResolvedValueOnce({
         ok: true,
@@ -120,6 +127,7 @@ describe('AuthProvider', () => {
     await waitFor(() => expect(screen.getByTestId('user-email')).toHaveTextContent('fallback@test.com'));
     expect(screen.getByTestId('user-name')).toHaveTextContent('Fallback User');
     expect(screen.getByTestId('user-role')).toHaveTextContent('host');
+    expect(screen.getByTestId('status')).toHaveTextContent('authenticated');
     expect(screen.getByTestId('error')).toHaveTextContent('');
     expect(mockedApiFetch).toHaveBeenCalledTimes(3);
     expect(mockedApiFetch.mock.calls[2]?.[0]).toBe('/api/auth/me');
@@ -128,9 +136,9 @@ describe('AuthProvider', () => {
   test('updates the user in context when profile changes are saved', async () => {
     mockedApiFetch
       .mockResolvedValueOnce({
-        ok: false,
-        status: 401,
-        json: async () => ({ error: 'No session' })
+        ok: true,
+        status: 200,
+        json: async () => ({ user: null })
       } as Response)
       .mockResolvedValueOnce({
         ok: true,
@@ -158,10 +166,65 @@ describe('AuthProvider', () => {
 
     await waitFor(() => expect(screen.getByTestId('user-name')).toHaveTextContent('Nuevo Nombre'));
     expect(screen.getByTestId('user-email')).toHaveTextContent('nuevo@test.com');
+    expect(screen.getByTestId('status')).toHaveTextContent('authenticated');
     expect(mockedApiFetch.mock.calls[1]?.[0]).toBe('/api/auth/profile');
     expect(JSON.parse(String(mockedApiFetch.mock.calls[1]?.[1]?.body))).toEqual({
       name: 'Nuevo Nombre',
       zone: 'Costa del Este'
     });
+  });
+
+  test('does not downgrade the session to logged out when /me fails during bootstrap', async () => {
+    mockedApiFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      json: async () => ({ error: 'server exploded' }),
+    } as Response);
+
+    render(
+      <AuthProvider>
+        <AuthHarness />
+      </AuthProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('false'));
+    expect(screen.getByTestId('user-email')).toHaveTextContent('guest');
+    expect(screen.getByTestId('status')).toHaveTextContent('error');
+    expect(screen.getByTestId('session-error')).toHaveTextContent('server exploded');
+  });
+
+  test('preserves the authenticated user when a background session refresh fails', async () => {
+    mockedApiFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          user: {
+            id: 'u4',
+            name: 'Persisted User',
+            email: 'persisted@test.com',
+            role: 'tenant',
+          },
+        }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        json: async () => ({ error: 'session unavailable' }),
+      } as Response);
+
+    render(
+      <AuthProvider>
+        <AuthHarness />
+      </AuthProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('user-email')).toHaveTextContent('persisted@test.com'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Refrescar sesión' }));
+
+    await waitFor(() => expect(screen.getByTestId('session-error')).toHaveTextContent('session unavailable'));
+    expect(screen.getByTestId('user-email')).toHaveTextContent('persisted@test.com');
+    expect(screen.getByTestId('status')).toHaveTextContent('authenticated');
   });
 });

@@ -5,9 +5,14 @@ import { AppShell } from '../AppShell';
 
 const useAuthMock = vi.fn();
 const getFavoritesCountMock = vi.fn();
+const useNotificationsMock = vi.fn();
 
 vi.mock('../../hooks/useAuth', () => ({
   useAuth: () => useAuthMock(),
+}));
+
+vi.mock('../../hooks/useNotifications', () => ({
+  useNotifications: () => useNotificationsMock(),
 }));
 
 vi.mock('../../hooks/useFavorites', () => ({
@@ -52,10 +57,21 @@ describe('AppShell', () => {
   beforeEach(() => {
     getFavoritesCountMock.mockReset();
     useAuthMock.mockReset();
+    useNotificationsMock.mockReset();
     getFavoritesCountMock.mockReturnValue(0);
+    useNotificationsMock.mockReturnValue({
+      status: 'logged-out',
+      notifications: [],
+      unreadCount: 0,
+      errorMessage: null,
+      isMarkingAllRead: false,
+      loadNotifications: vi.fn(async () => undefined),
+      markAllAsRead: vi.fn(async () => true),
+    });
     useAuthMock.mockReturnValue({
       user: null,
       loading: false,
+      status: 'unauthenticated',
       refresh: vi.fn(async () => undefined),
     });
   });
@@ -80,6 +96,7 @@ describe('AppShell', () => {
         role: 'tenant',
       },
       loading: false,
+      status: 'authenticated',
       refresh: vi.fn(async () => undefined),
     });
 

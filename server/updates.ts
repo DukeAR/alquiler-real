@@ -791,8 +791,25 @@ export const initDB = async () => {
       action TEXT,
       metadata JSONB,
       ip_address TEXT,
+      read_at TIMESTAMP,
       created_at TIMESTAMP DEFAULT NOW()
     );
+  `);
+
+  await db.query(`
+    DO $$ BEGIN
+      BEGIN ALTER TABLE user_activity_logs ADD COLUMN read_at TIMESTAMP; EXCEPTION WHEN duplicate_column THEN NULL; END;
+    END $$;
+  `);
+
+  await db.query(`
+    CREATE INDEX IF NOT EXISTS idx_user_activity_logs_user_created_at
+      ON user_activity_logs (user_id, created_at DESC);
+  `);
+
+  await db.query(`
+    CREATE INDEX IF NOT EXISTS idx_user_activity_logs_user_read_at
+      ON user_activity_logs (user_id, read_at);
   `);
 
   // ============================================================

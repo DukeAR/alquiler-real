@@ -1,19 +1,17 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, test, vi, beforeEach } from 'vitest';
 import { NotificationsMenu } from '../NotificationsMenu';
-import { APP_USER_NOTIFICATION_EVENT } from '../../lib/toast';
-import { apiFetch } from '../../lib/apiConfig';
-
-vi.mock('../../lib/apiConfig', () => ({
-  apiFetch: vi.fn(),
-}));
 
 const renderMenu = (props?: Partial<React.ComponentProps<typeof NotificationsMenu>>) => {
   const defaultProps: React.ComponentProps<typeof NotificationsMenu> = {
-    user: { id: 'u1', name: 'Ana', email: 'ana@test.com', role: 'tenant' },
-    authLoading: false,
-    refreshSession: vi.fn(async () => undefined),
+    status: 'ready',
+    notifications: [],
+    unreadCount: 0,
+    errorMessage: null,
+    isMarkingAllRead: false,
+    onRefresh: vi.fn(async () => undefined),
+    onMarkAllAsRead: vi.fn(async () => true),
     onLoginRequired: vi.fn(async () => undefined),
   };
 
@@ -26,13 +24,12 @@ const renderMenu = (props?: Partial<React.ComponentProps<typeof NotificationsMen
 
 describe('NotificationsMenu', () => {
   beforeEach(() => {
-    vi.mocked(apiFetch).mockReset();
   });
 
   test('shows the confirmed logged-out state instead of an auth error toast', async () => {
     const onLoginRequired = vi.fn(async () => undefined);
 
-    renderMenu({ user: null, onLoginRequired });
+    renderMenu({ status: 'logged-out', onLoginRequired });
 
     fireEvent.click(screen.getByRole('button', { name: 'Notificaciones' }));
 
@@ -43,39 +40,27 @@ describe('NotificationsMenu', () => {
   });
 
   test('shows auth loading without treating the user as logged out', () => {
-    renderMenu({ user: null, authLoading: true });
+    renderMenu({ status: 'auth-loading' });
 
     fireEvent.click(screen.getByRole('button', { name: 'Notificaciones' }));
 
     expect(screen.getByText('Cargando notificaciones…')).toBeInTheDocument();
   });
 
-  test('keeps toast events out of the notifications badge and panel', async () => {
-    vi.mocked(apiFetch).mockResolvedValue({
-      ok: false,
-      status: 404,
-      json: async () => ({}),
-    } as Response);
+  test('shows the empty authenticated state when there are no notifications', async () => {
+    renderMenu({ status: 'ready', notifications: [], unreadCount: 0 });
 
-    renderMenu();
+    fireEvent.click(screen.getByRole('button', { name: 'Notificaciones' }));
 
-    window.dispatchEvent(new CustomEvent('app-notification', {
-      detail: { title: 'Necesitás iniciar sesión', message: 'Iniciá sesión para seguir.', type: 'warning', duration: 5000 },
-    }));
-
-    const bellButton = screen.getByRole('button', { name: 'Notificaciones' });
-    expect(bellButton).toBeInTheDocument();
-
-    fireEvent.click(bellButton);
     await waitFor(() => expect(screen.getByText('No tenés notificaciones nuevas')).toBeInTheDocument());
   });
 
-  test('shows backend-driven unread count and does not reset it on open', () => {
-    renderMenu();
-
-    act(() => {
-      window.dispatchEvent(new CustomEvent(APP_USER_NOTIFICATION_EVENT, {
-        detail: {
+  test('keeps the unread badge visible after opening the panel', () => {
+    renderMenu({
+      status: 'ready',
+      unreadCount: 1,
+      notifications: [
+        {
           id: 'n1',
           title: 'Reserva confirmada',
           message: 'Tu anfitrión confirmó la reserva.',
@@ -83,7 +68,7 @@ describe('NotificationsMenu', () => {
           createdAt: '2026-04-03T12:00:00.000Z',
           unread: true,
         },
-      }));
+      ],
     });
 
     const bellButton = screen.getByRole('button', { name: 'Notificaciones, 1 nuevas' });
@@ -94,16 +79,44 @@ describe('NotificationsMenu', () => {
   });
 
   test('shows a real error state when notifications cannot be loaded', async () => {
-    vi.mocked(apiFetch).mockResolvedValue({
-      ok: false,
-      status: 500,
-      json: async () => ({ error: 'server error' }),
-    } as Response);
+    const onRefresh = vi.fn(async () => undefined);
 
-    renderMenu();
+    renderMenu({
+      status: 'error',
+      errorMessage: 'No pudimos cargar las notificaciones. Reintentá.',
+      onRefresh,
+    });
 
     fireEvent.click(screen.getByRole('button', { name: 'Notificaciones' }));
 
     await waitFor(() => expect(screen.getByText('No pudimos cargar las notificaciones. Reintentá.')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
+    await waitFor(() => expect(onRefresh).toHaveBeenCalledTimes(1));
+  });
+
+  test('shows the mark-as-read action only when there are unread notifications', async () => {
+    const onMarkAllAsRead = vi.fn(async () => true);
+
+    renderMenu({
+      status: 'ready',
+      unreadCount: 2,
+      onMarkAllAsRead,
+      notifications: [
+        {
+          id: 'n1',
+          title: 'Reserva confirmada',
+          message: 'Tu anfitrión confirmó la reserva.',
+          type: 'success',
+          createdAt: '2026-04-03T12:00:00.000Z',
+          unread: true,
+        },
+      ],
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Notificaciones, 2 nuevas' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Marcar leídas' }));
+    await waitFor(() => expect(onMarkAllAsRead).toHaveBeenCalledTimes(1));
   });
 });
