@@ -51,7 +51,7 @@ type RoleBenefit = {
   icon: IconType;
 };
 
-type StepCardTone = 'blue' | 'emerald';
+type StepCardTone = 'brand' | 'success';
 
 type StepCard = {
   eyebrow: string;
@@ -83,18 +83,18 @@ const projectScopeCards: ScopeCard[] = [
       'Qué información es clara antes de hablar o pagar.',
     ],
     icon: Icons.Target,
-    cardClassName: 'rounded-[26px] border-emerald-200/80 bg-emerald-50/92 p-6 dark:border-emerald-900/30 dark:bg-emerald-900/20',
-    iconClassName: 'flex h-11 w-11 items-center justify-center rounded-[16px] bg-emerald-500 text-white',
-    pointClassName: 'text-emerald-800/90 dark:text-emerald-200/90',
+    cardClassName: 'rounded-[26px] border-brand/15 bg-brand/[0.06] p-6 dark:border-brand/20 dark:bg-brand/10',
+    iconClassName: 'flex h-11 w-11 items-center justify-center rounded-[16px] bg-brand text-white',
+    pointClassName: 'text-slate-700 dark:text-slate-200',
   },
   {
-    eyebrow: 'Qué no hacemos',
-    title: 'Qué no vas a encontrar acá',
-    description: 'Hay cosas que no prometemos ni mostramos como si estuvieran resueltas.',
+    eyebrow: 'Hasta dónde llega la verificación',
+    title: 'Hasta dónde llega la verificación',
+    description: 'Verificamos información concreta antes de que avances. Hay cosas que dependen de las partes y no se pueden validar desde la plataforma.',
     points: [
-      'No garantizamos el estado del lugar ni los servicios.',
-      'No certificamos aspectos legales o contratos.',
-      'No intervenimos en pagos ni conflictos.',
+      'El estado del lugar y los servicios se confirman entre las partes.',
+      'Los aspectos legales y contractuales quedan fuera de la verificación.',
+      'Los pagos y acuerdos se realizan directamente entre huésped y anfitrión.',
     ],
     icon: Icons.ShieldAlert,
     cardClassName: 'rounded-[26px] border-slate-200/85 bg-white/92 p-6 dark:border-slate-800 dark:bg-slate-950',
@@ -128,11 +128,11 @@ const verificationLevels: VerificationLevel[] = [
       'No reemplaza una visita real.',
     ],
     icon: Icons.Shield,
-    cardClassName: 'rounded-[28px] border-blue-200/80 bg-blue-50/92 p-6 dark:border-blue-900/30 dark:bg-blue-900/20 md:p-7',
-    iconWrapClassName: 'flex h-12 w-12 items-center justify-center rounded-[18px] bg-blue-500 text-white shadow-[0_18px_34px_-24px_rgba(59,130,246,0.34)]',
-    headingClassName: 'text-blue-950 dark:text-blue-200',
-    bodyClassName: 'text-blue-800/85 dark:text-blue-200/85',
-    pointClassName: 'text-blue-800/90 dark:text-blue-200/90',
+    cardClassName: 'rounded-[28px] border-brand/15 bg-brand/[0.06] p-6 dark:border-brand/20 dark:bg-brand/10 md:p-7',
+    iconWrapClassName: 'flex h-12 w-12 items-center justify-center rounded-[18px] bg-brand text-white shadow-[0_18px_34px_-24px_rgba(67,56,202,0.34)]',
+    headingClassName: 'text-slate-950 dark:text-slate-50',
+    bodyClassName: 'text-slate-700 dark:text-slate-300',
+    pointClassName: 'text-slate-700 dark:text-slate-200',
   },
 ];
 
@@ -143,9 +143,9 @@ const futureCards: FutureCard[] = [
     icon: Icons.Globe,
   },
   {
-    title: 'Más claridad al reservar',
-    description: 'Más adelante puede haber una seña resguardada para ordenar mejor el momento del pago.',
-    icon: Icons.Lock,
+    title: 'Más señales fáciles de leer',
+    description: 'Si algo se valida, queremos que se entienda rápido y sin etiquetas técnicas.',
+    icon: Icons.Shield,
   },
   {
     title: 'Información cada vez más útil',
@@ -156,19 +156,19 @@ const futureCards: FutureCard[] = [
 
 const hostBenefits: RoleBenefit[] = [
   {
-    title: 'Menos dudas básicas',
-    description: 'Si el aviso explica lo importante, la otra persona ya sabe qué está viendo.',
-    icon: Icons.MessageSquare,
+    title: 'Quién publica queda claro',
+    description: 'Si validaste tu identidad, la otra persona lo ve antes de escribirte.',
+    icon: Icons.BadgeCheck,
   },
   {
-    title: 'Aviso más claro',
-    description: 'Identidad, ubicación y datos concretos ayudan a entender rápido qué ofrecés.',
+    title: 'Se entiende qué ya fue revisado',
+    description: 'La publicación deja claro qué parte se pudo comprobar y qué sigue siendo información declarada.',
     icon: Icons.ShieldCheck,
   },
   {
-    title: 'Pago por fuera de la app',
-    description: 'El acuerdo y el cobro siguen siendo directos entre vos y el huésped.',
-    icon: Icons.FileText,
+    title: 'Llegan consultas más enfocadas',
+    description: 'Se evita arrancar con "quién publica?", "dónde queda?" o "qué incluye?".',
+    icon: Icons.MessageSquare,
   },
 ];
 
@@ -191,17 +191,17 @@ const guestBenefits: RoleBenefit[] = [
 ];
 
 const hostSteps: StepCard = {
-  eyebrow: 'Paso a paso',
-  title: 'Qué conviene completar antes de publicar',
-  description: 'Un recorrido corto para que el aviso diga algo útil desde el inicio.',
+  eyebrow: 'Antes de publicar',
+  title: 'Qué conviene dejar claro',
+  description: 'Cuatro cosas para que el aviso se entienda rápido.',
   icon: Icons.ListTodo,
   steps: [
-    'Creá tu cuenta como anfitrión.',
-    'Cargá dirección, precio, fotos y reglas básicas.',
-    'Validá tu identidad y, si corresponde, sumá ubicación o visita presencial.',
-    'Publicá cuando la información principal ya esté clara.',
+    'Mostrá quién publica y si validaste tu identidad.',
+    'Dejá visible ubicación, precio, fotos y reglas básicas.',
+    'Marcá qué parte del aviso ya se pudo comprobar.',
+    'Publicá cuando lo principal se entienda sin abrir el chat.',
   ],
-  tone: 'blue',
+  tone: 'brand',
 };
 
 const guestSteps: StepCard = {
@@ -215,8 +215,20 @@ const guestSteps: StepCard = {
     'Hacé preguntas concretas antes de avanzar.',
     'Coordiná el pago cuando ya hayas revisado ubicación, reseñas y reglas básicas.',
   ],
-  tone: 'emerald',
+  tone: 'success',
 };
+
+const hostHighValidationPoints = [
+  'Se validó quién publica.',
+  'Se registró el lugar y su ubicación.',
+  'La consulta arranca con menos dudas básicas.',
+];
+
+const hostScopePoints = [
+  'La app deja visible quién publica, dónde está el lugar y qué parte ya fue validada.',
+  'La charla, la visita y la decisión final siguen siendo entre las personas.',
+  'El objetivo es que el aviso no arranque incompleto.',
+];
 
 const ScopeCardBlock = ({ card }: { card: ScopeCard }) => {
   const Icon = card.icon;
@@ -293,51 +305,53 @@ const RoleBenefitCard = ({ benefit }: { benefit: RoleBenefit }) => {
     <Card padding="lg" className={aboutFeatureCardClass}>
       <Icon className="h-6 w-6 text-brand" />
       <h3 className="text-[1rem] font-semibold leading-6 tracking-[-0.015em] text-slate-950 dark:text-slate-50">{benefit.title}</h3>
-      <p className="app-body-sm leading-7 text-slate-600 dark:text-slate-400">{benefit.description}</p>
+      <p className="app-body-sm leading-7 text-slate-700 dark:text-slate-300">{benefit.description}</p>
     </Card>
   );
 };
 
 const StepListCard = ({ content }: { content: StepCard }) => {
   const Icon = content.icon;
-  const isBlue = content.tone === 'blue';
+  const isBrand = content.tone === 'brand';
 
   return (
     <Card
       padding="none"
-      className={isBlue
-        ? 'rounded-[28px] border-blue-200/80 bg-blue-50/92 p-6 dark:border-blue-900/30 dark:bg-blue-900/20 md:p-7'
-        : 'rounded-[28px] border-emerald-200/80 bg-emerald-50/92 p-6 dark:border-emerald-900/30 dark:bg-emerald-900/20 md:p-7'}
+      className={isBrand
+        ? 'rounded-[28px] border-brand/15 bg-brand/[0.06] p-6 dark:border-brand/20 dark:bg-brand/10 md:p-7'
+        : 'rounded-[28px] border-emerald-200/70 bg-emerald-50/78 p-6 dark:border-emerald-900/30 dark:bg-emerald-900/14 md:p-7'}
     >
       <div className="space-y-5">
         <SectionTitle
           eyebrow={content.eyebrow}
           as="h3"
           heading={
-            <span className={cn('flex items-center gap-2', isBlue ? 'text-blue-950 dark:text-blue-200' : 'text-emerald-950 dark:text-emerald-200')}>
-              <Icon className="h-5 w-5" />
+            <span className="flex items-center gap-2 text-slate-950 dark:text-slate-50">
+              <Icon className={cn('h-5 w-5', isBrand ? 'text-brand' : 'text-emerald-600 dark:text-emerald-300')} />
               {content.title}
             </span>
           }
           description={content.description}
-          headingClassName={isBlue ? 'text-blue-950 dark:text-blue-200' : 'text-emerald-950 dark:text-emerald-200'}
+          headingClassName="text-slate-950 dark:text-slate-50"
+          eyebrowClassName={isBrand ? 'text-brand/90 dark:text-brand-light/80' : undefined}
+          descriptionClassName="text-slate-700 dark:text-slate-300"
         />
 
         <ol className="space-y-3">
           {content.steps.map((step, index) => (
             <li
               key={step}
-              className={isBlue
-                ? 'flex gap-3 rounded-[18px] border border-blue-200/70 bg-white/72 p-3.5 dark:border-blue-900/30 dark:bg-slate-950/70'
-                : 'flex gap-3 rounded-[18px] border border-emerald-200/70 bg-white/72 p-3.5 dark:border-emerald-900/30 dark:bg-slate-950/70'}
+              className={isBrand
+                ? 'flex gap-3 rounded-[18px] border border-brand/10 bg-white/88 p-3.5 shadow-[0_14px_28px_-24px_rgba(15,23,42,0.12)] dark:border-brand/20 dark:bg-slate-950/70'
+                : 'flex gap-3 rounded-[18px] border border-emerald-200/60 bg-white/88 p-3.5 shadow-[0_14px_28px_-24px_rgba(15,23,42,0.12)] dark:border-emerald-900/30 dark:bg-slate-950/70'}
             >
-              <span className={isBlue
-                ? 'flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-500 text-xs font-semibold text-white'
-                : 'flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-xs font-semibold text-white'}
+              <span className={isBrand
+                ? 'flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand text-xs font-semibold text-white shadow-[0_14px_28px_-20px_rgba(67,56,202,0.42)]'
+                : 'flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-500/88 text-xs font-semibold text-white shadow-[0_14px_28px_-20px_rgba(16,185,129,0.34)]'}
               >
                 {index + 1}
               </span>
-              <span className={cn('app-body-sm leading-6', isBlue ? 'text-blue-900/88 dark:text-blue-200/88' : 'text-emerald-900/88 dark:text-emerald-200/88')}>
+              <span className="app-body-sm leading-6 text-slate-700 dark:text-slate-200">
                 {step}
               </span>
             </li>
@@ -508,9 +522,10 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                   <SectionTitle
                     eyebrow="Anfitriones"
                     as="h2"
-                    heading="Publicá con información que se pueda revisar"
-                    description="Si el aviso deja claro quién publica, dónde está el lugar y qué parte fue validada, la otra persona entiende mejor qué está viendo."
+                    heading="Mostrá bien quién publica y qué se pudo comprobar"
+                    description="Cuando el aviso deja visible identidad, ubicación y validaciones concretas, la otra persona entiende rápido qué está viendo y consulta con menos vueltas."
                     className="max-w-2xl"
+                    descriptionClassName="text-slate-700 dark:text-slate-300"
                   />
 
                   <div className="grid gap-4 md:grid-cols-3">
@@ -521,36 +536,97 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                 </div>
               </section>
 
-              <section className="grid gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(18rem,0.95fr)] lg:items-start">
-                <StepListCard content={hostSteps} />
+              <section className="grid gap-6 lg:grid-cols-[minmax(0,1.08fr)_minmax(18rem,0.92fr)] lg:items-start">
+                <Card padding="none" variant="elevated" className="overflow-hidden rounded-[30px] border-brand/15 bg-brand/[0.06] p-7 shadow-[0_26px_52px_-40px_rgba(15,23,42,0.22)] dark:border-brand/20 dark:bg-brand/10 md:p-8">
+                  <div className="space-y-6">
+                    <div className="inline-flex h-12 w-12 items-center justify-center rounded-[18px] bg-brand/10 text-brand shadow-[0_16px_30px_-24px_rgba(67,56,202,0.36)] dark:bg-brand/15 dark:text-brand-light">
+                      <Icons.ShieldCheck className="h-6 w-6" />
+                    </div>
 
-                <Card padding="none" className="overflow-hidden rounded-[30px] border-slate-900 bg-[linear-gradient(180deg,rgba(15,23,42,0.98),rgba(30,41,59,0.98))] text-white shadow-[0_30px_60px_-38px_rgba(15,23,42,0.52)] dark:border-slate-800">
-                  <div className="space-y-6 p-7 md:p-8">
                     <SectionTitle
-                      eyebrow="Siguiente paso"
+                      eyebrow="Cuando ya se pudo comprobar"
                       as="h3"
-                      heading="Publicá con lo importante resuelto"
-                      description="Antes de recibir consultas, dejá claro quién publica, dónde está el lugar y qué parte del aviso ya fue validada."
-                      className="max-w-sm"
-                      headingClassName="text-white"
+                      heading="No mostrás solo lo que escribiste"
+                      description="Cuando una publicación llega a este nivel, la otra persona no depende solo del texto y las fotos. También ve señales concretas que ya se pudieron revisar en el lugar."
+                      className="max-w-2xl"
+                      eyebrowClassName="text-brand/90 dark:text-brand-light/80"
+                      descriptionClassName="text-slate-700 dark:text-slate-300"
                     />
 
                     <div className="space-y-3">
-                      {[
-                        'La otra persona entiende mejor el aviso.',
-                        'Bajan las preguntas que se resuelven leyendo.',
-                        'El trato sigue siendo directo.',
-                      ].map((point) => (
-                        <div key={point} className="flex items-start gap-3 rounded-[18px] border border-white/10 bg-white/5 px-4 py-3.5 text-[0.92rem] leading-6 text-slate-100/92">
-                          <Icons.CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
+                      {hostHighValidationPoints.map((point) => (
+                        <div key={point} className="flex items-start gap-3 rounded-[18px] border border-brand/10 bg-white/88 px-4 py-3.5 text-[0.92rem] leading-6 text-slate-800 shadow-[0_14px_28px_-24px_rgba(15,23,42,0.12)] dark:border-brand/20 dark:bg-slate-950/70 dark:text-slate-100">
+                          <Icons.CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400/78 dark:text-emerald-300/72" />
                           <span>{point}</span>
                         </div>
                       ))}
                     </div>
 
-                    <Button size="lg" fullWidth onClick={openAuthModal} className="bg-white text-slate-950 shadow-[0_18px_36px_-28px_rgba(255,255,255,0.32)] hover:bg-slate-100 hover:text-slate-950">
+                    <p className="app-body-sm leading-7 text-slate-700 dark:text-slate-300">
+                      No resuelve toda la reserva por vos, pero cambia la calidad de la conversación desde el primer mensaje.
+                    </p>
+                  </div>
+                </Card>
+
+                <Card padding="none" className="rounded-[30px] border-slate-200/85 bg-white/96 p-7 shadow-[0_22px_46px_-34px_rgba(15,23,42,0.18)] dark:border-slate-800 dark:bg-slate-900 md:p-8">
+                  <div className="space-y-6">
+                    <div className="inline-flex h-12 w-12 items-center justify-center rounded-[18px] bg-slate-100 text-slate-900 shadow-[0_16px_30px_-24px_rgba(15,23,42,0.18)] dark:bg-slate-800 dark:text-slate-100">
+                      <Icons.Layers className="h-6 w-6" />
+                    </div>
+
+                    <SectionTitle
+                      eyebrow="Hasta dónde ayuda la plataforma"
+                      as="h3"
+                      heading="Ordena lo importante y deja claro qué se revisó"
+                      description="La app no te reemplaza. Te ayuda a mostrar mejor lo que suele generar dudas al principio."
+                      className="max-w-sm"
+                      descriptionClassName="text-slate-700 dark:text-slate-300"
+                    />
+
+                    <ul className="space-y-3">
+                      {hostScopePoints.map((point) => (
+                        <li key={point} className="flex items-start gap-3 rounded-[18px] border border-slate-200/80 bg-slate-50/82 px-4 py-3.5 text-[0.92rem] leading-6 text-slate-700 dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-300">
+                          <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-brand/60" />
+                          <span>{point}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </Card>
+              </section>
+
+              <section className="grid gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(18rem,0.95fr)] lg:items-start">
+                <StepListCard content={hostSteps} />
+
+                <Card padding="none" className="overflow-hidden rounded-[30px] border-brand/15 bg-[radial-gradient(circle_at_top_right,rgba(67,56,202,0.1),transparent_38%),linear-gradient(180deg,rgba(255,255,255,0.99),rgba(248,250,252,0.98))] shadow-[0_26px_52px_-38px_rgba(15,23,42,0.2)] dark:border-slate-800 dark:bg-slate-900">
+                  <div className="space-y-6 p-7 md:p-8">
+                    <SectionTitle
+                      eyebrow="Siguiente paso"
+                      as="h3"
+                      heading="Publicá con lo importante claro"
+                      description="Antes de recibir consultas, dejá visible quién publica, dónde está el lugar y qué información ya fue validada."
+                      className="max-w-sm"
+                      eyebrowClassName="text-brand/90 dark:text-brand-light/80"
+                      descriptionClassName="text-slate-700 dark:text-slate-300"
+                      headingClassName="text-slate-950 dark:text-slate-50"
+                    />
+
+                    <div className="space-y-3">
+                      {[
+                        'La otra persona entiende rápido qué está viendo.',
+                        'Se reducen las preguntas innecesarias.',
+                        'El trato sigue siendo directo.',
+                      ].map((point) => (
+                        <div key={point} className="flex items-start gap-3 rounded-[18px] border border-slate-200/90 bg-white px-4 py-3.5 text-[0.92rem] font-medium leading-6 text-slate-800 shadow-[0_12px_24px_-20px_rgba(15,23,42,0.12)] dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-100">
+                          <Icons.CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400/82 dark:text-emerald-300/76" />
+                          <span>{point}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <Button size="lg" fullWidth onClick={openAuthModal}>
                       <Icons.ArrowRight className="h-5 w-5" />
-                      Creá tu cuenta de anfitrión
+                      Creá tu cuenta y publicá
                     </Button>
                   </div>
                 </Card>

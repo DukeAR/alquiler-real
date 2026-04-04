@@ -20,9 +20,9 @@ describe('AboutPage', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Anfitriones' }));
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Publicá con información que se pueda revisar' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Mostrá bien quién publica y qué se pudo comprobar' })).toBeInTheDocument();
     });
-    expect(screen.getByText('Publicá con lo importante resuelto')).toBeInTheDocument();
+    expect(screen.getByText('Publicá con lo importante claro')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Huéspedes' }));
 

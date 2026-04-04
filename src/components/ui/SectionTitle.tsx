@@ -10,6 +10,8 @@ export interface SectionTitleProps extends Omit<React.HTMLAttributes<HTMLDivElem
   as?: HeadingTag;
   visualLevel?: HeadingTag;
   headingClassName?: string;
+  eyebrowClassName?: string;
+  descriptionClassName?: string;
 }
 
 export const SectionTitle: React.FC<SectionTitleProps> = ({
@@ -20,6 +22,8 @@ export const SectionTitle: React.FC<SectionTitleProps> = ({
   as = 'h2',
   visualLevel,
   headingClassName,
+  eyebrowClassName,
+  descriptionClassName,
   ...props
 }) => {
   const Heading = as;
@@ -33,9 +37,9 @@ export const SectionTitle: React.FC<SectionTitleProps> = ({
 
   return (
     <div className={cn('space-y-3', className)} {...props}>
-      {eyebrow ? <p className="app-eyebrow">{eyebrow}</p> : null}
+      {eyebrow ? <p className={cn('app-eyebrow', eyebrowClassName)}>{eyebrow}</p> : null}
       <Heading className={cn(headingClassByTag[resolvedVisualLevel], 'dark:text-slate-50', headingClassName)}>{heading}</Heading>
-      {description ? <p className="app-body-sm max-w-prose app-text-muted dark:text-slate-400">{description}</p> : null}
+      {description ? <p className={cn('app-body-sm max-w-prose app-text-muted dark:text-slate-400', descriptionClassName)}>{description}</p> : null}
     </div>
   );
 };
