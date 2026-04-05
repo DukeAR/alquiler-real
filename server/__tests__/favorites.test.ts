@@ -18,6 +18,9 @@ describe('Favorites endpoints - unauthenticated', () => {
   test('GET /api/favorites -> 401 when not logged in', async () => {
     const res = await request(app).get('/api/favorites');
     expect(res.status).toBe(401);
+    expect(res.headers['cache-control']).toContain('no-store');
+    expect(res.headers.vary).toContain('Cookie');
+    expect(res.headers.vary).toContain('Origin');
   });
 
   test('POST /api/favorites/:id -> 401 when not logged in', async () => {

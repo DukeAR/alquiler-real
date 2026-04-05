@@ -102,7 +102,7 @@ export const FavoritesProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             if (!res.ok) throw new Error('server');
             // fetch full property and cache
             try {
-              const p = await apiJson<PropertyObject>(`/api/properties/${op.propertyId}`, { includeCredentials: false });
+              const p = await apiJson<PropertyObject>(`/api/properties/${op.propertyId}`);
               setFavoritesMap(prev => new Map(prev).set(p.id, p));
             } catch {
               // ignore property fetch failure and keep sync result only
@@ -219,7 +219,7 @@ export const FavoritesProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         if (!res.ok) throw new Error('server');
         // fetch full property and replace placeholder
         try {
-          const p = await apiJson<PropertyObject>(`/api/properties/${propertyId}`, { includeCredentials: false });
+          const p = await apiJson<PropertyObject>(`/api/properties/${propertyId}`);
           setFavoritesMap(prev => new Map(prev).set(p.id, p));
         } catch {
           // leave placeholder if we can't fetch details

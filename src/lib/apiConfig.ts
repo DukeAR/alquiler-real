@@ -39,6 +39,10 @@ const getBackendUrl = (): string => {
 export const API_BASE_URL = getBackendUrl();
 const API_TIMEOUT_MS = Number(import.meta.env.VITE_API_TIMEOUT || 30000);
 
+export type ApiRequestOptions = Omit<RequestInit, 'credentials'> & {
+  includeCredentials?: true;
+};
+
 // Logger para debugging
 const logApiCall = (method: string, url: string, details?: any) => {
   if (import.meta.env.DEV) {
@@ -106,9 +110,9 @@ const interpretFetchError = (error: any, url: string, method: string): string =>
  */
 export async function apiFetch(
   endpoint: string,
-  options: RequestInit & { includeCredentials?: boolean } = {}
+  options: ApiRequestOptions = {}
 ): Promise<Response> {
-  const { includeCredentials = true, ...fetchOptions } = options;
+  const { includeCredentials: _includeCredentials, ...fetchOptions } = options;
 
   // Construir URL absoluta
   const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
@@ -116,7 +120,8 @@ export async function apiFetch(
   // Configurar opciones finales
   const finalOptions: RequestInit = {
     ...fetchOptions,
-    credentials: includeCredentials ? 'include' : 'omit',
+    credentials: 'include',
+    cache: 'no-store',
   };
 
   // Asegurar que headers sea un objeto
@@ -190,7 +195,7 @@ export async function apiFetch(
  */
 export async function apiJson<T = any>(
   endpoint: string,
-  options: RequestInit & { includeCredentials?: boolean } = {}
+  options: ApiRequestOptions = {}
 ): Promise<T> {
   try {
     const response = await apiFetch(endpoint, options);

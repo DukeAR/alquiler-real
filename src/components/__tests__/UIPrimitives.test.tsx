@@ -74,7 +74,7 @@ describe('UI primitives', () => {
     render(<Badge variant="info" size="md">Nuevo</Badge>);
 
     expect(screen.getByText('Nuevo')).toHaveClass('rounded-full');
-    expect(screen.getByText('Nuevo')).toHaveClass('text-sky-700');
+    expect(screen.getByText('Nuevo')).toHaveClass('text-brand-dark');
   });
 
   it('renders EmptyState with eyebrow and CTA', () => {

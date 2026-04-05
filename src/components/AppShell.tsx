@@ -10,6 +10,7 @@ import { useNotifications } from '../hooks/useNotifications';
 import { useSocket } from '../hooks/useSocket';
 import { cn } from '../lib/utils';
 import { showToast } from '../lib/toast';
+import { getResolvedAuthViewState } from '../lib/authViewState';
 
 type AppShellProps = {
   children: React.ReactNode;
@@ -127,6 +128,10 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   const { user, loading: authLoading, status: authStatus, refresh } = useAuth();
   const { getFavoritesCount } = useFavorites();
   const notifications = useNotifications();
+  const authViewState = getResolvedAuthViewState({ user, loading: authLoading, status: authStatus });
+  const isAuthenticated = authViewState === 'authenticated' && Boolean(user);
+  const isUnauthenticated = authViewState === 'unauthenticated';
+  const hasSessionError = authViewState === 'error';
   const favoritesAction: NavAction = {
     label: 'Guardados',
     shortLabel: 'Guardados',
@@ -151,17 +156,17 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
 
     if (!action.path) return;
 
-    if (authLoading) {
+    if (authViewState === 'loading') {
       return;
     }
 
-    if (action.protected && authStatus === 'error' && !user) {
+    if (action.protected && hasSessionError) {
       showToast('No pudimos verificar tu sesión', 'Reintentá antes de entrar a esta sección.', 'error');
       void refresh();
       return;
     }
 
-    if (action.protected && !user) {
+    if (action.protected && authViewState !== 'authenticated') {
       await promptAuth('Iniciá sesión para entrar a esta sección.');
       return;
     }
@@ -175,22 +180,27 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
 
   const desktopActions: NavAction[] = [
     { label: 'Explorar', shortLabel: 'Explorar', path: '/', icon: Icons.Search },
-    ...(user ? [favoritesAction] : []),
+    ...(isAuthenticated ? [favoritesAction] : []),
     { label: 'Cómo funciona', shortLabel: 'Cómo', path: '/about', icon: Icons.Info },
     { label: 'Ayuda', shortLabel: 'Ayuda', path: '/faq', icon: Icons.Lightbulb }
   ];
 
-  const mobileActions: NavAction[] = user
+  const mobileActions: NavAction[] = isAuthenticated
     ? [
         { label: 'Explorar', shortLabel: 'Explorar', path: '/', icon: Icons.Search },
         favoritesAction,
         { label: 'Reservas', shortLabel: 'Reservas', path: '/my-bookings', protected: true, icon: Icons.Calendar },
         { label: 'Perfil', shortLabel: 'Perfil', path: '/profile', protected: true, icon: Icons.User }
       ]
-    : [
+    : isUnauthenticated
+      ? [
         { label: 'Explorar', shortLabel: 'Explorar', path: '/', icon: Icons.Search },
         { label: 'Ayuda', shortLabel: 'Ayuda', path: '/faq', icon: Icons.Lightbulb },
         { label: 'Ingresá', shortLabel: 'Ingresá', onClick: () => { openLoginModal(); }, icon: Icons.User }
+      ]
+      : [
+        { label: 'Explorar', shortLabel: 'Explorar', path: '/', icon: Icons.Search },
+        { label: 'Ayuda', shortLabel: 'Ayuda', path: '/faq', icon: Icons.Lightbulb }
       ];
 
   return (
@@ -236,7 +246,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                 onLoginRequired={openLoginModal}
               />
 
-              {user?.role === 'host' ? (
+              {isAuthenticated && user?.role === 'host' ? (
                 <button
                   type="button"
                   onClick={() => navigate('/host-dashboard')}
@@ -247,7 +257,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                 </button>
               ) : null}
 
-              {user ? (
+              {isAuthenticated && user ? (
                 <>
                   <button
                     type="button"
@@ -272,7 +282,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                     </div>
                   </button>
                 </>
-              ) : (
+              ) : isUnauthenticated ? (
                 <>
                   <button type="button" onClick={() => openLoginModal()} className="app-button-secondary hidden md:inline-flex">
                     <Icons.User className="h-4 w-4" />
@@ -283,6 +293,16 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                     Creá tu cuenta
                   </button>
                 </>
+              ) : hasSessionError ? (
+                <button type="button" onClick={() => void refresh()} className="app-button-secondary hidden md:inline-flex">
+                  <Icons.AlertTriangle className="h-4 w-4" />
+                  Reintentar sesión
+                </button>
+              ) : (
+                <div role="status" aria-live="polite" className="hidden items-center gap-2 rounded-full border border-slate-200/90 bg-white/96 px-4 py-2 text-sm font-semibold text-slate-500 shadow-[0_18px_35px_-28px_rgba(15,23,42,0.24)] md:inline-flex">
+                  <Icons.Loader2 className="h-4 w-4 animate-spin" />
+                  Verificando sesión...
+                </div>
               )}
             </div>
           </div>

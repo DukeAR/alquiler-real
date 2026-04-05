@@ -68,6 +68,7 @@ FRONTEND_URL=https://tu-frontend.vercel.app
 CORS_ALLOWED_ORIGINS=https://tu-frontend.vercel.app
 SESSION_COOKIE_SECURE=true
 SESSION_COOKIE_SAME_SITE=none
+SESSION_COOKIE_DOMAIN=
 TRUST_PROXY=true
 GEMINI_API_KEY=
 ```
@@ -89,6 +90,7 @@ Si más adelante resolvés frontend y backend bajo el mismo dominio con proxy re
 - En producción: `apiConfig` usa `VITE_BACKEND_URL` si existe
 - Las sesiones siguen funcionando con `credentials: include`
 - Las cookies cross-site quedan cubiertas con `SESSION_COOKIE_SECURE=true` y `SESSION_COOKIE_SAME_SITE=none`
+- Dejá `SESSION_COOKIE_DOMAIN` vacío salvo que realmente necesites compartir cookies entre subdominios del mismo dominio padre
 
 ## Checklist rápido
 

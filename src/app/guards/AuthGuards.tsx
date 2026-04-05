@@ -3,12 +3,14 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { ErrorState } from '../../components/ErrorState';
 import { LoadingState } from '../../components/LoadingState';
+import { getResolvedAuthViewState } from '../../lib/authViewState';
 
 export const RequireAuth = ({ children }: { children: ReactNode }) => {
   const { user, loading, status, refresh } = useAuth();
   const location = useLocation();
+  const authViewState = getResolvedAuthViewState({ user, loading, status });
 
-  if (loading) {
+  if (authViewState === 'loading') {
     return (
       <LoadingState
         compact
@@ -18,7 +20,7 @@ export const RequireAuth = ({ children }: { children: ReactNode }) => {
     );
   }
 
-  if (status === 'error' && !user) {
+  if (authViewState === 'error') {
     return (
       <ErrorState
         title="No pudimos verificar tu sesión"
@@ -28,7 +30,7 @@ export const RequireAuth = ({ children }: { children: ReactNode }) => {
     );
   }
 
-  if (!user) {
+  if (authViewState !== 'authenticated' || !user) {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }
 
@@ -38,8 +40,9 @@ export const RequireAuth = ({ children }: { children: ReactNode }) => {
 export const RequireRole = ({ children, allowedRoles }: { children: ReactNode; allowedRoles: Array<'tenant' | 'host'> }) => {
   const { user, loading, status, refresh } = useAuth();
   const location = useLocation();
+  const authViewState = getResolvedAuthViewState({ user, loading, status });
 
-  if (loading) {
+  if (authViewState === 'loading') {
     return (
       <LoadingState
         compact
@@ -49,7 +52,7 @@ export const RequireRole = ({ children, allowedRoles }: { children: ReactNode; a
     );
   }
 
-  if (status === 'error' && !user) {
+  if (authViewState === 'error') {
     return (
       <ErrorState
         title="No pudimos verificar tu sesión"
@@ -59,7 +62,7 @@ export const RequireRole = ({ children, allowedRoles }: { children: ReactNode; a
     );
   }
 
-  if (!user) {
+  if (authViewState !== 'authenticated' || !user) {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }
 

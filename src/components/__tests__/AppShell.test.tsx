@@ -105,4 +105,34 @@ describe('AppShell', () => {
     expect(screen.getAllByRole('button', { name: 'Guardados' })).not.toHaveLength(0);
     expect(screen.queryByRole('button', { name: 'Creá tu cuenta' })).not.toBeInTheDocument();
   });
+
+  test('keeps the header neutral while auth is still loading', async () => {
+    useAuthMock.mockReturnValue({
+      user: null,
+      loading: true,
+      status: 'loading',
+      refresh: vi.fn(async () => undefined),
+    });
+
+    await renderShell();
+
+    expect(screen.queryAllByRole('button', { name: 'Ingresá' })).toHaveLength(0);
+    expect(screen.queryByRole('button', { name: 'Creá tu cuenta' })).not.toBeInTheDocument();
+    expect(screen.getByText('Verificando sesión...')).toBeInTheDocument();
+  });
+
+  test('does not show guest auth actions when session verification failed', async () => {
+    useAuthMock.mockReturnValue({
+      user: null,
+      loading: false,
+      status: 'error',
+      refresh: vi.fn(async () => ({ user: null, status: 'error', error: 'session failed' })),
+    });
+
+    await renderShell();
+
+    expect(screen.queryAllByRole('button', { name: 'Ingresá' })).toHaveLength(0);
+    expect(screen.queryByRole('button', { name: 'Creá tu cuenta' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Reintentar sesión' })).toBeInTheDocument();
+  });
 });

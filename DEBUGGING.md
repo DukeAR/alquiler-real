@@ -46,7 +46,7 @@ console.log(import.meta.env.VITE_BACKEND_URL)
 **En browser console:**
 ```javascript
 // Test directo
-fetch('http://localhost:3001/api/auth/me')
+fetch('http://localhost:3001/api/auth/me', { credentials: 'include' })
   .then(r => r.json())
   .then(d => console.log('✓ Conectó!', d))
   .catch(e => console.error('✗ Error:', e));

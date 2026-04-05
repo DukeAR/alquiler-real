@@ -15,6 +15,16 @@ vi.mock('connect-pg-simple', () => ({
 import app from '../index';
 
 describe('Protected auth and verification endpoints - unauthenticated', () => {
+  test('GET /api/auth/me returns uncached guest session state', async () => {
+    const res = await request(app).get('/api/auth/me');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ user: null });
+    expect(res.headers['cache-control']).toContain('no-store');
+    expect(res.headers.vary).toContain('Cookie');
+    expect(res.headers.vary).toContain('Origin');
+  });
+
   test('POST /api/auth/change-password -> 401 when not logged in', async () => {
     const res = await request(app).post('/api/auth/change-password').send({
       currentPassword: '123456',

@@ -102,7 +102,7 @@
         async function testCORS() {
             show('result3', 'Probando...', 'info');
             try {
-                const r = await fetch(`${API}/api/login`, {method: 'OPTIONS'});
+                const r = await fetch(`${API}/api/login`, {method: 'OPTIONS', credentials: 'include'});
                 const cors = `Allow-Origin: ${r.headers.get('Access-Control-Allow-Origin') || 'NO'}\nAllow-Methods: ${r.headers.get('Access-Control-Allow-Methods') || 'NO'}\nAllow-Credentials: ${r.headers.get('Access-Control-Allow-Credentials') || 'NO'}`;
                 show('result3', `✓ CORS verificado\n${cors}`, 'success');
             } catch (e) {

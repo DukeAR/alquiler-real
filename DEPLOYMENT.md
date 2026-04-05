@@ -51,6 +51,7 @@ FRONTEND_URL=https://tu-frontend.vercel.app
 CORS_ALLOWED_ORIGINS=https://tu-frontend.vercel.app
 SESSION_COOKIE_SECURE=true
 SESSION_COOKIE_SAME_SITE=none
+SESSION_COOKIE_DOMAIN=
 TRUST_PROXY=true
 PORT=3001
 GEMINI_API_KEY=
@@ -60,6 +61,7 @@ Notas prácticas:
 
 - `SESSION_COOKIE_SAME_SITE=none` es importante si frontend y backend viven en dominios distintos
 - `SESSION_COOKIE_SECURE=true` es obligatorio junto con `sameSite=none`
+- `SESSION_COOKIE_DOMAIN` normalmente debe quedar vacio si frontend y backend viven en hosts distintos; solo definilo si compartis un dominio padre real
 - `TRUST_PROXY=true` evita problemas de cookies seguras detrás de Render/Railway
 
 ## Pasos de deploy

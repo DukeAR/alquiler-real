@@ -18,6 +18,38 @@ const app: Express = express();
 const port = serverEnv.port;
 const memoryUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
+const SESSION_SENSITIVE_ROUTE_PATTERNS = [
+  /^\/api\/auth(?:\/|$)/,
+  /^\/api\/notifications(?:\/|$)/,
+  /^\/api\/favorites(?:\/|$)/,
+] as const;
+
+const isSessionSensitiveRoute = (path: string) => SESSION_SENSITIVE_ROUTE_PATTERNS.some((pattern) => pattern.test(path));
+
+const applySessionSensitiveHeaders = (res: express.Response) => {
+  res.set('Cache-Control', 'private, no-store, no-cache, must-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  res.vary('Cookie');
+  res.vary('Origin');
+};
+
+const persistSession = (req: express.Request) => new Promise<void>((resolve, reject) => {
+  if (!req.session || typeof req.session.save !== 'function') {
+    resolve();
+    return;
+  }
+
+  req.session.save((error) => {
+    if (error) {
+      reject(error);
+      return;
+    }
+
+    resolve();
+  });
+});
+
 if (serverEnv.trustProxy) {
   app.set('trust proxy', 1);
 }
@@ -60,6 +92,14 @@ app.use(session({
     maxAge: 1000 * 60 * 60 * 24 * 7,
   },
 }));
+
+app.use((req, res, next) => {
+  if (isSessionSensitiveRoute(req.path)) {
+    applySessionSensitiveHeaders(res);
+  }
+
+  next();
+});
 
 // Initialize Database
 if (!serverEnv.isTest) {
@@ -360,6 +400,7 @@ app.post('/api/auth/register', async (req, res) => {
     }
 
     req.session.userId = user.id;
+    await persistSession(req);
     res.status(201).json({ user });
   } catch (err) {
     console.error('Error en registro:', err);
@@ -416,6 +457,7 @@ app.post('/api/auth/login', async (req, res) => {
     
     console.log(`[LOGIN] ✓ Login successful for user: ${user.id} (${normalizedEmail})`);
     req.session.userId = user.id;
+    await persistSession(req);
     res.json({ user: normalizeAuthUser(user) });
   } catch (err) {
     console.error('Error en login:', err);

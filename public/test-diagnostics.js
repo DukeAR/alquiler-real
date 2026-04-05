@@ -51,6 +51,7 @@ async function diagnoseBackend() {
   try {
     const response = await fetch('http://localhost:3001/api/auth/login', {
       method: 'OPTIONS', // Preflight request
+      credentials: 'include',
       headers: {
         'Access-Control-Request-Method': 'POST',
         'Access-Control-Request-Headers': 'Content-Type'
