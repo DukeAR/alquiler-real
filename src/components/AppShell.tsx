@@ -211,7 +211,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
       </Suspense>
 
       {showHeader ? (
-        <header className="app-header sticky top-0 z-50">
+        <header className="app-header z-50 lg:sticky lg:top-0">
           <div className="app-page flex items-center justify-between gap-4 py-4">
             <button type="button" onClick={() => navigate('/')} aria-label="Ir al inicio de Alquiler Real" className="flex items-center gap-3 rounded-full pr-3 transition-transform duration-200 hover:scale-[1.01]">
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-[0_18px_35px_-22px_rgba(15,23,42,0.85)]">
@@ -309,11 +309,11 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
         </header>
       ) : null}
 
-      <div className={cn('min-h-screen', showMobileNav ? 'pb-28 md:pb-10' : '')}>{children}</div>
+      <div className={cn('min-h-screen', showMobileNav ? 'pb-[calc(env(safe-area-inset-bottom)+5.75rem)] md:pb-10' : '')}>{children}</div>
 
       {showMobileNav ? (
-        <nav aria-label="Navegación principal" className="fixed inset-x-0 bottom-4 z-50 px-4 md:hidden">
-          <div className="mx-auto flex max-w-md items-center gap-2 rounded-[30px] border border-slate-200/90 bg-white/98 p-2.5 shadow-[0_24px_50px_-30px_rgba(15,23,42,0.28)] backdrop-blur-xl">
+        <nav aria-label="Navegación principal" className="fixed inset-x-0 bottom-0 z-50 md:hidden">
+          <div className="mx-auto flex max-w-md items-center gap-2 rounded-t-[30px] border border-b-0 border-slate-200/90 bg-white px-4 pb-[calc(env(safe-area-inset-bottom)+0.8rem)] pt-3 shadow-[0_-18px_40px_-30px_rgba(15,23,42,0.28)] backdrop-blur-none">
             {mobileActions.map((action) => (
               <MobileNavButton
                 key={action.label}

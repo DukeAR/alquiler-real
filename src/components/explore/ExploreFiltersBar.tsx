@@ -36,7 +36,7 @@ export const ExploreFiltersBar = ({
   onClear,
 }: ExploreFiltersBarProps) => {
   return (
-    <section className="sticky top-20 z-40">
+    <section className="z-40 lg:sticky lg:top-24">
       <Card padding="none" className="app-surface border-slate-200/85 bg-white/94 p-4 shadow-[0_18px_38px_-28px_rgba(15,23,42,0.2)] backdrop-blur-xl md:p-5">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex w-fit items-center rounded-[18px] border border-slate-200/80 bg-slate-100/80 p-1">
