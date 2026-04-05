@@ -30,7 +30,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
     <header
       className={cn(
         'border-b border-slate-200 bg-white/80 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/80',
-        sticky && 'sticky top-0 z-50',
+        sticky && 'lg:sticky lg:top-0 lg:z-50',
         className,
       )}
       {...props}

@@ -152,7 +152,7 @@ export const MyBookings = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-24">
-      <header className="sticky top-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-b border-slate-200 dark:border-slate-800">
+      <header className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-b border-slate-200 dark:border-slate-800 lg:sticky lg:top-0 lg:z-50">
         <div className="p-4 flex items-center gap-4 max-w-2xl mx-auto">
           <button onClick={() => navigate('/profile')} className="p-3 bg-slate-100 dark:bg-slate-800 rounded-2xl text-slate-600 dark:text-slate-400 hover:bg-brand/10 hover:text-brand transition-all" type="button">
             <Icons.ArrowLeft className="w-5 h-5" />

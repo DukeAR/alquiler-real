@@ -32,7 +32,7 @@ export const HostProfileView: React.FC<HostProfileViewProps> = ({ profile, onBac
 
   return (
     <div className="pb-24 bg-slate-50 dark:bg-slate-950 min-h-screen">
-      <header className="p-4 flex items-center gap-4 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-10">
+      <header className="p-4 flex items-center gap-4 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 lg:sticky lg:top-0 lg:z-10">
         <button onClick={onBack} className="p-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors">
           <Icons.ArrowLeft className="w-6 h-6" />
         </button>

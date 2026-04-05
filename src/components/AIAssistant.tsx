@@ -77,7 +77,7 @@ export const AIAssistant: React.FC = () => {
         type="button"
         aria-label="Abrir asistente de Alquiler Real"
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-24 right-6 w-14 h-14 bg-blue-600 text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-40"
+        className="fixed bottom-24 right-6 z-40 hidden h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-2xl transition-all hover:scale-110 active:scale-95 md:flex"
       >
         <Icons.MessageCircle className="w-7 h-7" />
       </button>
