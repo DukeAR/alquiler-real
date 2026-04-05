@@ -10,7 +10,7 @@ type ExploreHeroProps = {
   onLocationSelect: (location: LocationSuggestion) => void;
 };
 
-const trustLine = 'Propiedades verificadas • reseñas reales • información clara antes de reservar';
+const trustLine = 'No decidimos por vos. Te damos todo para que elijas tranquilo y disfrutes el viaje.';
 
 export const ExploreHero = ({
   searchValue,
@@ -35,12 +35,10 @@ export const ExploreHero = ({
         <div className="space-y-10 md:space-y-12 lg:space-y-14">
           <div className="space-y-4 md:space-y-5">
             <h1 className="font-display max-w-[41rem] text-balance text-[2.78rem] font-semibold leading-[1.02] tracking-[-0.035em] text-white md:text-[4.15rem] lg:text-[4.45rem]">
-              Reservar es fácil.
-              <br />
-              Elegir bien no siempre.
+              Elegí con información real antes de reservar
             </h1>
             <p className="max-w-[41rem] text-[0.98rem] leading-7 text-slate-100/86 md:text-[1.08rem] md:leading-8">
-              Elegí con información clara desde el inicio: ubicación, verificación y reseñas reales antes de decidir.
+              Ubicación verificada, identidad confirmada y reseñas reales.
             </p>
           </div>
           <form
@@ -53,14 +51,14 @@ export const ExploreHero = ({
             <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:gap-5">
               <div className="flex-1 space-y-3">
                 <label htmlFor="explore-destination" className="app-form-label block text-slate-500">
-                  Destino
+                  Zona o ciudad
                 </label>
                 <LocationAutocomplete
                   inputId="explore-destination"
                   value={searchValue}
                   suggestions={locationSuggestions}
                   onChange={onSearchChange}
-                  placeholder="¿Dónde querés alojarte?"
+                  placeholder="Buscá una zona o ciudad"
                   onSelect={onLocationSelect}
                   onSubmitValue={onSearchSubmitValue}
                 />
@@ -71,7 +69,7 @@ export const ExploreHero = ({
                 size="lg"
                 className="h-16 w-full rounded-[16px] bg-slate-950 px-6 text-[0.98rem] font-semibold tracking-[-0.01em] text-white shadow-[0_18px_36px_-28px_rgba(15,23,42,0.42)] hover:-translate-y-[1px] hover:bg-slate-900 hover:shadow-[0_22px_44px_-30px_rgba(15,23,42,0.48)] active:translate-y-0 active:scale-[0.995] lg:w-auto lg:min-w-[192px] lg:flex-none"
               >
-                Ver opciones
+                Ver alojamientos
               </Button>
             </div>
           </form>

@@ -76,27 +76,27 @@ export const ExploreResultsSection = ({
     : 'Resultados';
 
   const summaryHeading = loading
-    ? 'Actualizando opciones'
+    ? 'Actualizando datos'
     : failedToLoadResults
-      ? 'No hay resultados disponibles ahora.'
+      ? 'No pudimos cargar resultados ahora.'
     : hasActiveFilters
       ? hasAnyResults
-        ? 'Resultados'
+        ? 'Resultados para revisar'
         : 'No encontramos coincidencias'
       : hasAnyResults
-        ? 'Propiedades disponibles'
+        ? 'Propiedades para revisar'
         : 'No hay propiedades disponibles ahora.';
 
   const summaryDescription = loading
-    ? 'Estamos actualizando las opciones disponibles.'
+    ? 'Estamos actualizando la información disponible.'
     : failedToLoadResults
       ? 'Probá con otra zona o volvé a intentar en unos segundos.'
     : hasActiveFilters
       ? hasAnyResults
-        ? `${formatPropertyCount(totalResults)} para esta búsqueda.`
+        ? `${formatPropertyCount(totalResults)} para revisar en esta búsqueda.`
         : 'Probá con otra zona o limpiá los filtros.'
       : hasAnyResults
-        ? `${formatPropertyCount(totalResults)} disponibles ahora.`
+        ? `${formatPropertyCount(totalResults)} para revisar ahora.`
         : 'Volvé a revisar más tarde.';
 
   const summaryCard = (
@@ -134,7 +134,7 @@ export const ExploreResultsSection = ({
           className="mt-4"
           tone="warning"
           heading="Mostrando la última versión disponible"
-          description="Volvé a intentar en unos segundos si querés actualizar los resultados."
+            description="Volvé a intentar en unos segundos si querés actualizar la información."
         />
       ) : null}
     </Card>
@@ -146,7 +146,7 @@ export const ExploreResultsSection = ({
         <Card className="rounded-[32px] border-slate-200/80 bg-white p-6 shadow-[0_28px_70px_-50px_rgba(15,23,42,0.25)] sm:p-7">
           <NoticeBanner
             tone="error"
-            heading="No hay resultados disponibles ahora."
+            heading="No pudimos cargar resultados ahora."
             description="Probá con otra zona o volvé a intentar en unos segundos."
           />
 
@@ -193,8 +193,8 @@ export const ExploreResultsSection = ({
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Mapa de resultados</p>
               <p className="mt-1 text-sm text-slate-600">
                 {loading
-                  ? 'Estamos ubicando los alojamientos para que veas cada zona con más claridad.'
-                  : 'Abrí el detalle desde cada pin para revisar precio, anfitrión y señales de confianza.'}
+                  ? 'Estamos ubicando cada opción en el mapa.'
+                  : 'Abrí cada pin para ver precio y qué se pudo comprobar.'}
               </p>
             </div>
 
@@ -240,7 +240,8 @@ export const ExploreResultsSection = ({
       {showFeaturedSection ? (
         <section className="space-y-5 md:space-y-6">
           <SectionTitle
-            heading="Opciones destacadas"
+            heading="Primero revisá estas opciones"
+            description="En cada una podés revisar si hay ubicación verificada, identidad confirmada o reseñas reales."
             className="max-w-2xl"
           />
 
@@ -265,14 +266,14 @@ export const ExploreResultsSection = ({
           <div className="flex flex-col gap-4 border-b border-slate-200/70 pb-5 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-2xl">
               <SectionTitle
-                heading={hasActiveFilters ? 'Resultados' : 'Más opciones'}
+                heading={hasActiveFilters ? 'Resultados para revisar' : 'Más opciones para comparar'}
                 description={loading
-                  ? 'Estamos actualizando las opciones disponibles.'
+                  ? 'Estamos actualizando la información disponible.'
                   : hasActiveFilters
-                    ? `${formatPropertyCount(listingProperties.length)} para esta búsqueda.`
+                    ? `${formatPropertyCount(listingProperties.length)} para revisar en esta búsqueda.`
                     : listingProperties.length > 0
-                      ? `${formatPropertyCount(listingProperties.length)} disponibles ahora.`
-                      : 'No hay más propiedades disponibles por ahora.'}
+                      ? `${formatPropertyCount(listingProperties.length)} para seguir comparando antes de decidir.`
+                      : 'No hay más propiedades para revisar por ahora.'}
                 className="max-w-2xl"
               />
             </div>
@@ -280,7 +281,7 @@ export const ExploreResultsSection = ({
             {!loading && listingProperties.length > 0 ? (
               <p className="text-sm text-slate-500">
                 {remainingResults > 0
-                  ? `Mostrando ${visibleCount}. Quedan ${remainingResults} disponibles.`
+                  ? `Mostrando ${visibleCount}. Quedan ${remainingResults} para revisar.`
                   : `${visibleCount} visibles en esta búsqueda.`}
               </p>
             ) : null}
@@ -296,7 +297,7 @@ export const ExploreResultsSection = ({
                   eyebrow="Resultados"
                   icon={<Icons.Search className="h-10 w-10 text-slate-400" />}
                   title={hasActiveFilters ? 'No encontramos propiedades para esa zona' : 'No hay más propiedades por ahora'}
-                  description={hasActiveFilters ? 'Probá con otra zona o limpiá los filtros.' : 'Volvé a revisar más tarde.'}
+                  description={hasActiveFilters ? 'Probá con otra zona o limpiá los filtros.' : 'Volvé a revisar más tarde para ver nuevas opciones.'}
                   action={hasActiveFilters ? { label: 'Limpiar filtros', onClick: onClearFilters } : undefined}
                 />
               </div>
@@ -315,9 +316,9 @@ export const ExploreResultsSection = ({
 
           {!loading && hasMoreResults ? (
             <div className="flex flex-col items-center gap-4 pt-4 md:pt-6">
-              <p className="text-sm text-slate-500">Mostrando {visibleCount} de {listingProperties.length} propiedades.</p>
+              <p className="text-sm text-slate-500">Mostrando {visibleCount} de {listingProperties.length} propiedades para comparar.</p>
               <Button type="button" className="rounded-full px-6 md:px-8" onClick={onLoadMore}>
-                Ver más opciones
+                Ver más propiedades
               </Button>
             </div>
           ) : null}

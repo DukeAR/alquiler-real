@@ -66,8 +66,9 @@ describe('ExploreResultsSection', () => {
   test('renders the decision-oriented hierarchy on the home results view', () => {
     renderSection();
 
-    expect(screen.getByRole('heading', { name: 'Opciones destacadas' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Más opciones' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Primero revisá estas opciones' })).toBeInTheDocument();
+    expect(screen.getByText('En cada una podés revisar si hay ubicación verificada, identidad confirmada o reseñas reales.')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Más opciones para comparar' })).toBeInTheDocument();
     expect(screen.getByText('Casa frente al mar')).toBeInTheDocument();
     expect(screen.getByText('Departamento luminoso')).toBeInTheDocument();
   });
@@ -97,7 +98,7 @@ describe('ExploreResultsSection', () => {
     const onRetry = vi.fn();
 
     renderSection({
-      loadError: 'No hay resultados disponibles ahora.',
+      loadError: 'No pudimos cargar resultados ahora.',
       filteredProperties: [],
       featuredProperties: [],
       listingProperties: [],
@@ -105,7 +106,7 @@ describe('ExploreResultsSection', () => {
       onRetry,
     });
 
-    expect(screen.getByText('No hay resultados disponibles ahora.')).toBeInTheDocument();
+    expect(screen.getByText('No pudimos cargar resultados ahora.')).toBeInTheDocument();
     expect(screen.getByText('Probá con otra zona o volvé a intentar en unos segundos.')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /volver a intentar/i }));

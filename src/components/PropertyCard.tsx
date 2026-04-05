@@ -30,7 +30,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
 
   const imageBadge = property.isVerifiedProperty
     ? {
-        label: 'Verificada',
+        label: 'Ubicación verificada',
         variant: 'success' as const,
         icon: <Icons.ShieldCheck className="h-3.5 w-3.5" />,
         className: 'border-emerald-200/80 bg-white/95 text-emerald-700 shadow-sm',
@@ -40,7 +40,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   const trustSignals = [
     property.isSuperHost
       ? {
-          label: 'Superanfitrión',
+          label: 'Anfitrión con historial',
           variant: 'brand' as const,
           icon: <Icons.Award className="h-3.5 w-3.5" />,
           className: 'border-brand/15 bg-brand/10 text-brand-dark dark:border-brand/20 dark:bg-brand/15 dark:text-brand-light',
@@ -48,7 +48,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
       : null,
     !property.isVerifiedProperty && property.identityValidated
       ? {
-          label: 'Anfitrión validado',
+          label: 'Identidad confirmada',
           variant: 'success' as const,
           icon: <Icons.BadgeCheck className="h-3.5 w-3.5" />,
           className: 'border-emerald-200 bg-emerald-50 text-emerald-700',
@@ -69,8 +69,8 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
     className: string;
   }>;
 
-  const ratingLabel = rating > 0 ? rating.toFixed(1) : 'Nuevo';
-  const reviewLabel = reviewsCount > 0 ? `${reviewsCount} ${reviewsCount === 1 ? 'reseña' : 'reseñas'}` : 'Sin reseñas';
+  const ratingLabel = rating > 0 ? rating.toFixed(1) : 'Sin puntaje';
+  const reviewLabel = reviewsCount > 0 ? `${reviewsCount} ${reviewsCount === 1 ? 'reseña real' : 'reseñas reales'}` : 'Sin reseñas todavía';
   const guestLabel = property.maxGuests ? `${property.maxGuests} ${property.maxGuests === 1 ? 'huésped' : 'huéspedes'}` : null;
 
   const handleFavoriteToggle = (e: React.MouseEvent) => {
@@ -187,7 +187,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
               {property.hostName ? (
                 <span className="inline-flex items-center gap-1.5">
                   <Icons.UserCheck className="h-4 w-4 text-slate-400" />
-                  <span>{property.hostName}</span>
+                  <span>Anfitrión: {property.hostName}</span>
                 </span>
               ) : null}
             </div>
@@ -206,7 +206,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         ) : null}
 
         <div className="mt-auto flex items-end justify-between gap-4 border-t border-slate-100/90 pt-4">
-          <p className="text-[13px] font-medium leading-6 text-slate-500">Datos claros para decidir antes de reservar.</p>
+          <p className="text-[13px] font-medium leading-6 text-slate-500">Revisá qué se pudo comprobar antes de decidir.</p>
           {onClick ? (
             <div className="inline-flex items-center gap-2 text-[13.5px] font-semibold tracking-[-0.01em] text-slate-700 transition-colors duration-150 group-hover:text-slate-950">
               <span>{isFavoritesVariant ? 'Abrir detalle' : 'Ver detalle'}</span>

@@ -75,7 +75,7 @@ export const PropertyMap: React.FC<PropertyMapProps> = ({ properties, onProperty
                                     />
                                     {property.traceabilityLevel === 'high' && (
                                         <div className="absolute top-2 right-2 bg-brand/90 backdrop-blur-sm px-2 py-1 rounded-lg border border-brand/20 shadow-sm text-[10px] font-bold text-white uppercase flex items-center gap-1">
-                                            Verificada
+                                            Más datos comprobados
                                         </div>
                                     )}
                                 </div>
@@ -90,7 +90,7 @@ export const PropertyMap: React.FC<PropertyMapProps> = ({ properties, onProperty
                                     onClick={(e) => handleDetailClick(e, property.id)}
                                     className="mt-1 w-full bg-brand text-white py-2.5 rounded-xl text-sm font-bold shadow-md shadow-brand/20 hover:scale-[1.02] active:scale-95 transition-all outline-none"
                                 >
-                                    Ver más
+                                    Ver detalle
                                 </button>
                             </div>
                         </Popup>

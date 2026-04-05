@@ -49,13 +49,14 @@ describe('PropertyCard', () => {
 
     expect(screen.getByText('Casa frente al mar')).toBeInTheDocument();
     expect(screen.getByText('Santa Teresita')).toBeInTheDocument();
-    expect(screen.getByText('Verificada')).toBeInTheDocument();
-    expect(screen.getByText('Superanfitrión')).toBeInTheDocument();
+    expect(screen.getByText('Ubicación verificada')).toBeInTheDocument();
+    expect(screen.getByText('Anfitrión con historial')).toBeInTheDocument();
     expect(screen.getByText('5 huéspedes')).toBeInTheDocument();
-    expect(screen.getByText('Laura')).toBeInTheDocument();
+    expect(screen.getByText('Anfitrión: Laura')).toBeInTheDocument();
     expect(screen.getByText('Precio por noche')).toBeInTheDocument();
     expect(screen.getByText('/ noche')).toBeInTheDocument();
-    expect(screen.getByText('Datos claros para decidir antes de reservar.')).toBeInTheDocument();
+    expect(screen.getByText('12 reseñas reales')).toBeInTheDocument();
+    expect(screen.getByText('Revisá qué se pudo comprobar antes de decidir.')).toBeInTheDocument();
     expect(screen.getByText('Ver detalle')).toBeInTheDocument();
   });
 
