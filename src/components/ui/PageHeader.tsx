@@ -22,7 +22,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   description,
   onBack,
   backLabel = 'Volver',
-  sticky = true,
+  sticky = false,
   action,
   ...props
 }) => {

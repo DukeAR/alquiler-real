@@ -1,7 +1,7 @@
 export const ProfileSkeleton = () => {
   return (
     <div className="pb-24 bg-slate-50 dark:bg-slate-950 min-h-screen">
-      <header className="border-b border-slate-200 bg-white/80 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/80 lg:sticky lg:top-0 lg:z-10">
+      <header className="border-b border-slate-200 bg-white/80 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/80">
         <div className="app-page flex items-center gap-4 py-4">
           <div className="h-10 w-10 rounded-full bg-slate-200 dark:bg-slate-800 skeleton" />
           <div className="space-y-2">

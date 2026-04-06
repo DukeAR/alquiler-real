@@ -265,7 +265,7 @@ export const ProfileViewNew = () => {
       ) : (
         <main className="app-page py-8 md:py-10">
           <div className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)] xl:items-start">
-            <aside className="space-y-6 xl:sticky xl:top-28">
+            <aside className="space-y-6">
               <Card variant="elevated" padding="lg" className="space-y-6 border-slate-200/80 bg-white/96 shadow-[0_24px_60px_-38px_rgba(15,23,42,0.32)]">
                 <div className="flex flex-col items-center text-center space-y-4">
                   <div className="relative">

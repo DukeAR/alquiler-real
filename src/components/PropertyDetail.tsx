@@ -873,8 +873,8 @@ export const PropertyDetailShell: React.FC<{
           </Card>
         </section>
 
-        <aside className="mx-auto w-full max-w-2xl xl:sticky xl:top-24 xl:max-w-none xl:self-start">
-          <Card variant="elevated" className="rounded-[30px] border-slate-200/80 bg-white p-6 shadow-[0_30px_80px_-50px_rgba(15,23,42,0.35)] xl:max-h-[calc(100vh-7rem)] xl:overflow-y-auto">
+        <aside className="mx-auto w-full max-w-2xl xl:max-w-none xl:self-start">
+          <Card variant="elevated" className="rounded-[30px] border-slate-200/80 bg-white p-6 shadow-[0_30px_80px_-50px_rgba(15,23,42,0.35)]">
             <div className="flex items-start justify-between gap-4">
               <div className="space-y-2">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Resumen para decidir</p>
