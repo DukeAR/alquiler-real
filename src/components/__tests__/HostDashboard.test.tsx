@@ -194,6 +194,11 @@ describe('HostDashboard', () => {
     expect(within(profileCard).getByText('Consultó antes de reservar')).toBeInTheDocument();
     expect(within(profileCard).getByText('Usuario desde 2022')).toBeInTheDocument();
     expect(within(profileCard).getByText('La coordinación fue clara y la estadía avanzó sin cambios de último momento.')).toBeInTheDocument();
+
+    const profileText = profileCard.textContent ?? '';
+    expect(profileText.indexOf('Qué hizo dentro de esta solicitud')).toBeLessThan(profileText.indexOf('Identidad'));
+    expect(profileText.indexOf('Identidad')).toBeLessThan(profileText.indexOf('Historial en la plataforma'));
+    expect(profileText.indexOf('Historial en la plataforma')).toBeLessThan(profileText.indexOf('Reseñas de anfitriones'));
   });
 
   test('shows explicit missing-data states when the guest profile is not structured yet', async () => {

@@ -96,7 +96,22 @@ export const GuestRequestProfileCard: React.FC<GuestRequestProfileCardProps> = (
           </div>
         ) : null}
 
-        <section className="space-y-3 border-t border-slate-200/80 pt-4 first:border-t-0 first:pt-0 dark:border-slate-800">
+        <section className="space-y-3 border-t border-slate-200/80 pt-4 dark:border-slate-800">
+          <p className={sectionLabelClass}>Qué hizo dentro de esta solicitud</p>
+          {!profile.dataAvailability.operationSignals ? (
+            <SectionEmptyState message={getGuestRequestProfileEmptyStateMessage(profile, 'operationSignals')} />
+          ) : visibleSignals.length > 0 ? (
+            <div className="grid gap-3 sm:grid-cols-3">
+              {visibleSignals.map((signal) => (
+                <StatusItem key={signal.id} checked={signal.active} label={signal.label} />
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">{getGuestRequestProfileOperationEmptyMessage(profile)}</p>
+          )}
+        </section>
+
+        <section className="space-y-3 border-t border-slate-200/80 pt-4 dark:border-slate-800">
           <p className={sectionLabelClass}>Identidad</p>
           {profile.dataAvailability.identity ? (
             <StatusItem checked={profile.identityVerified} label={profile.identityVerified ? 'Identidad confirmada' : 'Identidad no verificada'} />
@@ -146,21 +161,6 @@ export const GuestRequestProfileCard: React.FC<GuestRequestProfileCardProps> = (
             </div>
           ) : (
             <SectionEmptyState message={getGuestRequestProfileEmptyStateMessage(profile, 'profileCompletion')} />
-          )}
-        </section>
-
-        <section className="space-y-3 border-t border-slate-200/80 pt-4 dark:border-slate-800">
-          <p className={sectionLabelClass}>Qué hizo dentro de esta solicitud</p>
-          {!profile.dataAvailability.operationSignals ? (
-            <SectionEmptyState message={getGuestRequestProfileEmptyStateMessage(profile, 'operationSignals')} />
-          ) : visibleSignals.length > 0 ? (
-            <div className="grid gap-3 sm:grid-cols-3">
-              {visibleSignals.map((signal) => (
-                <StatusItem key={signal.id} checked={signal.active} label={signal.label} />
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">{getGuestRequestProfileOperationEmptyMessage(profile)}</p>
           )}
         </section>
 
