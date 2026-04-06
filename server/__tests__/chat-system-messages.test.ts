@@ -27,6 +27,7 @@ describe('chatSystemMessages', () => {
       'conversation-start',
       'request-sent',
     ]);
+    expect(messages[1]?.content).toBe('Tu propuesta fue enviada por chat. El anfitrión puede responder por acá.');
   });
 
   test('adds acceptance and payment guidance before the deposit step', () => {
@@ -70,6 +71,7 @@ describe('chatSystemMessages', () => {
       'direct-after-payment',
       'before-arrival',
     ]);
+    expect(messages[2]?.content).toBe('El anfitrión aceptó tu propuesta. Ya pueden coordinar los detalles.');
   });
 
   test('adds protected arrival and problem guidance when check-in day arrives', () => {

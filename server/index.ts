@@ -9,7 +9,7 @@ import { db } from './config/db';
 import { initDB } from './updates';
 import { mapPropertyRecord } from './propertySerializer';
 import { REAL_VERIFICATION_FILTER_MIN_SCORE } from './propertyVerification';
-import { CHAT_SYSTEM_MESSAGE_COPY, getChatSystemMessages, type ChatSystemMessageKey } from './chatSystemMessages';
+import { getChatSystemMessages, getRequestAcceptedMessage, type ChatSystemMessageKey } from './chatSystemMessages';
 
 declare module "express-session" {
   interface SessionData {
@@ -216,10 +216,10 @@ const mapActivityLogToNotification = (row: any) => {
     case 'BOOKING_REQUEST_ACCEPTED':
       return {
         id: row.id,
-        title: 'Solicitud aceptada',
+        title: metadata.requestMode === 'protected' ? 'Solicitud aceptada' : 'Propuesta aceptada',
         message: metadata.requestMode === 'protected'
           ? 'Ya podés avanzar con una reserva protegida y coordinar lo que falta por chat.'
-          : 'Ya podés coordinar los últimos detalles con el anfitrión.',
+          : 'Tu propuesta fue aceptada. Ya podés coordinar los últimos detalles con el anfitrión.',
         type: 'success',
         createdAt,
         unread,
@@ -2743,7 +2743,7 @@ app.post('/api/conversations/:id/accept-request', async (req, res) => {
       );
     }
 
-    const acceptanceMessage = CHAT_SYSTEM_MESSAGE_COPY['request-accepted'];
+    const acceptanceMessage = getRequestAcceptedMessage(conversation.request_mode === 'direct' ? 'direct' : 'protected');
     const messageId = `msg_${Date.now()}`;
 
     await db.query(

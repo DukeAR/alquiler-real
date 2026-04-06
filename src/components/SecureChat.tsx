@@ -350,12 +350,19 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
 
     try {
       const updatedConversation = await acceptConversationRequest(activeConv.id);
+      const acceptedMode = updatedConversation.requestMode === 'direct' ? 'direct' : 'protected';
       setConversations((current) => current.map((conversation) => (
         conversation.id === updatedConversation.id ? { ...conversation, ...updatedConversation } : conversation
       )));
       setActiveConv((current) => (current && current.id === updatedConversation.id ? { ...current, ...updatedConversation } : current));
       await loadMessages(activeConv.id);
-      showToast('Solicitud aceptada', 'La solicitud ya quedó aceptada y el chat pasó al cierre de detalles.', 'success');
+      showToast(
+        acceptedMode === 'protected' ? 'Solicitud aceptada' : 'Propuesta aceptada',
+        acceptedMode === 'protected'
+          ? 'La solicitud ya quedó aceptada y el chat pasó al cierre de detalles.'
+          : 'La propuesta ya quedó aceptada y el chat pasó al cierre de detalles.',
+        'success',
+      );
     } catch (err) {
       showToast('Solicitud', err instanceof Error ? err.message : 'No pudimos aceptar la solicitud. Intentá de nuevo.', 'error');
     } finally {
@@ -682,7 +689,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                               className="inline-flex items-center justify-center gap-2 rounded-2xl bg-brand px-4 py-3 text-sm font-semibold text-white shadow-[0_18px_38px_-28px_rgba(67,56,202,0.5)] transition-transform hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-70"
                             >
                               {acceptingRequest ? <Icons.Loader2 className="h-4 w-4 animate-spin" /> : <Icons.CheckCircle2 className="h-4 w-4" />}
-                              <span>{acceptingRequest ? 'Aceptando...' : 'Aceptar solicitud'}</span>
+                              <span>{acceptingRequest ? 'Aceptando...' : activeRequestContext.mode === 'protected' ? 'Aceptar solicitud' : 'Aceptar propuesta'}</span>
                             </button>
                           ) : null}
                           {canReportDirectDeposit ? (

@@ -344,7 +344,8 @@ describe('PropertyDetail', () => {
     expect(screen.getByText('Cómo querés avanzar')).toBeDefined();
     expect(screen.getByLabelText(/acordar directamente/i)).toBeChecked();
     expect(screen.getByLabelText(/reserva protegida/i)).not.toBeChecked();
-    expect(screen.getByText('Opción con mayor control sobre la seña')).toBeDefined();
+    expect(screen.getByText('Las fechas no se bloquean y la plataforma no interviene en la seña.')).toBeDefined();
+    expect(screen.getByText('Fechas, huéspedes y total quedan asentados desde ahora.')).toBeDefined();
   });
 
   test('smoke: sends a direct request by default and opens the contextual chat', async () => {
@@ -411,7 +412,7 @@ describe('PropertyDetail', () => {
       return { ok: true, status: 200, json: async () => ({}) };
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /^solicitar reserva$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^abrir chat para acordar$/i }));
 
     expect(bookingCalls).toHaveLength(0);
 
@@ -516,7 +517,7 @@ describe('PropertyDetail', () => {
     });
 
     const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
-    fireEvent.click(screen.getByRole('button', { name: /^solicitar reserva$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^enviar solicitud protegida$/i }));
 
     await waitFor(() => expect(dispatchSpy).toHaveBeenCalled());
     expect(bookingCalls).toHaveLength(1);
@@ -583,7 +584,7 @@ describe('PropertyDetail', () => {
     fireEvent.click(screen.getByRole('button', { name: new RegExp(checkInIso) }));
     fireEvent.click(screen.getByRole('button', { name: new RegExp(checkOutIso) }));
     fireEvent.click(screen.getByLabelText(/reserva protegida/i));
-    fireEvent.click(screen.getByRole('button', { name: /^solicitar reserva$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^enviar solicitud protegida$/i }));
 
     await waitFor(() => expect(showLoginModal).toHaveBeenCalledTimes(1));
   });

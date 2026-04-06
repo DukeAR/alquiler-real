@@ -38,8 +38,8 @@ export type ChatSystemMessageContext = {
 
 export const CHAT_SYSTEM_MESSAGE_COPY: Record<ChatSystemMessageKey, string> = {
   'conversation-start': 'Podés hacer todas las preguntas necesarias antes de avanzar.',
-  'request-sent': 'Tu solicitud fue enviada. El anfitrión puede responder por acá.',
-  'request-accepted': 'El anfitrión aceptó tu solicitud. Ya pueden coordinar los detalles.',
+  'request-sent': 'La propuesta inicial ya quedó enviada en el chat.',
+  'request-accepted': 'La otra parte aceptó avanzar.',
   'before-payment': 'Antes de avanzar, revisá la información del aviso y con quién estás hablando.',
   'protected-payment': 'En la reserva protegida, la seña se mantiene en custodia hasta tu llegada.',
   'direct-after-payment': 'Cuando ambas partes confirmen, la reserva queda registrada.',
@@ -100,6 +100,18 @@ const isDateReached = (targetDate?: string | null, today?: string | null) => (
   Boolean(targetDate && today && targetDate <= today)
 );
 
+export const getRequestSentMessage = (mode: ReservationRequestMode) => (
+  mode === 'protected'
+    ? 'Tu solicitud protegida fue enviada. El anfitrión puede responder por acá.'
+    : 'Tu propuesta fue enviada por chat. El anfitrión puede responder por acá.'
+);
+
+export const getRequestAcceptedMessage = (mode: ReservationRequestMode) => (
+  mode === 'protected'
+    ? 'El anfitrión aceptó tu solicitud. Ya podés avanzar con la reserva protegida.'
+    : 'El anfitrión aceptó tu propuesta. Ya pueden coordinar los detalles.'
+);
+
 export const getChatSystemMessages = (context: ChatSystemMessageContext): ChatSystemMessage[] => {
   const messages: ChatSystemMessage[] = [
     {
@@ -128,17 +140,17 @@ export const getChatSystemMessages = (context: ChatSystemMessageContext): ChatSy
     && hasArrivalCoordinationStage
     && isDateReached(bookingStartDate, context.today ?? null);
 
-  if (hasRequest) {
+  if (hasRequest && mode) {
     messages.push({
       key: 'request-sent',
-      content: CHAT_SYSTEM_MESSAGE_COPY['request-sent'],
+      content: getRequestSentMessage(mode),
     });
   }
 
-  if (requestStatus === 'accepted') {
+  if (requestStatus === 'accepted' && mode) {
     messages.push({
       key: 'request-accepted',
-      content: CHAT_SYSTEM_MESSAGE_COPY['request-accepted'],
+      content: getRequestAcceptedMessage(mode),
     });
   }
 

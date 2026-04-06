@@ -119,8 +119,8 @@ const BookingConfirmationModal: React.FC<Props> = ({
 
   const activeNotice = submitNotice ?? {
     tone: 'info' as const,
-    heading: 'Elegí cómo querés seguir',
-    description: 'Podés abrir el chat para coordinar primero o dejar la solicitud protegida en la app. En ambos casos vas a seguir la conversación por mensajes.',
+    heading: 'Elegí cómo querés seguir con estas fechas',
+    description: 'Podés abrir un acuerdo directo por chat o dejar una solicitud protegida en la app. En ambos casos después seguís por mensajes.',
   };
 
   useEffect(() => {
@@ -174,7 +174,7 @@ const BookingConfirmationModal: React.FC<Props> = ({
               <div className="flex flex-wrap gap-2">
                 <Badge variant="brand" size="md" className="gap-2">
                   <Icons.MessageSquare className="h-3.5 w-3.5" />
-                  <span>Solicitud lista para enviar</span>
+                  <span>Propuesta lista para enviar</span>
                 </Badge>
                 <Badge variant="neutral" size="md" className="gap-2">
                   <Icons.Clock className="h-3.5 w-3.5" />
@@ -189,8 +189,8 @@ const BookingConfirmationModal: React.FC<Props> = ({
               <SectionTitle
                 as="h3"
                 visualLevel="h3"
-                heading="Cómo querés mandar esta solicitud"
-                description="Las fechas, huéspedes y total ya reflejan tu selección actual. Ahora elegí si querés hablar primero o dejarla protegida en la app."
+                heading="Elegí cómo querés avanzar con esta estadía"
+                description="Las fechas, huéspedes y total ya reflejan tu selección actual. Ahora definí si querés abrir un acuerdo directo por chat o dejar una solicitud protegida en la app."
                 headingClassName="font-semibold tracking-tight"
                 className="pr-2"
               />
@@ -220,9 +220,9 @@ const BookingConfirmationModal: React.FC<Props> = ({
                     <Icons.MessageSquare className="h-3.5 w-3.5" />
                     <span>Acordar directamente</span>
                   </Badge>
-                  <p className="text-base font-semibold text-slate-950">Abrís el chat con esta propuesta</p>
+                  <p className="text-base font-semibold text-slate-950">Abrís un chat para acordar</p>
                   <p className="text-sm leading-6 text-slate-600">
-                    Sirve si querés conversar primero. Las fechas no se bloquean y no queda una reserva protegida registrada todavía.
+                    Sirve si querés conversar primero. Las fechas no se bloquean y la plataforma no interviene en la seña.
                   </p>
                 </div>
 
@@ -235,7 +235,7 @@ const BookingConfirmationModal: React.FC<Props> = ({
                   loadingLabel="Abriendo chat..."
                   disabled={isBusy && actionLoadingMode !== 'direct'}
                 >
-                  Abrir chat con esta propuesta
+                  Abrir chat para acordar
                 </Button>
               </div>
             </Card>
@@ -249,7 +249,7 @@ const BookingConfirmationModal: React.FC<Props> = ({
                   </Badge>
                   <p className="text-base font-semibold text-slate-950">La solicitud queda pendiente en la app</p>
                   <p className="text-sm leading-6 text-slate-600">
-                    Conviene si querés dejar fechas, huéspedes y total asentados desde ahora mientras esperás la respuesta del anfitrión.
+                    Conviene si querés dejar fechas, huéspedes y total asentados desde ahora mientras esperás la respuesta del anfitrión y después avanzar con seña en custodia.
                   </p>
                 </div>
 

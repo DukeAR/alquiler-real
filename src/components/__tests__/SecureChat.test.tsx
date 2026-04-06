@@ -106,8 +106,8 @@ describe('SecureChat', () => {
 
     renderChat();
 
-    expect(await screen.findAllByText('Solicitud aceptada')).not.toHaveLength(0);
-    expect(screen.getByText('La solicitud ya fue aceptada. Avisá cuando hayas enviado la seña.')).toBeInTheDocument();
+    expect(await screen.findAllByText('Propuesta aceptada')).not.toHaveLength(0);
+    expect(screen.getByText('La propuesta ya fue aceptada. Avisá cuando hayas enviado la seña.')).toBeInTheDocument();
     expect(screen.getByText('Cuando ambos confirman, la reserva queda registrada.')).toBeInTheDocument();
     expect(screen.getByText('Si vas a transferir una seña, verificá que coincida con quien publica.')).toBeInTheDocument();
 
@@ -154,7 +154,7 @@ describe('SecureChat', () => {
         conversation_id: 'conv-1',
         sender_id: 'host-1',
         receiver_id: 'tenant-1',
-        content: 'Tu solicitud fue enviada. El anfitrión puede responder por acá.',
+        content: 'Tu propuesta fue enviada por chat. El anfitrión puede responder por acá.',
         is_system: true,
         created_at: '2026-04-06T11:06:00.000Z',
       },
@@ -163,7 +163,7 @@ describe('SecureChat', () => {
     renderChat();
 
     expect(await screen.findByText('Podés hacer todas las preguntas necesarias antes de avanzar.')).toBeInTheDocument();
-    expect(screen.getByText('Tu solicitud fue enviada. El anfitrión puede responder por acá.')).toBeInTheDocument();
+    expect(screen.getByText('Tu propuesta fue enviada por chat. El anfitrión puede responder por acá.')).toBeInTheDocument();
   });
 
   test('advances a protected reservation from payment to custody inside the chat summary', async () => {
@@ -267,7 +267,7 @@ describe('SecureChat', () => {
           conversation_id: 'conv-1',
           sender_id: 'host-1',
           receiver_id: 'tenant-1',
-          content: 'El anfitrión aceptó tu solicitud. Ya pueden coordinar los detalles.',
+          content: 'El anfitrión aceptó tu propuesta. Ya pueden coordinar los detalles.',
           is_system: true,
           created_at: '2026-04-06T12:10:00.000Z',
         },
@@ -284,18 +284,18 @@ describe('SecureChat', () => {
 
     renderChat();
 
-    fireEvent.click(await screen.findByRole('button', { name: /Aceptar solicitud/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Aceptar propuesta/i }));
 
     await waitFor(() => {
       expect(acceptConversationRequestMock).toHaveBeenCalledWith('conv-1');
     });
 
-    expect(await screen.findAllByText('Solicitud aceptada')).not.toHaveLength(0);
-    expect(screen.getByText('La solicitud ya fue aceptada. Avisá cuando hayas enviado la seña.')).toBeInTheDocument();
+    expect(await screen.findAllByText('Propuesta aceptada')).not.toHaveLength(0);
+    expect(screen.getByText('La propuesta ya fue aceptada. Avisá cuando hayas enviado la seña.')).toBeInTheDocument();
     expect(screen.getByText('Huésped')).toBeInTheDocument();
     expect(showToastMock).toHaveBeenCalledWith(
-      'Solicitud aceptada',
-      'La solicitud ya quedó aceptada y el chat pasó al cierre de detalles.',
+      'Propuesta aceptada',
+      'La propuesta ya quedó aceptada y el chat pasó al cierre de detalles.',
       'success',
     );
   });

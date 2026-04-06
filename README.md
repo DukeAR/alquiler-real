@@ -6,6 +6,10 @@
 
 Demo de reservas con foco en confianza, trazabilidad y señales reales para tomar mejores decisiones antes de alquilar.
 
+## Mapa UX de reservas
+
+El flujo completo de reserva, con estados, decisiones y fricciones detectadas, quedó documentado en [RESERVATION_UX_MAP.md](./RESERVATION_UX_MAP.md).
+
 ## Demo
 
 Credenciales listas para probar los dos recorridos principales:

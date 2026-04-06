@@ -245,7 +245,7 @@ describe('Bookings and availability endpoints', () => {
               conversation_id: 'conv-1',
               sender_id: 'host-1',
               receiver_id: 'tenant-1',
-              content: 'Tu solicitud fue enviada. El anfitrión puede responder por acá.',
+              content: 'Tu propuesta fue enviada por chat. El anfitrión puede responder por acá.',
               is_system: true,
               created_at: '2099-09-01T10:01:00.000Z',
             },
@@ -264,12 +264,12 @@ describe('Bookings and availability endpoints', () => {
     expect(insertedSystemKeys).toEqual(['conversation-start', 'request-sent']);
     expect(res.body.map((message: { content: string }) => message.content)).toEqual([
       'Podés hacer todas las preguntas necesarias antes de avanzar.',
-      'Tu solicitud fue enviada. El anfitrión puede responder por acá.',
+      'Tu propuesta fue enviada por chat. El anfitrión puede responder por acá.',
     ]);
   });
 
   test('POST /api/conversations/:id/accept-request accepts the request and confirms a protected booking', async () => {
-    const acceptanceMessage = 'El anfitrión aceptó tu solicitud. Ya pueden coordinar los detalles.';
+    const acceptanceMessage = 'El anfitrión aceptó tu solicitud. Ya podés avanzar con la reserva protegida.';
 
     queryMock.mockImplementation(async (text: string, params?: unknown[]) => {
       if (text.includes('FROM conversations c') && text.includes('LEFT JOIN bookings b ON b.id = c.booking_id') && text.includes('WHERE c.id = $1') && text.includes('LIMIT 1') && !text.includes('JOIN users u_tenant')) {

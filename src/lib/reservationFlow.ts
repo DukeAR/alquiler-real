@@ -118,22 +118,22 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
       return {
         stage,
         modelLabel,
-        statusLabel: 'Solicitud pendiente',
+        statusLabel: input.mode === 'protected' ? 'Solicitud pendiente' : 'Propuesta enviada',
         description: input.mode === 'protected'
           ? 'Esperá a que el anfitrión la acepte antes de pagar la seña.'
-          : 'Esperá a que el anfitrión acepte la solicitud para seguir con la seña.',
+          : 'Esperá a que el anfitrión acepte la propuesta para seguir con la seña.',
         nextActor: 'host',
         nextActorLabel: 'Anfitrión',
-        nextStepLabel: 'Aceptar solicitud',
+        nextStepLabel: input.mode === 'protected' ? 'Aceptar solicitud' : 'Aceptar propuesta',
       };
     case 'request-accepted':
       return {
         stage,
         modelLabel,
-        statusLabel: 'Solicitud aceptada',
+        statusLabel: input.mode === 'protected' ? 'Solicitud aceptada' : 'Propuesta aceptada',
         description: input.mode === 'protected'
           ? 'Podés avanzar con una reserva protegida.'
-          : 'La solicitud ya fue aceptada. Avisá cuando hayas enviado la seña.',
+          : 'La propuesta ya fue aceptada. Avisá cuando hayas enviado la seña.',
         supportText: input.mode === 'direct' ? 'Cuando ambos confirman, la reserva queda registrada.' : undefined,
         nextActor: 'guest',
         nextActorLabel: 'Huésped',

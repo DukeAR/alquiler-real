@@ -28,10 +28,10 @@ describe('BookingConfirmationModal', () => {
     );
 
     expect(screen.getByRole('dialog')).toBeInTheDocument();
-    expect(screen.getByText('Solicitud lista para enviar')).toBeInTheDocument();
+    expect(screen.getByText('Propuesta lista para enviar')).toBeInTheDocument();
     expect(screen.getAllByText('Casa frente al mar').length).toBeGreaterThan(0);
     expect(screen.getByText('Laura')).toBeInTheDocument();
-    expect(screen.getByText('Cómo querés mandar esta solicitud')).toBeInTheDocument();
+    expect(screen.getByText('Elegí cómo querés avanzar con esta estadía')).toBeInTheDocument();
     expect(screen.getByText('Acordar directamente')).toBeInTheDocument();
     expect(screen.getByText('Reserva protegida')).toBeInTheDocument();
 
@@ -72,7 +72,7 @@ describe('BookingConfirmationModal', () => {
     fireEvent.click(screen.getByRole('button', { name: /seguir revisando/i }));
     expect(onClose).toHaveBeenCalledTimes(2);
 
-    fireEvent.click(screen.getByRole('button', { name: /abrir chat con esta propuesta/i }));
+    fireEvent.click(screen.getByRole('button', { name: /abrir chat para acordar/i }));
     expect(onStartDirect).toHaveBeenCalledTimes(1);
   });
 });

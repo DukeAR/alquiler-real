@@ -660,11 +660,11 @@ export const PropertyDetailShell: React.FC<{
         : canReserve
           ? {
               tone: 'success',
-              heading: selectedRequestMode === 'protected' ? 'Ya podés enviar la solicitud' : 'Ya podés avanzar por chat',
+              heading: selectedRequestMode === 'protected' ? 'Ya podés enviar la solicitud protegida' : 'Ya podés abrir el chat para acordar',
               description:
                 selectedRequestMode === 'protected'
-                  ? `${formatCurrency(total)} total · ${nights} ${nights === 1 ? 'noche' : 'noches'} · ${formatGuestSelection(adults, childrenCount)}.`
-                  : `La propuesta queda lista para seguirla por chat con ${formatCurrency(total)} estimado y ${formatGuestSelection(adults, childrenCount)}.`,
+                  ? `${formatCurrency(total)} total · ${nights} ${nights === 1 ? 'noche' : 'noches'} · ${formatGuestSelection(adults, childrenCount)}. Queda pendiente en la app hasta la respuesta del anfitrión.`
+                  : `La propuesta queda lista para seguirla por chat con ${formatCurrency(total)} estimado y ${formatGuestSelection(adults, childrenCount)}. Todavía no se registra una reserva protegida.`,
             }
           : {
               tone: 'warning',
@@ -675,7 +675,9 @@ export const PropertyDetailShell: React.FC<{
             };
 
   const reserveButtonLabel = canReserve
-    ? 'Solicitar reserva'
+    ? selectedRequestMode === 'protected'
+      ? 'Enviar solicitud protegida'
+      : 'Abrir chat para acordar'
     : !checkIn && !checkOut
       ? 'Elegí fechas'
       : hasPartialDates
@@ -876,9 +878,9 @@ export const PropertyDetailShell: React.FC<{
       resetBookingSubmitState();
       navigateToConversation(conversationId, requestContext);
       showToast(
-        'Chat abierto',
+        'Chat abierto para acordar',
         initialMessageSent
-          ? 'Ya le mandaste tu propuesta al anfitrión y la conversación quedó abierta.'
+          ? 'Ya le mandaste tu propuesta al anfitrión. Los próximos pasos siguen por chat y la seña se coordina por fuera de la app.'
           : 'Abrimos el chat, pero la propuesta automática no salió. Podés seguir desde ahí.',
         initialMessageSent ? 'success' : 'warning',
       );
@@ -1130,7 +1132,7 @@ export const PropertyDetailShell: React.FC<{
           <Card variant="elevated" className="rounded-[30px] border-slate-200/80 bg-white p-4 shadow-[0_30px_80px_-50px_rgba(15,23,42,0.35)] sm:p-5">
             <div className="flex items-start justify-between gap-4 border-b border-slate-200/70 pb-4">
               <div className="space-y-2">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Armá tu solicitud</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Armá tu estadía</p>
                 <div className="flex items-end gap-2">
                   <span className="text-[2.55rem] font-black tracking-tight text-slate-950 sm:text-[2.9rem]">{nightly ? formatCurrency(nightly) : '—'}</span>
                   <span className="pb-1 text-sm font-medium text-slate-500">/ noche</span>
@@ -1297,7 +1299,8 @@ export const PropertyDetailShell: React.FC<{
                     selected={selectedRequestMode === 'direct'}
                     disabled={bookingSubmitMode !== null}
                     title="Acordar directamente"
-                    description="Coordinás con el anfitrión y definís los detalles por chat."
+                    description="Abrís el chat con esta propuesta y coordinás los detalles por fuera de la app."
+                    helper="Las fechas no se bloquean y la plataforma no interviene en la seña."
                     onSelect={(mode) => {
                       setSelectedRequestMode(mode);
                       setBookingSubmitNotice(null);
@@ -1308,8 +1311,8 @@ export const PropertyDetailShell: React.FC<{
                     selected={selectedRequestMode === 'protected'}
                     disabled={bookingSubmitMode !== null}
                     title="Reserva protegida"
-                    description="La seña se mantiene en custodia y se libera cuando llegás al lugar."
-                    helper="Opción con mayor control sobre la seña"
+                    description="La solicitud queda registrada en la app y la seña se mantiene en custodia hasta la llegada."
+                    helper="Fechas, huéspedes y total quedan asentados desde ahora."
                     onSelect={(mode) => {
                       setSelectedRequestMode(mode);
                       setBookingSubmitNotice(null);
