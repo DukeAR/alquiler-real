@@ -147,7 +147,7 @@ export const NotificationsMenu: React.FC<NotificationsMenuProps> = ({
       </button>
 
       {isOpen ? (
-        <div id="app-notifications-panel" aria-label="Panel de notificaciones" className="absolute right-0 top-14 w-[22rem] overflow-hidden rounded-[28px] border border-slate-200/90 bg-white/98 shadow-[0_24px_50px_-30px_rgba(15,23,42,0.28)] backdrop-blur-xl">
+        <div id="app-notifications-panel" aria-label="Panel de notificaciones" className="absolute right-0 top-14 w-[22rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded-[28px] border border-slate-200/90 bg-white/98 shadow-[0_24px_50px_-30px_rgba(15,23,42,0.28)] backdrop-blur-xl">
           <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/70 px-5 py-4">
             <div>
               <h3 className="text-sm font-semibold tracking-tight text-slate-900">Notificaciones</h3>

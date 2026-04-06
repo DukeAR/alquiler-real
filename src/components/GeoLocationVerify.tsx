@@ -114,7 +114,7 @@ export const GeoLocationVerify: React.FC<GeoLocationVerifyProps> = ({ onVerified
               <Icons.CheckCircle2 className="w-6 h-6 text-emerald-600" />
               <span className="font-bold text-emerald-800 dark:text-emerald-300">¡Ubicación verificada!</span>
             </div>
-            <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
               <div className="bg-white dark:bg-slate-800 p-3 rounded-xl">
                 <p className="text-xs text-slate-500 mb-1">Latitud</p>
                 <p className="font-mono font-bold text-slate-900 dark:text-white">{coords.lat.toFixed(6)}</p>

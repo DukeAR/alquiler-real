@@ -999,16 +999,16 @@ export const PropertyDetailShell: React.FC<{
                 helperText={guestFieldHelper}
                 error={bookingError?.field === 'guests' ? bookingError.message : undefined}
               >
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <Card padding="sm" variant="muted" className="rounded-[22px] border-slate-200/80 bg-slate-50/80">
-                    <div className="flex items-center justify-between gap-2">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <div>
                         <div className="text-sm font-medium text-slate-900">Adultos</div>
                         <div className="text-xs text-slate-500">Mayores de 18</div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-start">
                         <Button type="button" variant="outline" size="sm" onClick={() => handleAdultsChange(adults - 1)} className="h-8 w-8 rounded-full p-0 font-semibold" aria-label="Restar adulto">-</Button>
-                        <div className="w-6 text-center text-sm font-semibold text-slate-900">{adults}</div>
+                        <div className="w-8 text-center text-sm font-semibold text-slate-900">{adults}</div>
                         <Button
                           type="button"
                           variant="outline"
@@ -1024,14 +1024,14 @@ export const PropertyDetailShell: React.FC<{
                     </div>
                   </Card>
                   <Card padding="sm" variant="muted" className="rounded-[22px] border-slate-200/80 bg-slate-50/80">
-                    <div className="flex items-center justify-between gap-2">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <div>
                         <div className="text-sm font-medium text-slate-900">Niños</div>
                         <div className="text-xs text-slate-500">Hasta 17 años</div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-start">
                         <Button type="button" variant="outline" size="sm" onClick={() => handleChildrenChange(childrenCount - 1)} className="h-8 w-8 rounded-full p-0 font-semibold" aria-label="Restar menor">-</Button>
-                        <div className="w-6 text-center text-sm font-semibold text-slate-900">{childrenCount}</div>
+                        <div className="w-8 text-center text-sm font-semibold text-slate-900">{childrenCount}</div>
                         <Button
                           type="button"
                           variant="outline"

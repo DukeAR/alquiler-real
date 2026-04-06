@@ -290,7 +290,7 @@ export const PropertyUploadForm: React.FC<{ onComplete: () => void }> = ({ onCom
                             />
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <div>
                                 <label className="text-xs font-bold uppercase text-slate-500">Dirección exacta</label>
                                 <input
@@ -313,7 +313,7 @@ export const PropertyUploadForm: React.FC<{ onComplete: () => void }> = ({ onCom
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <div>
                                 <label className="text-xs font-bold uppercase text-slate-500">Huéspedes máx.</label>
                                 <input
@@ -341,7 +341,7 @@ export const PropertyUploadForm: React.FC<{ onComplete: () => void }> = ({ onCom
                         <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Comodidades</h2>
                         <p className="text-sm text-slate-500">Marcá qué ofrece tu propiedad.</p>
 
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                             {amenitiesList.map((amenity) => (
                                 <button
                                     type="button"
@@ -477,7 +477,7 @@ export const PropertyUploadForm: React.FC<{ onComplete: () => void }> = ({ onCom
                                 </div>
                             )}
 
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                 <div>
                                     <label className="text-xs font-bold uppercase text-slate-500">Latitud</label>
                                     <input

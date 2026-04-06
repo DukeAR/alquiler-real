@@ -317,7 +317,7 @@ export const MyBookings = () => {
               </div>
               <div className="p-8 max-h-[60vh] overflow-y-auto space-y-8 no-scrollbar">
                  <div className="space-y-6">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div className="space-y-1">
                           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Huésped</p>
                           <p className="text-sm font-black truncate">{selectedContract.guestName}</p>

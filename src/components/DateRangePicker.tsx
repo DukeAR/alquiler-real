@@ -510,24 +510,24 @@ const DateRangePicker: React.FC<Props> = ({ checkIn, checkOut, setCheckIn, setCh
           setIsOpen(true);
         }}
         className={cn(
-          'grid overflow-hidden rounded-2xl p-0 text-left',
+          'grid overflow-hidden rounded-2xl p-0 text-left whitespace-normal',
           isOpen ? 'border-slate-300 shadow-[0_18px_40px_-26px_rgba(15,23,42,0.35)]' : 'border-slate-200 hover:border-slate-300 hover:shadow-sm',
         )}
       >
-        <div className="grid w-full grid-cols-2 divide-x divide-slate-200">
+        <div className="grid w-full grid-cols-1 divide-y divide-slate-200 sm:grid-cols-2 sm:divide-x sm:divide-y-0">
           <div className="px-3 py-3">
             <div className="text-[11px] uppercase tracking-[0.12em] text-slate-500">{dateCopy.startLabel}</div>
             <div className="mt-1 text-sm font-medium text-slate-900">{formatDisplay(checkIn)}</div>
           </div>
-          <div className="px-3 py-3 text-right">
+          <div className="px-3 py-3 text-left sm:text-right">
             <div className="text-[11px] uppercase tracking-[0.12em] text-slate-500">{dateCopy.endLabel}</div>
             <div className="mt-1 text-sm font-medium text-slate-900">{formatDisplay(checkOut)}</div>
           </div>
         </div>
-        <div className="flex items-center justify-between gap-3 border-t border-slate-200 bg-slate-50/80 px-3 py-2 text-xs text-slate-500">
-          <div className="inline-flex items-center gap-2">
+        <div className="flex flex-col items-start gap-2 border-t border-slate-200 bg-slate-50/80 px-3 py-2 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+          <div className="inline-flex min-w-0 items-start gap-2 text-left">
             <Icons.Calendar className="h-3.5 w-3.5 text-slate-400" />
-            <span>{dateCopy.triggerSummary}</span>
+            <span className="whitespace-normal break-words">{dateCopy.triggerSummary}</span>
           </div>
           {hasCompleteRange ? <span className="font-semibold text-brand">Rango listo</span> : null}
         </div>
@@ -550,7 +550,7 @@ const DateRangePicker: React.FC<Props> = ({ checkIn, checkOut, setCheckIn, setCh
             className={`origin-top rounded-[22px] border-slate-200 shadow-[0_22px_50px_-26px_rgba(15,23,42,0.35)] transition-all duration-200 ease-out ${isOpen ? 'scale-100 translate-y-0' : 'scale-[0.985] -translate-y-1'}`}
           >
             <div className="space-y-4">
-              <div className="flex items-start justify-between gap-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">{dateCopy.headerEyebrow}</p>
                   <p className="mt-1 text-sm font-semibold text-slate-900">{dateCopy.selectionTitle}</p>
@@ -559,7 +559,7 @@ const DateRangePicker: React.FC<Props> = ({ checkIn, checkOut, setCheckIn, setCh
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   {checkIn || checkOut ? (
                     <Button type="button" variant="ghost" size="sm" onClick={clearSelection} className="rounded-full px-3 text-xs">
                       <Icons.X className="h-3.5 w-3.5" />
@@ -572,13 +572,13 @@ const DateRangePicker: React.FC<Props> = ({ checkIn, checkOut, setCheckIn, setCh
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <div className={cn('rounded-2xl border px-3 py-3', checkIn ? 'border-brand/20 bg-brand/5' : 'border-slate-200 bg-slate-50')}>
                   <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">{dateCopy.startLabel}</div>
                   <div className="mt-1 text-sm font-semibold text-slate-900">{formatDisplay(checkIn)}</div>
                   <div className="mt-1 text-xs text-slate-500">{checkIn ? formatLongDisplay(checkIn) : dateCopy.startHint}</div>
                 </div>
-                <div className={cn('rounded-2xl border px-3 py-3 text-right', checkOut ? 'border-slate-900/10 bg-slate-900/[0.03]' : 'border-slate-200 bg-slate-50')}>
+                <div className={cn('rounded-2xl border px-3 py-3 text-left sm:text-right', checkOut ? 'border-slate-900/10 bg-slate-900/[0.03]' : 'border-slate-200 bg-slate-50')}>
                   <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">{dateCopy.endLabel}</div>
                   <div className="mt-1 text-sm font-semibold text-slate-900">{formatDisplay(checkOut)}</div>
                   <div className="mt-1 text-xs text-slate-500">{checkOut ? formatLongDisplay(checkOut) : dateCopy.endHint}</div>
@@ -623,7 +623,7 @@ const DateRangePicker: React.FC<Props> = ({ checkIn, checkOut, setCheckIn, setCh
                 const month = m.getMonth();
                 const weeks = generateWeeks(year, month);
                 return (
-                  <div key={idx} className="w-48 min-w-[12rem] shrink-0 snap-start">
+                  <div key={idx} className="min-w-full shrink-0 snap-start md:w-48 md:min-w-[12rem]">
                     <div className="mb-3 flex items-center justify-between">
                       {idx === 0 ? (
                         <Button type="button" onClick={() => setVisible(addMonths(visible, -1))} variant="ghost" size="sm" aria-label="Ver mes anterior" className="rounded-full px-2.5 py-1.5 text-sm">
