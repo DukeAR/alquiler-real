@@ -10,6 +10,10 @@ Demo de reservas con foco en confianza, trazabilidad y señales reales para toma
 
 El flujo completo de reserva, con estados, decisiones y fricciones detectadas, quedó documentado en [RESERVATION_UX_MAP.md](./RESERVATION_UX_MAP.md).
 
+## Política de seña y devoluciones
+
+La propuesta canónica de política para acuerdo directo y reserva protegida quedó documentada en [POLITICA_SENA_Y_DEVOLUCIONES.md](./POLITICA_SENA_Y_DEVOLUCIONES.md).
+
 ## Demo
 
 Credenciales listas para probar los dos recorridos principales:

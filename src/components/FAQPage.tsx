@@ -80,20 +80,20 @@ const validationBuckets: ValidationBucket[] = [
 
 const supportCards: SupportCard[] = [
   {
-    eyebrow: 'Pagos directos',
-    title: 'El pago va por fuera de la app',
-    description: 'Se coordina entre anfitrión y huésped. Alquiler Real no procesa pagos ni retiene dinero.',
-    icon: Icons.FileText,
+    eyebrow: 'Acuerdo directo',
+    title: 'La app no cobra ni retiene la seña',
+    description: 'Sirve para dejar contexto y seguir la conversación. El cobro y cualquier devolución se coordinan entre huésped y anfitrión.',
+    icon: Icons.MessageSquare,
     className: 'border-slate-200/85 bg-white/98 shadow-[0_18px_38px_-30px_rgba(15,23,42,0.18)] dark:border-slate-800 dark:bg-slate-900',
     iconWrapClassName: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200',
     titleClassName: 'text-slate-950 dark:text-slate-50',
     descriptionClassName: 'text-slate-600 dark:text-slate-400',
   },
   {
-    eyebrow: 'Hoy y lo que viene',
-    title: 'Hoy operamos en San Clemente',
-    description: 'Ese es el alcance actual. Si más adelante cambia el flujo de pago, lo vamos a mostrar claro. Hoy no forma parte de la app.',
-    icon: Icons.MapPin,
+    eyebrow: 'Reserva protegida',
+    title: 'La seña queda en custodia',
+    description: 'Se paga después de la aceptación del anfitrión. En estadías de 1 a 3 noches equivale a 1 noche. Desde 4 noches, equivale a 2 noches.',
+    icon: Icons.ShieldCheck,
     className: 'border-brand/15 bg-[radial-gradient(circle_at_top_right,rgba(67,56,202,0.12),transparent_42%),linear-gradient(180deg,rgba(255,255,255,0.99),rgba(248,250,252,0.98))] shadow-[0_18px_38px_-30px_rgba(15,23,42,0.18)] dark:border-brand/20 dark:bg-slate-900',
     iconWrapClassName: 'bg-brand/10 text-brand dark:bg-brand/15 dark:text-brand-light',
     titleClassName: 'text-slate-950 dark:text-slate-50',
@@ -103,47 +103,69 @@ const supportCards: SupportCard[] = [
 
 const faqGroups: FAQGroup[] = [
   {
-    eyebrow: 'Antes de reservar',
-    description: 'Qué mirar antes de avanzar y qué no conviene dar por hecho.',
+    eyebrow: 'Modelos de reserva',
+    description: 'Qué cambia entre acuerdo directo y reserva protegida antes de pagar o confirmar.',
     items: [
       {
-        question: '¿Qué me aporta ver información comprobada en una propiedad?',
-        answer: 'Sirve para saber qué parte del aviso se pudo comprobar antes de hablar o pagar.',
+        question: '¿Qué cambia entre acuerdo directo y reserva protegida?',
+        answer: 'En acuerdo directo la plataforma acompaña la conversación, pero no cobra ni retiene la seña. En reserva protegida la seña se paga dentro del flujo y queda en custodia.',
         bullets: [
-          'Quién publica, si hay ubicación verificada y si existen reseñas reales o registro del lugar.',
-          'No reemplaza una visita, pero evita decidir solo por promesas.',
+          'Acuerdo directo: la plataforma solo muestra estados y deja contexto para la operación.',
+          'Reserva protegida: la plataforma puede retener, revisar o devolver la seña según cómo cierre la reserva.',
         ],
-        icon: Icons.ShieldCheck,
+        icon: Icons.MessageSquare,
       },
       {
-        question: '¿Eso garantiza cómo va a salir la estadía?',
-        answer: 'No. Que algo esté comprobado no significa que la app garantice limpieza, estado del lugar ni funcionamiento de los servicios.',
-        icon: Icons.Home,
+        question: '¿Cómo se calcula la seña en una reserva protegida?',
+        answer: 'La seña se calcula por cantidad de noches y solo se paga después de que el anfitrión acepta la solicitud.',
+        bullets: [
+          'De 1 a 3 noches: 1 noche de seña.',
+          'Desde 4 noches: 2 noches de seña.',
+        ],
+        icon: Icons.FileSpreadsheet,
       },
       {
-        question: '¿Qué conviene revisar igual antes de pagar?',
-        answer: 'Además de la verificación, conviene revisar lo básico de la publicación.',
+        question: '¿Cuándo se paga la seña protegida?',
+        answer: 'Después de la aceptación del anfitrión. Antes de eso, la solicitud puede quedar pendiente o cancelarse sin una seña cobrada dentro de la app.',
         bullets: [
-          'Reseñas reales, fotos, ubicación y reglas de la propiedad.',
-          'Lo que no esté claro, preguntalo antes de pagar.',
+          'Primero se define si el anfitrión acepta.',
+          'Después recién se activa el paso de seña y custodia.',
         ],
-        icon: Icons.Search,
+        icon: Icons.Clock,
       },
     ],
   },
   {
-    eyebrow: 'Pagos y alcance',
-    description: 'Qué hace la app y qué queda por fuera.',
+    eyebrow: 'Seña y devoluciones',
+    description: 'Cómo se revisa la seña según cancelaciones, no show y problemas reportados.',
     items: [
       {
-        question: '¿Quién maneja el pago?',
-        answer: 'El pago lo coordinan anfitrión y huésped. La app no procesa pagos, no retiene plata y no cobra por reservar.',
-        icon: Icons.FileSpreadsheet,
+        question: '¿Cuándo puede devolverse la seña protegida?',
+        answer: 'La devolución depende del momento de la cancelación y del estado de la reserva.',
+        bullets: [
+          'Si el anfitrión cancela o la propiedad no está realmente disponible, la seña se devuelve.',
+          'Si hay un problema reportado al llegar o un no show, la seña puede quedar en revisión antes de definirse.',
+        ],
+        icon: Icons.ShieldCheck,
       },
       {
-        question: '¿Qué pasa si hay un conflicto?',
-        answer: 'La app no interviene ni decide quién tiene razón. Si hay un problema, lo resuelven las partes por fuera de la plataforma.',
-        icon: Icons.MessageSquare,
+        question: '¿Qué pasa si cancela el anfitrión o la propiedad no existe?',
+        answer: 'En reserva protegida, la seña se devuelve. En acuerdo directo, la plataforma deja asentado el estado, pero no interviene sobre pagos hechos por fuera.',
+        icon: Icons.Home,
+      },
+      {
+        question: '¿Qué pasa si hay no show o un problema reportado al llegar?',
+        answer: 'En reserva protegida, la seña no se libera automáticamente. Puede quedar pendiente de confirmación o en revisión hasta cerrar qué corresponde.',
+        bullets: [
+          'Si el huésped no llega, la seña puede quedar pendiente de confirmación.',
+          'Si la propiedad no coincide de forma sustancial o surge un problema al llegar, la seña puede quedar en revisión.',
+        ],
+        icon: Icons.AlertTriangle,
+      },
+      {
+        question: '¿Qué pasa con un cargo de servicio si existe?',
+        answer: 'Siempre se informa por separado y no se mezcla con la seña. Si la reserva no puede concretarse por causa del anfitrión o por un problema sustancial del lugar, se devuelve. Si la cancelación o el no show dependen del huésped, puede quedar sujeto a revisión o no devolverse.',
+        icon: Icons.FileText,
       },
     ],
   },
@@ -152,24 +174,24 @@ const faqGroups: FAQGroup[] = [
 const roleGuides: RoleGuide[] = [
   {
     eyebrow: 'Para anfitriones',
-    title: 'Mostrá lo importante antes del chat',
-    description: 'Si el aviso deja claro quién publica, dónde está el lugar y qué parte se pudo comprobar, la consulta llega mejor.',
+    title: 'Elegí bien el modelo antes de aceptar',
+    description: 'El acuerdo directo y la reserva protegida no cierran igual. Conviene dejar claro cuál usás y qué pasa con la seña en cada caso.',
     points: [
-      'La otra persona entiende más rápido qué ofrecés.',
-      'Bajan las preguntas que se resuelven leyendo.',
-      'El trato sigue siendo directo y el pago va por fuera de la app.',
+      'En reserva protegida, la seña recién entra después de tu aceptación.',
+      'Si cancelás una reserva protegida, la seña se devuelve.',
+      'Si informás un no show, la seña no se libera sola: queda pendiente de confirmación.',
     ],
     icon: Icons.Home,
     tone: 'dark',
   },
   {
     eyebrow: 'Para huéspedes',
-    title: 'Sabé qué revisar antes de reservar',
-    description: 'Podés ver quién publica, si hay ubicación verificada y qué reseñas reales dejaron otras personas.',
+    title: 'Antes de pagar, revisá qué modelo elegiste',
+    description: 'No es lo mismo abrir un acuerdo por chat que dejar una reserva protegida con seña en custodia.',
     points: [
-      'No arrancás solo con fotos y promesas.',
-      'Podés comparar propiedades sin ir a ciegas.',
-      'La decisión sigue siendo tuya.',
+      'En acuerdo directo, la plataforma no cobra ni devuelve la seña.',
+      'En reserva protegida, la seña depende de la cantidad de noches.',
+      'La devolución depende del momento de la cancelación y del estado final de la reserva.',
     ],
     icon: Icons.UserCheck,
     tone: 'light',
@@ -280,7 +302,7 @@ export const FAQPage: React.FC<FAQPageProps> = ({ onBack }) => {
         onBack={onBack}
         eyebrow="Ayuda"
         heading="Preguntas frecuentes"
-        description="Qué muestra la app, qué no comprobamos y qué conviene revisar antes de reservar o publicar."
+        description="Qué cambia entre acuerdo directo y reserva protegida, cómo se calcula la seña y cuándo puede revisarse o devolverse."
         contentClassName="mx-auto w-full max-w-5xl"
       />
 
@@ -390,7 +412,7 @@ export const FAQPage: React.FC<FAQPageProps> = ({ onBack }) => {
             eyebrow="FAQ principal"
             as="h2"
             heading="Preguntas que conviene resolver antes de reservar o publicar"
-            description="Respuestas cortas sobre verificación, pagos y alcance."
+            description="Respuestas cortas sobre modelos de reserva, seña y devoluciones."
             className="max-w-3xl"
           />
 

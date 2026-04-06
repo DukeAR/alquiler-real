@@ -87,8 +87,8 @@ export const MyBookings = () => {
     const cancellationDeadlineLabel = getCancellationDeadlineLabel(booking);
     const confirmMessage = booking.requestMode === 'protected'
       ? cancellationDeadlineLabel
-        ? `¿Querés cancelar esta reserva? Podés hacerlo hasta el ${cancellationDeadlineLabel}. Si la seña ya estaba en la plataforma, va a quedar en revisión según la etapa de la reserva.`
-        : '¿Querés cancelar esta reserva? Si la seña ya estaba en la plataforma, va a quedar en revisión según la etapa de la reserva.'
+        ? `¿Querés cancelar esta reserva? Podés hacerlo hasta el ${cancellationDeadlineLabel}. La devolución depende del momento de la cancelación y del estado de la reserva. Si la seña ya estaba en custodia, puede quedar en revisión.`
+        : '¿Querés cancelar esta reserva? La devolución depende del momento de la cancelación y del estado de la reserva. Si la seña ya estaba en custodia, puede quedar en revisión.'
       : cancellationDeadlineLabel
         ? `¿Querés cancelar esta reserva? Podés hacerlo hasta el ${cancellationDeadlineLabel}. La plataforma solo va a dejar asentado el estado.`
         : '¿Querés cancelar esta reserva? La plataforma solo va a dejar asentado el estado.';

@@ -11,9 +11,10 @@ describe('FAQPage', () => {
     expect(screen.getByRole('heading', { name: 'Preguntas frecuentes' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Qué mostramos y qué no damos por hecho' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Preguntas que conviene resolver antes de reservar o publicar' })).toBeInTheDocument();
-    expect(screen.getByText('Mostrá lo importante antes del chat')).toBeInTheDocument();
-    expect(screen.getByText('Sabé qué revisar antes de reservar')).toBeInTheDocument();
-    expect(screen.getByText('¿Quién maneja el pago?')).toBeInTheDocument();
+    expect(screen.getByText('Elegí bien el modelo antes de aceptar')).toBeInTheDocument();
+    expect(screen.getByText('Antes de pagar, revisá qué modelo elegiste')).toBeInTheDocument();
+    expect(screen.getByText('¿Cómo se calcula la seña en una reserva protegida?')).toBeInTheDocument();
+    expect(screen.getByText('¿Qué pasa con un cargo de servicio si existe?')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Volver' }));
 

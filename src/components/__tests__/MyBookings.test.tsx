@@ -323,7 +323,7 @@ describe('MyBookings', () => {
 
     expect(await screen.findAllByText('Cancelaste la reserva')).not.toHaveLength(0);
     expect(screen.getByText('La cancelación ya quedó registrada.')).toBeInTheDocument();
-    expect(screen.getByText('La plataforma revisa qué pasa con la seña según la etapa de la reserva.')).toBeInTheDocument();
+    expect(screen.getByText('La devolución depende del momento de la cancelación y de cómo quedó la reserva. La seña está en revisión hasta cerrar qué corresponde.')).toBeInTheDocument();
     expect(screen.getByText('Plataforma')).toBeInTheDocument();
   });
 
@@ -355,7 +355,7 @@ describe('MyBookings', () => {
 
     expect(await screen.findAllByText('Canceló el anfitrión')).not.toHaveLength(0);
     expect(screen.getByText('La reserva ya no sigue activa.')).toBeInTheDocument();
-    expect(screen.getByText('La seña se devuelve automáticamente.')).toBeInTheDocument();
+    expect(screen.getByText('Si la seña ya estaba en custodia, se devuelve.')).toBeInTheDocument();
     expect(screen.getByText('Devolver seña')).toBeInTheDocument();
   });
 

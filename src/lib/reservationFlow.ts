@@ -227,8 +227,8 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
         description: 'La cancelación ya quedó registrada.',
         supportText: input.mode === 'protected'
           ? input.depositStatus === 'review'
-            ? 'La plataforma revisa qué pasa con la seña según la etapa de la reserva.'
-            : 'Si la seña ya estaba en la plataforma, revisamos cómo sigue según la etapa de la reserva.'
+            ? 'La devolución depende del momento de la cancelación y de cómo quedó la reserva. La seña está en revisión hasta cerrar qué corresponde.'
+            : 'La devolución depende del momento de la cancelación y del estado de la reserva. Si la seña ya estaba en custodia, la plataforma revisa cómo cerrarla.'
           : 'La plataforma solo informa el estado. Si hubo una seña, la resolución queda entre ustedes.',
         nextActor: input.mode === 'protected' && (input.depositStatus === 'review' || input.depositStatus === 'held' || input.depositStatus === 'pending_confirmation')
           ? 'platform'
@@ -247,7 +247,7 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
         statusLabel: 'Canceló el anfitrión',
         description: 'La reserva ya no sigue activa.',
         supportText: input.mode === 'protected'
-          ? 'La seña se devuelve automáticamente.'
+          ? 'Si la seña ya estaba en custodia, se devuelve.'
           : 'La plataforma solo informa el estado. Si hubo una seña, la resolución queda entre ustedes.',
         nextActor: input.mode === 'protected' ? 'platform' : 'none',
         nextActorLabel: input.mode === 'protected' ? 'Plataforma' : undefined,
