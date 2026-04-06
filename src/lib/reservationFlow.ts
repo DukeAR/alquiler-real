@@ -23,6 +23,8 @@ export type ReservationFlowStageWithIssues =
 
 export type ReservationFlowActor = 'guest' | 'host' | 'platform' | 'none';
 export type ReservationFlowViewerRole = 'guest' | 'host';
+export type ReservationFlowMilestoneKey = 'request' | 'accepted' | 'deposit' | 'confirmed';
+export type ReservationFlowMilestoneState = 'completed' | 'current' | 'upcoming';
 
 type ReservationFlowInput = {
   mode?: ReservationRequestMode | null;
@@ -44,6 +46,78 @@ export type ReservationFlowCopy = {
   modelLabel?: string;
   directDepositHint?: string;
   trackingHint?: string;
+};
+
+export type ReservationFlowMilestone = {
+  key: ReservationFlowMilestoneKey;
+  label: string;
+  state: ReservationFlowMilestoneState;
+};
+
+const getRequestStatusLabel = (mode: ReservationRequestMode, viewerRole: ReservationFlowViewerRole) => {
+  if (mode === 'protected') {
+    return viewerRole === 'host' ? 'Solicitud recibida' : 'Solicitud enviada';
+  }
+
+  return viewerRole === 'host' ? 'Propuesta recibida' : 'Propuesta enviada';
+};
+
+const getDepositMilestoneLabel = (
+  mode: ReservationRequestMode,
+  stage: ReservationFlowStageWithIssues | null,
+) => {
+  if (mode === 'protected') {
+    return 'Seña en custodia';
+  }
+
+  if (stage === 'direct-deposit-reported') {
+    return 'Seña informada';
+  }
+
+  return 'Seña confirmada';
+};
+
+const getMilestoneIndex = (stage: ReservationFlowStageWithIssues | null) => {
+  switch (stage) {
+    case 'request-pending':
+      return 0;
+    case 'request-accepted':
+      return 1;
+    case 'direct-deposit-reported':
+    case 'protected-deposit-held':
+    case 'protected-deposit-review':
+    case 'protected-no-show-pending':
+      return 2;
+    case 'reservation-confirmed':
+    case 'protected-deposit-released':
+    case 'guest-cancelled':
+    case 'host-cancelled':
+      return 3;
+    default:
+      return 0;
+  }
+};
+
+export const getReservationFlowMilestones = (input: ReservationFlowInput): ReservationFlowMilestone[] => {
+  if (!input.mode) {
+    return [];
+  }
+
+  const stage = getReservationFlowStage(input);
+  const viewerRole = input.viewerRole ?? 'guest';
+  const currentIndex = getMilestoneIndex(stage);
+  const milestones = [
+    getRequestStatusLabel(input.mode, viewerRole),
+    'Aceptada',
+    getDepositMilestoneLabel(input.mode, stage),
+    stage === 'guest-cancelled' || stage === 'host-cancelled' ? 'Cancelada' : 'Confirmada',
+  ] as const;
+
+  return milestones.map((label, index) => ({
+    key: (['request', 'accepted', 'deposit', 'confirmed'] as const)[index],
+    label,
+    state: index < currentIndex ? 'completed' : index === currentIndex ? 'current' : 'upcoming',
+  }));
 };
 
 export const getReservationFlowStage = ({
@@ -122,13 +196,19 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
       return {
         stage,
         modelLabel,
-        statusLabel: input.mode === 'protected' ? 'Solicitud pendiente' : 'Propuesta enviada',
+        statusLabel: getRequestStatusLabel(input.mode, viewerRole),
         description: input.mode === 'protected'
-          ? 'Esperá a que el anfitrión la acepte antes de pagar la seña.'
-          : 'Esperá a que el anfitrión acepte la propuesta para seguir con la seña.',
+          ? viewerRole === 'host'
+            ? 'Respondé esta solicitud dentro de las próximas 24 horas para que no se venza.'
+            : 'Tu solicitud ya quedó enviada. Esperá a que el anfitrión la acepte antes de pagar la seña.'
+          : viewerRole === 'host'
+            ? 'Revisá la propuesta y respondé por acá antes de que venza.'
+            : 'Tu propuesta ya quedó enviada. Esperá a que el anfitrión la acepte antes de seguir con la seña.',
         nextActor: 'host',
         nextActorLabel: 'Anfitrión',
-        nextStepLabel: input.mode === 'protected' ? 'Aceptar solicitud' : 'Aceptar propuesta',
+        nextStepLabel: viewerRole === 'host'
+          ? input.mode === 'protected' ? 'Aceptar solicitud' : 'Aceptar propuesta'
+          : 'Esperar respuesta',
       };
     case 'request-accepted':
       return {
@@ -137,12 +217,14 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
         statusLabel: input.mode === 'protected' ? 'Solicitud aceptada' : 'Propuesta aceptada',
         description: input.mode === 'protected'
           ? 'Podés avanzar con una reserva protegida.'
-          : 'La propuesta ya fue aceptada. Avisá cuando hayas enviado la seña.',
+          : 'La propuesta ya fue aceptada. Confirmá por acá cuando hayas enviado la seña.',
         supportText: input.mode === 'direct' ? 'Cuando ambos confirman, la reserva queda registrada.' : undefined,
         nextActor: 'guest',
         nextActorLabel: 'Huésped',
-        nextStepLabel: input.mode === 'protected' ? 'Pagar seña' : 'Ya envié la seña',
-        directDepositHint: input.mode === 'direct' ? 'Si vas a transferir una seña, verificá que coincida con quien publica.' : undefined,
+        nextStepLabel: input.mode === 'protected'
+          ? viewerRole === 'host' ? 'Esperar pago de seña' : 'Pagar seña'
+          : viewerRole === 'host' ? 'Esperar confirmación de seña' : 'Confirmar seña',
+        directDepositHint: input.mode === 'direct' ? 'Revisá que el titular coincida con quien publica antes de transferir.' : undefined,
       };
     case 'direct-deposit-reported':
       return {
@@ -154,7 +236,7 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
         nextActor: 'host',
         nextActorLabel: 'Anfitrión',
         nextStepLabel: 'Confirmar recepción',
-        directDepositHint: 'Si vas a transferir una seña, verificá que coincida con quien publica.',
+        directDepositHint: 'Revisá que el titular coincida con quien publica antes de transferir.',
       };
     case 'reservation-confirmed':
       return {
@@ -162,7 +244,12 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
         modelLabel,
         statusLabel: 'Reserva confirmada',
         description: 'La reserva ya quedó registrada.',
+        supportText: viewerRole === 'host'
+          ? 'Próximo paso: coordiná horario de llegada con el huésped.'
+          : 'Próximo paso: coordiná horario de llegada con el anfitrión.',
         nextActor: 'none',
+        nextActorLabel: 'Ambos',
+        nextStepLabel: 'Coordinar llegada',
       };
     case 'protected-deposit-held':
       if (viewerRole === 'host') {
@@ -173,9 +260,9 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
           description: 'La seña ya fue recibida',
           supportText: 'El huésped confirmó la seña a través de la plataforma. El monto queda en custodia y se libera cuando el huésped confirma su llegada al lugar.',
           trackingHint: 'Vas a poder ver el estado y el momento de liberación desde esta reserva.',
-          nextActor: 'guest',
-          nextActorLabel: 'Huésped',
-          nextStepLabel: 'Confirmar llegada',
+          nextActor: 'none',
+          nextActorLabel: 'Ambos',
+          nextStepLabel: 'Coordinar llegada',
         };
       }
 
@@ -184,10 +271,11 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
         modelLabel,
         statusLabel: 'Seña en custodia',
         description: 'La seña se mantiene protegida hasta tu llegada.',
-        supportText: 'Si surge un problema al llegar, podés reportarlo desde la app.',
-        nextActor: 'guest',
-        nextActorLabel: 'Huésped',
-        nextStepLabel: 'Confirmar llegada',
+        supportText: 'Próximo paso: coordiná horario de llegada con el anfitrión.',
+        trackingHint: 'Si surge un problema al llegar, podés reportarlo desde la app.',
+        nextActor: 'none',
+        nextActorLabel: 'Ambos',
+        nextStepLabel: 'Coordinar llegada',
       };
     case 'protected-deposit-review':
       return {

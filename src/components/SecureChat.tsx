@@ -10,7 +10,7 @@ import {
 import { ReportModal } from './ReportModal';
 import { useAuth } from '../hooks/useAuth';
 import { type ReservationRequestContext } from '../types';
-import { getReservationFlowCopy } from '../lib/reservationFlow';
+import { getReservationFlowCopy, getReservationFlowMilestones, type ReservationFlowMilestoneKey, type ReservationFlowMilestoneState } from '../lib/reservationFlow';
 
 const formatRequestDate = (value?: string) => {
   if (!value) {
@@ -41,6 +41,94 @@ const getNightCount = (startDate?: string, endDate?: string) => {
   const end = new Date(Date.UTC(endYear, endMonth - 1, endDay));
 
   return Math.max(0, Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
+};
+
+const REQUEST_RESPONSE_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+const parseTimestampValue = (value?: string | null) => {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+const isSameLocalDay = (left: Date, right: Date) => (
+  left.getFullYear() === right.getFullYear()
+  && left.getMonth() === right.getMonth()
+  && left.getDate() === right.getDate()
+);
+
+const formatDeadlineLabel = (deadline: Date) => {
+  const now = new Date();
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const timeLabel = deadline.toLocaleTimeString('es-AR', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
+  if (isSameLocalDay(deadline, now)) {
+    return `hoy a las ${timeLabel}`;
+  }
+
+  if (isSameLocalDay(deadline, tomorrow)) {
+    return `mañana a las ${timeLabel}`;
+  }
+
+  return `${deadline.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })} a las ${timeLabel}`;
+};
+
+const getRequestDeadline = (requestCreatedAt?: string) => {
+  const requestCreatedAtDate = parseTimestampValue(requestCreatedAt);
+
+  if (!requestCreatedAtDate) {
+    return null;
+  }
+
+  return new Date(requestCreatedAtDate.getTime() + REQUEST_RESPONSE_WINDOW_MS);
+};
+
+const getFlowMilestoneIcon = (key: ReservationFlowMilestoneKey, mode: ReservationRequestContext['mode']) => {
+  if (key === 'request') {
+    return Icons.MessageSquare;
+  }
+
+  if (key === 'accepted') {
+    return Icons.Check;
+  }
+
+  if (key === 'deposit') {
+    return mode === 'protected' ? Icons.ShieldCheck : Icons.Clock;
+  }
+
+  return Icons.CheckCircle2;
+};
+
+const getFlowMilestoneClasses = (state: ReservationFlowMilestoneState) => {
+  if (state === 'completed') {
+    return 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-900/20 dark:text-emerald-300';
+  }
+
+  if (state === 'current') {
+    return 'border-brand/20 bg-brand/10 text-brand dark:border-brand/25 dark:bg-brand/15 dark:text-brand-light';
+  }
+
+  return 'border-slate-200 bg-slate-50 text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400';
+};
+
+const getFlowMilestoneStateLabel = (state: ReservationFlowMilestoneState) => {
+  if (state === 'completed') {
+    return 'Hecho';
+  }
+
+  if (state === 'current') {
+    return 'Ahora';
+  }
+
+  return 'Sigue';
 };
 
 const getConversationRequestStatus = (conversation: Conversation | null) => {
@@ -78,6 +166,8 @@ const getActiveRequestContext = (
   const endDate = activeConversation.requestEndDate || activeConversation.endDate;
   const guests = Number(activeConversation.requestGuests ?? activeConversation.guests) || 1;
   const totalPrice = Number(activeConversation.requestTotalPrice ?? activeConversation.totalPrice) || 0;
+  const requestCreatedAt = activeConversation.requestCreatedAt
+    || (initialConversationId && activeConversation.id === initialConversationId ? initialRequestContext?.requestCreatedAt : undefined);
 
   if (requestMode && startDate && endDate) {
     const nights = getNightCount(startDate, endDate);
@@ -93,6 +183,7 @@ const getActiveRequestContext = (
       nights,
       totalPrice,
       mode: requestMode,
+      requestCreatedAt,
       requestStatus,
       depositStatus: activeConversation.depositStatus,
       cancellationActor: activeConversation.cancellationActor,
@@ -104,6 +195,7 @@ const getActiveRequestContext = (
   if (initialConversationId && activeConversation.id === initialConversationId && initialRequestContext) {
     return {
       ...initialRequestContext,
+      requestCreatedAt: initialRequestContext.requestCreatedAt,
       requestStatus: initialRequestContext.requestStatus ?? 'pending',
       depositStatus: initialRequestContext.depositStatus,
       cancellationActor: initialRequestContext.cancellationActor,
@@ -532,13 +624,69 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
   const requestHeading = flowCopy?.statusLabel ?? null;
   const requestDescription = flowCopy?.description ?? 'Dejá por acá fechas, montos y cambios importantes para que la conversación quede clara.';
   const requestGuidance = flowCopy?.supportText ?? null;
-  const canAcceptRequest = Boolean(isHostConversation && flowCopy?.stage === 'request-pending');
+  const flowMilestones = activeRequestContext
+    ? getReservationFlowMilestones({
+        mode: activeRequestContext.mode,
+        requestStatus: activeRequestContext.requestStatus,
+        bookingStatus: activeRequestContext.bookingStatus,
+        depositStatus: activeRequestContext.depositStatus,
+        cancellationActor: activeRequestContext.cancellationActor,
+        viewerRole: isTenantConversation ? 'guest' : 'host',
+      })
+    : [];
+  const requestDeadline = flowCopy?.stage === 'request-pending'
+    ? getRequestDeadline(activeRequestContext?.requestCreatedAt ?? activeConv?.requestCreatedAt)
+    : null;
+  const isRequestExpired = Boolean(requestDeadline && Date.now() > requestDeadline.getTime());
+  const requestCreatedAtDate = parseTimestampValue(activeRequestContext?.requestCreatedAt ?? activeConv?.requestCreatedAt);
+  const counterpartyId = user && activeConv
+    ? user.id === activeConv.tenant_id
+      ? activeConv.host_id
+      : activeConv.tenant_id
+    : null;
+  const hasCounterpartyReplyAfterRequest = Boolean(
+    requestCreatedAtDate
+    && counterpartyId
+    && messages.some((message) => {
+      if (message.is_system || message.sender_id !== counterpartyId) {
+        return false;
+      }
+
+      const messageCreatedAt = parseTimestampValue(message.created_at);
+      return Boolean(messageCreatedAt && messageCreatedAt.getTime() >= requestCreatedAtDate.getTime());
+    }),
+  );
+  const requestDeadlineMessage = flowCopy?.stage === 'request-pending' && requestDeadline
+    ? isTenantConversation
+      ? isRequestExpired
+        ? `El plazo de respuesta terminó ${formatDeadlineLabel(requestDeadline)}.`
+        : `El anfitrión tiene hasta ${formatDeadlineLabel(requestDeadline)} para responder.`
+      : isRequestExpired
+        ? `Esta solicitud venció ${formatDeadlineLabel(requestDeadline)}.`
+        : `Respondé antes de ${formatDeadlineLabel(requestDeadline)} para que no se venza.`
+    : null;
+  const noResponseMessage = isTenantConversation && flowCopy?.stage === 'request-pending' && isRequestExpired && !hasCounterpartyReplyAfterRequest
+    ? 'Todavía no hubo respuesta. Podés enviar otro mensaje o ver otras opciones.'
+    : null;
+  const canAcceptRequest = Boolean(isHostConversation && flowCopy?.stage === 'request-pending' && !isRequestExpired);
   const canReportDirectDeposit = Boolean(isTenantConversation && activeRequestContext?.mode === 'direct' && flowCopy?.stage === 'request-accepted');
   const canConfirmDirectDeposit = Boolean(isHostConversation && activeRequestContext?.mode === 'direct' && flowCopy?.stage === 'direct-deposit-reported');
   const canPayProtectedDeposit = Boolean(isTenantConversation && activeRequestContext?.mode === 'protected' && flowCopy?.stage === 'request-accepted' && activeRequestContext.bookingId);
   const canConfirmArrival = Boolean(isTenantConversation && activeRequestContext?.mode === 'protected' && flowCopy?.stage === 'protected-deposit-held' && activeRequestContext.bookingId);
   const canReportArrivalProblem = Boolean(isTenantConversation && activeRequestContext?.mode === 'protected' && flowCopy?.stage === 'protected-deposit-held' && activeRequestContext.bookingId);
-  const requestStatusTone = flowCopy?.stage === 'reservation-confirmed' || flowCopy?.stage === 'protected-deposit-released'
+  const canCoordinateArrival = Boolean(
+    activeRequestContext
+    && (flowCopy?.stage === 'request-accepted'
+      || flowCopy?.stage === 'direct-deposit-reported'
+      || flowCopy?.stage === 'protected-deposit-held'
+      || flowCopy?.stage === 'reservation-confirmed'),
+  );
+  const arrivalCoordinationDraft = isTenantConversation
+    ? '¿Qué horario de llegada te queda mejor?'
+    : 'Si querés, definimos ahora el horario de llegada.';
+  const requestStatusTone = isRequestExpired
+    ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300'
+    : flowCopy?.stage === 'reservation-confirmed' || flowCopy?.stage === 'protected-deposit-released'
     ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
     : flowCopy?.stage === 'host-cancelled'
       ? 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300'
@@ -549,7 +697,9 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
     : flowCopy?.stage === 'request-accepted' || flowCopy?.stage === 'protected-deposit-held'
       ? 'bg-brand/10 text-brand'
       : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300';
-  const requestStatusIcon = flowCopy?.stage === 'reservation-confirmed' || flowCopy?.stage === 'protected-deposit-released'
+  const requestStatusIcon = isRequestExpired
+    ? <Icons.Clock className="h-3.5 w-3.5" />
+    : flowCopy?.stage === 'reservation-confirmed' || flowCopy?.stage === 'protected-deposit-released'
     ? <Icons.CheckCircle2 className="h-3.5 w-3.5" />
     : flowCopy?.stage === 'host-cancelled' || flowCopy?.stage === 'guest-cancelled'
       ? <Icons.AlertTriangle className="h-3.5 w-3.5" />
@@ -564,6 +714,10 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
     ? 'El chat sigue disponible por si necesitás dejar asentado cómo cierran esta cancelación.'
     : flowCopy?.stage === 'protected-deposit-review' || flowCopy?.stage === 'protected-no-show-pending'
       ? 'El chat sigue activo para dejar contexto mientras la plataforma revisa este punto.'
+      : flowCopy?.stage === 'protected-deposit-held' || flowCopy?.stage === 'reservation-confirmed'
+        ? isTenantConversation
+          ? 'Próximo paso: coordiná horario de llegada con el anfitrión.'
+          : 'Próximo paso: coordiná horario de llegada con el huésped.'
       : requestAccepted
         ? 'Usá este chat para cerrar horarios, ingreso y cualquier ajuste final sin perder el contexto de la solicitud.'
         : 'Dejá por acá fechas, montos y cambios importantes. Si después necesitás revisar algo, queda todo mucho más claro.';
@@ -703,7 +857,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                               className="inline-flex items-center justify-center gap-2 rounded-2xl bg-brand px-4 py-3 text-sm font-semibold text-white shadow-[0_18px_38px_-28px_rgba(67,56,202,0.5)] transition-transform hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-70"
                             >
                               {processingFlowAction === 'report-direct-deposit' ? <Icons.Loader2 className="h-4 w-4 animate-spin" /> : <Icons.MessageSquare className="h-4 w-4" />}
-                              <span>{processingFlowAction === 'report-direct-deposit' ? 'Informando...' : 'Ya envié la seña'}</span>
+                              <span>{processingFlowAction === 'report-direct-deposit' ? 'Confirmando...' : 'Confirmar seña'}</span>
                             </button>
                           ) : null}
                           {canConfirmDirectDeposit ? (
@@ -750,8 +904,42 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                               <span>{processingFlowAction === 'report-arrival-problem' ? 'Informando...' : 'Reportar problema'}</span>
                             </button>
                           ) : null}
+                          {canCoordinateArrival ? (
+                            <button
+                              type="button"
+                              onClick={() => setInputText(arrivalCoordinationDraft)}
+                              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition-transform hover:-translate-y-px hover:border-brand/30 hover:text-brand dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                            >
+                              <Icons.Calendar className="h-4 w-4" />
+                              <span>Coordinar llegada</span>
+                            </button>
+                          ) : null}
+                          {isHostConversation && flowCopy?.stage === 'request-pending' && isRequestExpired ? (
+                            <span className="inline-flex items-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700 dark:border-amber-900/30 dark:bg-amber-900/20 dark:text-amber-300">
+                              <Icons.Clock className="h-4 w-4" />
+                              <span>Solicitud vencida</span>
+                            </span>
+                          ) : null}
                         </div>
                       </div>
+
+                      {flowMilestones.length > 0 ? (
+                        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                          {flowMilestones.map((milestone) => {
+                            const MilestoneIcon = getFlowMilestoneIcon(milestone.key, activeRequestContext.mode);
+
+                            return (
+                              <div key={milestone.key} className={cn('rounded-2xl border px-3 py-3 text-sm', getFlowMilestoneClasses(milestone.state))}>
+                                <div className="flex items-center gap-2">
+                                  <MilestoneIcon className="h-4 w-4" />
+                                  <p className="text-[10px] font-black uppercase tracking-[0.14em]">{getFlowMilestoneStateLabel(milestone.state)}</p>
+                                </div>
+                                <p className="mt-2 font-semibold">{milestone.label}</p>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : null}
 
                       <div className="grid gap-2 md:grid-cols-3">
                         <div className="rounded-2xl bg-slate-50 px-3 py-3 text-sm dark:bg-slate-900">
@@ -793,6 +981,20 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                         <div className="flex gap-3 rounded-[24px] border border-slate-200/80 bg-slate-50 px-4 py-3 text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
                           <Icons.Info className="h-4 w-4 shrink-0 text-brand" />
                           <p className="leading-5">{flowCopy.directDepositHint}</p>
+                        </div>
+                      ) : null}
+
+                      {requestDeadlineMessage ? (
+                        <div className="flex gap-3 rounded-[24px] border border-slate-200/80 bg-slate-50 px-4 py-3 text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
+                          <Icons.Clock className="h-4 w-4 shrink-0 text-brand" />
+                          <p className="leading-5">{requestDeadlineMessage}</p>
+                        </div>
+                      ) : null}
+
+                      {noResponseMessage ? (
+                        <div className="flex gap-3 rounded-[24px] border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-700 dark:border-amber-900/30 dark:bg-amber-900/20 dark:text-amber-300">
+                          <Icons.AlertTriangle className="h-4 w-4 shrink-0" />
+                          <p className="leading-5">{noResponseMessage}</p>
                         </div>
                       ) : null}
 

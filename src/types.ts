@@ -133,6 +133,7 @@ export interface ReservationRequestContext {
   nights: number;
   totalPrice: number;
   mode: ReservationRequestMode;
+  requestCreatedAt?: string;
   requestStatus?: ReservationRequestStatus;
   depositStatus?: ReservationDepositStatus;
   cancellationActor?: ReservationCancellationActor;
@@ -183,6 +184,7 @@ export interface Conversation {
   totalPrice?: number;
   requestMode?: ReservationRequestMode;
   requestStatus?: ReservationRequestStatus;
+  requestCreatedAt?: string;
   depositStatus?: ReservationDepositStatus;
   cancellationActor?: ReservationCancellationActor;
   requestStartDate?: string;

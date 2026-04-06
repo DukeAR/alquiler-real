@@ -12,7 +12,7 @@ import { Button } from './ui/Button';
 import { LoadingState } from './LoadingState';
 import { formatBookingDateOnly, formatBookingDateTime, getCancellationDeadlineFromStartDate } from '../lib/bookingDates';
 import { useUserReservations } from '../hooks/useUserReservations';
-import { getReservationFlowCopy } from '../lib/reservationFlow';
+import { getReservationFlowCopy, getReservationFlowMilestones, type ReservationFlowMilestoneKey, type ReservationFlowMilestoneState } from '../lib/reservationFlow';
 
 export const MyBookings = () => {
   const navigate = useNavigate();
@@ -129,6 +129,59 @@ export const MyBookings = () => {
     cancellationActor: booking.cancellationActor,
     viewerRole: 'guest',
   });
+
+  const getBookingMilestones = (booking: Booking) => getReservationFlowMilestones({
+    mode: booking.requestMode,
+    requestStatus: booking.requestMode === 'protected'
+      ? booking.depositStatus === 'held' || booking.depositStatus === 'released' || booking.status === 'confirmed'
+        ? 'accepted'
+        : 'pending'
+      : undefined,
+    bookingStatus: booking.status,
+    depositStatus: booking.depositStatus,
+    cancellationActor: booking.cancellationActor,
+    viewerRole: 'guest',
+  });
+
+  const getFlowMilestoneIcon = (key: ReservationFlowMilestoneKey, mode?: Booking['requestMode']) => {
+    if (key === 'request') {
+      return Icons.MessageSquare;
+    }
+
+    if (key === 'accepted') {
+      return Icons.Check;
+    }
+
+    if (key === 'deposit') {
+      return mode === 'protected' ? Icons.ShieldCheck : Icons.Clock;
+    }
+
+    return Icons.CheckCircle2;
+  };
+
+  const getFlowMilestoneClasses = (state: ReservationFlowMilestoneState) => {
+    if (state === 'completed') {
+      return 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-900/20 dark:text-emerald-300';
+    }
+
+    if (state === 'current') {
+      return 'border-brand/20 bg-brand/10 text-brand dark:border-brand/25 dark:bg-brand/15 dark:text-brand-light';
+    }
+
+    return 'border-slate-200 bg-white/80 text-slate-500 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-400';
+  };
+
+  const getFlowMilestoneStateLabel = (state: ReservationFlowMilestoneState) => {
+    if (state === 'completed') {
+      return 'Hecho';
+    }
+
+    if (state === 'current') {
+      return 'Ahora';
+    }
+
+    return 'Sigue';
+  };
 
   const updateBookingState = (nextBooking: Booking) => {
     setBookings((currentBookings) =>
@@ -276,7 +329,8 @@ export const MyBookings = () => {
             const cancellationDeadlineLabel = getCancellationDeadlineLabel(booking);
             const isCancelable = canCancelBooking(booking);
             const bookingFlow = getBookingFlow(booking);
-            const showReservationFlowPanel = Boolean(booking.requestMode && bookingFlow.stage && bookingFlow.stage !== 'request-pending' && bookingFlow.stage !== 'reservation-confirmed');
+            const bookingMilestones = getBookingMilestones(booking);
+            const showReservationFlowPanel = Boolean(booking.requestMode && bookingFlow.stage && bookingFlow.stage !== 'reservation-confirmed');
             const isPayingDeposit = processingBookingAction?.bookingId === booking.id && processingBookingAction.action === 'pay-deposit';
             const isConfirmingArrival = processingBookingAction?.bookingId === booking.id && processingBookingAction.action === 'confirm-arrival';
             const isReportingArrivalProblem = processingBookingAction?.bookingId === booking.id && processingBookingAction.action === 'report-arrival-problem';
@@ -440,6 +494,24 @@ export const MyBookings = () => {
                         ) : null}
                       </div>
 
+                      {bookingMilestones.length > 0 ? (
+                        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                          {bookingMilestones.map((milestone) => {
+                            const MilestoneIcon = getFlowMilestoneIcon(milestone.key, booking.requestMode);
+
+                            return (
+                              <div key={milestone.key} className={cn('rounded-2xl border px-3 py-3 text-sm', getFlowMilestoneClasses(milestone.state))}>
+                                <div className="flex items-center gap-2">
+                                  <MilestoneIcon className="h-4 w-4" />
+                                  <p className="text-[10px] font-black uppercase tracking-[0.14em]">{getFlowMilestoneStateLabel(milestone.state)}</p>
+                                </div>
+                                <p className="mt-2 font-semibold">{milestone.label}</p>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : null}
+
                       <div className="grid gap-2 md:grid-cols-3">
                         <div className="rounded-2xl bg-white/80 px-3 py-3 text-sm dark:bg-slate-900/70">
                           <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Estado actual</p>
@@ -459,13 +531,19 @@ export const MyBookings = () => {
                 ) : null}
 
                 {(bookingFlow.stage === 'reservation-confirmed' || (!booking.requestMode && booking.status === 'confirmed')) && (
-                  <div className="p-4 bg-brand/5 dark:bg-brand/10 rounded-2xl border border-brand/10 dark:border-brand/20 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Icons.CheckCircle2 className="w-5 h-5 text-brand" />
-                      <div>
-                        <p className="text-[10px] font-black text-brand dark:text-brand-light uppercase tracking-widest">Datos para el ingreso</p>
-                        <p className="text-xs font-bold text-slate-700/80 dark:text-slate-300/80">Código de ingreso: {booking.stay_code}</p>
+                  <div className="rounded-2xl border border-brand/10 bg-brand/5 p-4 dark:border-brand/20 dark:bg-brand/10">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <Icons.CheckCircle2 className="w-5 h-5 text-brand" />
+                        <div>
+                          <p className="text-[10px] font-black text-brand dark:text-brand-light uppercase tracking-widest">Datos para el ingreso</p>
+                          <p className="text-xs font-bold text-slate-700/80 dark:text-slate-300/80">Código de ingreso: {booking.stay_code}</p>
+                        </div>
                       </div>
+                    </div>
+                    <div className="mt-3 flex items-start gap-3 rounded-2xl border border-white/80 bg-white/80 px-3 py-3 text-xs text-slate-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-300">
+                      <Icons.Calendar className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
+                      <p className="leading-5">Próximo paso: coordiná horario de llegada con el anfitrión.</p>
                     </div>
                   </div>
                 )}

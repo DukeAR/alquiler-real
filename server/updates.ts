@@ -720,6 +720,7 @@ export const initDB = async () => {
       host_id TEXT REFERENCES users(id),
       request_mode TEXT,
       request_status TEXT DEFAULT 'pending',
+      request_created_at TIMESTAMP,
       deposit_status TEXT,
       request_start_date DATE,
       request_end_date DATE,
@@ -735,6 +736,7 @@ export const initDB = async () => {
     DO $$ BEGIN
       BEGIN ALTER TABLE conversations ADD COLUMN request_mode TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE conversations ADD COLUMN request_status TEXT DEFAULT 'pending'; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE conversations ADD COLUMN request_created_at TIMESTAMP; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE conversations ADD COLUMN deposit_status TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE conversations ADD COLUMN request_start_date DATE; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE conversations ADD COLUMN request_end_date DATE; EXCEPTION WHEN duplicate_column THEN NULL; END;

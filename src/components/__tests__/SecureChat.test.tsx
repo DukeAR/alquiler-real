@@ -107,11 +107,11 @@ describe('SecureChat', () => {
     renderChat();
 
     expect(await screen.findAllByText('Propuesta aceptada')).not.toHaveLength(0);
-    expect(screen.getByText('La propuesta ya fue aceptada. Avisá cuando hayas enviado la seña.')).toBeInTheDocument();
+    expect(screen.getByText('La propuesta ya fue aceptada. Confirmá por acá cuando hayas enviado la seña.')).toBeInTheDocument();
     expect(screen.getByText('Cuando ambos confirman, la reserva queda registrada.')).toBeInTheDocument();
-    expect(screen.getByText('Si vas a transferir una seña, verificá que coincida con quien publica.')).toBeInTheDocument();
+    expect(screen.getByText('Revisá que el titular coincida con quien publica antes de transferir.')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /Ya envié la seña/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Confirmar seña/i }));
 
     await waitFor(() => {
       expect(reportDirectDepositMock).toHaveBeenCalledWith('conv-1');
@@ -202,6 +202,7 @@ describe('SecureChat', () => {
     expect(await screen.findAllByText('Seña en custodia')).not.toHaveLength(0);
     expect(screen.getByText('La seña se mantiene protegida hasta tu llegada.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Confirmar llegada/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Coordinar llegada/i })).toBeInTheDocument();
   });
 
   test('shows the host-specific custody message when the protected deposit is already held', async () => {
@@ -228,8 +229,31 @@ describe('SecureChat', () => {
     expect(screen.getByText('La seña ya fue recibida')).toBeInTheDocument();
     expect(screen.getByText('El huésped confirmó la seña a través de la plataforma. El monto queda en custodia y se libera cuando el huésped confirma su llegada al lugar.')).toBeInTheDocument();
     expect(screen.getByText('Vas a poder ver el estado y el momento de liberación desde esta reserva.')).toBeInTheDocument();
-    expect(screen.getByText('Huésped')).toBeInTheDocument();
-    expect(screen.getByText('Confirmar llegada')).toBeInTheDocument();
+    expect(screen.getByText('Ambos')).toBeInTheDocument();
+    expect(screen.getAllByText('Coordinar llegada').length).toBeGreaterThan(0);
+  });
+
+  test('shows the 24 hour response deadline and inactivity guidance when a pending protected request expires', async () => {
+    useAuthMock.mockReturnValue({ user: { id: 'tenant-1' } });
+    fetchConversationsMock.mockResolvedValue([
+      {
+        ...baseConversation,
+        requestMode: 'protected',
+        requestStatus: 'pending',
+        requestCreatedAt: new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString(),
+        requestStartDate: '2026-05-10',
+        requestEndDate: '2026-05-13',
+        requestGuests: 2,
+        requestTotalPrice: 320000,
+      },
+    ]);
+    fetchMessagesMock.mockResolvedValue([]);
+
+    renderChat();
+
+    expect(await screen.findAllByText('Solicitud enviada')).not.toHaveLength(0);
+    expect(screen.getByText(/El plazo de respuesta terminó/i)).toBeInTheDocument();
+    expect(screen.getByText('Todavía no hubo respuesta. Podés enviar otro mensaje o ver otras opciones.')).toBeInTheDocument();
   });
 
   test('lets the guest report an arrival problem from the protected chat summary', async () => {
@@ -319,7 +343,7 @@ describe('SecureChat', () => {
     });
 
     expect(await screen.findAllByText('Propuesta aceptada')).not.toHaveLength(0);
-    expect(screen.getByText('La propuesta ya fue aceptada. Avisá cuando hayas enviado la seña.')).toBeInTheDocument();
+    expect(screen.getByText('La propuesta ya fue aceptada. Confirmá por acá cuando hayas enviado la seña.')).toBeInTheDocument();
     expect(screen.getByText('Huésped')).toBeInTheDocument();
     expect(showToastMock).toHaveBeenCalledWith(
       'Propuesta aceptada',

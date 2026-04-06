@@ -342,10 +342,16 @@ describe('PropertyDetail', () => {
     await waitFor(() => expect(screen.getByText('Casa de prueba')).toBeDefined());
 
     expect(screen.getByText('Cómo querés avanzar')).toBeDefined();
+    expect(screen.getByText('Cómo funciona esta reserva')).toBeDefined();
+    expect(screen.getByText('Enviás solicitud')).toBeDefined();
+    expect(screen.getByText('Hablás con el anfitrión')).toBeDefined();
+    expect(screen.getByText('Confirmás la seña')).toBeDefined();
+    expect(screen.getByText('Coordinás llegada')).toBeDefined();
     expect(screen.getByLabelText(/acordar directamente/i)).toBeChecked();
     expect(screen.getByLabelText(/reserva protegida/i)).not.toBeChecked();
     expect(screen.getByText('Las fechas no se bloquean y la plataforma no interviene en la seña.')).toBeDefined();
     expect(screen.getByText('Fechas, huéspedes y total quedan asentados desde ahora.')).toBeDefined();
+    expect(screen.getByText('Si elegís acuerdo directo, la seña se coordina por fuera de la app y conviene verificar al titular antes de transferir.')).toBeDefined();
   });
 
   test('smoke: sends a direct request by default and opens the contextual chat', async () => {

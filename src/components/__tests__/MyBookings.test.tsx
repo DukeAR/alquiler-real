@@ -95,6 +95,8 @@ describe('MyBookings', () => {
     fireEvent.click(await screen.findByRole('button', { name: /Ver condiciones/i }));
     fireEvent.click(screen.getByRole('button', { name: /Aceptar condiciones/i }));
 
+    expect(screen.getByText('Próximo paso: coordiná horario de llegada con el anfitrión.')).toBeInTheDocument();
+
     await waitFor(() => {
       expect(acceptContractMock).toHaveBeenCalledWith('booking-1');
     });

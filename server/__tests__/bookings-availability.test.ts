@@ -352,6 +352,36 @@ describe('Bookings and availability endpoints', () => {
     expect(res.body.requestMode).toBe('protected');
   });
 
+  test('POST /api/conversations/:id/accept-request rejects an expired request after 24 hours', async () => {
+    queryMock.mockImplementation(async (text: string) => {
+      if (text.includes('FROM conversations c') && text.includes('LEFT JOIN bookings b ON b.id = c.booking_id') && text.includes('WHERE c.id = $1') && text.includes('LIMIT 1') && !text.includes('JOIN users u_tenant')) {
+        return {
+          rows: [
+            {
+              id: 'conv-1',
+              tenant_id: 'tenant-1',
+              host_id: 'host-1',
+              booking_id: 'booking-1',
+              request_mode: 'protected',
+              request_status: 'pending',
+              request_created_at: new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString(),
+              bookingStatus: 'pending',
+            },
+          ],
+        };
+      }
+
+      throw new Error(`Unexpected query: ${text}`);
+    });
+
+    const res = await request(app)
+      .post('/api/conversations/conv-1/accept-request')
+      .set('x-test-user-id', 'host-1');
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toBe('La solicitud venció después de 24 horas sin respuesta. Pedile al huésped que mande una nueva si todavía quiere avanzar.');
+  });
+
   test('POST /api/conversations/:id/report-direct-deposit marks a direct deposit as reported', async () => {
     queryMock.mockImplementation(async (text: string, params?: unknown[]) => {
       if (text.includes('FROM conversations c') && text.includes('LEFT JOIN bookings b ON b.id = c.booking_id') && text.includes('WHERE c.id = $1') && text.includes('LIMIT 1') && !text.includes('JOIN users u_tenant')) {

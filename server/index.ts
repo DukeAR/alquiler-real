@@ -1738,6 +1738,7 @@ const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const BOOKING_TIME_ZONE = 'America/Argentina/Buenos_Aires';
 const BOOKING_DATE_OFFSET = '-03:00';
 const CANCELLATION_WINDOW_MS = 24 * 60 * 60 * 1000;
+const REQUEST_RESPONSE_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 const buildBookingContract = (params: {
   guestName: string;
@@ -1773,6 +1774,7 @@ const getEnrichedConversationById = async (conversationId: string) => {
           b.cancellation_actor as "cancellationActor",
             COALESCE(c.request_mode, b.request_mode, CASE WHEN c.booking_id IS NOT NULL THEN 'protected' ELSE NULL END) as "requestMode",
             c.request_status as "requestStatus",
+            c.request_created_at as "requestCreatedAt",
             COALESCE(c.deposit_status, b.deposit_status) as "depositStatus",
             c.request_start_date as "requestStartDate",
             c.request_end_date as "requestEndDate",
@@ -1816,6 +1818,25 @@ const normalizeDateOnlyValue = (value: unknown) => {
   }
 
   return null;
+};
+
+const parseTimestampValue = (value: unknown) => {
+  if (typeof value !== 'string' && !(value instanceof Date)) {
+    return null;
+  }
+
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+const getRequestResponseDeadline = (conversation: { request_created_at?: unknown }) => {
+  const requestCreatedAt = parseTimestampValue(conversation.request_created_at);
+
+  if (!requestCreatedAt) {
+    return null;
+  }
+
+  return new Date(requestCreatedAt.getTime() + REQUEST_RESPONSE_WINDOW_MS);
 };
 
 const insertSystemConversationMessage = async (
@@ -2520,6 +2541,7 @@ app.get('/api/conversations', async (req, res) => {
               b.cancellation_actor as "cancellationActor",
               COALESCE(c.request_mode, b.request_mode, CASE WHEN c.booking_id IS NOT NULL THEN 'protected' ELSE NULL END) as "requestMode",
               c.request_status as "requestStatus",
+              c.request_created_at as "requestCreatedAt",
               COALESCE(c.deposit_status, b.deposit_status) as "depositStatus",
               c.request_start_date as "requestStartDate",
               c.request_end_date as "requestEndDate",
@@ -2603,6 +2625,8 @@ app.post('/api/conversations', async (req, res) => {
   const requestGuests = Number.isInteger(parsedRequestGuests) && parsedRequestGuests > 0 ? parsedRequestGuests : null;
   const parsedRequestTotal = Number(req.body?.totalPrice);
   const requestTotalPrice = Number.isFinite(parsedRequestTotal) ? parsedRequestTotal : null;
+  const hasRequestContext = requestMode !== null || requestStartDate !== null || requestEndDate !== null || requestGuests !== null || requestTotalPrice !== null;
+  const requestCreatedAt = hasRequestContext ? new Date().toISOString() : null;
 
   if (!propertyId) {
     return res.status(400).json({ error: 'Elegí la propiedad antes de abrir el chat.' });
@@ -2673,14 +2697,19 @@ app.post('/api/conversations', async (req, res) => {
            SET booking_id = COALESCE($1, booking_id),
                request_mode = COALESCE($2, request_mode),
                request_status = CASE WHEN request_status = 'accepted' THEN 'accepted' ELSE COALESCE($3, request_status, 'pending') END,
+               request_created_at = CASE
+                 WHEN request_status = 'accepted' THEN request_created_at
+                 WHEN $8::timestamp IS NOT NULL THEN $8::timestamp
+                 ELSE request_created_at
+               END,
                request_start_date = COALESCE($4, request_start_date),
                request_end_date = COALESCE($5, request_end_date),
                request_guests = COALESCE($6, request_guests),
                request_total_price = COALESCE($7, request_total_price),
                updated_at = NOW()
-           WHERE id = $8
+           WHERE id = $9
            RETURNING *`,
-          [bookingId, requestMode, requestStatus, requestStartDate, requestEndDate, requestGuests, requestTotalPrice, existingConversation.id],
+          [bookingId, requestMode, requestStatus, requestStartDate, requestEndDate, requestGuests, requestTotalPrice, requestCreatedAt, existingConversation.id],
         );
 
         return res.json(updated.rows[0]);
@@ -2693,10 +2722,10 @@ app.post('/api/conversations', async (req, res) => {
     const result = await db.query(
       `INSERT INTO conversations (
          id, tenant_id, host_id, property_id, booking_id,
-         request_mode, request_status, request_start_date, request_end_date, request_guests, request_total_price
+         request_mode, request_status, request_created_at, request_start_date, request_end_date, request_guests, request_total_price
        ) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
-      [id, userId, hostId, propertyId, bookingId, requestMode, requestStatus, requestStartDate, requestEndDate, requestGuests, requestTotalPrice]
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
+      [id, userId, hostId, propertyId, bookingId, requestMode, requestStatus, requestCreatedAt, requestStartDate, requestEndDate, requestGuests, requestTotalPrice]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
@@ -2726,6 +2755,11 @@ app.post('/api/conversations/:id/accept-request', async (req, res) => {
 
     if (conversation.host_id !== userId) {
       return res.status(403).json({ error: 'Solo el anfitrión puede aceptar esta solicitud.' });
+    }
+
+    const requestResponseDeadline = getRequestResponseDeadline(conversation);
+    if (conversation.request_status !== 'accepted' && requestResponseDeadline && Date.now() > requestResponseDeadline.getTime()) {
+      return res.status(409).json({ error: 'La solicitud venció después de 24 horas sin respuesta. Pedile al huésped que mande una nueva si todavía quiere avanzar.' });
     }
 
     const effectiveRequestMode = conversation.request_mode === 'direct' || conversation.request_mode === 'protected'

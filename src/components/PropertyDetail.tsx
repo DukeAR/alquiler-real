@@ -192,6 +192,29 @@ const buildInitialRequestMessage = (requestContext: ReservationRequestContext) =
   return `Hola ${requestContext.hostName}, me interesa ${requestContext.propertyTitle} del ${dateRangeLabel} para ${guestLabel}. El total estimado me da ${formatCurrency(requestContext.totalPrice)}. Si te sirve, lo coordinamos por acá.`;
 };
 
+const RESERVATION_HOW_IT_WORKS_STEPS = [
+  {
+    title: 'Enviás solicitud',
+    detail: 'Dejás fechas, huéspedes y total para arrancar con todo claro.',
+    icon: Icons.MessageSquare,
+  },
+  {
+    title: 'Hablás con el anfitrión',
+    detail: 'Aclaran dudas, condiciones y ajustes finos dentro del chat.',
+    icon: Icons.Check,
+  },
+  {
+    title: 'Confirmás la seña',
+    detail: 'La etapa de la seña queda explícita antes de dar la reserva por cerrada.',
+    icon: Icons.ShieldCheck,
+  },
+  {
+    title: 'Coordinás llegada',
+    detail: 'Horario, ingreso y último detalle quedan en el mismo hilo.',
+    icon: Icons.Calendar,
+  },
+] as const;
+
 const getHostName = (property: PropertyDetailData) => property.host?.name || property.hostName || 'Anfitrión';
 
 const getHostTenureLabel = (property: PropertyDetailData) => {
@@ -835,10 +858,18 @@ export const PropertyDetailShell: React.FC<{
 
     try {
       await sendMessage(conversation.id, buildInitialRequestMessage(requestContext), property.hostId);
-      return { conversationId: conversation.id, initialMessageSent: true };
+      return {
+        conversationId: conversation.id,
+        initialMessageSent: true,
+        requestCreatedAt: conversation.requestCreatedAt ?? new Date().toISOString(),
+      };
     } catch (error) {
       console.error('Request message error', error);
-      return { conversationId: conversation.id, initialMessageSent: false };
+      return {
+        conversationId: conversation.id,
+        initialMessageSent: false,
+        requestCreatedAt: conversation.requestCreatedAt ?? new Date().toISOString(),
+      };
     }
   };
 
@@ -873,10 +904,10 @@ export const PropertyDetailShell: React.FC<{
     const requestContext = buildReservationRequestContext('direct');
 
     try {
-      const { conversationId, initialMessageSent } = await prepareConversationForRequest(requestContext);
+      const { conversationId, initialMessageSent, requestCreatedAt } = await prepareConversationForRequest(requestContext);
 
       resetBookingSubmitState();
-      navigateToConversation(conversationId, requestContext);
+      navigateToConversation(conversationId, { ...requestContext, requestCreatedAt });
       showToast(
         'Chat abierto para acordar',
         initialMessageSent
@@ -956,9 +987,9 @@ export const PropertyDetailShell: React.FC<{
     setAvailabilityRefreshToken((currentValue) => currentValue + 1);
 
     try {
-      const { conversationId, initialMessageSent } = await prepareConversationForRequest(requestContext, result.data.booking.id);
+      const { conversationId, initialMessageSent, requestCreatedAt } = await prepareConversationForRequest(requestContext, result.data.booking.id);
 
-      navigateToConversation(conversationId, requestContext);
+      navigateToConversation(conversationId, { ...requestContext, requestCreatedAt });
       showToast(
         'Solicitud enviada',
         initialMessageSent
@@ -1319,6 +1350,45 @@ export const PropertyDetailShell: React.FC<{
                     }}
                   />
                 </div>
+              </div>
+
+              <div className="rounded-[24px] border border-slate-200/80 bg-slate-50/80 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-950">Cómo funciona esta reserva</h3>
+                    <p className="mt-1 text-xs leading-5 text-slate-500">
+                      Un recorrido corto para saber qué pasa ahora y qué sigue después.
+                    </p>
+                  </div>
+                  <span className="inline-flex items-center rounded-full bg-white px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-slate-500 shadow-sm">
+                    4 pasos
+                  </span>
+                </div>
+
+                <div className="mt-4 grid gap-2">
+                  {RESERVATION_HOW_IT_WORKS_STEPS.map((step, index) => {
+                    const StepIcon = step.icon;
+
+                    return (
+                      <div key={step.title} className="flex items-start gap-3 rounded-[22px] border border-white/80 bg-white px-3 py-3 shadow-[0_16px_32px_-30px_rgba(15,23,42,0.2)]">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-brand/10 text-brand">
+                          <StepIcon className="h-4 w-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">Paso {index + 1}</p>
+                          <p className="mt-1 text-sm font-semibold text-slate-900">{step.title}</p>
+                          <p className="mt-1 text-xs leading-5 text-slate-500">{step.detail}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <p className="mt-3 text-xs leading-5 text-slate-500">
+                  {selectedRequestMode === 'protected'
+                    ? 'Si elegís reserva protegida, la seña se confirma desde la app y queda en custodia hasta la llegada.'
+                    : 'Si elegís acuerdo directo, la seña se coordina por fuera de la app y conviene verificar al titular antes de transferir.'}
+                </p>
               </div>
 
               <NoticeBanner
