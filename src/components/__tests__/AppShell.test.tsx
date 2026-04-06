@@ -4,7 +4,8 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { AppShell } from '../AppShell';
 
 const useAuthMock = vi.fn();
-const getFavoritesCountMock = vi.fn();
+const getUnseenFavoritesCountMock = vi.fn();
+const markFavoritesAsSeenMock = vi.fn();
 const useNotificationsMock = vi.fn();
 
 vi.mock('../../hooks/useAuth', () => ({
@@ -17,7 +18,8 @@ vi.mock('../../hooks/useNotifications', () => ({
 
 vi.mock('../../hooks/useFavorites', () => ({
   useFavorites: () => ({
-    getFavoritesCount: getFavoritesCountMock,
+    getUnseenFavoritesCount: getUnseenFavoritesCountMock,
+    markFavoritesAsSeen: markFavoritesAsSeenMock,
   }),
 }));
 
@@ -55,10 +57,11 @@ const renderShell = async () => {
 
 describe('AppShell', () => {
   beforeEach(() => {
-    getFavoritesCountMock.mockReset();
+    getUnseenFavoritesCountMock.mockReset();
+    markFavoritesAsSeenMock.mockReset();
     useAuthMock.mockReset();
     useNotificationsMock.mockReset();
-    getFavoritesCountMock.mockReturnValue(0);
+    getUnseenFavoritesCountMock.mockReturnValue(0);
     useNotificationsMock.mockReturnValue({
       status: 'logged-out',
       notifications: [],
@@ -104,6 +107,29 @@ describe('AppShell', () => {
 
     expect(screen.getAllByRole('button', { name: 'Guardados' })).not.toHaveLength(0);
     expect(screen.queryByRole('button', { name: 'Creá tu cuenta' })).not.toBeInTheDocument();
+  });
+
+  test('marks Guardados as seen when an authenticated user opens the section', async () => {
+    useAuthMock.mockReturnValue({
+      user: {
+        id: 'u1',
+        name: 'Ana',
+        email: 'ana@test.com',
+        role: 'tenant',
+      },
+      loading: false,
+      status: 'authenticated',
+      refresh: vi.fn(async () => undefined),
+    });
+    getUnseenFavoritesCountMock.mockReturnValue(2);
+
+    await renderShell();
+
+    act(() => {
+      screen.getAllByRole('button', { name: /Guardados/i })[0]?.click();
+    });
+
+    expect(markFavoritesAsSeenMock).toHaveBeenCalledTimes(1);
   });
 
   test('keeps the header neutral while auth is still loading', async () => {

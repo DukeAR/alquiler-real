@@ -27,11 +27,14 @@ describe('FavoritesView', () => {
   });
 
   test('renders the empty state when there are no favorites', () => {
+    const markFavoritesAsSeen = vi.fn();
+
     useFavoritesMock.mockReturnValue({
       favoritesMap: new Map(),
       toggleFavorite: vi.fn(),
       isFavorite: vi.fn(() => false),
       isLoading: false,
+      markFavoritesAsSeen,
       clearAllFavorites: vi.fn(),
     });
 
@@ -44,6 +47,7 @@ describe('FavoritesView', () => {
     expect(screen.getByText('Todavía no guardaste propiedades')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Explorá propiedades/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Cómo funciona/i })).toBeInTheDocument();
+    expect(markFavoritesAsSeen).toHaveBeenCalledTimes(1);
   });
 
   test('orders saved properties by real verification before the original saved order', () => {
@@ -71,6 +75,7 @@ describe('FavoritesView', () => {
       toggleFavorite: vi.fn(),
       isFavorite: vi.fn(() => true),
       isLoading: false,
+      markFavoritesAsSeen: vi.fn(),
       clearAllFavorites: vi.fn(),
     });
 
@@ -100,6 +105,7 @@ describe('FavoritesView', () => {
       toggleFavorite: toggleFavoriteMock,
       isFavorite: vi.fn(() => true),
       isLoading: false,
+      markFavoritesAsSeen: vi.fn(),
       clearAllFavorites: vi.fn(),
     });
 

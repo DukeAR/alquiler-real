@@ -75,6 +75,7 @@ describe('FavoritesView integration', () => {
       toggleFavorite: vi.fn(),
       isFavorite: vi.fn(() => true),
       isLoading: false,
+      markFavoritesAsSeen: vi.fn(),
       clearAllFavorites: vi.fn(),
     });
 

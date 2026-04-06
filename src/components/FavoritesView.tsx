@@ -23,7 +23,7 @@ const isResolvedProperty = (value: unknown): value is Property => {
 
 export const FavoritesView: React.FC = () => {
   const navigate = useNavigate();
-  const { favoritesMap, toggleFavorite, isFavorite, isLoading, clearAllFavorites } = useFavorites();
+  const { favoritesMap, toggleFavorite, isFavorite, isLoading, markFavoritesAsSeen, clearAllFavorites } = useFavorites();
   const [confirmingClear, setConfirmingClear] = useState(false);
   const [recentRemoval, setRecentRemoval] = useState<{ id: string; title: string } | null>(null);
   const removalTimeoutRef = useRef<number | null>(null);
@@ -32,6 +32,10 @@ export const FavoritesView: React.FC = () => {
   const properties = favoriteEntries.filter(isResolvedProperty);
   const sortedProperties = sortPropertiesByCatalogOrder(properties, 'verification');
   const pendingFavoritesCount = favoriteEntries.length - properties.length;
+
+  useEffect(() => {
+    markFavoritesAsSeen();
+  }, [favoritesMap, markFavoritesAsSeen]);
 
   useEffect(() => {
     return () => {

@@ -55,10 +55,13 @@ describe('NotificationsMenu', () => {
     await waitFor(() => expect(screen.getByText('No tenés notificaciones nuevas')).toBeInTheDocument());
   });
 
-  test('keeps the unread badge visible after opening the panel', () => {
+  test('requests mark-as-read when the user opens the panel with unread notifications', () => {
+    const onMarkAllAsRead = vi.fn(async () => true);
+
     renderMenu({
       status: 'ready',
       unreadCount: 1,
+      onMarkAllAsRead,
       notifications: [
         {
           id: 'n1',
@@ -75,7 +78,7 @@ describe('NotificationsMenu', () => {
     fireEvent.click(bellButton);
 
     expect(screen.getByText('Reserva confirmada')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Notificaciones, 1 nuevas' })).toBeInTheDocument();
+    expect(onMarkAllAsRead).toHaveBeenCalledTimes(1);
   });
 
   test('renders the panel as a fixed overlay so it stays above the page content', () => {
@@ -138,7 +141,7 @@ describe('NotificationsMenu', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Notificaciones, 2 nuevas' }));
 
-    fireEvent.click(screen.getByRole('button', { name: 'Marcar leídas' }));
     await waitFor(() => expect(onMarkAllAsRead).toHaveBeenCalledTimes(1));
+    expect(screen.getByRole('button', { name: 'Marcar leídas' })).toBeInTheDocument();
   });
 });

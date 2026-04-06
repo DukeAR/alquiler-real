@@ -24,6 +24,7 @@ type NavAction = {
   protected?: boolean;
   onClick?: () => void;
   badge?: number;
+  badgeLabel?: (count: number) => string;
 };
 
 const matchesPath = (pathname: string, target: string) => {
@@ -34,6 +35,10 @@ const matchesPath = (pathname: string, target: string) => {
 const getNavAriaLabel = (action: NavAction) => {
   if (!action.badge) {
     return action.label;
+  }
+
+  if (action.badgeLabel) {
+    return `${action.label}, ${action.badgeLabel(action.badge)}`;
   }
 
   return `${action.label}, ${action.badge} ${action.badge === 1 ? 'elemento guardado' : 'elementos guardados'}`;
@@ -126,7 +131,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, loading: authLoading, status: authStatus, refresh } = useAuth();
-  const { getFavoritesCount } = useFavorites();
+  const { getUnseenFavoritesCount, markFavoritesAsSeen } = useFavorites();
   const notifications = useNotifications();
   const authViewState = getResolvedAuthViewState({ user, loading: authLoading, status: authStatus });
   const isAuthenticated = authViewState === 'authenticated' && Boolean(user);
@@ -138,7 +143,8 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
     path: '/favorites',
     protected: true,
     icon: Icons.Heart,
-    badge: getFavoritesCount(),
+    badge: getUnseenFavoritesCount(),
+    badgeLabel: (count) => `${count} ${count === 1 ? 'guardado nuevo' : 'guardados nuevos'}`,
   };
 
   useSocket();
@@ -169,6 +175,10 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
     if (action.protected && authViewState !== 'authenticated') {
       await promptAuth('Iniciá sesión para entrar a esta sección.');
       return;
+    }
+
+    if (action.path === '/favorites') {
+      markFavoritesAsSeen();
     }
 
     navigate(action.path);

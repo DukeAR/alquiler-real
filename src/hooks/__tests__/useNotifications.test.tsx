@@ -30,6 +30,7 @@ const Harness = () => {
       <div data-testid="status">{notifications.status}</div>
       <div data-testid="unread">{notifications.unreadCount}</div>
       <div data-testid="error">{notifications.errorMessage || ''}</div>
+      <div data-testid="first-unread">{notifications.notifications[0] ? String(notifications.notifications[0].unread) : ''}</div>
       <button type="button" onClick={() => void notifications.loadNotifications()}>Actualizar</button>
       <button type="button" onClick={() => void notifications.markAllAsRead()}>Marcar</button>
       {notifications.notifications.map((notification) => (
@@ -141,7 +142,7 @@ describe('useNotifications', () => {
     expect(screen.getByTestId('unread')).toHaveTextContent('1');
   });
 
-  test('keeps the unread count until the backend confirms mark-as-read', async () => {
+  test('clears the unread count immediately and restores it if mark-as-read fails', async () => {
     vi.mocked(apiFetch)
       .mockResolvedValueOnce({
         ok: true,
@@ -172,11 +173,15 @@ describe('useNotifications', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Marcar' }));
 
+    expect(screen.getByTestId('unread')).toHaveTextContent('0');
+    expect(screen.getByTestId('first-unread')).toHaveTextContent('false');
+
     await waitFor(() => expect(vi.mocked(showToast)).toHaveBeenCalledTimes(1));
     expect(screen.getByTestId('unread')).toHaveTextContent('1');
+    expect(screen.getByTestId('first-unread')).toHaveTextContent('true');
   });
 
-  test('clears the unread count only after the backend confirms read-all', async () => {
+  test('clears the unread count immediately and keeps it cleared after read-all succeeds', async () => {
     vi.mocked(apiFetch)
       .mockResolvedValueOnce({
         ok: true,
@@ -207,7 +212,11 @@ describe('useNotifications', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Marcar' }));
 
+    expect(screen.getByTestId('unread')).toHaveTextContent('0');
+    expect(screen.getByTestId('first-unread')).toHaveTextContent('false');
+
     await waitFor(() => expect(screen.getByTestId('unread')).toHaveTextContent('0'));
+    expect(screen.getByTestId('first-unread')).toHaveTextContent('false');
   });
 
   test('keeps socket-driven notifications in the shared state', async () => {

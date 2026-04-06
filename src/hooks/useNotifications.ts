@@ -88,18 +88,17 @@ export const useNotifications = () => {
   const { user, loading: authLoading, status: authStatus, refresh } = useAuth();
   const [status, setStatus] = useState<NotificationStatus>(authLoading ? 'auth-loading' : user ? 'loading' : authStatus === 'error' ? 'error' : 'logged-out');
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [hasLoaded, setHasLoaded] = useState(false);
   const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false);
   const [isMarkingAllRead, setIsMarkingAllRead] = useState(false);
   const activeUserIdRef = useRef<string | null>(user?.id ?? null);
   const requestIdRef = useRef(0);
+  const unreadCount = notifications.filter((notification) => notification.unread).length;
 
   const resetState = useCallback(() => {
     requestIdRef.current += 1;
     setNotifications([]);
-    setUnreadCount(0);
     setErrorMessage(null);
     setHasLoaded(false);
     setHasAttemptedLoad(false);
@@ -182,7 +181,6 @@ export const useNotifications = () => {
 
         const nextState = parseNotificationResponse(payload);
         setNotifications(nextState.items);
-        setUnreadCount(nextState.unreadCount);
         setHasLoaded(true);
         setStatus('ready');
         setErrorMessage(null);
@@ -205,6 +203,21 @@ export const useNotifications = () => {
     }
 
     const requestUserId = user.id;
+    const unreadNotificationIds = new Set(
+      notifications
+        .filter((notification) => notification.unread)
+        .map((notification) => notification.id)
+    );
+
+    setNotifications((current) => current.map((notification) => (
+      unreadNotificationIds.has(notification.id) && notification.unread
+        ? { ...notification, unread: false }
+        : notification
+    )));
+    setStatus('ready');
+    setErrorMessage(null);
+    setHasAttemptedLoad(true);
+    setHasLoaded(true);
     setIsMarkingAllRead(true);
 
     try {
@@ -223,6 +236,9 @@ export const useNotifications = () => {
         }
 
         if (session.status !== 'authenticated' || session.user?.id !== requestUserId) {
+          setNotifications((current) => current.map((notification) => (
+            unreadNotificationIds.has(notification.id) ? { ...notification, unread: true } : notification
+          )));
           showToast('Notificaciones', DEFAULT_NOTIFICATIONS_ERROR, 'error');
           return false;
         }
@@ -237,21 +253,18 @@ export const useNotifications = () => {
         throw new Error('mark-all-read-failed');
       }
 
-      setNotifications((current) => current.map((notification) => (
-        notification.unread ? { ...notification, unread: false } : notification
-      )));
-      setUnreadCount(0);
-      setStatus('ready');
-      setErrorMessage(null);
       return true;
     } catch (error) {
+      setNotifications((current) => current.map((notification) => (
+        unreadNotificationIds.has(notification.id) ? { ...notification, unread: true } : notification
+      )));
       console.error('[useNotifications] Failed to mark notifications as read:', error);
       showToast('Notificaciones', 'No pudimos actualizar tus notificaciones. Reintentá.', 'error');
       return false;
     } finally {
       setIsMarkingAllRead(false);
     }
-  }, [isMarkingAllRead, refresh, resetState, setLoggedOutState, unreadCount, user]);
+  }, [isMarkingAllRead, notifications, refresh, resetState, setLoggedOutState, unreadCount, user]);
 
   useEffect(() => {
     const nextUserId = user?.id ?? null;
@@ -301,12 +314,6 @@ export const useNotifications = () => {
       const nextNotification = normalizeNotificationItem(detail as unknown as Record<string, unknown>, 0, true);
 
       setNotifications((current) => {
-        const alreadyPresent = current.some((item) => item.id === nextNotification.id);
-
-        if (!alreadyPresent && nextNotification.unread) {
-          setUnreadCount((count) => count + 1);
-        }
-
         return [nextNotification, ...current.filter((item) => item.id !== nextNotification.id)];
       });
 

@@ -45,6 +45,7 @@ export const NotificationsMenu: React.FC<NotificationsMenuProps> = ({
   const [panelTop, setPanelTop] = useState(72);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const wasOpenRef = useRef(false);
 
   useEffect(() => {
     setIsOpen(false);
@@ -90,6 +91,17 @@ export const NotificationsMenu: React.FC<NotificationsMenuProps> = ({
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [isOpen]);
+
+  useEffect(() => {
+    const justOpened = isOpen && !wasOpenRef.current;
+    wasOpenRef.current = isOpen;
+
+    if (!justOpened || status !== 'ready' || unreadCount === 0 || isMarkingAllRead) {
+      return;
+    }
+
+    void onMarkAllAsRead();
+  }, [isMarkingAllRead, isOpen, onMarkAllAsRead, status, unreadCount]);
 
   const handleToggle = () => {
     setIsOpen((current) => !current);

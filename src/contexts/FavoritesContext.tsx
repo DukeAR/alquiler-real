@@ -14,12 +14,53 @@ type FavoritesContextValue = {
   isFavorite: (propertyId: string) => boolean;
   getFavoriteIds: () => string[];
   getFavoritesCount: () => number;
+  getUnseenFavoritesCount: () => number;
+  markFavoritesAsSeen: () => void;
   clearAllFavorites: () => Promise<void>;
 };
 
 export const FavoritesContext = createContext<FavoritesContextValue | null>(null);
 
 const PENDING_KEY = 'pendingFavoritesOps_v1';
+const SEEN_FAVORITES_KEY_PREFIX = 'seenFavorites_v1';
+
+const getSeenFavoritesKey = (userId: string) => `${SEEN_FAVORITES_KEY_PREFIX}:${userId}`;
+
+const loadSeenFavoriteIds = (userId: string): string[] | null => {
+  try {
+    const raw = localStorage.getItem(getSeenFavoritesKey(userId));
+    if (!raw) {
+      return null;
+    }
+
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((value): value is string => typeof value === 'string') : null;
+  } catch (err) {
+    return null;
+  }
+};
+
+const saveSeenFavoriteIds = (userId: string, ids: Iterable<string>) => {
+  try {
+    localStorage.setItem(getSeenFavoritesKey(userId), JSON.stringify(Array.from(new Set(ids))));
+  } catch (err) {
+    /* noop */
+  }
+};
+
+const areSetsEqual = (left: Set<string>, right: Set<string>) => {
+  if (left.size !== right.size) {
+    return false;
+  }
+
+  for (const value of left) {
+    if (!right.has(value)) {
+      return false;
+    }
+  }
+
+  return true;
+};
 
 const loadPending = (): Array<any> => {
   try {
@@ -35,13 +76,56 @@ const savePending = (ops: Array<any>) => {
 export const FavoritesProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading: authLoading } = useAuth();
   const [favoritesMap, setFavoritesMap] = useState<Map<string, PropertyObject>>(new Map());
+  const [seenFavoriteIds, setSeenFavoriteIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const syncingRef = useRef(false);
+  const activeUserIdRef = useRef<string | null>(user?.id ?? null);
 
   const openLoginModal = useCallback((message: string) => {
     showToast('Necesitás iniciar sesión', message, 'warning');
     void import('../lib/modal').then((module) => module.showLoginModal());
   }, []);
+
+  const replaceSeenFavoriteIds = useCallback((nextIds: Iterable<string>) => {
+    if (!user?.id) {
+      setSeenFavoriteIds(new Set());
+      return;
+    }
+
+    const nextSeenFavoriteIds = new Set(nextIds);
+    saveSeenFavoriteIds(user.id, nextSeenFavoriteIds);
+    setSeenFavoriteIds(nextSeenFavoriteIds);
+  }, [user?.id]);
+
+  const removeSeenFavoriteId = useCallback((propertyId: string) => {
+    if (!user?.id) {
+      return;
+    }
+
+    setSeenFavoriteIds((current) => {
+      if (!current.has(propertyId)) {
+        return current;
+      }
+
+      const nextSeenFavoriteIds = new Set(current);
+      nextSeenFavoriteIds.delete(propertyId);
+      saveSeenFavoriteIds(user.id, nextSeenFavoriteIds);
+      return nextSeenFavoriteIds;
+    });
+  }, [user?.id]);
+
+  useEffect(() => {
+    const nextUserId = user?.id ?? null;
+
+    if (activeUserIdRef.current === nextUserId) {
+      return;
+    }
+
+    activeUserIdRef.current = nextUserId;
+    setFavoritesMap(new Map());
+    setSeenFavoriteIds(new Set());
+    setIsLoading(Boolean(nextUserId));
+  }, [user?.id]);
 
   // Load favorites (full objects) from backend
   useEffect(() => {
@@ -53,17 +137,20 @@ export const FavoritesProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     if (!user?.id) {
       setFavoritesMap(new Map());
+      setSeenFavoriteIds(new Set());
       setIsLoading(false);
       return () => { cancelled = true; };
     }
 
     (async () => {
+      const requestUserId = user.id;
       setIsLoading(true);
       try {
         const res = await apiFetch('/api/favorites');
         if (res.status === 401) {
           if (!cancelled) {
             setFavoritesMap(new Map());
+            setSeenFavoriteIds(new Set());
           }
           return;
         }
@@ -72,7 +159,14 @@ export const FavoritesProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         const favorites = Array.isArray(data) ? data : [];
         const m = new Map<string, PropertyObject>();
         favorites.forEach((p: any) => { if (p?.id) m.set(p.id, p); });
+        const storedSeenFavoriteIds = loadSeenFavoriteIds(requestUserId);
+        const nextSeenFavoriteIds = storedSeenFavoriteIds
+          ? new Set(storedSeenFavoriteIds.filter((propertyId) => m.has(propertyId)))
+          : new Set(m.keys());
+
         setFavoritesMap(m);
+        saveSeenFavoriteIds(requestUserId, nextSeenFavoriteIds);
+        setSeenFavoriteIds(nextSeenFavoriteIds);
       } catch (err) {
         console.error('[FavoritesProvider] Error loading favorites', err);
         showToast('Error', 'No pudimos cargar tus guardados.', 'error');
@@ -119,6 +213,7 @@ export const FavoritesProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               copy.delete(op.propertyId);
               return copy;
             });
+            removeSeenFavoriteId(op.propertyId);
           } else if (op.action === 'clear') {
             const res = await apiFetch('/api/favorites', { method: 'DELETE' });
             if (res.status === 401) {
@@ -127,6 +222,7 @@ export const FavoritesProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             }
             if (!res.ok) throw new Error('server');
             setFavoritesMap(new Map());
+            replaceSeenFavoriteIds([]);
           }
         } catch (err) {
           // keep op for later
@@ -137,7 +233,7 @@ export const FavoritesProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     } finally {
       syncingRef.current = false;
     }
-  }, [openLoginModal, user?.id]);
+  }, [openLoginModal, removeSeenFavoriteId, replaceSeenFavoriteIds, user?.id]);
 
   useEffect(() => {
     if (!user?.id) {
@@ -157,6 +253,27 @@ export const FavoritesProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const getFavoriteIds = useCallback(() => Array.from(favoritesMap.keys()), [favoritesMap]);
   const getFavoritesCount = useCallback(() => favoritesMap.size, [favoritesMap]);
+  const getUnseenFavoritesCount = useCallback(() => {
+    let unseenCount = 0;
+
+    favoritesMap.forEach((_, propertyId) => {
+      if (!seenFavoriteIds.has(propertyId)) {
+        unseenCount += 1;
+      }
+    });
+
+    return unseenCount;
+  }, [favoritesMap, seenFavoriteIds]);
+
+  const markFavoritesAsSeen = useCallback(() => {
+    if (!user?.id) {
+      return;
+    }
+
+    const nextSeenFavoriteIds = new Set(favoritesMap.keys());
+    saveSeenFavoriteIds(user.id, nextSeenFavoriteIds);
+    setSeenFavoriteIds((current) => (areSetsEqual(current, nextSeenFavoriteIds) ? current : nextSeenFavoriteIds));
+  }, [favoritesMap, user?.id]);
 
   const enqueueOp = (op: any) => {
     const ops = loadPending();
@@ -190,6 +307,7 @@ export const FavoritesProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           return 'unchanged';
         }
         if (!res.ok) throw new Error('server');
+        removeSeenFavoriteId(propertyId);
         showToast('Guardados', 'Quitamos la propiedad de tus guardados.', 'success');
         return 'removed';
       } catch (err) {
@@ -234,7 +352,7 @@ export const FavoritesProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         return 'pending-add';
       }
     }
-  }, [favoritesMap, openLoginModal, user?.id]);
+  }, [favoritesMap, openLoginModal, removeSeenFavoriteId, user?.id]);
 
   const clearAllFavorites = useCallback(async () => {
     if (!user?.id) {
@@ -252,6 +370,7 @@ export const FavoritesProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         return;
       }
       if (!res.ok) throw new Error('server');
+      replaceSeenFavoriteIds([]);
       showToast('Guardados', 'Ya vaciamos tus guardados.', 'success');
     } catch (err) {
       console.error('[FavoritesProvider] clearAll error', err);
@@ -259,10 +378,10 @@ export const FavoritesProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       enqueueOp({ action: 'clear', ts: Date.now() });
       showToast('Guardados', 'No pudimos vaciar tus guardados ahora. Lo vamos a reintentar cuando recuperes conexión.', 'error');
     }
-  }, [favoritesMap, openLoginModal, user?.id]);
+  }, [favoritesMap, openLoginModal, replaceSeenFavoriteIds, user?.id]);
 
   return (
-    <FavoritesContext.Provider value={{ favoritesMap, isLoading, toggleFavorite, isFavorite, getFavoriteIds, getFavoritesCount, clearAllFavorites }}>
+    <FavoritesContext.Provider value={{ favoritesMap, isLoading, toggleFavorite, isFavorite, getFavoriteIds, getFavoritesCount, getUnseenFavoritesCount, markFavoritesAsSeen, clearAllFavorites }}>
       {children}
     </FavoritesContext.Provider>
   );
