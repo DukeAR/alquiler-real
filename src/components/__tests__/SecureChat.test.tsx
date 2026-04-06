@@ -7,6 +7,10 @@ const fetchConversationsMock = vi.fn();
 const fetchMessagesMock = vi.fn();
 const sendMessageMock = vi.fn();
 const acceptConversationRequestMock = vi.fn();
+const reportDirectDepositMock = vi.fn();
+const confirmDirectDepositMock = vi.fn();
+const payProtectedDepositMock = vi.fn();
+const confirmArrivalMock = vi.fn();
 const showToastMock = vi.fn();
 
 vi.mock('../../hooks/useAuth', () => ({
@@ -18,6 +22,10 @@ vi.mock('../../services/geminiService', () => ({
   fetchMessages: (...args: unknown[]) => fetchMessagesMock(...args),
   sendMessage: (...args: unknown[]) => sendMessageMock(...args),
   acceptConversationRequest: (...args: unknown[]) => acceptConversationRequestMock(...args),
+  reportDirectDeposit: (...args: unknown[]) => reportDirectDepositMock(...args),
+  confirmDirectDeposit: (...args: unknown[]) => confirmDirectDepositMock(...args),
+  payProtectedDeposit: (...args: unknown[]) => payProtectedDepositMock(...args),
+  confirmArrival: (...args: unknown[]) => confirmArrivalMock(...args),
 }));
 
 vi.mock('../../lib/toast', () => ({
@@ -61,10 +69,14 @@ describe('SecureChat', () => {
     fetchMessagesMock.mockReset();
     sendMessageMock.mockReset();
     acceptConversationRequestMock.mockReset();
+    reportDirectDepositMock.mockReset();
+    confirmDirectDepositMock.mockReset();
+    payProtectedDepositMock.mockReset();
+    confirmArrivalMock.mockReset();
     showToastMock.mockReset();
   });
 
-  test('shows the accepted direct request summary without protected actions', async () => {
+  test('lets the guest report a direct deposit from the chat summary', async () => {
     useAuthMock.mockReturnValue({ user: { id: 'tenant-1' } });
     fetchConversationsMock.mockResolvedValue([
       {
@@ -78,19 +90,40 @@ describe('SecureChat', () => {
       },
     ]);
     fetchMessagesMock.mockResolvedValue([]);
+    reportDirectDepositMock.mockResolvedValue({
+      ...baseConversation,
+      requestMode: 'direct',
+      requestStatus: 'accepted',
+      depositStatus: 'reported',
+      requestStartDate: '2026-05-10',
+      requestEndDate: '2026-05-13',
+      requestGuests: 2,
+      requestTotalPrice: 320000,
+    });
 
     renderChat();
 
-    expect(await screen.findByText('Solicitud aceptada')).toBeInTheDocument();
-    expect(screen.getAllByText('Casa de prueba').length).toBeGreaterThan(0);
-    expect(screen.getByText('Coordiná los detalles con el anfitrión y definan cómo avanzar.')).toBeInTheDocument();
-    expect(screen.getByText('Ya podés coordinar los últimos detalles con el anfitrión.')).toBeInTheDocument();
-    expect(screen.getByText(/2 huéspedes/i)).toBeInTheDocument();
+    expect(await screen.findAllByText('Solicitud aceptada')).not.toHaveLength(0);
+    expect(screen.getByText('La solicitud ya fue aceptada. Avisá cuando hayas enviado la seña.')).toBeInTheDocument();
+    expect(screen.getByText('Cuando ambos confirman, la reserva queda registrada.')).toBeInTheDocument();
     expect(screen.getByText('Si vas a transferir una seña, verificá que coincida con quien publica.')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Continuar con reserva protegida/i })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Ya envié la seña/i }));
+
+    await waitFor(() => {
+      expect(reportDirectDepositMock).toHaveBeenCalledWith('conv-1');
+    });
+
+    expect(await screen.findAllByText('Seña informada')).not.toHaveLength(0);
+    expect(screen.getAllByText('Confirmar recepción')).not.toHaveLength(0);
+    expect(showToastMock).toHaveBeenCalledWith(
+      'Seña informada',
+      'El anfitrión ya ve que informaste la seña y puede confirmar la recepción.',
+      'success',
+    );
   });
 
-  test('shows the protected continuation CTA after an accepted protected request', async () => {
+  test('advances a protected reservation from payment to custody inside the chat summary', async () => {
     useAuthMock.mockReturnValue({ user: { id: 'tenant-1' } });
     fetchConversationsMock.mockResolvedValue([
       {
@@ -106,14 +139,26 @@ describe('SecureChat', () => {
       },
     ]);
     fetchMessagesMock.mockResolvedValue([]);
+    payProtectedDepositMock.mockResolvedValue({
+      id: 'booking-1',
+      status: 'confirmed',
+      requestMode: 'protected',
+      depositStatus: 'held',
+    });
 
     renderChat();
 
     expect(await screen.findByText('Podés avanzar con una reserva protegida.')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /Continuar con reserva protegida/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Pagar seña/i }));
 
-    expect(await screen.findByText('Ruta Mis reservas')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(payProtectedDepositMock).toHaveBeenCalledWith('booking-1');
+    });
+
+    expect(await screen.findAllByText('Seña en custodia')).not.toHaveLength(0);
+    expect(screen.getByText('La seña se mantiene protegida hasta tu llegada.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Confirmar llegada/i })).toBeInTheDocument();
   });
 
   test('lets the host accept a pending request and updates the chat context', async () => {
@@ -137,7 +182,7 @@ describe('SecureChat', () => {
           conversation_id: 'conv-1',
           sender_id: 'host-1',
           receiver_id: 'tenant-1',
-          content: 'Ya podés coordinar los últimos detalles con el anfitrión.',
+          content: 'La solicitud ya fue aceptada. Revisá arriba cómo seguir.',
           is_system: true,
           created_at: '2026-04-06T12:10:00.000Z',
         },
@@ -160,10 +205,56 @@ describe('SecureChat', () => {
       expect(acceptConversationRequestMock).toHaveBeenCalledWith('conv-1');
     });
 
-    expect(await screen.findByText('Solicitud aceptada')).toBeInTheDocument();
+    expect(await screen.findAllByText('Solicitud aceptada')).not.toHaveLength(0);
+    expect(screen.getByText('La solicitud ya fue aceptada. Avisá cuando hayas enviado la seña.')).toBeInTheDocument();
+    expect(screen.getByText('Huésped')).toBeInTheDocument();
     expect(showToastMock).toHaveBeenCalledWith(
       'Solicitud aceptada',
       'La solicitud ya quedó aceptada y el chat pasó al cierre de detalles.',
+      'success',
+    );
+  });
+
+  test('lets the host confirm a reported direct deposit from the chat summary', async () => {
+    useAuthMock.mockReturnValue({ user: { id: 'host-1' } });
+    fetchConversationsMock.mockResolvedValue([
+      {
+        ...baseConversation,
+        requestMode: 'direct',
+        requestStatus: 'accepted',
+        depositStatus: 'reported',
+        requestStartDate: '2026-05-10',
+        requestEndDate: '2026-05-13',
+        requestGuests: 2,
+        requestTotalPrice: 320000,
+      },
+    ]);
+    fetchMessagesMock.mockResolvedValue([]);
+    confirmDirectDepositMock.mockResolvedValue({
+      ...baseConversation,
+      booking_id: 'booking-1',
+      bookingStatus: 'confirmed',
+      requestMode: 'direct',
+      requestStatus: 'accepted',
+      depositStatus: 'confirmed',
+      requestStartDate: '2026-05-10',
+      requestEndDate: '2026-05-13',
+      requestGuests: 2,
+      requestTotalPrice: 320000,
+    });
+
+    renderChat();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Confirmar recepción/i }));
+
+    await waitFor(() => {
+      expect(confirmDirectDepositMock).toHaveBeenCalledWith('conv-1');
+    });
+
+    expect(await screen.findAllByText('Reserva confirmada')).not.toHaveLength(0);
+    expect(showToastMock).toHaveBeenCalledWith(
+      'Reserva confirmada',
+      'La reserva ya quedó registrada y el chat sigue disponible para cerrar detalles.',
       'success',
     );
   });

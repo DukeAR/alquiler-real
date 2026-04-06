@@ -156,10 +156,38 @@ export async function acceptConversationRequest(conversationId: string): Promise
   });
 }
 
+export async function reportDirectDeposit(conversationId: string): Promise<Conversation> {
+  return apiJson<Conversation>(`/api/conversations/${conversationId}/report-direct-deposit`, {
+    method: 'POST'
+  });
+}
+
+export async function confirmDirectDeposit(conversationId: string): Promise<Conversation> {
+  return apiJson<Conversation>(`/api/conversations/${conversationId}/confirm-direct-deposit`, {
+    method: 'POST'
+  });
+}
+
 export async function acceptContract(bookingId: string) {
   return apiJson(`/api/bookings/${bookingId}/accept-contract`, {
     method: 'POST'
   });
+}
+
+export async function payProtectedDeposit(bookingId: string): Promise<Booking> {
+  const response = await apiJson<{ booking: Booking }>(`/api/bookings/${bookingId}/pay-deposit`, {
+    method: 'POST'
+  });
+
+  return response.booking;
+}
+
+export async function confirmArrival(bookingId: string): Promise<Booking> {
+  const response = await apiJson<{ booking: Booking }>(`/api/bookings/${bookingId}/confirm-arrival`, {
+    method: 'POST'
+  });
+
+  return response.booking;
 }
 
 export async function cancelBooking(bookingId: string) {

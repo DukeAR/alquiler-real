@@ -1322,6 +1322,7 @@ app.get('/api/host/dashboard', async (req, res) => {
           TO_CHAR(b.end_date, 'DD/MM/YYYY') as "endDate",
           COALESCE(b.guests, 1)::int as guests,
           COALESCE(b.total_price, 0)::int as "totalPrice",
+          COALESCE(c.deposit_status, b.deposit_status) as "depositStatus",
           COALESCE(b.request_mode, CASE WHEN c.booking_id IS NOT NULL THEN 'protected' ELSE 'direct' END) as "requestMode",
           b."userId",
                 guest.name as "userName", p.title as "propertyTitle"
@@ -1721,6 +1722,7 @@ type ManualAvailabilityBlock = {
 const BOOKING_SELECT_QUERY = `SELECT b.id, b."propertyId", b."userId", b.status, b.date, b.stay_code, b.verified,
   b.start_date as "startDate", b.end_date as "endDate", b.total_price as "totalPrice",
   b.guests, b.contract_accepted as "contractAccepted", b.contract_json as "contractJson",
+  COALESCE(c.deposit_status, b.deposit_status) as "depositStatus",
   COALESCE(b.request_mode, CASE WHEN c.booking_id IS NOT NULL THEN 'protected' ELSE 'direct' END) as "requestMode",
   p.title as "propertyTitle", p."imageUrl", p.location
  FROM bookings b
@@ -1733,6 +1735,57 @@ const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const BOOKING_TIME_ZONE = 'America/Argentina/Buenos_Aires';
 const BOOKING_DATE_OFFSET = '-03:00';
 const CANCELLATION_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+const buildBookingContract = (params: {
+  guestName: string;
+  hostName: string;
+  propertyTitle: string;
+  location: string;
+  startDate: string;
+  endDate: string;
+  totalPrice: number;
+}) => ({
+  guestName: params.guestName,
+  hostName: params.hostName,
+  propertyTitle: params.propertyTitle,
+  location: params.location,
+  startDate: params.startDate,
+  endDate: params.endDate,
+  totalPrice: params.totalPrice,
+  currency: 'ARS',
+  rules: [
+    'Respetar horarios de silencio: 22:00 - 08:00',
+    'No fumar dentro de la propiedad',
+    'Cuidar el mobiliario y electrodomésticos',
+  ],
+});
+
+const getEnrichedConversationById = async (conversationId: string) => {
+  const result = await db.query(
+    `SELECT c.*, 
+            u_tenant.name as "tenantName", u_host.name as "hostName",
+            p.title as "propertyTitle", p."imageUrl" as "propertyImage",
+            b.status as "bookingStatus", b.start_date as "startDate", b.end_date as "endDate",
+            b.guests, b.total_price as "totalPrice",
+            COALESCE(c.request_mode, b.request_mode, CASE WHEN c.booking_id IS NOT NULL THEN 'protected' ELSE NULL END) as "requestMode",
+            c.request_status as "requestStatus",
+            COALESCE(c.deposit_status, b.deposit_status) as "depositStatus",
+            c.request_start_date as "requestStartDate",
+            c.request_end_date as "requestEndDate",
+            c.request_guests as "requestGuests",
+            c.request_total_price as "requestTotalPrice"
+     FROM conversations c
+     JOIN users u_tenant ON c.tenant_id = u_tenant.id
+     JOIN users u_host ON c.host_id = u_host.id
+     JOIN properties p ON c.property_id = p.id
+     LEFT JOIN bookings b ON c.booking_id = b.id
+     WHERE c.id = $1
+     LIMIT 1`,
+    [conversationId],
+  );
+
+  return result.rows[0] ?? null;
+};
 
 const getFormatterPart = (parts: Intl.DateTimeFormatPart[], type: Intl.DateTimeFormatPartTypes) => (
   parts.find((part) => part.type === type)?.value ?? ''
@@ -1897,6 +1950,7 @@ const getUserBookingById = async (userId: string, bookingId: string) => {
     `SELECT b.id, b."propertyId", b."userId", b.status, b.date, b.stay_code, b.verified,
             b.start_date as "startDate", b.end_date as "endDate", b.total_price as "totalPrice",
             b.guests, b.contract_accepted as "contractAccepted", b.contract_json as "contractJson",
+            COALESCE(c.deposit_status, b.deposit_status) as "depositStatus",
             COALESCE(b.request_mode, CASE WHEN c.booking_id IS NOT NULL THEN 'protected' ELSE 'direct' END) as "requestMode",
             p.title as "propertyTitle", p."imageUrl", p.location
      FROM bookings b
@@ -2067,7 +2121,7 @@ app.post('/api/bookings', async (req, res) => {
     const bookingId = `book_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     const stay_code = Math.random().toString(36).slice(2, 8).toUpperCase();
 
-    const contract = {
+    const contract = buildBookingContract({
       guestName,
       hostName: property.hostName || 'Anfitrión',
       propertyTitle: property.title,
@@ -2075,20 +2129,14 @@ app.post('/api/bookings', async (req, res) => {
       startDate: startDate.iso,
       endDate: endDate.iso,
       totalPrice,
-      currency: 'ARS',
-      rules: [
-        'Respetar horarios de silencio: 22:00 - 08:00',
-        'No fumar dentro de la propiedad',
-        'Cuidar el mobiliario y electrodomésticos'
-      ]
-    };
+    });
 
     const insertResult = await client.query(
       `INSERT INTO bookings (id, "propertyId", "userId", status, start_date, end_date, total_price, guests, stay_code, contract_json, request_mode)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
        RETURNING id, "propertyId", "userId", status, date, stay_code, verified,
                  start_date as "startDate", end_date as "endDate", total_price as "totalPrice",
-                 guests, contract_accepted as "contractAccepted", contract_json as "contractJson", request_mode as "requestMode"`,
+                 guests, contract_accepted as "contractAccepted", contract_json as "contractJson", request_mode as "requestMode", deposit_status as "depositStatus"`,
       [bookingId, propertyId, userId, bookingStatus, startDate.iso, endDate.iso, totalPrice, guests, stay_code, JSON.stringify(contract), requestMode]
     );
 
@@ -2222,6 +2270,7 @@ app.get('/api/conversations', async (req, res) => {
               b.guests, b.total_price as "totalPrice",
               COALESCE(c.request_mode, b.request_mode, CASE WHEN c.booking_id IS NOT NULL THEN 'protected' ELSE NULL END) as "requestMode",
               c.request_status as "requestStatus",
+              COALESCE(c.deposit_status, b.deposit_status) as "depositStatus",
               c.request_start_date as "requestStartDate",
               c.request_end_date as "requestEndDate",
               c.request_guests as "requestGuests",
@@ -2438,7 +2487,7 @@ app.post('/api/conversations/:id/accept-request', async (req, res) => {
       );
     }
 
-    const acceptanceMessage = 'Ya podés coordinar los últimos detalles con el anfitrión.';
+    const acceptanceMessage = 'La solicitud ya fue aceptada. Revisá arriba cómo seguir.';
     const messageId = `msg_${Date.now()}`;
 
     await db.query(
@@ -2462,32 +2511,294 @@ app.post('/api/conversations/:id/accept-request', async (req, res) => {
       requestMode: effectiveRequestMode,
     });
 
-    const updatedConversationResult = await db.query(
-      `SELECT c.*, 
-              u_tenant.name as "tenantName", u_host.name as "hostName",
-              p.title as "propertyTitle", p."imageUrl" as "propertyImage",
-              b.status as "bookingStatus", b.start_date as "startDate", b.end_date as "endDate",
-              b.guests, b.total_price as "totalPrice",
-              COALESCE(c.request_mode, b.request_mode, CASE WHEN c.booking_id IS NOT NULL THEN 'protected' ELSE NULL END) as "requestMode",
-              c.request_status as "requestStatus",
-              c.request_start_date as "requestStartDate",
-              c.request_end_date as "requestEndDate",
-              c.request_guests as "requestGuests",
-              c.request_total_price as "requestTotalPrice"
+    return res.json(await getEnrichedConversationById(req.params.id));
+  } catch (err) {
+    console.error('Error al aceptar solicitud en conversación:', err);
+    return res.status(500).json({ error: 'No pudimos aceptar la solicitud. Intentá de nuevo.' });
+  }
+});
+
+app.post('/api/conversations/:id/report-direct-deposit', async (req, res) => {
+  const userId = req.session.userId;
+  if (!userId) return res.status(401).json({ error: AUTH_REQUIRED_ERROR });
+
+  try {
+    const conversationResult = await db.query(
+      `SELECT c.*, b.status as "bookingStatus"
        FROM conversations c
-       JOIN users u_tenant ON c.tenant_id = u_tenant.id
-       JOIN users u_host ON c.host_id = u_host.id
-       JOIN properties p ON c.property_id = p.id
-       LEFT JOIN bookings b ON c.booking_id = b.id
+       LEFT JOIN bookings b ON b.id = c.booking_id
        WHERE c.id = $1
        LIMIT 1`,
       [req.params.id],
     );
 
-    return res.json(updatedConversationResult.rows[0]);
+    const conversation = conversationResult.rows[0];
+
+    if (!conversation) {
+      return res.status(404).json({ error: 'No encontramos esa conversación.' });
+    }
+
+    if (conversation.tenant_id !== userId) {
+      return res.status(403).json({ error: 'Solo el huésped puede informar esta seña.' });
+    }
+
+    if (conversation.request_mode !== 'direct') {
+      return res.status(422).json({ error: 'Esta acción solo aplica a acuerdos directos.' });
+    }
+
+    if (conversation.request_status !== 'accepted') {
+      return res.status(422).json({ error: 'Esperá a que el anfitrión acepte la solicitud antes de informar la seña.' });
+    }
+
+    if (conversation.deposit_status === 'reported' || conversation.deposit_status === 'confirmed') {
+      return res.json(await getEnrichedConversationById(req.params.id));
+    }
+
+    await db.query(
+      `UPDATE conversations
+       SET deposit_status = 'reported', updated_at = NOW()
+       WHERE id = $1`,
+      [req.params.id],
+    );
+
+    return res.json(await getEnrichedConversationById(req.params.id));
   } catch (err) {
-    console.error('Error al aceptar solicitud en conversación:', err);
-    return res.status(500).json({ error: 'No pudimos aceptar la solicitud. Intentá de nuevo.' });
+    console.error('Error al informar la seña directa:', err);
+    return res.status(500).json({ error: 'No pudimos registrar que informaste la seña. Intentá de nuevo.' });
+  }
+});
+
+app.post('/api/conversations/:id/confirm-direct-deposit', async (req, res) => {
+  const userId = req.session.userId;
+  if (!userId) return res.status(401).json({ error: AUTH_REQUIRED_ERROR });
+
+  let client;
+
+  try {
+    client = await db.getClient();
+    await client.query('BEGIN');
+
+    const conversationResult = await client.query(
+      `SELECT c.*, p.title as "propertyTitle", p.location, p."hostName", tenant.name as "guestName"
+       FROM conversations c
+       JOIN properties p ON p.id = c.property_id
+       LEFT JOIN users tenant ON tenant.id = c.tenant_id
+       WHERE c.id = $1
+       LIMIT 1`,
+      [req.params.id],
+    );
+
+    const conversation = conversationResult.rows[0];
+
+    if (!conversation) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'No encontramos esa conversación.' });
+    }
+
+    if (conversation.host_id !== userId) {
+      await client.query('ROLLBACK');
+      return res.status(403).json({ error: 'Solo el anfitrión puede confirmar la recepción de la seña.' });
+    }
+
+    if (conversation.request_mode !== 'direct') {
+      await client.query('ROLLBACK');
+      return res.status(422).json({ error: 'Esta acción solo aplica a acuerdos directos.' });
+    }
+
+    if (conversation.request_status !== 'accepted') {
+      await client.query('ROLLBACK');
+      return res.status(422).json({ error: 'La solicitud todavía no quedó aceptada.' });
+    }
+
+    if (conversation.deposit_status === 'confirmed') {
+      await client.query('COMMIT');
+      return res.json(await getEnrichedConversationById(req.params.id));
+    }
+
+    if (conversation.deposit_status !== 'reported') {
+      await client.query('ROLLBACK');
+      return res.status(422).json({ error: 'Esperá a que el huésped informe la seña antes de confirmarla.' });
+    }
+
+    const startDate = typeof conversation.request_start_date === 'string' ? conversation.request_start_date : null;
+    const endDate = typeof conversation.request_end_date === 'string' ? conversation.request_end_date : null;
+    const guests = Number(conversation.request_guests);
+    const totalPrice = Number(conversation.request_total_price);
+
+    if (!startDate || !endDate || !Number.isInteger(guests) || guests < 1 || !Number.isFinite(totalPrice) || totalPrice <= 0) {
+      await client.query('ROLLBACK');
+      return res.status(422).json({ error: 'Faltan datos de la solicitud para registrar esta reserva.' });
+    }
+
+    await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [conversation.property_id]);
+
+    const collision = await client.query(
+      `SELECT id
+       FROM bookings
+       WHERE "propertyId" = $1
+         AND status != 'cancelled'
+         AND id <> COALESCE($4, '')
+         AND start_date < $3::date
+         AND end_date > $2::date
+       LIMIT 1`,
+      [conversation.property_id, startDate, endDate, conversation.booking_id ?? null],
+    );
+
+    if (collision.rows.length > 0) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: 'No pudimos registrar la reserva porque esas fechas ya no están disponibles.' });
+    }
+
+    const bookingId = typeof conversation.booking_id === 'string' && conversation.booking_id ? conversation.booking_id : `book_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const stayCode = Math.random().toString(36).slice(2, 8).toUpperCase();
+    const contract = buildBookingContract({
+      guestName: conversation.guestName || 'Huésped',
+      hostName: conversation.hostName || 'Anfitrión',
+      propertyTitle: conversation.propertyTitle || 'Propiedad',
+      location: conversation.location || '',
+      startDate,
+      endDate,
+      totalPrice,
+    });
+
+    if (conversation.booking_id) {
+      await client.query(
+        `UPDATE bookings
+         SET status = 'confirmed',
+             request_mode = 'direct',
+             deposit_status = 'confirmed',
+             contract_json = COALESCE(contract_json, $2)
+         WHERE id = $1`,
+        [conversation.booking_id, JSON.stringify(contract)],
+      );
+    } else {
+      await client.query(
+        `INSERT INTO bookings (id, "propertyId", "userId", status, start_date, end_date, total_price, guests, stay_code, contract_json, request_mode, deposit_status)
+         VALUES ($1, $2, $3, 'confirmed', $4, $5, $6, $7, $8, $9, 'direct', 'confirmed')`,
+        [bookingId, conversation.property_id, conversation.tenant_id, startDate, endDate, totalPrice, guests, stayCode, JSON.stringify(contract)],
+      );
+    }
+
+    await client.query(
+      `UPDATE conversations
+       SET booking_id = $1,
+           deposit_status = 'confirmed',
+           updated_at = NOW()
+       WHERE id = $2`,
+      [bookingId, req.params.id],
+    );
+
+    await client.query('COMMIT');
+
+    await logActivity(conversation.tenant_id, 'BOOKING_CREATED', {
+      propertyId: conversation.property_id,
+      startDate,
+      endDate,
+      guests,
+      totalPrice,
+      requestMode: 'direct',
+    });
+
+    return res.json(await getEnrichedConversationById(req.params.id));
+  } catch (err) {
+    if (client) {
+      await client.query('ROLLBACK').catch(() => undefined);
+    }
+
+    console.error('Error al confirmar recepción de seña directa:', err);
+    return res.status(500).json({ error: 'No pudimos confirmar la recepción de la seña. Intentá de nuevo.' });
+  } finally {
+    client?.release();
+  }
+});
+
+app.post('/api/bookings/:id/pay-deposit', async (req, res) => {
+  const userId = req.session.userId;
+  if (!userId) {
+    return sendBookingError(res, 401, 'AUTH_REQUIRED', AUTH_REQUIRED_ERROR);
+  }
+
+  try {
+    const booking = await getUserBookingById(userId, req.params.id);
+
+    if (!booking) {
+      return sendBookingError(res, 404, 'BOOKING_NOT_FOUND', 'No encontramos esa reserva.');
+    }
+
+    if (booking.requestMode !== 'protected') {
+      return sendBookingError(res, 422, 'INVALID_PAYMENT_FLOW', 'Esta acción solo aplica a reservas protegidas.');
+    }
+
+    if (booking.status !== 'confirmed') {
+      return sendBookingError(res, 422, 'BOOKING_NOT_ACCEPTED', 'Esperá a que el anfitrión acepte la solicitud antes de pagar la seña.');
+    }
+
+    if (booking.depositStatus === 'held' || booking.depositStatus === 'released') {
+      return res.json({ booking });
+    }
+
+    await db.query(
+      `UPDATE bookings
+       SET deposit_status = 'held'
+       WHERE id = $1 AND "userId" = $2`,
+      [req.params.id, userId],
+    );
+
+    await db.query(
+      `UPDATE conversations
+       SET deposit_status = 'held', updated_at = NOW()
+       WHERE booking_id = $1`,
+      [req.params.id],
+    );
+
+    const updatedBooking = await getUserBookingById(userId, req.params.id);
+    return res.json({ booking: updatedBooking });
+  } catch (err) {
+    console.error('Error al marcar la seña protegida:', err);
+    return sendBookingError(res, 500, 'BOOKING_DEPOSIT_PAYMENT_FAILED', 'No pudimos registrar el pago de la seña. Intentá de nuevo.');
+  }
+});
+
+app.post('/api/bookings/:id/confirm-arrival', async (req, res) => {
+  const userId = req.session.userId;
+  if (!userId) {
+    return sendBookingError(res, 401, 'AUTH_REQUIRED', AUTH_REQUIRED_ERROR);
+  }
+
+  try {
+    const booking = await getUserBookingById(userId, req.params.id);
+
+    if (!booking) {
+      return sendBookingError(res, 404, 'BOOKING_NOT_FOUND', 'No encontramos esa reserva.');
+    }
+
+    if (booking.requestMode !== 'protected') {
+      return sendBookingError(res, 422, 'INVALID_ARRIVAL_FLOW', 'Esta acción solo aplica a reservas protegidas.');
+    }
+
+    if (booking.depositStatus !== 'held') {
+      return sendBookingError(res, 422, 'BOOKING_NOT_IN_CUSTODY', 'Primero necesitás tener la seña en custodia para confirmar la llegada.');
+    }
+
+    await db.query(
+      `UPDATE bookings
+       SET deposit_status = 'released'
+       WHERE id = $1 AND "userId" = $2`,
+      [req.params.id, userId],
+    );
+
+    await db.query(
+      `UPDATE conversations
+       SET deposit_status = 'released', updated_at = NOW()
+       WHERE booking_id = $1`,
+      [req.params.id],
+    );
+
+    const updatedBooking = await getUserBookingById(userId, req.params.id);
+    return res.json({ booking: updatedBooking });
+  } catch (err) {
+    console.error('Error al confirmar la llegada:', err);
+    return sendBookingError(res, 500, 'BOOKING_ARRIVAL_CONFIRM_FAILED', 'No pudimos registrar la llegada. Intentá de nuevo.');
   }
 });
 

@@ -4,7 +4,7 @@ import { Icons } from './Icons';
 import { Booking } from '../types';
 import { cn } from '../lib/utils';
 import { showToast } from '../lib/toast';
-import { acceptContract, cancelBooking } from '../services/geminiService';
+import { acceptContract, cancelBooking, confirmArrival, payProtectedDeposit } from '../services/geminiService';
 import { EmptyState } from './EmptyState';
 import { ErrorState } from './ErrorState';
 import { Badge } from './ui/Badge';
@@ -12,6 +12,7 @@ import { Button } from './ui/Button';
 import { LoadingState } from './LoadingState';
 import { formatBookingDateOnly, formatBookingDateTime, getCancellationDeadlineFromStartDate } from '../lib/bookingDates';
 import { useUserReservations } from '../hooks/useUserReservations';
+import { getReservationFlowCopy } from '../lib/reservationFlow';
 
 export const MyBookings = () => {
   const navigate = useNavigate();
@@ -19,6 +20,7 @@ export const MyBookings = () => {
   const [selectedContract, setSelectedContract] = useState<any>(null);
   const [accepting, setAccepting] = useState(false);
   const [cancelingBookingId, setCancelingBookingId] = useState<string | null>(null);
+  const [processingBookingAction, setProcessingBookingAction] = useState<{ bookingId: string; action: 'pay-deposit' | 'confirm-arrival' } | null>(null);
 
   const handleAcceptContract = async (bookingId: string) => {
     setAccepting(true);
@@ -107,10 +109,61 @@ export const MyBookings = () => {
     }
   };
 
-  const isAcceptedProtectedRequest = (booking: Booking) => booking.requestMode === 'protected' && booking.status === 'confirmed';
+  const getBookingFlow = (booking: Booking) => getReservationFlowCopy({
+    mode: booking.requestMode,
+    requestStatus: booking.requestMode === 'protected'
+      ? booking.depositStatus === 'held' || booking.depositStatus === 'released' || booking.status === 'confirmed'
+        ? 'accepted'
+        : 'pending'
+      : undefined,
+    bookingStatus: booking.status,
+    depositStatus: booking.depositStatus,
+  });
+
+  const updateBookingState = (nextBooking: Booking) => {
+    setBookings((currentBookings) =>
+      currentBookings.map((currentBooking) =>
+        currentBooking.id === nextBooking.id ? { ...currentBooking, ...nextBooking } : currentBooking,
+      ),
+    );
+  };
+
+  const handlePayDeposit = async (bookingId: string) => {
+    setProcessingBookingAction({ bookingId, action: 'pay-deposit' });
+
+    try {
+      const nextBooking = await payProtectedDeposit(bookingId);
+      updateBookingState(nextBooking);
+      showToast('Seña en custodia', 'La seña ya quedó resguardada en la plataforma hasta que confirmes la llegada.', 'success');
+    } catch (err) {
+      showToast('Seña', err instanceof Error ? err.message : 'No pudimos registrar el pago de la seña.', 'error');
+    } finally {
+      setProcessingBookingAction(null);
+    }
+  };
+
+  const handleConfirmProtectedArrival = async (bookingId: string) => {
+    setProcessingBookingAction({ bookingId, action: 'confirm-arrival' });
+
+    try {
+      const nextBooking = await confirmArrival(bookingId);
+      updateBookingState(nextBooking);
+      showToast('Seña liberada', 'La llegada quedó confirmada y la seña pasó a liberación.', 'success');
+    } catch (err) {
+      showToast('Llegada', err instanceof Error ? err.message : 'No pudimos confirmar la llegada.', 'error');
+    } finally {
+      setProcessingBookingAction(null);
+    }
+  };
 
   const getStatusColor = (booking: Booking) => {
-    if (isAcceptedProtectedRequest(booking)) {
+    const flow = getBookingFlow(booking);
+
+    if (flow.stage === 'request-accepted' || flow.stage === 'protected-deposit-held') {
+      return 'brand';
+    }
+
+    if (flow.stage === 'protected-deposit-released' || flow.stage === 'reservation-confirmed') {
       return 'success';
     }
 
@@ -124,8 +177,10 @@ export const MyBookings = () => {
   };
 
   const getStatusText = (booking: Booking) => {
-    if (isAcceptedProtectedRequest(booking)) {
-      return 'Solicitud aceptada';
+    const flow = getBookingFlow(booking);
+
+    if (flow.statusLabel) {
+      return flow.statusLabel;
     }
 
     switch (booking.status) {
@@ -188,6 +243,10 @@ export const MyBookings = () => {
           bookings.map((booking) => {
             const cancellationDeadlineLabel = getCancellationDeadlineLabel(booking);
             const isCancelable = canCancelBooking(booking);
+            const bookingFlow = getBookingFlow(booking);
+            const showProtectedFlowPanel = booking.requestMode === 'protected' && bookingFlow.stage && bookingFlow.stage !== 'request-pending';
+            const isPayingDeposit = processingBookingAction?.bookingId === booking.id && processingBookingAction.action === 'pay-deposit';
+            const isConfirmingArrival = processingBookingAction?.bookingId === booking.id && processingBookingAction.action === 'confirm-arrival';
 
             return (
             <div
@@ -250,7 +309,7 @@ export const MyBookings = () => {
                           )}
                         >
                           <Icons.FileText className="w-4 h-4" />
-                          {isAcceptedProtectedRequest(booking) && !booking.contractAccepted ? 'Continuar con reserva protegida' : booking.contractAccepted ? 'Firmado' : 'Ver acuerdo'}
+                          {booking.contractAccepted ? 'Firmado' : 'Ver condiciones'}
                         </button>
                      )}
                      {isCancelable && (
@@ -287,31 +346,68 @@ export const MyBookings = () => {
                   </div>
                 ) : null}
 
-                {isAcceptedProtectedRequest(booking) ? (
-                  <div className="rounded-[28px] border border-emerald-200 bg-emerald-50/80 p-4 dark:border-emerald-900/30 dark:bg-emerald-950/20">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                      <div className="space-y-1">
-                        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-300">Solicitud aceptada</p>
-                        <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">Podés avanzar con una reserva protegida.</p>
+                {showProtectedFlowPanel ? (
+                  <div className="rounded-[28px] border border-brand/15 bg-brand/5 p-4 dark:border-brand/20 dark:bg-brand/10">
+                    <div className="space-y-4">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="space-y-1">
+                          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-brand">{bookingFlow.statusLabel}</p>
+                          <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">{bookingFlow.description}</p>
+                          {bookingFlow.supportText ? <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">{bookingFlow.supportText}</p> : null}
+                        </div>
+
+                        {bookingFlow.stage === 'request-accepted' ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={() => void handlePayDeposit(booking.id)}
+                            loading={isPayingDeposit}
+                            loadingLabel="Registrando pago..."
+                            className="rounded-2xl"
+                          >
+                            <>
+                              <Icons.ShieldCheck className="w-4 h-4" />
+                              Pagar seña
+                            </>
+                          </Button>
+                        ) : null}
+
+                        {bookingFlow.stage === 'protected-deposit-held' ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={() => void handleConfirmProtectedArrival(booking.id)}
+                            loading={isConfirmingArrival}
+                            loadingLabel="Confirmando llegada..."
+                            className="rounded-2xl"
+                          >
+                            <>
+                              <Icons.CheckCircle2 className="w-4 h-4" />
+                              Confirmar llegada
+                            </>
+                          </Button>
+                        ) : null}
                       </div>
-                      {booking.contractJson ? (
-                        <Button
-                          type="button"
-                          size="sm"
-                          onClick={() => setSelectedContract({ ...JSON.parse(booking.contractJson!), id: booking.id, accepted: booking.contractAccepted })}
-                          className="rounded-2xl"
-                        >
-                          <>
-                            <Icons.ShieldCheck className="w-4 h-4" />
-                            Continuar con reserva protegida
-                          </>
-                        </Button>
-                      ) : null}
+
+                      <div className="grid gap-2 md:grid-cols-3">
+                        <div className="rounded-2xl bg-white/80 px-3 py-3 text-sm dark:bg-slate-900/70">
+                          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Estado actual</p>
+                          <p className="mt-1 font-semibold text-slate-900 dark:text-white">{bookingFlow.statusLabel}</p>
+                        </div>
+                        <div className="rounded-2xl bg-white/80 px-3 py-3 text-sm dark:bg-slate-900/70">
+                          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Actúa ahora</p>
+                          <p className="mt-1 font-semibold text-slate-900 dark:text-white">{bookingFlow.nextActorLabel ?? 'No hace falta'}</p>
+                        </div>
+                        <div className="rounded-2xl bg-white/80 px-3 py-3 text-sm dark:bg-slate-900/70">
+                          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Próximo paso</p>
+                          <p className="mt-1 font-semibold text-slate-900 dark:text-white">{bookingFlow.nextStepLabel ?? 'Solo coordinar por chat'}</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ) : null}
 
-                {booking.status === 'confirmed' && !isAcceptedProtectedRequest(booking) && (
+                {(bookingFlow.stage === 'reservation-confirmed' || (!booking.requestMode && booking.status === 'confirmed')) && (
                   <div className="p-4 bg-brand/5 dark:bg-brand/10 rounded-2xl border border-brand/10 dark:border-brand/20 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <Icons.CheckCircle2 className="w-5 h-5 text-brand" />

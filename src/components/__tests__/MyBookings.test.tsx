@@ -6,6 +6,8 @@ import { formatBookingDateTime, getCancellationDeadlineFromStartDate } from '../
 const apiJsonMock = vi.fn();
 const acceptContractMock = vi.fn();
 const cancelBookingMock = vi.fn();
+const payProtectedDepositMock = vi.fn();
+const confirmArrivalMock = vi.fn();
 const showToastMock = vi.fn();
 
 vi.mock('../../lib/apiConfig', () => ({
@@ -15,6 +17,8 @@ vi.mock('../../lib/apiConfig', () => ({
 vi.mock('../../services/geminiService', () => ({
   acceptContract: (...args: unknown[]) => acceptContractMock(...args),
   cancelBooking: (...args: unknown[]) => cancelBookingMock(...args),
+  payProtectedDeposit: (...args: unknown[]) => payProtectedDepositMock(...args),
+  confirmArrival: (...args: unknown[]) => confirmArrivalMock(...args),
 }));
 
 vi.mock('../../lib/toast', () => ({
@@ -28,6 +32,8 @@ describe('MyBookings', () => {
     apiJsonMock.mockReset();
     acceptContractMock.mockReset();
     cancelBookingMock.mockReset();
+    payProtectedDepositMock.mockReset();
+    confirmArrivalMock.mockReset();
     showToastMock.mockReset();
     vi.spyOn(window, 'confirm').mockReturnValue(true);
   });
@@ -83,7 +89,7 @@ describe('MyBookings', () => {
       </MemoryRouter>,
     );
 
-    fireEvent.click(await screen.findByRole('button', { name: /Ver acuerdo/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Ver condiciones/i }));
     fireEvent.click(screen.getByRole('button', { name: /Aceptar condiciones/i }));
 
     await waitFor(() => {
@@ -99,7 +105,7 @@ describe('MyBookings', () => {
     );
   });
 
-  test('shows the accepted protected request state with the next protected step', async () => {
+  test('shows the protected payment step and moves the reservation to custody', async () => {
     apiJsonMock.mockResolvedValue([
       {
         id: 'booking-protected-1',
@@ -123,6 +129,21 @@ describe('MyBookings', () => {
         }),
       },
     ]);
+    payProtectedDepositMock.mockResolvedValue({
+      id: 'booking-protected-1',
+      propertyId: 'property-1',
+      userId: 'user-1',
+      status: 'confirmed',
+      requestMode: 'protected',
+      depositStatus: 'held',
+      propertyTitle: 'Casa frente al bosque',
+      location: 'Cariló',
+      startDate: '2026-05-10',
+      endDate: '2026-05-14',
+      guests: 3,
+      totalPrice: 520000,
+      contractAccepted: false,
+    });
 
     render(
       <MemoryRouter>
@@ -132,10 +153,71 @@ describe('MyBookings', () => {
 
     expect(await screen.findAllByText('Solicitud aceptada')).not.toHaveLength(0);
     expect(screen.getByText('Podés avanzar con una reserva protegida.')).toBeInTheDocument();
+    expect(screen.getAllByText('Pagar seña')).not.toHaveLength(0);
 
-    fireEvent.click(screen.getAllByRole('button', { name: /Continuar con reserva protegida/i })[0]);
+    fireEvent.click(screen.getByRole('button', { name: /Pagar seña/i }));
 
-    expect(await screen.findByRole('heading', { name: /Condiciones de la reserva/i })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(payProtectedDepositMock).toHaveBeenCalledWith('booking-protected-1');
+    });
+
+    expect(await screen.findAllByText('Seña en custodia')).not.toHaveLength(0);
+    expect(screen.getByText('La seña se mantiene protegida hasta tu llegada.')).toBeInTheDocument();
+    expect(showToastMock).toHaveBeenCalledWith(
+      'Seña en custodia',
+      'La seña ya quedó resguardada en la plataforma hasta que confirmes la llegada.',
+      'success',
+    );
+  });
+
+  test('lets the guest confirm arrival once the protected deposit is in custody', async () => {
+    apiJsonMock.mockResolvedValue([
+      {
+        id: 'booking-protected-2',
+        propertyId: 'property-2',
+        userId: 'user-1',
+        status: 'confirmed',
+        requestMode: 'protected',
+        depositStatus: 'held',
+        propertyTitle: 'Departamento luminoso',
+        location: 'Belgrano',
+        startDate: '2026-06-01',
+        endDate: '2026-06-05',
+        guests: 2,
+        totalPrice: 410000,
+        contractAccepted: true,
+      },
+    ]);
+    confirmArrivalMock.mockResolvedValue({
+      id: 'booking-protected-2',
+      propertyId: 'property-2',
+      userId: 'user-1',
+      status: 'confirmed',
+      requestMode: 'protected',
+      depositStatus: 'released',
+      propertyTitle: 'Departamento luminoso',
+      location: 'Belgrano',
+      startDate: '2026-06-01',
+      endDate: '2026-06-05',
+      guests: 2,
+      totalPrice: 410000,
+      contractAccepted: true,
+    });
+
+    render(
+      <MemoryRouter>
+        <MyBookings />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: /Confirmar llegada/i }));
+
+    await waitFor(() => {
+      expect(confirmArrivalMock).toHaveBeenCalledWith('booking-protected-2');
+    });
+
+    expect(await screen.findAllByText('Seña liberada')).not.toHaveLength(0);
+    expect(screen.getByText('La llegada ya quedó confirmada y la seña salió de custodia.')).toBeInTheDocument();
   });
 
   test('cancels a future reservation and updates the status in place', async () => {

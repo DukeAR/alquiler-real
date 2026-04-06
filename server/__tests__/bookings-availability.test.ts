@@ -188,7 +188,7 @@ describe('Bookings and availability endpoints', () => {
   });
 
   test('POST /api/conversations/:id/accept-request accepts the request and confirms a protected booking', async () => {
-    const acceptanceMessage = 'Ya podés coordinar los últimos detalles con el anfitrión.';
+    const acceptanceMessage = 'La solicitud ya fue aceptada. Revisá arriba cómo seguir.';
 
     queryMock.mockImplementation(async (text: string, params?: unknown[]) => {
       if (text.includes('FROM conversations c') && text.includes('LEFT JOIN bookings b ON b.id = c.booking_id') && text.includes('WHERE c.id = $1') && text.includes('LIMIT 1') && !text.includes('JOIN users u_tenant')) {
@@ -268,6 +268,285 @@ describe('Bookings and availability endpoints', () => {
     expect(res.body.requestStatus).toBe('accepted');
     expect(res.body.bookingStatus).toBe('confirmed');
     expect(res.body.requestMode).toBe('protected');
+  });
+
+  test('POST /api/conversations/:id/report-direct-deposit marks a direct deposit as reported', async () => {
+    queryMock.mockImplementation(async (text: string, params?: unknown[]) => {
+      if (text.includes('FROM conversations c') && text.includes('LEFT JOIN bookings b ON b.id = c.booking_id') && text.includes('WHERE c.id = $1') && text.includes('LIMIT 1') && !text.includes('JOIN users u_tenant')) {
+        return {
+          rows: [
+            {
+              id: 'conv-1',
+              tenant_id: 'tenant-1',
+              host_id: 'host-1',
+              booking_id: null,
+              request_mode: 'direct',
+              request_status: 'accepted',
+              deposit_status: null,
+              bookingStatus: null,
+            },
+          ],
+        };
+      }
+
+      if (text.includes('UPDATE conversations') && text.includes("deposit_status = 'reported'")) {
+        expect(params).toEqual(['conv-1']);
+        return { rows: [] };
+      }
+
+      if (text.includes('JOIN users u_tenant') && text.includes('WHERE c.id = $1')) {
+        return {
+          rows: [
+            {
+              id: 'conv-1',
+              property_id: 'prop-1',
+              booking_id: null,
+              tenant_id: 'tenant-1',
+              host_id: 'host-1',
+              tenantName: 'Lucía',
+              hostName: 'Mariana',
+              propertyTitle: 'Casa del bosque',
+              propertyImage: 'https://example.com/property.jpg',
+              bookingStatus: null,
+              startDate: null,
+              endDate: null,
+              guests: null,
+              totalPrice: null,
+              requestMode: 'direct',
+              requestStatus: 'accepted',
+              requestStartDate: '2099-09-20',
+              requestEndDate: '2099-09-23',
+              requestGuests: 2,
+              requestTotalPrice: 360000,
+              depositStatus: 'reported',
+              created_at: '2099-09-01T10:00:00.000Z',
+              updated_at: '2099-09-01T10:15:00.000Z',
+            },
+          ],
+        };
+      }
+
+      throw new Error(`Unexpected query: ${text}`);
+    });
+
+    const res = await request(app)
+      .post('/api/conversations/conv-1/report-direct-deposit')
+      .set('x-test-user-id', 'tenant-1');
+
+    expect(res.status).toBe(200);
+    expect(res.body.depositStatus).toBe('reported');
+    expect(res.body.requestMode).toBe('direct');
+  });
+
+  test('POST /api/conversations/:id/confirm-direct-deposit registers the direct reservation after host confirmation', async () => {
+    const clientQueryMock = vi.fn();
+
+    getClientMock.mockResolvedValue({
+      query: clientQueryMock,
+      release: vi.fn(),
+    });
+
+    queryMock.mockImplementation(async (text: string) => {
+      if (text.includes(LOG_ACTIVITY_QUERY_SNIPPET)) {
+        return { rows: [] };
+      }
+
+      if (text.includes('JOIN users u_tenant') && text.includes('WHERE c.id = $1')) {
+        return {
+          rows: [
+            {
+              id: 'conv-1',
+              property_id: 'prop-1',
+              booking_id: 'booking-1',
+              tenant_id: 'tenant-1',
+              host_id: 'host-1',
+              tenantName: 'Lucía',
+              hostName: 'Mariana',
+              propertyTitle: 'Casa del bosque',
+              propertyImage: 'https://example.com/property.jpg',
+              bookingStatus: 'confirmed',
+              startDate: '2099-09-20',
+              endDate: '2099-09-23',
+              guests: 2,
+              totalPrice: 360000,
+              requestMode: 'direct',
+              requestStatus: 'accepted',
+              requestStartDate: '2099-09-20',
+              requestEndDate: '2099-09-23',
+              requestGuests: 2,
+              requestTotalPrice: 360000,
+              depositStatus: 'confirmed',
+              created_at: '2099-09-01T10:00:00.000Z',
+              updated_at: '2099-09-01T10:15:00.000Z',
+            },
+          ],
+        };
+      }
+
+      throw new Error(`Unexpected query: ${text}`);
+    });
+
+    clientQueryMock.mockImplementation(async (text: string, params?: unknown[]) => {
+      if (text === 'BEGIN' || text === 'COMMIT') {
+        return { rows: [] };
+      }
+
+      if (text.includes('FROM conversations c') && text.includes('JOIN properties p ON p.id = c.property_id')) {
+        return {
+          rows: [
+            {
+              id: 'conv-1',
+              property_id: 'prop-1',
+              tenant_id: 'tenant-1',
+              host_id: 'host-1',
+              booking_id: 'booking-1',
+              request_mode: 'direct',
+              request_status: 'accepted',
+              deposit_status: 'reported',
+              request_start_date: '2099-09-20',
+              request_end_date: '2099-09-23',
+              request_guests: 2,
+              request_total_price: 360000,
+              propertyTitle: 'Casa del bosque',
+              location: 'Pinamar',
+              hostName: 'Mariana',
+              guestName: 'Lucía',
+            },
+          ],
+        };
+      }
+
+      if (text.includes('SELECT pg_advisory_xact_lock')) {
+        return { rows: [] };
+      }
+
+      if (text.includes('FROM bookings') && text.includes('status != \'cancelled\'')) {
+        return { rows: [] };
+      }
+
+      if (text.includes('UPDATE bookings') && text.includes("request_mode = 'direct'")) {
+        expect(params?.[0]).toBe('booking-1');
+        return { rows: [] };
+      }
+
+      if (text.includes('UPDATE conversations') && text.includes("deposit_status = 'confirmed'")) {
+        expect(params).toEqual(['booking-1', 'conv-1']);
+        return { rows: [] };
+      }
+
+      throw new Error(`Unexpected client query: ${text}`);
+    });
+
+    const res = await request(app)
+      .post('/api/conversations/conv-1/confirm-direct-deposit')
+      .set('x-test-user-id', 'host-1');
+
+    expect(res.status).toBe(200);
+    expect(res.body.depositStatus).toBe('confirmed');
+    expect(res.body.booking_id).toBe('booking-1');
+    expect(res.body.bookingStatus).toBe('confirmed');
+  });
+
+  test('POST /api/bookings/:id/pay-deposit keeps a protected deposit in custody', async () => {
+    let bookingLookupCount = 0;
+
+    queryMock.mockImplementation(async (text: string, params?: unknown[]) => {
+      if (text.includes(BOOKING_LOOKUP_QUERY_SNIPPET) && text.includes('LIMIT 1')) {
+        bookingLookupCount += 1;
+
+        return {
+          rows: [
+            {
+              id: 'booking-1',
+              propertyId: 'prop-1',
+              userId: 'user-1',
+              status: 'confirmed',
+              startDate: '2099-09-20',
+              endDate: '2099-09-23',
+              totalPrice: 360000,
+              guests: 2,
+              contractAccepted: false,
+              contractJson: '{}',
+              requestMode: 'protected',
+              depositStatus: bookingLookupCount === 1 ? null : 'held',
+              propertyTitle: 'Casa del bosque',
+              imageUrl: 'https://example.com/property.jpg',
+              location: 'Pinamar',
+            },
+          ],
+        };
+      }
+
+      if (text.includes('UPDATE bookings') && text.includes("deposit_status = 'held'")) {
+        expect(params).toEqual(['booking-1', 'user-1']);
+        return { rows: [] };
+      }
+
+      if (text.includes('UPDATE conversations') && text.includes("deposit_status = 'held'")) {
+        expect(params).toEqual(['booking-1']);
+        return { rows: [] };
+      }
+
+      throw new Error(`Unexpected query: ${text}`);
+    });
+
+    const res = await request(app)
+      .post('/api/bookings/booking-1/pay-deposit')
+      .set('x-test-user-id', 'user-1');
+
+    expect(res.status).toBe(200);
+    expect(res.body.booking.depositStatus).toBe('held');
+  });
+
+  test('POST /api/bookings/:id/confirm-arrival releases a protected deposit after arrival', async () => {
+    let bookingLookupCount = 0;
+
+    queryMock.mockImplementation(async (text: string, params?: unknown[]) => {
+      if (text.includes(BOOKING_LOOKUP_QUERY_SNIPPET) && text.includes('LIMIT 1')) {
+        bookingLookupCount += 1;
+
+        return {
+          rows: [
+            {
+              id: 'booking-1',
+              propertyId: 'prop-1',
+              userId: 'user-1',
+              status: 'confirmed',
+              startDate: '2099-09-20',
+              endDate: '2099-09-23',
+              totalPrice: 360000,
+              guests: 2,
+              contractAccepted: false,
+              contractJson: '{}',
+              requestMode: 'protected',
+              depositStatus: bookingLookupCount === 1 ? 'held' : 'released',
+              propertyTitle: 'Casa del bosque',
+              imageUrl: 'https://example.com/property.jpg',
+              location: 'Pinamar',
+            },
+          ],
+        };
+      }
+
+      if (text.includes('UPDATE bookings') && text.includes("deposit_status = 'released'")) {
+        expect(params).toEqual(['booking-1', 'user-1']);
+        return { rows: [] };
+      }
+
+      if (text.includes('UPDATE conversations') && text.includes("deposit_status = 'released'")) {
+        expect(params).toEqual(['booking-1']);
+        return { rows: [] };
+      }
+
+      throw new Error(`Unexpected query: ${text}`);
+    });
+
+    const res = await request(app)
+      .post('/api/bookings/booking-1/confirm-arrival')
+      .set('x-test-user-id', 'user-1');
+
+    expect(res.status).toBe(200);
+    expect(res.body.booking.depositStatus).toBe('released');
   });
 
   test('GET /api/properties/:id/availability merges booking and manual blocks with metadata', async () => {

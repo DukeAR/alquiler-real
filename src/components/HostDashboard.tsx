@@ -14,6 +14,7 @@ import { LoadingState } from './LoadingState';
 import { PropertyUploadForm } from './PropertyUploadForm';
 import { ReviewModal } from './ReviewModal';
 import { Button } from './ui/Button';
+import { getReservationFlowCopy } from '../lib/reservationFlow';
 
 interface HostDashboardProps {
   onBack: () => void;
@@ -27,8 +28,23 @@ const getHostVerificationStatusText = (status: 'complete' | 'pending') => (
   status === 'complete' ? 'Ya está completa.' : 'Todavía falta completarla.'
 );
 
+const getBookingFlow = (booking: any) => getReservationFlowCopy({
+  mode: booking.requestMode,
+  requestStatus: booking.requestMode === 'protected'
+    ? booking.depositStatus === 'held' || booking.depositStatus === 'released' || booking.status === 'confirmed'
+      ? 'accepted'
+      : 'pending'
+    : undefined,
+  bookingStatus: booking.status,
+  depositStatus: booking.depositStatus,
+});
+
 const getBookingStatusLabel = (booking: any) => {
-  if (booking.requestMode === 'protected' && booking.status === 'confirmed') return 'Solicitud aceptada';
+  const flow = getBookingFlow(booking);
+
+  if (flow.statusLabel) {
+    return flow.statusLabel;
+  }
 
   const status = booking.status;
   if (status === 'pending') return 'Solicitud pendiente';
@@ -37,12 +53,26 @@ const getBookingStatusLabel = (booking: any) => {
   return 'Estado no disponible';
 };
 
-const getBookingStatusClassName = (status: string) => {
-  if (status === 'pending') {
+const getBookingStatusClassName = (booking: any) => {
+  const flow = getBookingFlow(booking);
+
+  if (flow.stage === 'direct-deposit-reported') {
     return 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/30 dark:bg-amber-900/20 dark:text-amber-300';
   }
 
-  if (status === 'confirmed') {
+  if (flow.stage === 'request-accepted' || flow.stage === 'protected-deposit-held') {
+    return 'border-brand/20 bg-brand/10 text-brand dark:border-brand/25 dark:bg-brand/15 dark:text-brand-light';
+  }
+
+  if (flow.stage === 'reservation-confirmed' || flow.stage === 'protected-deposit-released') {
+    return 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-900/20 dark:text-emerald-300';
+  }
+
+  if (booking.status === 'pending') {
+    return 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/30 dark:bg-amber-900/20 dark:text-amber-300';
+  }
+
+  if (booking.status === 'confirmed') {
     return 'border-brand/20 bg-brand/10 text-brand dark:border-brand/25 dark:bg-brand/15 dark:text-brand-light';
   }
 
@@ -425,7 +455,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
                           </div>
                         </div>
                         <div className="flex flex-col gap-2 sm:items-end">
-                          <span className={cn('inline-flex items-center rounded-full border px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em]', getBookingStatusClassName(booking.status))}>
+                          <span className={cn('inline-flex items-center rounded-full border px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em]', getBookingStatusClassName(booking))}>
                             {getBookingStatusLabel(booking)}
                           </span>
                         </div>
