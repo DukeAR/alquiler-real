@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Icons } from './Icons';
 import { showToast } from '../lib/toast';
 import { LoadingState } from './LoadingState';
 import { cn } from '../lib/utils';
 import { 
-  fetchConversations, fetchMessages, sendMessage, 
+  acceptConversationRequest, fetchConversations, fetchMessages, sendMessage, 
   Conversation, Message 
 } from '../services/geminiService';
 import { ReportModal } from './ReportModal';
@@ -42,6 +43,22 @@ const getNightCount = (startDate?: string, endDate?: string) => {
   return Math.max(0, Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
 };
 
+const getConversationRequestStatus = (conversation: Conversation | null) => {
+  if (!conversation) {
+    return 'pending' as const;
+  }
+
+  if (conversation.requestStatus === 'accepted') {
+    return 'accepted' as const;
+  }
+
+  if ((conversation.requestMode === 'protected' || conversation.booking_id) && conversation.bookingStatus === 'confirmed') {
+    return 'accepted' as const;
+  }
+
+  return 'pending' as const;
+};
+
 const getActiveRequestContext = (
   activeConversation: Conversation | null,
   initialConversationId?: string,
@@ -51,28 +68,42 @@ const getActiveRequestContext = (
     return null;
   }
 
-  if (activeConversation.booking_id && activeConversation.startDate && activeConversation.endDate) {
-    const nights = getNightCount(activeConversation.startDate, activeConversation.endDate);
-    const totalPrice = Number(activeConversation.totalPrice) || 0;
+  const requestMode = activeConversation.requestMode === 'protected' || activeConversation.booking_id
+    ? 'protected'
+    : activeConversation.requestMode === 'direct'
+      ? 'direct'
+      : null;
+  const requestStatus = getConversationRequestStatus(activeConversation);
+  const startDate = activeConversation.requestStartDate || activeConversation.startDate;
+  const endDate = activeConversation.requestEndDate || activeConversation.endDate;
+  const guests = Number(activeConversation.requestGuests ?? activeConversation.guests) || 1;
+  const totalPrice = Number(activeConversation.requestTotalPrice ?? activeConversation.totalPrice) || 0;
+
+  if (requestMode && startDate && endDate) {
+    const nights = getNightCount(startDate, endDate);
 
     return {
       propertyId: activeConversation.property_id,
       propertyTitle: activeConversation.propertyTitle || 'Propiedad',
       hostName: activeConversation.hostName || 'Anfitrión',
-      startDate: activeConversation.startDate,
-      endDate: activeConversation.endDate,
-      guests: Number(activeConversation.guests) || 1,
+      startDate,
+      endDate,
+      guests,
       nightly: nights > 0 ? totalPrice / nights : 0,
       nights,
       totalPrice,
-      mode: 'protected',
+      mode: requestMode,
+      requestStatus,
       bookingId: activeConversation.booking_id,
       bookingStatus: activeConversation.bookingStatus,
     };
   }
 
   if (initialConversationId && activeConversation.id === initialConversationId && initialRequestContext) {
-    return initialRequestContext;
+    return {
+      ...initialRequestContext,
+      requestStatus: initialRequestContext.requestStatus ?? 'pending',
+    };
   }
 
   return null;
@@ -81,6 +112,20 @@ const getActiveRequestContext = (
 const getSuggestionTexts = (requestContext: ReservationRequestContext | null, isTenant: boolean) => {
   if (!requestContext) {
     return [] as string[];
+  }
+
+  if (requestContext.requestStatus === 'accepted') {
+    return isTenant
+      ? [
+          'Ya tengo todo listo de mi lado.',
+          '¿Qué horario de llegada te queda mejor?',
+          'Dejemos por acá cualquier detalle final.',
+        ]
+      : [
+          'Te paso por acá los datos finales.',
+          'Si querés, definimos ahora el horario de llegada.',
+          'Quedo atento a cualquier detalle que falte.',
+        ];
   }
 
   if (requestContext.mode === 'protected') {
@@ -114,6 +159,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
   initialConversationId,
   initialRequestContext = null,
 }) => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConv, setActiveConv] = useState<Conversation | null>(null);
@@ -121,6 +167,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(true);
   const [sendingMessageId, setSendingMessageId] = useState<string | null>(null);
+  const [acceptingRequest, setAcceptingRequest] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showReportModal, setShowReportModal] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -214,26 +261,57 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
     }
   };
 
+  const handleAcceptRequest = async () => {
+    if (!activeConv) {
+      return;
+    }
+
+    setAcceptingRequest(true);
+
+    try {
+      const updatedConversation = await acceptConversationRequest(activeConv.id);
+      setConversations((current) => current.map((conversation) => (
+        conversation.id === updatedConversation.id ? { ...conversation, ...updatedConversation } : conversation
+      )));
+      setActiveConv((current) => (current && current.id === updatedConversation.id ? { ...current, ...updatedConversation } : current));
+      await loadMessages(activeConv.id);
+      showToast('Solicitud aceptada', 'La solicitud ya quedó aceptada y el chat pasó al cierre de detalles.', 'success');
+    } catch (err) {
+      showToast('Solicitud', err instanceof Error ? err.message : 'No pudimos aceptar la solicitud. Intentá de nuevo.', 'error');
+    } finally {
+      setAcceptingRequest(false);
+    }
+  };
+
   if (loading) return <LoadingState message="Cargando conversaciones..." description="Estamos trayendo tus mensajes para que retomes la charla desde donde quedó." />;
 
   const activeRequestContext = getActiveRequestContext(activeConv, initialConversationId, initialRequestContext);
   const isTenantConversation = Boolean(user && activeConv && user.id === activeConv.tenant_id);
+  const isHostConversation = Boolean(user && activeConv && user.id === activeConv.host_id);
+  const requestAccepted = activeRequestContext?.requestStatus === 'accepted';
   const suggestionTexts = getSuggestionTexts(activeRequestContext, isTenantConversation);
   const requestDateLabel = activeRequestContext
     ? `${formatRequestDate(activeRequestContext.startDate)} al ${formatRequestDate(activeRequestContext.endDate)}`
     : null;
   const requestHeading = activeRequestContext
-    ? activeRequestContext.mode === 'protected'
-      ? activeRequestContext.bookingStatus === 'confirmed'
-        ? 'Reserva protegida confirmada'
-        : 'Solicitud protegida pendiente'
-      : 'Propuesta abierta por chat'
+    ? requestAccepted
+      ? 'Solicitud aceptada'
+      : activeRequestContext.mode === 'protected'
+        ? 'Solicitud protegida pendiente'
+        : 'Propuesta abierta por chat'
     : null;
   const requestDescription = activeRequestContext
-    ? activeRequestContext.mode === 'protected'
-      ? 'La solicitud ya quedó asentada en la app mientras seguís conversando por acá con el anfitrión.'
-      : 'Todavía no bloquea fechas ni deja una reserva protegida. Sirve para conversar antes de decidir cómo seguir.'
+    ? requestAccepted
+      ? activeRequestContext.mode === 'protected'
+        ? 'Podés avanzar con una reserva protegida.'
+        : 'Coordiná los detalles con el anfitrión y definan cómo avanzar.'
+      : activeRequestContext.mode === 'protected'
+        ? 'La solicitud ya quedó asentada en la app mientras seguís conversando por acá con el anfitrión.'
+        : 'Todavía no bloquea fechas ni deja una reserva protegida. Sirve para conversar antes de decidir cómo seguir.'
     : 'Dejá por acá fechas, montos y cambios importantes para que la conversación quede clara.';
+  const requestGuidance = requestAccepted ? 'Ya podés coordinar los últimos detalles con el anfitrión.' : null;
+  const showProtectedContinue = Boolean(requestAccepted && activeRequestContext?.mode === 'protected' && isTenantConversation);
+  const canAcceptRequest = Boolean(isHostConversation && activeRequestContext && !requestAccepted);
 
   return (
     <div className="flex h-screen bg-white dark:bg-slate-950 overflow-hidden pt-4 md:pt-0">
@@ -328,22 +406,49 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                           <div className="flex flex-wrap gap-2">
                             <span className={cn(
                               'inline-flex items-center gap-2 rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em]',
+                              requestAccepted
+                                ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
+                                : activeRequestContext.mode === 'protected'
+                                  ? 'bg-brand/10 text-brand'
+                                  : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
+                            )}>
+                              {requestAccepted ? <Icons.CheckCircle2 className="h-3.5 w-3.5" /> : activeRequestContext.mode === 'protected' ? <Icons.ShieldCheck className="h-3.5 w-3.5" /> : <Icons.MessageSquare className="h-3.5 w-3.5" />}
+                              <span>{requestHeading}</span>
+                            </span>
+                            <span className={cn(
+                              'inline-flex items-center gap-2 rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em]',
                               activeRequestContext.mode === 'protected'
                                 ? 'bg-brand/10 text-brand'
                                 : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
                             )}>
                               {activeRequestContext.mode === 'protected' ? <Icons.ShieldCheck className="h-3.5 w-3.5" /> : <Icons.MessageSquare className="h-3.5 w-3.5" />}
-                              <span>{activeRequestContext.mode === 'protected' ? 'Reserva protegida' : 'Chat directo'}</span>
+                              <span>{activeRequestContext.mode === 'protected' ? 'Reserva protegida' : 'Acuerdo directo'}</span>
                             </span>
                           </div>
                           <div>
-                            <p className="text-sm font-semibold text-slate-950 dark:text-white">{requestHeading}</p>
                             <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">{requestDescription}</p>
+                            {requestGuidance ? <p className="mt-2 text-sm font-medium text-slate-900 dark:text-slate-100">{requestGuidance}</p> : null}
                           </div>
                         </div>
+
+                        {canAcceptRequest ? (
+                          <button
+                            type="button"
+                            onClick={handleAcceptRequest}
+                            disabled={acceptingRequest}
+                            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-brand px-4 py-3 text-sm font-semibold text-white shadow-[0_18px_38px_-28px_rgba(67,56,202,0.5)] transition-transform hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-70"
+                          >
+                            {acceptingRequest ? <Icons.Loader2 className="h-4 w-4 animate-spin" /> : <Icons.CheckCircle2 className="h-4 w-4" />}
+                            <span>{acceptingRequest ? 'Aceptando...' : 'Aceptar solicitud'}</span>
+                          </button>
+                        ) : null}
                       </div>
 
-                      <div className="grid gap-2 sm:grid-cols-3">
+                      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                        <div className="rounded-2xl bg-slate-50 px-3 py-3 text-sm dark:bg-slate-900">
+                          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Propiedad</p>
+                          <p className="mt-1 font-semibold text-slate-900 dark:text-white">{activeRequestContext.propertyTitle}</p>
+                        </div>
                         <div className="rounded-2xl bg-slate-50 px-3 py-3 text-sm dark:bg-slate-900">
                           <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Fechas</p>
                           <p className="mt-1 font-semibold text-slate-900 dark:text-white">{requestDateLabel}</p>
@@ -359,6 +464,26 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                           </p>
                         </div>
                       </div>
+
+                      {showProtectedContinue ? (
+                        <div className="flex flex-wrap gap-3">
+                          <button
+                            type="button"
+                            onClick={() => navigate('/my-bookings')}
+                            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-brand px-4 py-3 text-sm font-semibold text-white shadow-[0_18px_38px_-28px_rgba(67,56,202,0.5)] transition-transform hover:-translate-y-px"
+                          >
+                            <Icons.ShieldCheck className="h-4 w-4" />
+                            <span>Continuar con reserva protegida</span>
+                          </button>
+                        </div>
+                      ) : null}
+
+                      {requestAccepted ? (
+                        <div className="flex gap-3 rounded-[24px] border border-slate-200/80 bg-slate-50 px-4 py-3 text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
+                          <Icons.Info className="h-4 w-4 shrink-0 text-brand" />
+                          <p className="leading-5">Si vas a transferir una seña, verificá que coincida con quien publica.</p>
+                        </div>
+                      ) : null}
 
                       {suggestionTexts.length > 0 ? (
                         <div className="flex flex-wrap gap-2">
@@ -380,7 +505,11 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
 
                 <div className="flex gap-3 rounded-[24px] border border-slate-200/80 bg-white px-4 py-3 text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300">
                   <Icons.ShieldCheck className="h-4 w-4 shrink-0 text-brand" />
-                  <p className="leading-5">Dejá por acá fechas, montos y cambios importantes. Si después necesitás revisar algo, queda todo mucho más claro.</p>
+                  <p className="leading-5">
+                    {requestAccepted
+                      ? 'Usá este chat para cerrar horarios, ingreso y cualquier ajuste final sin perder el contexto de la solicitud.'
+                      : 'Dejá por acá fechas, montos y cambios importantes. Si después necesitás revisar algo, queda todo mucho más claro.'}
+                  </p>
                 </div>
               </div>
             </div>
@@ -417,29 +546,37 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
               )}
 
               {messages.map((msg) => (
-                <div key={msg.id} className={cn(
-                  "flex flex-col gap-1 max-w-[80%]",
-                  msg.sender_id === user?.id ? "self-end" : "self-start"
-                )}>
-                  <div className={cn(
-                    "p-4 rounded-[28px] text-sm font-medium leading-relaxed shadow-sm relative",
-                    msg.sender_id === user?.id
-                      ? "bg-brand text-white rounded-tr-none shadow-brand/10"
-                      : "bg-white dark:bg-slate-900 text-slate-900 dark:text-white rounded-tl-none border border-slate-100 dark:border-slate-800"
-                  )}>
-                    {msg.content}
-                    {sendingMessageId === msg.id && (
-                      <Icons.Loader2 className="w-3 h-3 animate-spin absolute -right-6 top-1/2 -translate-y-1/2" />
-                    )}
+                msg.is_system ? (
+                  <div key={msg.id} className="flex justify-center">
+                    <div className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
+                      {msg.content}
+                    </div>
                   </div>
-                  <span className={cn(
-                    "text-[8px] font-black uppercase tracking-widest text-slate-400 px-2",
-                    msg.sender_id === user?.id ? "text-right" : "text-left",
-                    sendingMessageId === msg.id && "opacity-50"
+                ) : (
+                  <div key={msg.id} className={cn(
+                    "flex flex-col gap-1 max-w-[80%]",
+                    msg.sender_id === user?.id ? "self-end" : "self-start"
                   )}>
-                    {(msg as any).is_optimistic ? 'Enviando...' : new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                </div>
+                    <div className={cn(
+                      "p-4 rounded-[28px] text-sm font-medium leading-relaxed shadow-sm relative",
+                      msg.sender_id === user?.id
+                        ? "bg-brand text-white rounded-tr-none shadow-brand/10"
+                        : "bg-white dark:bg-slate-900 text-slate-900 dark:text-white rounded-tl-none border border-slate-100 dark:border-slate-800"
+                    )}>
+                      {msg.content}
+                      {sendingMessageId === msg.id && (
+                        <Icons.Loader2 className="w-3 h-3 animate-spin absolute -right-6 top-1/2 -translate-y-1/2" />
+                      )}
+                    </div>
+                    <span className={cn(
+                      "text-[8px] font-black uppercase tracking-widest text-slate-400 px-2",
+                      msg.sender_id === user?.id ? "text-right" : "text-left",
+                      sendingMessageId === msg.id && "opacity-50"
+                    )}>
+                      {(msg as any).is_optimistic ? 'Enviando...' : new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                )
               ))}
             </div>
 

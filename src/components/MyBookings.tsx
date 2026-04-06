@@ -107,8 +107,14 @@ export const MyBookings = () => {
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
+  const isAcceptedProtectedRequest = (booking: Booking) => booking.requestMode === 'protected' && booking.status === 'confirmed';
+
+  const getStatusColor = (booking: Booking) => {
+    if (isAcceptedProtectedRequest(booking)) {
+      return 'success';
+    }
+
+    switch (booking.status) {
       case 'confirmed': return 'brand';
       case 'pending': return 'neutral';
       case 'cancelled': return 'neutral';
@@ -117,13 +123,17 @@ export const MyBookings = () => {
     }
   };
 
-  const getStatusText = (status: string) => {
-    switch (status) {
+  const getStatusText = (booking: Booking) => {
+    if (isAcceptedProtectedRequest(booking)) {
+      return 'Solicitud aceptada';
+    }
+
+    switch (booking.status) {
       case 'confirmed': return 'Confirmada';
       case 'pending': return 'Pendiente';
       case 'cancelled': return 'Cancelada';
       case 'completed': return 'Finalizada';
-      default: return status;
+      default: return booking.status;
     }
   };
 
@@ -192,11 +202,11 @@ export const MyBookings = () => {
                 />
                 <div className="absolute top-4 right-4">
                   <Badge
-                    variant={getStatusColor(booking.status) as 'neutral' | 'brand' | 'success' | 'warning' | 'danger'}
+                    variant={getStatusColor(booking) as 'neutral' | 'brand' | 'success' | 'warning' | 'danger'}
                     size="md"
                     className="shadow-lg"
                   >
-                    {getStatusText(booking.status)}
+                    {getStatusText(booking)}
                   </Badge>
                 </div>
                 <div className="absolute inset-x-0 bottom-0 p-6 bg-gradient-to-t from-black/80 to-transparent">
@@ -240,7 +250,7 @@ export const MyBookings = () => {
                           )}
                         >
                           <Icons.FileText className="w-4 h-4" />
-                          {booking.contractAccepted ? 'Firmado' : 'Ver acuerdo'}
+                          {isAcceptedProtectedRequest(booking) && !booking.contractAccepted ? 'Continuar con reserva protegida' : booking.contractAccepted ? 'Firmado' : 'Ver acuerdo'}
                         </button>
                      )}
                      {isCancelable && (
@@ -277,7 +287,31 @@ export const MyBookings = () => {
                   </div>
                 ) : null}
 
-                {booking.status === 'confirmed' && (
+                {isAcceptedProtectedRequest(booking) ? (
+                  <div className="rounded-[28px] border border-emerald-200 bg-emerald-50/80 p-4 dark:border-emerald-900/30 dark:bg-emerald-950/20">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-300">Solicitud aceptada</p>
+                        <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">Podés avanzar con una reserva protegida.</p>
+                      </div>
+                      {booking.contractJson ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() => setSelectedContract({ ...JSON.parse(booking.contractJson!), id: booking.id, accepted: booking.contractAccepted })}
+                          className="rounded-2xl"
+                        >
+                          <>
+                            <Icons.ShieldCheck className="w-4 h-4" />
+                            Continuar con reserva protegida
+                          </>
+                        </Button>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : null}
+
+                {booking.status === 'confirmed' && !isAcceptedProtectedRequest(booking) && (
                   <div className="p-4 bg-brand/5 dark:bg-brand/10 rounded-2xl border border-brand/10 dark:border-brand/20 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <Icons.CheckCircle2 className="w-5 h-5 text-brand" />

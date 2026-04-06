@@ -3,7 +3,7 @@ import { apiJson } from "../lib/apiConfig";
 import {
   Property, Review, Booking, HostProfile,
   TraceabilityReport, TraceabilityFactor, TraceabilityLevel,
-  Conversation, Message
+  Conversation, Message, type ReservationRequestContext
 } from "../types";
 
 // Note: In a real production app, we would remove direct AI initialization from frontend
@@ -124,10 +124,35 @@ export async function sendMessage(convId: string, content: string, receiverId: s
   });
 }
 
-export async function startConversation(propertyId: string, hostId: string, bookingId?: string): Promise<Conversation> {
+type ConversationRequestPayload = Pick<ReservationRequestContext, 'mode' | 'startDate' | 'endDate' | 'guests' | 'totalPrice'> & {
+  requestStatus?: ReservationRequestContext['requestStatus'];
+};
+
+export async function startConversation(
+  propertyId: string,
+  hostId: string,
+  bookingId?: string,
+  requestContext?: ConversationRequestPayload,
+): Promise<Conversation> {
   return apiJson<Conversation>('/api/conversations', {
     method: 'POST',
-    body: JSON.stringify({ propertyId, hostId, bookingId })
+    body: JSON.stringify({
+      propertyId,
+      hostId,
+      bookingId,
+      requestMode: requestContext?.mode,
+      requestStatus: requestContext?.requestStatus,
+      startDate: requestContext?.startDate,
+      endDate: requestContext?.endDate,
+      guests: requestContext?.guests,
+      totalPrice: requestContext?.totalPrice,
+    })
+  });
+}
+
+export async function acceptConversationRequest(conversationId: string): Promise<Conversation> {
+  return apiJson<Conversation>(`/api/conversations/${conversationId}/accept-request`, {
+    method: 'POST'
   });
 }
 

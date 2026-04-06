@@ -99,6 +99,45 @@ describe('MyBookings', () => {
     );
   });
 
+  test('shows the accepted protected request state with the next protected step', async () => {
+    apiJsonMock.mockResolvedValue([
+      {
+        id: 'booking-protected-1',
+        propertyId: 'property-1',
+        userId: 'user-1',
+        status: 'confirmed',
+        requestMode: 'protected',
+        propertyTitle: 'Casa frente al bosque',
+        location: 'Cariló',
+        startDate: '2026-05-10',
+        endDate: '2026-05-14',
+        guests: 3,
+        totalPrice: 520000,
+        contractAccepted: false,
+        contractJson: JSON.stringify({
+          guestName: 'Ana',
+          hostName: 'Mariana',
+          propertyTitle: 'Casa frente al bosque',
+          location: 'Cariló',
+          rules: ['No fumar dentro de la propiedad'],
+        }),
+      },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <MyBookings />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findAllByText('Solicitud aceptada')).not.toHaveLength(0);
+    expect(screen.getByText('Podés avanzar con una reserva protegida.')).toBeInTheDocument();
+
+    fireEvent.click(screen.getAllByRole('button', { name: /Continuar con reserva protegida/i })[0]);
+
+    expect(await screen.findByRole('heading', { name: /Condiciones de la reserva/i })).toBeInTheDocument();
+  });
+
   test('cancels a future reservation and updates the status in place', async () => {
     apiJsonMock.mockResolvedValue([
       {

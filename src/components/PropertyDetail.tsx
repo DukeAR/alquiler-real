@@ -812,6 +812,7 @@ export const PropertyDetailShell: React.FC<{
     nights,
     totalPrice: total,
     mode,
+    requestStatus: bookingStatus === 'confirmed' ? 'accepted' : 'pending',
     bookingId,
     bookingStatus,
   });
@@ -821,7 +822,14 @@ export const PropertyDetailShell: React.FC<{
       throw new Error('No pudimos preparar el chat de esta propiedad. Probá de nuevo.');
     }
 
-    const conversation = await startConversation(property.id, property.hostId, bookingId);
+    const conversation = await startConversation(property.id, property.hostId, bookingId, {
+      mode: requestContext.mode,
+      requestStatus: requestContext.requestStatus,
+      startDate: requestContext.startDate,
+      endDate: requestContext.endDate,
+      guests: requestContext.guests,
+      totalPrice: requestContext.totalPrice,
+    });
 
     try {
       await sendMessage(conversation.id, buildInitialRequestMessage(requestContext), property.hostId);

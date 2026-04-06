@@ -692,6 +692,7 @@ export const initDB = async () => {
       BEGIN ALTER TABLE bookings ADD COLUMN created_at TIMESTAMP DEFAULT NOW(); EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE bookings ADD COLUMN contract_accepted BOOLEAN DEFAULT FALSE; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE bookings ADD COLUMN contract_json TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE bookings ADD COLUMN request_mode TEXT DEFAULT 'direct'; EXCEPTION WHEN duplicate_column THEN NULL; END;
     END $$;
   `);
 
@@ -715,10 +716,27 @@ export const initDB = async () => {
       booking_id TEXT REFERENCES bookings(id),
       tenant_id TEXT REFERENCES users(id),
       host_id TEXT REFERENCES users(id),
+      request_mode TEXT,
+      request_status TEXT DEFAULT 'pending',
+      request_start_date DATE,
+      request_end_date DATE,
+      request_guests INTEGER,
+      request_total_price DECIMAL(12,2),
       last_message TEXT,
       updated_at TIMESTAMP DEFAULT NOW(),
       created_at TIMESTAMP DEFAULT NOW()
     );
+  `);
+
+  await db.query(`
+    DO $$ BEGIN
+      BEGIN ALTER TABLE conversations ADD COLUMN request_mode TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE conversations ADD COLUMN request_status TEXT DEFAULT 'pending'; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE conversations ADD COLUMN request_start_date DATE; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE conversations ADD COLUMN request_end_date DATE; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE conversations ADD COLUMN request_guests INTEGER; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE conversations ADD COLUMN request_total_price DECIMAL(12,2); EXCEPTION WHEN duplicate_column THEN NULL; END;
+    END $$;
   `);
 
   await db.query(`

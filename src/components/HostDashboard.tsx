@@ -27,7 +27,10 @@ const getHostVerificationStatusText = (status: 'complete' | 'pending') => (
   status === 'complete' ? 'Ya está completa.' : 'Todavía falta completarla.'
 );
 
-const getBookingStatusLabel = (status: string) => {
+const getBookingStatusLabel = (booking: any) => {
+  if (booking.requestMode === 'protected' && booking.status === 'confirmed') return 'Solicitud aceptada';
+
+  const status = booking.status;
   if (status === 'pending') return 'Solicitud pendiente';
   if (status === 'confirmed') return 'Reserva confirmada';
   if (status === 'completed') return 'Estadía finalizada';
@@ -423,7 +426,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
                         </div>
                         <div className="flex flex-col gap-2 sm:items-end">
                           <span className={cn('inline-flex items-center rounded-full border px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em]', getBookingStatusClassName(booking.status))}>
-                            {getBookingStatusLabel(booking.status)}
+                            {getBookingStatusLabel(booking)}
                           </span>
                         </div>
                       </div>

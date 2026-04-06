@@ -116,6 +116,8 @@ export type BookingStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled';
 
 export type ReservationRequestMode = 'direct' | 'protected';
 
+export type ReservationRequestStatus = 'pending' | 'accepted';
+
 export interface ReservationRequestContext {
   propertyId: string;
   propertyTitle: string;
@@ -127,6 +129,7 @@ export interface ReservationRequestContext {
   nights: number;
   totalPrice: number;
   mode: ReservationRequestMode;
+  requestStatus?: ReservationRequestStatus;
   bookingId?: string;
   bookingStatus?: BookingStatus;
 }
@@ -144,6 +147,7 @@ export interface Booking {
   endDate?: string;
   guests?: number;
   totalPrice?: number;
+  requestMode?: ReservationRequestMode;
   cancellationDeadline?: string | null;
   date?: string;
   contractAccepted?: boolean;
@@ -169,6 +173,12 @@ export interface Conversation {
   endDate?: string;
   guests?: number;
   totalPrice?: number;
+  requestMode?: ReservationRequestMode;
+  requestStatus?: ReservationRequestStatus;
+  requestStartDate?: string;
+  requestEndDate?: string;
+  requestGuests?: number;
+  requestTotalPrice?: number;
   updated_at: string;
   created_at: string;
 }

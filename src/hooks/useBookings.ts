@@ -106,6 +106,7 @@ const normalizeCreateBookingResponse = (
       endDate: request.endDate,
       guests: request.guests,
       totalPrice: total,
+      requestMode: request.requestMode === 'protected' ? 'protected' : 'direct',
       contractJson: payload?.contract ? JSON.stringify(payload.contract) : undefined,
       stay_code: typeof payload?.stay_code === 'string' ? payload.stay_code : undefined,
     },

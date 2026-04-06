@@ -187,6 +187,89 @@ describe('Bookings and availability endpoints', () => {
     expect(res.body.booking_id).toBe('booking-1');
   });
 
+  test('POST /api/conversations/:id/accept-request accepts the request and confirms a protected booking', async () => {
+    const acceptanceMessage = 'Ya podés coordinar los últimos detalles con el anfitrión.';
+
+    queryMock.mockImplementation(async (text: string, params?: unknown[]) => {
+      if (text.includes('FROM conversations c') && text.includes('LEFT JOIN bookings b ON b.id = c.booking_id') && text.includes('WHERE c.id = $1') && text.includes('LIMIT 1') && !text.includes('JOIN users u_tenant')) {
+        return {
+          rows: [
+            {
+              id: 'conv-1',
+              tenant_id: 'tenant-1',
+              host_id: 'host-1',
+              booking_id: 'booking-1',
+              request_mode: 'protected',
+              bookingStatus: 'pending',
+            },
+          ],
+        };
+      }
+
+      if (text.includes('UPDATE bookings')) {
+        expect(params).toEqual(['booking-1']);
+        return { rows: [] };
+      }
+
+      if (text.includes('UPDATE conversations')) {
+        expect(params).toEqual([acceptanceMessage, 'conv-1']);
+        return { rows: [] };
+      }
+
+      if (text.includes('INSERT INTO messages')) {
+        expect(params?.[1]).toBe('conv-1');
+        expect(params?.[4]).toBe(acceptanceMessage);
+        return { rows: [] };
+      }
+
+      if (text.includes(LOG_ACTIVITY_QUERY_SNIPPET)) {
+        return { rows: [] };
+      }
+
+      if (text.includes('JOIN users u_tenant') && text.includes('WHERE c.id = $1')) {
+        return {
+          rows: [
+            {
+              id: 'conv-1',
+              property_id: 'prop-1',
+              booking_id: 'booking-1',
+              tenant_id: 'tenant-1',
+              host_id: 'host-1',
+              tenantName: 'Lucía',
+              hostName: 'Mariana',
+              propertyTitle: 'Casa del bosque',
+              propertyImage: 'https://example.com/property.jpg',
+              bookingStatus: 'confirmed',
+              startDate: '2099-09-20',
+              endDate: '2099-09-23',
+              guests: 2,
+              totalPrice: 360000,
+              requestMode: 'protected',
+              requestStatus: 'accepted',
+              requestStartDate: '2099-09-20',
+              requestEndDate: '2099-09-23',
+              requestGuests: 2,
+              requestTotalPrice: 360000,
+              created_at: '2099-09-01T10:00:00.000Z',
+              updated_at: '2099-09-01T10:15:00.000Z',
+            },
+          ],
+        };
+      }
+
+      throw new Error(`Unexpected query: ${text}`);
+    });
+
+    const res = await request(app)
+      .post('/api/conversations/conv-1/accept-request')
+      .set('x-test-user-id', 'host-1');
+
+    expect(res.status).toBe(200);
+    expect(res.body.requestStatus).toBe('accepted');
+    expect(res.body.bookingStatus).toBe('confirmed');
+    expect(res.body.requestMode).toBe('protected');
+  });
+
   test('GET /api/properties/:id/availability merges booking and manual blocks with metadata', async () => {
     queryMock.mockImplementation(async (text: string) => {
       if (text.includes('SELECT id, manual_blocked_dates FROM properties')) {

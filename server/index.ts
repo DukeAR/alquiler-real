@@ -134,6 +134,7 @@ const NOTIFIABLE_ACTIVITY_ACTIONS = [
   'IDENTITY_DOCUMENTS_SUBMITTED',
   'PROPERTY_AVAILABILITY_UPDATED',
   'BOOKING_CREATED',
+  'BOOKING_REQUEST_ACCEPTED',
   'BOOKING_CANCELLED',
 ] as const;
 
@@ -203,8 +204,21 @@ const mapActivityLogToNotification = (row: any) => {
     case 'BOOKING_CREATED':
       return {
         id: row.id,
-        title: 'Reserva confirmada',
-        message: 'Registramos tu reserva. Revisá las fechas y los próximos pasos en Mis reservas.',
+        title: metadata.requestMode === 'protected' ? 'Solicitud enviada' : 'Reserva confirmada',
+        message: metadata.requestMode === 'protected'
+          ? 'La solicitud protegida ya quedó registrada. Cuando el anfitrión la acepte, vas a ver cómo seguir.'
+          : 'Registramos tu reserva. Revisá las fechas y los próximos pasos en Mis reservas.',
+        type: metadata.requestMode === 'protected' ? 'info' : 'success',
+        createdAt,
+        unread,
+      };
+    case 'BOOKING_REQUEST_ACCEPTED':
+      return {
+        id: row.id,
+        title: 'Solicitud aceptada',
+        message: metadata.requestMode === 'protected'
+          ? 'Ya podés avanzar con una reserva protegida y coordinar lo que falta por chat.'
+          : 'Ya podés coordinar los últimos detalles con el anfitrión.',
         type: 'success',
         createdAt,
         unread,
@@ -1308,10 +1322,12 @@ app.get('/api/host/dashboard', async (req, res) => {
           TO_CHAR(b.end_date, 'DD/MM/YYYY') as "endDate",
           COALESCE(b.guests, 1)::int as guests,
           COALESCE(b.total_price, 0)::int as "totalPrice",
+          COALESCE(b.request_mode, CASE WHEN c.booking_id IS NOT NULL THEN 'protected' ELSE 'direct' END) as "requestMode",
           b."userId",
                 guest.name as "userName", p.title as "propertyTitle"
          FROM bookings b
          JOIN properties p ON b."propertyId" = p.id
+         LEFT JOIN conversations c ON c.booking_id = b.id
          LEFT JOIN users guest ON guest.id = b."userId"
          WHERE p."hostId" = $1
            AND b.status <> 'cancelled'
@@ -1703,11 +1719,13 @@ type ManualAvailabilityBlock = {
 };
 
 const BOOKING_SELECT_QUERY = `SELECT b.id, b."propertyId", b."userId", b.status, b.date, b.stay_code, b.verified,
-        b.start_date as "startDate", b.end_date as "endDate", b.total_price as "totalPrice",
-        b.guests, b.contract_accepted as "contractAccepted", b.contract_json as "contractJson",
-        p.title as "propertyTitle", p."imageUrl", p.location
+  b.start_date as "startDate", b.end_date as "endDate", b.total_price as "totalPrice",
+  b.guests, b.contract_accepted as "contractAccepted", b.contract_json as "contractJson",
+  COALESCE(b.request_mode, CASE WHEN c.booking_id IS NOT NULL THEN 'protected' ELSE 'direct' END) as "requestMode",
+  p.title as "propertyTitle", p."imageUrl", p.location
  FROM bookings b
  LEFT JOIN properties p ON b."propertyId" = p.id
+ LEFT JOIN conversations c ON c.booking_id = b.id
  WHERE b."userId" = $1
  ORDER BY b.created_at DESC`;
 
@@ -1879,9 +1897,11 @@ const getUserBookingById = async (userId: string, bookingId: string) => {
     `SELECT b.id, b."propertyId", b."userId", b.status, b.date, b.stay_code, b.verified,
             b.start_date as "startDate", b.end_date as "endDate", b.total_price as "totalPrice",
             b.guests, b.contract_accepted as "contractAccepted", b.contract_json as "contractJson",
+            COALESCE(b.request_mode, CASE WHEN c.booking_id IS NOT NULL THEN 'protected' ELSE 'direct' END) as "requestMode",
             p.title as "propertyTitle", p."imageUrl", p.location
      FROM bookings b
      LEFT JOIN properties p ON b."propertyId" = p.id
+     LEFT JOIN conversations c ON c.booking_id = b.id
      WHERE b."userId" = $1 AND b.id = $2
      LIMIT 1`,
     [userId, bookingId]
@@ -1922,7 +1942,7 @@ app.post('/api/bookings', async (req, res) => {
     return sendBookingError(res, 401, 'AUTH_REQUIRED', AUTH_REQUIRED_ERROR);
   }
 
-  const requestMode = req.body?.requestMode === 'protected' ? 'protected' : 'standard';
+  const requestMode = req.body?.requestMode === 'protected' ? 'protected' : 'direct';
   const bookingStatus = requestMode === 'protected' ? 'pending' : 'confirmed';
 
   const risk = await checkUserRisk(userId);
@@ -2064,12 +2084,12 @@ app.post('/api/bookings', async (req, res) => {
     };
 
     const insertResult = await client.query(
-      `INSERT INTO bookings (id, "propertyId", "userId", status, start_date, end_date, total_price, guests, stay_code, contract_json)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      `INSERT INTO bookings (id, "propertyId", "userId", status, start_date, end_date, total_price, guests, stay_code, contract_json, request_mode)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
        RETURNING id, "propertyId", "userId", status, date, stay_code, verified,
                  start_date as "startDate", end_date as "endDate", total_price as "totalPrice",
-                 guests, contract_accepted as "contractAccepted", contract_json as "contractJson"`,
-      [bookingId, propertyId, userId, bookingStatus, startDate.iso, endDate.iso, totalPrice, guests, stay_code, JSON.stringify(contract)]
+                 guests, contract_accepted as "contractAccepted", contract_json as "contractJson", request_mode as "requestMode"`,
+      [bookingId, propertyId, userId, bookingStatus, startDate.iso, endDate.iso, totalPrice, guests, stay_code, JSON.stringify(contract), requestMode]
     );
 
     await client.query('COMMIT');
@@ -2199,7 +2219,13 @@ app.get('/api/conversations', async (req, res) => {
               u_tenant.name as "tenantName", u_host.name as "hostName",
               p.title as "propertyTitle", p."imageUrl" as "propertyImage",
               b.status as "bookingStatus", b.start_date as "startDate", b.end_date as "endDate",
-              b.guests, b.total_price as "totalPrice"
+              b.guests, b.total_price as "totalPrice",
+              COALESCE(c.request_mode, b.request_mode, CASE WHEN c.booking_id IS NOT NULL THEN 'protected' ELSE NULL END) as "requestMode",
+              c.request_status as "requestStatus",
+              c.request_start_date as "requestStartDate",
+              c.request_end_date as "requestEndDate",
+              c.request_guests as "requestGuests",
+              c.request_total_price as "requestTotalPrice"
        FROM conversations c
        JOIN users u_tenant ON c.tenant_id = u_tenant.id
        JOIN users u_host ON c.host_id = u_host.id
@@ -2268,6 +2294,14 @@ app.post('/api/conversations', async (req, res) => {
 
   const propertyId = typeof req.body?.propertyId === 'string' ? req.body.propertyId.trim() : '';
   const requestedBookingId = typeof req.body?.bookingId === 'string' ? req.body.bookingId.trim() : '';
+  const requestMode = req.body?.requestMode === 'protected' ? 'protected' : req.body?.requestMode === 'direct' ? 'direct' : null;
+  const requestStatus = req.body?.requestStatus === 'accepted' ? 'accepted' : 'pending';
+  const requestStartDate = typeof req.body?.startDate === 'string' && DATE_ONLY_PATTERN.test(req.body.startDate) ? req.body.startDate : null;
+  const requestEndDate = typeof req.body?.endDate === 'string' && DATE_ONLY_PATTERN.test(req.body.endDate) ? req.body.endDate : null;
+  const parsedRequestGuests = Number(req.body?.guests);
+  const requestGuests = Number.isInteger(parsedRequestGuests) && parsedRequestGuests > 0 ? parsedRequestGuests : null;
+  const parsedRequestTotal = Number(req.body?.totalPrice);
+  const requestTotalPrice = Number.isFinite(parsedRequestTotal) ? parsedRequestTotal : null;
 
   if (!propertyId) {
     return res.status(400).json({ error: 'Elegí la propiedad antes de abrir el chat.' });
@@ -2323,30 +2357,137 @@ app.post('/api/conversations', async (req, res) => {
     );
 
     if (existing.rows.length > 0) {
-      if (bookingId && existing.rows[0].booking_id !== bookingId) {
+      const existingConversation = existing.rows[0];
+      const shouldUpdateExisting =
+        (bookingId && existingConversation.booking_id !== bookingId)
+        || requestMode !== null
+        || requestStartDate !== null
+        || requestEndDate !== null
+        || requestGuests !== null
+        || requestTotalPrice !== null;
+
+      if (shouldUpdateExisting) {
         const updated = await db.query(
           `UPDATE conversations
-           SET booking_id = $1, updated_at = NOW()
-           WHERE id = $2
+           SET booking_id = COALESCE($1, booking_id),
+               request_mode = COALESCE($2, request_mode),
+               request_status = CASE WHEN request_status = 'accepted' THEN 'accepted' ELSE COALESCE($3, request_status, 'pending') END,
+               request_start_date = COALESCE($4, request_start_date),
+               request_end_date = COALESCE($5, request_end_date),
+               request_guests = COALESCE($6, request_guests),
+               request_total_price = COALESCE($7, request_total_price),
+               updated_at = NOW()
+           WHERE id = $8
            RETURNING *`,
-          [bookingId, existing.rows[0].id],
+          [bookingId, requestMode, requestStatus, requestStartDate, requestEndDate, requestGuests, requestTotalPrice, existingConversation.id],
         );
 
         return res.json(updated.rows[0]);
       }
 
-      return res.json(existing.rows[0]);
+      return res.json(existingConversation);
     }
 
     const id = `conv_${Date.now()}`;
     const result = await db.query(
-      `INSERT INTO conversations (id, tenant_id, host_id, property_id, booking_id) 
-       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [id, userId, hostId, propertyId, bookingId]
+      `INSERT INTO conversations (
+         id, tenant_id, host_id, property_id, booking_id,
+         request_mode, request_status, request_start_date, request_end_date, request_guests, request_total_price
+       ) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
+      [id, userId, hostId, propertyId, bookingId, requestMode, requestStatus, requestStartDate, requestEndDate, requestGuests, requestTotalPrice]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ error: 'No pudimos iniciar la conversación. Intentá de nuevo.' });
+  }
+});
+
+app.post('/api/conversations/:id/accept-request', async (req, res) => {
+  const userId = req.session.userId;
+  if (!userId) return res.status(401).json({ error: AUTH_REQUIRED_ERROR });
+
+  try {
+    const conversationResult = await db.query(
+      `SELECT c.*, b.status as "bookingStatus", b.request_mode as "bookingRequestMode"
+       FROM conversations c
+       LEFT JOIN bookings b ON b.id = c.booking_id
+       WHERE c.id = $1
+       LIMIT 1`,
+      [req.params.id],
+    );
+
+    const conversation = conversationResult.rows[0];
+
+    if (!conversation) {
+      return res.status(404).json({ error: 'No encontramos esa conversación.' });
+    }
+
+    if (conversation.host_id !== userId) {
+      return res.status(403).json({ error: 'Solo el anfitrión puede aceptar esta solicitud.' });
+    }
+
+    const effectiveRequestMode = conversation.request_mode === 'protected' || conversation.booking_id ? 'protected' : 'direct';
+
+    if (conversation.booking_id && conversation.bookingStatus === 'pending') {
+      await db.query(
+        `UPDATE bookings
+         SET status = 'confirmed'
+         WHERE id = $1`,
+        [conversation.booking_id],
+      );
+    }
+
+    const acceptanceMessage = 'Ya podés coordinar los últimos detalles con el anfitrión.';
+    const messageId = `msg_${Date.now()}`;
+
+    await db.query(
+      `UPDATE conversations
+       SET request_status = 'accepted',
+           last_message = $1,
+           updated_at = NOW()
+       WHERE id = $2`,
+      [acceptanceMessage, req.params.id],
+    );
+
+    await db.query(
+      `INSERT INTO messages (id, conversation_id, sender_id, receiver_id, content, is_system)
+       VALUES ($1, $2, $3, $4, $5, TRUE)`,
+      [messageId, req.params.id, userId, conversation.tenant_id, acceptanceMessage],
+    );
+
+    await logActivity(conversation.tenant_id, 'BOOKING_REQUEST_ACCEPTED', {
+      bookingId: conversation.booking_id ?? undefined,
+      conversationId: req.params.id,
+      requestMode: effectiveRequestMode,
+    });
+
+    const updatedConversationResult = await db.query(
+      `SELECT c.*, 
+              u_tenant.name as "tenantName", u_host.name as "hostName",
+              p.title as "propertyTitle", p."imageUrl" as "propertyImage",
+              b.status as "bookingStatus", b.start_date as "startDate", b.end_date as "endDate",
+              b.guests, b.total_price as "totalPrice",
+              COALESCE(c.request_mode, b.request_mode, CASE WHEN c.booking_id IS NOT NULL THEN 'protected' ELSE NULL END) as "requestMode",
+              c.request_status as "requestStatus",
+              c.request_start_date as "requestStartDate",
+              c.request_end_date as "requestEndDate",
+              c.request_guests as "requestGuests",
+              c.request_total_price as "requestTotalPrice"
+       FROM conversations c
+       JOIN users u_tenant ON c.tenant_id = u_tenant.id
+       JOIN users u_host ON c.host_id = u_host.id
+       JOIN properties p ON c.property_id = p.id
+       LEFT JOIN bookings b ON c.booking_id = b.id
+       WHERE c.id = $1
+       LIMIT 1`,
+      [req.params.id],
+    );
+
+    return res.json(updatedConversationResult.rows[0]);
+  } catch (err) {
+    console.error('Error al aceptar solicitud en conversación:', err);
+    return res.status(500).json({ error: 'No pudimos aceptar la solicitud. Intentá de nuevo.' });
   }
 });
 
