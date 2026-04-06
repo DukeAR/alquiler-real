@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { apiJson } from '../lib/apiConfig';
 import { LoadingState } from './LoadingState';
 import { Icons } from './Icons';
-import BookingConfirmationModal from './BookingConfirmationModal';
 import DateRangePicker from './DateRangePicker';
 import {
   getPropertyVerificationGuidanceMessage,
@@ -106,12 +105,14 @@ type BookingConfirmationNotice = {
   description: string;
 };
 
-type BookingSuccessState = {
-  bookingId: string;
-  nights: number;
-  total: number;
-  guestSummary: string;
-  stayCode?: string;
+type ReservationModeCardProps = {
+  mode: ReservationRequestMode;
+  selected: boolean;
+  disabled?: boolean;
+  title: string;
+  description: string;
+  helper?: string;
+  onSelect: (mode: ReservationRequestMode) => void;
 };
 
 const formatMonthYear = (value?: string) => {
@@ -476,6 +477,58 @@ const GuestCounterCard: React.FC<GuestCounterCardProps> = ({
   );
 };
 
+const ReservationModeCard: React.FC<ReservationModeCardProps> = ({
+  mode,
+  selected,
+  disabled = false,
+  title,
+  description,
+  helper,
+  onSelect,
+}) => {
+  return (
+    <label
+      className={cn(
+        'block rounded-[24px] border p-4 transition-[border-color,box-shadow,background-color] duration-150',
+        disabled && 'cursor-not-allowed opacity-70',
+        selected
+          ? 'border-brand/40 bg-white shadow-[0_18px_40px_-32px_rgba(14,116,144,0.45)] ring-1 ring-brand/15'
+          : mode === 'protected'
+            ? 'border-slate-200 bg-brand/[0.04] hover:border-brand/25'
+            : 'border-slate-200 bg-white hover:border-slate-300',
+      )}
+    >
+      <input
+        type="radio"
+        name="reservation-mode"
+        value={mode}
+        checked={selected}
+        disabled={disabled}
+        onChange={() => onSelect(mode)}
+        className="sr-only"
+      />
+
+      <div className="flex items-start gap-3">
+        <span
+          aria-hidden="true"
+          className={cn(
+            'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors',
+            selected ? 'border-brand bg-brand text-white' : 'border-slate-300 bg-white text-transparent',
+          )}
+        >
+          <span className={cn('h-2 w-2 rounded-full bg-current', !selected && 'opacity-0')} />
+        </span>
+
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-slate-950">{title}</p>
+          <p className="mt-1 text-sm leading-6 text-slate-600">{description}</p>
+          {helper ? <p className="mt-2 text-xs font-medium text-slate-500">{helper}</p> : null}
+        </div>
+      </div>
+    </label>
+  );
+};
+
 export const PropertyDetailShell: React.FC<{
   property: PropertyDetailData;
   images: string[];
@@ -514,12 +567,11 @@ export const PropertyDetailShell: React.FC<{
   const [checkOut, setCheckOut] = useState<string>('');
   const [adults, setAdults] = useState<number>(1);
   const [childrenCount, setChildrenCount] = useState<number>(0);
+  const [selectedRequestMode, setSelectedRequestMode] = useState<ReservationRequestMode>('direct');
   const [bookingError, setBookingError] = useState<BookingErrorState | null>(null);
-  const [confirmOpen, setConfirmOpen] = useState<boolean>(false);
   const [isGuestPickerOpen, setIsGuestPickerOpen] = useState(false);
   const [bookingSubmitMode, setBookingSubmitMode] = useState<ReservationRequestMode | null>(null);
   const [bookingSubmitNotice, setBookingSubmitNotice] = useState<BookingConfirmationNotice | null>(null);
-  const [bookingSuccess, setBookingSuccess] = useState<BookingSuccessState | null>(null);
   const [availabilityRefreshToken, setAvailabilityRefreshToken] = useState(0);
   const guestPickerRef = useRef<HTMLDivElement | null>(null);
   const guestTriggerRef = useRef<HTMLButtonElement | null>(null);
@@ -585,7 +637,9 @@ export const PropertyDetailShell: React.FC<{
   const canAddGuest = !guestCapacityReached;
   const canReserve = hasCompleteDates && nights > 0 && !guestCapacityExceeded;
 
-  const bookingNotice: BookingNoticeState = bookingError
+  const bookingNotice: BookingNoticeState = bookingSubmitNotice
+    ? bookingSubmitNotice
+    : bookingError
     ? {
         tone: bookingError.field === 'guests' ? 'warning' : 'error',
         heading: bookingError.field === 'guests' ? 'Revisá la cantidad de huéspedes' : 'Revisá las fechas',
@@ -606,8 +660,11 @@ export const PropertyDetailShell: React.FC<{
         : canReserve
           ? {
               tone: 'success',
-              heading: 'Ya podés enviar la solicitud',
-              description: `${formatCurrency(total)} total · ${nights} ${nights === 1 ? 'noche' : 'noches'} · ${formatGuestSelection(adults, childrenCount)}.`,
+              heading: selectedRequestMode === 'protected' ? 'Ya podés enviar la solicitud' : 'Ya podés avanzar por chat',
+              description:
+                selectedRequestMode === 'protected'
+                  ? `${formatCurrency(total)} total · ${nights} ${nights === 1 ? 'noche' : 'noches'} · ${formatGuestSelection(adults, childrenCount)}.`
+                  : `La propuesta queda lista para seguirla por chat con ${formatCurrency(total)} estimado y ${formatGuestSelection(adults, childrenCount)}.`,
             }
           : {
               tone: 'warning',
@@ -654,7 +711,6 @@ export const PropertyDetailShell: React.FC<{
   const clearBookingFeedback = () => {
     setBookingError(null);
     setBookingSubmitNotice(null);
-    setBookingSuccess(null);
   };
 
   useEffect(() => {
@@ -688,12 +744,6 @@ export const PropertyDetailShell: React.FC<{
     };
   }, [isGuestPickerOpen]);
 
-  const closeBookingConfirmation = () => {
-    if (bookingSubmitMode) return;
-    setConfirmOpen(false);
-    resetBookingSubmitState();
-  };
-
   const handleAdultsChange = (nextValue: number) => {
     setAdults(Math.max(1, nextValue));
     clearBookingFeedback();
@@ -704,8 +754,11 @@ export const PropertyDetailShell: React.FC<{
     clearBookingFeedback();
   };
 
-  const handleReserve = (e: React.FormEvent) => {
+  const handleReserve = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (bookingSubmitMode) {
+      return;
+    }
     if (!checkIn && !checkOut) {
       setBookingError({ field: 'dates', message: 'Elegí ingreso y salida para seguir.' });
       return;
@@ -735,7 +788,13 @@ export const PropertyDetailShell: React.FC<{
     }
     setBookingError(null);
     resetBookingSubmitState();
-    setConfirmOpen(true);
+
+    if (selectedRequestMode === 'protected') {
+      await handleStartProtectedRequest();
+      return;
+    }
+
+    await handleStartDirectRequest();
   };
 
   const buildReservationRequestContext = (
@@ -778,7 +837,6 @@ export const PropertyDetailShell: React.FC<{
   };
 
   const openLoginForRequest = (title: string, description: string) => {
-    setConfirmOpen(false);
     resetBookingSubmitState();
     showToast(title, description, 'warning');
     import('../lib/modal').then((m) => m.showLoginModal());
@@ -807,7 +865,6 @@ export const PropertyDetailShell: React.FC<{
     try {
       const { conversationId, initialMessageSent } = await prepareConversationForRequest(requestContext);
 
-      setConfirmOpen(false);
       resetBookingSubmitState();
       navigateToConversation(conversationId, requestContext);
       showToast(
@@ -884,7 +941,6 @@ export const PropertyDetailShell: React.FC<{
     const requestContext = buildReservationRequestContext('protected', result.data.booking.id, result.data.booking.status);
 
     setBookingError(null);
-    setConfirmOpen(false);
     resetBookingSubmitState();
     resetBookingDraft();
     setAvailabilityRefreshToken((currentValue) => currentValue + 1);
@@ -1095,38 +1151,6 @@ export const PropertyDetailShell: React.FC<{
               ) : null}
             </div>
 
-            {bookingSuccess ? (
-              <Card padding="sm" variant="muted" className="mt-5 rounded-[24px] border-brand/10 bg-brand/5">
-                <NoticeBanner
-                  tone="info"
-                  heading="La estadía ya quedó confirmada"
-                  description={`Guardamos ${bookingSuccess.nights} ${bookingSuccess.nights === 1 ? 'noche' : 'noches'} para ${bookingSuccess.guestSummary} por ${formatCurrency(bookingSuccess.total)}. Desde Mis reservas podés revisar fechas, estado y condiciones.`}
-                  className="border-brand/15 bg-white/85 text-slate-700 shadow-none dark:border-brand/20 dark:bg-slate-900/85 dark:text-slate-100"
-                />
-
-                {bookingSuccess.stayCode ? (
-                  <Badge variant="brand" size="md" className="mt-4 gap-2">
-                    <Icons.CheckCircle2 className="h-3.5 w-3.5" />
-                    <span>Código de ingreso: {bookingSuccess.stayCode}</span>
-                  </Badge>
-                ) : null}
-
-                <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-                  <Button type="button" onClick={() => navigate('/my-bookings')} className="sm:flex-1">
-                    <Icons.Calendar className="h-4 w-4" />
-                    Ver mis reservas
-                  </Button>
-                  <Button type="button" variant="secondary" onClick={onContact} className="sm:flex-1">
-                    <Icons.MessageSquare className="h-4 w-4" />
-                    Escribir al anfitrión
-                  </Button>
-                  <Button type="button" variant="ghost" size="sm" onClick={() => setBookingSuccess(null)}>
-                    Cerrar aviso
-                  </Button>
-                </div>
-              </Card>
-            ) : null}
-
             <form className="mt-5 space-y-4" onSubmit={handleReserve}>
               <div className="space-y-3.5">
                 <FormField
@@ -1256,6 +1280,36 @@ export const PropertyDetailShell: React.FC<{
                 </div>
               </Card>
 
+              <div className="space-y-3 rounded-[24px] border border-slate-200/80 bg-white p-4">
+                <h3 className="text-sm font-semibold text-slate-950">Cómo querés avanzar</h3>
+
+                <div role="radiogroup" aria-label="Cómo querés avanzar" className="grid gap-3">
+                  <ReservationModeCard
+                    mode="direct"
+                    selected={selectedRequestMode === 'direct'}
+                    disabled={bookingSubmitMode !== null}
+                    title="Acordar directamente"
+                    description="Coordinás con el anfitrión y definís los detalles por chat."
+                    onSelect={(mode) => {
+                      setSelectedRequestMode(mode);
+                      setBookingSubmitNotice(null);
+                    }}
+                  />
+                  <ReservationModeCard
+                    mode="protected"
+                    selected={selectedRequestMode === 'protected'}
+                    disabled={bookingSubmitMode !== null}
+                    title="Reserva protegida"
+                    description="La seña se mantiene en custodia y se libera cuando llegás al lugar."
+                    helper="Opción con mayor control sobre la seña"
+                    onSelect={(mode) => {
+                      setSelectedRequestMode(mode);
+                      setBookingSubmitNotice(null);
+                    }}
+                  />
+                </div>
+              </div>
+
               <NoticeBanner
                 tone={bookingNotice.tone}
                 heading={bookingNotice.heading}
@@ -1269,9 +1323,11 @@ export const PropertyDetailShell: React.FC<{
                   variant="primary"
                   size="lg"
                   fullWidth
-                  disabled={!canReserve}
-                  aria-disabled={!canReserve}
+                  disabled={!canReserve || bookingSubmitMode !== null}
+                  aria-disabled={!canReserve || bookingSubmitMode !== null}
                   className="rounded-2xl shadow-[0_24px_46px_-28px_rgba(67,56,202,0.42)]"
+                  loading={bookingSubmitMode !== null}
+                  loadingLabel={bookingSubmitMode === 'protected' ? 'Enviando solicitud...' : 'Abriendo chat...'}
                 >
                   <>
                     <Icons.ArrowRight className="h-4 w-4" />
@@ -1285,27 +1341,9 @@ export const PropertyDetailShell: React.FC<{
               </div>
 
               <p className="text-center text-xs leading-5 text-slate-500">
-                Primero revisás la propuesta y después elegís si querés conversar o dejarla protegida en la app.
+                Podés cambiar esta elección antes de enviar la solicitud, sin perder las fechas que elegiste.
               </p>
             </form>
-
-            <BookingConfirmationModal
-              isOpen={confirmOpen}
-              onClose={closeBookingConfirmation}
-              onStartDirect={handleStartDirectRequest}
-              onStartProtected={handleStartProtectedRequest}
-              propertyTitle={property.title}
-              hostName={hostName}
-              checkIn={checkIn}
-              checkOut={checkOut}
-              nights={nights}
-              adults={adults}
-              children={childrenCount}
-              nightly={nightly}
-              total={total}
-              actionLoadingMode={bookingSubmitMode}
-              submitNotice={bookingSubmitNotice}
-            />
           </Card>
         </aside>
 

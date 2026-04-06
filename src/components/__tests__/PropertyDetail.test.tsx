@@ -336,7 +336,18 @@ describe('PropertyDetail', () => {
     expect(screen.getByText('Máximo: 4 huéspedes.')).toBeDefined();
   });
 
-  test('smoke: selects date range and sends a protected request from the sidebar', async () => {
+  test('shows the inline advance choice with direct agreement selected by default', async () => {
+    renderPropertyDetail();
+
+    await waitFor(() => expect(screen.getByText('Casa de prueba')).toBeDefined());
+
+    expect(screen.getByText('Cómo querés avanzar')).toBeDefined();
+    expect(screen.getByLabelText(/acordar directamente/i)).toBeChecked();
+    expect(screen.getByLabelText(/reserva protegida/i)).not.toBeChecked();
+    expect(screen.getByText('Opción con mayor control sobre la seña')).toBeDefined();
+  });
+
+  test('smoke: sends a direct request by default and opens the contextual chat', async () => {
     renderPropertyDetail();
 
     await waitFor(() => expect(screen.getByText('Casa de prueba')).toBeDefined());
@@ -350,9 +361,88 @@ describe('PropertyDetail', () => {
     fireEvent.click(screen.getByRole('button', { name: new RegExp(checkInIso) }));
     fireEvent.click(screen.getByRole('button', { name: new RegExp(checkOutIso) }));
 
+    const bookingCalls: Array<{ url: string; options: RequestInit }> = [];
+    const apiJsonCalls: Array<{ url: string; options?: RequestInit }> = [];
+
+    (apiJson as any).mockImplementation(async (url: string, options?: RequestInit) => {
+      apiJsonCalls.push({ url, options });
+
+      if (url.endsWith('/reviews')) return [{ id: 'r1', reviewer_id: 'u1', rating: 5, comment: 'Buen lugar' }];
+      if (url === '/api/bookings') return [];
+      if (url === '/api/conversations' && options?.method === 'POST') {
+        return {
+          id: 'conv-1',
+          property_id: 'p1',
+          tenant_id: 'u1',
+          host_id: 'h1',
+          hostName: 'Mariana',
+          propertyTitle: 'Casa de prueba',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+      }
+      if (url === '/api/messages' && options?.method === 'POST') {
+        return {
+          id: 'msg-1',
+          conversation_id: 'conv-1',
+          sender_id: 'u1',
+          receiver_id: 'h1',
+          content: 'Hola Mariana',
+          created_at: new Date().toISOString(),
+        };
+      }
+
+      return sampleProperty;
+    });
+
+    (apiFetch as any).mockImplementation(async (url: string, options: RequestInit = {}) => {
+      if (url === '/api/auth/me') {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ user: { id: 'u1', name: 'Test User', email: 'test@test.com', role: 'tenant' } })
+        };
+      }
+
+      if (url === '/api/bookings' && options.method === 'POST') {
+        bookingCalls.push({ url, options });
+      }
+
+      return { ok: true, status: 200, json: async () => ({}) };
+    });
+
     fireEvent.click(screen.getByRole('button', { name: /^solicitar reserva$/i }));
 
-    await waitFor(() => expect(screen.getByText('Cómo querés mandar esta solicitud', { selector: 'h3' })).toBeDefined());
+    expect(bookingCalls).toHaveLength(0);
+
+    await waitFor(() => {
+      expect(apiJsonCalls).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ url: '/api/conversations' }),
+          expect.objectContaining({ url: '/api/messages' }),
+        ]),
+      );
+    });
+
+    await waitFor(() => expect(screen.getByText('Chat abierto conv-1')).toBeDefined());
+    expect(screen.getByText('Modo: direct')).toBeDefined();
+  });
+
+  test('smoke: selects date range and sends a protected request from the sidebar', async () => {
+    renderPropertyDetail();
+
+    await waitFor(() => expect(screen.getByText('Casa de prueba')).toBeDefined());
+
+    const checkInIso = isoPlusDays(2);
+    const checkOutIso = isoPlusDays(5);
+
+    fireEvent.click(screen.getByRole('button', { name: /abrir calendario de fechas/i }));
+
+    await waitFor(() => expect(screen.getByRole('button', { name: new RegExp(checkInIso) })).toBeDefined());
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(checkInIso) }));
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(checkOutIso) }));
+    fireEvent.click(screen.getByLabelText(/reserva protegida/i));
+    expect(screen.getByLabelText(/reserva protegida/i)).toBeChecked();
 
     const bookingCalls: Array<{ url: string; options: RequestInit }> = [];
     const apiJsonCalls: Array<{ url: string; options?: RequestInit }> = [];
@@ -426,7 +516,7 @@ describe('PropertyDetail', () => {
     });
 
     const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
-    fireEvent.click(screen.getByRole('button', { name: /enviar solicitud protegida/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^solicitar reserva$/i }));
 
     await waitFor(() => expect(dispatchSpy).toHaveBeenCalled());
     expect(bookingCalls).toHaveLength(1);
@@ -450,8 +540,6 @@ describe('PropertyDetail', () => {
 
     await waitFor(() => expect(screen.getByText('Chat abierto conv-1')).toBeDefined());
     expect(screen.getByText('Modo: protected')).toBeDefined();
-
-    await waitFor(() => expect(screen.queryByText('Cómo querés mandar esta solicitud', { selector: 'h3' })).toBeNull());
   });
 
   test('smoke: keeps the booking CTA disabled until dates are complete', async () => {
@@ -464,8 +552,8 @@ describe('PropertyDetail', () => {
     expect(reserveButton).toBeDisabled();
     expect(screen.getByText('Faltan las fechas')).toBeInTheDocument();
     expect(screen.getByText('Elegí ingreso y salida para ver el total.')).toBeInTheDocument();
-
-    expect(screen.queryByText('Cómo querés mandar esta solicitud', { selector: 'h3' })).toBeNull();
+    expect(screen.getByText('Cómo querés avanzar')).toBeInTheDocument();
+    expect(screen.getByLabelText(/acordar directamente/i)).toBeChecked();
   });
 
   test('asks for login when trying to confirm a reservation without a session', async () => {
@@ -494,13 +582,9 @@ describe('PropertyDetail', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: new RegExp(checkInIso) })).toBeDefined());
     fireEvent.click(screen.getByRole('button', { name: new RegExp(checkInIso) }));
     fireEvent.click(screen.getByRole('button', { name: new RegExp(checkOutIso) }));
+    fireEvent.click(screen.getByLabelText(/reserva protegida/i));
     fireEvent.click(screen.getByRole('button', { name: /^solicitar reserva$/i }));
 
-    await waitFor(() => expect(screen.getByText('Cómo querés mandar esta solicitud', { selector: 'h3' })).toBeDefined());
-
-    fireEvent.click(screen.getByRole('button', { name: /enviar solicitud protegida/i }));
-
     await waitFor(() => expect(showLoginModal).toHaveBeenCalledTimes(1));
-    await waitFor(() => expect(screen.queryByText('Cómo querés mandar esta solicitud', { selector: 'h3' })).toBeNull());
   });
 });
