@@ -156,20 +156,50 @@ const futureCards: FutureCard[] = [
 
 const hostBenefits: RoleBenefit[] = [
   {
-    title: 'Quién sos queda claro',
-    description: 'Si tu identidad está confirmada, la otra persona lo ve antes de escribirte.',
-    icon: Icons.BadgeCheck,
+    title: 'Publicás con más claridad',
+    description: 'Tu aviso deja visible quién sos, dónde está el lugar y qué parte ya fue comprobada desde el inicio.',
+    icon: Icons.Home,
   },
   {
-    title: 'Se entiende mejor el lugar',
-    description: 'La ubicación y el material real ayudan a que no todo dependa del chat.',
+    title: 'Revisás mejor cada solicitud',
+    description: 'Antes de aceptar, sumás contexto del huésped y de cómo viene avanzando la reserva.',
     icon: Icons.ShieldCheck,
   },
   {
-    title: 'Llegan consultas más útiles',
-    description: 'Te escriben con menos dudas básicas y con más decisión.',
+    title: 'Aportás referencias útiles',
+    description: 'Después de la estadía, podés dejar una opinión útil para otros anfitriones, enfocada en la experiencia real.',
     icon: Icons.MessageSquare,
   },
+];
+
+const hostAcceptancePoints = [
+  'Si la identidad del huésped ya fue confirmada.',
+  'Qué historial de reservas tiene dentro de la plataforma.',
+  'Qué reseñas dejaron otros anfitriones después de recibirlo.',
+  'Qué tan completo está su perfil para entender si ya cargó la información básica.',
+  'Señales objetivas de uso serio dentro de la plataforma.',
+];
+
+const hostGuestProfilePoints = [
+  'Identidad confirmada, si ya está validada.',
+  'Antigüedad en la plataforma.',
+  'Reservas completadas.',
+  'Cancelaciones o conflictos, si existen.',
+  'Reseñas de anfitriones.',
+  'Nivel de completitud del perfil.',
+];
+
+const hostOperationSignals = [
+  'Si consultó antes por la propiedad.',
+  'Si la guardó y volvió a verla.',
+  'Si completó sus datos básicos.',
+  'Si avanzó seriamente en la solicitud.',
+];
+
+const hostClosingPoints = [
+  'Mostrás mejor tu propiedad desde el inicio.',
+  'Entendés mejor quién te quiere alquilar antes de aceptar.',
+  'Dejás referencias útiles que ayudan a otros anfitriones a decidir mejor.',
 ];
 
 const guestBenefits: RoleBenefit[] = [
@@ -191,15 +221,15 @@ const guestBenefits: RoleBenefit[] = [
 ];
 
 const hostSteps: StepCard = {
-  eyebrow: 'Antes de publicar',
+  eyebrow: 'Para publicar mejor',
   title: 'Qué conviene completar antes de publicar',
-  description: 'Cuatro pasos para que el aviso se entienda antes del chat.',
+  description: 'Cuatro pasos para que el aviso se entienda antes del chat y la reserva arranque mejor.',
   icon: Icons.ListTodo,
   steps: [
     'Confirmá tu identidad.',
     'Marcá bien la ubicación y el precio.',
     'Subí fotos o video que muestren el lugar como es.',
-    'Publicá cuando el aviso se entienda sin abrir el chat.',
+    'Publicá cuando el aviso se entienda sin depender del chat.',
   ],
   tone: 'brand',
 };
@@ -217,18 +247,6 @@ const guestSteps: StepCard = {
   ],
   tone: 'success',
 };
-
-const hostHighValidationPoints = [
-  'Se ve quién publica.',
-  'Se entiende dónde está el lugar.',
-  'Hay material real para mirar antes de escribir.',
-];
-
-const hostScopePoints = [
-  'Nombre, ubicación y material real dejan de ser dudas iniciales.',
-  'La otra persona entiende más rápido si el lugar le cierra.',
-  'La conversación empieza más ordenada y con menos vueltas.',
-];
 
 const ScopeCardBlock = ({ card }: { card: ScopeCard }) => {
   const Icon = card.icon;
@@ -563,9 +581,9 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                   <SectionTitle
                     eyebrow="Anfitriones"
                     as="h2"
-                    heading="Publicá para que te entiendan antes del chat"
-                    description="Antes de recibir consultas, dejá claro quién sos, dónde está el lugar y qué parte del aviso ya fue comprobada."
-                    className="max-w-2xl"
+                    heading="No solo publicás mejor. También elegís con más información."
+                    description="Antes de aceptar una reserva, podés revisar quién te contacta, qué historial tiene en la plataforma y qué dijeron otros anfitriones. Así decidís con más criterio, sin sumar fricción innecesaria."
+                    className="max-w-3xl"
                     descriptionClassName="text-slate-700 dark:text-slate-300"
                   />
 
@@ -585,17 +603,17 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                     </div>
 
                     <SectionTitle
-                      eyebrow="Cuando el aviso ya está claro"
+                      eyebrow="Qué podés revisar antes de aceptar"
                       as="h3"
-                      heading="Cuanto más completo esté tu aviso, más arriba aparece"
-                      description="Además, la otra persona puede ver quién sos, dónde está el lugar y cómo se ve antes de escribirte."
+                      heading="Más contexto para decidir con criterio"
+                      description="La idea es que, cuando esa información ya existe dentro de la plataforma, la veas ordenada antes de responder o aceptar."
                       className="max-w-2xl"
                       eyebrowClassName="text-brand/90 dark:text-brand-light/80"
                       descriptionClassName="text-slate-700 dark:text-slate-300"
                     />
 
                     <div className="space-y-3">
-                      {hostHighValidationPoints.map((point) => (
+                      {hostAcceptancePoints.map((point) => (
                         <div key={point} className="flex items-start gap-3 rounded-[18px] border border-brand/10 bg-white/88 px-4 py-3.5 text-[0.92rem] leading-6 text-slate-800 shadow-[0_14px_28px_-24px_rgba(15,23,42,0.12)] dark:border-brand/20 dark:bg-slate-950/70 dark:text-slate-100">
                           <Icons.CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400/78 dark:text-emerald-300/72" />
                           <span>{point}</span>
@@ -604,36 +622,66 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                     </div>
 
                     <p className="app-body-sm leading-7 text-slate-700 dark:text-slate-300">
-                      Un aviso claro no reemplaza la conversación, pero hace que la charla arranque mucho mejor.
+                      No reemplaza tu criterio ni la conversación. Te da una base más clara para decidir con calma.
                     </p>
                   </div>
                 </Card>
 
-                <Card padding="none" className="rounded-[30px] border-slate-200/85 bg-white/96 p-7 shadow-[0_22px_46px_-34px_rgba(15,23,42,0.18)] dark:border-slate-800 dark:bg-slate-900 md:p-8">
-                  <div className="space-y-6">
-                    <div className="inline-flex h-12 w-12 items-center justify-center rounded-[18px] bg-slate-100 text-slate-900 shadow-[0_16px_30px_-24px_rgba(15,23,42,0.18)] dark:bg-slate-800 dark:text-slate-100">
-                      <Icons.Layers className="h-6 w-6" />
+                <div className="grid gap-6">
+                  <Card padding="none" className="rounded-[30px] border-slate-200/85 bg-white/96 p-7 shadow-[0_22px_46px_-34px_rgba(15,23,42,0.18)] dark:border-slate-800 dark:bg-slate-900 md:p-8">
+                    <div className="space-y-6">
+                      <div className="inline-flex h-12 w-12 items-center justify-center rounded-[18px] bg-slate-100 text-slate-900 shadow-[0_16px_30px_-24px_rgba(15,23,42,0.18)] dark:bg-slate-800 dark:text-slate-100">
+                        <Icons.BadgeCheck className="h-6 w-6" />
+                      </div>
+
+                      <SectionTitle
+                        eyebrow="Ficha breve del huésped"
+                        as="h3"
+                        heading="Lo importante en una lectura"
+                        description="La experiencia está pensada para ordenar la información básica del huésped sin convertirla en un filtro automático."
+                        className="max-w-sm"
+                        descriptionClassName="text-slate-700 dark:text-slate-300"
+                      />
+
+                      <ul className="space-y-3">
+                        {hostGuestProfilePoints.map((point) => (
+                          <li key={point} className="flex items-start gap-3 rounded-[18px] border border-slate-200/80 bg-slate-50/82 px-4 py-3.5 text-[0.92rem] leading-6 text-slate-700 dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-300">
+                            <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-brand/60" />
+                            <span>{point}</span>
+                          </li>
+                        ))}
+                      </ul>
                     </div>
+                  </Card>
 
-                    <SectionTitle
-                      eyebrow="Qué hace subir un aviso"
-                      as="h3"
-                      heading="Mostrá lo importante desde el inicio"
-                      description="No se trata de agregar texto. Se trata de dejar a la vista lo que hoy define una reserva."
-                      className="max-w-sm"
-                      descriptionClassName="text-slate-700 dark:text-slate-300"
-                    />
+                  <Card padding="none" className="rounded-[28px] border-emerald-200/70 bg-emerald-50/75 p-6 shadow-[0_18px_38px_-32px_rgba(15,23,42,0.16)] dark:border-emerald-900/30 dark:bg-emerald-900/14 md:p-7">
+                    <div className="space-y-5">
+                      <div className="inline-flex h-11 w-11 items-center justify-center rounded-[16px] bg-emerald-500/14 text-emerald-700 dark:bg-emerald-500/12 dark:text-emerald-300">
+                        <Icons.Layers className="h-5 w-5" />
+                      </div>
 
-                    <ul className="space-y-3">
-                      {hostScopePoints.map((point) => (
-                        <li key={point} className="flex items-start gap-3 rounded-[18px] border border-slate-200/80 bg-slate-50/82 px-4 py-3.5 text-[0.92rem] leading-6 text-slate-700 dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-300">
-                          <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-brand/60" />
-                          <span>{point}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </Card>
+                      <SectionTitle
+                        eyebrow="Señales útiles dentro de la operación"
+                        as="h3"
+                        heading="Qué muestra el recorrido de la solicitud"
+                        description="Sin sumar fricción innecesaria, también podés ver señales útiles del recorrido de esa reserva dentro de la plataforma."
+                        className="max-w-sm"
+                        descriptionClassName="text-emerald-900/80 dark:text-emerald-200/85"
+                        headingClassName="text-emerald-950 dark:text-emerald-100"
+                        eyebrowClassName="text-emerald-700 dark:text-emerald-300"
+                      />
+
+                      <ul className="space-y-3">
+                        {hostOperationSignals.map((point) => (
+                          <li key={point} className="flex items-start gap-2.5 text-[0.9rem] leading-6 text-emerald-900/85 dark:text-emerald-200/90">
+                            <Icons.Check className="mt-1 h-4 w-4 shrink-0" />
+                            <span>{point}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </Card>
+                </div>
               </section>
 
               <section className="grid gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(18rem,0.95fr)] lg:items-start">
@@ -642,27 +690,32 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                 <Card padding="none" className="overflow-hidden rounded-[30px] border-brand/15 bg-[radial-gradient(circle_at_top_right,rgba(67,56,202,0.1),transparent_38%),linear-gradient(180deg,rgba(255,255,255,0.99),rgba(248,250,252,0.98))] shadow-[0_26px_52px_-38px_rgba(15,23,42,0.2)] dark:border-slate-800 dark:bg-slate-900">
                   <div className="space-y-6 p-7 md:p-8">
                     <SectionTitle
-                      eyebrow="Siguiente paso"
+                      eyebrow="Cierre"
                       as="h3"
-                      heading="Publicá cuando el aviso se entienda solo"
-                      description="Cuanto más completo esté tu aviso, más arriba aparece y más concretas llegan las consultas."
-                      className="max-w-sm"
+                      heading="Publicar mejor también te permite aceptar con más criterio."
+                      description="Cuando el aviso está claro y la reserva llega con más contexto, la decisión se ordena mejor para ambos lados."
+                      className="max-w-md"
                       eyebrowClassName="text-slate-800 dark:text-slate-100"
                       descriptionClassName="text-slate-800 dark:text-slate-100"
                       headingClassName="text-slate-800 dark:text-slate-100"
                     />
 
                     <div className="space-y-3">
-                      {[
-                        'La otra persona entiende rápido qué está viendo.',
-                        'Llegan preguntas más concretas.',
-                        'Tu aviso gana jerarquía sin sobrecargarse.',
-                      ].map((point) => (
+                      {hostClosingPoints.map((point) => (
                         <div key={point} className="flex items-start gap-3 rounded-[18px] border border-slate-200/90 bg-white px-4 py-3.5 text-[0.92rem] font-medium leading-6 text-slate-800 shadow-[0_12px_24px_-20px_rgba(15,23,42,0.12)] dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-100">
                           <Icons.CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-300" />
                           <span>{point}</span>
                         </div>
                       ))}
+                    </div>
+
+                    <div className="space-y-2 rounded-[20px] border border-slate-200/80 bg-white/92 px-4 py-4 text-slate-700 shadow-[0_12px_24px_-20px_rgba(15,23,42,0.12)] dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-200">
+                      <p className="app-body-sm font-semibold leading-6 text-slate-900 dark:text-slate-50">
+                        Después de cada estadía, también podés dejar una opinión útil para otros anfitriones.
+                      </p>
+                      <p className="app-body-sm leading-7 text-slate-600 dark:text-slate-400">
+                        La idea es que esa opinión se enfoque en cómo fue la reserva y la estadía, no en juicios personales.
+                      </p>
                     </div>
 
                     <Button size="lg" fullWidth onClick={openAuthModal}>
