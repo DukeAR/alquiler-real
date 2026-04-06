@@ -195,4 +195,61 @@ describe('HostDashboard', () => {
     expect(within(profileCard).getByText('Usuario desde 2022')).toBeInTheDocument();
     expect(within(profileCard).getByText('La coordinación fue clara y la estadía avanzó sin cambios de último momento.')).toBeInTheDocument();
   });
+
+  test('shows explicit missing-data states when the guest profile is not structured yet', async () => {
+    apiJsonMock.mockResolvedValue({
+      stats: {
+        host_rating: 4.9,
+        total_bookings_hosted: 1,
+        trust_score: 88,
+        badge: 'Verificado',
+        host_verified: true,
+      },
+      properties: [
+        {
+          id: 'prop-1',
+          title: 'Casa del bosque',
+          location: 'Pinamar',
+          price: 150000,
+          status: 'active',
+          reviewsCount: 8,
+          rating: 4.9,
+          imageUrl: 'https://example.com/property.jpg',
+          verificationScore: 4,
+          verificationItems: [
+            { key: 'identity', label: 'Identidad confirmada', description: 'Sabés con quién estás hablando.', status: 'complete' },
+          ],
+        },
+      ],
+      recentBookings: [
+        {
+          id: 'booking-2',
+          status: 'pending',
+          date: '20/10/2026',
+          userId: 'guest-2',
+          userName: 'Tomás',
+          propertyTitle: 'Casa del bosque',
+        },
+      ],
+      contactedGuests: [
+        {
+          id: 'guest-2',
+          name: 'Tomás',
+        },
+      ],
+      estimatedIncome: 250000,
+    });
+
+    render(<HostDashboard onBack={vi.fn()} />);
+
+    expect(await screen.findByText('Datos en preparación')).toBeInTheDocument();
+    expect(screen.getByText('Todavía sin datos estructurados')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Ver ficha del huésped' }));
+
+    const profileCard = await screen.findByTestId('guest-request-profile-card');
+
+    expect(within(profileCard).getByText('Esta ficha todavía no tiene datos estructurados para mostrar.')).toBeInTheDocument();
+    expect(within(profileCard).getAllByText('Esta parte de la ficha todavía no tiene datos estructurados para mostrar.').length).toBeGreaterThan(0);
+  });
 });

@@ -387,7 +387,11 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
                       </div>
                       <div>
                         <p className="text-sm font-semibold text-slate-900 dark:text-white">{tenant.name}</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">Usuario desde {formatGuestMemberSinceYear(tenant.guestProfile.memberSince)}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          {tenant.guestProfile.dataAvailability.memberSince
+                            ? `Usuario desde ${formatGuestMemberSinceYear(tenant.guestProfile.memberSince)}`
+                            : 'Antigüedad todavía no disponible'}
+                        </p>
                       </div>
                     </div>
                     <div className="text-right">

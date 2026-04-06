@@ -1,4 +1,10 @@
-import type { GuestHostReviewSnippet, GuestOperationSignal, GuestRequestProfile } from '../types';
+import type {
+  GuestHostReviewSnippet,
+  GuestOperationSignal,
+  GuestRequestProfile,
+  GuestRequestProfileDataAvailability,
+  GuestRequestProfileDataSource,
+} from '../types';
 
 type GuestRequestProfileSource = {
   id?: string;
@@ -8,108 +14,112 @@ type GuestRequestProfileSource = {
   guestProfile?: Partial<GuestRequestProfile> | null;
 };
 
-const hostReviewCommentPool = [
-  'La coordinación fue clara y mantuvo buena comunicación durante toda la reserva.',
-  'Llegó con los datos completos y respetó lo acordado para la estadía.',
-  'Respondió rápido y la experiencia fue ordenada desde el inicio.',
-  'Avisó con tiempo los detalles de llegada y mantuvo un trato correcto.',
-  'La reserva avanzó sin cambios de último momento y con buena predisposición.',
-];
+const hasOwn = <T extends object>(value: T, key: PropertyKey) => Object.prototype.hasOwnProperty.call(value, key);
 
-const hostReviewAuthorPool = ['Laura', 'Martín', 'Sofía', 'Paula', 'Federico'];
+const isObject = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value);
 
-const buildSeed = (source: GuestRequestProfileSource, index: number) => {
-  const baseValue = `${source.userId || source.id || source.userName || 'guest'}-${source.status || 'pending'}-${index}`;
-  return Array.from(baseValue).reduce((total, char, position) => total + (char.charCodeAt(0) * (position + 1)), 0);
+const createDataAvailability = (overrides?: Partial<GuestRequestProfileDataAvailability>): GuestRequestProfileDataAvailability => {
+  const availability: GuestRequestProfileDataAvailability = {
+    identity: false,
+    platformHistory: false,
+    hostReviews: false,
+    profileCompletion: false,
+    operationSignals: false,
+    memberSince: false,
+    anyStructuredData: false,
+    ...overrides,
+  };
+
+  availability.anyStructuredData = [
+    availability.identity,
+    availability.platformHistory,
+    availability.hostReviews,
+    availability.profileCompletion,
+    availability.operationSignals,
+    availability.memberSince,
+  ].some(Boolean);
+
+  return availability;
 };
 
-const pickValue = <T,>(values: T[], seed: number, offset = 0) => values[(seed + offset) % values.length];
-
-const buildMockOperationSignals = (seed: number, status?: string): GuestOperationSignal[] => {
-  const signals: GuestOperationSignal[] = [
-    { id: 'consulted-before', label: 'Consultó antes de reservar', active: status === 'pending' || seed % 2 === 0 },
-    { id: 'saved-property', label: 'Guardó la propiedad', active: seed % 3 !== 1 },
-    { id: 'returned-to-view', label: 'Volvió a verla', active: status !== 'completed' || seed % 5 !== 0 },
+const getDataSource = (availability: GuestRequestProfileDataAvailability): GuestRequestProfileDataSource => {
+  const flags = [
+    availability.identity,
+    availability.platformHistory,
+    availability.hostReviews,
+    availability.profileCompletion,
+    availability.operationSignals,
+    availability.memberSince,
   ];
 
-  if (!signals.some((signal) => signal.active)) {
-    signals[0] = { ...signals[0], active: true };
+  if (!availability.anyStructuredData) {
+    return 'fallback';
   }
 
-  return signals;
+  if (flags.every(Boolean)) {
+    return 'api';
+  }
+
+  return 'mixed';
 };
 
-const buildMockHostReviews = (seed: number, completedStays: number): GuestHostReviewSnippet[] => {
-  const reviewCount = Math.min(3, Math.max(1, completedStays));
-
-  return Array.from({ length: reviewCount }, (_, index) => ({
-    id: `mock-review-${seed}-${index}`,
-    authorName: pickValue(hostReviewAuthorPool, seed, index),
-    date: `${2022 + ((seed + index) % 4)}-0${((index % 3) + 1)}-12`,
-    comment: pickValue(hostReviewCommentPool, seed, index),
-  }));
-};
-
-const buildMockGuestRequestProfile = (source: GuestRequestProfileSource, index: number): GuestRequestProfile => {
-  const seed = buildSeed(source, index);
-  const completedStays = Math.max(1, (seed % 5) + (source.status === 'completed' ? 2 : 1));
-  const conflictsCount = seed % 7 === 0 ? 1 : 0;
-  const cancellationsCount = seed % 6 === 0 ? 1 : 0;
+const createEmptyGuestRequestProfile = (): GuestRequestProfile => {
+  const dataAvailability = createDataAvailability();
 
   return {
-    identityVerified: seed % 4 !== 0,
+    identityVerified: false,
     platformHistory: {
-      completedStays,
-      conflictsCount,
-      cancellationsCount,
+      completedStays: 0,
+      conflictsCount: 0,
+      cancellationsCount: 0,
     },
-    hostReviews: buildMockHostReviews(seed, completedStays),
+    hostReviews: [],
     profileCompletion: {
-      profileComplete: seed % 3 !== 0,
-      photoUploaded: seed % 5 !== 0,
-      basicDetailsComplete: seed % 4 !== 1,
+      profileComplete: false,
+      photoUploaded: false,
+      basicDetailsComplete: false,
     },
-    operationSignals: buildMockOperationSignals(seed, source.status),
-    memberSince: `${2020 + (seed % 5)}-0${((seed % 3) + 1)}-15`,
+    operationSignals: [],
+    memberSince: '',
+    dataAvailability,
+    dataSource: getDataSource(dataAvailability),
   };
 };
 
-const normalizeHostReviews = (value: unknown, fallback: GuestHostReviewSnippet[]) => {
+const normalizeHostReviews = (value: unknown) => {
   if (!Array.isArray(value)) {
-    return fallback;
+    return [] as GuestHostReviewSnippet[];
   }
 
   return value.slice(0, 3).map((review, index) => {
     const candidate = (review && typeof review === 'object' ? review : {}) as Partial<GuestHostReviewSnippet>;
-    const fallbackReview = fallback[index] || fallback[0];
 
     return {
-      id: typeof candidate.id === 'string' && candidate.id.trim() ? candidate.id : `${fallbackReview.id}-${index}`,
-      authorName: typeof candidate.authorName === 'string' && candidate.authorName.trim() ? candidate.authorName : fallbackReview.authorName,
-      date: typeof candidate.date === 'string' && candidate.date.trim() ? candidate.date : fallbackReview.date,
-      comment: typeof candidate.comment === 'string' && candidate.comment.trim() ? candidate.comment : fallbackReview.comment,
+      id: typeof candidate.id === 'string' && candidate.id.trim() ? candidate.id : `guest-review-${index}`,
+      authorName: typeof candidate.authorName === 'string' && candidate.authorName.trim() ? candidate.authorName : 'Anfitrión',
+      date: typeof candidate.date === 'string' && candidate.date.trim() ? candidate.date : '',
+      comment: typeof candidate.comment === 'string' && candidate.comment.trim() ? candidate.comment : 'Sin comentario cargado.',
     };
   });
 };
 
-const normalizeOperationSignals = (value: unknown, fallback: GuestOperationSignal[]) => {
+const normalizeOperationSignals = (value: unknown) => {
   if (!Array.isArray(value)) {
-    return fallback;
+    return [] as GuestOperationSignal[];
   }
 
   return value.slice(0, 3).map((signal, index) => {
     const candidate = (signal && typeof signal === 'object' ? signal : {}) as Partial<GuestOperationSignal>;
-    const fallbackSignal = fallback[index] || fallback[0];
 
     return {
-      id: typeof candidate.id === 'string' && candidate.id.trim() ? candidate.id : `${fallbackSignal.id}-${index}`,
-      label: typeof candidate.label === 'string' && candidate.label.trim() ? candidate.label : fallbackSignal.label,
-      active: typeof candidate.active === 'boolean' ? candidate.active : fallbackSignal.active,
+      id: typeof candidate.id === 'string' && candidate.id.trim() ? candidate.id : `guest-signal-${index}`,
+      label: typeof candidate.label === 'string' && candidate.label.trim() ? candidate.label : 'Señal disponible',
+      active: typeof candidate.active === 'boolean' ? candidate.active : false,
     };
   });
 };
 
-const getSafeCount = (value: unknown, fallback: number) => {
+const getSafeCount = (value: unknown, fallback = 0) => {
   if (typeof value !== 'number' || Number.isNaN(value)) {
     return fallback;
   }
@@ -117,41 +127,65 @@ const getSafeCount = (value: unknown, fallback: number) => {
   return Math.max(0, Math.round(value));
 };
 
-export const resolveGuestRequestProfile = (source: GuestRequestProfileSource, index = 0): GuestRequestProfile => {
-  const fallback = buildMockGuestRequestProfile(source, index);
+export const resolveGuestRequestProfile = (source: GuestRequestProfileSource, _index = 0): GuestRequestProfile => {
   const providedProfile = source.guestProfile;
+  const emptyProfile = createEmptyGuestRequestProfile();
 
-  if (!providedProfile) {
-    return fallback;
+  if (!isObject(providedProfile)) {
+    return emptyProfile;
   }
 
+  const platformHistory = isObject(providedProfile.platformHistory) ? providedProfile.platformHistory : null;
+  const profileCompletion = isObject(providedProfile.profileCompletion) ? providedProfile.profileCompletion : null;
+
+  const dataAvailability = createDataAvailability({
+    identity: hasOwn(providedProfile, 'identityVerified') && typeof providedProfile.identityVerified === 'boolean',
+    platformHistory: !!platformHistory && ['completedStays', 'conflictsCount', 'cancellationsCount'].some(
+      (key) => typeof platformHistory[key] === 'number',
+    ),
+    hostReviews: Array.isArray(providedProfile.hostReviews),
+    profileCompletion: !!profileCompletion && ['profileComplete', 'photoUploaded', 'basicDetailsComplete'].some(
+      (key) => typeof profileCompletion[key] === 'boolean',
+    ),
+    operationSignals: Array.isArray(providedProfile.operationSignals),
+    memberSince: typeof providedProfile.memberSince === 'string' && providedProfile.memberSince.trim().length > 0,
+  });
+
   return {
-    identityVerified: typeof providedProfile.identityVerified === 'boolean' ? providedProfile.identityVerified : fallback.identityVerified,
+    identityVerified: dataAvailability.identity && typeof providedProfile.identityVerified === 'boolean'
+      ? providedProfile.identityVerified
+      : emptyProfile.identityVerified,
     platformHistory: {
-      completedStays: getSafeCount(providedProfile.platformHistory?.completedStays, fallback.platformHistory.completedStays),
-      conflictsCount: getSafeCount(providedProfile.platformHistory?.conflictsCount, fallback.platformHistory.conflictsCount),
-      cancellationsCount: getSafeCount(providedProfile.platformHistory?.cancellationsCount, fallback.platformHistory.cancellationsCount),
+      completedStays: getSafeCount(platformHistory?.completedStays, emptyProfile.platformHistory.completedStays),
+      conflictsCount: getSafeCount(platformHistory?.conflictsCount, emptyProfile.platformHistory.conflictsCount),
+      cancellationsCount: getSafeCount(platformHistory?.cancellationsCount, emptyProfile.platformHistory.cancellationsCount),
     },
-    hostReviews: normalizeHostReviews(providedProfile.hostReviews, fallback.hostReviews),
+    hostReviews: normalizeHostReviews(providedProfile.hostReviews),
     profileCompletion: {
-      profileComplete: typeof providedProfile.profileCompletion?.profileComplete === 'boolean'
-        ? providedProfile.profileCompletion.profileComplete
-        : fallback.profileCompletion.profileComplete,
-      photoUploaded: typeof providedProfile.profileCompletion?.photoUploaded === 'boolean'
-        ? providedProfile.profileCompletion.photoUploaded
-        : fallback.profileCompletion.photoUploaded,
-      basicDetailsComplete: typeof providedProfile.profileCompletion?.basicDetailsComplete === 'boolean'
-        ? providedProfile.profileCompletion.basicDetailsComplete
-        : fallback.profileCompletion.basicDetailsComplete,
+      profileComplete: typeof profileCompletion?.profileComplete === 'boolean'
+        ? profileCompletion.profileComplete
+        : emptyProfile.profileCompletion.profileComplete,
+      photoUploaded: typeof profileCompletion?.photoUploaded === 'boolean'
+        ? profileCompletion.photoUploaded
+        : emptyProfile.profileCompletion.photoUploaded,
+      basicDetailsComplete: typeof profileCompletion?.basicDetailsComplete === 'boolean'
+        ? profileCompletion.basicDetailsComplete
+        : emptyProfile.profileCompletion.basicDetailsComplete,
     },
-    operationSignals: normalizeOperationSignals(providedProfile.operationSignals, fallback.operationSignals),
-    memberSince: typeof providedProfile.memberSince === 'string' && providedProfile.memberSince.trim()
+    operationSignals: normalizeOperationSignals(providedProfile.operationSignals),
+    memberSince: dataAvailability.memberSince && typeof providedProfile.memberSince === 'string' && providedProfile.memberSince.trim()
       ? providedProfile.memberSince
-      : fallback.memberSince,
+      : emptyProfile.memberSince,
+    dataAvailability,
+    dataSource: getDataSource(dataAvailability),
   };
 };
 
 export const formatGuestMemberSinceYear = (value: string) => {
+  if (!value.trim()) {
+    return '';
+  }
+
   const parsedDate = new Date(value);
 
   if (Number.isNaN(parsedDate.getTime())) {
@@ -161,14 +195,42 @@ export const formatGuestMemberSinceYear = (value: string) => {
   return new Intl.DateTimeFormat('es-AR', { year: 'numeric' }).format(parsedDate);
 };
 
-export const getGuestSnapshotTitle = (profile: GuestRequestProfile) => (
-  profile.identityVerified ? 'Identidad confirmada' : 'Perfil en desarrollo'
-);
+export const getGuestSnapshotTitle = (profile: GuestRequestProfile) => {
+  if (!profile.dataAvailability.anyStructuredData) {
+    return 'Datos en preparación';
+  }
+
+  if (profile.dataAvailability.identity) {
+    return profile.identityVerified ? 'Identidad confirmada' : 'Identidad pendiente';
+  }
+
+  if (profile.dataAvailability.platformHistory && profile.platformHistory.completedStays > 1) {
+    return 'Con historial en la plataforma';
+  }
+
+  return 'Ficha inicial';
+};
 
 export const getGuestSnapshotDetail = (profile: GuestRequestProfile) => {
-  if (profile.platformHistory.completedStays > 1) {
+  if (!profile.dataAvailability.anyStructuredData) {
+    return 'Todavía sin datos estructurados';
+  }
+
+  if (profile.dataAvailability.platformHistory && profile.platformHistory.completedStays > 1) {
     return `${profile.platformHistory.completedStays} estadías completadas`;
   }
 
-  return `Usuario desde ${formatGuestMemberSinceYear(profile.memberSince)}`;
+  if (profile.dataAvailability.memberSince && profile.memberSince.trim()) {
+    return `Usuario desde ${formatGuestMemberSinceYear(profile.memberSince)}`;
+  }
+
+  if (profile.dataAvailability.hostReviews && profile.hostReviews.length > 0) {
+    return `${profile.hostReviews.length} ${profile.hostReviews.length === 1 ? 'reseña' : 'reseñas'} de anfitriones`;
+  }
+
+  if (profile.dataAvailability.profileCompletion) {
+    return 'Información inicial disponible';
+  }
+
+  return 'Información inicial disponible';
 };

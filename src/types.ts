@@ -86,6 +86,18 @@ export interface GuestOperationSignal {
   active: boolean;
 }
 
+export interface GuestRequestProfileDataAvailability {
+  identity: boolean;
+  platformHistory: boolean;
+  hostReviews: boolean;
+  profileCompletion: boolean;
+  operationSignals: boolean;
+  memberSince: boolean;
+  anyStructuredData: boolean;
+}
+
+export type GuestRequestProfileDataSource = 'api' | 'mixed' | 'fallback';
+
 export interface GuestRequestProfile {
   identityVerified: boolean;
   platformHistory: GuestPlatformHistory;
@@ -93,6 +105,8 @@ export interface GuestRequestProfile {
   profileCompletion: GuestProfileCompletion;
   operationSignals: GuestOperationSignal[];
   memberSince: string;
+  dataAvailability: GuestRequestProfileDataAvailability;
+  dataSource: GuestRequestProfileDataSource;
 }
 
 export interface Booking {
