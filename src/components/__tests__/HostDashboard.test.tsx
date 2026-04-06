@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 const apiJsonMock = vi.fn();
@@ -104,5 +104,95 @@ describe('HostDashboard', () => {
       'Las fechas volvieron a quedar disponibles.',
       'success',
     );
+  });
+
+  test('shows the guest profile sheet for a pending booking before evaluation is enabled', async () => {
+    apiJsonMock.mockResolvedValue({
+      stats: {
+        host_rating: 4.9,
+        total_bookings_hosted: 4,
+        trust_score: 88,
+        badge: 'Verificado',
+        host_verified: true,
+      },
+      properties: [
+        {
+          id: 'prop-1',
+          title: 'Casa del bosque',
+          location: 'Pinamar',
+          price: 150000,
+          status: 'active',
+          reviewsCount: 8,
+          rating: 4.9,
+          imageUrl: 'https://example.com/property.jpg',
+          verificationScore: 4,
+          verificationItems: [
+            { key: 'identity', label: 'Identidad confirmada', description: 'Sabés con quién estás hablando.', status: 'complete' },
+          ],
+        },
+      ],
+      recentBookings: [
+        {
+          id: 'booking-1',
+          status: 'pending',
+          date: '12/10/2026',
+          userId: 'guest-1',
+          userName: 'Marina',
+          propertyTitle: 'Casa del bosque',
+          guestProfile: {
+            identityVerified: true,
+            memberSince: '2022-02-10',
+            platformHistory: {
+              completedStays: 4,
+              conflictsCount: 1,
+              cancellationsCount: 0,
+            },
+            hostReviews: [
+              {
+                id: 'review-1',
+                authorName: 'Laura',
+                date: '2025-11-14',
+                comment: 'La coordinación fue clara y la estadía avanzó sin cambios de último momento.',
+              },
+            ],
+            profileCompletion: {
+              profileComplete: true,
+              photoUploaded: true,
+              basicDetailsComplete: true,
+            },
+            operationSignals: [
+              { id: 'consulted-before', label: 'Consultó antes de reservar', active: true },
+              { id: 'saved-property', label: 'Guardó la propiedad', active: true },
+              { id: 'returned-to-view', label: 'Volvió a verla', active: false },
+            ],
+          },
+        },
+      ],
+      contactedGuests: [
+        {
+          id: 'guest-1',
+          name: 'Marina',
+        },
+      ],
+      estimatedIncome: 250000,
+    });
+
+    render(<HostDashboard onBack={vi.fn()} />);
+
+    expect(await screen.findByText('Solicitudes y huéspedes')).toBeInTheDocument();
+    expect(screen.getAllByText('Marina').length).toBeGreaterThan(0);
+    expect(screen.queryByRole('button', { name: 'Evaluar huésped' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Ver ficha del huésped' }));
+
+    const profileCard = await screen.findByTestId('guest-request-profile-card');
+
+    expect(within(profileCard).getByText('Ficha del huésped')).toBeInTheDocument();
+    expect(within(profileCard).getByText('Identidad confirmada')).toBeInTheDocument();
+    expect(within(profileCard).getByText('Estadías completadas')).toBeInTheDocument();
+    expect(within(profileCard).getByText('Conflictos')).toBeInTheDocument();
+    expect(within(profileCard).getByText('Consultó antes de reservar')).toBeInTheDocument();
+    expect(within(profileCard).getByText('Usuario desde 2022')).toBeInTheDocument();
+    expect(within(profileCard).getByText('La coordinación fue clara y la estadía avanzó sin cambios de último momento.')).toBeInTheDocument();
   });
 });

@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { apiJson } from '../lib/apiConfig';
+import { formatGuestMemberSinceYear, getGuestSnapshotDetail, getGuestSnapshotTitle, resolveGuestRequestProfile } from '../lib/guestRequestProfile';
 import { getPropertyVerificationBadge, getPropertyVerificationItems } from '../lib/propertyVerification';
 import { showToast } from '../lib/toast';
 import { Icons } from './Icons';
+import GuestRequestProfileCard from './GuestRequestProfileCard';
 import HostAvailabilityPanel from './HostAvailabilityPanel';
 import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
@@ -25,6 +27,25 @@ const getHostVerificationStatusText = (status: 'complete' | 'pending') => (
   status === 'complete' ? 'Ya está completa.' : 'Todavía falta completarla.'
 );
 
+const getBookingStatusLabel = (status: string) => {
+  if (status === 'pending') return 'Solicitud pendiente';
+  if (status === 'confirmed') return 'Reserva confirmada';
+  if (status === 'completed') return 'Estadía finalizada';
+  return 'Estado no disponible';
+};
+
+const getBookingStatusClassName = (status: string) => {
+  if (status === 'pending') {
+    return 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/30 dark:bg-amber-900/20 dark:text-amber-300';
+  }
+
+  if (status === 'confirmed') {
+    return 'border-brand/20 bg-brand/10 text-brand dark:border-brand/25 dark:bg-brand/15 dark:text-brand-light';
+  }
+
+  return 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-900/20 dark:text-emerald-300';
+};
+
 export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -32,6 +53,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
   const [isAddingProperty, setIsAddingProperty] = useState(false);
   const [reviewingBooking, setReviewingBooking] = useState<any>(null);
   const [availabilityPropertyId, setAvailabilityPropertyId] = useState<string | null>(null);
+  const [expandedBookingId, setExpandedBookingId] = useState<string | null>(null);
 
   useEffect(() => {
     void fetchData();
@@ -128,8 +150,19 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
     }
   };
 
-  const contactedGuests = Array.isArray(dashboardData?.contactedGuests) ? dashboardData.contactedGuests : [];
+  const contactedGuests = Array.isArray(dashboardData?.contactedGuests)
+    ? dashboardData.contactedGuests.map((guest: any, index: number) => ({
+        ...guest,
+        guestProfile: resolveGuestRequestProfile(guest, index),
+      }))
+    : [];
   const hostProperties = Array.isArray(dashboardData?.properties) ? dashboardData.properties : [];
+  const recentBookings = Array.isArray(dashboardData?.recentBookings)
+    ? dashboardData.recentBookings.map((booking: any, index: number) => ({
+        ...booking,
+        guestProfile: resolveGuestRequestProfile(booking, index),
+      }))
+    : [];
 
 
   return (
@@ -335,14 +368,14 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
           <div className="flex items-center justify-between">
             <h2 className="app-title-4 dark:text-white flex items-center gap-2">
               <Icons.ShieldAlert className="w-5 h-5 text-brand" />
-              Lo que revisan antes de escribirte
+              Contexto del huésped
             </h2>
           </div>
 
           <div className="grid md:grid-cols-2 gap-6">
             <div className={dashboardSectionClass}>
               <div className="flex items-center justify-between">
-                <h3 className="app-title-4 dark:text-white">Perfiles que te contactaron</h3>
+                <h3 className="app-title-4 dark:text-white">Huéspedes con actividad reciente</h3>
                 <span className="app-eyebrow">Recientes</span>
               </div>
               <div className="space-y-3">
@@ -352,28 +385,14 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
                       <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[10px] font-bold uppercase">
                         {String(tenant.name || 'H').slice(0, 1)}
                       </div>
-                      <span className="text-sm font-semibold">{tenant.name}</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="text-right">
-                        <p className="app-eyebrow leading-none">Confianza</p>
-                        <p className={cn(
-                          "text-xs font-semibold",
-                          tenant.risk === 'low'
-                            ? 'text-brand dark:text-brand-light'
-                            : tenant.risk === 'medium'
-                              ? 'text-slate-600 dark:text-slate-300'
-                              : 'text-slate-400 dark:text-slate-500'
-                        )}>{tenant.score}%</p>
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900 dark:text-white">{tenant.name}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Usuario desde {formatGuestMemberSinceYear(tenant.guestProfile.memberSince)}</p>
                       </div>
-                      <div className={cn(
-                        "w-2 h-2 rounded-full",
-                        tenant.risk === 'low'
-                          ? 'bg-brand'
-                          : tenant.risk === 'medium'
-                            ? 'bg-slate-500 dark:bg-slate-400'
-                            : 'bg-slate-300 dark:bg-slate-600'
-                      )} />
+                    </div>
+                    <div className="text-right">
+                      <p className="app-eyebrow leading-none">{getGuestSnapshotTitle(tenant.guestProfile)}</p>
+                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{getGuestSnapshotDetail(tenant.guestProfile)}</p>
                     </div>
                   </div>
                 )) : (
@@ -386,13 +405,13 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
               <div className="w-12 h-12 bg-brand/20 rounded-2xl flex items-center justify-center mb-2">
                 <Icons.Zap className="w-6 h-6 text-brand" />
               </div>
-              <h3 className="app-title-4 text-white">Lo que revisan antes de escribirte</h3>
+              <h3 className="app-title-4 text-white">Más contexto antes de aceptar</h3>
               <p className="app-body-sm text-slate-100">
-                Mostrá quién sos, dónde está el lugar y cómo se ve de verdad. Cuanto más completo esté tu aviso, más arriba aparece.
+                Abrí la ficha del huésped para revisar identidad, historial, reseñas y señales simples dentro de la plataforma antes de responder o aceptar.
               </p>
               <div className="pt-4">
                 <div className="flex items-center gap-2 app-eyebrow text-emerald-300">
-                  <Icons.CheckCircle2 className="w-3 h-3" /> Identidades verificadas
+                  <span aria-hidden="true">✔</span> Información simple, sin puntajes ocultos
                 </div>
               </div>
             </div>
@@ -402,46 +421,76 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
         {/* Tenant Management Section */}
         <section className="space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="app-title-4 dark:text-white flex items-center gap-2">
-              <Icons.UserCheck className="w-5 h-5 text-brand" />
-              Huéspedes
-            </h2>
+            <div className="space-y-1">
+              <h2 className="app-title-4 dark:text-white flex items-center gap-2">
+                <Icons.UserCheck className="w-5 h-5 text-brand" />
+                Solicitudes y huéspedes
+              </h2>
+              <p className="app-body-sm app-text-muted">Antes de aceptar una reserva, podés abrir la ficha del huésped y revisar información simple de la plataforma.</p>
+            </div>
           </div>
 
           <div className="app-card overflow-hidden dark:border-slate-800 dark:bg-slate-900">
             <div className="p-6 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
-              <p className="app-eyebrow">Estadías recientes</p>
+              <p className="app-eyebrow">Solicitudes y estadías recientes</p>
             </div>
             <div className="divide-y divide-slate-100 dark:divide-slate-800">
-              {dashboardData.recentBookings.length > 0 ? (
-                dashboardData.recentBookings.map((booking: any) => (
-                  <div key={booking.id} className="p-6 flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                        <Icons.User className="w-6 h-6 text-slate-400" />
+              {recentBookings.length > 0 ? (
+                recentBookings.map((booking: any) => {
+                  const isExpanded = expandedBookingId === booking.id;
+                  const canReviewBooking = booking.status === 'completed';
+
+                  return (
+                    <div key={booking.id} className="p-6 space-y-4">
+                      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                            <Icons.User className="w-6 h-6 text-slate-400" />
+                          </div>
+                          <div>
+                            <p className="app-title-4 dark:text-white">{booking.userName || 'Huésped'}</p>
+                            <p className="app-body-sm app-text-muted">{booking.propertyTitle} • {booking.date}</p>
+                          </div>
+                        </div>
+                        <div className="flex flex-col gap-2 sm:items-end">
+                          <span className={cn('inline-flex items-center rounded-full border px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em]', getBookingStatusClassName(booking.status))}>
+                            {getBookingStatusLabel(booking.status)}
+                          </span>
+                          <div className="flex flex-wrap gap-2">
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => setExpandedBookingId((currentValue) => currentValue === booking.id ? null : booking.id)}
+                              className="rounded-full"
+                            >
+                              {isExpanded ? 'Ocultar ficha' : 'Ver ficha del huésped'}
+                            </Button>
+                            {canReviewBooking ? (
+                              <button
+                                onClick={() => setReviewingBooking(booking)}
+                                className="app-button-base rounded-[var(--app-radius-control)] bg-brand px-4 py-2 text-sm text-white hover:-translate-y-px hover:bg-brand-dark hover:shadow-[var(--app-shadow-brand)]"
+                              >
+                                Evaluar huésped
+                              </button>
+                            ) : null}
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <p className="app-title-4 dark:text-white">{booking.propertyTitle}</p>
-                        <p className="app-body-sm app-text-muted">{booking.date} • {booking.status}</p>
-                      </div>
+
+                      {isExpanded ? (
+                        <GuestRequestProfileCard guestName={booking.userName || 'Huésped'} profile={booking.guestProfile} />
+                      ) : null}
                     </div>
-                    <div className="flex flex-col gap-2">
-                      <button 
-                        onClick={() => setReviewingBooking(booking)}
-                        className="app-button-base rounded-[var(--app-radius-control)] bg-brand px-4 py-2 text-sm text-white hover:-translate-y-px hover:bg-brand-dark hover:shadow-[var(--app-shadow-brand)]"
-                      >
-                        Evaluar huésped
-                      </button>
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               ) : (
-                <p className="p-8 text-center app-body-sm app-text-muted">Todavía no hay estadías para revisar.</p>
+                <p className="p-8 text-center app-body-sm app-text-muted">Todavía no hay solicitudes o estadías para revisar.</p>
               )}
             </div>
           </div>
           <p className="app-form-hint italic px-4">
-            * Solo podés evaluar estadías finalizadas. Las evaluaciones son estructuradas y no permiten texto ofensivo.
+            * La ficha del huésped ordena la información disponible dentro de la plataforma. Las evaluaciones solo se habilitan después de una estadía finalizada.
           </p>
         </section>
 

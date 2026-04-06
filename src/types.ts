@@ -61,11 +61,46 @@ export interface Review {
   pressureToBookFast: boolean;
 }
 
+export interface GuestPlatformHistory {
+  completedStays: number;
+  conflictsCount: number;
+  cancellationsCount: number;
+}
+
+export interface GuestHostReviewSnippet {
+  id: string;
+  authorName: string;
+  date: string;
+  comment: string;
+}
+
+export interface GuestProfileCompletion {
+  profileComplete: boolean;
+  photoUploaded: boolean;
+  basicDetailsComplete: boolean;
+}
+
+export interface GuestOperationSignal {
+  id: string;
+  label: string;
+  active: boolean;
+}
+
+export interface GuestRequestProfile {
+  identityVerified: boolean;
+  platformHistory: GuestPlatformHistory;
+  hostReviews: GuestHostReviewSnippet[];
+  profileCompletion: GuestProfileCompletion;
+  operationSignals: GuestOperationSignal[];
+  memberSince: string;
+}
+
 export interface Booking {
   id: string;
   propertyId: string;
   userId: string;
   status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
+  userName?: string;
   propertyTitle?: string;
   imageUrl?: string;
   location?: string;
@@ -79,6 +114,7 @@ export interface Booking {
   contractJson?: string;
   stay_code?: string;
   verified?: number;
+  guestProfile?: GuestRequestProfile;
 }
 
 export interface Conversation {
