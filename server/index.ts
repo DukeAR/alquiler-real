@@ -9,6 +9,7 @@ import { db } from './config/db';
 import { initDB } from './updates';
 import { mapPropertyRecord } from './propertySerializer';
 import { REAL_VERIFICATION_FILTER_MIN_SCORE } from './propertyVerification';
+import { CHAT_SYSTEM_MESSAGE_COPY, getChatSystemMessages, type ChatSystemMessageKey } from './chatSystemMessages';
 
 declare module "express-session" {
   interface SessionData {
@@ -1805,6 +1806,66 @@ const formatDateOnlyInBookingTimeZone = (date: Date) => {
   return `${getFormatterPart(parts, 'year')}-${getFormatterPart(parts, 'month')}-${getFormatterPart(parts, 'day')}`;
 };
 
+const normalizeDateOnlyValue = (value: unknown) => {
+  if (typeof value === 'string' && DATE_ONLY_PATTERN.test(value)) {
+    return value;
+  }
+
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value.toISOString().slice(0, 10);
+  }
+
+  return null;
+};
+
+const insertSystemConversationMessage = async (
+  conversation: Awaited<ReturnType<typeof getEnrichedConversationById>>,
+  key: ChatSystemMessageKey,
+  content: string,
+) => {
+  if (!conversation) {
+    return;
+  }
+
+  await db.query(
+    `INSERT INTO messages (id, conversation_id, sender_id, receiver_id, content, is_system, system_key)
+     VALUES ($1, $2, $3, $4, $5, TRUE, $6)
+     ON CONFLICT DO NOTHING`,
+    [
+      `msg_sys_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      conversation.id,
+      conversation.host_id,
+      conversation.tenant_id,
+      content,
+      key,
+    ],
+  );
+};
+
+const syncConversationSystemMessages = async (conversationId: string) => {
+  const conversation = await getEnrichedConversationById(conversationId);
+
+  if (!conversation) {
+    return;
+  }
+
+  const systemMessages = getChatSystemMessages({
+    requestMode: conversation.requestMode,
+    requestStatus: conversation.requestStatus,
+    bookingStatus: conversation.bookingStatus,
+    depositStatus: conversation.depositStatus,
+    requestStartDate: normalizeDateOnlyValue(conversation.requestStartDate),
+    requestEndDate: normalizeDateOnlyValue(conversation.requestEndDate),
+    bookingStartDate: normalizeDateOnlyValue(conversation.startDate),
+    bookingEndDate: normalizeDateOnlyValue(conversation.endDate),
+    today: formatDateOnlyInBookingTimeZone(new Date()),
+  });
+
+  for (const systemMessage of systemMessages) {
+    await insertSystemConversationMessage(conversation, systemMessage.key, systemMessage.content);
+  }
+};
+
 const sendBookingError = (
   res: express.Response,
   status: number,
@@ -2485,6 +2546,8 @@ app.get('/api/conversations/:id/messages', async (req, res) => {
   if (!userId) return res.status(401).json({ error: AUTH_REQUIRED_ERROR });
 
   try {
+    await syncConversationSystemMessages(req.params.id);
+
     const messages = await db.query(
       `SELECT * FROM messages WHERE conversation_id = $1 ORDER BY created_at ASC`,
       [req.params.id]
@@ -2680,7 +2743,7 @@ app.post('/api/conversations/:id/accept-request', async (req, res) => {
       );
     }
 
-    const acceptanceMessage = 'La solicitud ya fue aceptada. Revisá arriba cómo seguir.';
+    const acceptanceMessage = CHAT_SYSTEM_MESSAGE_COPY['request-accepted'];
     const messageId = `msg_${Date.now()}`;
 
     await db.query(
@@ -2693,9 +2756,10 @@ app.post('/api/conversations/:id/accept-request', async (req, res) => {
     );
 
     await db.query(
-      `INSERT INTO messages (id, conversation_id, sender_id, receiver_id, content, is_system)
-       VALUES ($1, $2, $3, $4, $5, TRUE)`,
-      [messageId, req.params.id, userId, conversation.tenant_id, acceptanceMessage],
+      `INSERT INTO messages (id, conversation_id, sender_id, receiver_id, content, is_system, system_key)
+       VALUES ($1, $2, $3, $4, $5, TRUE, $6)
+       ON CONFLICT DO NOTHING`,
+      [messageId, req.params.id, userId, conversation.tenant_id, acceptanceMessage, 'request-accepted'],
     );
 
     await logActivity(conversation.tenant_id, 'BOOKING_REQUEST_ACCEPTED', {

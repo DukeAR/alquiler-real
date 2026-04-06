@@ -187,8 +187,89 @@ describe('Bookings and availability endpoints', () => {
     expect(res.body.booking_id).toBe('booking-1');
   });
 
+  test('GET /api/conversations/:id/messages injects the first reservation guidance messages into the chat', async () => {
+    const insertedSystemKeys: string[] = [];
+
+    queryMock.mockImplementation(async (text: string, params?: unknown[]) => {
+      if (text.includes('JOIN users u_tenant') && text.includes('WHERE c.id = $1')) {
+        return {
+          rows: [
+            {
+              id: 'conv-1',
+              property_id: 'prop-1',
+              booking_id: null,
+              tenant_id: 'tenant-1',
+              host_id: 'host-1',
+              tenantName: 'Lucía',
+              hostName: 'Mariana',
+              propertyTitle: 'Casa del bosque',
+              propertyImage: 'https://example.com/property.jpg',
+              bookingStatus: null,
+              startDate: null,
+              endDate: null,
+              guests: null,
+              totalPrice: null,
+              requestMode: 'direct',
+              requestStatus: 'pending',
+              requestStartDate: '2099-09-20',
+              requestEndDate: '2099-09-23',
+              requestGuests: 2,
+              requestTotalPrice: 360000,
+              depositStatus: null,
+              created_at: '2099-09-01T10:00:00.000Z',
+              updated_at: '2099-09-01T10:15:00.000Z',
+            },
+          ],
+        };
+      }
+
+      if (text.includes('INSERT INTO messages') && text.includes('system_key')) {
+        insertedSystemKeys.push(String(params?.[5] ?? ''));
+        return { rows: [] };
+      }
+
+      if (text.includes('SELECT * FROM messages WHERE conversation_id = $1')) {
+        return {
+          rows: [
+            {
+              id: 'msg-system-1',
+              conversation_id: 'conv-1',
+              sender_id: 'host-1',
+              receiver_id: 'tenant-1',
+              content: 'Podés hacer todas las preguntas necesarias antes de avanzar.',
+              is_system: true,
+              created_at: '2099-09-01T10:00:00.000Z',
+            },
+            {
+              id: 'msg-system-2',
+              conversation_id: 'conv-1',
+              sender_id: 'host-1',
+              receiver_id: 'tenant-1',
+              content: 'Tu solicitud fue enviada. El anfitrión puede responder por acá.',
+              is_system: true,
+              created_at: '2099-09-01T10:01:00.000Z',
+            },
+          ],
+        };
+      }
+
+      throw new Error(`Unexpected query: ${text}`);
+    });
+
+    const res = await request(app)
+      .get('/api/conversations/conv-1/messages')
+      .set('x-test-user-id', 'tenant-1');
+
+    expect(res.status).toBe(200);
+    expect(insertedSystemKeys).toEqual(['conversation-start', 'request-sent']);
+    expect(res.body.map((message: { content: string }) => message.content)).toEqual([
+      'Podés hacer todas las preguntas necesarias antes de avanzar.',
+      'Tu solicitud fue enviada. El anfitrión puede responder por acá.',
+    ]);
+  });
+
   test('POST /api/conversations/:id/accept-request accepts the request and confirms a protected booking', async () => {
-    const acceptanceMessage = 'La solicitud ya fue aceptada. Revisá arriba cómo seguir.';
+    const acceptanceMessage = 'El anfitrión aceptó tu solicitud. Ya pueden coordinar los detalles.';
 
     queryMock.mockImplementation(async (text: string, params?: unknown[]) => {
       if (text.includes('FROM conversations c') && text.includes('LEFT JOIN bookings b ON b.id = c.booking_id') && text.includes('WHERE c.id = $1') && text.includes('LIMIT 1') && !text.includes('JOIN users u_tenant')) {
@@ -219,6 +300,7 @@ describe('Bookings and availability endpoints', () => {
       if (text.includes('INSERT INTO messages')) {
         expect(params?.[1]).toBe('conv-1');
         expect(params?.[4]).toBe(acceptanceMessage);
+        expect(params?.[5]).toBe('request-accepted');
         return { rows: [] };
       }
 

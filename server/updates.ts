@@ -751,9 +751,22 @@ export const initDB = async () => {
       receiver_id TEXT REFERENCES users(id),
       content TEXT NOT NULL,
       is_system BOOLEAN DEFAULT FALSE,
+      system_key TEXT,
       is_suspicious BOOLEAN DEFAULT FALSE,
       created_at TIMESTAMP DEFAULT NOW()
     );
+  `);
+
+  await db.query(`
+    DO $$ BEGIN
+      BEGIN ALTER TABLE messages ADD COLUMN system_key TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
+    END $$;
+  `);
+
+  await db.query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS messages_conversation_system_key_idx
+    ON messages (conversation_id, system_key)
+    WHERE system_key IS NOT NULL;
   `);
 
   // ============================================================

@@ -126,6 +126,46 @@ describe('SecureChat', () => {
     );
   });
 
+  test('renders automatic system guidance messages inside the chat thread', async () => {
+    useAuthMock.mockReturnValue({ user: { id: 'tenant-1' } });
+    fetchConversationsMock.mockResolvedValue([
+      {
+        ...baseConversation,
+        requestMode: 'direct',
+        requestStatus: 'pending',
+        requestStartDate: '2026-05-10',
+        requestEndDate: '2026-05-13',
+        requestGuests: 2,
+        requestTotalPrice: 320000,
+      },
+    ]);
+    fetchMessagesMock.mockResolvedValue([
+      {
+        id: 'msg-system-1',
+        conversation_id: 'conv-1',
+        sender_id: 'host-1',
+        receiver_id: 'tenant-1',
+        content: 'Podés hacer todas las preguntas necesarias antes de avanzar.',
+        is_system: true,
+        created_at: '2026-04-06T11:05:00.000Z',
+      },
+      {
+        id: 'msg-system-2',
+        conversation_id: 'conv-1',
+        sender_id: 'host-1',
+        receiver_id: 'tenant-1',
+        content: 'Tu solicitud fue enviada. El anfitrión puede responder por acá.',
+        is_system: true,
+        created_at: '2026-04-06T11:06:00.000Z',
+      },
+    ]);
+
+    renderChat();
+
+    expect(await screen.findByText('Podés hacer todas las preguntas necesarias antes de avanzar.')).toBeInTheDocument();
+    expect(screen.getByText('Tu solicitud fue enviada. El anfitrión puede responder por acá.')).toBeInTheDocument();
+  });
+
   test('advances a protected reservation from payment to custody inside the chat summary', async () => {
     useAuthMock.mockReturnValue({ user: { id: 'tenant-1' } });
     fetchConversationsMock.mockResolvedValue([
@@ -227,7 +267,7 @@ describe('SecureChat', () => {
           conversation_id: 'conv-1',
           sender_id: 'host-1',
           receiver_id: 'tenant-1',
-          content: 'La solicitud ya fue aceptada. Revisá arriba cómo seguir.',
+          content: 'El anfitrión aceptó tu solicitud. Ya pueden coordinar los detalles.',
           is_system: true,
           created_at: '2026-04-06T12:10:00.000Z',
         },
