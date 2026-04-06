@@ -1,6 +1,13 @@
 import React from 'react';
 import { cn } from '../lib/utils';
-import { formatGuestMemberSinceYear } from '../lib/guestRequestProfile';
+import {
+  formatGuestMemberSinceYear,
+  getGuestRequestProfileBannerCopy,
+  getGuestRequestProfileEmptyStateMessage,
+  getGuestRequestProfileOperationEmptyMessage,
+  getGuestRequestProfileReviewsEmptyMessage,
+  getGuestRequestProfileScenario,
+} from '../lib/guestRequestProfile';
 import type { GuestHostReviewSnippet, GuestRequestProfile } from '../types';
 
 type GuestRequestProfileCardProps = {
@@ -71,6 +78,8 @@ export const GuestRequestProfileCard: React.FC<GuestRequestProfileCardProps> = (
     profile.dataAvailability.operationSignals,
     profile.dataAvailability.memberSince,
   ].filter((value) => !value).length;
+  const bannerCopy = getGuestRequestProfileBannerCopy(profile);
+  const scenario = getGuestRequestProfileScenario(profile);
 
   return (
     <div data-testid="guest-request-profile-card" className={cn('rounded-[26px] border border-slate-200/85 bg-slate-50/85 p-5 shadow-[0_18px_32px_-26px_rgba(15,23,42,0.14)] dark:border-slate-800 dark:bg-slate-950/80 md:p-6', className)}>
@@ -80,15 +89,10 @@ export const GuestRequestProfileCard: React.FC<GuestRequestProfileCardProps> = (
       </div>
 
       <div className="mt-5 space-y-5">
-        {profile.dataSource === 'fallback' ? (
+        {bannerCopy && (scenario === 'sync-pending' || scenario === 'new-guest' || (scenario === 'partial-profile' && missingSectionsCount > 0)) ? (
           <div className="rounded-[18px] border border-dashed border-slate-200/90 bg-white/75 px-4 py-3 text-sm leading-6 text-slate-600 dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-300">
-            Esta ficha todavía no tiene datos estructurados para mostrar.
-          </div>
-        ) : null}
-
-        {profile.dataSource === 'mixed' && missingSectionsCount > 0 ? (
-          <div className="rounded-[18px] border border-dashed border-slate-200/90 bg-white/75 px-4 py-3 text-sm leading-6 text-slate-600 dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-300">
-            Algunos bloques de esta ficha todavía no tienen datos estructurados desde la plataforma.
+            <p className="font-semibold text-slate-900 dark:text-slate-100">{bannerCopy.title}</p>
+            <p className="mt-1">{bannerCopy.description}</p>
           </div>
         ) : null}
 
@@ -97,7 +101,7 @@ export const GuestRequestProfileCard: React.FC<GuestRequestProfileCardProps> = (
           {profile.dataAvailability.identity ? (
             <StatusItem checked={profile.identityVerified} label={profile.identityVerified ? 'Identidad confirmada' : 'Identidad no verificada'} />
           ) : (
-            <SectionEmptyState message="Esta parte de la ficha todavía no tiene datos estructurados para mostrar." />
+            <SectionEmptyState message={getGuestRequestProfileEmptyStateMessage(profile, 'identity')} />
           )}
         </section>
 
@@ -113,14 +117,14 @@ export const GuestRequestProfileCard: React.FC<GuestRequestProfileCardProps> = (
               ))}
             </div>
           ) : (
-            <SectionEmptyState message="Esta parte de la ficha todavía no tiene datos estructurados para mostrar." />
+            <SectionEmptyState message={getGuestRequestProfileEmptyStateMessage(profile, 'platformHistory')} />
           )}
         </section>
 
         <section className="space-y-3 border-t border-slate-200/80 pt-4 dark:border-slate-800">
           <p className={sectionLabelClass}>Reseñas de anfitriones</p>
           {!profile.dataAvailability.hostReviews ? (
-            <SectionEmptyState message="Esta parte de la ficha todavía no tiene datos estructurados para mostrar." />
+            <SectionEmptyState message={getGuestRequestProfileEmptyStateMessage(profile, 'hostReviews')} />
           ) : profile.hostReviews.length > 0 ? (
             <ul className="space-y-3">
               {profile.hostReviews.slice(0, 3).map((review) => (
@@ -128,7 +132,7 @@ export const GuestRequestProfileCard: React.FC<GuestRequestProfileCardProps> = (
               ))}
             </ul>
           ) : (
-            <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">Todavía no hay reseñas cargadas para mostrar.</p>
+            <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">{getGuestRequestProfileReviewsEmptyMessage(profile)}</p>
           )}
         </section>
 
@@ -141,14 +145,14 @@ export const GuestRequestProfileCard: React.FC<GuestRequestProfileCardProps> = (
               <StatusItem checked={profile.profileCompletion.basicDetailsComplete} label="Datos básicos completos" />
             </div>
           ) : (
-            <SectionEmptyState message="Esta parte de la ficha todavía no tiene datos estructurados para mostrar." />
+            <SectionEmptyState message={getGuestRequestProfileEmptyStateMessage(profile, 'profileCompletion')} />
           )}
         </section>
 
         <section className="space-y-3 border-t border-slate-200/80 pt-4 dark:border-slate-800">
-          <p className={sectionLabelClass}>Señales de esta operación</p>
+          <p className={sectionLabelClass}>Qué hizo dentro de esta solicitud</p>
           {!profile.dataAvailability.operationSignals ? (
-            <SectionEmptyState message="Esta parte de la ficha todavía no tiene datos estructurados para mostrar." />
+            <SectionEmptyState message={getGuestRequestProfileEmptyStateMessage(profile, 'operationSignals')} />
           ) : visibleSignals.length > 0 ? (
             <div className="grid gap-3 sm:grid-cols-3">
               {visibleSignals.map((signal) => (
@@ -156,7 +160,7 @@ export const GuestRequestProfileCard: React.FC<GuestRequestProfileCardProps> = (
               ))}
             </div>
           ) : (
-            <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">Todavía no hay señales registradas para esta operación.</p>
+            <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">{getGuestRequestProfileOperationEmptyMessage(profile)}</p>
           )}
         </section>
 
@@ -165,7 +169,7 @@ export const GuestRequestProfileCard: React.FC<GuestRequestProfileCardProps> = (
           {profile.dataAvailability.memberSince ? (
             <p className="text-sm font-semibold leading-6 text-slate-900 dark:text-slate-50">Usuario desde {formatGuestMemberSinceYear(profile.memberSince)}</p>
           ) : (
-            <SectionEmptyState message="Esta parte de la ficha todavía no tiene datos estructurados para mostrar." />
+            <SectionEmptyState message={getGuestRequestProfileEmptyStateMessage(profile, 'memberSince')} />
           )}
         </section>
       </div>

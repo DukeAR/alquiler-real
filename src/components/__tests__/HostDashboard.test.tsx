@@ -242,14 +242,106 @@ describe('HostDashboard', () => {
 
     render(<HostDashboard onBack={vi.fn()} />);
 
-    expect(await screen.findByText('Datos en preparación')).toBeInTheDocument();
-    expect(screen.getByText('Todavía sin datos estructurados')).toBeInTheDocument();
+    expect(await screen.findByText('Ficha en preparación')).toBeInTheDocument();
+    expect(screen.getByText('Todavía estamos cargando sus primeros datos')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Ver ficha del huésped' }));
 
     const profileCard = await screen.findByTestId('guest-request-profile-card');
 
-    expect(within(profileCard).getByText('Esta ficha todavía no tiene datos estructurados para mostrar.')).toBeInTheDocument();
-    expect(within(profileCard).getAllByText('Esta parte de la ficha todavía no tiene datos estructurados para mostrar.').length).toBeGreaterThan(0);
+    expect(within(profileCard).getByText('Estamos armando esta ficha')).toBeInTheDocument();
+    expect(within(profileCard).getByText('Todavía se están cargando los primeros datos de esta cuenta.')).toBeInTheDocument();
+    expect(within(profileCard).getByText('La validación de identidad va a aparecer acá cuando termine de cargarse la ficha.')).toBeInTheDocument();
+  });
+
+  test('shows a specific copy for a guest with an account but no visible history yet', async () => {
+    apiJsonMock.mockResolvedValue({
+      stats: {
+        host_rating: 4.9,
+        total_bookings_hosted: 2,
+        trust_score: 88,
+        badge: 'Verificado',
+        host_verified: true,
+      },
+      properties: [
+        {
+          id: 'prop-1',
+          title: 'Casa del bosque',
+          location: 'Pinamar',
+          price: 150000,
+          status: 'active',
+          reviewsCount: 8,
+          rating: 4.9,
+          imageUrl: 'https://example.com/property.jpg',
+          verificationScore: 4,
+          verificationItems: [
+            { key: 'identity', label: 'Identidad confirmada', description: 'Sabés con quién estás hablando.', status: 'complete' },
+          ],
+        },
+      ],
+      recentBookings: [
+        {
+          id: 'booking-3',
+          status: 'pending',
+          date: '21/10/2026',
+          userId: 'guest-3',
+          userName: 'Rocío',
+          propertyTitle: 'Casa del bosque',
+          guestProfile: {
+            identityVerified: true,
+            memberSince: '2026-01-12',
+            platformHistory: {
+              completedStays: 0,
+              conflictsCount: 0,
+              cancellationsCount: 0,
+            },
+            hostReviews: [],
+            profileCompletion: {
+              profileComplete: false,
+              photoUploaded: true,
+              basicDetailsComplete: true,
+            },
+            operationSignals: [],
+          },
+        },
+      ],
+      contactedGuests: [
+        {
+          id: 'guest-3',
+          name: 'Rocío',
+          guestProfile: {
+            identityVerified: true,
+            memberSince: '2026-01-12',
+            platformHistory: {
+              completedStays: 0,
+              conflictsCount: 0,
+              cancellationsCount: 0,
+            },
+            hostReviews: [],
+            profileCompletion: {
+              profileComplete: false,
+              photoUploaded: true,
+              basicDetailsComplete: true,
+            },
+            operationSignals: [],
+          },
+        },
+      ],
+      estimatedIncome: 250000,
+    });
+
+    render(<HostDashboard onBack={vi.fn()} />);
+
+    expect(await screen.findByText('Cuenta sin historial todavía')).toBeInTheDocument();
+    expect(screen.getByText('Todavía no hay estadías ni reseñas para revisar')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Ver ficha del huésped' }));
+
+    const profileCard = await screen.findByTestId('guest-request-profile-card');
+
+    expect(within(profileCard).getByText('Cuenta sin historial todavía')).toBeInTheDocument();
+    expect(within(profileCard).getByText('Todavía no hay estadías ni reseñas de anfitriones para revisar.')).toBeInTheDocument();
+    expect(within(profileCard).getByText('Todavía no hay reseñas de anfitriones porque esta cuenta todavía no tiene estadías visibles.')).toBeInTheDocument();
+    expect(within(profileCard).getByText('Esta solicitud todavía no dejó movimientos para revisar dentro de la plataforma.')).toBeInTheDocument();
   });
 });
