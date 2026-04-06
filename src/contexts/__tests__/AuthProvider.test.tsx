@@ -178,8 +178,11 @@ describe('AuthProvider', () => {
     mockedApiFetch.mockResolvedValueOnce({
       ok: false,
       status: 500,
+      headers: {
+        get: () => 'application/json',
+      },
       json: async () => ({ error: 'server exploded' }),
-    } as Response);
+    } as unknown as Response);
 
     render(
       <AuthProvider>
@@ -191,6 +194,51 @@ describe('AuthProvider', () => {
     expect(screen.getByTestId('user-email')).toHaveTextContent('guest');
     expect(screen.getByTestId('status')).toHaveTextContent('error');
     expect(screen.getByTestId('session-error')).toHaveTextContent('server exploded');
+  });
+
+  test('uses the fallback message when /me fails with an empty non-json body', async () => {
+    mockedApiFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 503,
+      headers: {
+        get: () => 'text/plain',
+      },
+      json: async () => {
+        throw new SyntaxError('Unexpected end of JSON input');
+      },
+      text: async () => '',
+    } as unknown as Response);
+
+    render(
+      <AuthProvider>
+        <AuthHarness />
+      </AuthProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('false'));
+    expect(screen.getByTestId('status')).toHaveTextContent('error');
+    expect(screen.getByTestId('session-error')).toHaveTextContent('No pudimos recuperar tu sesión. Intentá de nuevo.');
+  });
+
+  test('shows the proxy message when the backend local is unavailable', async () => {
+    mockedApiFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 503,
+      headers: {
+        get: () => 'application/json; charset=utf-8',
+      },
+      json: async () => ({ error: 'No pudimos conectar con el backend local. Levantá npm run server o npm run dev para seguir.' }),
+    } as unknown as Response);
+
+    render(
+      <AuthProvider>
+        <AuthHarness />
+      </AuthProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('false'));
+    expect(screen.getByTestId('status')).toHaveTextContent('error');
+    expect(screen.getByTestId('session-error')).toHaveTextContent('No pudimos conectar con el backend local. Levantá npm run server o npm run dev para seguir.');
   });
 
   test('preserves the authenticated user when a background session refresh fails', async () => {

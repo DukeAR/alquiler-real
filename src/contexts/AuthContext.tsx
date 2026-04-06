@@ -106,11 +106,44 @@ const readUserFromResponse = async (response: Response, source: 'login' | 'regis
 };
 
 const getAuthErrorMessage = async (response: Response, fallbackMessage: string) => {
+    const contentType = response.headers?.get?.('Content-Type') || '';
+    const canReadJson = typeof response.json === 'function';
+    const canReadText = typeof response.text === 'function';
+    const isJsonResponse = contentType.includes('application/json');
+
     try {
-        const data = await response.json();
-        if (typeof data?.error === 'string' && data.error.trim()) {
-            return data.error;
+        if (isJsonResponse || (!contentType && canReadJson)) {
+            const data = await response.json();
+            if (typeof data?.error === 'string' && data.error.trim()) {
+                return data.error;
+            }
+
+            return fallbackMessage;
         }
+
+        if (!canReadText) {
+            return fallbackMessage;
+        }
+
+        const text = await response.text();
+        const trimmedText = text.trim();
+
+        if (!trimmedText || trimmedText.startsWith('<')) {
+            return fallbackMessage;
+        }
+
+        if (trimmedText.startsWith('{')) {
+            try {
+                const data = JSON.parse(trimmedText);
+                if (typeof data?.error === 'string' && data.error.trim()) {
+                    return data.error;
+                }
+            } catch {
+                return fallbackMessage;
+            }
+        }
+
+        return trimmedText;
     } catch (parseErr) {
         console.error('[AuthContext] Failed to parse error response:', parseErr);
     }

@@ -1,9 +1,26 @@
+import type { IncomingMessage, ServerResponse } from 'node:http';
 import { defineConfig, loadEnv, type PluginOption } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { visualizer } from 'rollup-plugin-visualizer';
 
 const normalizeUrl = (value?: string) => value?.replace(/\/+$/, '') || '';
+const DEV_BACKEND_UNAVAILABLE_RESPONSE = JSON.stringify({
+  error: 'No pudimos conectar con el backend local. Levantá npm run server o npm run dev para seguir.',
+});
+
+const sendDevBackendUnavailableResponse = (res: ServerResponse<IncomingMessage>) => {
+  if (!res.headersSent) {
+    res.writeHead(503, {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Cache-Control': 'no-store',
+    });
+  }
+
+  if (!res.writableEnded) {
+    res.end(DEV_BACKEND_UNAVAILABLE_RESPONSE);
+  }
+};
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
@@ -15,7 +32,7 @@ export default defineConfig(({ mode }) => {
     ? [remoteHmrHost]
     : ['localhost', '127.0.0.1'];
   const shouldAnalyze = env.ANALYZE === 'true';
-  const devApiProxyTarget = normalizeUrl(env.VITE_DEV_API_PROXY_TARGET || env.DEV_API_PROXY_TARGET || 'http://localhost:3001');
+  const devApiProxyTarget = normalizeUrl(env.VITE_DEV_API_PROXY_TARGET || env.DEV_API_PROXY_TARGET || 'http://127.0.0.1:3001');
 
   const plugins: PluginOption[] = [react(), tailwindcss()];
 
@@ -113,6 +130,11 @@ export default defineConfig(({ mode }) => {
           secure: false,
           ws: true,
           rewrite: (path) => path,
+          configure: (proxy) => {
+            proxy.on('error', (_error, _req, res) => {
+              sendDevBackendUnavailableResponse(res as ServerResponse<IncomingMessage>);
+            });
+          },
         },
       },
     },
