@@ -16,6 +16,7 @@ type Props = {
   propertyId?: string;
   availabilityRefreshToken?: number;
   mode?: 'booking' | 'blocking';
+  monthsToShow?: 1 | 2;
 };
 
 type AvailabilityRange = {
@@ -162,7 +163,7 @@ const expandBlockedDates = (ranges: AvailabilityRange[]) => {
 
 const getMonthLabel = (date: Date) => date.toLocaleString('es-AR', { month: 'long', year: 'numeric' });
 
-const DateRangePicker: React.FC<Props> = ({ checkIn, checkOut, setCheckIn, setCheckOut, minDate, onChange, propertyId, availabilityRefreshToken = 0, mode = 'booking' }) => {
+const DateRangePicker: React.FC<Props> = ({ checkIn, checkOut, setCheckIn, setCheckOut, minDate, onChange, propertyId, availabilityRefreshToken = 0, mode = 'booking', monthsToShow = 2 }) => {
   const todayIso = minDate || formatIso(new Date());
   const [visible, setVisible] = useState<Date>(() => new Date());
   const [hoverIso, setHoverIso] = useState<string | null>(null);
@@ -177,7 +178,10 @@ const DateRangePicker: React.FC<Props> = ({ checkIn, checkOut, setCheckIn, setCh
   const statusId = useId();
   const instructionsId = useId();
 
-  const visibleMonths = useMemo(() => [visible, addMonths(visible, 1)], [visible]);
+  const visibleMonths = useMemo(
+    () => (monthsToShow === 2 ? [visible, addMonths(visible, 1)] : [visible]),
+    [monthsToShow, visible],
+  );
   const blockedDates = useMemo(() => expandBlockedDates(availabilityRanges), [availabilityRanges]);
   const hasCompleteRange = Boolean(checkIn && checkOut);
   const hasPartialRange = Boolean((checkIn && !checkOut) || (!checkIn && checkOut));
@@ -574,13 +578,13 @@ const DateRangePicker: React.FC<Props> = ({ checkIn, checkOut, setCheckIn, setCh
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <div className={cn('grid grid-cols-1 gap-2', monthsToShow === 2 && 'sm:grid-cols-2')}>
                 <div className={cn('rounded-2xl border px-3 py-3', checkIn ? 'border-brand/20 bg-brand/5' : 'border-slate-200 bg-slate-50')}>
                   <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">{dateCopy.startLabel}</div>
                   <div className="mt-1 text-sm font-semibold text-slate-900">{formatDisplay(checkIn)}</div>
                   <div className="mt-1 text-xs text-slate-500">{checkIn ? formatLongDisplay(checkIn) : dateCopy.startHint}</div>
                 </div>
-                <div className={cn('rounded-2xl border px-3 py-3 text-left sm:text-right', checkOut ? 'border-slate-900/10 bg-slate-900/[0.03]' : 'border-slate-200 bg-slate-50')}>
+                <div className={cn('rounded-2xl border px-3 py-3 text-left', monthsToShow === 2 && 'sm:text-right', checkOut ? 'border-slate-900/10 bg-slate-900/[0.03]' : 'border-slate-200 bg-slate-50')}>
                   <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">{dateCopy.endLabel}</div>
                   <div className="mt-1 text-sm font-semibold text-slate-900">{formatDisplay(checkOut)}</div>
                   <div className="mt-1 text-xs text-slate-500">{checkOut ? formatLongDisplay(checkOut) : dateCopy.endHint}</div>
@@ -619,36 +623,30 @@ const DateRangePicker: React.FC<Props> = ({ checkIn, checkOut, setCheckIn, setCh
                 ) : null
               ) : null}
 
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className={cn('grid gap-4', monthsToShow === 2 && 'md:grid-cols-2')}>
               {visibleMonths.map((m, idx) => {
                 const year = m.getFullYear();
                 const month = m.getMonth();
                 const weeks = generateWeeks(year, month);
-                const isSecondaryMonth = idx === 1;
+                const showInlinePrev = idx === 0;
+                const showInlineNext = monthsToShow === 1 || idx === visibleMonths.length - 1;
 
                 return (
-                  <div key={idx} className={cn('rounded-[24px] border border-slate-200/80 bg-slate-50/70 p-3 sm:p-4', isSecondaryMonth && 'hidden md:block')}>
+                  <div key={idx} className="rounded-[24px] border border-slate-200/80 bg-slate-50/70 p-3 sm:p-4">
                     <div className="mb-4 flex items-center justify-between gap-2">
-                      {idx === 0 ? (
+                      {showInlinePrev ? (
                         <Button type="button" onClick={() => setVisible(addMonths(visible, -1))} variant="ghost" size="sm" aria-label="Ver mes anterior" className="rounded-full px-2.5 py-1.5 text-sm">
                           <Icons.ChevronLeft className="h-4 w-4" />
                         </Button>
-                      ) : <div className="hidden h-9 w-9 md:block" />}
+                      ) : <div className="h-9 w-9" />}
 
                       <div className="min-w-0 flex-1 text-center text-sm font-semibold capitalize text-slate-900">{getMonthLabel(m)}</div>
 
-                      {idx === 0 ? (
-                        <>
-                          <Button type="button" onClick={() => setVisible(addMonths(visible, 1))} variant="ghost" size="sm" aria-label="Ver mes siguiente" className="rounded-full px-2.5 py-1.5 text-sm md:hidden">
-                            <Icons.ChevronRight className="h-4 w-4" />
-                          </Button>
-                          <div className="hidden h-9 w-9 md:block" />
-                        </>
-                      ) : (
-                        <Button type="button" onClick={() => setVisible(addMonths(visible, 1))} variant="ghost" size="sm" aria-label="Ver mes siguiente" className="hidden rounded-full px-2.5 py-1.5 text-sm md:inline-flex">
+                      {showInlineNext ? (
+                        <Button type="button" onClick={() => setVisible(addMonths(visible, 1))} variant="ghost" size="sm" aria-label="Ver mes siguiente" className="rounded-full px-2.5 py-1.5 text-sm">
                           <Icons.ChevronRight className="h-4 w-4" />
                         </Button>
-                      )}
+                      ) : <div className="h-9 w-9" />}
                     </div>
 
                     <div className="mb-3 grid grid-cols-7 gap-1 text-[11px] text-center font-medium text-slate-500">

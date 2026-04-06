@@ -408,18 +408,13 @@ const GuestCounterCard: React.FC<GuestCounterCardProps> = ({
 }) => {
   return (
     <Card padding="sm" variant="muted" className="rounded-[24px] border-slate-200/80 bg-slate-50/80">
-      <div className="space-y-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-base font-semibold text-slate-900">{label}</p>
-            <p className="mt-1 text-sm leading-6 text-slate-500">{helper}</p>
-          </div>
-          <span className="inline-flex shrink-0 items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-sm font-semibold text-slate-900 shadow-[0_12px_24px_-20px_rgba(15,23,42,0.16)]">
-            {value}
-          </span>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-base font-semibold text-slate-900">{label}</p>
+          <p className="mt-1 text-sm leading-6 text-slate-500">{helper}</p>
         </div>
 
-        <div className="flex items-center justify-between gap-3 rounded-[20px] border border-slate-200/90 bg-white px-3 py-2.5 shadow-[0_12px_24px_-20px_rgba(15,23,42,0.12)]">
+        <div className="flex items-center justify-between gap-3 rounded-[20px] border border-slate-200/90 bg-white px-3 py-2.5 shadow-[0_12px_24px_-20px_rgba(15,23,42,0.12)] sm:min-w-[180px]">
           <Button
             type="button"
             variant="outline"
@@ -1027,7 +1022,7 @@ export const PropertyDetailShell: React.FC<{
               </Card>
             ) : null}
 
-            <div className="mt-5 grid gap-3 sm:grid-cols-3 xl:grid-cols-1 2xl:grid-cols-3">
+            <div className="mt-5 grid gap-3 2xl:grid-cols-3">
               <BookingSnapshotCard
                 icon={Icons.Calendar}
                 label="Ingreso"
@@ -1066,16 +1061,26 @@ export const PropertyDetailShell: React.FC<{
                   availabilityRefreshToken={availabilityRefreshToken}
                   minDate={todayISO}
                   onChange={clearBookingFeedback}
+                  monthsToShow={1}
                 />
               </FormField>
 
               <FormField
                 label="Huéspedes"
-                hint={formatGuestSelection(adults, childrenCount)}
+                hint={undefined}
                 helperText={guestFieldHelper}
                 error={bookingError?.field === 'guests' ? bookingError.message : undefined}
               >
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Card padding="sm" variant="muted" className="rounded-[24px] border-slate-200/80 bg-slate-50/80">
+                  <div className="flex items-center justify-between gap-3 border-b border-slate-200/80 pb-3">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Total</p>
+                      <p className="mt-1 text-base font-semibold text-slate-900">{formatGuestSelection(adults, childrenCount)}</p>
+                    </div>
+                    <Badge variant="neutral" size="md">{guestCount} {guestCount === 1 ? 'persona' : 'personas'}</Badge>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-1 gap-3">
                   <GuestCounterCard
                     label="Adultos"
                     helper="Mayores de 18"
@@ -1100,7 +1105,8 @@ export const PropertyDetailShell: React.FC<{
                     decrementDisabled={!canRemoveChildren}
                     incrementDisabled={!canAddGuest}
                   />
-                </div>
+                  </div>
+                </Card>
               </FormField>
 
               <Card padding="sm" variant="muted" className="rounded-[24px] border-slate-200/80 bg-slate-50/80">
