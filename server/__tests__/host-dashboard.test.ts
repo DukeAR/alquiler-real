@@ -99,4 +99,137 @@ describe('Host dashboard endpoint', () => {
       expect.objectContaining({ key: 'relationship', status: 'pending' }),
     ]));
   });
+
+  test('GET /api/host/dashboard includes guest profiles built from backend data', async () => {
+    queryMock.mockImplementation(async (text: string) => {
+      if (text.includes('SELECT host_rating, host_verified, trust_score, badge')) {
+        return { rows: [{ host_rating: 4.8, host_verified: true, trust_score: 84, badge: 'Verificado' }] };
+      }
+
+      if (text.includes('FROM properties p') && text.includes('LEFT JOIN users u ON u.id = p."hostId"')) {
+        return { rows: [] };
+      }
+
+      if (text.includes('FROM bookings b') && text.includes('LIMIT 5')) {
+        return {
+          rows: [
+            {
+              id: 'booking-1',
+              status: 'pending',
+              date: '12/10/2026',
+              userId: 'guest-1',
+              userName: 'Marina',
+              propertyTitle: 'Casa del bosque',
+            },
+          ],
+        };
+      }
+
+      if (text.includes('total_bookings_hosted')) {
+        return { rows: [{ total_bookings_hosted: 4, estimated_income: 250000 }] };
+      }
+
+      if (text.includes('recent_guests')) {
+        return {
+          rows: [
+            {
+              id: 'guest-1',
+              name: 'Marina',
+              trust_score: 82,
+              risk_score: 8,
+            },
+          ],
+        };
+      }
+
+      if (text.includes('COALESCE(u.member_since, u.created_at) as "memberSince"')) {
+        return {
+          rows: [
+            {
+              id: 'guest-1',
+              identityVerified: true,
+              memberSince: '2022-02-10T00:00:00.000Z',
+              profilePhoto: 'https://example.com/guest.jpg',
+              bio: 'Viaja por escapadas cortas.',
+              phone: '+54 11 5555 0000',
+              zone: 'Caballito',
+              emailVerified: true,
+              phoneVerified: true,
+              completedStays: 4,
+              cancellationsCount: 1,
+              conflictsCount: 0,
+            },
+          ],
+        };
+      }
+
+      if (text.includes('WHERE r.type = \'host_to_guest\'')) {
+        return {
+          rows: [
+            {
+              guestId: 'guest-1',
+              id: 'review-1',
+              authorName: 'Laura',
+              date: '2025-11-14T00:00:00.000Z',
+              comment: 'La coordinación fue clara y mantuvo buena comunicación durante toda la reserva.',
+            },
+          ],
+        };
+      }
+
+      if (text.includes('consultedBeforeReserve')) {
+        return {
+          rows: [
+            {
+              bookingId: 'booking-1',
+              consultedBeforeReserve: true,
+              savedProperty: true,
+              acceptedAgreement: false,
+            },
+          ],
+        };
+      }
+
+      throw new Error(`Unexpected query: ${text}`);
+    });
+
+    const res = await request(app)
+      .get('/api/host/dashboard')
+      .set('x-test-user-id', 'host-1');
+
+    expect(res.status).toBe(200);
+    expect(res.body.recentBookings).toHaveLength(1);
+    expect(res.body.recentBookings[0].guestProfile).toEqual({
+      identityVerified: true,
+      memberSince: '2022-02-10',
+      platformHistory: {
+        completedStays: 4,
+        conflictsCount: 0,
+        cancellationsCount: 1,
+      },
+      hostReviews: [
+        {
+          id: 'review-1',
+          authorName: 'Laura',
+          date: '2025-11-14',
+          comment: 'La coordinación fue clara y mantuvo buena comunicación durante toda la reserva.',
+        },
+      ],
+      profileCompletion: {
+        profileComplete: true,
+        photoUploaded: true,
+        basicDetailsComplete: true,
+      },
+      operationSignals: [
+        { id: 'consulted-before', label: 'Consultó antes de reservar', active: true },
+        { id: 'saved-property', label: 'Guardó la propiedad', active: true },
+        { id: 'accepted-agreement', label: 'Aceptó el acuerdo de reserva', active: false },
+      ],
+    });
+    expect(res.body.contactedGuests[0].guestProfile).toMatchObject({
+      identityVerified: true,
+      memberSince: '2022-02-10',
+      operationSignals: [],
+    });
+  });
 });

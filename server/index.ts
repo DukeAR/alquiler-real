@@ -1152,6 +1152,122 @@ const getHostProfileData = async (hostId: string) => {
 // HOST DASHBOARD & PROPERTY MANAGEMENT
 // ==========================================
 
+type HostDashboardGuestProfileRow = {
+  id: string;
+  identityVerified?: boolean | number | string | null;
+  memberSince?: string | Date | null;
+  profilePhoto?: string | null;
+  bio?: string | null;
+  phone?: string | null;
+  zone?: string | null;
+  emailVerified?: boolean | number | string | null;
+  phoneVerified?: boolean | number | string | null;
+  completedStays?: number | string | null;
+  cancellationsCount?: number | string | null;
+  conflictsCount?: number | string | null;
+};
+
+type HostDashboardGuestReviewRow = {
+  guestId: string;
+  id: string;
+  authorName?: string | null;
+  date?: string | Date | null;
+  comment?: string | null;
+};
+
+type HostDashboardBookingSignalRow = {
+  bookingId: string;
+  consultedBeforeReserve?: boolean | null;
+  savedProperty?: boolean | null;
+  acceptedAgreement?: boolean | null;
+};
+
+const isTruthyFlag = (value: unknown) => value === true || value === 1 || value === '1' || value === 't' || value === 'true';
+
+const toDateOnlyString = (value: unknown) => {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value.toISOString().slice(0, 10);
+  }
+
+  if (typeof value === 'string') {
+    const trimmedValue = value.trim();
+
+    if (!trimmedValue) {
+      return new Date().toISOString().slice(0, 10);
+    }
+
+    const parsedValue = new Date(trimmedValue);
+
+    if (!Number.isNaN(parsedValue.getTime())) {
+      return parsedValue.toISOString().slice(0, 10);
+    }
+
+    return trimmedValue;
+  }
+
+  return new Date().toISOString().slice(0, 10);
+};
+
+const buildGuestRequestProfilePayload = (
+  guest: HostDashboardGuestProfileRow | undefined,
+  options: {
+    hostReviews?: HostDashboardGuestReviewRow[];
+    bookingSignals?: HostDashboardBookingSignalRow;
+  } = {},
+) => {
+  if (!guest) {
+    return undefined;
+  }
+
+  const photoUploaded = typeof guest.profilePhoto === 'string' && guest.profilePhoto.trim().length > 0;
+  const basicDetailsComplete = [guest.bio, guest.phone, guest.zone].every(
+    (value) => typeof value === 'string' && value.trim().length > 0,
+  );
+  const emailVerified = isTruthyFlag(guest.emailVerified);
+  const phoneVerified = isTruthyFlag(guest.phoneVerified);
+  const identityVerified = isTruthyFlag(guest.identityVerified);
+
+  return {
+    identityVerified,
+    platformHistory: {
+      completedStays: toSafeNumber(guest.completedStays),
+      conflictsCount: toSafeNumber(guest.conflictsCount),
+      cancellationsCount: toSafeNumber(guest.cancellationsCount),
+    },
+    hostReviews: (options.hostReviews ?? []).slice(0, 3).map((review) => ({
+      id: review.id,
+      authorName: review.authorName || 'Anfitrión',
+      date: toDateOnlyString(review.date),
+      comment: review.comment || 'Sin comentario cargado.',
+    })),
+    profileCompletion: {
+      profileComplete: photoUploaded && basicDetailsComplete && (emailVerified || phoneVerified || identityVerified),
+      photoUploaded,
+      basicDetailsComplete,
+    },
+    operationSignals: options.bookingSignals
+      ? [
+          {
+            id: 'consulted-before',
+            label: 'Consultó antes de reservar',
+            active: !!options.bookingSignals.consultedBeforeReserve,
+          },
+          {
+            id: 'saved-property',
+            label: 'Guardó la propiedad',
+            active: !!options.bookingSignals.savedProperty,
+          },
+          {
+            id: 'accepted-agreement',
+            label: 'Aceptó el acuerdo de reserva',
+            active: !!options.bookingSignals.acceptedAgreement,
+          },
+        ]
+      : [],
+    memberSince: toDateOnlyString(guest.memberSince),
+  };
+};
+
 app.get('/api/host/dashboard', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: AUTH_REQUIRED_ERROR });
   try {
@@ -1221,6 +1337,108 @@ app.get('/api/host/dashboard', async (req, res) => {
       ...mapPropertyRecord(property),
       rating: roundToOneDecimal(toSafeNumber(property.rating)),
     }));
+    const recentBookings = recentBookingsResult.rows;
+    const contactedGuests = contactedGuestsResult.rows;
+    const guestIds = Array.from(new Set([
+      ...recentBookings.map((booking) => (typeof booking.userId === 'string' ? booking.userId : null)),
+      ...contactedGuests.map((guest) => (typeof guest.id === 'string' ? guest.id : null)),
+    ].filter((value): value is string => !!value)));
+    const guestProfilesById = new Map<string, HostDashboardGuestProfileRow>();
+    const guestReviewsByGuestId = new Map<string, HostDashboardGuestReviewRow[]>();
+    const bookingSignalsByBookingId = new Map<string, HostDashboardBookingSignalRow>();
+
+    if (guestIds.length > 0) {
+      const recentBookingIds = recentBookings
+        .map((booking) => (typeof booking.id === 'string' ? booking.id : null))
+        .filter((value): value is string => !!value);
+
+      const [guestProfilesResult, guestReviewsResult, bookingSignalsResult] = await Promise.all([
+        db.query(
+          `SELECT u.id,
+                  (COALESCE(u.is_identity_verified, FALSE) OR COALESCE(u.identity_validated, FALSE)) as "identityVerified",
+                  COALESCE(u.member_since, u.created_at) as "memberSince",
+                  u.profile_photo as "profilePhoto",
+                  u.bio,
+                  u.phone,
+                  u.zone,
+                  (COALESCE(u.email_verified, FALSE) OR COALESCE(u.is_email_verified, FALSE)) as "emailVerified",
+                  (COALESCE(u.phone_verified, FALSE) OR COALESCE(u.is_phone_verified, FALSE)) as "phoneVerified",
+                  COALESCE(booking_stats.completed_stays, 0)::int as "completedStays",
+                  COALESCE(booking_stats.cancellations_count, 0)::int as "cancellationsCount",
+                  COALESCE(report_stats.conflicts_count, 0)::int as "conflictsCount"
+           FROM users u
+           LEFT JOIN (
+             SELECT "userId" as user_id,
+                    COUNT(*) FILTER (WHERE status = 'completed')::int as completed_stays,
+                    COUNT(*) FILTER (WHERE status = 'cancelled')::int as cancellations_count
+             FROM bookings
+             WHERE "userId" = ANY($1::text[])
+             GROUP BY "userId"
+           ) booking_stats ON booking_stats.user_id = u.id
+           LEFT JOIN (
+             SELECT reported_user_id as user_id,
+                    COUNT(*)::int as conflicts_count
+             FROM reports
+             WHERE reported_user_id = ANY($1::text[])
+             GROUP BY reported_user_id
+           ) report_stats ON report_stats.user_id = u.id
+           WHERE u.id = ANY($1::text[])`,
+          [guestIds],
+        ),
+        db.query(
+          `SELECT r.reviewed_user_id as "guestId",
+                  r.id,
+                  reviewer.name as "authorName",
+                  r.created_at as date,
+                  r.comment
+           FROM reviews r
+           LEFT JOIN users reviewer ON reviewer.id = r.reviewer_id
+           WHERE r.type = 'host_to_guest'
+             AND r.reviewed_user_id = ANY($1::text[])
+           ORDER BY r.reviewed_user_id ASC, r.created_at DESC`,
+          [guestIds],
+        ),
+        recentBookingIds.length > 0
+          ? db.query(
+              `SELECT b.id as "bookingId",
+                      EXISTS(
+                        SELECT 1
+                        FROM conversations c
+                        WHERE c.tenant_id = b."userId"
+                          AND c.host_id = $2
+                          AND c.property_id = b."propertyId"
+                      ) as "consultedBeforeReserve",
+                      EXISTS(
+                        SELECT 1
+                        FROM favorites f
+                        WHERE f.user_id = b."userId"
+                          AND f.property_id = b."propertyId"
+                      ) as "savedProperty",
+                      (COALESCE(b.contract_accepted, FALSE) OR b.status IN ('confirmed', 'completed')) as "acceptedAgreement"
+               FROM bookings b
+               WHERE b.id = ANY($1::text[])`,
+              [recentBookingIds, req.session.userId],
+            )
+          : Promise.resolve({ rows: [] }),
+      ]);
+
+      guestProfilesResult.rows.forEach((guest) => {
+        guestProfilesById.set(guest.id, guest);
+      });
+
+      guestReviewsResult.rows.forEach((review) => {
+        const existingReviews = guestReviewsByGuestId.get(review.guestId) ?? [];
+
+        if (existingReviews.length < 3) {
+          existingReviews.push(review);
+          guestReviewsByGuestId.set(review.guestId, existingReviews);
+        }
+      });
+
+      bookingSignalsResult.rows.forEach((signal) => {
+        bookingSignalsByBookingId.set(signal.bookingId, signal);
+      });
+    }
 
     res.json({
       stats: {
@@ -1232,13 +1450,29 @@ app.get('/api/host/dashboard', async (req, res) => {
         badge: stats.badge || 'Nuevo usuario',
       },
       properties: hostProperties,
-      recentBookings: recentBookingsResult.rows,
-      contactedGuests: contactedGuestsResult.rows.map((guest) => ({
-        id: guest.id,
-        name: guest.name || 'Huesped',
-        score: toSafeNumber(guest.trust_score),
-        risk: toSafeNumber(guest.risk_score) >= 40 ? 'high' : toSafeNumber(guest.risk_score) >= 20 ? 'medium' : 'low',
-      })),
+      recentBookings: recentBookings.map((booking) => {
+        const guestProfile = buildGuestRequestProfilePayload(guestProfilesById.get(booking.userId), {
+          hostReviews: guestReviewsByGuestId.get(booking.userId),
+          bookingSignals: bookingSignalsByBookingId.get(booking.id),
+        });
+
+        return guestProfile
+          ? { ...booking, guestProfile }
+          : booking;
+      }),
+      contactedGuests: contactedGuests.map((guest) => {
+        const guestProfile = buildGuestRequestProfilePayload(guestProfilesById.get(guest.id), {
+          hostReviews: guestReviewsByGuestId.get(guest.id),
+        });
+
+        return {
+          id: guest.id,
+          name: guest.name || 'Huesped',
+          score: toSafeNumber(guest.trust_score),
+          risk: toSafeNumber(guest.risk_score) >= 40 ? 'high' : toSafeNumber(guest.risk_score) >= 20 ? 'medium' : 'low',
+          ...(guestProfile ? { guestProfile } : {}),
+        };
+      }),
       estimatedIncome: toSafeNumber(totals.estimated_income),
     });
   } catch (err) {
