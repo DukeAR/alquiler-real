@@ -200,7 +200,7 @@ export const TenantProfileView: React.FC<TenantProfileViewProps> = ({ onBack }) 
             {validationStatus.level === 'BASICO' && (
               <div className="p-4 bg-slate-100 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700">
                 <p className="text-sm text-slate-600 dark:text-slate-400">
-                  <strong>📋 Nivel básico:</strong> Subí tu DNI para verificar tu identidad y sumar más señales de confianza.
+                  <strong>📋 Nivel básico:</strong> Subí tu DNI para verificar tu identidad y completar mejor tu perfil.
                 </p>
               </div>
             )}
@@ -364,7 +364,7 @@ export const TenantProfileView: React.FC<TenantProfileViewProps> = ({ onBack }) 
         {/* DISCLAIMER */}
         <div className="p-6 bg-slate-100 dark:bg-slate-900/50 rounded-[32px] border border-slate-200 dark:border-slate-800">
           <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed text-center font-medium">
-            Alquiler Real usa señales de actividad para reducir conflictos y estafas. La verificación de identidad confirma quién sos, pero no funciona como un aval sobre tu conducta.
+            Alquiler Real usa tu actividad para detectar problemas y cuidar la experiencia. La verificación de identidad confirma quién sos, pero no funciona como un aval sobre tu conducta.
           </p>
         </div>
           </>

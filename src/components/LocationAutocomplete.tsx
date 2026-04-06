@@ -178,7 +178,7 @@ export const LocationAutocomplete = ({
             </button>
           ) : null}
           className={cn(
-            'min-h-16 rounded-[18px] border-slate-200/90 bg-white py-4 pl-14 text-[1rem] font-semibold tracking-[-0.01em] text-slate-900 shadow-none placeholder:text-slate-400 focus:border-slate-300 focus:shadow-[0_0_0_4px_rgba(15,23,42,0.06)] md:py-5 md:pl-16',
+            'min-h-16 rounded-[18px] border-slate-200/90 bg-white py-4 pl-14 text-[1rem] font-semibold tracking-[-0.01em] text-slate-900 shadow-none placeholder:text-slate-400 focus:border-brand/50 focus:shadow-[var(--app-focus-ring)] md:py-5 md:pl-16',
             value ? 'pr-14 md:pr-16' : 'pr-5 md:pr-6',
             showSuggestions || showEmptyState ? 'rounded-b-[14px] border-b-transparent md:rounded-b-[16px]' : ''
           )}

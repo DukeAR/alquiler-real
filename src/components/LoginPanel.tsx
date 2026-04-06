@@ -169,7 +169,7 @@ export const LoginPanel = ({ context = 'page', className, onClose, onSuccess }: 
         heading="Ingresá a tu cuenta"
         description={
           isModal
-            ? 'Entrá para guardar propiedades, seguir tus reservas y hablar con anfitriones con más contexto.'
+            ? 'Entrá para guardar propiedades, seguir tus reservas y hablar con anfitriones con todo más claro.'
             : 'Entrá para guardar propiedades, retomar conversaciones y seguir tus reservas.'
         }
         as="h2"
@@ -237,7 +237,7 @@ export const LoginPanel = ({ context = 'page', className, onClose, onSuccess }: 
       <Card variant="muted" padding="none" className="mt-6 border-slate-200/80 bg-slate-50/90 p-4">
         <p className="text-sm font-semibold tracking-tight text-slate-900">¿Todavía no tenés cuenta?</p>
         <p className="mt-1 text-sm leading-6 text-slate-600">
-          Creala en pocos pasos para guardar propiedades, hablar con anfitriones y reservar con más contexto.
+          Creala en pocos pasos para guardar propiedades, hablar con anfitriones y reservar con más claridad.
         </p>
         <Button
           type="button"

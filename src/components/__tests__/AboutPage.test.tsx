@@ -14,20 +14,20 @@ describe('AboutPage', () => {
     );
 
     expect(screen.getByRole('heading', { name: 'Cómo funciona Alquiler Real' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Elegí con información real antes de reservar' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Qué significa cada dato comprobado' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Lo importante para decidir sin vueltas' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Qué puede aparecer como verificado' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Anfitriones' }));
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Mostrá bien quién publica y qué se pudo comprobar' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Publicá con información que se pueda verificar' })).toBeInTheDocument();
     });
-    expect(screen.getByText('Publicá con lo importante claro')).toBeInTheDocument();
+    expect(screen.getByText('Dejá el aviso listo para decidir')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Huéspedes' }));
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Mirá qué se pudo comprobar' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Mirá qué ya fue verificado' })).toBeInTheDocument();
     });
     expect(screen.getByText('Explorá con la información a la vista')).toBeInTheDocument();
 

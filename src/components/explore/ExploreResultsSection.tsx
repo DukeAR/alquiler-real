@@ -76,7 +76,7 @@ export const ExploreResultsSection = ({
     : 'Resultados';
 
   const summaryHeading = loading
-    ? 'Actualizando datos'
+    ? 'Actualizando resultados'
     : failedToLoadResults
       ? 'No pudimos cargar resultados ahora.'
     : hasActiveFilters
@@ -84,11 +84,11 @@ export const ExploreResultsSection = ({
         ? 'Resultados para revisar'
         : 'No encontramos coincidencias'
       : hasAnyResults
-        ? 'Propiedades para revisar'
+          ? 'Opciones para decidir'
         : 'No hay propiedades disponibles ahora.';
 
   const summaryDescription = loading
-    ? 'Estamos actualizando la información disponible.'
+    ? 'Estamos actualizando los avisos disponibles.'
     : failedToLoadResults
       ? 'Probá con otra zona o volvé a intentar en unos segundos.'
     : hasActiveFilters
@@ -241,7 +241,7 @@ export const ExploreResultsSection = ({
         <section className="space-y-5 md:space-y-6">
           <SectionTitle
             heading="Primero revisá estas opciones"
-            description="En cada una podés revisar si hay ubicación verificada, identidad confirmada o reseñas reales."
+            description="En cada una podés ver quién publica, dónde está y qué parte del aviso ya fue revisada."
             className="max-w-2xl"
           />
 
@@ -268,7 +268,7 @@ export const ExploreResultsSection = ({
               <SectionTitle
                 heading={hasActiveFilters ? 'Resultados para revisar' : 'Más opciones para comparar'}
                 description={loading
-                  ? 'Estamos actualizando la información disponible.'
+                  ? 'Estamos actualizando los avisos disponibles.'
                   : hasActiveFilters
                     ? `${formatPropertyCount(listingProperties.length)} para revisar en esta búsqueda.`
                     : listingProperties.length > 0

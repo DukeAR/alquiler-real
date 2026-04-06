@@ -125,8 +125,8 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
       {!hasCompletedBooking && (
         <div className="mb-8 p-4 bg-white/5 border border-white/10 rounded-2xl flex items-start gap-3">
           <Icons.Info className="w-5 h-5 text-accent shrink-0 mt-0.5" />
-          <p className="text-sm text-white/70">
-            Solo pueden opinar los huéspedes que completaron la estadía y cerraron la reserva en la plataforma. Así cuidamos que cada reseña tenga contexto real.
+          <p className="text-sm text-white/80">
+            Solo pueden opinar los huéspedes que completaron la estadía y cerraron la reserva en la plataforma. Así cuidamos que cada reseña sea real.
           </p>
         </div>
       )}
@@ -251,7 +251,7 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
                 </div>
 
                 <div className="space-y-4">
-                  <label className="block text-sm font-medium text-white/60">Señales de la estadía (obligatorias)</label>
+                  <label className="block text-sm font-medium text-white/80">Cómo fue la estadía (obligatorio)</label>
 
                   <div className="flex items-center justify-between p-4 bg-white/5 rounded-xl border border-white/10">
                     <div className="flex items-center gap-3">

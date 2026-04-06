@@ -70,7 +70,7 @@ export const HostProfileView: React.FC<HostProfileViewProps> = ({ profile, onBac
           <div className="p-5 bg-slate-100/90 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-[24px] space-y-3">
             <div className="flex items-center gap-3 text-slate-700 dark:text-slate-300">
               <Icons.AlertTriangle className="w-5 h-5 shrink-0" />
-              <p className="text-sm font-bold uppercase tracking-tight">Señales para revisar</p>
+              <p className="text-sm font-bold uppercase tracking-tight">Puntos para revisar</p>
             </div>
             <ul className="space-y-2">
               {profile.alerts.map((alert, i) => (
@@ -80,8 +80,8 @@ export const HostProfileView: React.FC<HostProfileViewProps> = ({ profile, onBac
                 </li>
               ))}
             </ul>
-            <p className="text-[10px] text-slate-500/70 italic font-medium pt-1">
-              Este perfil registra señales que conviene revisar con más atención.
+            <p className="text-[10px] text-slate-500 italic font-medium pt-1">
+              Este perfil tiene algunos puntos que conviene mirar con más atención.
             </p>
           </div>
         )}

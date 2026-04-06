@@ -172,11 +172,12 @@ describe('PropertyDetail', () => {
     expect(screen.getByText('Lo importante para decidir')).toBeDefined();
     expect(screen.getByText('Comodidades clave')).toBeDefined();
     expect(screen.getByText('Wifi rápido')).toBeDefined();
-    expect(screen.getByText('Datos para revisar antes de reservar')).toBeDefined();
+    expect(screen.getByText('Nivel de verificación')).toBeDefined();
+    expect(screen.getByText('3 de 5 verificaciones completadas')).toBeDefined();
     expect(screen.getByText('Ubicación: Ciudad Test.')).toBeDefined();
-    expect(screen.getAllByText('Más datos comprobados').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Identidad confirmada').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Ubicación verificada').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Material real del lugar').length).toBeGreaterThan(0);
     expect(screen.getByText('Mariana')).toBeDefined();
   });
 
@@ -303,6 +304,7 @@ describe('PropertyDetail', () => {
     renderPropertyDetail();
 
     await waitFor(() => expect(screen.getByText('Casa de prueba')).toBeDefined());
+    expect(screen.queryByRole('button', { name: /guardar en guardados/i })).toBeNull();
 
     const checkInIso = isoPlusDays(2);
     const checkOutIso = isoPlusDays(5);

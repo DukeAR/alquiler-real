@@ -56,7 +56,7 @@ describe('PropertyCard', () => {
     expect(screen.getByText('Precio por noche')).toBeInTheDocument();
     expect(screen.getByText('/ noche')).toBeInTheDocument();
     expect(screen.getByText('12 reseñas reales')).toBeInTheDocument();
-    expect(screen.getByText('Revisá qué se pudo comprobar antes de decidir.')).toBeInTheDocument();
+    expect(screen.getByText('Revisá ubicación, precio y qué ya fue verificado antes de decidir.')).toBeInTheDocument();
     expect(screen.getByText('Ver detalle')).toBeInTheDocument();
   });
 
@@ -79,5 +79,14 @@ describe('PropertyCard', () => {
     fireEvent.click(screen.getByRole('button', { name: /Guardar propiedad/i }));
     expect(onFavoriteToggle).toHaveBeenCalledWith('p1', true);
     expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  test('hides the save button when there is no active session', () => {
+    useAuthMock.mockReturnValue({ user: null });
+
+    render(<PropertyCard property={sampleProperty} onClick={vi.fn()} />);
+
+    expect(screen.queryByRole('button', { name: /Guardar propiedad/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Quitar de guardados/i })).toBeNull();
   });
 });

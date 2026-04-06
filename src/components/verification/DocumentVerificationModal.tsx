@@ -69,7 +69,7 @@ export const DocumentVerificationModal: React.FC<DocumentVerificationModalProps>
       color: 'bg-blue-100 text-blue-700',
       icon: Icons.ShieldCheck,
       requirements: ['DNI frente y dorso', 'Selfie con DNI'],
-      benefits: ['Más contexto al reservar', 'Insignia de verificado', 'Perfil más completo'],
+      benefits: ['Más claridad al reservar', 'Insignia de verificado', 'Perfil más completo'],
     },
     {
       id: 'premium',
@@ -80,8 +80,8 @@ export const DocumentVerificationModal: React.FC<DocumentVerificationModalProps>
         ? ['Documentacion enviada', 'Comprobante de servicios']
         : ['Documentacion enviada'],
       benefits: userType === 'host'
-        ? ['Podés publicar propiedades', 'Insignia destacada', 'Más señales visibles en tu perfil']
-        : ['Más señales visibles en tu perfil', 'Insignia destacada', 'Perfil más completo'],
+        ? ['Podés publicar propiedades', 'Insignia destacada', 'Más verificaciones visibles en tu perfil']
+        : ['Más verificaciones visibles en tu perfil', 'Insignia destacada', 'Perfil más completo'],
     },
   ] as const;
 

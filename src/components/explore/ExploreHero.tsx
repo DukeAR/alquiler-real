@@ -10,7 +10,7 @@ type ExploreHeroProps = {
   onLocationSelect: (location: LocationSuggestion) => void;
 };
 
-const trustLine = 'No decidimos por vos. Te damos todo para que elijas tranquilo y disfrutes el viaje.';
+const trustLine = 'Ves rápido quién publica, dónde está el lugar y qué parte del aviso ya fue revisada.';
 
 export const ExploreHero = ({
   searchValue,
@@ -31,18 +31,18 @@ export const ExploreHero = ({
         <div className="absolute inset-0 bg-slate-950/52" />
       </div>
 
-      <div className="relative z-10 mx-auto w-full max-w-5xl">
+      <div className="relative z-10 mx-auto w-full max-w-6xl">
         <div className="space-y-10 md:space-y-12 lg:space-y-14">
           <div className="space-y-4 md:space-y-5">
             <h1 className="font-display max-w-[41rem] text-balance text-[2.78rem] font-semibold leading-[1.02] tracking-[-0.035em] text-white md:text-[4.15rem] lg:text-[4.45rem]">
-              Elegí con información real antes de reservar
+              Elegir dónde quedarte debería ser simple.
             </h1>
-            <p className="max-w-[41rem] text-[0.98rem] leading-7 text-slate-100/86 md:text-[1.08rem] md:leading-8">
-              Ubicación verificada, identidad confirmada y reseñas reales.
+            <p className="max-w-[43rem] text-[0.98rem] leading-7 text-slate-100 md:text-[1.08rem] md:leading-8">
+              No podemos elegir por vos, pero te damos claridad en todo el proceso para que decidas tranquilo.
             </p>
           </div>
           <form
-            className="mx-auto w-full rounded-[24px] border border-white/75 bg-white/97 p-5 shadow-[0_24px_54px_-34px_rgba(15,23,42,0.26)] md:p-6 lg:w-[70%] xl:w-[66%]"
+            className="w-full max-w-[58rem] rounded-[24px] border border-white/75 bg-white/97 p-5 shadow-[0_24px_54px_-34px_rgba(15,23,42,0.26)] md:p-6 lg:p-7"
             onSubmit={(event) => {
               event.preventDefault();
               onSearchSubmit();
@@ -58,7 +58,7 @@ export const ExploreHero = ({
                   value={searchValue}
                   suggestions={locationSuggestions}
                   onChange={onSearchChange}
-                  placeholder="Buscá una zona o ciudad"
+                  placeholder="Buscá una zona, ciudad o barrio"
                   onSelect={onLocationSelect}
                   onSubmitValue={onSearchSubmitValue}
                 />
@@ -74,7 +74,7 @@ export const ExploreHero = ({
             </div>
           </form>
 
-          <p className="mx-auto max-w-[48rem] text-[13px] font-semibold leading-6 tracking-[0.01em] text-slate-100/78 md:text-center md:text-[14px]">
+          <p className="max-w-[48rem] text-[13px] font-semibold leading-6 tracking-[0.01em] text-slate-100 md:text-[14px]">
             {trustLine}
           </p>
         </div>

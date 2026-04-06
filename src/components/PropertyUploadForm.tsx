@@ -373,7 +373,7 @@ export const PropertyUploadForm: React.FC<{ onComplete: () => void }> = ({ onCom
                         <div className="border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-2xl p-6 text-center hover:border-brand transition-colors cursor-pointer bg-slate-50 dark:bg-slate-950">
                             <Icons.Video className="w-8 h-8 mx-auto text-slate-300 dark:text-slate-600 mb-2" />
                             <p className="font-medium text-slate-600 dark:text-slate-400">Subí un video de la propiedad</p>
-                            <p className="text-xs text-slate-400">El video suma contexto y confianza</p>
+                            <p className="text-xs text-slate-400">El video ayuda a mostrar cómo está el lugar</p>
                         </div>
 
                         <div className="bg-brand/5 dark:bg-brand/10 p-4 rounded-xl border border-brand/10 dark:border-brand/20 text-sm text-slate-700 dark:text-slate-200 flex gap-3">

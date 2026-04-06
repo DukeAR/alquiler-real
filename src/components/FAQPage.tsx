@@ -168,7 +168,7 @@ const roleGuides: RoleGuide[] = [
     description: 'Podés ver quién publica, si hay ubicación verificada y qué reseñas reales dejaron otras personas.',
     points: [
       'No arrancás solo con fotos y promesas.',
-      'Podés comparar propiedades con más contexto.',
+      'Podés comparar propiedades con más claridad.',
       'La decisión sigue siendo tuya.',
     ],
     icon: Icons.UserCheck,

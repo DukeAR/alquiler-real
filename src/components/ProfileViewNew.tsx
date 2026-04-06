@@ -404,7 +404,7 @@ export const ProfileViewNew = () => {
                     <NoticeBanner
                       tone={riskScore > 50 ? 'error' : 'warning'}
                       className="mt-6"
-                      heading={riskScore > 50 ? 'Tu cuenta necesita revisión.' : 'Detectamos señales para revisar con calma.'}
+                      heading={riskScore > 50 ? 'Tu cuenta necesita revisión.' : 'Detectamos algunos puntos para revisar con calma.'}
                       description={`Puntaje actual: ${riskScore}. Si hubo algo fuera de lo esperado, conviene revisar tu perfil y tus interacciones recientes.`}
                     />
                   ) : (

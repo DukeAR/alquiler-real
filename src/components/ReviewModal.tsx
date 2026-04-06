@@ -69,7 +69,7 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
             Evaluá a {reviewedUserName}
           </h3>
           <p className="text-slate-500 text-sm">
-            Tu reseña suma contexto real y ayuda a cuidar la comunidad.
+            Tu reseña ayuda a que otras personas decidan con más claridad.
           </p>
         </div>
 

@@ -179,7 +179,7 @@ const HostProfileWrapper = () => {
       <LoadingState
         fullScreen
         message="Cargando perfil del anfitrión..."
-        description="Estamos reuniendo su historial y sus señales de confianza para mostrarte el perfil con contexto."
+        description="Estamos reuniendo su historial, sus reseñas y lo que ya se verificó para mostrarte el perfil con claridad."
       />
     );
   }

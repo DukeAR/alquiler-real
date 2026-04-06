@@ -51,7 +51,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
       <LoadingState
         fullScreen
         message="Cargando tu panel..."
-        description="Estamos reuniendo propiedades, reservas y señales de confianza para mostrarte todo ordenado."
+        description="Estamos reuniendo propiedades, reservas y verificaciones para mostrarte todo ordenado."
       />
     );
   }
@@ -91,7 +91,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
             tone="soft"
             visual={<Icons.LayoutDashboard className="h-10 w-10" />}
             title="Todavía no publicaste propiedades"
-            description="Publicá tu primera propiedad con información clara y empezá a recibir consultas con más contexto."
+            description="Publicá tu primera propiedad con información clara y empezá a recibir consultas con menos dudas."
             action={{
               label: 'Publicá tu primera propiedad',
               onClick: () => setIsAddingProperty(true),
@@ -333,9 +333,9 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
               <div className="w-12 h-12 bg-brand/20 rounded-2xl flex items-center justify-center mb-2">
                 <Icons.Zap className="w-6 h-6 text-brand" />
               </div>
-              <h3 className="app-title-4 text-white">Contexto para decidir</h3>
-              <p className="app-body-sm text-slate-400">
-                Juntamos señales de comportamiento y validaciones para que decidas mejor con quién hablar.
+              <h3 className="app-title-4 text-white">Lo que más miran antes de escribirte</h3>
+              <p className="app-body-sm text-slate-100">
+                Mostrá quién sos, dónde está el lugar y cómo se ve de verdad para recibir consultas más directas.
               </p>
               <div className="pt-4">
                 <div className="flex items-center gap-2 app-eyebrow text-emerald-300">
@@ -412,15 +412,15 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
           <div className="app-card border-brand/10 bg-brand/5 p-8 space-y-4 dark:border-brand/20 dark:bg-brand/10">
             <Icons.Lightbulb className="w-8 h-8 text-brand" />
             <h3 className="app-title-4 text-slate-950 dark:text-slate-50">¿Por qué conviene verificar mejor?</h3>
-            <p className="app-body-sm text-slate-700/80 dark:text-slate-300/80">
-              Un perfil verificado transmite más confianza. Los huéspedes suelen elegir propiedades donde el anfitrión mostró identidad y ubicación real.
+            <p className="app-body-sm text-slate-700 dark:text-slate-300">
+              Cuando el aviso deja claro quién publica, dónde está el lugar y qué ya fue comprobado, la decisión cuesta menos.
             </p>
           </div>
           <div className="rounded-[var(--app-radius-card)] border border-slate-800 bg-slate-900 dark:bg-slate-800 p-8 text-white space-y-4 shadow-[var(--app-shadow-soft)]">
             <Icons.Shield className="w-8 h-8 text-brand" />
             <h3 className="app-title-4 text-white">Información real, mejores decisiones</h3>
-            <p className="app-body-sm text-slate-400">
-              Cuando validás tu identidad también cuidás tu reputación. Una plataforma más transparente mejora la experiencia para ambas partes.
+            <p className="app-body-sm text-slate-100">
+              Completar verificaciones mejora tu aviso porque la otra persona entiende más rápido qué está viendo y qué ya fue revisado.
             </p>
             <button className="app-button-base justify-start px-0 text-sm text-brand hover:underline">
               Ver guía para anfitriones

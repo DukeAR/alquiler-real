@@ -73,9 +73,9 @@ export const PropertyMap: React.FC<PropertyMapProps> = ({ properties, onProperty
                                         alt={property.title}
                                         className="w-full h-full object-cover"
                                     />
-                                    {property.traceabilityLevel === 'high' && (
+                                    {property.locationVerified && (
                                         <div className="absolute top-2 right-2 bg-brand/90 backdrop-blur-sm px-2 py-1 rounded-lg border border-brand/20 shadow-sm text-[10px] font-bold text-white uppercase flex items-center gap-1">
-                                            Más datos comprobados
+                                            Ubicación verificada
                                         </div>
                                     )}
                                 </div>

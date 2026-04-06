@@ -6,10 +6,10 @@ type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost';
 type ButtonSize = 'sm' | 'md' | 'lg' | 'icon' | 'auto';
 
 const variantClasses: Record<ButtonVariant, string> = {
-  primary: 'bg-brand text-white shadow-[var(--app-shadow-brand)] hover:-translate-y-[1px] hover:bg-brand-dark hover:shadow-[0_22px_42px_-28px_rgba(55,48,163,0.42)] active:translate-y-0 active:scale-[0.995] disabled:bg-slate-200 disabled:text-slate-500 disabled:shadow-none',
-  secondary: 'border border-slate-200/90 bg-white text-slate-700 shadow-[var(--app-shadow-subtle)] hover:border-slate-300 hover:bg-white hover:text-slate-900 hover:shadow-[var(--app-shadow-soft)] active:translate-y-0 active:scale-[0.995] disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 disabled:shadow-none dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-slate-600 dark:hover:bg-slate-800',
-  outline: 'border border-slate-200/90 bg-white/70 text-slate-700 hover:border-slate-300 hover:bg-white hover:text-slate-900 hover:shadow-[var(--app-shadow-subtle)] active:scale-[0.995] disabled:text-slate-400 disabled:shadow-none dark:border-slate-700 dark:text-slate-100 dark:hover:border-slate-600 dark:hover:bg-slate-800/80',
-  ghost: 'bg-transparent text-slate-600 hover:bg-slate-100/90 hover:text-slate-900 active:scale-[0.99] disabled:text-slate-300 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-50',
+  primary: 'bg-brand text-white shadow-[var(--app-shadow-brand)] hover:bg-brand-dark hover:shadow-[0_22px_42px_-28px_rgba(55,48,163,0.42)] disabled:bg-slate-200 disabled:text-slate-500 disabled:shadow-none',
+  secondary: 'border border-slate-200/90 bg-white text-slate-700 shadow-[var(--app-shadow-subtle)] hover:border-slate-300 hover:bg-white hover:text-slate-900 hover:shadow-[var(--app-shadow-soft)] disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 disabled:shadow-none dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-slate-600 dark:hover:bg-slate-800',
+  outline: 'border border-slate-200/90 bg-white/70 text-slate-700 hover:border-slate-300 hover:bg-white hover:text-slate-900 hover:shadow-[var(--app-shadow-subtle)] disabled:text-slate-400 disabled:shadow-none dark:border-slate-700 dark:text-slate-100 dark:hover:border-slate-600 dark:hover:bg-slate-800/80',
+  ghost: 'bg-transparent text-slate-600 hover:bg-slate-100/90 hover:text-slate-900 disabled:text-slate-300 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-50',
 };
 
 const sizeClasses: Record<ButtonSize, string> = {
@@ -91,7 +91,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           'app-button-base shrink-0 whitespace-nowrap rounded-[var(--app-radius-control)] focus-visible:outline-none disabled:pointer-events-none disabled:cursor-not-allowed',
           variantClasses[variant],
           loading && loadingClasses[variant],
-          success && 'bg-emerald-500 text-white shadow-[0_22px_50px_-28px_rgba(16,185,129,0.58)] hover:bg-emerald-500 hover:shadow-[0_22px_50px_-28px_rgba(16,185,129,0.58)] active:scale-100 disabled:bg-emerald-500 disabled:text-white disabled:opacity-100 disabled:shadow-[0_22px_50px_-28px_rgba(16,185,129,0.58)]',
+          success && 'bg-emerald-500 text-white shadow-[0_22px_50px_-28px_rgba(16,185,129,0.58)] hover:bg-emerald-500 hover:shadow-[0_22px_50px_-28px_rgba(16,185,129,0.58)] disabled:bg-emerald-500 disabled:text-white disabled:opacity-100 disabled:shadow-[0_22px_50px_-28px_rgba(16,185,129,0.58)]',
           sizeClasses[size],
           fullWidth && 'w-full',
           className,

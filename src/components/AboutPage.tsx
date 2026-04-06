@@ -73,14 +73,14 @@ const aboutFeatureCardClass = 'space-y-3 rounded-[24px] border-slate-200/85 bg-w
 
 const projectScopeCards: ScopeCard[] = [
   {
-    eyebrow: 'Qué sí hacemos',
-    title: 'Qué mostramos antes de que decidas',
-    description: 'Ejemplos concretos de lo que podés revisar antes de hablar o pagar.',
+    eyebrow: 'Qué te mostramos',
+    title: 'Lo que podés revisar rápido',
+    description: 'Lo importante para entender un aviso antes de hablar o reservar.',
     points: [
-      'Quién publica cuando hay identidad confirmada.',
-      'Si la ubicación coincide con el lugar real.',
-      'Qué reseñas reales dejaron otras personas que ya estuvieron.',
-      'Qué información ya está clara antes de hablar o pagar.',
+      'Quién publica cuando la identidad ya fue confirmada.',
+      'Si la ubicación coincide con el lugar.',
+      'Si hay fotos o video que muestren el estado real.',
+      'Qué reseñas dejaron otras personas que ya estuvieron.',
     ],
     icon: Icons.Target,
     cardClassName: 'rounded-[26px] border-brand/15 bg-brand/[0.06] p-6 dark:border-brand/20 dark:bg-brand/10',
@@ -88,15 +88,15 @@ const projectScopeCards: ScopeCard[] = [
     pointClassName: 'text-slate-700 dark:text-slate-200',
   },
   {
-    eyebrow: 'Qué no comprobamos',
-    title: 'Qué no comprobamos desde la app',
-    description: 'Mostramos información concreta antes de que avances. Hay cosas que dependen de las partes y no las comprobamos desde la plataforma.',
+    eyebrow: 'Qué conviene mirar además',
+    title: 'Lo básico antes de avanzar',
+    description: 'Además de lo verificado, también conviene mirar lo esencial del aviso.',
     points: [
-      'El estado final del lugar y los servicios se confirman entre las partes.',
-      'Los aspectos legales y contractuales quedan fuera de la app.',
-      'Los pagos y acuerdos se realizan directamente entre huésped y anfitrión.',
+      'Fotos, precio y reglas básicas del lugar.',
+      'Reseñas completas si ya hay estadías cerradas.',
+      'Las dudas concretas que quieras resolver antes de coordinar.',
     ],
-    icon: Icons.ShieldAlert,
+    icon: Icons.Search,
     cardClassName: 'rounded-[26px] border-slate-200/85 bg-white/92 p-6 dark:border-slate-800 dark:bg-slate-950',
     iconClassName: 'flex h-11 w-11 items-center justify-center rounded-[16px] bg-slate-900 text-white dark:bg-slate-800',
     pointClassName: 'text-slate-600 dark:text-slate-400',
@@ -105,12 +105,12 @@ const projectScopeCards: ScopeCard[] = [
 
 const verificationLevels: VerificationLevel[] = [
   {
-    title: 'Revisión presencial',
-    description: 'Es el nivel más completo porque hubo revisión en el lugar.',
+    title: 'Verificación presencial',
+    description: 'Ya hubo una revisión en el lugar.',
     bullets: [
-      'La identidad quedó confirmada en persona.',
-      'Se registró el lugar físicamente.',
-      'La ubicación verificada coincide con la propiedad.',
+      'Quién publica quedó confirmado.',
+      'La ubicación coincide con el lugar.',
+      'Hay revisión hecha en persona.',
     ],
     icon: Icons.ShieldCheck,
     cardClassName: 'rounded-[28px] border-emerald-200/80 bg-emerald-50/92 p-6 dark:border-emerald-900/30 dark:bg-emerald-900/20 md:p-7',
@@ -120,12 +120,12 @@ const verificationLevels: VerificationLevel[] = [
     pointClassName: 'text-emerald-800/90 dark:text-emerald-200/90',
   },
   {
-    title: 'Revisión digital',
-    description: 'La revisión fue online. Sirve para mirar algunos datos antes de avanzar.',
+    title: 'Verificación digital',
+    description: 'Hay una revisión online y material cargado por quien publica.',
     bullets: [
       'La identidad quedó confirmada online.',
-      'Hay registro de ubicación en ese momento.',
-      'No reemplaza una visita real.',
+      'Hay material real para mirar.',
+      'Todavía no reemplaza una visita al lugar.',
     ],
     icon: Icons.Shield,
     cardClassName: 'rounded-[28px] border-brand/15 bg-brand/[0.06] p-6 dark:border-brand/20 dark:bg-brand/10 md:p-7',
@@ -138,36 +138,36 @@ const verificationLevels: VerificationLevel[] = [
 
 const futureCards: FutureCard[] = [
   {
-    title: 'Más zonas con el mismo criterio',
-    description: 'La idea es llevar esta forma de mostrar información a más destinos de la costa.',
+    title: 'Más avisos claros',
+    description: 'Queremos que cada vez más propiedades se entiendan de una sola lectura.',
     icon: Icons.Globe,
   },
   {
-    title: 'Más datos fáciles de leer',
-    description: 'Si algo se pudo comprobar, queremos que se entienda rápido y sin etiquetas técnicas.',
+    title: 'Más verificaciones visibles',
+    description: 'Si algo ya se comprobó, queremos que se vea rápido y sin vueltas.',
     icon: Icons.Shield,
   },
   {
-    title: 'Información cada vez más útil',
-    description: 'Queremos sumar datos concretos sin llenar la pantalla de texto ni etiquetas vacías.',
+    title: 'Mejor decisión en menos tiempo',
+    description: 'La idea es que entiendas el aviso en segundos y llegues mejor a la conversación.',
     icon: Icons.Layers,
   },
 ];
 
 const hostBenefits: RoleBenefit[] = [
   {
-    title: 'Quién publica queda claro',
-    description: 'Si tenés identidad confirmada, la otra persona lo ve antes de escribirte.',
+    title: 'Quién sos queda claro',
+    description: 'Si tu identidad está confirmada, la otra persona lo ve antes de escribirte.',
     icon: Icons.BadgeCheck,
   },
   {
-    title: 'Se entiende qué ya fue revisado',
-    description: 'La publicación deja claro qué parte se pudo comprobar y qué sigue siendo información declarada.',
+    title: 'Se entiende mejor el lugar',
+    description: 'La ubicación y el material real ayudan a que no todo dependa del chat.',
     icon: Icons.ShieldCheck,
   },
   {
-    title: 'Llegan consultas más enfocadas',
-    description: 'Se evita arrancar con "quién publica?", "dónde queda?" o "qué incluye?".',
+    title: 'Llegan consultas más útiles',
+    description: 'Te escriben con menos dudas básicas y con más decisión.',
     icon: Icons.MessageSquare,
   },
 ];
@@ -192,14 +192,14 @@ const guestBenefits: RoleBenefit[] = [
 
 const hostSteps: StepCard = {
   eyebrow: 'Antes de publicar',
-  title: 'Qué conviene dejar claro',
-  description: 'Cuatro cosas para que el aviso se entienda rápido.',
+  title: 'Qué conviene completar antes de publicar',
+  description: 'Cuatro pasos para que el aviso se entienda de una sola lectura.',
   icon: Icons.ListTodo,
   steps: [
-    'Mostrá quién publica y si tenés identidad confirmada.',
-    'Dejá visible ubicación, precio, fotos y reglas básicas.',
-    'Marcá qué parte del aviso se pudo comprobar.',
-    'Publicá cuando lo principal se entienda sin abrir el chat.',
+    'Confirmá tu identidad.',
+    'Marcá bien la ubicación y el precio.',
+    'Subí fotos o video que muestren el lugar como es.',
+    'Publicá cuando el aviso se entienda sin abrir el chat.',
   ],
   tone: 'brand',
 };
@@ -219,15 +219,15 @@ const guestSteps: StepCard = {
 };
 
 const hostHighValidationPoints = [
-  'Se confirmó quién publica.',
-  'Se registró el lugar y su ubicación.',
-  'La consulta arranca con menos dudas básicas.',
+  'Se ve quién publica.',
+  'Se entiende dónde está el lugar.',
+  'Hay material real para mirar antes de escribir.',
 ];
 
 const hostScopePoints = [
-  'La app deja visible quién publica, dónde está el lugar y qué parte ya se pudo comprobar.',
-  'La charla, la visita y la decisión final siguen siendo entre las personas.',
-  'El objetivo es que el aviso no arranque incompleto.',
+  'Nombre, ubicación y material real dejan de ser dudas iniciales.',
+  'La otra persona entiende más rápido si el lugar le cierra.',
+  'La conversación empieza más ordenada y con menos vueltas.',
 ];
 
 const ScopeCardBlock = ({ card }: { card: ScopeCard }) => {
@@ -381,7 +381,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
         onBack={onBack}
         eyebrow="Información clara"
         heading="Cómo funciona Alquiler Real"
-        description="Qué información muestra la app, qué se pudo comprobar y qué conviene revisar antes de reservar."
+        description="Qué información muestra la app, qué ya fue verificado y qué conviene revisar antes de reservar."
         contentClassName="mx-auto w-full max-w-5xl"
       />
 
@@ -430,16 +430,16 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                     <SectionTitle
                       eyebrow="Proyecto"
                       as="h2"
-                      heading="Elegí con información real antes de reservar"
-                      description="En la costa muchas veces la decisión arranca con fotos, texto y promesas. Acá ordenamos lo que sí se pudo comprobar."
+                      heading="Lo importante para decidir sin vueltas"
+                      description="Quién publica, dónde está el lugar, cómo se ve y qué dijeron otras personas, en una lectura clara."
                       className="max-w-2xl"
                     />
                     <div className="space-y-4">
                       <p className="app-body text-slate-700 dark:text-slate-300">
-                        Mostramos <strong>ubicación verificada, identidad confirmada y reseñas reales</strong> cuando esa información está disponible.
+                        Mostramos <strong>identidad confirmada, ubicación verificada, material real y reseñas</strong> cuando esa información está disponible.
                       </p>
                       <p className="app-body text-slate-700 dark:text-slate-300">
-                        No decidimos por vos. Dejamos claro qué se pudo comprobar y qué no antes de avanzar.
+                        La idea es que entiendas rápido qué estás viendo antes de escribir o reservar.
                       </p>
                     </div>
                   </div>
@@ -456,8 +456,8 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                 <SectionTitle
                   eyebrow="Cómo leer una propiedad"
                   as="h2"
-                  heading="Qué significa cada dato comprobado"
-                  description="No todo vale lo mismo. Algunas cosas se pudieron revisar y otras no."
+                  heading="Qué puede aparecer como verificado"
+                  description="Cada aviso muestra en simple qué ya se revisó y qué todavía falta."
                 />
 
                 <div className="grid gap-5 lg:grid-cols-2">
@@ -474,7 +474,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                     <div className="space-y-2">
                       <h3 className="text-[1rem] font-semibold leading-6 tracking-[-0.015em] text-slate-950 dark:text-slate-50">Qué mirar además de esto</h3>
                       <p className="app-body-sm leading-7 text-slate-600 dark:text-slate-400">
-                        La información comprobada ayuda, pero no alcanza sola. Siempre conviene revisar reseñas reales, fotos, ubicación y hablar con quien publica antes de reservar.
+                        También conviene mirar fotos, precio, reglas y reseñas antes de coordinar.
                       </p>
                     </div>
                   </div>
@@ -485,8 +485,8 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                 <SectionTitle
                   eyebrow="Próximo paso"
                   as="h2"
-                  heading="Lo que seguimos sumando"
-                  description="Queremos sumar más zonas y seguir mostrando solo lo importante antes de reservar."
+                  heading="Lo que seguimos mejorando"
+                  description="Queremos mostrar cada vez mejor lo importante para decidir sin llenar la pantalla de ruido."
                 />
 
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -522,8 +522,8 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                   <SectionTitle
                     eyebrow="Anfitriones"
                     as="h2"
-                    heading="Mostrá bien quién publica y qué se pudo comprobar"
-                    description="Cuando el aviso deja visible identidad confirmada, ubicación verificada y datos concretos, la otra persona entiende rápido qué está viendo y consulta con menos vueltas."
+                    heading="Publicá con información que se pueda verificar"
+                    description="Antes de recibir consultas, dejá claro quién sos, dónde está el lugar y qué parte del aviso ya fue comprobada."
                     className="max-w-2xl"
                     descriptionClassName="text-slate-700 dark:text-slate-300"
                   />
@@ -544,10 +544,10 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                     </div>
 
                     <SectionTitle
-                      eyebrow="Cuando ya hay más datos comprobados"
+                      eyebrow="Cuando el aviso ya está claro"
                       as="h3"
-                      heading="No mostrás solo lo que escribiste"
-                      description="Cuando una propiedad llega a este nivel, la otra persona no depende solo del texto y las fotos. También ve datos concretos que ya se pudieron comprobar."
+                      heading="No depende solo de una descripción"
+                      description="La otra persona puede ver quién sos, dónde está el lugar y cómo se ve antes de escribirte."
                       className="max-w-2xl"
                       eyebrowClassName="text-brand/90 dark:text-brand-light/80"
                       descriptionClassName="text-slate-700 dark:text-slate-300"
@@ -563,7 +563,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                     </div>
 
                     <p className="app-body-sm leading-7 text-slate-700 dark:text-slate-300">
-                      No resuelve toda la reserva por vos, pero cambia la calidad de la conversación desde el primer mensaje.
+                      Un aviso claro no reemplaza la conversación, pero hace que la charla arranque mucho mejor.
                     </p>
                   </div>
                 </Card>
@@ -575,10 +575,10 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                     </div>
 
                     <SectionTitle
-                      eyebrow="Hasta dónde ayuda la plataforma"
+                      eyebrow="Qué hace más fuerte un aviso"
                       as="h3"
-                      heading="Ordena lo importante y deja claro qué se pudo comprobar"
-                      description="La app no te reemplaza. Te ayuda a mostrar mejor lo que suele generar dudas al principio."
+                      heading="Un aviso claro evita vueltas"
+                      description="La idea no es sumar texto: es que lo importante esté visible desde el inicio."
                       className="max-w-sm"
                       descriptionClassName="text-slate-700 dark:text-slate-300"
                     />
@@ -603,22 +603,22 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                     <SectionTitle
                       eyebrow="Siguiente paso"
                       as="h3"
-                      heading="Publicá con lo importante claro"
-                      description="Antes de recibir consultas, dejá visible quién publica, dónde está el lugar y qué información ya se pudo comprobar."
+                      heading="Dejá el aviso listo para decidir"
+                      description="Antes de recibir consultas, dejá claro quién sos, dónde está el lugar y qué parte del aviso ya fue comprobada."
                       className="max-w-sm"
-                      eyebrowClassName="text-brand/90 dark:text-brand-light/80"
-                      descriptionClassName="text-slate-700 dark:text-slate-300"
-                      headingClassName="text-slate-950 dark:text-slate-50"
+                      eyebrowClassName="text-slate-800 dark:text-slate-100"
+                      descriptionClassName="text-slate-800 dark:text-slate-100"
+                      headingClassName="text-slate-800 dark:text-slate-100"
                     />
 
                     <div className="space-y-3">
                       {[
                         'La otra persona entiende rápido qué está viendo.',
-                        'Se reducen las preguntas innecesarias.',
-                        'El trato sigue siendo directo.',
+                        'Llegan preguntas más concretas.',
+                        'Tu aviso gana jerarquía sin sobrecargarse.',
                       ].map((point) => (
                         <div key={point} className="flex items-start gap-3 rounded-[18px] border border-slate-200/90 bg-white px-4 py-3.5 text-[0.92rem] font-medium leading-6 text-slate-800 shadow-[0_12px_24px_-20px_rgba(15,23,42,0.12)] dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-100">
-                          <Icons.CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400/82 dark:text-emerald-300/76" />
+                          <Icons.CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-300" />
                           <span>{point}</span>
                         </div>
                       ))}
@@ -650,8 +650,8 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                   <SectionTitle
                     eyebrow="Huéspedes"
                     as="h2"
-                    heading="Mirá qué se pudo comprobar"
-                    description="Antes de reservar, podés revisar quién publica, si hay ubicación verificada y qué reseñas reales dejaron otras personas."
+                    heading="Mirá qué ya fue verificado"
+                    description="Antes de reservar, podés ver quién publica, dónde está el lugar y qué reseñas dejaron otras personas."
                     className="max-w-2xl"
                   />
 
@@ -672,7 +672,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                       eyebrow="Listo para explorar"
                       as="h3"
                       heading="Explorá con la información a la vista"
-                      description="No reemplaza una visita ni una charla. Sirve para llegar a esa charla sabiendo qué se pudo comprobar y qué no."
+                      description="No reemplaza una visita ni una charla. Sirve para llegar a esa charla sabiendo qué ya fue verificado."
                       className="max-w-sm"
                     />
 

@@ -200,8 +200,8 @@ export const SecureChat: React.FC<{ initialConversationId?: string }> = ({ initi
             <div className="bg-amber-50 dark:bg-amber-900/10 p-4 border-b border-amber-100 dark:border-amber-900/30">
                <div className="flex gap-3 max-w-2xl mx-auto items-center">
                   <Icons.ShieldAlert className="w-5 h-5 text-amber-600 shrink-0" />
-                  <p className="text-[10px] text-amber-800/80 dark:text-amber-400 font-bold leading-tight uppercase tracking-tight">
-                    Antes de transferir dinero, dejá la conversación y la reserva registradas acá. Eso te da más contexto si necesitás revisar algo después.
+                  <p className="text-[10px] text-amber-800 dark:text-amber-300 font-bold leading-tight uppercase tracking-tight">
+                    Antes de transferir dinero, dejá la conversación y la reserva registradas acá. Eso te deja todo más claro si necesitás revisar algo después.
                   </p>
                </div>
             </div>

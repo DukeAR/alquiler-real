@@ -23,18 +23,26 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   variant = 'default',
 }) => {
   const auth = useAuth();
+  const user = auth.user;
   const imageSrc = property.imageUrl || 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=900&q=80';
   const rating = Number(property.rating || 0);
   const reviewsCount = Number(property.reviewsCount || 0);
   const isFavoritesVariant = variant === 'favorites';
 
-  const imageBadge = property.isVerifiedProperty
+  const imageBadge = property.locationVerified
     ? {
         label: 'Ubicación verificada',
         variant: 'success' as const,
         icon: <Icons.ShieldCheck className="h-3.5 w-3.5" />,
         className: 'border-emerald-200/80 bg-white/95 text-emerald-700 shadow-sm',
       }
+    : property.identityValidated
+      ? {
+          label: 'Identidad confirmada',
+          variant: 'success' as const,
+          icon: <Icons.BadgeCheck className="h-3.5 w-3.5" />,
+          className: 'border-emerald-200/80 bg-white/95 text-emerald-700 shadow-sm',
+        }
     : null;
 
   const trustSignals = [
@@ -127,22 +135,24 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
             ) : null}
           </div>
 
-          <Button
-            type="button"
-            variant="secondary"
-            size="icon"
-            onClick={handleFavoriteToggle}
-            aria-pressed={isFavorite}
-            aria-label={isFavorite ? 'Quitar de guardados' : 'Guardar propiedad'}
-            className={cn(
-              'h-10 w-10 rounded-full border-white/80 bg-white/94 text-slate-700 shadow-[0_16px_30px_-22px_rgba(15,23,42,0.24)] backdrop-blur-sm transition-[background-color,border-color,color,box-shadow,transform] duration-150 active:scale-[0.98]',
-              isFavorite
-                ? 'border-brand bg-brand text-white hover:border-brand hover:bg-brand-dark hover:text-white'
-                : 'hover:border-brand/30 hover:bg-white hover:text-brand',
-            )}
-          >
-            <Icons.Heart className={`h-4 w-4 ${isFavorite ? 'fill-current' : ''}`} />
-          </Button>
+          {user ? (
+            <Button
+              type="button"
+              variant="secondary"
+              size="icon"
+              onClick={handleFavoriteToggle}
+              aria-pressed={isFavorite}
+              aria-label={isFavorite ? 'Quitar de guardados' : 'Guardar propiedad'}
+              className={cn(
+                'h-10 w-10 rounded-full border-white/80 bg-white/94 text-slate-700 shadow-[0_16px_30px_-22px_rgba(15,23,42,0.24)] backdrop-blur-sm transition-[background-color,border-color,color,box-shadow,transform] duration-150',
+                isFavorite
+                  ? 'border-brand bg-brand text-white hover:border-brand hover:bg-brand-dark hover:text-white'
+                  : 'hover:border-brand/30 hover:bg-white hover:text-brand',
+              )}
+            >
+              <Icons.Heart className={`h-4 w-4 ${isFavorite ? 'fill-current' : ''}`} />
+            </Button>
+          ) : null}
         </div>
       </div>
 
@@ -206,7 +216,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         ) : null}
 
         <div className="mt-auto flex items-end justify-between gap-4 border-t border-slate-100/90 pt-4">
-          <p className="text-[13px] font-medium leading-6 text-slate-500">Revisá qué se pudo comprobar antes de decidir.</p>
+          <p className="text-[13px] font-medium leading-6 text-slate-500">Revisá ubicación, precio y qué ya fue verificado antes de decidir.</p>
           {onClick ? (
             <div className="inline-flex items-center gap-2 text-[13.5px] font-semibold tracking-[-0.01em] text-slate-700 transition-colors duration-150 group-hover:text-slate-950">
               <span>{isFavoritesVariant ? 'Abrir detalle' : 'Ver detalle'}</span>

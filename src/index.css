@@ -31,7 +31,7 @@
   --app-shadow-soft: 0 20px 44px -30px rgba(15, 23, 42, 0.2);
   --app-shadow-raised: 0 28px 52px -34px rgba(15, 23, 42, 0.24);
   --app-shadow-brand: 0 18px 34px -24px rgba(67, 56, 202, 0.34);
-  --app-focus-ring: 0 0 0 3px rgba(67, 56, 202, 0.14);
+  --app-focus-ring: 0 0 0 3px rgba(67, 56, 202, 0.22), 0 12px 28px -20px rgba(67, 56, 202, 0.28);
   --app-interaction-duration: 160ms;
   --app-interaction-ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -155,7 +155,16 @@ body {
   border-radius: var(--app-radius-control);
   font-weight: 700;
   letter-spacing: -0.01em;
+  will-change: transform, box-shadow;
   transition: transform var(--app-interaction-duration) var(--app-interaction-ease), background-color var(--app-interaction-duration) var(--app-interaction-ease), border-color var(--app-interaction-duration) var(--app-interaction-ease), box-shadow var(--app-interaction-duration) var(--app-interaction-ease), color var(--app-interaction-duration) var(--app-interaction-ease), opacity var(--app-interaction-duration) var(--app-interaction-ease);
+}
+
+.app-button-base:hover:not(:disabled) {
+  transform: translateY(-1px) scale(1.01);
+}
+
+.app-button-base:active:not(:disabled) {
+  transform: scale(0.995);
 }
 
 .app-button-base:focus-visible,
@@ -185,9 +194,11 @@ body {
 .app-control:hover {
   border-color: var(--app-surface-border-strong);
   background: white;
+  box-shadow: 0 10px 24px -22px rgba(15, 23, 42, 0.24);
 }
 
-.app-control:focus {
+.app-control:focus,
+.app-control:focus-visible {
   outline: none;
   border-color: rgba(67, 56, 202, 0.5);
   box-shadow: var(--app-focus-ring);

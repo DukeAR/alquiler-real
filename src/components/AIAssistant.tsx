@@ -116,7 +116,7 @@ export const AIAssistant: React.FC = () => {
                   </div>
                   <div className="space-y-1">
                     <p className="font-bold text-slate-900 dark:text-white">¿En qué te puedo ayudar?</p>
-                    <p className="text-xs text-slate-500">Preguntame por zonas, señales de confianza o qué revisar antes de reservar.</p>
+                    <p className="text-xs text-slate-500">Preguntame por zonas, qué revisar en un aviso o cómo comparar opciones antes de reservar.</p>
                   </div>
                 </div>
               )}
