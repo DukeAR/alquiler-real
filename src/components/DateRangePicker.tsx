@@ -160,6 +160,8 @@ const expandBlockedDates = (ranges: AvailabilityRange[]) => {
   return blockedDates;
 };
 
+const getMonthLabel = (date: Date) => date.toLocaleString('es-AR', { month: 'long', year: 'numeric' });
+
 const DateRangePicker: React.FC<Props> = ({ checkIn, checkOut, setCheckIn, setCheckOut, minDate, onChange, propertyId, availabilityRefreshToken = 0, mode = 'booking' }) => {
   const todayIso = minDate || formatIso(new Date());
   const [visible, setVisible] = useState<Date>(() => new Date());
@@ -547,7 +549,7 @@ const DateRangePicker: React.FC<Props> = ({ checkIn, checkOut, setCheckIn, setCh
             aria-describedby={isOpen ? instructionsId : undefined}
             aria-hidden={!isOpen}
             padding="sm"
-            className={`origin-top rounded-[22px] border-slate-200 shadow-[0_22px_50px_-26px_rgba(15,23,42,0.35)] transition-all duration-200 ease-out ${isOpen ? 'scale-100 translate-y-0' : 'scale-[0.985] -translate-y-1'}`}
+            className={`origin-top rounded-[26px] border-slate-200 shadow-[0_26px_60px_-30px_rgba(15,23,42,0.32)] transition-all duration-200 ease-out ${isOpen ? 'scale-100 translate-y-0' : 'scale-[0.985] -translate-y-1'}`}
           >
             <div className="space-y-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -617,36 +619,47 @@ const DateRangePicker: React.FC<Props> = ({ checkIn, checkOut, setCheckIn, setCh
                 ) : null
               ) : null}
 
-              <div className="flex items-start gap-3 overflow-x-auto pb-1 md:overflow-visible md:pb-0 md:[scrollbar-width:none] snap-x snap-mandatory">
+              <div className="grid gap-4 md:grid-cols-2">
               {visibleMonths.map((m, idx) => {
                 const year = m.getFullYear();
                 const month = m.getMonth();
                 const weeks = generateWeeks(year, month);
+                const isSecondaryMonth = idx === 1;
+
                 return (
-                  <div key={idx} className="min-w-full shrink-0 snap-start md:w-48 md:min-w-[12rem]">
-                    <div className="mb-3 flex items-center justify-between">
+                  <div key={idx} className={cn('rounded-[24px] border border-slate-200/80 bg-slate-50/70 p-3 sm:p-4', isSecondaryMonth && 'hidden md:block')}>
+                    <div className="mb-4 flex items-center justify-between gap-2">
                       {idx === 0 ? (
                         <Button type="button" onClick={() => setVisible(addMonths(visible, -1))} variant="ghost" size="sm" aria-label="Ver mes anterior" className="rounded-full px-2.5 py-1.5 text-sm">
                           <Icons.ChevronLeft className="h-4 w-4" />
                         </Button>
-                      ) : <div className="w-9" />}
-                      <div className="text-sm font-semibold capitalize text-slate-900">{m.toLocaleString('es-AR', { month: 'long', year: 'numeric' })}</div>
-                      {idx === visibleMonths.length - 1 ? (
-                        <Button type="button" onClick={() => setVisible(addMonths(visible, 1))} variant="ghost" size="sm" aria-label="Ver mes siguiente" className="rounded-full px-2.5 py-1.5 text-sm">
+                      ) : <div className="hidden h-9 w-9 md:block" />}
+
+                      <div className="min-w-0 flex-1 text-center text-sm font-semibold capitalize text-slate-900">{getMonthLabel(m)}</div>
+
+                      {idx === 0 ? (
+                        <>
+                          <Button type="button" onClick={() => setVisible(addMonths(visible, 1))} variant="ghost" size="sm" aria-label="Ver mes siguiente" className="rounded-full px-2.5 py-1.5 text-sm md:hidden">
+                            <Icons.ChevronRight className="h-4 w-4" />
+                          </Button>
+                          <div className="hidden h-9 w-9 md:block" />
+                        </>
+                      ) : (
+                        <Button type="button" onClick={() => setVisible(addMonths(visible, 1))} variant="ghost" size="sm" aria-label="Ver mes siguiente" className="hidden rounded-full px-2.5 py-1.5 text-sm md:inline-flex">
                           <Icons.ChevronRight className="h-4 w-4" />
                         </Button>
-                      ) : <div className="w-9" />}
+                      )}
                     </div>
 
-                    <div className="mb-2 grid grid-cols-7 gap-1 text-xs text-center text-slate-500">
+                    <div className="mb-3 grid grid-cols-7 gap-1 text-[11px] text-center font-medium text-slate-500">
                       {weekDays.map(d => (<div key={d}>{d}</div>))}
                     </div>
 
-                    <div className="grid grid-cols-7 gap-1.5" role="grid" aria-label={`Calendario ${m.toLocaleString('es-AR', { month: 'long', year: 'numeric' })}`}>
+                    <div className="grid grid-cols-7 gap-1" role="grid" aria-label={`Calendario ${getMonthLabel(m)}`}>
                       {weeks.map((week, wi) => (
                         <div key={wi} role="row" className="contents">
                           {week.map((day, di) => {
-                            if (!day) return <div key={di} className="h-11 w-11" />;
+                            if (!day) return <div key={di} className="h-10 w-10 md:h-11 md:w-11" />;
                             const iso = formatIso(day);
                             const disabled = isDayUnavailable(iso);
                             const blockedByAvailability = !availabilityLoading && !availabilityError && blockedDates.has(iso);
@@ -670,7 +683,7 @@ const DateRangePicker: React.FC<Props> = ({ checkIn, checkOut, setCheckIn, setCh
                             else if (end && !start) fillCls = 'before:absolute before:inset-y-1 before:left-0 before:right-1/2 before:rounded-l-full before:bg-brand/20';
                             else if (inRangeFinal && !(start || end)) fillCls = `before:absolute before:inset-y-1 before:left-0 before:right-0 ${isPreview ? 'before:bg-brand/10' : 'before:bg-brand/20'}`;
 
-                            const buttonBase = 'relative z-10 h-11 w-11 rounded-full text-sm transition-[transform,background-color,color,box-shadow,border-color] duration-150 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-white';
+                            const buttonBase = 'relative z-10 h-10 w-10 rounded-full text-sm transition-[transform,background-color,color,box-shadow,border-color] duration-150 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-white md:h-11 md:w-11';
                             const buttonState = disabled
                               ? blockedByAvailability
                                 ? 'cursor-not-allowed border border-slate-200 bg-slate-100 text-slate-500 opacity-90'
@@ -685,7 +698,7 @@ const DateRangePicker: React.FC<Props> = ({ checkIn, checkOut, setCheckIn, setCh
                             else if (isToday && !disabled) selectionCls = 'border border-brand/30 bg-white text-slate-900';
 
                             return (
-                              <div key={di} role="gridcell" aria-selected={start || end || inRangeFinal} className={`relative flex h-11 w-11 items-center justify-center ${fillCls}`}>
+                              <div key={di} role="gridcell" aria-selected={start || end || inRangeFinal} className={`relative flex h-10 w-10 items-center justify-center md:h-11 md:w-11 ${fillCls}`}>
                                 <button
                                   type="button"
                                   ref={(node) => { dayRefs.current[iso] = node; }}

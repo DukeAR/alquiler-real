@@ -29,13 +29,13 @@ export const FormField: React.FC<FormFieldProps> = ({
   return (
     <div className={cn('space-y-2.5', className)} {...props}>
       {hasHeader ? (
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-col gap-1.5 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
           {label ? (
             <LabelTag htmlFor={htmlFor} className={cn('app-form-label', htmlFor && 'cursor-pointer')}>
               {label}
             </LabelTag>
           ) : <div />}
-          {hint ? <p className="app-form-hint text-right">{hint}</p> : null}
+          {hint ? <p className="app-form-hint sm:text-right">{hint}</p> : null}
         </div>
       ) : null}
       {children}

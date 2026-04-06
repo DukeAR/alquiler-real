@@ -83,6 +83,19 @@ type BookingSnapshotCardProps = {
   emphasis?: boolean;
 };
 
+type GuestCounterCardProps = {
+  label: string;
+  helper: string;
+  value: number;
+  valueLabel: string;
+  decrementLabel: string;
+  incrementLabel: string;
+  onDecrement: () => void;
+  onIncrement: () => void;
+  decrementDisabled?: boolean;
+  incrementDisabled?: boolean;
+};
+
 type BookingNoticeState = {
   tone: NonNullable<React.ComponentProps<typeof NoticeBanner>['tone']>;
   heading: string;
@@ -381,6 +394,66 @@ const BookingSnapshotCard: React.FC<BookingSnapshotCardProps> = ({
   );
 };
 
+const GuestCounterCard: React.FC<GuestCounterCardProps> = ({
+  label,
+  helper,
+  value,
+  valueLabel,
+  decrementLabel,
+  incrementLabel,
+  onDecrement,
+  onIncrement,
+  decrementDisabled = false,
+  incrementDisabled = false,
+}) => {
+  return (
+    <Card padding="sm" variant="muted" className="rounded-[24px] border-slate-200/80 bg-slate-50/80">
+      <div className="space-y-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-base font-semibold text-slate-900">{label}</p>
+            <p className="mt-1 text-sm leading-6 text-slate-500">{helper}</p>
+          </div>
+          <span className="inline-flex shrink-0 items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-sm font-semibold text-slate-900 shadow-[0_12px_24px_-20px_rgba(15,23,42,0.16)]">
+            {value}
+          </span>
+        </div>
+
+        <div className="flex items-center justify-between gap-3 rounded-[20px] border border-slate-200/90 bg-white px-3 py-2.5 shadow-[0_12px_24px_-20px_rgba(15,23,42,0.12)]">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onDecrement}
+            className="h-10 w-10 rounded-full p-0 font-semibold"
+            aria-label={decrementLabel}
+            disabled={decrementDisabled}
+          >
+            -
+          </Button>
+
+          <div className="min-w-0 flex-1 text-center">
+            <p className="text-2xl font-semibold tracking-tight text-slate-950">{value}</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">{valueLabel}</p>
+          </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onIncrement}
+            className="h-10 w-10 rounded-full p-0 font-semibold"
+            aria-label={incrementLabel}
+            disabled={incrementDisabled}
+          >
+            +
+          </Button>
+        </div>
+      </div>
+    </Card>
+  );
+};
+
 export const PropertyDetailShell: React.FC<{
   property: PropertyDetailData;
   images: string[];
@@ -524,6 +597,9 @@ export const PropertyDetailShell: React.FC<{
   const hasPartialDates = Boolean((checkIn && !checkOut) || (!checkIn && checkOut));
   const guestCapacityReached = Boolean(maxGuestsNumber && guestCount >= maxGuestsNumber);
   const guestCapacityExceeded = Boolean(maxGuestsNumber && guestCount > maxGuestsNumber);
+  const canRemoveAdult = adults > 1;
+  const canRemoveChildren = childrenCount > 0;
+  const canAddGuest = !guestCapacityReached;
   const canReserve = hasCompleteDates && nights > 0 && !guestCapacityExceeded;
 
   const bookingNotice: BookingNoticeState = bookingError
@@ -999,53 +1075,31 @@ export const PropertyDetailShell: React.FC<{
                 helperText={guestFieldHelper}
                 error={bookingError?.field === 'guests' ? bookingError.message : undefined}
               >
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  <Card padding="sm" variant="muted" className="rounded-[22px] border-slate-200/80 bg-slate-50/80">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <div className="text-sm font-medium text-slate-900">Adultos</div>
-                        <div className="text-xs text-slate-500">Mayores de 18</div>
-                      </div>
-                      <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-start">
-                        <Button type="button" variant="outline" size="sm" onClick={() => handleAdultsChange(adults - 1)} className="h-8 w-8 rounded-full p-0 font-semibold" aria-label="Restar adulto">-</Button>
-                        <div className="w-8 text-center text-sm font-semibold text-slate-900">{adults}</div>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleAdultsChange(adults + 1)}
-                          className="h-8 w-8 rounded-full p-0 font-semibold"
-                          aria-label="Sumar adulto"
-                          disabled={guestCapacityReached}
-                        >
-                          +
-                        </Button>
-                      </div>
-                    </div>
-                  </Card>
-                  <Card padding="sm" variant="muted" className="rounded-[22px] border-slate-200/80 bg-slate-50/80">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <div className="text-sm font-medium text-slate-900">Niños</div>
-                        <div className="text-xs text-slate-500">Hasta 17 años</div>
-                      </div>
-                      <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-start">
-                        <Button type="button" variant="outline" size="sm" onClick={() => handleChildrenChange(childrenCount - 1)} className="h-8 w-8 rounded-full p-0 font-semibold" aria-label="Restar menor">-</Button>
-                        <div className="w-8 text-center text-sm font-semibold text-slate-900">{childrenCount}</div>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleChildrenChange(childrenCount + 1)}
-                          className="h-8 w-8 rounded-full p-0 font-semibold"
-                          aria-label="Sumar menor"
-                          disabled={guestCapacityReached}
-                        >
-                          +
-                        </Button>
-                      </div>
-                    </div>
-                  </Card>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <GuestCounterCard
+                    label="Adultos"
+                    helper="Mayores de 18"
+                    value={adults}
+                    valueLabel={adults === 1 ? 'adulto' : 'adultos'}
+                    decrementLabel="Restar adulto"
+                    incrementLabel="Sumar adulto"
+                    onDecrement={() => handleAdultsChange(adults - 1)}
+                    onIncrement={() => handleAdultsChange(adults + 1)}
+                    decrementDisabled={!canRemoveAdult}
+                    incrementDisabled={!canAddGuest}
+                  />
+                  <GuestCounterCard
+                    label="Niños"
+                    helper="Hasta 17 años"
+                    value={childrenCount}
+                    valueLabel={childrenCount === 1 ? 'menor' : 'menores'}
+                    decrementLabel="Restar menor"
+                    incrementLabel="Sumar menor"
+                    onDecrement={() => handleChildrenChange(childrenCount - 1)}
+                    onIncrement={() => handleChildrenChange(childrenCount + 1)}
+                    decrementDisabled={!canRemoveChildren}
+                    incrementDisabled={!canAddGuest}
+                  />
                 </div>
               </FormField>
 
