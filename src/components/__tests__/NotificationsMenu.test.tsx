@@ -78,6 +78,28 @@ describe('NotificationsMenu', () => {
     expect(screen.getByRole('button', { name: 'Notificaciones, 1 nuevas' })).toBeInTheDocument();
   });
 
+  test('renders the panel as a fixed overlay so it stays above the page content', () => {
+    renderMenu({
+      status: 'ready',
+      notifications: [
+        {
+          id: 'n1',
+          title: 'Reserva confirmada',
+          message: 'Tu anfitrión confirmó la reserva.',
+          type: 'success',
+          createdAt: '2026-04-03T12:00:00.000Z',
+          unread: true,
+        },
+      ],
+      unreadCount: 1,
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Notificaciones, 1 nuevas' }));
+
+    expect(screen.getByLabelText('Panel de notificaciones')).toHaveClass('fixed');
+    expect(screen.getByLabelText('Panel de notificaciones')).toHaveClass('z-[9999]');
+  });
+
   test('shows a real error state when notifications cannot be loaded', async () => {
     const onRefresh = vi.fn(async () => undefined);
 

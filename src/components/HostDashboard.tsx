@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { apiJson } from '../lib/apiConfig';
+import { getPropertyVerificationBadge, getPropertyVerificationItems } from '../lib/propertyVerification';
 import { showToast } from '../lib/toast';
 import { Icons } from './Icons';
 import HostAvailabilityPanel from './HostAvailabilityPanel';
@@ -19,6 +20,10 @@ interface HostDashboardProps {
 const dashboardCardClass = 'app-card p-6 dark:border-slate-800 dark:bg-slate-900';
 const dashboardSectionClass = 'app-card p-6 md:p-8 space-y-6 dark:border-slate-800 dark:bg-slate-900';
 const dashboardMutedTileClass = 'rounded-[var(--app-radius-control)] border border-slate-100 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/50';
+
+const getHostVerificationStatusText = (status: 'complete' | 'pending') => (
+  status === 'complete' ? 'Ya está completa.' : 'Todavía falta completarla.'
+);
 
 export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
   const [dashboardData, setDashboardData] = useState<any>(null);
@@ -51,7 +56,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
       <LoadingState
         fullScreen
         message="Cargando tu panel..."
-        description="Estamos reuniendo propiedades, reservas y verificaciones para mostrarte todo ordenado."
+        description="Estamos reuniendo propiedades, reservas y verificaciones para mostrarte qué ya está claro y qué te falta completar."
       />
     );
   }
@@ -91,7 +96,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
             tone="soft"
             visual={<Icons.LayoutDashboard className="h-10 w-10" />}
             title="Todavía no publicaste propiedades"
-            description="Publicá tu primera propiedad con información clara y empezá a recibir consultas con menos dudas."
+            description="Publicá tu primera propiedad con datos claros para aparecer mejor y recibir preguntas más concretas."
             action={{
               label: 'Publicá tu primera propiedad',
               onClick: () => setIsAddingProperty(true),
@@ -124,6 +129,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
   };
 
   const contactedGuests = Array.isArray(dashboardData?.contactedGuests) ? dashboardData.contactedGuests : [];
+  const hostProperties = Array.isArray(dashboardData?.properties) ? dashboardData.properties : [];
 
 
   return (
@@ -141,7 +147,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
           <div className="flex items-center gap-3">
             <div className="text-right hidden sm:block">
               <p className="app-title-4 dark:text-white">Panel de anfitrión</p>
-              <p className="app-eyebrow">Resumen</p>
+              <p className="app-eyebrow">Tu actividad</p>
             </div>
             <div className="w-10 h-10 rounded-full bg-brand/10 border border-brand/20 flex items-center justify-center">
               <Icons.User className="w-5 h-5 text-brand" />
@@ -203,8 +209,8 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
              </div>
              
              <div className="flex-1 space-y-2">
-                <h3 className="app-title-4 dark:text-white">Tu reputación</h3>
-                <p className="app-body-sm app-text-muted">Hoy tu perfil figura como <span className="text-brand font-semibold">{dashboardData.stats?.badge || 'Usuario nuevo'}</span>. Los perfiles con mejor historial suelen recibir consultas más claras.</p>
+               <h3 className="app-title-4 dark:text-white">Cómo te ven</h3>
+               <p className="app-body-sm app-text-muted">Hoy tu perfil figura como <span className="text-brand font-semibold">{dashboardData.stats?.badge || 'Usuario nuevo'}</span>. Un mejor historial y avisos más completos ayudan a recibir consultas más directas.</p>
                 <div className="flex flex-wrap gap-2 pt-2">
                    <div className={cn(dashboardMutedTileClass, 'px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400')}>
                      <span className="text-brand mr-1">Calificación:</span> {dashboardData.stats?.host_rating || 5.0}
@@ -214,6 +220,53 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
                    </div>
                 </div>
              </div>
+          </div>
+        </section>
+
+        <section className={dashboardSectionClass}>
+          <div className="space-y-2">
+            <h2 className="app-title-4 dark:text-white">Completá lo que falta en cada aviso</h2>
+            <p className="app-body-sm app-text-muted">Cuanto más completo esté tu aviso, más arriba aparece en los resultados.</p>
+          </div>
+
+          <div className="grid gap-4 xl:grid-cols-2">
+            {hostProperties.map((property: any) => {
+              const verificationBadge = getPropertyVerificationBadge(property);
+              const verificationItems = getPropertyVerificationItems(property);
+
+              return (
+                <div key={`verification-${property.id}`} className={cn(dashboardMutedTileClass, 'space-y-4 p-5')}>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900 dark:text-white">{property.title}</p>
+                      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{verificationBadge.label}</p>
+                    </div>
+                    <span className="font-mono text-[11px] font-semibold tracking-[0.14em] text-slate-500 dark:text-slate-400">
+                      {verificationBadge.visual}
+                    </span>
+                  </div>
+
+                  <ul className="space-y-2.5">
+                    {verificationItems.map((item) => (
+                      <li key={`${property.id}-${item.key}`} className="flex items-start gap-3 text-sm leading-5">
+                        <span className={cn(
+                          'mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs font-semibold',
+                          item.status === 'complete'
+                            ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-900/20 dark:text-emerald-300'
+                            : 'border-slate-200 bg-white text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400',
+                        )} aria-hidden="true">
+                          {item.status === 'complete' ? '✔' : '○'}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="font-semibold text-slate-900 dark:text-white">{item.label}</p>
+                          <p className="text-slate-500 dark:text-slate-400">{getHostVerificationStatusText(item.status)}</p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })}
           </div>
         </section>
 
@@ -282,7 +335,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
           <div className="flex items-center justify-between">
             <h2 className="app-title-4 dark:text-white flex items-center gap-2">
               <Icons.ShieldAlert className="w-5 h-5 text-brand" />
-              Señales para revisar
+              Lo que revisan antes de escribirte
             </h2>
           </div>
 
@@ -333,9 +386,9 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
               <div className="w-12 h-12 bg-brand/20 rounded-2xl flex items-center justify-center mb-2">
                 <Icons.Zap className="w-6 h-6 text-brand" />
               </div>
-              <h3 className="app-title-4 text-white">Lo que más miran antes de escribirte</h3>
+              <h3 className="app-title-4 text-white">Lo que revisan antes de escribirte</h3>
               <p className="app-body-sm text-slate-100">
-                Mostrá quién sos, dónde está el lugar y cómo se ve de verdad para recibir consultas más directas.
+                Mostrá quién sos, dónde está el lugar y cómo se ve de verdad. Cuanto más completo esté tu aviso, más arriba aparece.
               </p>
               <div className="pt-4">
                 <div className="flex items-center gap-2 app-eyebrow text-emerald-300">

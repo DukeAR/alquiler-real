@@ -165,12 +165,12 @@ export const LoginPanel = ({ context = 'page', className, onClose, onSuccess }: 
       ) : null}
 
       <SectionTitle
-        eyebrow="Acceso seguro"
+        eyebrow="Tu cuenta"
         heading="Ingresá a tu cuenta"
         description={
           isModal
-            ? 'Entrá para guardar propiedades, seguir tus reservas y hablar con anfitriones con todo más claro.'
-            : 'Entrá para guardar propiedades, retomar conversaciones y seguir tus reservas.'
+            ? 'Entrá para guardar propiedades, seguir tus reservas y revisar mejor antes de reservar.'
+            : 'Entrá para guardar propiedades, retomar conversaciones y seguir tus reservas sin perder de vista lo importante.'
         }
         as="h2"
         visualLevel={isModal ? 'h4' : 'h3'}
@@ -215,7 +215,7 @@ export const LoginPanel = ({ context = 'page', className, onClose, onSuccess }: 
         <div className="rounded-[1.25rem] border border-slate-200/80 bg-slate-50/70 px-4 py-3 text-sm text-slate-600">
           <div className="flex items-start gap-3">
             <Icons.ShieldCheck className="mt-0.5 h-5 w-5 flex-shrink-0 text-emerald-600" />
-            <p>Tu cuenta te permite guardar propiedades, seguir tus reservas y hablar con anfitriones dentro de Alquiler Real.</p>
+            <p>Tu cuenta te permite guardar propiedades, seguir tus reservas y hablar con anfitriones desde un mismo lugar.</p>
           </div>
         </div>
 
@@ -237,7 +237,7 @@ export const LoginPanel = ({ context = 'page', className, onClose, onSuccess }: 
       <Card variant="muted" padding="none" className="mt-6 border-slate-200/80 bg-slate-50/90 p-4">
         <p className="text-sm font-semibold tracking-tight text-slate-900">¿Todavía no tenés cuenta?</p>
         <p className="mt-1 text-sm leading-6 text-slate-600">
-          Creala en pocos pasos para guardar propiedades, hablar con anfitriones y reservar con más claridad.
+          Creala en pocos pasos para guardar propiedades, hablar con anfitriones y revisar mejor antes de reservar.
         </p>
         <Button
           type="button"

@@ -100,7 +100,7 @@ export const AIAssistant: React.FC = () => {
                 </div>
                 <div>
                   <h3 className="font-bold">Asistente de Alquiler Real</h3>
-                  <p className="text-[10px] opacity-80 uppercase font-bold tracking-widest">Información real para decidir mejor</p>
+                  <p className="text-[10px] opacity-80 uppercase font-bold tracking-widest">Antes de reservar, sabé qué revisar</p>
                 </div>
               </div>
               <button type="button" aria-label="Cerrar asistente" onClick={() => setIsOpen(false)} className="p-2 hover:bg-white/10 rounded-full">
@@ -116,7 +116,7 @@ export const AIAssistant: React.FC = () => {
                   </div>
                   <div className="space-y-1">
                     <p className="font-bold text-slate-900 dark:text-white">¿En qué te puedo ayudar?</p>
-                    <p className="text-xs text-slate-500">Preguntame por zonas, qué revisar en un aviso o cómo comparar opciones antes de reservar.</p>
+                    <p className="text-xs text-slate-500">Preguntame por zonas, qué revisar en un aviso o cómo comparar opciones sin ir a ciegas.</p>
                   </div>
                 </div>
               )}

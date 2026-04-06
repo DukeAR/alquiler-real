@@ -61,7 +61,7 @@ export function ValidationProgress({ checks, progress, missingRequirements, user
   const hostItems = userRole === 'HOST' ? [
     { label: 'Comprobante de servicios cargado', isCompleted: checks.utilityBillUploaded || false, icon: <Icons.FileSpreadsheet className="w-4 h-4" /> },
     {
-      label: 'Comprobante verificado',
+      label: 'Domicilio verificado',
       isCompleted: checks.utilityBillVerified || false,
       isPending: checks.utilityBillUploaded && !checks.utilityBillVerified,
       icon: <Icons.UserCheck className="w-4 h-4" />
@@ -72,7 +72,7 @@ export function ValidationProgress({ checks, progress, missingRequirements, user
     <div className="space-y-6">
       <div className="space-y-2">
         <div className="flex justify-between items-center">
-          <span className="text-sm font-medium text-gray-700">Avance de verificación documental</span>
+          <span className="text-sm font-medium text-gray-700">Qué falta para completar tu verificación</span>
           <span className="text-sm font-bold text-blue-600">{progress}%</span>
         </div>
         <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
@@ -84,7 +84,7 @@ export function ValidationProgress({ checks, progress, missingRequirements, user
         <div>
           <h4 className="text-xs uppercase tracking-wider text-gray-500 font-medium mb-2 flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-blue-400" />
-            Verificación documental
+            Documentos e identidad
           </h4>
           <div className="space-y-2">
             {documentItems.map((item) => (<ChecklistItem key={item.label} {...item} />))}
@@ -95,7 +95,7 @@ export function ValidationProgress({ checks, progress, missingRequirements, user
           <div>
             <h4 className="text-xs uppercase tracking-wider text-gray-500 font-medium mb-2 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-purple-400" />
-              Verificación adicional del anfitrión
+              Revisión extra del anfitrión
             </h4>
             <div className="space-y-2">
               {hostItems.map((item) => (<ChecklistItem key={item.label} {...item} />))}
@@ -106,7 +106,7 @@ export function ValidationProgress({ checks, progress, missingRequirements, user
 
       {missingRequirements.length > 0 && (
         <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-          <h4 className="text-sm font-medium text-amber-800 mb-2">Todavía te falta completar:</h4>
+          <h4 className="text-sm font-medium text-amber-800 mb-2">Todavía falta completar esto:</h4>
           <ul className="space-y-1">
             {missingRequirements.map((req, index) => (
               <li key={index} className="text-sm text-amber-700 flex items-center gap-2">

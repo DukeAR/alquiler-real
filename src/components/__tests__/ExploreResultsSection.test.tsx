@@ -3,7 +3,21 @@ import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, test, vi } from 'vitest';
 
 vi.mock('../PropertyCard', () => ({
-  PropertyCard: ({ property }: { property: { title: string } }) => <div>{property.title}</div>,
+  PropertyCard: ({
+    property,
+    verificationGuidanceLabel,
+    emphasizeVerification,
+  }: {
+    property: { title: string };
+    verificationGuidanceLabel?: string | null;
+    emphasizeVerification?: boolean;
+  }) => (
+    <div>
+      <span>{property.title}</span>
+      {verificationGuidanceLabel ? <span>{verificationGuidanceLabel}</span> : null}
+      {emphasizeVerification ? <span>Verificación más visible</span> : null}
+    </div>
+  ),
 }));
 
 import { ExploreResultsSection } from '../explore/ExploreResultsSection';
@@ -16,6 +30,7 @@ const sampleProperties = [
     price: 120000,
     rating: 4.8,
     reviewsCount: 12,
+    verificationScore: 4,
   },
   {
     id: 'p2',
@@ -24,6 +39,7 @@ const sampleProperties = [
     price: 98000,
     rating: 4.6,
     reviewsCount: 8,
+    verificationScore: 3,
   },
   {
     id: 'p3',
@@ -32,6 +48,7 @@ const sampleProperties = [
     price: 143000,
     rating: 4.7,
     reviewsCount: 10,
+    verificationScore: 2,
   },
 ] as any[];
 
@@ -40,6 +57,8 @@ const renderSection = (props?: Partial<React.ComponentProps<typeof ExploreResult
     loading: false,
     loadError: null,
     viewMode: 'grid',
+    sortBy: 'verification',
+    caresAboutVerification: false,
     hasActiveFilters: false,
     searchQuery: '',
     appliedFilterCount: 0,
@@ -66,11 +85,22 @@ describe('ExploreResultsSection', () => {
   test('renders the decision-oriented hierarchy on the home results view', () => {
     renderSection();
 
-    expect(screen.getByRole('heading', { name: 'Primero revisá estas opciones' })).toBeInTheDocument();
-    expect(screen.getByText('Cada aviso te muestra quién publica, dónde está y qué ya se pudo confirmar.')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Más opciones para comparar' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Primero revisá estos avisos' })).toBeInTheDocument();
+    expect(screen.getByText('Acá ves precio, ubicación, rating y qué parte del aviso ya fue comprobada.')).toBeInTheDocument();
+    expect(screen.getAllByText('Mostramos primero los avisos con mayor nivel de verificación.').length).toBeGreaterThan(0);
+    expect(screen.getByText('Mejor verificado')).toBeInTheDocument();
+    expect(screen.getByText('Alto nivel de verificación')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Más avisos para revisar' })).toBeInTheDocument();
     expect(screen.getByText('Casa frente al mar')).toBeInTheDocument();
     expect(screen.getByText('Departamento luminoso')).toBeInTheDocument();
+    expect(screen.queryByText('Cabaña entre pinos')).toBeInTheDocument();
+  });
+
+  test('shows the subtle verification hint and emphasizes cards when the preference is active', () => {
+    renderSection({ caresAboutVerification: true });
+
+    expect(screen.getByText('Estás viendo avisos con mayor nivel de verificación')).toBeInTheDocument();
+    expect(screen.getAllByText('Verificación más visible')).toHaveLength(3);
   });
 
   test('shows the filtered empty state and clears filters when requested', () => {

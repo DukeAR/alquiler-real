@@ -2,6 +2,7 @@ import React from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { Icons } from './Icons';
 import { cn, formatCurrency } from '../lib/utils';
+import { getPropertyVerificationBadge } from '../lib/propertyVerification';
 import { Property } from '../services/geminiService';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
@@ -13,6 +14,8 @@ interface PropertyCardProps {
   isFavorite?: boolean;
   onFavoriteToggle?: (propertyId: string, isFavorite: boolean) => void | Promise<unknown>;
   variant?: 'default' | 'favorites';
+  verificationGuidanceLabel?: string | null;
+  emphasizeVerification?: boolean;
 }
 
 export const PropertyCard: React.FC<PropertyCardProps> = ({ 
@@ -21,65 +24,18 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   isFavorite = false,
   onFavoriteToggle,
   variant = 'default',
+  verificationGuidanceLabel = null,
+  emphasizeVerification = false,
 }) => {
   const auth = useAuth();
   const user = auth.user;
   const imageSrc = property.imageUrl || 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=900&q=80';
   const rating = Number(property.rating || 0);
-  const reviewsCount = Number(property.reviewsCount || 0);
   const isFavoritesVariant = variant === 'favorites';
-
-  const imageBadge = property.locationVerified
-    ? {
-        label: 'Ubicación verificada',
-        variant: 'success' as const,
-        icon: <Icons.ShieldCheck className="h-3.5 w-3.5" />,
-        className: 'border-emerald-200/80 bg-white/95 text-emerald-700 shadow-sm',
-      }
-    : property.identityValidated
-      ? {
-          label: 'Identidad confirmada',
-          variant: 'success' as const,
-          icon: <Icons.BadgeCheck className="h-3.5 w-3.5" />,
-          className: 'border-emerald-200/80 bg-white/95 text-emerald-700 shadow-sm',
-        }
-    : null;
-
-  const trustSignals = [
-    property.isSuperHost
-      ? {
-          label: 'Anfitrión con historial',
-          variant: 'brand' as const,
-          icon: <Icons.Award className="h-3.5 w-3.5" />,
-          className: 'border-brand/15 bg-brand/10 text-brand-dark dark:border-brand/20 dark:bg-brand/15 dark:text-brand-light',
-        }
-      : null,
-    !property.isVerifiedProperty && property.identityValidated
-      ? {
-          label: 'Identidad confirmada',
-          variant: 'success' as const,
-          icon: <Icons.BadgeCheck className="h-3.5 w-3.5" />,
-          className: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-        }
-      : null,
-    !property.isVerifiedProperty && !property.identityValidated && property.locationVerified
-      ? {
-          label: 'Ubicación verificada',
-          variant: 'success' as const,
-          icon: <Icons.MapPin className="h-3.5 w-3.5" />,
-          className: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-        }
-      : null,
-  ].filter(Boolean) as Array<{
-    label: string;
-    variant: 'neutral' | 'brand' | 'success' | 'warning' | 'danger' | 'info';
-    icon: React.ReactNode;
-    className: string;
-  }>;
+  const verificationBadge = getPropertyVerificationBadge(property);
+  const shouldEmphasizeVerification = emphasizeVerification && !isFavoritesVariant;
 
   const ratingLabel = rating > 0 ? rating.toFixed(1) : 'Sin puntaje';
-  const reviewLabel = reviewsCount > 0 ? `${reviewsCount} ${reviewsCount === 1 ? 'reseña real' : 'reseñas reales'}` : 'Sin reseñas todavía';
-  const guestLabel = property.maxGuests ? `${property.maxGuests} ${property.maxGuests === 1 ? 'huésped' : 'huéspedes'}` : null;
 
   const handleFavoriteToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -125,16 +81,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         />
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-slate-950/18 via-slate-950/5 to-transparent" />
         
-        <div className="absolute inset-x-0 top-0 flex items-start justify-between gap-3 p-4">
-          <div className="flex min-w-0 flex-wrap gap-2">
-            {imageBadge ? (
-              <Badge variant={imageBadge.variant} size="md" className={imageBadge.className}>
-                {imageBadge.icon}
-                {imageBadge.label}
-              </Badge>
-            ) : null}
-          </div>
-
+        <div className="absolute inset-x-0 top-0 flex items-start justify-end gap-3 p-4">
           {user ? (
             <Button
               type="button"
@@ -182,41 +129,59 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
                 <Icons.Star className="h-4 w-4 fill-brand text-brand" />
                 {ratingLabel}
               </div>
-              <p className="mt-0.5 text-[10.5px] font-medium text-slate-500">{reviewLabel}</p>
             </div>
           </div>
-
-          {guestLabel || property.hostName ? (
-            <div className="mt-3 flex flex-wrap items-center gap-3 text-[13px] text-slate-500">
-              {guestLabel ? (
-                <span className="inline-flex items-center gap-1.5">
-                  <Icons.Users className="h-4 w-4 text-slate-400" />
-                  <span>{guestLabel}</span>
-                </span>
-              ) : null}
-              {property.hostName ? (
-                <span className="inline-flex items-center gap-1.5">
-                  <Icons.UserCheck className="h-4 w-4 text-slate-400" />
-                  <span>Anfitrión: {property.hostName}</span>
-                </span>
-              ) : null}
-            </div>
-          ) : null}
         </Card>
 
-        {trustSignals.length > 0 ? (
-          <div className="flex flex-wrap items-center gap-2.5 text-sm text-slate-500">
-            {trustSignals.map((signal) => (
-              <Badge key={signal.label} variant={signal.variant} size="md" className={signal.className}>
-                {signal.icon}
-                {signal.label}
-              </Badge>
-            ))}
-          </div>
-        ) : null}
+        <div
+          className={cn(
+            'rounded-[22px] border px-4 py-3.5 transition-[border-color,background-color,box-shadow] duration-200',
+            shouldEmphasizeVerification
+              ? 'border-emerald-200/80 bg-emerald-50/70 shadow-[0_18px_36px_-32px_rgba(22,163,74,0.38)]'
+              : 'border-slate-200/80 bg-white',
+          )}
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className={cn(
+                'text-[10px] font-semibold uppercase tracking-[0.16em]',
+                shouldEmphasizeVerification ? 'text-emerald-700' : 'text-slate-400',
+              )}>Verificación</p>
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                {verificationGuidanceLabel ? (
+                  <Badge
+                    variant="neutral"
+                    size="sm"
+                    className={cn(
+                      'border-slate-200/90 bg-slate-50/90 text-slate-600',
+                      shouldEmphasizeVerification && 'border-emerald-200/90 bg-white text-emerald-700',
+                    )}
+                  >
+                    {verificationGuidanceLabel}
+                  </Badge>
+                ) : null}
+                <span className={cn(
+                  'text-[13px] font-semibold leading-5',
+                  shouldEmphasizeVerification ? 'text-emerald-950' : 'text-slate-800',
+                )}>
+                  {verificationBadge.label}
+                </span>
+              </div>
+            </div>
 
-        <div className="mt-auto flex items-end justify-between gap-4 border-t border-slate-100/90 pt-4">
-          <p className="text-[13px] font-medium leading-6 text-slate-500">Revisá ubicación, precio y verificación antes de decidir.</p>
+            <span
+              aria-label={verificationBadge.summaryLabel}
+              className={cn(
+                'shrink-0 font-mono text-[11px] font-semibold tracking-[0.14em]',
+                shouldEmphasizeVerification ? 'text-emerald-700' : 'text-slate-500',
+              )}
+            >
+              {verificationBadge.visual}
+            </span>
+          </div>
+        </div>
+
+        <div className="mt-auto flex items-end justify-end gap-4 border-t border-slate-100/90 pt-4">
           {onClick ? (
             <div className="inline-flex items-center gap-2 text-[13.5px] font-semibold tracking-[-0.01em] text-slate-700 transition-colors duration-150 group-hover:text-slate-950">
               <span>{isFavoritesVariant ? 'Abrir detalle' : 'Ver detalle'}</span>

@@ -69,7 +69,7 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
             Evaluá a {reviewedUserName}
           </h3>
           <p className="text-slate-500 text-sm">
-            Tu reseña ayuda a que otras personas decidan con más claridad.
+            Tu reseña ayuda a que otras personas entiendan mejor cómo fue tratar con esta persona.
           </p>
         </div>
 
@@ -96,7 +96,7 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
             onChange={(e) => setComment(e.target.value)}
             rows={4}
             className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-4 py-4 font-medium focus:ring-2 focus:ring-brand outline-none resize-none text-slate-900 dark:text-white placeholder:text-slate-400"
-            placeholder="Contanos cómo fue la experiencia (opcional)..."
+            placeholder="Contá lo que suma para entender cómo fue tratar con esta persona (opcional)..."
           />
           {error && <p className="text-red-500 text-xs font-bold text-center mt-2">{error}</p>}
         </div>
@@ -118,7 +118,7 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
         </div>
 
         <p className="text-[10px] text-slate-400 text-center italic">
-          * Tu calificación impacta en el puntaje de confianza del usuario.
+          * Tu calificación impacta en cómo se muestra este perfil dentro de la app.
         </p>
       </div>
     </div>

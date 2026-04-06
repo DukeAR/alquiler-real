@@ -57,7 +57,7 @@ export const DocumentVerificationModal: React.FC<DocumentVerificationModalProps>
   const levels = [
     {
       id: 'basic',
-      name: 'Preparacion',
+      name: 'Documentos pendientes',
       color: 'bg-slate-100 text-slate-700',
       icon: Icons.User,
       requirements: ['DNI frente y dorso', 'Selfie con DNI'],
@@ -65,23 +65,23 @@ export const DocumentVerificationModal: React.FC<DocumentVerificationModalProps>
     },
     {
       id: 'verified',
-      name: 'Documentacion enviada',
+      name: 'Documentación cargada',
       color: 'bg-blue-100 text-blue-700',
       icon: Icons.ShieldCheck,
       requirements: ['DNI frente y dorso', 'Selfie con DNI'],
-      benefits: ['Más claridad al reservar', 'Insignia de verificado', 'Perfil más completo'],
+      benefits: ['La identidad queda lista para revisión', 'Se ve que ya enviaste la documentación', 'Tu perfil queda más completo'],
     },
     {
       id: 'premium',
-      name: 'Validacion extendida',
+      name: 'Revisión adicional',
       color: 'bg-emerald-100 text-emerald-700',
       icon: Icons.ShieldCheck,
       requirements: userType === 'host'
         ? ['Documentacion enviada', 'Comprobante de servicios']
         : ['Documentacion enviada'],
       benefits: userType === 'host'
-        ? ['Podés publicar propiedades', 'Insignia destacada', 'Más verificaciones visibles en tu perfil']
-        : ['Más verificaciones visibles en tu perfil', 'Insignia destacada', 'Perfil más completo'],
+        ? ['Podés publicar con más datos comprobados', 'Se ve mejor qué ya revisamos', 'Tu perfil suma respaldo documental']
+        : ['Se ve mejor qué ya revisamos', 'Tu perfil suma más respaldo documental', 'La identidad queda más completa'],
     },
   ] as const;
 
@@ -131,10 +131,10 @@ export const DocumentVerificationModal: React.FC<DocumentVerificationModalProps>
       });
 
       await onSubmitted(finalVerification);
-      showToast('Verificación', 'Recibimos tu documentación y actualizamos tu estado.', 'success');
+      showToast('Verificación', 'Recibimos tu documentación. Ahora la revisamos.', 'success');
       onClose();
     } catch (error) {
-      showToast('Verificación', error instanceof Error ? error.message : 'No pudimos guardar la verificación.', 'error');
+      showToast('Verificación', error instanceof Error ? error.message : 'No pudimos guardar la documentación.', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -159,7 +159,7 @@ export const DocumentVerificationModal: React.FC<DocumentVerificationModalProps>
           <div>
             <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Verificación documental</h2>
             <p className="text-sm text-slate-500">
-              {userType === 'tenant' ? 'Huésped' : 'Anfitrión'} - subí la documentación requerida desde un solo flujo.
+              {userType === 'tenant' ? 'Huésped' : 'Anfitrión'} - subí la documentación necesaria para que quede claro qué ya pudimos validar.
             </p>
           </div>
           <button type="button" onClick={onClose} className="rounded-full p-2 transition hover:bg-slate-100 dark:hover:bg-slate-800">
@@ -168,7 +168,7 @@ export const DocumentVerificationModal: React.FC<DocumentVerificationModalProps>
         </div>
 
         <div className="space-y-4">
-          <h3 className="font-bold text-slate-900 dark:text-white">Estado del proceso</h3>
+          <h3 className="font-bold text-slate-900 dark:text-white">Qué falta y qué ya cargaste</h3>
 
           <div className="grid gap-4">
             {levels.map((level, index) => {
@@ -192,7 +192,7 @@ export const DocumentVerificationModal: React.FC<DocumentVerificationModalProps>
                     </div>
                     <div className="flex-1">
                       <h4 className="font-bold text-slate-900 dark:text-white">{level.name}</h4>
-                      <p className="text-xs text-slate-500">{isReached ? '✓ Completo o disponible' : 'Pendiente'}</p>
+                      <p className="text-xs text-slate-500">{isReached ? 'Listo' : 'Pendiente'}</p>
                     </div>
                     {isCurrent ? (
                       <span className="rounded-full bg-brand px-3 py-1 text-xs font-bold text-white">Actual</span>
@@ -280,7 +280,7 @@ export const DocumentVerificationModal: React.FC<DocumentVerificationModalProps>
           <div className="flex items-start gap-3">
             <Icons.Info className="mt-0.5 h-5 w-5 flex-shrink-0 text-brand" />
             <p>
-              Este flujo se enfoca solo en documentación de identidad: frente y dorso del DNI, selfie con el documento y, para anfitriones, comprobante adicional.
+              Este flujo solo valida identidad y documentación: frente y dorso del DNI, selfie con el documento y, para anfitriones, comprobante adicional.
             </p>
           </div>
         </div>

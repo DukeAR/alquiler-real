@@ -13,23 +13,23 @@ describe('AboutPage', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole('heading', { name: 'Cómo funciona Alquiler Real' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Lo importante para decidir en una sola lectura' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Sabé qué estás viendo antes de reservar' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Lo importante para revisar antes de reservar' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Qué puede aparecer como verificado' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Anfitriones' }));
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Publicá con información que se pueda verificar' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Publicá para que te entiendan antes del chat' })).toBeInTheDocument();
     });
-    expect(screen.getByText('Dejá el aviso listo para decidir')).toBeInTheDocument();
+    expect(screen.getByText('Publicá cuando el aviso se entienda solo')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Huéspedes' }));
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: 'Qué mirar antes de reservar' })).toBeInTheDocument();
     });
-    expect(screen.getByText('Explorá con la información a la vista')).toBeInTheDocument();
+    expect(screen.getByText('Explorá sabiendo qué ya fue comprobado')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Volver' }));
 

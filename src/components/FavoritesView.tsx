@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useFavorites } from '../hooks/useFavorites';
+import { sortPropertiesByCatalogOrder } from '../lib/propertyVerification';
 import { Property } from '../services/geminiService';
 import { EmptyState } from './EmptyState';
 import { LoadingState } from './LoadingState';
@@ -29,6 +30,7 @@ export const FavoritesView: React.FC = () => {
 
   const favoriteEntries = Array.from(favoritesMap.values()).filter(Boolean);
   const properties = favoriteEntries.filter(isResolvedProperty);
+  const sortedProperties = sortPropertiesByCatalogOrder(properties, 'verification');
   const pendingFavoritesCount = favoriteEntries.length - properties.length;
 
   useEffect(() => {
@@ -150,7 +152,7 @@ export const FavoritesView: React.FC = () => {
               <SectionTitle
                 eyebrow="Tu shortlist"
                 heading="Tus propiedades guardadas, mejor organizadas."
-                description="Compará con calma, retomá lo que te interesó y entrá al detalle cuando estés listo para decidir."
+                description="Compará con calma, retomá lo que te interesó y revisá primero las que ya tienen más comprobaciones reales."
                 as="h1"
                 visualLevel="h2"
                 className="max-w-3xl"
@@ -214,7 +216,7 @@ export const FavoritesView: React.FC = () => {
         ) : null}
 
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {properties.map((property) => (
+          {sortedProperties.map((property) => (
             <PropertyCard
               key={property.id}
               property={property}

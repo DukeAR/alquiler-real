@@ -326,8 +326,8 @@ export const ProfileViewNew = () => {
               <Card padding="lg" className="space-y-5 dark:border-slate-800 dark:bg-slate-900">
                 <SectionTitle
                   eyebrow="Accesos rápidos"
-                  heading="Resolvé lo importante"
-                  description="Entrá a tus datos, tu actividad y las acciones principales sin pasar por pantallas de más."
+                  heading="Resolvé lo básico"
+                  description="Entrá a tus datos, tu actividad y lo que necesitás revisar sin dar vueltas."
                   as="h2"
                   visualLevel="h4"
                 />
@@ -387,15 +387,15 @@ export const ProfileViewNew = () => {
                   className="border-slate-200/80 bg-[radial-gradient(circle_at_top_right,rgba(79,70,229,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.98))] shadow-[0_24px_60px_-38px_rgba(15,23,42,0.32)]"
                 >
                   <SectionTitle
-                    eyebrow="Confianza"
-                    heading="Cómo se ve tu perfil"
-                    description="Una lectura simple de cómo se muestra tu cuenta dentro de Alquiler Real."
+                    eyebrow="Perfil"
+                    heading="Qué muestra tu perfil"
+                    description="Lo que hoy ve otra persona cuando entra a tu cuenta."
                     as="h2"
                     visualLevel="h3"
                   />
 
                   <div className="mt-6 grid gap-4 sm:grid-cols-3">
-                    <MiniMetric label="Puntaje de confianza" value={String(user.trustScore || 0)} accent="brand" caption="Sobre 100" />
+                    <MiniMetric label="Puntaje del perfil" value={String(user.trustScore || 0)} accent="brand" caption="Sobre 100" />
                     <MiniMetric label="Nivel actual" value={user.badge || 'Bronce'} accent="success" caption="Se actualiza con tu actividad" />
                     <MiniMetric label="Calificación" value={ratingValue > 0 ? ratingValue.toFixed(1) : 'Sin dato'} accent="warning" caption="Según tu historial" />
                   </div>
@@ -412,7 +412,7 @@ export const ProfileViewNew = () => {
                       tone="success"
                       className="mt-6"
                       heading="Tu perfil no muestra alertas activas."
-                      description="Seguí manteniendo tus datos al día y una comunicación clara para sostener ese nivel de confianza."
+                      description="Mantené tus datos al día y respondé claro para sostener este estado."
                     />
                   )}
                 </Card>
@@ -422,7 +422,7 @@ export const ProfileViewNew = () => {
                     <SectionTitle
                       eyebrow="Verificación"
                       heading="Estado de verificación"
-                      description="Cuanto más completo esté tu perfil, más fácil es usar la app y generar confianza."
+                      description="Cuanto más completo esté tu perfil, más fácil es entender quién sos y avanzar sin dudas básicas."
                       as="h2"
                       visualLevel="h4"
                       className="max-w-md"
@@ -476,7 +476,7 @@ export const ProfileViewNew = () => {
                   {missingRequirementsText ? (
                     <NoticeBanner
                       tone="info"
-                      heading="Te faltan algunos pasos para completar tu verificación actual."
+                      heading="Todavía faltan pasos para completar tu verificación."
                       description={missingRequirementsText}
                     />
                   ) : null}
@@ -492,8 +492,8 @@ export const ProfileViewNew = () => {
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                   <SectionTitle
                     eyebrow="Información personal"
-                    heading="Lo que personaliza tu experiencia"
-                    description="Intereses, presentación y preferencias ayudan a ordenar mejor lo que ves."
+                    heading="Lo que ajusta lo que ves"
+                    description="Intereses, presentación y preferencias ayudan a ordenar mejor lo que ves al explorar."
                     as="h2"
                     visualLevel="h3"
                     className="max-w-2xl"
@@ -527,7 +527,7 @@ export const ProfileViewNew = () => {
                       </div>
                     ) : (
                       <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">
-                        Todavía no cargaste intereses. Sumarlos ayuda a que las sugerencias se parezcan más a lo que buscás.
+                        Todavía no cargaste intereses. Sumarlos ayuda a que las sugerencias se acerquen más a lo que querés revisar.
                       </p>
                     )}
                   </div>
@@ -554,7 +554,7 @@ export const ProfileViewNew = () => {
                     <p className="text-sm leading-7 text-slate-700 dark:text-slate-200">{user.bio}</p>
                   ) : (
                     <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">
-                      Sumá una breve presentación para que tu perfil se vea más completo y genere más confianza cuando hablás con otras personas.
+                      Sumá una breve presentación para que sepan con quién hablan antes de escribirte.
                     </p>
                   )}
                 </div>
@@ -835,7 +835,7 @@ const InterestsModal = ({ currentInterests, currentBio, onClose, onSave }: {
     <ProfileModalShell
       eyebrow="Perfil"
       heading="Tus intereses"
-      description="Definí lo que te gusta y una breve presentación para que el perfil se sienta más completo y personal."
+      description="Contá qué te interesa y sumá una breve presentación para que sepan mejor con quién hablan."
       onClose={onClose}
       footer={
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
@@ -850,7 +850,7 @@ const InterestsModal = ({ currentInterests, currentBio, onClose, onSave }: {
       }
     >
       <div className="space-y-6">
-        <FormField label="¿Qué te gusta hacer?" hint="Opcional">
+        <FormField label="Qué plan buscás" hint="Opcional">
           <div className="flex flex-wrap gap-2.5">
             {interestOptions.map((interest) => (
               <button
@@ -870,14 +870,14 @@ const InterestsModal = ({ currentInterests, currentBio, onClose, onSave }: {
           </div>
         </FormField>
 
-        <FormField label="Sobre vos" hint="Opcional" htmlFor="profile-bio">
+        <FormField label="Presentación breve" hint="Opcional" htmlFor="profile-bio">
           <textarea
             id="profile-bio"
             value={bio}
             onChange={(e) => setBio(e.target.value)}
             rows={4}
             className="app-control resize-none px-4 py-3 text-sm font-medium dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-            placeholder="Contá en pocas líneas cómo viajás, qué buscás o qué valorás cuando elegís una propiedad."
+            placeholder="Contá en pocas líneas cómo viajás o qué valorás cuando elegís una propiedad."
           />
         </FormField>
       </div>
@@ -911,8 +911,8 @@ const PreferencesModal = ({ currentPreferences, onClose, onSave }: {
   return (
     <ProfileModalShell
       eyebrow="Preferencias"
-      heading="Cómo querés explorar"
-      description="Definí una zona, un presupuesto y el tipo de propiedad que más te interesa para que la app te ordene mejor los resultados."
+      heading="Qué querés ver primero"
+      description="Definí zona, presupuesto y tipo de propiedad para ordenar mejor lo que ves al explorar."
       onClose={onClose}
       footer={
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">

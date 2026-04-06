@@ -3,8 +3,9 @@ import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { Input } from '../ui/Input';
 import { cn } from '../../lib/utils';
+import type { PropertyCatalogSort } from '../../lib/propertyVerification';
 
-export type ExploreSort = 'recommended' | 'rating' | 'price-asc';
+export type ExploreSort = PropertyCatalogSort;
 
 export type ExploreFilters = {
   minPrice: string;
@@ -36,7 +37,7 @@ export const ExploreFiltersBar = ({
   onClear,
 }: ExploreFiltersBarProps) => {
   return (
-    <section className="z-40">
+    <section>
       <Card padding="none" className="app-surface border-slate-200/85 bg-white/94 p-4 shadow-[0_18px_38px_-28px_rgba(15,23,42,0.2)] backdrop-blur-xl md:p-5">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex w-fit items-center rounded-[18px] border border-slate-200/80 bg-slate-100/80 p-1">
@@ -56,18 +57,46 @@ export const ExploreFiltersBar = ({
             ))}
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5 md:gap-3">
-            <select
-              value={sortBy}
-              onChange={(event) => onSortChange(event.target.value as ExploreSort)}
-              className="app-control h-11 min-w-[170px] rounded-[14px] bg-white px-4 text-[0.94rem] font-semibold tracking-[-0.01em] text-slate-700 outline-none shadow-none"
-            >
-              <option value="recommended">Primero lo más claro</option>
-              <option value="rating">Mejor calificación</option>
-              <option value="price-asc">Menor precio</option>
-            </select>
+          <div className="grid w-full gap-3 sm:grid-cols-2 xl:flex xl:flex-wrap xl:items-end">
+            <label className="flex min-w-0 w-full flex-col gap-1 sm:min-w-[188px] sm:w-auto xl:w-auto">
+              <span className="pl-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                Ordenar por
+              </span>
+              <select
+                aria-label="Ordenar por"
+                value={sortBy}
+                onChange={(event) => onSortChange(event.target.value as ExploreSort)}
+                className="app-control h-11 min-w-0 w-full rounded-[14px] bg-white px-4 text-[0.94rem] font-semibold tracking-[-0.01em] text-slate-700 outline-none shadow-none sm:min-w-[170px]"
+              >
+                <option value="verification">Más verificados</option>
+                <option value="rating">Mejor calificados</option>
+                <option value="price">Precio</option>
+              </select>
+            </label>
 
-            <div className="flex items-center gap-2">
+            <label className="flex min-h-11 min-w-0 w-full items-center gap-3 rounded-[16px] border border-slate-200/80 bg-white px-3.5 py-2.5 text-left shadow-none transition-colors duration-150 hover:border-slate-300/90 sm:col-span-2 xl:min-w-[250px] xl:w-auto">
+              <span className="relative inline-flex h-6 w-11 shrink-0 items-center">
+                <input
+                  type="checkbox"
+                  checked={filters.verifiedOnly}
+                  onChange={(event) => onFiltersChange({ ...filters, verifiedOnly: event.target.checked })}
+                  className="peer sr-only"
+                />
+                <span className="absolute inset-0 rounded-full bg-slate-200 transition-colors duration-150 peer-checked:bg-emerald-500/90" />
+                <span className="absolute left-0.5 h-5 w-5 rounded-full bg-white shadow-[0_4px_10px_rgba(15,23,42,0.16)] transition-transform duration-150 peer-checked:translate-x-5" />
+              </span>
+
+              <span className="min-w-0">
+                <span className="block text-[13px] font-semibold leading-5 text-slate-800">
+                  Solo con verificaciones reales
+                </span>
+                <span className="block text-[11.5px] leading-4 text-slate-500">
+                  3 o más comprobaciones concretas
+                </span>
+              </span>
+            </label>
+
+            <div className="grid min-w-0 grid-cols-2 gap-2 sm:w-full xl:flex xl:w-auto xl:items-center">
               <Input
                 type="number"
                 inputMode="numeric"
@@ -75,7 +104,7 @@ export const ExploreFiltersBar = ({
                 onChange={(event) => onFiltersChange({ ...filters, minPrice: event.target.value })}
                 placeholder="Desde"
                 icon={<span className="text-xs font-medium">$</span>}
-                className="h-11 w-28 rounded-[14px] border-slate-200 bg-white py-2.5 pl-9 pr-3 text-[0.94rem] font-semibold tracking-[-0.01em] shadow-none"
+                className="h-11 min-w-0 w-full rounded-[14px] border-slate-200 bg-white py-2.5 pl-9 pr-3 text-[0.94rem] font-semibold tracking-[-0.01em] shadow-none xl:w-28"
               />
 
               <Input
@@ -85,7 +114,7 @@ export const ExploreFiltersBar = ({
                 onChange={(event) => onFiltersChange({ ...filters, maxPrice: event.target.value })}
                 placeholder="Hasta"
                 icon={<span className="text-xs font-medium">$</span>}
-                className="h-11 w-28 rounded-[14px] border-slate-200 bg-white py-2.5 pl-9 pr-3 text-[0.94rem] font-semibold tracking-[-0.01em] shadow-none"
+                className="h-11 min-w-0 w-full rounded-[14px] border-slate-200 bg-white py-2.5 pl-9 pr-3 text-[0.94rem] font-semibold tracking-[-0.01em] shadow-none xl:w-28"
               />
             </div>
 
@@ -95,7 +124,7 @@ export const ExploreFiltersBar = ({
                 onClick={onClear}
                 variant="ghost"
                 size="sm"
-                className="rounded-[14px] px-3.5 text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                className="w-full rounded-[14px] px-3.5 text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 sm:w-auto xl:w-auto"
               >
                 <Icons.X className="h-4 w-4" />
                 Limpiar filtros

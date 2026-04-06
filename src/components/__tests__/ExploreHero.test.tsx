@@ -15,10 +15,10 @@ describe('ExploreHero', () => {
       />,
     );
 
-    expect(screen.getByRole('heading', { name: 'Elegir dónde quedarte debería ser simple.' })).toBeInTheDocument();
-    expect(screen.getByText('No podemos elegir por vos, pero te damos claridad en todo el proceso para que decidas tranquilo.')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Sabé dónde te estás metiendo antes de reservar.' })).toBeInTheDocument();
+    expect(screen.getByText('Revisá quién publica, dónde está el lugar y qué parte del aviso ya fue comprobada antes de hablar o pagar.')).toBeInTheDocument();
     expect(screen.getByLabelText('Zona o ciudad')).toHaveAttribute('placeholder', 'Buscá una zona, ciudad o barrio');
     expect(screen.getByRole('button', { name: 'Ver alojamientos' })).toBeInTheDocument();
-    expect(screen.getByText('Comparás rápido quién publica, dónde está el lugar y qué ya se pudo confirmar.')).toBeInTheDocument();
+    expect(screen.getByText('Antes de reservar, ves rápido quién publica, dónde está el lugar y qué ya fue comprobado.')).toBeInTheDocument();
   });
 });

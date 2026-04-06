@@ -2,6 +2,11 @@ import { useEffect, useState } from 'react';
 import { apiJson } from '../../lib/apiConfig';
 import { useFavorites } from '../../hooks/useFavorites';
 import type { Property } from '../../services/geminiService';
+import { sortPropertiesByCatalogOrder } from '../../lib/propertyVerification';
+import {
+  getVerificationPreferenceState,
+  trackVerificationPreferenceSave,
+} from '../../lib/verificationPreference';
 import type { LocationSuggestion } from '../LocationAutocomplete';
 import { ExploreFiltersBar, type ExploreFilters, type ExploreSort } from './ExploreFiltersBar';
 import { ExploreHero } from './ExploreHero';
@@ -61,71 +66,16 @@ const buildLocationSuggestions = (items: Property[]): LocationSuggestion[] => {
   });
 };
 
-const getFeaturedPropertyScore = (property: Property) => {
-  const ratingScore = Number(property.rating || 0) * 12;
-  const reviewScore = Math.min(Number(property.reviewsCount || 0), 18);
-  const consistencyScore = Math.min(Number(property.historicalConsistency || 0) / 5, 18);
-  const experienceScore = Math.min(Number(property.hostExperienceYears || 0) * 1.5, 12);
-  const verificationScore = [
-    property.identityValidated,
-    property.locationVerified,
-    property.videoValidated,
-    property.isVerifiedProperty,
-    property.hasDigitalVerification,
-    property.hasPresencialVerification,
-  ].filter(Boolean).length * 8;
-  const penalty = Number(property.unresolvedReviewsCount || 0) * 18;
-
-  return ratingScore + reviewScore + consistencyScore + experienceScore + verificationScore - penalty;
-};
-
-const sortProperties = (items: Property[], sortBy: ExploreSort) => {
-  const sortedItems = [...items];
-
-  sortedItems.sort((left, right) => {
-    if (sortBy === 'price-asc') {
-      const priceDifference = Number(left.price || 0) - Number(right.price || 0);
-      if (priceDifference !== 0) {
-        return priceDifference;
-      }
-
-      return Number(right.rating || 0) - Number(left.rating || 0);
-    }
-
-    if (sortBy === 'rating') {
-      const ratingDifference = Number(right.rating || 0) - Number(left.rating || 0);
-      if (ratingDifference !== 0) {
-        return ratingDifference;
-      }
-
-      return Number(right.reviewsCount || 0) - Number(left.reviewsCount || 0);
-    }
-
-    const scoreDifference = getFeaturedPropertyScore(right) - getFeaturedPropertyScore(left);
-    if (scoreDifference !== 0) {
-      return scoreDifference;
-    }
-
-    const ratingDifference = Number(right.rating || 0) - Number(left.rating || 0);
-    if (ratingDifference !== 0) {
-      return ratingDifference;
-    }
-
-    return Number(right.reviewsCount || 0) - Number(left.reviewsCount || 0);
-  });
-
-  return sortedItems;
-};
-
 export const ExplorePage = () => {
   const { toggleFavorite, isFavorite } = useFavorites();
   const [properties, setProperties] = useState<Property[]>([]);
+  const [verificationPreference, setVerificationPreference] = useState(() => getVerificationPreferenceState());
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
-  const [sortBy, setSortBy] = useState<ExploreSort>('recommended');
+  const [sortBy, setSortBy] = useState<ExploreSort>('verification');
   const [visibleCount, setVisibleCount] = useState(9);
   const [filters, setFilters] = useState<ExploreFilters>(defaultFilters);
   const [locationSuggestions, setLocationSuggestions] = useState<LocationSuggestion[]>([]);
@@ -169,9 +119,9 @@ export const ExplorePage = () => {
     setVisibleCount(9);
   }, [filters, searchQuery, sortBy]);
 
-  const featuredProperties = sortProperties(properties, 'recommended')
+  const featuredProperties = sortPropertiesByCatalogOrder(properties, 'verification')
     .slice(0, 3);
-  const orderedProperties = sortProperties(properties, sortBy);
+  const orderedProperties = sortPropertiesByCatalogOrder(properties, sortBy);
 
   const featuredIds = new Set(featuredProperties.map((property) => property.id));
   const hasActiveFilters = Boolean(searchQuery || filters.minPrice || filters.maxPrice || filters.type || filters.verifiedOnly);
@@ -218,6 +168,22 @@ export const ExplorePage = () => {
     setSearchQuery('');
   };
 
+  const handleFavoriteToggle = async (propertyId: string, nextFavoriteState: boolean) => {
+    const result = await toggleFavorite(propertyId);
+
+    if (!nextFavoriteState || (result !== 'added' && result !== 'pending-add')) {
+      return;
+    }
+
+    const property = properties.find((item) => item.id === propertyId);
+
+    if (!property) {
+      return;
+    }
+
+    setVerificationPreference(trackVerificationPreferenceSave(property));
+  };
+
   return (
     <div className="pb-28">
       <main className="app-page space-y-8 py-8 md:space-y-10 md:py-12">
@@ -245,6 +211,8 @@ export const ExplorePage = () => {
           loading={loading}
           loadError={loadError}
           viewMode={viewMode}
+          sortBy={sortBy}
+          caresAboutVerification={verificationPreference.caresAboutVerification}
           hasActiveFilters={hasActiveFilters}
           searchQuery={searchQuery}
           appliedFilterCount={appliedFilterCount}
@@ -256,7 +224,7 @@ export const ExplorePage = () => {
           onLoadMore={() => setVisibleCount((current) => current + 9)}
           onRetry={() => setRefreshToken((current) => current + 1)}
           onClearFilters={clearAllFilters}
-          onFavoriteToggle={toggleFavorite}
+          onFavoriteToggle={handleFavoriteToggle}
           isFavorite={isFavorite}
         />
       </main>

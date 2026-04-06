@@ -37,7 +37,7 @@ const parseIsoDate = (iso: string) => {
 };
 
 const formatDisplay = (iso?: string) => {
-  if (!iso) return 'Agregar fecha';
+  if (!iso) return 'Elegí fecha';
   try { return parseIsoDate(iso).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' }); } catch { return iso; }
 };
 
@@ -172,11 +172,13 @@ const DateRangePicker: React.FC<Props> = ({ checkIn, checkOut, setCheckIn, setCh
   const [availabilityLoading, setAvailabilityLoading] = useState(Boolean(propertyId));
   const [availabilityError, setAvailabilityError] = useState<string | null>(null);
   const dayRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const pendingFocusIsoRef = useRef<string | null>(null);
   const panelId = useId();
   const statusId = useId();
   const instructionsId = useId();
+  const bookingMode = mode === 'booking';
 
   const visibleMonths = useMemo(
     () => (monthsToShow === 2 ? [visible, addMonths(visible, 1)] : [visible]),
@@ -219,30 +221,30 @@ const DateRangePicker: React.FC<Props> = ({ checkIn, checkOut, setCheckIn, setCh
       }
     : {
         selectionTitle: !checkIn
-          ? 'Elegí tu ingreso y salida'
+          ? 'Elegí ingreso y salida'
           : !checkOut
-            ? 'Ahora elegí la salida'
+            ? 'Elegí la salida'
             : `${nights} ${nights === 1 ? 'noche seleccionada' : 'noches seleccionadas'}`,
         selectionDescription: !checkIn
-          ? 'Primero marcás el ingreso y después la salida para completar la estadía.'
+          ? 'Primero ingreso, después salida.'
           : !checkOut
-            ? `Tu ingreso quedó para el ${formatDisplay(checkIn)}. Elegí la salida para cerrar el rango.`
-            : `Del ${formatDisplay(checkIn)} al ${formatDisplay(checkOut)}.`,
+            ? `Ingreso: ${formatDisplay(checkIn)}. Falta la salida.`
+            : `${formatDisplay(checkIn)} al ${formatDisplay(checkOut)}.`,
         triggerSummary: hasCompleteRange
-          ? `${nights} ${nights === 1 ? 'noche' : 'noches'} · ${formatDisplay(checkIn)} al ${formatDisplay(checkOut)}`
+          ? `${formatDisplay(checkIn)} al ${formatDisplay(checkOut)}`
           : hasPartialRange
-            ? `Ingreso elegido para el ${formatDisplay(checkIn)}. Falta la salida.`
-            : 'Todavía no elegiste fechas',
+            ? 'Falta la salida'
+            : 'Faltan fechas',
         headerEyebrow: 'Fechas de la estadía',
         startLabel: 'Ingreso',
         endLabel: 'Salida',
         startHint: 'Marcá tu fecha de llegada.',
         endHint: 'Elegí cuándo termina la estadía.',
         helper: hasCompleteRange
-          ? 'Ya tenés el rango completo. Si querés, podés volver a elegir el ingreso.'
+          ? 'Si querés, podés cambiar las fechas.'
           : hasPartialRange
-            ? 'Te falta la salida para cerrar el rango.'
-            : 'Elegí primero el ingreso y después la salida para calcular la estadía.',
+            ? 'Elegí la salida para ver el total.'
+            : 'Primero elegí ingreso y después salida.',
       };
 
   const isAfter = (a: string, b: string) => parseIsoDate(a) > parseIsoDate(b);
@@ -495,8 +497,36 @@ const DateRangePicker: React.FC<Props> = ({ checkIn, checkOut, setCheckIn, setCh
     return () => window.cancelAnimationFrame(frame);
   }, [isOpen, visible]);
 
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
+      if (!containerRef.current?.contains(event.target as Node)) {
+        closePicker(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        closePicker();
+      }
+    };
+
+    window.addEventListener('mousedown', handlePointerDown);
+    window.addEventListener('touchstart', handlePointerDown);
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('mousedown', handlePointerDown);
+      window.removeEventListener('touchstart', handlePointerDown);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen]);
+
   return (
-    <div className="w-full">
+    <div ref={containerRef} className="relative w-full">
       <Button
         ref={triggerRef}
         type="button"
@@ -516,52 +546,73 @@ const DateRangePicker: React.FC<Props> = ({ checkIn, checkOut, setCheckIn, setCh
           setIsOpen(true);
         }}
         className={cn(
-          'grid overflow-hidden rounded-2xl p-0 text-left whitespace-normal',
+          bookingMode ? 'overflow-hidden rounded-[24px] p-0 text-left whitespace-normal' : 'grid overflow-hidden rounded-2xl p-0 text-left whitespace-normal',
           isOpen ? 'border-slate-300 shadow-[0_18px_40px_-26px_rgba(15,23,42,0.35)]' : 'border-slate-200 hover:border-slate-300 hover:shadow-sm',
         )}
       >
-        <div className="grid w-full grid-cols-1 divide-y divide-slate-200 sm:grid-cols-2 sm:divide-x sm:divide-y-0">
-          <div className="px-3 py-3">
-            <div className="text-[11px] uppercase tracking-[0.12em] text-slate-500">{dateCopy.startLabel}</div>
-            <div className="mt-1 text-sm font-medium text-slate-900">{formatDisplay(checkIn)}</div>
+        {bookingMode ? (
+          <div className="grid w-full grid-cols-2 divide-x divide-slate-200">
+            <div className="min-w-0 px-4 py-3.5">
+              <div className="text-[11px] uppercase tracking-[0.12em] text-slate-500">{dateCopy.startLabel}</div>
+              <div className="mt-1 text-sm font-semibold text-slate-900">{formatDisplay(checkIn)}</div>
+            </div>
+            <div className="min-w-0 px-4 py-3.5">
+              <div className="text-[11px] uppercase tracking-[0.12em] text-slate-500">{dateCopy.endLabel}</div>
+              <div className="mt-1 text-sm font-semibold text-slate-900">{formatDisplay(checkOut)}</div>
+            </div>
           </div>
-          <div className="px-3 py-3 text-left sm:text-right">
-            <div className="text-[11px] uppercase tracking-[0.12em] text-slate-500">{dateCopy.endLabel}</div>
-            <div className="mt-1 text-sm font-medium text-slate-900">{formatDisplay(checkOut)}</div>
-          </div>
-        </div>
-        <div className="flex flex-col items-start gap-2 border-t border-slate-200 bg-slate-50/80 px-3 py-2 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-          <div className="inline-flex min-w-0 items-start gap-2 text-left">
-            <Icons.Calendar className="h-3.5 w-3.5 text-slate-400" />
-            <span className="whitespace-normal break-words">{dateCopy.triggerSummary}</span>
-          </div>
-          {hasCompleteRange ? <span className="font-semibold text-brand">Rango listo</span> : null}
-        </div>
+        ) : (
+          <>
+            <div className="grid w-full grid-cols-1 divide-y divide-slate-200 sm:grid-cols-2 sm:divide-x sm:divide-y-0">
+              <div className="px-3 py-3">
+                <div className="text-[11px] uppercase tracking-[0.12em] text-slate-500">{dateCopy.startLabel}</div>
+                <div className="mt-1 text-sm font-medium text-slate-900">{formatDisplay(checkIn)}</div>
+              </div>
+              <div className="px-3 py-3 text-left sm:text-right">
+                <div className="text-[11px] uppercase tracking-[0.12em] text-slate-500">{dateCopy.endLabel}</div>
+                <div className="mt-1 text-sm font-medium text-slate-900">{formatDisplay(checkOut)}</div>
+              </div>
+            </div>
+            <div className="flex flex-col items-start gap-2 border-t border-slate-200 bg-slate-50/80 px-3 py-2 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+              <div className="inline-flex min-w-0 items-start gap-2 text-left">
+                <Icons.Calendar className="h-3.5 w-3.5 text-slate-400" />
+                <span className="whitespace-normal break-words">{dateCopy.triggerSummary}</span>
+              </div>
+              {hasCompleteRange ? <span className="font-semibold text-brand">Rango listo</span> : null}
+            </div>
+          </>
+        )}
       </Button>
 
       <div id={statusId} aria-live="polite" className="sr-only">
         {dateCopy.selectionTitle}. {dateCopy.selectionDescription}
       </div>
 
-      <div className={`grid overflow-hidden transition-[grid-template-rows,opacity,transform,margin] duration-200 ease-out ${isOpen ? 'mt-3 grid-rows-[1fr] opacity-100' : 'mt-1 grid-rows-[0fr] opacity-0 scale-[0.99] pointer-events-none'}`}>
-        <div className="min-h-0 overflow-hidden">
+      {isOpen ? (
+        <div className={cn(
+          bookingMode ? 'mt-2.5' : 'mt-3',
+          bookingMode ? 'w-full' : 'absolute left-0 top-full z-50 w-[min(22rem,calc(100vw-2rem))] max-w-[calc(100vw-2rem)] sm:w-full',
+        )}>
           <Card
             id={panelId}
-            role={isOpen ? 'dialog' : undefined}
-            aria-modal={isOpen ? 'false' : undefined}
-            aria-label={isOpen ? 'Selector de rango de fechas' : undefined}
-            aria-describedby={isOpen ? instructionsId : undefined}
-            aria-hidden={!isOpen}
+            role="dialog"
+            aria-modal="false"
+            aria-label="Selector de rango de fechas"
+            aria-describedby={instructionsId}
             padding="sm"
-            className={`origin-top rounded-[26px] border-slate-200 shadow-[0_26px_60px_-30px_rgba(15,23,42,0.32)] transition-all duration-200 ease-out ${isOpen ? 'scale-100 translate-y-0' : 'scale-[0.985] -translate-y-1'}`}
+            className={cn(
+              bookingMode
+                ? 'rounded-[22px] border-slate-200 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.14)]'
+                : 'origin-top rounded-[26px] border-slate-200 shadow-[0_26px_60px_-30px_rgba(15,23,42,0.32)]',
+            )}
           >
-            <div className="space-y-4">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className={cn('space-y-4', bookingMode && 'space-y-3')}>
+              <div className={cn('flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between', bookingMode && 'gap-2 sm:items-center')}>
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">{dateCopy.headerEyebrow}</p>
+                  {!bookingMode ? <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">{dateCopy.headerEyebrow}</p> : null}
                   <p className="mt-1 text-sm font-semibold text-slate-900">{dateCopy.selectionTitle}</p>
                   <p id={instructionsId} className="mt-1 text-xs leading-5 text-slate-500">
-                    {dateCopy.selectionDescription} Podés moverte con flechas y elegir con Enter.
+                    {bookingMode ? dateCopy.selectionDescription : `${dateCopy.selectionDescription} Podés moverte con flechas y elegir con Enter.`}
                   </p>
                 </div>
 
@@ -578,48 +629,79 @@ const DateRangePicker: React.FC<Props> = ({ checkIn, checkOut, setCheckIn, setCh
                 </div>
               </div>
 
-              <div className={cn('grid grid-cols-1 gap-2', monthsToShow === 2 && 'sm:grid-cols-2')}>
-                <div className={cn('rounded-2xl border px-3 py-3', checkIn ? 'border-brand/20 bg-brand/5' : 'border-slate-200 bg-slate-50')}>
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">{dateCopy.startLabel}</div>
-                  <div className="mt-1 text-sm font-semibold text-slate-900">{formatDisplay(checkIn)}</div>
-                  <div className="mt-1 text-xs text-slate-500">{checkIn ? formatLongDisplay(checkIn) : dateCopy.startHint}</div>
-                </div>
-                <div className={cn('rounded-2xl border px-3 py-3 text-left', monthsToShow === 2 && 'sm:text-right', checkOut ? 'border-slate-900/10 bg-slate-900/[0.03]' : 'border-slate-200 bg-slate-50')}>
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">{dateCopy.endLabel}</div>
-                  <div className="mt-1 text-sm font-semibold text-slate-900">{formatDisplay(checkOut)}</div>
-                  <div className="mt-1 text-xs text-slate-500">{checkOut ? formatLongDisplay(checkOut) : dateCopy.endHint}</div>
-                </div>
-              </div>
+              {!bookingMode ? (
+                <>
+                  <div className={cn('grid grid-cols-1 gap-2', monthsToShow === 2 && 'sm:grid-cols-2')}>
+                    <div className={cn('rounded-2xl border px-3 py-3', checkIn ? 'border-brand/20 bg-brand/5' : 'border-slate-200 bg-slate-50')}>
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">{dateCopy.startLabel}</div>
+                      <div className="mt-1 text-sm font-semibold text-slate-900">{formatDisplay(checkIn)}</div>
+                      <div className="mt-1 text-xs text-slate-500">{checkIn ? formatLongDisplay(checkIn) : dateCopy.startHint}</div>
+                    </div>
+                    <div className={cn('rounded-2xl border px-3 py-3 text-left', monthsToShow === 2 && 'sm:text-right', checkOut ? 'border-slate-900/10 bg-slate-900/[0.03]' : 'border-slate-200 bg-slate-50')}>
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">{dateCopy.endLabel}</div>
+                      <div className="mt-1 text-sm font-semibold text-slate-900">{formatDisplay(checkOut)}</div>
+                      <div className="mt-1 text-xs text-slate-500">{checkOut ? formatLongDisplay(checkOut) : dateCopy.endHint}</div>
+                    </div>
+                  </div>
 
-              <div className="flex items-center gap-2 rounded-2xl bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-500">
-                <Icons.Info className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-                <span>{dateCopy.helper}</span>
-              </div>
+                  <div className="flex items-center gap-2 rounded-2xl bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-500">
+                    <Icons.Info className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                    <span>{dateCopy.helper}</span>
+                  </div>
+                </>
+              ) : (
+                <p className="text-xs leading-5 text-slate-500">{dateCopy.helper}</p>
+              )}
 
               {propertyId ? (
                 availabilityLoading ? (
-                  <NoticeBanner
-                    tone="info"
-                    heading="Consultando disponibilidad"
-                    description="Estamos trayendo las fechas ocupadas para bloquearlas antes de que confirmes la reserva."
-                  />
-                ) : availabilityError ? (
-                  <div className="space-y-3">
+                  bookingMode ? (
+                    <div className="flex items-start gap-2 rounded-[18px] bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-600">
+                      <Icons.Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
+                      <span>Estamos trayendo la disponibilidad para bloquear las fechas ocupadas.</span>
+                    </div>
+                  ) : (
                     <NoticeBanner
-                      tone="warning"
-                      heading="No pudimos cargar la disponibilidad"
-                      description={availabilityError}
+                      tone="info"
+                      heading="Consultando disponibilidad"
+                      description="Estamos trayendo las fechas ocupadas para bloquearlas antes de que confirmes la reserva."
                     />
-                    <Button type="button" variant="secondary" size="sm" onClick={() => void loadAvailability()} className="rounded-full px-3 text-xs">
-                      Reintentar
-                    </Button>
-                  </div>
+                  )
+                ) : availabilityError ? (
+                  bookingMode ? (
+                    <div className="flex flex-col gap-2 rounded-[18px] border border-slate-200 bg-slate-50/80 px-3 py-2.5 text-xs leading-5 text-slate-600">
+                      <span>No pudimos cargar la disponibilidad. {availabilityError}</span>
+                      <div>
+                        <Button type="button" variant="secondary" size="sm" onClick={() => void loadAvailability()} className="rounded-full px-3 text-xs">
+                          Reintentar
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <NoticeBanner
+                        tone="warning"
+                        heading="No pudimos cargar la disponibilidad"
+                        description={availabilityError}
+                      />
+                      <Button type="button" variant="secondary" size="sm" onClick={() => void loadAvailability()} className="rounded-full px-3 text-xs">
+                        Reintentar
+                      </Button>
+                    </div>
+                  )
                 ) : blockedDates.size > 0 ? (
-                  <NoticeBanner
-                    tone="info"
-                    heading="Fechas ocupadas bloqueadas"
-                    description="El calendario ya está marcando los días que no se pueden reservar para esta propiedad."
-                  />
+                  bookingMode ? (
+                    <div className="flex items-start gap-2 rounded-[18px] bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-600">
+                      <Icons.Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
+                      <span>Las fechas ocupadas ya están bloqueadas en el calendario.</span>
+                    </div>
+                  ) : (
+                    <NoticeBanner
+                      tone="info"
+                      heading="Fechas ocupadas bloqueadas"
+                      description="El calendario ya está marcando los días que no se pueden reservar para esta propiedad."
+                    />
+                  )
                 ) : null
               ) : null}
 
@@ -632,8 +714,11 @@ const DateRangePicker: React.FC<Props> = ({ checkIn, checkOut, setCheckIn, setCh
                 const showInlineNext = monthsToShow === 1 || idx === visibleMonths.length - 1;
 
                 return (
-                  <div key={idx} className="rounded-[24px] border border-slate-200/80 bg-slate-50/70 p-3 sm:p-4">
-                    <div className="mb-4 flex items-center justify-between gap-2">
+                  <div key={idx} className={cn(
+                    'border border-slate-200/80 p-3 sm:p-4',
+                    bookingMode ? 'rounded-[20px] bg-white' : 'rounded-[24px] bg-slate-50/70',
+                  )}>
+                    <div className={cn('flex items-center justify-between gap-2', bookingMode ? 'mb-3' : 'mb-4')}>
                       {showInlinePrev ? (
                         <Button type="button" onClick={() => setVisible(addMonths(visible, -1))} variant="ghost" size="sm" aria-label="Ver mes anterior" className="rounded-full px-2.5 py-1.5 text-sm">
                           <Icons.ChevronLeft className="h-4 w-4" />
@@ -727,7 +812,7 @@ const DateRangePicker: React.FC<Props> = ({ checkIn, checkOut, setCheckIn, setCh
             </div>
           </Card>
         </div>
-      </div>
+      ) : null}
     </div>
   );
 };

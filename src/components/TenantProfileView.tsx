@@ -184,7 +184,7 @@ export const TenantProfileView: React.FC<TenantProfileViewProps> = ({ onBack }) 
             {validationStatus.level === 'DESTACADO' && (
               <div className="p-4 bg-brand/5 dark:bg-brand/10 rounded-2xl border border-brand/10 dark:border-brand/20">
                 <p className="text-sm text-slate-700 dark:text-slate-200">
-                  <strong>⭐ Nivel destacado:</strong> Llegaste a este nivel por las reseñas positivas que recibiste de los anfitriones. Seguí construyendo ese historial.
+                  <strong>⭐ Buen historial:</strong> Llegaste a este nivel por las reseñas positivas que recibiste. Seguí sosteniendo ese recorrido.
                 </p>
               </div>
             )}
@@ -192,7 +192,7 @@ export const TenantProfileView: React.FC<TenantProfileViewProps> = ({ onBack }) 
             {validationStatus.level === 'VERIFICADO' && (
               <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl border border-emerald-200 dark:border-emerald-800">
                 <p className="text-sm text-emerald-800 dark:text-emerald-300">
-                  <strong>✅ Identidad verificada:</strong> Validamos tu identidad con tu DNI. Los anfitriones pueden confiar en que sos quien decís ser.
+                  <strong>✅ Identidad validada:</strong> Validamos tu identidad con tu DNI. Los anfitriones pueden ver que sos quien decís ser.
                 </p>
               </div>
             )}
@@ -200,7 +200,7 @@ export const TenantProfileView: React.FC<TenantProfileViewProps> = ({ onBack }) 
             {validationStatus.level === 'BASICO' && (
               <div className="p-4 bg-slate-100 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700">
                 <p className="text-sm text-slate-600 dark:text-slate-400">
-                  <strong>📋 Nivel básico:</strong> Subí tu DNI para verificar tu identidad y completar mejor tu perfil.
+                  <strong>📋 Perfil inicial:</strong> Subí tu DNI para validar tu identidad y completar mejor tu perfil.
                 </p>
               </div>
             )}
@@ -230,7 +230,7 @@ export const TenantProfileView: React.FC<TenantProfileViewProps> = ({ onBack }) 
               {showDocUpload && (
                 <div className="mt-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700">
                   <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
-                    Para verificar tu identidad, subí tu DNI y una selfie.
+                    Para validar tu identidad, subí tu DNI y una selfie.
                   </p>
                   <button
                     onClick={() => window.location.href = '/verification'}
@@ -284,7 +284,7 @@ export const TenantProfileView: React.FC<TenantProfileViewProps> = ({ onBack }) 
             <div className="space-y-4">
               <div>
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-2">
-                  ¿Qué te gusta hacer?
+                  Qué plan buscás
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {interestsList.map((interest) => (
@@ -305,14 +305,14 @@ export const TenantProfileView: React.FC<TenantProfileViewProps> = ({ onBack }) 
 
               <div>
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-2">
-                  Sobre vos
+                  Presentación breve
                 </label>
                 <textarea
                   value={editBio}
                   onChange={(e) => setEditBio(e.target.value)}
                   rows={3}
                   className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-4 py-4 font-medium focus:ring-2 focus:ring-brand outline-none resize-none text-slate-900 dark:text-white"
-                  placeholder="Contá un poco sobre vos..."
+                  placeholder="Contá cómo viajás o qué buscás cuando reservás..."
                 />
               </div>
 
@@ -364,7 +364,7 @@ export const TenantProfileView: React.FC<TenantProfileViewProps> = ({ onBack }) 
         {/* DISCLAIMER */}
         <div className="p-6 bg-slate-100 dark:bg-slate-900/50 rounded-[32px] border border-slate-200 dark:border-slate-800">
           <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed text-center font-medium">
-            Alquiler Real usa tu actividad para detectar problemas y cuidar la experiencia. La verificación de identidad confirma quién sos, pero no funciona como un aval sobre tu conducta.
+            La verificación de identidad confirma quién sos. No garantiza cómo te vas a comportar ni reemplaza el trato entre personas.
           </p>
         </div>
           </>

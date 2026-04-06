@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import type { NotificationItem, NotificationStatus } from '../hooks/useNotifications';
 import { cn } from '../lib/utils';
@@ -42,10 +42,54 @@ export const NotificationsMenu: React.FC<NotificationsMenuProps> = ({
 }) => {
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
+  const [panelTop, setPanelTop] = useState(72);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     setIsOpen(false);
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const updatePanelTop = () => {
+      const headerElement = buttonRef.current?.closest('header') ?? document.querySelector('.app-header');
+      const headerHeight = headerElement instanceof HTMLElement ? headerElement.offsetHeight : 56;
+      setPanelTop(Math.max(16, headerHeight + 8));
+    };
+
+    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
+      if (!containerRef.current?.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') {
+        return;
+      }
+
+      setIsOpen(false);
+      buttonRef.current?.focus();
+    };
+
+    updatePanelTop();
+
+    window.addEventListener('resize', updatePanelTop);
+    window.addEventListener('mousedown', handlePointerDown);
+    window.addEventListener('touchstart', handlePointerDown);
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('resize', updatePanelTop);
+      window.removeEventListener('mousedown', handlePointerDown);
+      window.removeEventListener('touchstart', handlePointerDown);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen]);
 
   const handleToggle = () => {
     setIsOpen((current) => !current);
@@ -129,8 +173,9 @@ export const NotificationsMenu: React.FC<NotificationsMenuProps> = ({
   }, [errorMessage, notifications, onLoginRequired, onRefresh, status]);
 
   return (
-    <div className="relative hidden md:block">
+    <div ref={containerRef} className="relative hidden md:block">
       <button
+        ref={buttonRef}
         type="button"
         onClick={handleToggle}
         className="app-icon-button"
@@ -147,7 +192,12 @@ export const NotificationsMenu: React.FC<NotificationsMenuProps> = ({
       </button>
 
       {isOpen ? (
-        <div id="app-notifications-panel" aria-label="Panel de notificaciones" className="absolute right-0 top-14 w-[22rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded-[28px] border border-slate-200/90 bg-white/98 shadow-[0_24px_50px_-30px_rgba(15,23,42,0.28)] backdrop-blur-xl">
+        <div
+          id="app-notifications-panel"
+          aria-label="Panel de notificaciones"
+          style={{ top: `${panelTop}px` }}
+          className="fixed right-4 z-[9999] w-[22rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded-[28px] border border-slate-200/90 bg-white/98 shadow-[0_24px_50px_-30px_rgba(15,23,42,0.28)] backdrop-blur-xl"
+        >
           <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/70 px-5 py-4">
             <div>
               <h3 className="text-sm font-semibold tracking-tight text-slate-900">Notificaciones</h3>

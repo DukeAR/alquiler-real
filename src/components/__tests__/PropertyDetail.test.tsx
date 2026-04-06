@@ -20,6 +20,10 @@ vi.mock('../../lib/apiConfig', () => ({
 }));
 
 import { apiJson, apiFetch } from '../../lib/apiConfig';
+import {
+  clearVerificationPreferenceState,
+  getVerificationPreferenceState,
+} from '../../lib/verificationPreference';
 import PropertyDetail from '../PropertyDetail';
 
 // Mock the modal system
@@ -56,7 +60,18 @@ const sampleProperty = {
     name: 'Mariana',
     bio: 'Responde rápido y mantiene la información al día.',
     avatarUrl: 'https://example.com/host.jpg'
-  }
+  },
+  hostTrustScore: 4,
+  hostTrust: {
+    score: 4,
+    level: 'high',
+    items: [
+      { key: 'identity', label: 'Identidad confirmada', description: 'Identidad ya confirmada.', status: 'complete' },
+      { key: 'reservations', label: 'Historial de reservas', description: '6 reservas completadas.', status: 'complete' },
+      { key: 'reviews', label: 'Reseñas de huéspedes', description: '4 reseñas de huéspedes.', status: 'complete' },
+      { key: 'tenure', label: 'Antigüedad en la plataforma', description: '3 años en la plataforma.', status: 'complete' },
+    ],
+  },
 };
 
 const renderPropertyDetail = () => {
@@ -86,6 +101,8 @@ const isoPlusDays = (days: number) => {
 };
 
 beforeEach(() => {
+  clearVerificationPreferenceState();
+
   (apiJson as any).mockImplementation(async (url: string) => {
     if (url.endsWith('/reviews')) return [{ id: 'r1', reviewer_id: 'u1', rating: 5, comment: 'Buen lugar' }];
     if (url === '/api/bookings') return [];
@@ -118,6 +135,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  clearVerificationPreferenceState();
   vi.restoreAllMocks();
 });
 
@@ -169,16 +187,93 @@ describe('PropertyDetail', () => {
 
     await waitFor(() => expect(screen.getByText('Casa de prueba')).toBeDefined());
 
-    expect(screen.getByText('Lo importante para decidir')).toBeDefined();
+    expect(screen.getByText('Lo importante de este aviso')).toBeDefined();
     expect(screen.getByText('Comodidades clave')).toBeDefined();
     expect(screen.getByText('Wifi rápido')).toBeDefined();
     expect(screen.getByText('Nivel de verificación')).toBeDefined();
-    expect(screen.getByText('3 de 5 verificaciones completadas')).toBeDefined();
+    expect(screen.getByText('Qué parte del aviso ya fue comprobada. Lo demás conviene revisarlo antes de reservar.')).toBeDefined();
+    expect(screen.getByText('Este aviso ya tiene varias comprobaciones hechas.')).toBeDefined();
+    expect(screen.getByText('3 de 5 comprobaciones')).toBeDefined();
+    expect(screen.getByText('✔ ✔ ✔ ○ ○')).toBeDefined();
     expect(screen.getByText('Ubicación: Ciudad Test.')).toBeDefined();
     expect(screen.getAllByText('Identidad confirmada').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Ubicación verificada').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Material real del lugar').length).toBeGreaterThan(0);
+    expect(screen.getByText('Podés ver mejor el estado real.')).toBeDefined();
+    expect(screen.getByText('Falta confirmar vínculo con el lugar.')).toBeDefined();
+    expect(screen.getByText('Todavía no hay revisión en el lugar.')).toBeDefined();
+    expect(screen.queryByText('Este aviso muestra más cosas comprobadas que la mayoría.')).toBeNull();
     expect(screen.getByText('Mariana')).toBeDefined();
+    expect(screen.getByText('Nivel de confianza: Alto')).toBeDefined();
+    expect(screen.getByText('Historial de reservas')).toBeDefined();
+    expect(screen.getByText('Reseñas de huéspedes')).toBeDefined();
+    expect(screen.queryByText('Antigüedad en la plataforma')).toBeNull();
+  });
+
+  test('shows the stronger guided verification message when the score reaches 4', async () => {
+    (apiJson as any).mockImplementation(async (url: string) => {
+      if (url.endsWith('/reviews')) return [{ id: 'r1', reviewer_id: 'u1', rating: 5, comment: 'Buen lugar' }];
+      if (url === '/api/bookings') return [];
+
+      return {
+        ...sampleProperty,
+        propertyRelationshipVerified: true,
+      };
+    });
+
+    renderPropertyDetail();
+
+    await waitFor(() => expect(screen.getByText('Casa de prueba')).toBeDefined());
+
+    expect(screen.getByText('4 de 5 comprobaciones')).toBeDefined();
+    expect(screen.getByText('Este aviso muestra más cosas comprobadas que la mayoría.')).toBeDefined();
+    expect(screen.queryByText('Este aviso ya tiene varias comprobaciones hechas.')).toBeNull();
+  });
+
+  test('records the detail visit when the property reaches a high verification level', async () => {
+    (apiJson as any).mockImplementation(async (url: string) => {
+      if (url.endsWith('/reviews')) return [{ id: 'r1', reviewer_id: 'u1', rating: 5, comment: 'Buen lugar' }];
+      if (url === '/api/bookings') return [];
+
+      return {
+        ...sampleProperty,
+        propertyRelationshipVerified: true,
+      };
+    });
+
+    renderPropertyDetail();
+
+    await waitFor(() => expect(screen.getByText('Casa de prueba')).toBeDefined());
+
+    expect(getVerificationPreferenceState().openedHighVerificationPropertyIds).toEqual(['p1']);
+    expect(getVerificationPreferenceState().caresAboutVerification).toBe(false);
+  });
+
+  test('keeps showing the verification section even when the backing is still low', async () => {
+    (apiJson as any).mockImplementation(async (url: string) => {
+      if (url.endsWith('/reviews')) return [];
+      if (url === '/api/bookings') return [];
+
+      return {
+        ...sampleProperty,
+        identityValidated: false,
+        locationVerified: true,
+        videoValidated: false,
+        propertyRelationshipVerified: false,
+        hasPresencialVerification: false,
+      };
+    });
+
+    renderPropertyDetail();
+
+    await waitFor(() => expect(screen.getByText('Casa de prueba')).toBeDefined());
+
+    expect(screen.getByText('Nivel de verificación')).toBeDefined();
+    expect(screen.getByText('1 de 5 comprobaciones')).toBeDefined();
+    expect(screen.getByText('✔ ○ ○ ○ ○')).toBeDefined();
+    expect(screen.getByText('Falta confirmar quién publica.')).toBeDefined();
+    expect(screen.queryByText('Este aviso muestra más cosas comprobadas que la mayoría.')).toBeNull();
+    expect(screen.queryByText('Este aviso ya tiene varias comprobaciones hechas.')).toBeNull();
   });
 
   test('guides the booking flow and stops guest selection at capacity', async () => {
@@ -186,7 +281,9 @@ describe('PropertyDetail', () => {
 
     await waitFor(() => expect(screen.getByText('Casa de prueba')).toBeDefined());
 
-    expect(screen.getByText('Elegí ingreso y salida para ver el resumen')).toBeDefined();
+    expect(screen.getByText('Faltan las fechas')).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: /abrir selector de huéspedes/i }));
 
     const addAdultButton = screen.getByRole('button', { name: /sumar adulto/i });
     const addChildButton = screen.getByRole('button', { name: /sumar menor/i });
@@ -197,7 +294,7 @@ describe('PropertyDetail', () => {
 
     expect(addAdultButton).toBeDisabled();
     expect(addChildButton).toBeDisabled();
-    expect(screen.getByText('Capacidad máxima alcanzada: 4 huéspedes.')).toBeDefined();
+    expect(screen.getByText('Máximo: 4 huéspedes.')).toBeDefined();
   });
 
   test('smoke: selects date range and confirms booking from the sidebar', async () => {
@@ -214,7 +311,7 @@ describe('PropertyDetail', () => {
     fireEvent.click(screen.getByRole('button', { name: new RegExp(checkInIso) }));
     fireEvent.click(screen.getByRole('button', { name: new RegExp(checkOutIso) }));
 
-    fireEvent.click(screen.getByRole('button', { name: /^continuar$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^revisar reserva$/i }));
 
     await waitFor(() => expect(screen.getByText('Confirmá tu estadía', { selector: 'h3' })).toBeDefined());
 
@@ -279,11 +376,11 @@ describe('PropertyDetail', () => {
 
     await waitFor(() => expect(screen.getByText('Casa de prueba')).toBeDefined());
 
-    const reserveButton = screen.getByRole('button', { name: /elegí fechas para continuar/i });
+    const reserveButton = screen.getByRole('button', { name: /^elegí fechas$/i });
 
     expect(reserveButton).toBeDisabled();
-    expect(screen.getByText('Elegí ingreso y salida para ver el resumen')).toBeInTheDocument();
-    expect(screen.getByText('Cuando completes las fechas, vas a ver la propiedad, el anfitrión y el total antes de confirmar la estadía.')).toBeInTheDocument();
+    expect(screen.getByText('Faltan las fechas')).toBeInTheDocument();
+    expect(screen.getByText('Elegí ingreso y salida para ver el total.')).toBeInTheDocument();
 
     expect(screen.queryByText('Confirmá tu estadía', { selector: 'h3' })).toBeNull();
   });
@@ -314,7 +411,7 @@ describe('PropertyDetail', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: new RegExp(checkInIso) })).toBeDefined());
     fireEvent.click(screen.getByRole('button', { name: new RegExp(checkInIso) }));
     fireEvent.click(screen.getByRole('button', { name: new RegExp(checkOutIso) }));
-    fireEvent.click(screen.getByRole('button', { name: /^continuar$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^revisar reserva$/i }));
 
     await waitFor(() => expect(screen.getByText('Confirmá tu estadía', { selector: 'h3' })).toBeDefined());
 

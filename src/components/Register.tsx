@@ -17,8 +17,8 @@ type RegisterProps = {
 const loginHighlights = [
     {
         icon: Icons.Heart,
-        title: 'Guardá lo que te interesa',
-        description: 'Marcá propiedades y retomá la búsqueda cuando quieras.',
+        title: 'Guardá propiedades para revisar después',
+        description: 'Retomá la búsqueda sin arrancar de cero cada vez.',
     },
     {
         icon: Icons.Calendar,
@@ -27,8 +27,8 @@ const loginHighlights = [
     },
     {
         icon: Icons.ShieldCheck,
-        title: 'Hablá con confianza',
-        description: 'Accedé a perfiles verificados y conversaciones más claras.',
+        title: 'Mirá qué ya está verificado',
+        description: 'Entrá a perfiles y datos clave antes de avanzar.',
     },
 ];
 
@@ -113,7 +113,7 @@ export const Register = ({ mode = 'login' }: RegisterProps) => {
                                     <Icons.ShieldCheck className="h-6 w-6" />
                                 </div>
                                 <div>
-                                    <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-brand">Información real</div>
+                                    <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-brand">Antes de reservar</div>
                                     <div className="font-display text-[1.2rem] font-semibold tracking-tight text-slate-900">Alquiler Real</div>
                                 </div>
                             </button>
@@ -142,16 +142,16 @@ export const Register = ({ mode = 'login' }: RegisterProps) => {
 
                                 <SectionTitle
                                     className="mt-6"
-                                    eyebrow="Acceso claro y confiable"
-                                    heading="Volvé a tu cuenta y seguí desde donde quedaste."
-                                    description="Guardá propiedades, seguí reservas y hablá con anfitriones verificados desde el mismo lugar donde explorás."
+                                    eyebrow="Tu cuenta"
+                                    heading="Entrá y retomá lo que estabas revisando."
+                                    description="Guardá propiedades, seguí reservas y hablá con anfitriones desde el mismo lugar donde explorás."
                                     as="h1"
                                     visualLevel="h2"
                                 />
 
                                 <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/90 px-4 py-2 text-sm font-medium text-slate-600 shadow-[var(--app-shadow-subtle)]">
                                     <Icons.CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                                    Guardados, reservas y mensajes en un solo lugar.
+                                    Guardados, reservas y mensajes para no perder el hilo.
                                 </div>
                             </div>
 
@@ -192,7 +192,7 @@ export const Register = ({ mode = 'login' }: RegisterProps) => {
                         Alquiler Real
                     </h1>
                     <p className="text-sm text-slate-500 font-medium tracking-wide uppercase">
-                        Creá tu cuenta
+                        Empezá a revisar mejor antes de reservar
                     </p>
                 </div>
 
@@ -256,7 +256,7 @@ export const Register = ({ mode = 'login' }: RegisterProps) => {
 
                     {role === 'host' && (
                         <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-2xl border border-amber-200 dark:border-amber-800/30 text-sm text-amber-800 dark:text-amber-300">
-                            <p className="font-bold mb-1">📋 Para publicar tu propiedad vas a necesitar:</p>
+                            <p className="font-bold mb-1">📋 Para publicar con datos verificables vas a necesitar:</p>
                             <ul className="text-xs space-y-1">
                                 <li>• DNI (frente y dorso)</li>
                                 <li>• Selfie con DNI</li>
@@ -301,7 +301,7 @@ export const Register = ({ mode = 'login' }: RegisterProps) => {
 
                         <div>
                             <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-2">
-                                Zona de interés
+                                Zona para empezar a explorar
                             </label>
                             <div className="relative">
                                 <Icons.MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -321,7 +321,7 @@ export const Register = ({ mode = 'login' }: RegisterProps) => {
 
                         <div>
                             <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-2">
-                                ¿Qué te gusta hacer? (opcional)
+                                Qué plan buscás (opcional)
                             </label>
                             <div className="flex flex-wrap gap-2">
                                 {interestsList.map((interest) => (
@@ -342,18 +342,18 @@ export const Register = ({ mode = 'login' }: RegisterProps) => {
 
                         <div>
                             <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-2">
-                                Contá algo sobre vos (opcional)
+                                Presentación breve (opcional)
                             </label>
                             <textarea
                                 value={bio}
                                 onChange={(e) => setBio(e.target.value)}
                                 rows={3}
                                 className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-4 py-4 font-medium focus:ring-2 focus:ring-brand outline-none resize-none text-slate-900 dark:text-white"
-                                placeholder="Contá quién sos, cómo viajás o cómo recibís huéspedes..."
+                                placeholder="Contá cómo viajás o cómo recibís huéspedes..."
                             />
                             <p className="text-[10px] text-brand mt-1 flex items-center gap-1">
                                 <Icons.Sparkles className="w-3 h-3" />
-                                Una buena presentación genera más confianza
+                                Una presentación breve ayuda a que sepan con quién hablan
                             </p>
                         </div>
                     </div>

@@ -9,6 +9,11 @@ import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { NoticeBanner } from '../ui/NoticeBanner';
 import { SectionTitle } from '../ui/SectionTitle';
+import {
+  TOP_VERIFIED_RESULTS_COUNT,
+  getPropertyVerificationGuidanceLabel,
+  type PropertyCatalogSort,
+} from '../../lib/propertyVerification';
 import type { Property } from '../../services/geminiService';
 
 const LazyPropertyMap = lazy(() => import('../PropertyMap').then((module) => ({ default: module.PropertyMap })));
@@ -26,6 +31,8 @@ type ExploreResultsSectionProps = {
   loading: boolean;
   loadError: string | null;
   viewMode: 'grid' | 'map';
+  sortBy: PropertyCatalogSort;
+  caresAboutVerification: boolean;
   hasActiveFilters: boolean;
   searchQuery: string;
   appliedFilterCount: number;
@@ -37,7 +44,7 @@ type ExploreResultsSectionProps = {
   onLoadMore: () => void;
   onRetry: () => void;
   onClearFilters: () => void;
-  onFavoriteToggle: (propertyId: string, isFavorite: boolean) => void;
+  onFavoriteToggle: (propertyId: string, isFavorite: boolean) => void | Promise<unknown>;
   isFavorite: (propertyId: string) => boolean;
 };
 
@@ -45,6 +52,8 @@ export const ExploreResultsSection = ({
   loading,
   loadError,
   viewMode,
+  sortBy,
+  caresAboutVerification,
   hasActiveFilters,
   searchQuery,
   appliedFilterCount,
@@ -70,6 +79,17 @@ export const ExploreResultsSection = ({
   const showHomeBlocks = !hasActiveFilters && viewMode === 'grid';
   const showSummaryCard = viewMode === 'map' || hasActiveFilters || failedToLoadResults;
   const showFeaturedSection = showHomeBlocks && (loading || featuredCount > 0);
+  const showVerificationPreferenceHint = caresAboutVerification && !loading && hasAnyResults;
+  const topResultIds = new Set(
+    (showFeaturedSection ? featuredProperties : listingProperties)
+      .slice(0, TOP_VERIFIED_RESULTS_COUNT)
+      .map((property) => property.id),
+  );
+  const verificationSortDescription = sortBy === 'verification'
+    ? 'Mostramos primero los avisos con mayor nivel de verificación.'
+    : sortBy === 'rating'
+      ? 'Ordenados por mejor calificación, sin sacar de vista la verificación.'
+      : 'Ordenados por precio, sin sacar de vista la verificación.';
 
   const summaryEyebrow = viewMode === 'map'
     ? 'Mapa'
@@ -84,7 +104,7 @@ export const ExploreResultsSection = ({
         ? 'Resultados para revisar'
         : 'No encontramos coincidencias'
       : hasAnyResults
-          ? 'Opciones para decidir'
+          ? 'Avisos para revisar'
         : 'No hay propiedades disponibles ahora.';
 
   const summaryDescription = loading
@@ -96,7 +116,7 @@ export const ExploreResultsSection = ({
         ? `${formatPropertyCount(totalResults)} para revisar en esta búsqueda.`
         : 'Probá con otra zona o limpiá los filtros.'
       : hasAnyResults
-        ? `${formatPropertyCount(totalResults)} para revisar ahora.`
+        ? `${formatPropertyCount(totalResults)} para revisar antes de reservar.`
         : 'Volvé a revisar más tarde.';
 
   const summaryCard = (
@@ -139,6 +159,13 @@ export const ExploreResultsSection = ({
       ) : null}
     </Card>
   );
+
+  const verificationPreferenceHint = showVerificationPreferenceHint ? (
+    <p className="mt-3 inline-flex items-center gap-2 rounded-full border border-emerald-200/80 bg-emerald-50/80 px-3 py-1.5 text-[12.5px] font-medium leading-5 text-emerald-800">
+      <Icons.ShieldCheck className="h-4 w-4" />
+      <span>Estás viendo avisos con mayor nivel de verificación</span>
+    </p>
+  ) : null;
 
   if (failedToLoadResults) {
     return (
@@ -193,8 +220,8 @@ export const ExploreResultsSection = ({
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Mapa de resultados</p>
               <p className="mt-1 text-sm text-slate-600">
                 {loading
-                  ? 'Estamos ubicando cada opción en el mapa.'
-                  : 'Abrí cada pin para ver precio y qué se pudo comprobar.'}
+                  ? 'Estamos ubicando cada aviso en el mapa.'
+                  : 'Abrí cada pin para ver precio y qué parte del aviso ya fue comprobada.'}
               </p>
             </div>
 
@@ -239,11 +266,21 @@ export const ExploreResultsSection = ({
 
       {showFeaturedSection ? (
         <section className="space-y-5 md:space-y-6">
-          <SectionTitle
-            heading="Primero revisá estas opciones"
-            description="Cada aviso te muestra quién publica, dónde está y qué ya se pudo confirmar."
-            className="max-w-2xl"
-          />
+          <div className="max-w-2xl space-y-2">
+            <SectionTitle
+              heading="Primero revisá estos avisos"
+              description="Acá ves precio, ubicación, rating y qué parte del aviso ya fue comprobada."
+              className="max-w-2xl"
+            />
+            {!loading ? (
+              <>
+                <p className="text-[12.5px] leading-5 text-slate-500">
+                  {verificationSortDescription}
+                </p>
+                {verificationPreferenceHint}
+              </>
+            ) : null}
+          </div>
 
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-7 lg:grid-cols-3">
             {loading
@@ -252,6 +289,10 @@ export const ExploreResultsSection = ({
                   <PropertyCard
                     key={property.id}
                     property={property}
+                    verificationGuidanceLabel={getPropertyVerificationGuidanceLabel(property, {
+                      isTopResult: topResultIds.has(property.id),
+                    })}
+                    emphasizeVerification={caresAboutVerification}
                     onClick={() => navigate(`/detail/${property.id}`)}
                     isFavorite={isFavorite(property.id)}
                     onFavoriteToggle={onFavoriteToggle}
@@ -266,16 +307,26 @@ export const ExploreResultsSection = ({
           <div className="flex flex-col gap-4 border-b border-slate-200/70 pb-5 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-2xl">
               <SectionTitle
-                heading={hasActiveFilters ? 'Resultados para revisar' : 'Más opciones para comparar'}
+                heading={hasActiveFilters ? 'Resultados para revisar' : 'Más avisos para revisar'}
                 description={loading
                   ? 'Estamos actualizando los avisos disponibles.'
                   : hasActiveFilters
                     ? `${formatPropertyCount(listingProperties.length)} para revisar en esta búsqueda.`
                     : listingProperties.length > 0
-                      ? `${formatPropertyCount(listingProperties.length)} para seguir comparando con más criterio.`
+                      ? `${formatPropertyCount(listingProperties.length)} para seguir revisando antes de reservar.`
                       : 'No hay más propiedades para revisar por ahora.'}
                 className="max-w-2xl"
               />
+              {!loading && !showFeaturedSection ? (
+                <>
+                  {listingProperties.length > 0 ? (
+                    <p className="mt-2 text-[12.5px] leading-5 text-slate-500">
+                      {verificationSortDescription}
+                    </p>
+                  ) : null}
+                  {verificationPreferenceHint}
+                </>
+              ) : null}
             </div>
 
             {!loading && listingProperties.length > 0 ? (
@@ -306,6 +357,10 @@ export const ExploreResultsSection = ({
                 <PropertyCard
                   key={property.id}
                   property={property}
+                  verificationGuidanceLabel={getPropertyVerificationGuidanceLabel(property, {
+                    isTopResult: topResultIds.has(property.id),
+                  })}
+                  emphasizeVerification={caresAboutVerification}
                   onClick={() => navigate(`/detail/${property.id}`)}
                   isFavorite={isFavorite(property.id)}
                   onFavoriteToggle={onFavoriteToggle}

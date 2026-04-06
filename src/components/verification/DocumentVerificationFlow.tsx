@@ -42,7 +42,7 @@ const IdentityStep: React.FC<{
         <Icons.Smartphone className="h-8 w-8 text-brand" />
       </div>
       <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Validá tu identidad</h1>
-      <p className="font-medium text-slate-500">Verificación segura con Renaper</p>
+      <p className="font-medium text-slate-500">Usamos Renaper para validar que sos vos.</p>
     </div>
 
     <div className="space-y-8 rounded-[32px] border border-slate-200 bg-slate-50 p-8 dark:border-slate-800 dark:bg-slate-900/50">
@@ -94,7 +94,7 @@ const IdentityStep: React.FC<{
       <div className="flex gap-3">
         <Icons.Info className="h-5 w-5 shrink-0 text-blue-600" />
         <p className="text-xs font-medium leading-relaxed text-blue-800 dark:text-blue-200">
-          ¿Preferís hacerlo en persona? Si estás en <span className="font-bold">San Clemente del Tuyú</span>, podés pedir una validación presencial para sumar la señal más fuerte de confianza.
+          ¿Preferís hacerlo en persona? Si estás en <span className="font-bold">San Clemente del Tuyú</span>, podés pedir una validación presencial para sumar la comprobación más fuerte de tu perfil.
         </p>
       </div>
       <button
@@ -122,8 +122,8 @@ const BiometryStep: React.FC = () => (
       <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-[24px] bg-brand/10">
         <Icons.Zap className="h-8 w-8 fill-brand text-brand" />
       </div>
-      <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Prueba de vida</h1>
-      <p className="font-medium text-slate-500">Estamos validando tu identidad</p>
+      <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Validación facial</h1>
+      <p className="font-medium text-slate-500">Estamos validando que sos vos</p>
     </div>
 
     <div className="flex flex-col items-center gap-10">
@@ -155,8 +155,8 @@ const SuccessStep: React.FC = () => (
       <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-[24px] bg-accent/10">
         <Icons.CheckCircle2 className="h-8 w-8 text-accent" />
       </div>
-      <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Ya recibimos tu verificación</h1>
-      <p className="font-medium text-slate-500">Ahora la estamos revisando</p>
+      <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Ya recibimos tus datos</h1>
+      <p className="font-medium text-slate-500">Ahora los estamos revisando</p>
     </div>
 
     <div className="space-y-4">

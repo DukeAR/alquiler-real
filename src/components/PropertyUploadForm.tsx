@@ -378,15 +378,15 @@ export const PropertyUploadForm: React.FC<{ onComplete: () => void }> = ({ onCom
 
                         <div className="bg-brand/5 dark:bg-brand/10 p-4 rounded-xl border border-brand/10 dark:border-brand/20 text-sm text-slate-700 dark:text-slate-200 flex gap-3">
                             <Icons.ShieldCheck className="w-5 h-5 flex-shrink-0 text-brand" />
-                            <p><strong>Tip de confianza:</strong> Un video corto mostrando la propiedad reduce dudas y mejora la calidad de las consultas.</p>
+                            <p><strong>Tip:</strong> Un video corto del lugar ayuda a que sepan qué están viendo antes de escribirte.</p>
                         </div>
                     </motion.div>
                 )}
 
                 {step === 4 && (
                     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
-                        <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Cómo querés verificar tu propiedad</h2>
-                        <p className="text-slate-500">Elegí la opción que mejor se ajuste a tu publicación.</p>
+                        <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Cómo querés verificar este aviso</h2>
+                        <p className="text-slate-500">Elegí cómo querés comprobar este aviso antes de publicarlo.</p>
 
                         <div className="space-y-3">
                             <div
@@ -421,7 +421,7 @@ export const PropertyUploadForm: React.FC<{ onComplete: () => void }> = ({ onCom
                                     <span className="text-sm font-bold text-brand">{formatCurrency(VERIFICATION_COST)}</span>
                                 </div>
                                 <p className="text-sm text-slate-500 mt-2 ml-7">
-                                    Una persona visita tu propiedad. Es la señal más fuerte de confianza. <strong>Requerida para el nivel avanzado.</strong>
+                                    Una persona visita tu propiedad y registra el lugar. Es la comprobación más fuerte del aviso. <strong>Requerida para el nivel presencial.</strong>
                                 </p>
 
                                 {formData.verificationType === 'presencial' && formData.selectedSlots.length > 0 && (
@@ -450,7 +450,7 @@ export const PropertyUploadForm: React.FC<{ onComplete: () => void }> = ({ onCom
 
                         <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
                             <p className="text-sm text-slate-700 dark:text-slate-300">
-                                <strong>Importante:</strong> La ubicación es obligatoria para publicar tu propiedad. Nos ayuda a confirmar que el lugar existe y a sumar confianza.
+                                <strong>Importante:</strong> La ubicación es obligatoria para publicar tu propiedad. Nos ayuda a confirmar que el lugar existe y a mostrar dónde está antes de reservar.
                             </p>
                         </div>
 

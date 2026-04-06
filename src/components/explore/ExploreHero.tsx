@@ -10,7 +10,7 @@ type ExploreHeroProps = {
   onLocationSelect: (location: LocationSuggestion) => void;
 };
 
-const trustLine = 'Comparás rápido quién publica, dónde está el lugar y qué ya se pudo confirmar.';
+const trustLine = 'Antes de reservar, ves rápido quién publica, dónde está el lugar y qué ya fue comprobado.';
 
 export const ExploreHero = ({
   searchValue,
@@ -31,14 +31,14 @@ export const ExploreHero = ({
         <div className="absolute inset-0 bg-slate-950/52" />
       </div>
 
-      <div className="relative z-10 mx-auto w-full max-w-6xl">
+      <div className="relative mx-auto w-full max-w-6xl">
         <div className="space-y-10 md:space-y-12 lg:space-y-14">
           <div className="space-y-4 md:space-y-5">
             <h1 className="font-display max-w-[41rem] text-balance text-[2.78rem] font-semibold leading-[1.02] tracking-[-0.035em] text-white md:text-[4.15rem] lg:text-[4.45rem]">
-              Elegir dónde quedarte debería ser simple.
+              Sabé dónde te estás metiendo antes de reservar.
             </h1>
             <p className="max-w-[43rem] text-[0.98rem] leading-7 text-slate-100 md:text-[1.08rem] md:leading-8">
-              No podemos elegir por vos, pero te damos claridad en todo el proceso para que decidas tranquilo.
+              Revisá quién publica, dónde está el lugar y qué parte del aviso ya fue comprobada antes de hablar o pagar.
             </p>
           </div>
           <form

@@ -55,7 +55,7 @@ type RoleGuide = {
 const validationBuckets: ValidationBucket[] = [
   {
     eyebrow: 'Sí mostramos',
-    title: 'Qué podés revisar antes de avanzar',
+    title: 'Qué podés revisar antes de reservar',
     icon: Icons.ShieldCheck,
     tone: 'positive',
     items: [
@@ -152,7 +152,7 @@ const faqGroups: FAQGroup[] = [
 const roleGuides: RoleGuide[] = [
   {
     eyebrow: 'Para anfitriones',
-    title: 'Mostrá lo importante desde el inicio',
+    title: 'Mostrá lo importante antes del chat',
     description: 'Si el aviso deja claro quién publica, dónde está el lugar y qué parte se pudo comprobar, la consulta llega mejor.',
     points: [
       'La otra persona entiende más rápido qué ofrecés.',
@@ -164,11 +164,11 @@ const roleGuides: RoleGuide[] = [
   },
   {
     eyebrow: 'Para huéspedes',
-    title: 'Revisá antes de reservar',
+    title: 'Sabé qué revisar antes de reservar',
     description: 'Podés ver quién publica, si hay ubicación verificada y qué reseñas reales dejaron otras personas.',
     points: [
       'No arrancás solo con fotos y promesas.',
-      'Podés comparar propiedades con más claridad.',
+      'Podés comparar propiedades sin ir a ciegas.',
       'La decisión sigue siendo tuya.',
     ],
     icon: Icons.UserCheck,
@@ -299,8 +299,8 @@ export const FAQPage: React.FC<FAQPageProps> = ({ onBack }) => {
               <SectionTitle
                 eyebrow="Información clara"
                 as="h2"
-                heading="Qué mostramos y qué no comprobamos"
-                description="Mostramos qué parte del aviso se pudo comprobar y qué queda fuera de la app."
+                heading="Qué mostramos y qué no damos por hecho"
+                description="Mostramos qué parte del aviso ya fue comprobada y qué queda fuera de la app."
                 className="max-w-2xl"
               />
 
@@ -389,7 +389,7 @@ export const FAQPage: React.FC<FAQPageProps> = ({ onBack }) => {
           <SectionTitle
             eyebrow="FAQ principal"
             as="h2"
-            heading="Preguntas que conviene resolver antes de avanzar"
+            heading="Preguntas que conviene resolver antes de reservar o publicar"
             description="Respuestas cortas sobre verificación, pagos y alcance."
             className="max-w-3xl"
           />
@@ -416,8 +416,8 @@ export const FAQPage: React.FC<FAQPageProps> = ({ onBack }) => {
           <SectionTitle
             eyebrow="Para cada rol"
             as="h2"
-            heading="Qué cambia si publicás o reservás"
-            description="La misma información sirve para publicar mejor o para reservar mirando qué se pudo comprobar."
+            heading="Cómo cambia si publicás o reservás"
+            description="La misma información sirve para publicar un aviso más claro o para reservar viendo qué ya fue comprobado."
             className="max-w-3xl"
           />
 

@@ -7,6 +7,8 @@ import multer from 'multer';
 import { serverEnv } from './config/env';
 import { db } from './config/db';
 import { initDB } from './updates';
+import { mapPropertyRecord } from './propertySerializer';
+import { REAL_VERIFICATION_FILTER_MIN_SCORE } from './propertyVerification';
 
 declare module "express-session" {
   interface SessionData {
@@ -338,6 +340,33 @@ const getAuthUserById = async (userId: string) => {
   const user = result.rows[0];
   return user ? normalizeAuthUser(user) : null;
 };
+
+const PROPERTY_HOST_TRUST_SELECT = `u.identity_validated as "hostIdentityValidated",
+        u.is_identity_verified as "hostIdentityVerified",
+        u.name as "hostProfileName",
+        COALESCE(u.member_since, u.created_at) as "hostMemberSince",
+        COALESCE(host_completed_reservations."completedReservationsCount", 0) as "hostCompletedReservationsCount",
+        COALESCE(host_guest_reviews."guestReviewsCount", 0) as "hostGuestReviewsCount"`;
+
+const PROPERTY_HOST_TRUST_JOINS = `
+      LEFT JOIN users u ON u.id = p."hostId"
+      LEFT JOIN (
+        SELECT hp."hostId" as host_id,
+               COUNT(*)::int as "completedReservationsCount"
+        FROM bookings hb
+        JOIN properties hp ON hp.id = hb."propertyId"
+        WHERE hb.status = 'completed'
+        GROUP BY hp."hostId"
+      ) host_completed_reservations ON host_completed_reservations.host_id = p."hostId"
+      LEFT JOIN (
+        SELECT hp."hostId" as host_id,
+               COUNT(*)::int as "guestReviewsCount"
+        FROM reviews hr
+        JOIN properties hp ON hp.id = hr.property_id
+        WHERE hr.type = 'guest_to_host'
+        GROUP BY hp."hostId"
+      ) host_guest_reviews ON host_guest_reviews.host_id = p."hostId"
+`;
 
 // ==========================================
 // AUTH ROUTES
@@ -1134,10 +1163,15 @@ app.get('/api/host/dashboard', async (req, res) => {
         [req.session.userId],
       ),
       db.query(
-        `SELECT id, title, price, status, "reviewsCount", rating, "imageUrl"
-         FROM properties
+        `SELECT p.id, p.title, p.location, p.price, p.status, p."reviewsCount", p.rating, p."imageUrl",
+                p."hostId", p."hostName", p."identityValidated", p."locationVerified", p."videoValidated",
+                p."hasPresencialVerification", p."hasDigitalVerification", p.property_type as "propertyType",
+                p.is_verified_property as "isVerifiedProperty",
+                ${PROPERTY_HOST_TRUST_SELECT}
+         FROM properties p
+         ${PROPERTY_HOST_TRUST_JOINS}
          WHERE "hostId" = $1
-         ORDER BY created_at DESC`,
+         ORDER BY p.created_at DESC`,
         [req.session.userId],
       ),
       db.query(
@@ -1183,22 +1217,21 @@ app.get('/api/host/dashboard', async (req, res) => {
 
     const stats = statsResult.rows[0] || {};
     const totals = totalsResult.rows[0] || {};
+    const hostProperties = propertiesResult.rows.map((property) => ({
+      ...mapPropertyRecord(property),
+      rating: roundToOneDecimal(toSafeNumber(property.rating)),
+    }));
 
     res.json({
       stats: {
         host_rating: roundToOneDecimal(toSafeNumber(stats.host_rating)),
-        total_properties: propertiesResult.rows.length,
+        total_properties: hostProperties.length,
         total_bookings_hosted: toSafeNumber(totals.total_bookings_hosted),
         host_verified: !!stats.host_verified,
         trust_score: toSafeNumber(stats.trust_score),
         badge: stats.badge || 'Nuevo usuario',
       },
-      properties: propertiesResult.rows.map((property) => ({
-        ...property,
-        price: toSafeNumber(property.price),
-        rating: roundToOneDecimal(toSafeNumber(property.rating)),
-        reviewsCount: toSafeNumber(property.reviewsCount),
-      })),
+      properties: hostProperties,
       recentBookings: recentBookingsResult.rows,
       contactedGuests: contactedGuestsResult.rows.map((guest) => ({
         id: guest.id,
@@ -1283,10 +1316,12 @@ app.get('/api/properties', async (req, res) => {
         p.id, p.title, p.location, p.price, p."hostId", p."hostName",
         p.description, p."imageUrl", p.rating, p."reviewsCount",
         p."identityValidated", p."locationVerified", p."videoValidated",
-        p."traceabilityLevel", p."maxGuests", p.lat, p.lng,
+        p."traceabilityLevel", p."maxGuests", p."hasPresencialVerification", p."hasDigitalVerification", p.lat, p.lng,
         p.bedrooms, p.bathrooms, p.property_type as "propertyType",
-        p.is_verified_property as "isVerifiedProperty"
+        p.is_verified_property as "isVerifiedProperty",
+        ${PROPERTY_HOST_TRUST_SELECT}
       FROM properties p
+      ${PROPERTY_HOST_TRUST_JOINS}
       WHERE status = 'active'
     `;
 
@@ -1294,7 +1329,6 @@ app.get('/api/properties', async (req, res) => {
     if (minPrice) { params.push(minPrice); query += ` AND p.price >= $${params.length}`; }
     if (maxPrice) { params.push(maxPrice); query += ` AND p.price <= $${params.length}`; }
     if (guests) { params.push(guests); query += ` AND p."maxGuests" >= $${params.length}`; }
-    if (verifiedOnly === 'true') { query += ` AND p.is_verified_property = TRUE`; }
     if (type) { params.push(type); query += ` AND p.property_type = $${params.length}`; }
     if (location) { 
       params.push(`%${location}%`); 
@@ -1305,20 +1339,9 @@ app.get('/api/properties', async (req, res) => {
 
     const result = await db.query(query, params);
     
-    const properties = result.rows.map((p) => ({
-      ...p,
-      price: parseFloat(p.price) || 0,
-      rating: parseFloat(p.rating) || 0,
-      reviewsCount: parseInt(p.reviewsCount) || 0,
-      identityValidated: !!p.identityValidated,
-      locationVerified: !!p.locationVerified,
-      videoValidated: !!p.videoValidated,
-      isVerifiedProperty: !!p.isVerifiedProperty,
-      coordinates: {
-        lat: parseFloat(p.lat) || -36.3536,
-        lng: parseFloat(p.lng) || -56.7196
-      }
-    }));
+    const properties = result.rows
+      .map((property) => mapPropertyRecord(property))
+      .filter((property) => verifiedOnly === 'true' ? property.verificationScore >= REAL_VERIFICATION_FILTER_MIN_SCORE : true);
     res.json(properties);
   } catch (err) {
     console.error('Error al obtener propiedades:', err);
@@ -1402,23 +1425,15 @@ app.put('/api/properties/:id/availability', async (req, res) => {
 app.get('/api/properties/:id', async (req, res) => {
   try {
     const result = await db.query(
-      `SELECT *, COALESCE(lat, -36.3536) as lat, COALESCE(lng, -56.7196) as lng
-       FROM properties WHERE id = $1`,
+      `SELECT p.*, COALESCE(p.lat, -36.3536) as lat, COALESCE(p.lng, -56.7196) as lng,
+              ${PROPERTY_HOST_TRUST_SELECT}
+       FROM properties p
+       ${PROPERTY_HOST_TRUST_JOINS}
+       WHERE p.id = $1`,
       [req.params.id]
     );
     if (result.rows.length === 0) return res.status(404).json({ error: 'No encontramos esa propiedad.' });
-    const p = result.rows[0];
-    res.json({
-      ...p,
-      price: parseFloat(p.price),
-      rating: parseFloat(p.rating),
-      identityValidated: !!p.identityValidated,
-      locationVerified: !!p.locationVerified,
-      videoValidated: !!p.videoValidated,
-      isVerifiedProperty: !!p.is_verified_property,
-      imageUrl: p.imageUrl || 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800',
-      coordinates: { lat: parseFloat(p.lat), lng: parseFloat(p.lng) }
-    });
+    res.json(mapPropertyRecord(result.rows[0]));
   } catch (err) {
     res.status(500).json({ error: 'No pudimos cargar la propiedad.' });
   }
@@ -2149,13 +2164,15 @@ app.get('/api/favorites', async (req, res) => {
   if (!userId) return res.status(401).json({ error: AUTH_REQUIRED_ERROR });
   try {
     const result = await db.query(
-      `SELECT p.* FROM favorites f
+      `SELECT p.*, ${PROPERTY_HOST_TRUST_SELECT}
+       FROM favorites f
        JOIN properties p ON p.id = f.property_id
+       ${PROPERTY_HOST_TRUST_JOINS}
        WHERE f.user_id = $1
        ORDER BY f.created_at DESC`,
       [userId]
     );
-    res.json(result.rows);
+    res.json(result.rows.map((property) => mapPropertyRecord(property)));
   } catch (err) {
     console.error('Error fetching favorites:', err);
     res.status(500).json({ error: 'No pudimos cargar tus guardados.' });

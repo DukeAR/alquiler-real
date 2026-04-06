@@ -1,12 +1,22 @@
-import React, { useEffect, useState, useRef, KeyboardEvent } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { apiFetch, apiJson } from '../lib/apiConfig';
 import { LoadingState } from './LoadingState';
 import { Icons } from './Icons';
 import BookingConfirmationModal from './BookingConfirmationModal';
 import DateRangePicker from './DateRangePicker';
+import {
+  getPropertyVerificationGuidanceMessage,
+  getPropertyVerificationDetails,
+  type PropertyVerificationItem,
+} from '../lib/propertyVerification';
+import { getHostTrust, getHostTrustLevelLabel, type HostTrustItem } from '../lib/hostTrust';
 import { showToast } from '../lib/toast';
 import { cn, formatCurrency } from '../lib/utils';
+import {
+  trackVerificationPreferenceOpen,
+  trackVerificationPreferenceSave,
+} from '../lib/verificationPreference';
 import { type Property as AppProperty } from '../types';
 import { useFavorites } from '../hooks/useFavorites';
 import { useBookings } from '../hooks/useBookings';
@@ -63,27 +73,11 @@ type DetailStatProps = {
   value: string;
 };
 
-type VerificationStatus = 'complete' | 'pending';
-
-type VerificationItem = {
-  title: string;
-  description: string;
-  status: VerificationStatus;
-};
-
 type BookingFieldKey = 'dates' | 'guests';
 
 type BookingErrorState = {
   field: BookingFieldKey;
   message: string;
-};
-
-type BookingSnapshotCardProps = {
-  icon: IconComponent;
-  label: string;
-  value: string;
-  helper: string;
-  emphasis?: boolean;
 };
 
 type GuestCounterCardProps = {
@@ -160,18 +154,6 @@ const formatReviewDate = (value?: string) => {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
-  });
-};
-
-const formatBookingDate = (value?: string) => {
-  if (!value) return 'Elegir fecha';
-
-  const parsed = parseLocalIso(value);
-  if (Number.isNaN(parsed.getTime())) return value;
-
-  return parsed.toLocaleDateString('es-AR', {
-    day: 'numeric',
-    month: 'short',
   });
 };
 
@@ -260,34 +242,6 @@ const getReviewUsefulnessScore = (review: PropertyReviewItem) => {
     + (/\d/.test(comment) ? 10 : 0);
 };
 
-const getVerificationItems = (property: PropertyDetailData): VerificationItem[] => [
-  {
-    title: 'Identidad confirmada',
-    description: property.identityValidated ? 'Sabés con quién estás hablando.' : 'Todavía falta confirmar quién publica.',
-    status: property.identityValidated ? 'complete' : 'pending',
-  },
-  {
-    title: 'Ubicación verificada',
-    description: property.locationVerified ? 'El lugar existe y está ubicado.' : 'Todavía falta comprobar la ubicación.',
-    status: property.locationVerified ? 'complete' : 'pending',
-  },
-  {
-    title: 'Material real del lugar',
-    description: property.videoValidated ? 'Podés ver el estado real.' : 'Todavía falta material verificado del lugar.',
-    status: property.videoValidated ? 'complete' : 'pending',
-  },
-  {
-    title: 'Relación con la propiedad',
-    description: property.propertyRelationshipVerified ? 'Está confirmado el vínculo con el lugar.' : 'Falta confirmar vínculo con el lugar.',
-    status: property.propertyRelationshipVerified ? 'complete' : 'pending',
-  },
-  {
-    title: 'Verificación presencial',
-    description: property.hasPresencialVerification ? 'Ya hubo una revisión en el lugar.' : 'Todavía no hay revisión en el lugar.',
-    status: property.hasPresencialVerification ? 'complete' : 'pending',
-  },
-];
-
 const DetailStat: React.FC<DetailStatProps> = ({ icon: Icon, label, value }) => {
   return (
     <Card padding="sm" variant="muted" className="rounded-[28px] border-slate-200/80 bg-white/90">
@@ -304,12 +258,12 @@ const DetailStat: React.FC<DetailStatProps> = ({ icon: Icon, label, value }) => 
   );
 };
 
-const VerificationChecklistRow: React.FC<{ item: VerificationItem }> = ({ item }) => {
+const VerificationChecklistRow: React.FC<{ item: PropertyVerificationItem }> = ({ item }) => {
   return (
-    <li className="flex items-start gap-4 py-4">
+    <li className="flex items-start gap-3 py-3.5">
       <span
         className={cn(
-          'mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-sm font-semibold',
+          'mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-sm font-semibold',
           item.status === 'complete'
             ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
             : 'border-slate-200 bg-slate-50 text-slate-500',
@@ -319,10 +273,103 @@ const VerificationChecklistRow: React.FC<{ item: VerificationItem }> = ({ item }
         {item.status === 'complete' ? '✔' : '○'}
       </span>
       <div className="min-w-0">
-        <p className="text-sm font-semibold text-slate-900">{item.title}</p>
-        <p className="mt-1 text-sm leading-6 text-slate-600">{item.description}</p>
+        <p className="line-clamp-1 text-sm font-semibold leading-5 text-slate-900">{item.label}</p>
+        <p className="mt-1 line-clamp-1 text-sm leading-5 text-slate-600">{item.description}</p>
       </div>
     </li>
+  );
+};
+
+const HostTrustChecklistRow: React.FC<{ item: HostTrustItem }> = ({ item }) => {
+  return (
+    <li className="flex items-start gap-3 py-2.5">
+      <span
+        className={cn(
+          'mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs font-semibold',
+          item.status === 'complete'
+            ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+            : 'border-slate-200 bg-slate-50 text-slate-500',
+        )}
+        aria-hidden="true"
+      >
+        {item.status === 'complete' ? '✔' : '○'}
+      </span>
+      <div className="min-w-0">
+        <p className="text-sm font-semibold leading-5 text-slate-900">{item.label}</p>
+        <p className="mt-0.5 text-xs leading-5 text-slate-500">{item.description}</p>
+      </div>
+    </li>
+  );
+};
+
+const HostTrustPanel: React.FC<{
+  hostName: string;
+  hostTenureLabel: string | null;
+  hostAvatarUrl?: string;
+  hostTrustLevelLabel: string;
+  items: HostTrustItem[];
+}> = ({ hostName, hostTenureLabel, hostAvatarUrl, hostTrustLevelLabel, items }) => {
+  const visibleItems = items.slice(0, 3);
+
+  return (
+    <Card className="rounded-[30px] border-slate-200/80 bg-white p-5 shadow-[0_24px_60px_-46px_rgba(15,23,42,0.25)] sm:p-6">
+      <div className="grid gap-5 lg:grid-cols-[auto_minmax(0,1fr)] lg:items-start">
+        <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-slate-900 text-lg font-semibold text-white">
+          {hostAvatarUrl ? (
+            <img src={hostAvatarUrl} alt={hostName} className="h-full w-full object-cover" />
+          ) : (
+            getInitial(hostName)
+          )}
+        </div>
+
+        <div className="min-w-0">
+          <SectionTitle
+            eyebrow="Anfitrión"
+            heading={hostName}
+            description={hostTenureLabel ?? 'Perfil activo en la plataforma'}
+          />
+          <p className="mt-3 text-sm font-semibold text-slate-900">Nivel de confianza: {hostTrustLevelLabel}</p>
+          <ul className="mt-4 divide-y divide-slate-200/80 border-t border-slate-200/80">
+            {visibleItems.map((item) => (
+              <HostTrustChecklistRow key={item.key} item={item} />
+            ))}
+          </ul>
+        </div>
+      </div>
+    </Card>
+  );
+};
+
+const PropertyVerificationPanel: React.FC<{
+  details: ReturnType<typeof getPropertyVerificationDetails>;
+}> = ({ details }) => {
+  const { items, summaryLabel, spacedVisual } = details;
+
+  return (
+    <Card className="rounded-[30px] border-slate-200/80 bg-white p-5 shadow-[0_24px_60px_-46px_rgba(15,23,42,0.25)] sm:p-6">
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
+        <div className="max-w-2xl">
+          <SectionTitle
+            eyebrow="Verificación"
+            heading="Nivel de verificación"
+            description="Qué parte del aviso ya fue comprobada. Lo demás conviene revisarlo antes de reservar."
+          />
+        </div>
+
+        <div className="rounded-[22px] border border-slate-200/80 bg-slate-50/80 px-4 py-3.5 lg:min-w-[240px]">
+          <p className="text-[0.98rem] font-semibold text-slate-900">{summaryLabel}</p>
+          <p className="mt-2 font-mono text-[0.98rem] font-semibold tracking-[0.16em] text-slate-900" aria-label={summaryLabel}>
+            {spacedVisual}
+          </p>
+        </div>
+      </div>
+
+      <ul className="mt-5 divide-y divide-slate-200/80 border-t border-slate-200/80">
+        {items.map((item) => (
+          <VerificationChecklistRow key={item.key} item={item} />
+        ))}
+      </ul>
+    </Card>
   );
 };
 
@@ -352,36 +399,6 @@ const ReviewPreviewCard: React.FC<{ review: PropertyReviewItem }> = ({ review })
   );
 };
 
-const BookingSnapshotCard: React.FC<BookingSnapshotCardProps> = ({
-  icon: Icon,
-  label,
-  value,
-  helper,
-  emphasis = false,
-}) => {
-  return (
-    <Card
-      padding="sm"
-      variant="muted"
-      className={cn(
-        'rounded-[24px] border-slate-200/80 bg-slate-50/80 transition-colors',
-        emphasis && 'border-brand/20 bg-brand/5 shadow-[0_18px_40px_-34px_rgba(14,116,144,0.45)]',
-      )}
-    >
-      <div className="flex items-start gap-3">
-        <span className={cn('mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl', emphasis ? 'bg-brand text-white' : 'bg-white text-slate-700')}>
-          <Icon className="h-4 w-4" />
-        </span>
-        <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">{label}</p>
-          <p className="mt-1 text-sm font-semibold leading-6 text-slate-900">{value}</p>
-          <p className="mt-1 text-xs leading-5 text-slate-500">{helper}</p>
-        </div>
-      </div>
-    </Card>
-  );
-};
-
 const GuestCounterCard: React.FC<GuestCounterCardProps> = ({
   label,
   helper,
@@ -395,45 +412,43 @@ const GuestCounterCard: React.FC<GuestCounterCardProps> = ({
   incrementDisabled = false,
 }) => {
   return (
-    <Card padding="sm" variant="muted" className="rounded-[24px] border-slate-200/80 bg-slate-50/80">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="min-w-0">
-          <p className="text-base font-semibold text-slate-900">{label}</p>
-          <p className="mt-1 text-sm leading-6 text-slate-500">{helper}</p>
-        </div>
-
-        <div className="flex items-center justify-between gap-3 rounded-[20px] border border-slate-200/90 bg-white px-3 py-2.5 shadow-[0_12px_24px_-20px_rgba(15,23,42,0.12)] sm:min-w-[180px]">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={onDecrement}
-            className="h-10 w-10 rounded-full p-0 font-semibold"
-            aria-label={decrementLabel}
-            disabled={decrementDisabled}
-          >
-            -
-          </Button>
-
-          <div className="min-w-0 flex-1 text-center">
-            <p className="text-2xl font-semibold tracking-tight text-slate-950">{value}</p>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">{valueLabel}</p>
-          </div>
-
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={onIncrement}
-            className="h-10 w-10 rounded-full p-0 font-semibold"
-            aria-label={incrementLabel}
-            disabled={incrementDisabled}
-          >
-            +
-          </Button>
-        </div>
+    <div className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
+      <div className="min-w-0">
+        <p className="text-sm font-semibold text-slate-900">{label}</p>
+        <p className="mt-1 text-xs leading-5 text-slate-500">{helper}</p>
       </div>
-    </Card>
+
+      <div className="flex items-center gap-2 rounded-full border border-slate-200/90 bg-white px-2 py-1.5 shadow-[0_12px_24px_-20px_rgba(15,23,42,0.12)]">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={onDecrement}
+          className="h-9 w-9 rounded-full p-0 font-semibold"
+          aria-label={decrementLabel}
+          disabled={decrementDisabled}
+        >
+          -
+        </Button>
+
+        <div className="min-w-[3.5rem] text-center">
+          <p className="text-lg font-semibold tracking-tight text-slate-950">{value}</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">{valueLabel}</p>
+        </div>
+
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={onIncrement}
+          className="h-9 w-9 rounded-full p-0 font-semibold"
+          aria-label={incrementLabel}
+          disabled={incrementDisabled}
+        >
+          +
+        </Button>
+      </div>
+    </div>
   );
 };
 
@@ -477,10 +492,13 @@ export const PropertyDetailShell: React.FC<{
   const [childrenCount, setChildrenCount] = useState<number>(0);
   const [bookingError, setBookingError] = useState<BookingErrorState | null>(null);
   const [confirmOpen, setConfirmOpen] = useState<boolean>(false);
+  const [isGuestPickerOpen, setIsGuestPickerOpen] = useState(false);
   const [bookingSubmitting, setBookingSubmitting] = useState(false);
   const [bookingSubmitNotice, setBookingSubmitNotice] = useState<BookingConfirmationNotice | null>(null);
   const [bookingSuccess, setBookingSuccess] = useState<BookingSuccessState | null>(null);
   const [availabilityRefreshToken, setAvailabilityRefreshToken] = useState(0);
+  const guestPickerRef = useRef<HTMLDivElement | null>(null);
+  const guestTriggerRef = useRef<HTMLButtonElement | null>(null);
 
   const reviewCount = Math.max(Number(property.reviewsCount) || 0, reviews.length);
   const ratingValue = Number(property.rating) || 0;
@@ -488,11 +506,12 @@ export const PropertyDetailShell: React.FC<{
   const nightly = Number(property?.price) || 0;
   const hostName = getHostName(property);
   const hostTenureLabel = getHostTenureLabel(property);
-  const unresolvedReviewsCount = Number(property.unresolvedReviewsCount) || 0;
   const propertyTypeLabel = getPropertyTypeLabel(property);
   const decisionAmenityLabel = getDecisionAmenityLabel(property.amenities);
-  const verificationItems = getVerificationItems(property);
-  const completedVerificationCount = verificationItems.filter((item) => item.status === 'complete').length;
+  const verificationGuidanceMessage = getPropertyVerificationGuidanceMessage(property);
+  const verificationDetails = getPropertyVerificationDetails(property);
+  const hostTrust = getHostTrust(property);
+  const hostTrustLevelLabel = getHostTrustLevelLabel(hostTrust.level);
 
   const heroBadges = [
     property.identityValidated ? { label: 'Identidad confirmada', variant: 'brand', icon: Icons.ShieldCheck } : null,
@@ -551,50 +570,50 @@ export const PropertyDetailShell: React.FC<{
     : !checkIn && !checkOut
       ? {
           tone: 'info',
-          heading: 'Elegí ingreso y salida para ver el resumen',
-          description: 'Cuando completes las fechas, vas a ver la propiedad, el anfitrión y el total antes de confirmar la estadía.',
+          heading: 'Faltan las fechas',
+          description: 'Elegí ingreso y salida para ver el total.',
         }
       : hasPartialDates
         ? {
             tone: 'info',
-            heading: 'Falta completar la salida',
-            description: 'Elegí la fecha de salida para calcular el total final y seguir con más claridad.',
+            heading: 'Falta la salida',
+            description: 'Elegila para ver el total.',
           }
         : canReserve
           ? {
               tone: 'success',
-                heading: 'Todo listo para decidir con claridad',
-              description: `${nights} ${nights === 1 ? 'noche' : 'noches'} · ${formatGuestSelection(adults, childrenCount)} · ${formatCurrency(total)} estimados.`,
+              heading: 'Ya podés seguir',
+              description: `${formatCurrency(total)} total · ${nights} ${nights === 1 ? 'noche' : 'noches'} · ${formatGuestSelection(adults, childrenCount)}.`,
             }
           : {
               tone: 'warning',
-              heading: 'Ajustá los datos antes de continuar',
+              heading: 'Ajustá los datos',
               description: maxGuestsNumber
                 ? `Esta propiedad admite hasta ${maxGuestsNumber} ${maxGuestsNumber === 1 ? 'huésped' : 'huéspedes'}.`
-                : 'Revisá fechas y huéspedes antes de abrir la confirmación.',
+                : 'Revisá fechas y huéspedes antes de seguir.',
             };
 
   const reserveButtonLabel = canReserve
-    ? 'Continuar'
+    ? 'Revisar reserva'
     : !checkIn && !checkOut
-      ? 'Elegí fechas para continuar'
+      ? 'Elegí fechas'
       : hasPartialDates
-        ? 'Completá la salida'
+        ? 'Elegí salida'
         : guestCapacityExceeded
           ? 'Ajustá los huéspedes'
-          : 'Continuar';
+          : 'Revisar reserva';
 
   const dateFieldHelper = !checkIn && !checkOut
-    ? 'Marcá ingreso y salida para ver el resumen final de la estadía.'
+    ? 'Elegí ingreso y salida.'
     : hasPartialDates
-      ? 'Ahora elegí la salida para completar el resumen.'
+      ? 'Falta la salida.'
       : `${nights} ${nights === 1 ? 'noche seleccionada' : 'noches seleccionadas'}.`;
 
   const guestFieldHelper = maxGuestsNumber
     ? guestCapacityReached
-      ? `Capacidad máxima alcanzada: ${maxGuestsNumber} ${maxGuestsNumber === 1 ? 'huésped' : 'huéspedes'}.`
-      : `Podés reservar hasta ${maxGuestsNumber} ${maxGuestsNumber === 1 ? 'huésped' : 'huéspedes'}.`
-    : 'Ajustá la cantidad de adultos y menores para esta estadía.';
+      ? `Máximo: ${maxGuestsNumber} ${maxGuestsNumber === 1 ? 'huésped' : 'huéspedes'}.`
+      : `Hasta ${maxGuestsNumber} ${maxGuestsNumber === 1 ? 'huésped' : 'huéspedes'}.`
+    : 'Elegí cuántas personas viajan.';
 
   const resetBookingSubmitState = () => {
     setBookingSubmitting(false);
@@ -606,6 +625,37 @@ export const PropertyDetailShell: React.FC<{
     setBookingSubmitNotice(null);
     setBookingSuccess(null);
   };
+
+  useEffect(() => {
+    if (!isGuestPickerOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
+      if (!guestPickerRef.current?.contains(event.target as Node)) {
+        setIsGuestPickerOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') {
+        return;
+      }
+
+      setIsGuestPickerOpen(false);
+      guestTriggerRef.current?.focus();
+    };
+
+    window.addEventListener('mousedown', handlePointerDown);
+    window.addEventListener('touchstart', handlePointerDown);
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('mousedown', handlePointerDown);
+      window.removeEventListener('touchstart', handlePointerDown);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isGuestPickerOpen]);
 
   const closeBookingConfirmation = () => {
     if (bookingSubmitting) return;
@@ -626,29 +676,29 @@ export const PropertyDetailShell: React.FC<{
   const handleReserve = (e: React.FormEvent) => {
     e.preventDefault();
     if (!checkIn && !checkOut) {
-      setBookingError({ field: 'dates', message: 'Elegí fecha de ingreso y salida para revisar la estadía antes de continuar.' });
+      setBookingError({ field: 'dates', message: 'Elegí ingreso y salida para seguir.' });
       return;
     }
     if (checkIn && !checkOut) {
-      setBookingError({ field: 'dates', message: 'Falta la fecha de salida para continuar.' });
+      setBookingError({ field: 'dates', message: 'Elegí la salida para seguir.' });
       return;
     }
     if (!checkIn) {
-      setBookingError({ field: 'dates', message: 'Elegí la fecha de ingreso para continuar.' });
+      setBookingError({ field: 'dates', message: 'Elegí el ingreso para seguir.' });
       return;
     }
     if (parseLocalIso(checkOut) <= parseLocalIso(checkIn)) {
-      setBookingError({ field: 'dates', message: 'La salida tiene que ser posterior al ingreso.' });
+      setBookingError({ field: 'dates', message: 'La salida tiene que ser después del ingreso.' });
       return;
     }
     if (parseLocalIso(checkIn) < parseLocalIso(todayISO)) {
-      setBookingError({ field: 'dates', message: 'La fecha de ingreso no puede ser anterior a hoy.' });
+      setBookingError({ field: 'dates', message: 'El ingreso no puede ser antes de hoy.' });
       return;
     }
     if (maxGuestsNumber && guestCount > maxGuestsNumber) {
       setBookingError({
         field: 'guests',
-        message: `Esta propiedad admite hasta ${maxGuestsNumber} ${maxGuestsNumber === 1 ? 'huésped' : 'huéspedes'}. Ajustá la cantidad para continuar.`,
+        message: `Máximo ${maxGuestsNumber} ${maxGuestsNumber === 1 ? 'huésped' : 'huéspedes'}. Ajustá la cantidad para seguir.`,
       });
       return;
     }
@@ -783,7 +833,7 @@ export const PropertyDetailShell: React.FC<{
               visualLevel="h1"
               eyebrow="Detalle de la propiedad"
               heading={property.title}
-              description="Revisá ubicación, anfitrión y nivel de verificación antes de decidir."
+              description="Revisá ubicación, anfitrión y qué parte del aviso ya fue comprobada antes de reservar."
               className="max-w-3xl"
             />
 
@@ -890,15 +940,15 @@ export const PropertyDetailShell: React.FC<{
         </section>
 
         <aside className="mx-auto w-full max-w-2xl xl:max-w-none xl:self-start">
-          <Card variant="elevated" className="rounded-[30px] border-slate-200/80 bg-white p-6 shadow-[0_30px_80px_-50px_rgba(15,23,42,0.35)]">
-            <div className="flex items-start justify-between gap-4">
+          <Card variant="elevated" className="rounded-[30px] border-slate-200/80 bg-white p-4 shadow-[0_30px_80px_-50px_rgba(15,23,42,0.35)] sm:p-5">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-200/70 pb-4">
               <div className="space-y-2">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Resumen para decidir</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Antes de reservar</p>
                 <div className="flex items-end gap-2">
-                  <span className="text-3xl font-black tracking-tight text-slate-950">{nightly ? formatCurrency(nightly) : '—'}</span>
+                  <span className="text-[2.55rem] font-black tracking-tight text-slate-950 sm:text-[2.9rem]">{nightly ? formatCurrency(nightly) : '—'}</span>
                   <span className="pb-1 text-sm font-medium text-slate-500">/ noche</span>
                 </div>
-                <p className="text-sm leading-6 text-slate-500">Revisá fechas, total y verificación antes de confirmar la estadía.</p>
+                <p className="text-sm leading-6 text-slate-500">Elegí fechas para ver el total.</p>
                 <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600">
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-brand/10 px-3 py-1.5 font-semibold text-brand">
                     <Icons.Star className="h-4 w-4 fill-current" />
@@ -954,119 +1004,132 @@ export const PropertyDetailShell: React.FC<{
               </Card>
             ) : null}
 
-            <div className="mt-5 grid gap-3 2xl:grid-cols-3">
-              <BookingSnapshotCard
-                icon={Icons.Calendar}
-                label="Ingreso"
-                value={formatBookingDate(checkIn)}
-                helper={checkIn ? 'Ya está seleccionado.' : 'Elegí el día de llegada.'}
-                emphasis={Boolean(checkIn)}
-              />
-              <BookingSnapshotCard
-                icon={Icons.Calendar}
-                label="Salida"
-                value={formatBookingDate(checkOut)}
-                helper={checkOut ? 'Ya está seleccionada.' : 'Falta completar la estadía.'}
-                emphasis={Boolean(checkOut)}
-              />
-              <BookingSnapshotCard
-                icon={Icons.Users}
-                label="Huéspedes"
-                value={formatGuestSelection(adults, childrenCount)}
-                helper={maxGuestsNumber ? `Máximo ${maxGuestsNumber} ${maxGuestsNumber === 1 ? 'huésped' : 'huéspedes'}.` : 'Podés ajustarlo más abajo.'}
-                emphasis={guestCount > 0}
-              />
-            </div>
+            <form className="mt-5 space-y-4" onSubmit={handleReserve}>
+              <div className="space-y-3.5">
+                <FormField
+                  label="Fechas"
+                  helperText={dateFieldHelper}
+                  error={bookingError?.field === 'dates' ? bookingError.message : undefined}
+                  className="min-w-0 w-full"
+                >
+                  <DateRangePicker
+                    checkIn={checkIn}
+                    checkOut={checkOut}
+                    setCheckIn={(v) => { setCheckIn(v); clearBookingFeedback(); }}
+                    setCheckOut={(v) => { setCheckOut(v); clearBookingFeedback(); }}
+                    propertyId={property.id}
+                    availabilityRefreshToken={availabilityRefreshToken}
+                    minDate={todayISO}
+                    onChange={clearBookingFeedback}
+                    monthsToShow={1}
+                  />
+                </FormField>
 
-            <form className="mt-6 space-y-4" onSubmit={handleReserve}>
-              <FormField
-                label="Fechas"
-                helperText={dateFieldHelper}
-                error={bookingError?.field === 'dates' ? bookingError.message : undefined}
-              >
-                <DateRangePicker
-                  checkIn={checkIn}
-                  checkOut={checkOut}
-                  setCheckIn={(v) => { setCheckIn(v); clearBookingFeedback(); }}
-                  setCheckOut={(v) => { setCheckOut(v); clearBookingFeedback(); }}
-                  propertyId={property.id}
-                  availabilityRefreshToken={availabilityRefreshToken}
-                  minDate={todayISO}
-                  onChange={clearBookingFeedback}
-                  monthsToShow={1}
-                />
-              </FormField>
+                <FormField
+                  label="Huéspedes"
+                  error={bookingError?.field === 'guests' ? bookingError.message : undefined}
+                  className="min-w-0 w-full"
+                >
+                  <div ref={guestPickerRef} className="min-w-0 w-full">
+                    <button
+                      ref={guestTriggerRef}
+                      type="button"
+                      aria-expanded={isGuestPickerOpen}
+                      aria-controls="booking-guest-picker"
+                      aria-label={`Abrir selector de huéspedes. ${guestCount} ${guestCount === 1 ? 'persona' : 'personas'}.`}
+                      onClick={() => setIsGuestPickerOpen((current) => !current)}
+                      className={cn(
+                        'flex w-full min-w-0 items-center justify-between gap-3 rounded-[22px] border bg-white px-4 py-3.5 text-left transition-[border-color,background-color,box-shadow] duration-150',
+                        isGuestPickerOpen
+                          ? 'border-brand/30 bg-brand/5 shadow-[0_18px_36px_-30px_rgba(67,56,202,0.34)]'
+                          : 'border-slate-200/80 hover:border-slate-300/90 hover:bg-slate-50/80',
+                      )}
+                    >
+                      <div className="min-w-0">
+                        <p className="text-base font-semibold leading-6 text-slate-950">{formatGuestSelection(adults, childrenCount)}</p>
+                        <p className="mt-1 text-xs leading-5 text-slate-500">{guestFieldHelper}</p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2 text-xs text-slate-500">
+                        <span className="inline-flex h-9 min-w-9 items-center justify-center rounded-full bg-slate-100 px-3 text-sm font-semibold text-slate-700">
+                          {guestCount}
+                        </span>
+                        <Icons.ChevronDown className={cn('h-4 w-4 shrink-0 transition-transform', isGuestPickerOpen && 'rotate-180')} />
+                      </div>
+                    </button>
 
-              <FormField
-                label="Huéspedes"
-                hint={undefined}
-                helperText={guestFieldHelper}
-                error={bookingError?.field === 'guests' ? bookingError.message : undefined}
-              >
-                <Card padding="sm" variant="muted" className="rounded-[24px] border-slate-200/80 bg-slate-50/80">
-                  <div className="flex items-center justify-between gap-3 border-b border-slate-200/80 pb-3">
-                    <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Total</p>
-                      <p className="mt-1 text-base font-semibold text-slate-900">{formatGuestSelection(adults, childrenCount)}</p>
+                    {isGuestPickerOpen ? (
+                      <div
+                        id="booking-guest-picker"
+                        className="mt-2.5 w-full overflow-hidden rounded-[22px] border border-slate-200/90 bg-white shadow-[0_18px_40px_-32px_rgba(15,23,42,0.14)]"
+                      >
+                        <div className="space-y-0 px-4 py-3">
+                          <GuestCounterCard
+                            label="Adultos"
+                            helper="Mayores de 18"
+                            value={adults}
+                            valueLabel={adults === 1 ? 'adulto' : 'adultos'}
+                            decrementLabel="Restar adulto"
+                            incrementLabel="Sumar adulto"
+                            onDecrement={() => handleAdultsChange(adults - 1)}
+                            onIncrement={() => handleAdultsChange(adults + 1)}
+                            decrementDisabled={!canRemoveAdult}
+                            incrementDisabled={!canAddGuest}
+                          />
+                          <div className="border-t border-slate-200/70" />
+                          <GuestCounterCard
+                            label="Niños"
+                            helper="Hasta 17 años"
+                            value={childrenCount}
+                            valueLabel={childrenCount === 1 ? 'menor' : 'menores'}
+                            decrementLabel="Restar menor"
+                            incrementLabel="Sumar menor"
+                            onDecrement={() => handleChildrenChange(childrenCount - 1)}
+                            onIncrement={() => handleChildrenChange(childrenCount + 1)}
+                            decrementDisabled={!canRemoveChildren}
+                            incrementDisabled={!canAddGuest}
+                          />
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                </FormField>
+              </div>
+
+              <Card padding="sm" variant="muted" className="rounded-[22px] border-slate-200/80 bg-slate-50/80">
+                <div className="flex items-end justify-between gap-4">
+                  <div className="min-w-0">
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Total estimado</div>
+                    <div className="mt-2 text-2xl font-black tracking-tight text-slate-950">
+                      {hasCompleteDates ? formatCurrency(total) : 'Elegí fechas'}
                     </div>
-                    <Badge variant="neutral" size="md">{guestCount} {guestCount === 1 ? 'persona' : 'personas'}</Badge>
-                  </div>
-
-                  <div className="mt-3 grid grid-cols-1 gap-3">
-                  <GuestCounterCard
-                    label="Adultos"
-                    helper="Mayores de 18"
-                    value={adults}
-                    valueLabel={adults === 1 ? 'adulto' : 'adultos'}
-                    decrementLabel="Restar adulto"
-                    incrementLabel="Sumar adulto"
-                    onDecrement={() => handleAdultsChange(adults - 1)}
-                    onIncrement={() => handleAdultsChange(adults + 1)}
-                    decrementDisabled={!canRemoveAdult}
-                    incrementDisabled={!canAddGuest}
-                  />
-                  <GuestCounterCard
-                    label="Niños"
-                    helper="Hasta 17 años"
-                    value={childrenCount}
-                    valueLabel={childrenCount === 1 ? 'menor' : 'menores'}
-                    decrementLabel="Restar menor"
-                    incrementLabel="Sumar menor"
-                    onDecrement={() => handleChildrenChange(childrenCount - 1)}
-                    onIncrement={() => handleChildrenChange(childrenCount + 1)}
-                    decrementDisabled={!canRemoveChildren}
-                    incrementDisabled={!canAddGuest}
-                  />
-                  </div>
-                </Card>
-              </FormField>
-
-              <Card padding="sm" variant="muted" className="rounded-[24px] border-slate-200/80 bg-slate-50/80">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Resumen de precio</div>
                     <div className="mt-1 text-sm text-slate-600">
                       {hasCompleteDates
                         ? `${nights} ${nights === 1 ? 'noche' : 'noches'} × ${formatCurrency(nightly)}`
-                        : 'Completá las fechas para ver el total estimado.'}
+                        : 'Elegí fechas para ver el total.'}
                     </div>
                   </div>
-                  <div className="text-right text-sm text-slate-500">{nightly ? formatCurrency(nightly) : '—'} / noche</div>
+                  <div className="shrink-0 text-right">
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Precio base</div>
+                    <div className="mt-1 text-sm font-medium text-slate-600">{nightly ? formatCurrency(nightly) : '—'} / noche</div>
+                  </div>
                 </div>
 
-                <div className="mt-4 space-y-3 border-t border-slate-200/70 pt-4">
-                  <div className="flex items-center justify-between text-sm text-slate-600">
-                    <div>Estadía</div>
-                    <div>{hasCompleteDates ? `${nights} ${nights === 1 ? 'noche' : 'noches'}` : 'Pendiente'}</div>
+                <div className="mt-3 space-y-2.5 border-t border-slate-200/70 pt-3">
+                  <div className="flex items-center justify-between gap-3 text-sm">
+                    <div className="text-slate-500">Fechas</div>
+                    <div className="text-right font-medium text-slate-900">
+                      {hasCompleteDates ? `${nights} ${nights === 1 ? 'noche' : 'noches'} seleccionadas` : 'Faltan fechas'}
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between text-sm text-slate-600">
-                    <div>Huéspedes</div>
-                    <div>{formatGuestSelection(adults, childrenCount)}</div>
+                  <div className="flex items-center justify-between gap-3 text-sm">
+                    <div className="text-slate-500">Huéspedes</div>
+                    <div className="text-right font-medium text-slate-900">{formatGuestSelection(adults, childrenCount)}</div>
                   </div>
-                  <div className="flex items-center justify-between text-lg font-bold text-slate-950">
-                    <div>Total estimado</div>
-                    <div>{hasCompleteDates ? formatCurrency(total) : 'Elegí fechas'}</div>
-                  </div>
+                  {maxGuestsNumber ? (
+                    <p className="text-xs leading-5 text-slate-500">
+                      Capacidad máxima: {maxGuestsNumber} {maxGuestsNumber === 1 ? 'huésped' : 'huéspedes'}.
+                    </p>
+                  ) : null}
                 </div>
               </Card>
 
@@ -1074,23 +1137,29 @@ export const PropertyDetailShell: React.FC<{
                 tone={bookingNotice.tone}
                 heading={bookingNotice.heading}
                 description={bookingNotice.description}
+                className="shadow-none"
               />
 
-              <Button
-                type="submit"
-                variant="primary"
-                size="lg"
-                fullWidth
-                disabled={!canReserve}
-                aria-disabled={!canReserve}
-                className="rounded-2xl"
-              >
-                {reserveButtonLabel}
-              </Button>
+              <div className="space-y-2.5">
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="lg"
+                  fullWidth
+                  disabled={!canReserve}
+                  aria-disabled={!canReserve}
+                  className="rounded-2xl shadow-[0_24px_46px_-28px_rgba(67,56,202,0.42)]"
+                >
+                  <>
+                    <Icons.ArrowRight className="h-4 w-4" />
+                    {reserveButtonLabel}
+                  </>
+                </Button>
 
-              <Button type="button" variant="secondary" fullWidth onClick={onContact} className="rounded-2xl">
-                Hablar con el anfitrión
-              </Button>
+                <Button type="button" variant="secondary" fullWidth onClick={onContact} className="rounded-2xl border-slate-200 bg-white">
+                  Hablar con el anfitrión
+                </Button>
+              </div>
 
               <p className="text-center text-xs leading-5 text-slate-500">
                 No se confirma nada hasta que revises la estadía final.
@@ -1117,54 +1186,44 @@ export const PropertyDetailShell: React.FC<{
         </aside>
 
         <main className="space-y-8 xl:col-start-1 xl:row-start-2">
+          <div className="space-y-3">
+            {verificationGuidanceMessage ? (
+              <p className="text-sm font-medium leading-6 text-slate-600">
+                {verificationGuidanceMessage}
+              </p>
+            ) : null}
+            <PropertyVerificationPanel details={verificationDetails} />
+          </div>
+
+          <HostTrustPanel
+            hostName={hostName}
+            hostTenureLabel={hostTenureLabel}
+            hostAvatarUrl={property.host?.avatarUrl}
+            hostTrustLevelLabel={hostTrustLevelLabel}
+            items={hostTrust.items}
+          />
+
           <Card className="rounded-[32px] border-slate-200/80 bg-white p-6 shadow-[0_28px_70px_-50px_rgba(15,23,42,0.25)] sm:p-7">
-            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
-              <div className="space-y-4">
-                <SectionTitle
-                  eyebrow="Decisión"
-                  heading="Lo importante para decidir"
-                  description="Un resumen corto para ver si esta propiedad te cierra."
-                />
-                <p className="max-w-3xl text-base leading-8 text-slate-600">
-                  {property.description || 'Todavía no hay descripción disponible.'}
-                </p>
+            <div className="space-y-4">
+              <SectionTitle
+                eyebrow="Antes de reservar"
+                heading="Lo importante de este aviso"
+                description="Un resumen corto para ver si este lugar te cierra."
+              />
+              <p className="max-w-3xl text-base leading-8 text-slate-600">
+                {property.description || 'Todavía no hay descripción disponible.'}
+              </p>
 
-                <ul className="space-y-3">
-                  {decisionHighlights.map((item) => (
-                    <li key={item} className="flex items-start gap-3 rounded-[24px] border border-slate-200/80 bg-slate-50/80 px-4 py-3 text-sm leading-6 text-slate-700">
-                      <span className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand">
-                        <Icons.Check className="h-3.5 w-3.5" />
-                      </span>
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <Card padding="sm" variant="muted" className="rounded-[28px] border-slate-200/80 bg-slate-50/80">
-                <SectionTitle
-                  as="h3"
-                  visualLevel="h4"
-                  eyebrow="Anfitrión"
-                  heading={hostName}
-                  description={hostTenureLabel ?? 'Perfil activo en la plataforma'}
-                />
-
-                <div className="mt-4 flex items-start gap-3">
-                  {property.host?.avatarUrl ? (
-                    <img src={property.host.avatarUrl} alt={hostName} className="h-14 w-14 rounded-full object-cover" />
-                  ) : (
-                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-900 text-base font-semibold text-white">
-                      {getInitial(hostName)}
-                    </div>
-                  )}
-                  <div className="min-w-0">
-                    <p className="text-sm leading-6 text-slate-600">
-                      {property.host?.bio || 'Podés revisar el nivel de verificación y escribirle antes de reservar si querés despejar dudas.'}
-                    </p>
-                  </div>
-                </div>
-              </Card>
+              <ul className="space-y-3">
+                {decisionHighlights.map((item) => (
+                  <li key={item} className="flex items-start gap-3 rounded-[24px] border border-slate-200/80 bg-slate-50/80 px-4 py-3 text-sm leading-6 text-slate-700">
+                    <span className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand">
+                      <Icons.Check className="h-3.5 w-3.5" />
+                    </span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
           </Card>
 
@@ -1192,50 +1251,12 @@ export const PropertyDetailShell: React.FC<{
             </Card>
           ) : null}
 
-          <Card className="rounded-[32px] border-slate-200/80 bg-white p-6 shadow-[0_28px_70px_-50px_rgba(15,23,42,0.25)] sm:p-7">
-            <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
-              <SectionTitle
-                eyebrow="Verificación"
-                heading="Nivel de verificación"
-                description="Lo que ya se revisó en este aviso."
-              />
-
-              <div className="rounded-[24px] border border-slate-200/80 bg-slate-50/80 px-4 py-4 lg:min-w-[260px]">
-                <p className="text-base font-semibold text-slate-900">{completedVerificationCount} de {verificationItems.length} verificaciones completadas</p>
-                <p className="mt-1 text-xs leading-5 text-slate-500">Cuanto más completo esté, más fácil es comparar.</p>
-                <div className="mt-3 flex items-center gap-2" aria-label={`${completedVerificationCount} de ${verificationItems.length} verificaciones completadas`}>
-                  {verificationItems.map((item) => (
-                    <span
-                      key={item.title}
-                      className={cn('text-lg leading-none', item.status === 'complete' ? 'text-slate-900' : 'text-slate-300')}
-                      aria-hidden="true"
-                    >
-                      {item.status === 'complete' ? '●' : '○'}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <ul className="mt-5 divide-y divide-slate-200/80 border-t border-slate-200/80">
-              {verificationItems.map((item) => (
-                <VerificationChecklistRow key={item.title} item={item} />
-              ))}
-            </ul>
-
-            {unresolvedReviewsCount > 0 ? (
-              <p className="mt-5 text-sm leading-6 text-slate-600">
-                Hay {unresolvedReviewsCount} {unresolvedReviewsCount === 1 ? 'reseña pendiente de revisar' : 'reseñas pendientes de revisar'}. Conviene leerlas antes de decidir.
-              </p>
-            ) : null}
-          </Card>
-
           <section className="space-y-5">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
               <SectionTitle
                 eyebrow="Reseñas"
                 heading="Cómo fue la experiencia de otros huéspedes"
-                description={reviewCount > 0 ? 'Experiencias reales para decidir mejor.' : 'Todavía no hay reseñas reales publicadas para esta propiedad.'}
+                description={reviewCount > 0 ? 'Reseñas reales para entender mejor cómo fue la estadía.' : 'Todavía no hay reseñas reales publicadas para esta propiedad.'}
               />
 
               <Card padding="sm" variant="muted" className="w-full rounded-[28px] border-slate-200/80 bg-white lg:max-w-xs">
@@ -1365,6 +1386,14 @@ export const PropertyDetail: React.FC = () => {
     return () => { cancelled = true; };
   }, [id]);
 
+  useEffect(() => {
+    if (!property?.id) {
+      return;
+    }
+
+    trackVerificationPreferenceOpen(property);
+  }, [property]);
+
   if (loading) return <LoadingState message="Cargando la propiedad..." />;
   if (!property) return (
     <div className="max-w-4xl mx-auto p-6">
@@ -1400,6 +1429,25 @@ export const PropertyDetail: React.FC = () => {
     }
   };
 
+  const handleFavoriteToggle = () => {
+    if (!user) {
+      import('../lib/modal').then((m) => m.showLoginModal());
+      return;
+    }
+
+    if (!property.id) {
+      return;
+    }
+
+    const nextFavoriteState = !isFav;
+
+    void favCtx.toggleFavorite(property.id).then((result) => {
+      if (nextFavoriteState && (result === 'added' || result === 'pending-add')) {
+        trackVerificationPreferenceSave(property);
+      }
+    });
+  };
+
   return (
     <PropertyDetailShell
       property={property}
@@ -1407,11 +1455,7 @@ export const PropertyDetail: React.FC = () => {
       mainIndex={mainIndex}
       setMainIndex={setMainIndex}
       isFav={isFav}
-      toggleFav={() => {
-        if (!user) { import('../lib/modal').then(m => m.showLoginModal()); return; }
-        if (!property.id) return;
-        favCtx.toggleFavorite(property.id);
-      }}
+      toggleFav={handleFavoriteToggle}
       onContact={handleContact}
       reviews={reviews}
     />

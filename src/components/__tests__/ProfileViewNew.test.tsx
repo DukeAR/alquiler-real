@@ -97,11 +97,11 @@ describe('ProfileViewNew', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Cómo se ve tu perfil')).toBeInTheDocument();
+      expect(screen.getByText('Qué muestra tu perfil')).toBeInTheDocument();
     });
 
-    expect(screen.getByText('Resolvé lo importante')).toBeInTheDocument();
-    expect(screen.getByText('Lo que personaliza tu experiencia')).toBeInTheDocument();
+    expect(screen.getByText('Resolvé lo básico')).toBeInTheDocument();
+    expect(screen.getByText('Lo que ajusta lo que ves')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Completá tu verificación/i })).toBeInTheDocument();
     expect(screen.getByText('🏖️ Playa y Mar')).toBeInTheDocument();
   });
@@ -119,7 +119,7 @@ describe('ProfileViewNew', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Editar preferencias/i }));
 
-    expect(screen.getByRole('heading', { name: 'Cómo querés explorar' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Qué querés ver primero' })).toBeInTheDocument();
     expect(screen.getByLabelText('Zona preferida')).toBeInTheDocument();
     expect(screen.getByLabelText('Presupuesto máximo')).toBeInTheDocument();
     expect(screen.getByLabelText('Tipo de propiedad')).toBeInTheDocument();

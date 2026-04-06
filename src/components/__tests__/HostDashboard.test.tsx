@@ -43,10 +43,20 @@ describe('HostDashboard', () => {
             {
               id: 'prop-1',
               title: 'Casa del bosque',
+              location: 'Pinamar',
               price: 150000,
               status: 'active',
               reviewsCount: 8,
+              rating: 4.9,
               imageUrl: 'https://example.com/property.jpg',
+              verificationScore: 4,
+              verificationItems: [
+                { key: 'identity', label: 'Identidad confirmada', description: 'Sabés con quién estás hablando.', status: 'complete' },
+                { key: 'location', label: 'Ubicación verificada', description: 'El lugar existe y está ubicado.', status: 'complete' },
+                { key: 'visual', label: 'Material real del lugar', description: 'Podés ver mejor el estado real.', status: 'complete' },
+                { key: 'relationship', label: 'Relación con la propiedad', description: 'Falta confirmar vínculo con el lugar.', status: 'pending' },
+                { key: 'onsite', label: 'Verificación presencial', description: 'Ya hubo una revisión en el lugar.', status: 'complete' },
+              ],
             },
           ],
           recentBookings: [],
@@ -69,6 +79,11 @@ describe('HostDashboard', () => {
     });
 
     render(<HostDashboard onBack={vi.fn()} />);
+
+    expect(await screen.findByText('Completá lo que falta en cada aviso')).toBeInTheDocument();
+    expect(screen.getByText('Cuanto más completo esté tu aviso, más arriba aparece en los resultados.')).toBeInTheDocument();
+    expect(screen.getByText('4 de 5 comprobaciones')).toBeInTheDocument();
+    expect(screen.getByText(/Todavía falta completarla/i)).toBeInTheDocument();
 
     fireEvent.click(await screen.findByRole('button', { name: /Disponibilidad/i }));
 

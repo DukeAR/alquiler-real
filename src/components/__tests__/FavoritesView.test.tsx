@@ -10,7 +10,7 @@ vi.mock('../../hooks/useFavorites', () => ({
 
 vi.mock('../PropertyCard', () => ({
   PropertyCard: ({ property, onFavoriteToggle }: any) => (
-    <div>
+    <div data-testid="saved-property-card" data-title={property.title}>
       <span>{property.title}</span>
       <button type="button" onClick={() => onFavoriteToggle?.(property.id, false)}>
         Quitar guardado
@@ -44,6 +44,47 @@ describe('FavoritesView', () => {
     expect(screen.getByText('Todavía no guardaste propiedades')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Explorá propiedades/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Cómo funciona/i })).toBeInTheDocument();
+  });
+
+  test('orders saved properties by real verification before the original saved order', () => {
+    useFavoritesMock.mockReturnValue({
+      favoritesMap: new Map([
+        ['p-low', {
+          id: 'p-low',
+          title: 'Casa con menos comprobaciones',
+          identityValidated: true,
+          locationVerified: false,
+          videoValidated: false,
+          propertyRelationshipVerified: false,
+          hasPresencialVerification: false,
+        }],
+        ['p-high', {
+          id: 'p-high',
+          title: 'Casa con más comprobaciones',
+          identityValidated: true,
+          locationVerified: true,
+          videoValidated: true,
+          propertyRelationshipVerified: false,
+          hasPresencialVerification: true,
+        }],
+      ]),
+      toggleFavorite: vi.fn(),
+      isFavorite: vi.fn(() => true),
+      isLoading: false,
+      clearAllFavorites: vi.fn(),
+    });
+
+    render(
+      <MemoryRouter>
+        <FavoritesView />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText('Compará con calma, retomá lo que te interesó y revisá primero las que ya tienen más comprobaciones reales.')).toBeInTheDocument();
+    expect(screen.getAllByTestId('saved-property-card').map((card) => card.getAttribute('data-title'))).toEqual([
+      'Casa con más comprobaciones',
+      'Casa con menos comprobaciones',
+    ]);
   });
 
   test('shows local removal feedback with undo after removing a favorite', async () => {

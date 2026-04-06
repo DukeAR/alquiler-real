@@ -211,7 +211,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
       </Suspense>
 
       {showHeader ? (
-        <header className="app-header z-50">
+        <header className="app-header relative z-50">
           <div className="app-page flex items-center justify-between gap-4 py-4">
             <button type="button" onClick={() => navigate('/')} aria-label="Ir al inicio de Alquiler Real" className="flex items-center gap-3 rounded-full pr-3 transition-transform duration-200 hover:scale-[1.01]">
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-[0_18px_35px_-22px_rgba(15,23,42,0.85)]">

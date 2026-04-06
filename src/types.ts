@@ -1,3 +1,6 @@
+import type { PropertyVerificationItem } from './lib/propertyVerification';
+import type { HostTrustSummary } from './lib/hostTrust';
+
 export type TraceabilityLevel = 'low' | 'medium' | 'high';
 
 export interface TraceabilityFactor {
@@ -17,6 +20,10 @@ export interface Property {
   title: string;
   location: string;
   propertyType?: string;
+  verificationScore?: number;
+  verificationItems?: PropertyVerificationItem[];
+  hostTrustScore?: number;
+  hostTrust?: HostTrustSummary;
   price: number;
   hostName: string;
   hostId: string;
@@ -36,6 +43,7 @@ export interface Property {
   reviewsCount: number;
   isSuperHost?: boolean;
   maxGuests?: number;
+  propertyRelationshipVerified?: boolean;
   hasPresencialVerification?: boolean;
   hasDigitalVerification?: boolean;
   isVerifiedProperty?: boolean;
