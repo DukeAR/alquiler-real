@@ -1322,6 +1322,7 @@ app.get('/api/host/dashboard', async (req, res) => {
           TO_CHAR(b.end_date, 'DD/MM/YYYY') as "endDate",
           COALESCE(b.guests, 1)::int as guests,
           COALESCE(b.total_price, 0)::int as "totalPrice",
+              b.cancellation_actor as "cancellationActor",
           COALESCE(c.deposit_status, b.deposit_status) as "depositStatus",
           COALESCE(b.request_mode, CASE WHEN c.booking_id IS NOT NULL THEN 'protected' ELSE 'direct' END) as "requestMode",
           b."userId",
@@ -1722,6 +1723,7 @@ type ManualAvailabilityBlock = {
 const BOOKING_SELECT_QUERY = `SELECT b.id, b."propertyId", b."userId", b.status, b.date, b.stay_code, b.verified,
   b.start_date as "startDate", b.end_date as "endDate", b.total_price as "totalPrice",
   b.guests, b.contract_accepted as "contractAccepted", b.contract_json as "contractJson",
+  b.cancellation_actor as "cancellationActor",
   COALESCE(c.deposit_status, b.deposit_status) as "depositStatus",
   COALESCE(b.request_mode, CASE WHEN c.booking_id IS NOT NULL THEN 'protected' ELSE 'direct' END) as "requestMode",
   p.title as "propertyTitle", p."imageUrl", p.location
@@ -1767,6 +1769,7 @@ const getEnrichedConversationById = async (conversationId: string) => {
             p.title as "propertyTitle", p."imageUrl" as "propertyImage",
             b.status as "bookingStatus", b.start_date as "startDate", b.end_date as "endDate",
             b.guests, b.total_price as "totalPrice",
+          b.cancellation_actor as "cancellationActor",
             COALESCE(c.request_mode, b.request_mode, CASE WHEN c.booking_id IS NOT NULL THEN 'protected' ELSE NULL END) as "requestMode",
             c.request_status as "requestStatus",
             COALESCE(c.deposit_status, b.deposit_status) as "depositStatus",
@@ -1950,6 +1953,7 @@ const getUserBookingById = async (userId: string, bookingId: string) => {
     `SELECT b.id, b."propertyId", b."userId", b.status, b.date, b.stay_code, b.verified,
             b.start_date as "startDate", b.end_date as "endDate", b.total_price as "totalPrice",
             b.guests, b.contract_accepted as "contractAccepted", b.contract_json as "contractJson",
+          b.cancellation_actor as "cancellationActor",
             COALESCE(c.deposit_status, b.deposit_status) as "depositStatus",
             COALESCE(b.request_mode, CASE WHEN c.booking_id IS NOT NULL THEN 'protected' ELSE 'direct' END) as "requestMode",
             p.title as "propertyTitle", p."imageUrl", p.location
@@ -1962,6 +1966,40 @@ const getUserBookingById = async (userId: string, bookingId: string) => {
   );
 
   return result.rows[0] ? attachBookingDerivedFields(result.rows[0]) : null;
+};
+
+const getHostBookingById = async (hostId: string, bookingId: string) => {
+  const result = await db.query(
+    `SELECT b.id, b."propertyId", b."userId", b.status, b.date, b.stay_code, b.verified,
+            b.start_date as "startDate", b.end_date as "endDate", b.total_price as "totalPrice",
+            b.guests, b.contract_accepted as "contractAccepted", b.contract_json as "contractJson",
+            b.cancellation_actor as "cancellationActor",
+            COALESCE(c.deposit_status, b.deposit_status) as "depositStatus",
+            COALESCE(b.request_mode, CASE WHEN c.booking_id IS NOT NULL THEN 'protected' ELSE 'direct' END) as "requestMode",
+            p.title as "propertyTitle", p."imageUrl", p.location
+     FROM bookings b
+     JOIN properties p ON b."propertyId" = p.id
+     LEFT JOIN conversations c ON c.booking_id = b.id
+     WHERE p."hostId" = $1 AND b.id = $2
+     LIMIT 1`,
+    [hostId, bookingId],
+  );
+
+  return result.rows[0] ? attachBookingDerivedFields(result.rows[0]) : null;
+};
+
+const isProtectedDepositInPlatform = (depositStatus?: string | null) => (
+  depositStatus === 'held' || depositStatus === 'review' || depositStatus === 'pending_confirmation'
+);
+
+const syncConversationDepositStatus = async (bookingId: string, depositStatus: string | null) => {
+  await db.query(
+    `UPDATE conversations
+     SET deposit_status = $1,
+         updated_at = NOW()
+     WHERE booking_id = $2`,
+    [depositStatus, bookingId],
+  );
 };
 
 app.get('/api/bookings', async (req, res) => {
@@ -2235,12 +2273,20 @@ app.post('/api/bookings/:id/cancel', async (req, res) => {
       return sendBookingError(res, 422, 'BOOKING_TOO_LATE_TO_CANCEL', 'Podés cancelar solo hasta 24 horas antes del ingreso.');
     }
 
+    const nextDepositStatus = booking.requestMode === 'protected' && isProtectedDepositInPlatform(booking.depositStatus)
+      ? 'review'
+      : booking.depositStatus ?? null;
+
     await db.query(
       `UPDATE bookings
-       SET status = 'cancelled'
+       SET status = 'cancelled',
+           cancellation_actor = 'guest',
+           deposit_status = $3
        WHERE id = $1 AND "userId" = $2`,
-      [req.params.id, userId]
+      [req.params.id, userId, nextDepositStatus]
     );
+
+    await syncConversationDepositStatus(req.params.id, nextDepositStatus);
 
     await logActivity(userId, 'BOOKING_CANCELLED', { bookingId: req.params.id, propertyId: booking.propertyId });
 
@@ -2249,6 +2295,148 @@ app.post('/api/bookings/:id/cancel', async (req, res) => {
   } catch (err) {
     console.error('Error al cancelar reserva:', err);
     sendBookingError(res, 500, 'BOOKING_CANCEL_FAILED', 'No pudimos cancelar la reserva. Intentá de nuevo.');
+  }
+});
+
+app.post('/api/bookings/:id/cancel-as-host', async (req, res) => {
+  const userId = req.session.userId;
+  if (!userId) {
+    return sendBookingError(res, 401, 'AUTH_REQUIRED', AUTH_REQUIRED_ERROR);
+  }
+
+  try {
+    const booking = await getHostBookingById(userId, req.params.id);
+
+    if (!booking) {
+      return sendBookingError(res, 404, 'BOOKING_NOT_FOUND', 'No encontramos esa reserva.');
+    }
+
+    if (booking.status === 'cancelled') {
+      return res.json({ booking });
+    }
+
+    if (booking.status === 'completed') {
+      return sendBookingError(res, 422, 'BOOKING_ALREADY_COMPLETED', 'Esta estadía ya terminó y no se puede cancelar.');
+    }
+
+    if (booking.status !== 'pending' && booking.status !== 'confirmed') {
+      return sendBookingError(res, 422, 'BOOKING_NOT_CANCELLABLE', 'Esta reserva no se puede cancelar en su estado actual.');
+    }
+
+    const nextDepositStatus = booking.requestMode === 'protected' && isProtectedDepositInPlatform(booking.depositStatus)
+      ? 'refunded'
+      : booking.depositStatus ?? null;
+
+    await db.query(
+      `UPDATE bookings
+       SET status = 'cancelled',
+           cancellation_actor = 'host',
+           deposit_status = $2
+       WHERE id = $1`,
+      [req.params.id, nextDepositStatus],
+    );
+
+    await syncConversationDepositStatus(req.params.id, nextDepositStatus);
+
+    await logActivity(booking.userId, 'BOOKING_CANCELLED', { bookingId: req.params.id, propertyId: booking.propertyId });
+
+    const updatedBooking = await getHostBookingById(userId, req.params.id);
+    return res.json({ booking: updatedBooking });
+  } catch (err) {
+    console.error('Error al cancelar reserva como anfitrión:', err);
+    return sendBookingError(res, 500, 'BOOKING_HOST_CANCEL_FAILED', 'No pudimos cancelar la reserva desde el panel. Intentá de nuevo.');
+  }
+});
+
+app.post('/api/bookings/:id/report-arrival-problem', async (req, res) => {
+  const userId = req.session.userId;
+  if (!userId) {
+    return sendBookingError(res, 401, 'AUTH_REQUIRED', AUTH_REQUIRED_ERROR);
+  }
+
+  try {
+    const booking = await getUserBookingById(userId, req.params.id);
+
+    if (!booking) {
+      return sendBookingError(res, 404, 'BOOKING_NOT_FOUND', 'No encontramos esa reserva.');
+    }
+
+    if (booking.requestMode !== 'protected') {
+      return sendBookingError(res, 422, 'INVALID_REPORT_FLOW', 'Esta acción solo aplica a reservas protegidas.');
+    }
+
+    if (booking.status !== 'confirmed') {
+      return sendBookingError(res, 422, 'BOOKING_NOT_ACTIVE', 'La reserva tiene que seguir activa para reportar un problema al llegar.');
+    }
+
+    if (booking.depositStatus === 'review') {
+      return res.json({ booking });
+    }
+
+    if (booking.depositStatus !== 'held') {
+      return sendBookingError(res, 422, 'BOOKING_NOT_IN_CUSTODY', 'Primero necesitás tener la seña en custodia para reportar este problema.');
+    }
+
+    await db.query(
+      `UPDATE bookings
+       SET deposit_status = 'review'
+       WHERE id = $1 AND "userId" = $2`,
+      [req.params.id, userId],
+    );
+
+    await syncConversationDepositStatus(req.params.id, 'review');
+
+    const updatedBooking = await getUserBookingById(userId, req.params.id);
+    return res.json({ booking: updatedBooking });
+  } catch (err) {
+    console.error('Error al reportar problema al llegar:', err);
+    return sendBookingError(res, 500, 'BOOKING_ARRIVAL_PROBLEM_FAILED', 'No pudimos registrar el problema. Intentá de nuevo.');
+  }
+});
+
+app.post('/api/bookings/:id/report-no-show', async (req, res) => {
+  const userId = req.session.userId;
+  if (!userId) {
+    return sendBookingError(res, 401, 'AUTH_REQUIRED', AUTH_REQUIRED_ERROR);
+  }
+
+  try {
+    const booking = await getHostBookingById(userId, req.params.id);
+
+    if (!booking) {
+      return sendBookingError(res, 404, 'BOOKING_NOT_FOUND', 'No encontramos esa reserva.');
+    }
+
+    if (booking.requestMode !== 'protected') {
+      return sendBookingError(res, 422, 'INVALID_NO_SHOW_FLOW', 'Esta acción solo aplica a reservas protegidas.');
+    }
+
+    if (booking.status !== 'confirmed') {
+      return sendBookingError(res, 422, 'BOOKING_NOT_ACTIVE', 'La reserva tiene que seguir activa para informar un no show.');
+    }
+
+    if (booking.depositStatus === 'pending_confirmation') {
+      return res.json({ booking });
+    }
+
+    if (booking.depositStatus !== 'held') {
+      return sendBookingError(res, 422, 'BOOKING_NOT_IN_CUSTODY', 'Primero necesitás tener la seña en custodia para informar este no show.');
+    }
+
+    await db.query(
+      `UPDATE bookings
+       SET deposit_status = 'pending_confirmation'
+       WHERE id = $1`,
+      [req.params.id],
+    );
+
+    await syncConversationDepositStatus(req.params.id, 'pending_confirmation');
+
+    const updatedBooking = await getHostBookingById(userId, req.params.id);
+    return res.json({ booking: updatedBooking });
+  } catch (err) {
+    console.error('Error al informar no show:', err);
+    return sendBookingError(res, 500, 'BOOKING_NO_SHOW_FAILED', 'No pudimos registrar el no show. Intentá de nuevo.');
   }
 });
 
@@ -2268,6 +2456,7 @@ app.get('/api/conversations', async (req, res) => {
               p.title as "propertyTitle", p."imageUrl" as "propertyImage",
               b.status as "bookingStatus", b.start_date as "startDate", b.end_date as "endDate",
               b.guests, b.total_price as "totalPrice",
+              b.cancellation_actor as "cancellationActor",
               COALESCE(c.request_mode, b.request_mode, CASE WHEN c.booking_id IS NOT NULL THEN 'protected' ELSE NULL END) as "requestMode",
               c.request_status as "requestStatus",
               COALESCE(c.deposit_status, b.deposit_status) as "depositStatus",
@@ -2476,7 +2665,11 @@ app.post('/api/conversations/:id/accept-request', async (req, res) => {
       return res.status(403).json({ error: 'Solo el anfitrión puede aceptar esta solicitud.' });
     }
 
-    const effectiveRequestMode = conversation.request_mode === 'protected' || conversation.booking_id ? 'protected' : 'direct';
+    const effectiveRequestMode = conversation.request_mode === 'direct' || conversation.request_mode === 'protected'
+      ? conversation.request_mode
+      : conversation.booking_id
+        ? 'protected'
+        : 'direct';
 
     if (conversation.booking_id && conversation.bookingStatus === 'pending') {
       await db.query(

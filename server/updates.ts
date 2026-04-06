@@ -694,6 +694,7 @@ export const initDB = async () => {
       BEGIN ALTER TABLE bookings ADD COLUMN contract_json TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE bookings ADD COLUMN request_mode TEXT DEFAULT 'direct'; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE bookings ADD COLUMN deposit_status TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE bookings ADD COLUMN cancellation_actor TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
     END $$;
   `);
 

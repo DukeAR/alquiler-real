@@ -11,6 +11,7 @@ const reportDirectDepositMock = vi.fn();
 const confirmDirectDepositMock = vi.fn();
 const payProtectedDepositMock = vi.fn();
 const confirmArrivalMock = vi.fn();
+const reportArrivalProblemMock = vi.fn();
 const showToastMock = vi.fn();
 
 vi.mock('../../hooks/useAuth', () => ({
@@ -26,6 +27,7 @@ vi.mock('../../services/geminiService', () => ({
   confirmDirectDeposit: (...args: unknown[]) => confirmDirectDepositMock(...args),
   payProtectedDeposit: (...args: unknown[]) => payProtectedDepositMock(...args),
   confirmArrival: (...args: unknown[]) => confirmArrivalMock(...args),
+  reportArrivalProblem: (...args: unknown[]) => reportArrivalProblemMock(...args),
 }));
 
 vi.mock('../../lib/toast', () => ({
@@ -73,6 +75,7 @@ describe('SecureChat', () => {
     confirmDirectDepositMock.mockReset();
     payProtectedDepositMock.mockReset();
     confirmArrivalMock.mockReset();
+    reportArrivalProblemMock.mockReset();
     showToastMock.mockReset();
   });
 
@@ -159,6 +162,48 @@ describe('SecureChat', () => {
     expect(await screen.findAllByText('Seña en custodia')).not.toHaveLength(0);
     expect(screen.getByText('La seña se mantiene protegida hasta tu llegada.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Confirmar llegada/i })).toBeInTheDocument();
+  });
+
+  test('lets the guest report an arrival problem from the protected chat summary', async () => {
+    useAuthMock.mockReturnValue({ user: { id: 'tenant-1' } });
+    fetchConversationsMock.mockResolvedValue([
+      {
+        ...baseConversation,
+        booking_id: 'booking-2',
+        bookingStatus: 'confirmed',
+        requestMode: 'protected',
+        requestStatus: 'accepted',
+        depositStatus: 'held',
+        requestStartDate: '2026-06-10',
+        requestEndDate: '2026-06-14',
+        requestGuests: 2,
+        requestTotalPrice: 430000,
+      },
+    ]);
+    fetchMessagesMock.mockResolvedValue([]);
+    reportArrivalProblemMock.mockResolvedValue({
+      id: 'booking-2',
+      status: 'confirmed',
+      requestMode: 'protected',
+      depositStatus: 'review',
+    });
+
+    renderChat();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Reportar problema/i }));
+
+    await waitFor(() => {
+      expect(reportArrivalProblemMock).toHaveBeenCalledWith('booking-2');
+    });
+
+    expect(await screen.findAllByText('Seña en revisión')).not.toHaveLength(0);
+    expect(screen.getByText('Quedó reportado un problema al llegar y la seña pasó a revisión.')).toBeInTheDocument();
+    expect(screen.getByText('La plataforma revisa lo que pasó antes de definir cómo sigue la seña.')).toBeInTheDocument();
+    expect(showToastMock).toHaveBeenCalledWith(
+      'Seña en revisión',
+      'El problema quedó informado y la seña pasó a revisión.',
+      'success',
+    );
   });
 
   test('lets the host accept a pending request and updates the chat context', async () => {

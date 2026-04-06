@@ -1,5 +1,6 @@
 import {
   type BookingStatus,
+  type ReservationCancellationActor,
   type ReservationDepositStatus,
   type ReservationRequestMode,
   type ReservationRequestStatus,
@@ -11,19 +12,27 @@ export type ReservationFlowStage =
   | 'direct-deposit-reported'
   | 'reservation-confirmed'
   | 'protected-deposit-held'
+  | 'protected-deposit-review'
+  | 'protected-no-show-pending'
   | 'protected-deposit-released';
 
-export type ReservationFlowActor = 'guest' | 'host' | 'none';
+export type ReservationFlowStageWithIssues =
+  | ReservationFlowStage
+  | 'guest-cancelled'
+  | 'host-cancelled';
+
+export type ReservationFlowActor = 'guest' | 'host' | 'platform' | 'none';
 
 type ReservationFlowInput = {
   mode?: ReservationRequestMode | null;
   requestStatus?: ReservationRequestStatus | null;
   bookingStatus?: BookingStatus | null;
   depositStatus?: ReservationDepositStatus | null;
+  cancellationActor?: ReservationCancellationActor | null;
 };
 
 export type ReservationFlowCopy = {
-  stage: ReservationFlowStage | null;
+  stage: ReservationFlowStageWithIssues | null;
   statusLabel: string | null;
   description: string | null;
   supportText?: string;
@@ -39,9 +48,14 @@ export const getReservationFlowStage = ({
   requestStatus,
   bookingStatus,
   depositStatus,
-}: ReservationFlowInput): ReservationFlowStage | null => {
+  cancellationActor,
+}: ReservationFlowInput): ReservationFlowStageWithIssues | null => {
   if (!mode) {
     return null;
+  }
+
+  if (bookingStatus === 'cancelled') {
+    return cancellationActor === 'host' ? 'host-cancelled' : 'guest-cancelled';
   }
 
   const requestAccepted = requestStatus === 'accepted' || (mode === 'protected' && bookingStatus === 'confirmed');
@@ -60,6 +74,14 @@ export const getReservationFlowStage = ({
     }
 
     return 'request-pending';
+  }
+
+  if (depositStatus === 'review') {
+    return 'protected-deposit-review';
+  }
+
+  if (depositStatus === 'pending_confirmation') {
+    return 'protected-no-show-pending';
   }
 
   if (depositStatus === 'released') {
@@ -144,9 +166,32 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
         modelLabel,
         statusLabel: 'Seña en custodia',
         description: 'La seña se mantiene protegida hasta tu llegada.',
+        supportText: 'Si surge un problema al llegar, podés reportarlo desde la app.',
         nextActor: 'guest',
         nextActorLabel: 'Huésped',
         nextStepLabel: 'Confirmar llegada',
+      };
+    case 'protected-deposit-review':
+      return {
+        stage,
+        modelLabel,
+        statusLabel: 'Seña en revisión',
+        description: 'Quedó reportado un problema al llegar y la seña pasó a revisión.',
+        supportText: 'La plataforma revisa lo que pasó antes de definir cómo sigue la seña.',
+        nextActor: 'platform',
+        nextActorLabel: 'Plataforma',
+        nextStepLabel: 'Revisar reporte',
+      };
+    case 'protected-no-show-pending':
+      return {
+        stage,
+        modelLabel,
+        statusLabel: 'Pendiente de confirmación',
+        description: 'La seña no se libera automáticamente mientras se confirma el no show.',
+        supportText: 'La plataforma deja la seña en pausa hasta revisar lo que pasó.',
+        nextActor: 'platform',
+        nextActorLabel: 'Plataforma',
+        nextStepLabel: 'Confirmar no show',
       };
     case 'protected-deposit-released':
       return {
@@ -155,6 +200,40 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
         statusLabel: 'Seña liberada',
         description: 'La llegada ya quedó confirmada y la seña salió de custodia.',
         nextActor: 'none',
+      };
+    case 'guest-cancelled':
+      return {
+        stage,
+        modelLabel,
+        statusLabel: input.mode === 'protected' ? 'Cancelaste la reserva' : 'Cancelaste la reserva',
+        description: 'La cancelación ya quedó registrada.',
+        supportText: input.mode === 'protected'
+          ? input.depositStatus === 'review'
+            ? 'La plataforma revisa qué pasa con la seña según la etapa de la reserva.'
+            : 'Si la seña ya estaba en la plataforma, revisamos cómo sigue según la etapa de la reserva.'
+          : 'La plataforma solo informa el estado. Si hubo una seña, la resolución queda entre ustedes.',
+        nextActor: input.mode === 'protected' && (input.depositStatus === 'review' || input.depositStatus === 'held' || input.depositStatus === 'pending_confirmation')
+          ? 'platform'
+          : 'none',
+        nextActorLabel: input.mode === 'protected' && (input.depositStatus === 'review' || input.depositStatus === 'held' || input.depositStatus === 'pending_confirmation')
+          ? 'Plataforma'
+          : undefined,
+        nextStepLabel: input.mode === 'protected' && (input.depositStatus === 'review' || input.depositStatus === 'held' || input.depositStatus === 'pending_confirmation')
+          ? 'Revisar seña'
+          : undefined,
+      };
+    case 'host-cancelled':
+      return {
+        stage,
+        modelLabel,
+        statusLabel: 'Canceló el anfitrión',
+        description: 'La reserva ya no sigue activa.',
+        supportText: input.mode === 'protected'
+          ? 'La seña se devuelve automáticamente.'
+          : 'La plataforma solo informa el estado. Si hubo una seña, la resolución queda entre ustedes.',
+        nextActor: input.mode === 'protected' ? 'platform' : 'none',
+        nextActorLabel: input.mode === 'protected' ? 'Plataforma' : undefined,
+        nextStepLabel: input.mode === 'protected' ? 'Devolver seña' : undefined,
       };
     default:
       return {

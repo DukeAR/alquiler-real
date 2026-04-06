@@ -660,7 +660,7 @@ describe('Bookings and availability endpoints', () => {
     const futureStartDate = getDateInArgentina(7);
     const futureEndDate = getDateInArgentina(10);
 
-    queryMock.mockImplementation(async (text: string) => {
+    queryMock.mockImplementation(async (text: string, params?: unknown[]) => {
       if (text.includes(BOOKING_LOOKUP_QUERY_SNIPPET) && text.includes('LIMIT 1')) {
         bookingLookupCount += 1;
 
@@ -677,6 +677,9 @@ describe('Bookings and availability endpoints', () => {
               guests: 3,
               contractAccepted: true,
               contractJson: null,
+              requestMode: 'direct',
+              depositStatus: null,
+              cancellationActor: bookingLookupCount === 1 ? null : 'guest',
               propertyTitle: 'Casa con patio',
               imageUrl: 'https://example.com/property.jpg',
               location: 'Cariló',
@@ -685,7 +688,13 @@ describe('Bookings and availability endpoints', () => {
         };
       }
 
-      if (text.includes('UPDATE bookings')) {
+      if (text.includes('UPDATE bookings') && text.includes("cancellation_actor = 'guest'")) {
+        expect(params).toEqual(['booking-2', 'user-1', null]);
+        return { rows: [] };
+      }
+
+      if (text.includes('UPDATE conversations') && text.includes('deposit_status = $1')) {
+        expect(params).toEqual([null, 'booking-2']);
         return { rows: [] };
       }
 
@@ -703,5 +712,227 @@ describe('Bookings and availability endpoints', () => {
     expect(res.status).toBe(200);
     expect(res.body.booking.status).toBe('cancelled');
     expect(res.body.booking.cancellationDeadline).toBeTruthy();
+  });
+
+  test('POST /api/bookings/:id/cancel moves a protected guest cancellation into review and records the actor', async () => {
+    let bookingLookupCount = 0;
+    const futureStartDate = getDateInArgentina(9);
+    const futureEndDate = getDateInArgentina(12);
+
+    queryMock.mockImplementation(async (text: string, params?: unknown[]) => {
+      if (text.includes(BOOKING_LOOKUP_QUERY_SNIPPET) && text.includes('WHERE b."userId" = $1 AND b.id = $2')) {
+        bookingLookupCount += 1;
+
+        return {
+          rows: [
+            {
+              id: 'booking-protected-cancel',
+              propertyId: 'prop-3',
+              userId: 'user-1',
+              status: bookingLookupCount === 1 ? 'confirmed' : 'cancelled',
+              startDate: futureStartDate,
+              endDate: futureEndDate,
+              totalPrice: 420000,
+              guests: 2,
+              contractAccepted: true,
+              contractJson: null,
+              requestMode: 'protected',
+              depositStatus: bookingLookupCount === 1 ? 'held' : 'review',
+              cancellationActor: bookingLookupCount === 1 ? null : 'guest',
+              propertyTitle: 'Casa con patio',
+              imageUrl: 'https://example.com/property.jpg',
+              location: 'Cariló',
+            },
+          ],
+        };
+      }
+
+      if (text.includes('UPDATE bookings') && text.includes("cancellation_actor = 'guest'")) {
+        expect(params).toEqual(['booking-protected-cancel', 'user-1', 'review']);
+        return { rows: [] };
+      }
+
+      if (text.includes('UPDATE conversations') && text.includes('deposit_status = $1')) {
+        expect(params).toEqual(['review', 'booking-protected-cancel']);
+        return { rows: [] };
+      }
+
+      if (text.includes(LOG_ACTIVITY_QUERY_SNIPPET)) {
+        return { rows: [] };
+      }
+
+      throw new Error(`Unexpected query: ${text}`);
+    });
+
+    const res = await request(app)
+      .post('/api/bookings/booking-protected-cancel/cancel')
+      .set('x-test-user-id', 'user-1');
+
+    expect(res.status).toBe(200);
+    expect(res.body.booking.status).toBe('cancelled');
+    expect(res.body.booking.depositStatus).toBe('review');
+    expect(res.body.booking.cancellationActor).toBe('guest');
+  });
+
+  test('POST /api/bookings/:id/cancel-as-host refunds a protected booking and records the host actor', async () => {
+    let bookingLookupCount = 0;
+
+    queryMock.mockImplementation(async (text: string, params?: unknown[]) => {
+      if (text.includes(BOOKING_LOOKUP_QUERY_SNIPPET) && text.includes('WHERE p."hostId" = $1 AND b.id = $2')) {
+        bookingLookupCount += 1;
+
+        return {
+          rows: [
+            {
+              id: 'booking-host-cancel',
+              propertyId: 'prop-4',
+              userId: 'tenant-1',
+              status: bookingLookupCount === 1 ? 'confirmed' : 'cancelled',
+              startDate: getDateInArgentina(14),
+              endDate: getDateInArgentina(17),
+              totalPrice: 510000,
+              guests: 3,
+              contractAccepted: true,
+              contractJson: null,
+              requestMode: 'protected',
+              depositStatus: bookingLookupCount === 1 ? 'held' : 'refunded',
+              cancellationActor: bookingLookupCount === 1 ? null : 'host',
+              propertyTitle: 'Casa del lago',
+              imageUrl: 'https://example.com/property.jpg',
+              location: 'Bariloche',
+            },
+          ],
+        };
+      }
+
+      if (text.includes('UPDATE bookings') && text.includes("cancellation_actor = 'host'")) {
+        expect(params).toEqual(['booking-host-cancel', 'refunded']);
+        return { rows: [] };
+      }
+
+      if (text.includes('UPDATE conversations') && text.includes('deposit_status = $1')) {
+        expect(params).toEqual(['refunded', 'booking-host-cancel']);
+        return { rows: [] };
+      }
+
+      if (text.includes(LOG_ACTIVITY_QUERY_SNIPPET)) {
+        return { rows: [] };
+      }
+
+      throw new Error(`Unexpected query: ${text}`);
+    });
+
+    const res = await request(app)
+      .post('/api/bookings/booking-host-cancel/cancel-as-host')
+      .set('x-test-user-id', 'host-1');
+
+    expect(res.status).toBe(200);
+    expect(res.body.booking.status).toBe('cancelled');
+    expect(res.body.booking.depositStatus).toBe('refunded');
+    expect(res.body.booking.cancellationActor).toBe('host');
+  });
+
+  test('POST /api/bookings/:id/report-arrival-problem moves the protected deposit into review', async () => {
+    let bookingLookupCount = 0;
+
+    queryMock.mockImplementation(async (text: string, params?: unknown[]) => {
+      if (text.includes(BOOKING_LOOKUP_QUERY_SNIPPET) && text.includes('WHERE b."userId" = $1 AND b.id = $2')) {
+        bookingLookupCount += 1;
+
+        return {
+          rows: [
+            {
+              id: 'booking-arrival-problem',
+              propertyId: 'prop-5',
+              userId: 'user-1',
+              status: 'confirmed',
+              startDate: getDateInArgentina(6),
+              endDate: getDateInArgentina(9),
+              totalPrice: 360000,
+              guests: 2,
+              contractAccepted: true,
+              contractJson: null,
+              requestMode: 'protected',
+              depositStatus: bookingLookupCount === 1 ? 'held' : 'review',
+              cancellationActor: null,
+              propertyTitle: 'Depto céntrico',
+              imageUrl: 'https://example.com/property.jpg',
+              location: 'Mendoza',
+            },
+          ],
+        };
+      }
+
+      if (text.includes('UPDATE bookings') && text.includes("SET deposit_status = 'review'")) {
+        expect(params).toEqual(['booking-arrival-problem', 'user-1']);
+        return { rows: [] };
+      }
+
+      if (text.includes('UPDATE conversations') && text.includes('deposit_status = $1')) {
+        expect(params).toEqual(['review', 'booking-arrival-problem']);
+        return { rows: [] };
+      }
+
+      throw new Error(`Unexpected query: ${text}`);
+    });
+
+    const res = await request(app)
+      .post('/api/bookings/booking-arrival-problem/report-arrival-problem')
+      .set('x-test-user-id', 'user-1');
+
+    expect(res.status).toBe(200);
+    expect(res.body.booking.depositStatus).toBe('review');
+  });
+
+  test('POST /api/bookings/:id/report-no-show keeps the protected deposit pending confirmation', async () => {
+    let bookingLookupCount = 0;
+
+    queryMock.mockImplementation(async (text: string, params?: unknown[]) => {
+      if (text.includes(BOOKING_LOOKUP_QUERY_SNIPPET) && text.includes('WHERE p."hostId" = $1 AND b.id = $2')) {
+        bookingLookupCount += 1;
+
+        return {
+          rows: [
+            {
+              id: 'booking-no-show',
+              propertyId: 'prop-6',
+              userId: 'tenant-2',
+              status: 'confirmed',
+              startDate: getDateInArgentina(5),
+              endDate: getDateInArgentina(8),
+              totalPrice: 455000,
+              guests: 2,
+              contractAccepted: true,
+              contractJson: null,
+              requestMode: 'protected',
+              depositStatus: bookingLookupCount === 1 ? 'held' : 'pending_confirmation',
+              cancellationActor: null,
+              propertyTitle: 'Casa en la sierra',
+              imageUrl: 'https://example.com/property.jpg',
+              location: 'Tandil',
+            },
+          ],
+        };
+      }
+
+      if (text.includes('UPDATE bookings') && text.includes("SET deposit_status = 'pending_confirmation'")) {
+        expect(params).toEqual(['booking-no-show']);
+        return { rows: [] };
+      }
+
+      if (text.includes('UPDATE conversations') && text.includes('deposit_status = $1')) {
+        expect(params).toEqual(['pending_confirmation', 'booking-no-show']);
+        return { rows: [] };
+      }
+
+      throw new Error(`Unexpected query: ${text}`);
+    });
+
+    const res = await request(app)
+      .post('/api/bookings/booking-no-show/report-no-show')
+      .set('x-test-user-id', 'host-1');
+
+    expect(res.status).toBe(200);
+    expect(res.body.booking.depositStatus).toBe('pending_confirmation');
   });
 });

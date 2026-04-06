@@ -190,6 +190,30 @@ export async function confirmArrival(bookingId: string): Promise<Booking> {
   return response.booking;
 }
 
+export async function reportArrivalProblem(bookingId: string): Promise<Booking> {
+  const response = await apiJson<{ booking: Booking }>(`/api/bookings/${bookingId}/report-arrival-problem`, {
+    method: 'POST'
+  });
+
+  return response.booking;
+}
+
+export async function reportNoShow(bookingId: string): Promise<Booking> {
+  const response = await apiJson<{ booking: Booking }>(`/api/bookings/${bookingId}/report-no-show`, {
+    method: 'POST'
+  });
+
+  return response.booking;
+}
+
+export async function cancelBookingAsHost(bookingId: string): Promise<Booking> {
+  const response = await apiJson<{ booking: Booking }>(`/api/bookings/${bookingId}/cancel-as-host`, {
+    method: 'POST'
+  });
+
+  return response.booking;
+}
+
 export async function cancelBooking(bookingId: string) {
   return apiJson<{ booking: Booking }>(`/api/bookings/${bookingId}/cancel`, {
     method: 'POST'

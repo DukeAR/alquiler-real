@@ -8,6 +8,7 @@ const acceptContractMock = vi.fn();
 const cancelBookingMock = vi.fn();
 const payProtectedDepositMock = vi.fn();
 const confirmArrivalMock = vi.fn();
+const reportArrivalProblemMock = vi.fn();
 const showToastMock = vi.fn();
 
 vi.mock('../../lib/apiConfig', () => ({
@@ -19,6 +20,7 @@ vi.mock('../../services/geminiService', () => ({
   cancelBooking: (...args: unknown[]) => cancelBookingMock(...args),
   payProtectedDeposit: (...args: unknown[]) => payProtectedDepositMock(...args),
   confirmArrival: (...args: unknown[]) => confirmArrivalMock(...args),
+  reportArrivalProblem: (...args: unknown[]) => reportArrivalProblemMock(...args),
 }));
 
 vi.mock('../../lib/toast', () => ({
@@ -34,6 +36,7 @@ describe('MyBookings', () => {
     cancelBookingMock.mockReset();
     payProtectedDepositMock.mockReset();
     confirmArrivalMock.mockReset();
+    reportArrivalProblemMock.mockReset();
     showToastMock.mockReset();
     vi.spyOn(window, 'confirm').mockReturnValue(true);
   });
@@ -218,6 +221,142 @@ describe('MyBookings', () => {
 
     expect(await screen.findAllByText('Seña liberada')).not.toHaveLength(0);
     expect(screen.getByText('La llegada ya quedó confirmada y la seña salió de custodia.')).toBeInTheDocument();
+  });
+
+  test('lets the guest report an arrival problem while the protected deposit is in custody', async () => {
+    apiJsonMock.mockResolvedValue([
+      {
+        id: 'booking-protected-3',
+        propertyId: 'property-3',
+        userId: 'user-1',
+        status: 'confirmed',
+        requestMode: 'protected',
+        depositStatus: 'held',
+        propertyTitle: 'Cabaña entre pinos',
+        location: 'Villa La Angostura',
+        startDate: '2026-07-11',
+        endDate: '2026-07-16',
+        guests: 2,
+        totalPrice: 680000,
+        contractAccepted: true,
+      },
+    ]);
+    reportArrivalProblemMock.mockResolvedValue({
+      id: 'booking-protected-3',
+      propertyId: 'property-3',
+      userId: 'user-1',
+      status: 'confirmed',
+      requestMode: 'protected',
+      depositStatus: 'review',
+      propertyTitle: 'Cabaña entre pinos',
+      location: 'Villa La Angostura',
+      startDate: '2026-07-11',
+      endDate: '2026-07-16',
+      guests: 2,
+      totalPrice: 680000,
+      contractAccepted: true,
+    });
+
+    render(
+      <MemoryRouter>
+        <MyBookings />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: /Reportar problema/i }));
+
+    await waitFor(() => {
+      expect(reportArrivalProblemMock).toHaveBeenCalledWith('booking-protected-3');
+    });
+
+    expect(await screen.findAllByText('Seña en revisión')).not.toHaveLength(0);
+    expect(screen.getByText('Quedó reportado un problema al llegar y la seña pasó a revisión.')).toBeInTheDocument();
+    expect(screen.getByText('La plataforma revisa lo que pasó antes de definir cómo sigue la seña.')).toBeInTheDocument();
+    expect(showToastMock).toHaveBeenCalledWith(
+      'Seña en revisión',
+      'El problema quedó informado y la seña pasó a revisión.',
+      'success',
+    );
+  });
+
+  test('keeps a protected guest cancellation visible with platform review guidance', async () => {
+    apiJsonMock.mockResolvedValue([
+      {
+        id: 'booking-guest-cancel-protected',
+        propertyId: 'property-4',
+        userId: 'user-1',
+        status: 'confirmed',
+        requestMode: 'protected',
+        depositStatus: 'held',
+        propertyTitle: 'Casa con quincho',
+        location: 'Mar de las Pampas',
+        startDate: '2099-09-10',
+        endDate: '2099-09-15',
+        guests: 4,
+        totalPrice: 720000,
+        contractAccepted: true,
+      },
+    ]);
+    cancelBookingMock.mockResolvedValue({
+      booking: {
+        id: 'booking-guest-cancel-protected',
+        propertyId: 'property-4',
+        userId: 'user-1',
+        status: 'cancelled',
+        requestMode: 'protected',
+        depositStatus: 'review',
+        cancellationActor: 'guest',
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <MyBookings />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: /Cancelar reserva/i }));
+
+    await waitFor(() => {
+      expect(cancelBookingMock).toHaveBeenCalledWith('booking-guest-cancel-protected');
+    });
+
+    expect(await screen.findAllByText('Cancelaste la reserva')).not.toHaveLength(0);
+    expect(screen.getByText('La cancelación ya quedó registrada.')).toBeInTheDocument();
+    expect(screen.getByText('La plataforma revisa qué pasa con la seña según la etapa de la reserva.')).toBeInTheDocument();
+    expect(screen.getByText('Plataforma')).toBeInTheDocument();
+  });
+
+  test('shows the protected host cancellation state with automatic refund guidance', async () => {
+    apiJsonMock.mockResolvedValue([
+      {
+        id: 'booking-host-cancelled',
+        propertyId: 'property-5',
+        userId: 'user-1',
+        status: 'cancelled',
+        requestMode: 'protected',
+        depositStatus: 'refunded',
+        cancellationActor: 'host',
+        propertyTitle: 'Dúplex con terraza',
+        location: 'Colegiales',
+        startDate: '2026-08-01',
+        endDate: '2026-08-05',
+        guests: 2,
+        totalPrice: 390000,
+        contractAccepted: true,
+      },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <MyBookings />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findAllByText('Canceló el anfitrión')).not.toHaveLength(0);
+    expect(screen.getByText('La reserva ya no sigue activa.')).toBeInTheDocument();
+    expect(screen.getByText('La seña se devuelve automáticamente.')).toBeInTheDocument();
+    expect(screen.getByText('Devolver seña')).toBeInTheDocument();
   });
 
   test('cancels a future reservation and updates the status in place', async () => {

@@ -4,7 +4,7 @@ import { Icons } from './Icons';
 import { Booking } from '../types';
 import { cn } from '../lib/utils';
 import { showToast } from '../lib/toast';
-import { acceptContract, cancelBooking, confirmArrival, payProtectedDeposit } from '../services/geminiService';
+import { acceptContract, cancelBooking, confirmArrival, payProtectedDeposit, reportArrivalProblem } from '../services/geminiService';
 import { EmptyState } from './EmptyState';
 import { ErrorState } from './ErrorState';
 import { Badge } from './ui/Badge';
@@ -20,7 +20,7 @@ export const MyBookings = () => {
   const [selectedContract, setSelectedContract] = useState<any>(null);
   const [accepting, setAccepting] = useState(false);
   const [cancelingBookingId, setCancelingBookingId] = useState<string | null>(null);
-  const [processingBookingAction, setProcessingBookingAction] = useState<{ bookingId: string; action: 'pay-deposit' | 'confirm-arrival' } | null>(null);
+  const [processingBookingAction, setProcessingBookingAction] = useState<{ bookingId: string; action: 'pay-deposit' | 'confirm-arrival' | 'report-arrival-problem' } | null>(null);
 
   const handleAcceptContract = async (bookingId: string) => {
     setAccepting(true);
@@ -71,6 +71,10 @@ export const MyBookings = () => {
       return false;
     }
 
+    if (booking.depositStatus === 'review' || booking.depositStatus === 'pending_confirmation') {
+      return false;
+    }
+
     const cancellationDeadline = getCancellationDeadline(booking);
     if (!cancellationDeadline) {
       return false;
@@ -81,9 +85,13 @@ export const MyBookings = () => {
 
   const handleCancelBooking = async (booking: Booking) => {
     const cancellationDeadlineLabel = getCancellationDeadlineLabel(booking);
-    const confirmMessage = cancellationDeadlineLabel
-      ? `¿Querés cancelar esta reserva? Podés hacerlo hasta el ${cancellationDeadlineLabel} y, si seguís, las fechas van a volver a quedar disponibles.`
-      : '¿Querés cancelar esta reserva? Solo se puede cancelar hasta 24 horas antes del ingreso y, si seguís, las fechas van a volver a quedar disponibles.';
+    const confirmMessage = booking.requestMode === 'protected'
+      ? cancellationDeadlineLabel
+        ? `¿Querés cancelar esta reserva? Podés hacerlo hasta el ${cancellationDeadlineLabel}. Si la seña ya estaba en la plataforma, va a quedar en revisión según la etapa de la reserva.`
+        : '¿Querés cancelar esta reserva? Si la seña ya estaba en la plataforma, va a quedar en revisión según la etapa de la reserva.'
+      : cancellationDeadlineLabel
+        ? `¿Querés cancelar esta reserva? Podés hacerlo hasta el ${cancellationDeadlineLabel}. La plataforma solo va a dejar asentado el estado.`
+        : '¿Querés cancelar esta reserva? La plataforma solo va a dejar asentado el estado.';
 
     if (!window.confirm(confirmMessage)) {
       return;
@@ -118,6 +126,7 @@ export const MyBookings = () => {
       : undefined,
     bookingStatus: booking.status,
     depositStatus: booking.depositStatus,
+    cancellationActor: booking.cancellationActor,
   });
 
   const updateBookingState = (nextBooking: Booking) => {
@@ -156,8 +165,30 @@ export const MyBookings = () => {
     }
   };
 
+  const handleReportProtectedArrivalProblem = async (bookingId: string) => {
+    setProcessingBookingAction({ bookingId, action: 'report-arrival-problem' });
+
+    try {
+      const nextBooking = await reportArrivalProblem(bookingId);
+      updateBookingState(nextBooking);
+      showToast('Seña en revisión', 'El problema quedó informado y la seña pasó a revisión.', 'success');
+    } catch (err) {
+      showToast('Problema', err instanceof Error ? err.message : 'No pudimos registrar el problema. Intentá de nuevo.', 'error');
+    } finally {
+      setProcessingBookingAction(null);
+    }
+  };
+
   const getStatusColor = (booking: Booking) => {
     const flow = getBookingFlow(booking);
+
+    if (flow.stage === 'host-cancelled') {
+      return 'danger';
+    }
+
+    if (flow.stage === 'guest-cancelled' || flow.stage === 'protected-deposit-review' || flow.stage === 'protected-no-show-pending') {
+      return 'warning';
+    }
 
     if (flow.stage === 'request-accepted' || flow.stage === 'protected-deposit-held') {
       return 'brand';
@@ -171,7 +202,7 @@ export const MyBookings = () => {
       case 'confirmed': return 'brand';
       case 'pending': return 'neutral';
       case 'cancelled': return 'neutral';
-      case 'completed': return 'brand';
+      case 'completed': return 'success';
       default: return 'neutral';
     }
   };
@@ -244,9 +275,10 @@ export const MyBookings = () => {
             const cancellationDeadlineLabel = getCancellationDeadlineLabel(booking);
             const isCancelable = canCancelBooking(booking);
             const bookingFlow = getBookingFlow(booking);
-            const showProtectedFlowPanel = booking.requestMode === 'protected' && bookingFlow.stage && bookingFlow.stage !== 'request-pending';
+            const showReservationFlowPanel = Boolean(booking.requestMode && bookingFlow.stage && bookingFlow.stage !== 'request-pending' && bookingFlow.stage !== 'reservation-confirmed');
             const isPayingDeposit = processingBookingAction?.bookingId === booking.id && processingBookingAction.action === 'pay-deposit';
             const isConfirmingArrival = processingBookingAction?.bookingId === booking.id && processingBookingAction.action === 'confirm-arrival';
+            const isReportingArrivalProblem = processingBookingAction?.bookingId === booking.id && processingBookingAction.action === 'report-arrival-problem';
 
             return (
             <div
@@ -331,7 +363,7 @@ export const MyBookings = () => {
                    </div>
                 </div>
 
-                {(booking.status === 'pending' || booking.status === 'confirmed') && booking.startDate ? (
+                {(booking.status === 'pending' || booking.status === 'confirmed') && booking.startDate && bookingFlow.stage !== 'protected-deposit-review' && bookingFlow.stage !== 'protected-no-show-pending' ? (
                   <div className={cn(
                     'rounded-2xl border px-4 py-3 text-xs font-semibold leading-5',
                     isCancelable
@@ -346,7 +378,7 @@ export const MyBookings = () => {
                   </div>
                 ) : null}
 
-                {showProtectedFlowPanel ? (
+                {showReservationFlowPanel ? (
                   <div className="rounded-[28px] border border-brand/15 bg-brand/5 p-4 dark:border-brand/20 dark:bg-brand/10">
                     <div className="space-y-4">
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -387,6 +419,23 @@ export const MyBookings = () => {
                             </>
                           </Button>
                         ) : null}
+
+                        {bookingFlow.stage === 'protected-deposit-held' ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => void handleReportProtectedArrivalProblem(booking.id)}
+                            loading={isReportingArrivalProblem}
+                            loadingLabel="Informando problema..."
+                            className="rounded-2xl"
+                          >
+                            <>
+                              <Icons.AlertTriangle className="w-4 h-4" />
+                              Reportar problema
+                            </>
+                          </Button>
+                        ) : null}
                       </div>
 
                       <div className="grid gap-2 md:grid-cols-3">
@@ -419,7 +468,7 @@ export const MyBookings = () => {
                   </div>
                 )}
 
-                {booking.status === 'cancelled' && (
+                {booking.status === 'cancelled' && !showReservationFlowPanel && (
                   <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center gap-3">
                     <Icons.AlertTriangle className="w-5 h-5 text-slate-500" />
                     <div>

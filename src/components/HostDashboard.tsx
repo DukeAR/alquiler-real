@@ -37,6 +37,7 @@ const getBookingFlow = (booking: any) => getReservationFlowCopy({
     : undefined,
   bookingStatus: booking.status,
   depositStatus: booking.depositStatus,
+  cancellationActor: booking.cancellationActor,
 });
 
 const getBookingStatusLabel = (booking: any) => {
@@ -56,7 +57,11 @@ const getBookingStatusLabel = (booking: any) => {
 const getBookingStatusClassName = (booking: any) => {
   const flow = getBookingFlow(booking);
 
-  if (flow.stage === 'direct-deposit-reported') {
+  if (flow.stage === 'host-cancelled') {
+    return 'border-red-200 bg-red-50 text-red-700 dark:border-red-900/30 dark:bg-red-900/20 dark:text-red-300';
+  }
+
+  if (flow.stage === 'guest-cancelled' || flow.stage === 'protected-deposit-review' || flow.stage === 'protected-no-show-pending' || flow.stage === 'direct-deposit-reported') {
     return 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/30 dark:bg-amber-900/20 dark:text-amber-300';
   }
 
@@ -107,6 +112,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
   const [reviewingBooking, setReviewingBooking] = useState<any>(null);
   const [availabilityPropertyId, setAvailabilityPropertyId] = useState<string | null>(null);
   const [expandedBookingId, setExpandedBookingId] = useState<string | null>(null);
+  const [processingBookingAction, setProcessingBookingAction] = useState<{ bookingId: string; action: 'cancel-host' | 'report-no-show' } | null>(null);
 
   useEffect(() => {
     void fetchData();
@@ -123,6 +129,61 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
       setLoadError(err instanceof Error ? err.message : 'No pudimos cargar el panel del anfitrión.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const updateRecentBooking = (nextBooking: any) => {
+    setDashboardData((currentData: any) => {
+      if (!currentData || !Array.isArray(currentData.recentBookings)) {
+        return currentData;
+      }
+
+      return {
+        ...currentData,
+        recentBookings: currentData.recentBookings.map((booking: any) => (
+          booking.id === nextBooking.id ? { ...booking, ...nextBooking } : booking
+        )),
+      };
+    });
+  };
+
+  const handleCancelBookingAsHost = async (booking: any) => {
+    if (!window.confirm('¿Querés cancelar esta reserva desde el panel?')) {
+      return;
+    }
+
+    setProcessingBookingAction({ bookingId: booking.id, action: 'cancel-host' });
+
+    try {
+      const response = await apiJson<{ booking: any }>(`/api/bookings/${booking.id}/cancel-as-host`, {
+        method: 'POST',
+        includeCredentials: true,
+      });
+
+      updateRecentBooking(response.booking);
+      showToast('Reserva cancelada', booking.requestMode === 'protected' ? 'La reserva quedó cancelada y la seña se devuelve automáticamente.' : 'La reserva quedó cancelada y el estado ya se actualizó.', 'success');
+    } catch (err) {
+      showToast('Reserva', err instanceof Error ? err.message : 'No pudimos cancelar la reserva desde el panel.', 'error');
+    } finally {
+      setProcessingBookingAction(null);
+    }
+  };
+
+  const handleReportNoShow = async (booking: any) => {
+    setProcessingBookingAction({ bookingId: booking.id, action: 'report-no-show' });
+
+    try {
+      const response = await apiJson<{ booking: any }>(`/api/bookings/${booking.id}/report-no-show`, {
+        method: 'POST',
+        includeCredentials: true,
+      });
+
+      updateRecentBooking(response.booking);
+      showToast('Pendiente de confirmación', 'El no show quedó informado y la seña sigue en pausa hasta que se revise.', 'success');
+    } catch (err) {
+      showToast('No show', err instanceof Error ? err.message : 'No pudimos registrar el no show.', 'error');
+    } finally {
+      setProcessingBookingAction(null);
     }
   };
 
@@ -432,6 +493,12 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
                   const isDecisionStage = booking.status === 'pending';
                   const shouldShowGuestProfile = isDecisionStage || isExpanded;
                   const bookingSummaryItems = getBookingSummaryItems(booking);
+                  const bookingFlow = getBookingFlow(booking);
+                  const showBookingFlowPanel = Boolean(booking.requestMode && bookingFlow.stage && bookingFlow.stage !== 'request-pending' && bookingFlow.stage !== 'reservation-confirmed');
+                  const canCancelAsHost = (booking.status === 'pending' || booking.status === 'confirmed') && bookingFlow.stage !== 'host-cancelled' && bookingFlow.stage !== 'guest-cancelled' && bookingFlow.stage !== 'protected-deposit-review' && bookingFlow.stage !== 'protected-no-show-pending';
+                  const canReportProtectedNoShow = booking.requestMode === 'protected' && bookingFlow.stage === 'protected-deposit-held';
+                  const isCancelingAsHost = processingBookingAction?.bookingId === booking.id && processingBookingAction?.action === 'cancel-host';
+                  const isReportingNoShow = processingBookingAction?.bookingId === booking.id && processingBookingAction?.action === 'report-no-show';
 
                   return (
                     <div key={booking.id} className="space-y-4 p-6">
@@ -465,7 +532,34 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
                         <GuestRequestProfileCard guestName={booking.userName || 'Huésped'} profile={booking.guestProfile} />
                       ) : null}
 
-                      {!isDecisionStage || canReviewBooking ? (
+                      {showBookingFlowPanel ? (
+                        <div className="rounded-[26px] border border-brand/15 bg-brand/5 p-4 dark:border-brand/20 dark:bg-brand/10">
+                          <div className="space-y-4">
+                            <div className="space-y-1">
+                              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-brand">{bookingFlow.statusLabel}</p>
+                              <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">{bookingFlow.description}</p>
+                              {bookingFlow.supportText ? <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">{bookingFlow.supportText}</p> : null}
+                            </div>
+
+                            <div className="grid gap-2 md:grid-cols-3">
+                              <div className="rounded-2xl bg-white/80 px-3 py-3 text-sm dark:bg-slate-900/70">
+                                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Estado actual</p>
+                                <p className="mt-1 font-semibold text-slate-900 dark:text-white">{bookingFlow.statusLabel}</p>
+                              </div>
+                              <div className="rounded-2xl bg-white/80 px-3 py-3 text-sm dark:bg-slate-900/70">
+                                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Actúa ahora</p>
+                                <p className="mt-1 font-semibold text-slate-900 dark:text-white">{bookingFlow.nextActorLabel ?? 'No hace falta'}</p>
+                              </div>
+                              <div className="rounded-2xl bg-white/80 px-3 py-3 text-sm dark:bg-slate-900/70">
+                                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Próximo paso</p>
+                                <p className="mt-1 font-semibold text-slate-900 dark:text-white">{bookingFlow.nextStepLabel ?? 'Solo dejar contexto por chat'}</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ) : null}
+
+                      {!isDecisionStage || canReviewBooking || canCancelAsHost || canReportProtectedNoShow ? (
                         <div className="flex flex-wrap gap-2 pt-1 lg:justify-end">
                           {!isDecisionStage ? (
                             <Button
@@ -476,6 +570,38 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
                               className="rounded-full"
                             >
                               {isExpanded ? 'Ocultar ficha' : 'Ver ficha del huésped'}
+                            </Button>
+                          ) : null}
+                          {canReportProtectedNoShow ? (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => void handleReportNoShow(booking)}
+                              loading={isReportingNoShow}
+                              loadingLabel="Informando no show..."
+                              className="rounded-full"
+                            >
+                              <>
+                                <Icons.AlertTriangle className="h-4 w-4" />
+                                Marcar no show
+                              </>
+                            </Button>
+                          ) : null}
+                          {canCancelAsHost ? (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => void handleCancelBookingAsHost(booking)}
+                              loading={isCancelingAsHost}
+                              loadingLabel="Cancelando..."
+                              className="rounded-full"
+                            >
+                              <>
+                                <Icons.X className="h-4 w-4" />
+                                Cancelar reserva
+                              </>
                             </Button>
                           ) : null}
                           {canReviewBooking ? (

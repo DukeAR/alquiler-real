@@ -26,6 +26,7 @@ describe('HostDashboard', () => {
   beforeEach(() => {
     apiJsonMock.mockReset();
     showToastMock.mockReset();
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
   });
 
   test('opens the availability panel and removes a manual block', async () => {
@@ -340,5 +341,182 @@ describe('HostDashboard', () => {
     expect(within(profileCard).getByText('Todavía no hay estadías ni reseñas de anfitriones para revisar.')).toBeInTheDocument();
     expect(within(profileCard).getByText('Todavía no hay reseñas de anfitriones porque esta cuenta todavía no tiene estadías visibles.')).toBeInTheDocument();
     expect(within(profileCard).getByText('Completó sus datos')).toBeInTheDocument();
+  });
+
+  test('lets the host mark a protected no show and keeps the deposit pending confirmation', async () => {
+    apiJsonMock.mockImplementation(async (url: string, options?: RequestInit) => {
+      if (url === '/api/host/dashboard') {
+        return {
+          stats: {
+            host_rating: 4.9,
+            total_bookings_hosted: 3,
+            trust_score: 88,
+            badge: 'Verificado',
+            host_verified: true,
+          },
+          properties: [
+            {
+              id: 'prop-1',
+              title: 'Casa del bosque',
+              location: 'Pinamar',
+              price: 150000,
+              status: 'active',
+              reviewsCount: 8,
+              rating: 4.9,
+              imageUrl: 'https://example.com/property.jpg',
+              verificationScore: 4,
+              verificationItems: [
+                { key: 'identity', label: 'Identidad confirmada', description: 'Sabés con quién estás hablando.', status: 'complete' },
+              ],
+            },
+          ],
+          recentBookings: [
+            {
+              id: 'booking-no-show',
+              status: 'confirmed',
+              requestMode: 'protected',
+              depositStatus: 'held',
+              userId: 'guest-4',
+              userName: 'Sofía',
+              propertyTitle: 'Casa del bosque',
+              startDate: '2026-09-14',
+              endDate: '2026-09-18',
+              guests: 2,
+              totalPrice: 540000,
+            },
+          ],
+          estimatedIncome: 250000,
+        };
+      }
+
+      if (url === '/api/bookings/booking-no-show/report-no-show' && options?.method === 'POST') {
+        return {
+          booking: {
+            id: 'booking-no-show',
+            status: 'confirmed',
+            requestMode: 'protected',
+            depositStatus: 'pending_confirmation',
+            userId: 'guest-4',
+            userName: 'Sofía',
+            propertyTitle: 'Casa del bosque',
+            startDate: '2026-09-14',
+            endDate: '2026-09-18',
+            guests: 2,
+            totalPrice: 540000,
+          },
+        };
+      }
+
+      return {};
+    });
+
+    render(<HostDashboard onBack={vi.fn()} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /Marcar no show/i }));
+
+    await waitFor(() => {
+      expect(apiJsonMock).toHaveBeenCalledWith(
+        '/api/bookings/booking-no-show/report-no-show',
+        expect.objectContaining({ method: 'POST' }),
+      );
+    });
+
+    expect(await screen.findAllByText('Pendiente de confirmación')).not.toHaveLength(0);
+    expect(screen.getByText('La seña no se libera automáticamente mientras se confirma el no show.')).toBeInTheDocument();
+    expect(screen.getByText('La plataforma deja la seña en pausa hasta revisar lo que pasó.')).toBeInTheDocument();
+    expect(showToastMock).toHaveBeenCalledWith(
+      'Pendiente de confirmación',
+      'El no show quedó informado y la seña sigue en pausa hasta que se revise.',
+      'success',
+    );
+  });
+
+  test('lets the host cancel a protected reservation and shows the automatic refund state', async () => {
+    apiJsonMock.mockImplementation(async (url: string, options?: RequestInit) => {
+      if (url === '/api/host/dashboard') {
+        return {
+          stats: {
+            host_rating: 4.9,
+            total_bookings_hosted: 3,
+            trust_score: 88,
+            badge: 'Verificado',
+            host_verified: true,
+          },
+          properties: [
+            {
+              id: 'prop-1',
+              title: 'Casa del bosque',
+              location: 'Pinamar',
+              price: 150000,
+              status: 'active',
+              reviewsCount: 8,
+              rating: 4.9,
+              imageUrl: 'https://example.com/property.jpg',
+              verificationScore: 4,
+              verificationItems: [
+                { key: 'identity', label: 'Identidad confirmada', description: 'Sabés con quién estás hablando.', status: 'complete' },
+              ],
+            },
+          ],
+          recentBookings: [
+            {
+              id: 'booking-host-cancel',
+              status: 'confirmed',
+              requestMode: 'protected',
+              depositStatus: 'held',
+              userId: 'guest-5',
+              userName: 'Bruno',
+              propertyTitle: 'Casa del bosque',
+              startDate: '2026-10-04',
+              endDate: '2026-10-09',
+              guests: 3,
+              totalPrice: 610000,
+            },
+          ],
+          estimatedIncome: 250000,
+        };
+      }
+
+      if (url === '/api/bookings/booking-host-cancel/cancel-as-host' && options?.method === 'POST') {
+        return {
+          booking: {
+            id: 'booking-host-cancel',
+            status: 'cancelled',
+            requestMode: 'protected',
+            depositStatus: 'refunded',
+            cancellationActor: 'host',
+            userId: 'guest-5',
+            userName: 'Bruno',
+            propertyTitle: 'Casa del bosque',
+            startDate: '2026-10-04',
+            endDate: '2026-10-09',
+            guests: 3,
+            totalPrice: 610000,
+          },
+        };
+      }
+
+      return {};
+    });
+
+    render(<HostDashboard onBack={vi.fn()} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /Cancelar reserva/i }));
+
+    await waitFor(() => {
+      expect(apiJsonMock).toHaveBeenCalledWith(
+        '/api/bookings/booking-host-cancel/cancel-as-host',
+        expect.objectContaining({ method: 'POST' }),
+      );
+    });
+
+    expect(await screen.findAllByText('Canceló el anfitrión')).not.toHaveLength(0);
+    expect(screen.getByText('La reserva ya no sigue activa.')).toBeInTheDocument();
+    expect(screen.getByText('La seña se devuelve automáticamente.')).toBeInTheDocument();
+    expect(showToastMock).toHaveBeenCalledWith(
+      'Reserva cancelada',
+      'La reserva quedó cancelada y la seña se devuelve automáticamente.',
+      'success',
+    );
   });
 });

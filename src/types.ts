@@ -118,7 +118,9 @@ export type ReservationRequestMode = 'direct' | 'protected';
 
 export type ReservationRequestStatus = 'pending' | 'accepted';
 
-export type ReservationDepositStatus = 'reported' | 'confirmed' | 'held' | 'released';
+export type ReservationDepositStatus = 'reported' | 'confirmed' | 'held' | 'review' | 'pending_confirmation' | 'released' | 'refunded';
+
+export type ReservationCancellationActor = 'guest' | 'host';
 
 export interface ReservationRequestContext {
   propertyId: string;
@@ -133,6 +135,7 @@ export interface ReservationRequestContext {
   mode: ReservationRequestMode;
   requestStatus?: ReservationRequestStatus;
   depositStatus?: ReservationDepositStatus;
+  cancellationActor?: ReservationCancellationActor;
   bookingId?: string;
   bookingStatus?: BookingStatus;
 }
@@ -152,6 +155,7 @@ export interface Booking {
   totalPrice?: number;
   requestMode?: ReservationRequestMode;
   depositStatus?: ReservationDepositStatus;
+  cancellationActor?: ReservationCancellationActor;
   cancellationDeadline?: string | null;
   date?: string;
   contractAccepted?: boolean;
@@ -180,6 +184,7 @@ export interface Conversation {
   requestMode?: ReservationRequestMode;
   requestStatus?: ReservationRequestStatus;
   depositStatus?: ReservationDepositStatus;
+  cancellationActor?: ReservationCancellationActor;
   requestStartDate?: string;
   requestEndDate?: string;
   requestGuests?: number;
