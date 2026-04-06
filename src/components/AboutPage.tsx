@@ -417,6 +417,47 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
               exit={{ opacity: 0, y: -10 }}
               className="space-y-10"
             >
+              <section className="space-y-5">
+                <SectionTitle
+                  as="h2"
+                  heading="Por qué existe Alquiler Real"
+                  className="max-w-3xl"
+                />
+
+                <div className="max-w-3xl space-y-4">
+                  <p className="app-body leading-8 text-slate-700 dark:text-slate-300">
+                    Alquiler Real nace de algo simple: la frustración de no saber en qué confiar.
+                  </p>
+
+                  <p className="app-body leading-8 text-slate-700 dark:text-slate-300">
+                    Fotos que no representan el lugar, ubicaciones poco claras, condiciones que cambian después de hablar… y muchas veces, directamente, estafas.
+                  </p>
+
+                  <p className="app-body leading-8 text-slate-700 dark:text-slate-300">
+                    Reservar es cada vez más fácil.<br />
+                    Pero decidir bien sigue siendo difícil.
+                  </p>
+
+                  <p className="app-body leading-8 text-slate-700 dark:text-slate-300">
+                    Este proyecto no busca reemplazar tu decisión, sino mejorarla.
+                  </p>
+
+                  <p className="app-body leading-8 text-slate-700 dark:text-slate-300">
+                    Mostramos información que normalmente no está clara desde el inicio:<br />
+                    quién publica, dónde está realmente el lugar y qué parte del aviso fue comprobada.
+                  </p>
+
+                  <p className="app-body leading-8 text-slate-700 dark:text-slate-300">
+                    No intervenimos en el acuerdo ni en el pago.<br />
+                    Pero sí en algo clave: que tengas contexto real antes de avanzar.
+                  </p>
+
+                  <p className="app-body leading-8 text-slate-700 dark:text-slate-300">
+                    Porque elegir bien no debería depender de la suerte.
+                  </p>
+                </div>
+              </section>
+
               <section className="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)]">
                 <Card
                   padding="none"
