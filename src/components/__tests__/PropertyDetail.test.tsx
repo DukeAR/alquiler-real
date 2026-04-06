@@ -172,9 +172,10 @@ describe('PropertyDetail', () => {
     expect(screen.getByText('Lo importante para decidir')).toBeDefined();
     expect(screen.getByText('Comodidades clave')).toBeDefined();
     expect(screen.getByText('Wifi rápido')).toBeDefined();
-    expect(screen.getByText('Señales para decidir con más claridad')).toBeDefined();
+    expect(screen.getByText('Datos para revisar antes de reservar')).toBeDefined();
     expect(screen.getByText('Ubicación: Ciudad Test.')).toBeDefined();
-    expect(screen.getAllByText('Propiedad verificada').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Más datos comprobados').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Identidad confirmada').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Ubicación verificada').length).toBeGreaterThan(0);
     expect(screen.getByText('Mariana')).toBeDefined();
   });

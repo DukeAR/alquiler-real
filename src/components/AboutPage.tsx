@@ -75,12 +75,12 @@ const projectScopeCards: ScopeCard[] = [
   {
     eyebrow: 'Qué sí hacemos',
     title: 'Qué mostramos antes de que decidas',
-    description: 'Ejemplos concretos de lo que podés ver antes de hablar o pagar.',
+    description: 'Ejemplos concretos de lo que podés revisar antes de hablar o pagar.',
     points: [
-      'Quién está detrás de la publicación cuando hay verificación.',
+      'Quién publica cuando hay identidad confirmada.',
       'Si la ubicación coincide con el lugar real.',
-      'Qué dijeron otras personas que ya estuvieron.',
-      'Qué información es clara antes de hablar o pagar.',
+      'Qué reseñas reales dejaron otras personas que ya estuvieron.',
+      'Qué información ya está clara antes de hablar o pagar.',
     ],
     icon: Icons.Target,
     cardClassName: 'rounded-[26px] border-brand/15 bg-brand/[0.06] p-6 dark:border-brand/20 dark:bg-brand/10',
@@ -88,12 +88,12 @@ const projectScopeCards: ScopeCard[] = [
     pointClassName: 'text-slate-700 dark:text-slate-200',
   },
   {
-    eyebrow: 'Hasta dónde llega la verificación',
-    title: 'Hasta dónde llega la verificación',
-    description: 'Verificamos información concreta antes de que avances. Hay cosas que dependen de las partes y no se pueden validar desde la plataforma.',
+    eyebrow: 'Qué no comprobamos',
+    title: 'Qué no comprobamos desde la app',
+    description: 'Mostramos información concreta antes de que avances. Hay cosas que dependen de las partes y no las comprobamos desde la plataforma.',
     points: [
-      'El estado del lugar y los servicios se confirman entre las partes.',
-      'Los aspectos legales y contractuales quedan fuera de la verificación.',
+      'El estado final del lugar y los servicios se confirman entre las partes.',
+      'Los aspectos legales y contractuales quedan fuera de la app.',
       'Los pagos y acuerdos se realizan directamente entre huésped y anfitrión.',
     ],
     icon: Icons.ShieldAlert,
@@ -105,12 +105,12 @@ const projectScopeCards: ScopeCard[] = [
 
 const verificationLevels: VerificationLevel[] = [
   {
-    title: 'Verificación presencial',
-    description: 'Es el nivel más sólido porque hubo validación en el lugar.',
+    title: 'Revisión presencial',
+    description: 'Es el nivel más completo porque hubo revisión en el lugar.',
     bullets: [
-      'La identidad fue validada en persona.',
+      'La identidad quedó confirmada en persona.',
       'Se registró el lugar físicamente.',
-      'La ubicación coincide con la propiedad.',
+      'La ubicación verificada coincide con la propiedad.',
     ],
     icon: Icons.ShieldCheck,
     cardClassName: 'rounded-[28px] border-emerald-200/80 bg-emerald-50/92 p-6 dark:border-emerald-900/30 dark:bg-emerald-900/20 md:p-7',
@@ -120,11 +120,11 @@ const verificationLevels: VerificationLevel[] = [
     pointClassName: 'text-emerald-800/90 dark:text-emerald-200/90',
   },
   {
-    title: 'Verificación digital',
-    description: 'La validación fue online. Sirve para revisar algunos datos antes de avanzar.',
+    title: 'Revisión digital',
+    description: 'La revisión fue online. Sirve para mirar algunos datos antes de avanzar.',
     bullets: [
-      'La identidad fue validada online.',
-      'Hay señal de ubicación en ese momento.',
+      'La identidad quedó confirmada online.',
+      'Hay registro de ubicación en ese momento.',
       'No reemplaza una visita real.',
     ],
     icon: Icons.Shield,
@@ -143,8 +143,8 @@ const futureCards: FutureCard[] = [
     icon: Icons.Globe,
   },
   {
-    title: 'Más señales fáciles de leer',
-    description: 'Si algo se valida, queremos que se entienda rápido y sin etiquetas técnicas.',
+    title: 'Más datos fáciles de leer',
+    description: 'Si algo se pudo comprobar, queremos que se entienda rápido y sin etiquetas técnicas.',
     icon: Icons.Shield,
   },
   {
@@ -157,7 +157,7 @@ const futureCards: FutureCard[] = [
 const hostBenefits: RoleBenefit[] = [
   {
     title: 'Quién publica queda claro',
-    description: 'Si validaste tu identidad, la otra persona lo ve antes de escribirte.',
+    description: 'Si tenés identidad confirmada, la otra persona lo ve antes de escribirte.',
     icon: Icons.BadgeCheck,
   },
   {
@@ -175,17 +175,17 @@ const hostBenefits: RoleBenefit[] = [
 const guestBenefits: RoleBenefit[] = [
   {
     title: 'Quién publica',
-    description: 'Si hubo verificación, no hablás con un perfil anónimo.',
+    description: 'Si hubo identidad confirmada, no hablás con un perfil anónimo.',
     icon: Icons.BadgeCheck,
   },
   {
     title: 'Dónde está el lugar',
-    description: 'Podés revisar si la ubicación coincide con la propiedad.',
+    description: 'Podés revisar si la ubicación verificada coincide con la propiedad.',
     icon: Icons.MapPin,
   },
   {
     title: 'Qué dijeron otros',
-    description: 'Las reseñas muestran cómo fue la estadía para otras personas.',
+    description: 'Las reseñas reales muestran cómo fue la estadía para otras personas.',
     icon: Icons.Search,
   },
 ];
@@ -196,9 +196,9 @@ const hostSteps: StepCard = {
   description: 'Cuatro cosas para que el aviso se entienda rápido.',
   icon: Icons.ListTodo,
   steps: [
-    'Mostrá quién publica y si validaste tu identidad.',
+    'Mostrá quién publica y si tenés identidad confirmada.',
     'Dejá visible ubicación, precio, fotos y reglas básicas.',
-    'Marcá qué parte del aviso ya se pudo comprobar.',
+    'Marcá qué parte del aviso se pudo comprobar.',
     'Publicá cuando lo principal se entienda sin abrir el chat.',
   ],
   tone: 'brand',
@@ -211,21 +211,21 @@ const guestSteps: StepCard = {
   icon: Icons.ListTodo,
   steps: [
     'Elegí la zona y compará propiedades.',
-    'Revisá quién publica, qué verificación tiene y qué reseñas hay.',
+    'Revisá quién publica, si hay identidad confirmada, ubicación verificada y reseñas reales.',
     'Hacé preguntas concretas antes de avanzar.',
-    'Coordiná el pago cuando ya hayas revisado ubicación, reseñas y reglas básicas.',
+    'Coordiná el pago cuando ya hayas revisado ubicación, reseñas reales y reglas básicas.',
   ],
   tone: 'success',
 };
 
 const hostHighValidationPoints = [
-  'Se validó quién publica.',
+  'Se confirmó quién publica.',
   'Se registró el lugar y su ubicación.',
   'La consulta arranca con menos dudas básicas.',
 ];
 
 const hostScopePoints = [
-  'La app deja visible quién publica, dónde está el lugar y qué parte ya fue validada.',
+  'La app deja visible quién publica, dónde está el lugar y qué parte ya se pudo comprobar.',
   'La charla, la visita y la decisión final siguen siendo entre las personas.',
   'El objetivo es que el aviso no arranque incompleto.',
 ];
@@ -379,9 +379,9 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
     >
       <PageHeader
         onBack={onBack}
-        eyebrow="Transparencia"
+        eyebrow="Información clara"
         heading="Cómo funciona Alquiler Real"
-        description="Qué información muestra la app, qué cosas se pudieron comprobar y qué conviene mirar antes de reservar."
+        description="Qué información muestra la app, qué se pudo comprobar y qué conviene revisar antes de reservar."
         contentClassName="mx-auto w-full max-w-5xl"
       />
 
@@ -430,16 +430,16 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                     <SectionTitle
                       eyebrow="Proyecto"
                       as="h2"
-                      heading="Información clara para elegir sin adivinar"
-                      description="Alquilar en la costa muchas veces depende de confiar en lo que alguien publica. Fotos, descripciones y promesas."
+                      heading="Elegí con información real antes de reservar"
+                      description="En la costa muchas veces la decisión arranca con fotos, texto y promesas. Acá ordenamos lo que sí se pudo comprobar."
                       className="max-w-2xl"
                     />
                     <div className="space-y-4">
                       <p className="app-body text-slate-700 dark:text-slate-300">
-                        Acá ordenamos lo que se puede comprobar antes de avanzar: <strong>quién publica, si el lugar coincide y qué experiencia tuvieron otros.</strong>
+                        Mostramos <strong>ubicación verificada, identidad confirmada y reseñas reales</strong> cuando esa información está disponible.
                       </p>
                       <p className="app-body text-slate-700 dark:text-slate-300">
-                        No reemplazamos tu criterio. Mostramos datos concretos para que decidas con más base.
+                        No decidimos por vos. Dejamos claro qué se pudo comprobar y qué no antes de avanzar.
                       </p>
                     </div>
                   </div>
@@ -456,8 +456,8 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                 <SectionTitle
                   eyebrow="Cómo leer una propiedad"
                   as="h2"
-                  heading="Qué significa que algo esté verificado"
-                  description="No todo es igual. Algunas cosas se pudieron comprobar, otras no."
+                  heading="Qué significa cada dato comprobado"
+                  description="No todo vale lo mismo. Algunas cosas se pudieron revisar y otras no."
                 />
 
                 <div className="grid gap-5 lg:grid-cols-2">
@@ -474,7 +474,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                     <div className="space-y-2">
                       <h3 className="text-[1rem] font-semibold leading-6 tracking-[-0.015em] text-slate-950 dark:text-slate-50">Qué mirar además de esto</h3>
                       <p className="app-body-sm leading-7 text-slate-600 dark:text-slate-400">
-                        La verificación ayuda, pero no alcanza sola. Siempre conviene revisar reseñas, fotos, ubicación y hablar con quien publica antes de reservar.
+                        La información comprobada ayuda, pero no alcanza sola. Siempre conviene revisar reseñas reales, fotos, ubicación y hablar con quien publica antes de reservar.
                       </p>
                     </div>
                   </div>
@@ -523,7 +523,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                     eyebrow="Anfitriones"
                     as="h2"
                     heading="Mostrá bien quién publica y qué se pudo comprobar"
-                    description="Cuando el aviso deja visible identidad, ubicación y validaciones concretas, la otra persona entiende rápido qué está viendo y consulta con menos vueltas."
+                    description="Cuando el aviso deja visible identidad confirmada, ubicación verificada y datos concretos, la otra persona entiende rápido qué está viendo y consulta con menos vueltas."
                     className="max-w-2xl"
                     descriptionClassName="text-slate-700 dark:text-slate-300"
                   />
@@ -544,10 +544,10 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                     </div>
 
                     <SectionTitle
-                      eyebrow="Cuando ya se pudo comprobar"
+                      eyebrow="Cuando ya hay más datos comprobados"
                       as="h3"
                       heading="No mostrás solo lo que escribiste"
-                      description="Cuando una publicación llega a este nivel, la otra persona no depende solo del texto y las fotos. También ve señales concretas que ya se pudieron revisar en el lugar."
+                      description="Cuando una propiedad llega a este nivel, la otra persona no depende solo del texto y las fotos. También ve datos concretos que ya se pudieron comprobar."
                       className="max-w-2xl"
                       eyebrowClassName="text-brand/90 dark:text-brand-light/80"
                       descriptionClassName="text-slate-700 dark:text-slate-300"
@@ -577,7 +577,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                     <SectionTitle
                       eyebrow="Hasta dónde ayuda la plataforma"
                       as="h3"
-                      heading="Ordena lo importante y deja claro qué se revisó"
+                      heading="Ordena lo importante y deja claro qué se pudo comprobar"
                       description="La app no te reemplaza. Te ayuda a mostrar mejor lo que suele generar dudas al principio."
                       className="max-w-sm"
                       descriptionClassName="text-slate-700 dark:text-slate-300"
@@ -604,7 +604,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                       eyebrow="Siguiente paso"
                       as="h3"
                       heading="Publicá con lo importante claro"
-                      description="Antes de recibir consultas, dejá visible quién publica, dónde está el lugar y qué información ya fue validada."
+                      description="Antes de recibir consultas, dejá visible quién publica, dónde está el lugar y qué información ya se pudo comprobar."
                       className="max-w-sm"
                       eyebrowClassName="text-brand/90 dark:text-brand-light/80"
                       descriptionClassName="text-slate-700 dark:text-slate-300"
@@ -651,7 +651,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                     eyebrow="Huéspedes"
                     as="h2"
                     heading="Mirá qué se pudo comprobar"
-                    description="Antes de reservar, podés revisar quién publica, si la ubicación coincide y qué dijeron otras personas."
+                    description="Antes de reservar, podés revisar quién publica, si hay ubicación verificada y qué reseñas reales dejaron otras personas."
                     className="max-w-2xl"
                   />
 
@@ -678,8 +678,8 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
 
                     <div className="space-y-3">
                       {[
-                        'Podés ver quién publica y qué parte del aviso fue validada.',
-                        'Podés comparar ubicación, reseñas y fotos en la misma lectura.',
+                        'Podés ver quién publica y qué parte del aviso se pudo comprobar.',
+                        'Podés comparar ubicación verificada, reseñas reales y fotos en la misma lectura.',
                         'La decisión sigue siendo tuya.',
                       ].map((point) => (
                         <div key={point} className="flex items-start gap-3 rounded-[18px] border border-slate-200/80 bg-white/88 px-4 py-3.5 text-[0.92rem] leading-6 text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300">

@@ -54,26 +54,26 @@ type RoleGuide = {
 
 const validationBuckets: ValidationBucket[] = [
   {
-    eyebrow: 'Sí validamos',
+    eyebrow: 'Sí mostramos',
     title: 'Qué podés revisar antes de avanzar',
     icon: Icons.ShieldCheck,
     tone: 'positive',
     items: [
-      'Quién publica, cuando esa identidad ya fue validada.',
-      'Si la ubicación coincide con el lugar.',
-      'Qué reseñas o registro real hay de la propiedad.',
+      'Quién publica, cuando esa identidad quedó confirmada.',
+      'Si hay ubicación verificada o si la ubicación coincide con el lugar.',
+      'Qué reseñas reales o registro del lugar hay.',
       'Qué parte del aviso ya está clara antes de hablar o pagar.',
     ],
   },
   {
-    eyebrow: 'No validamos',
-    title: 'Qué no garantiza la app',
+    eyebrow: 'No comprobamos',
+    title: 'Qué queda fuera de la app',
     icon: Icons.ShieldAlert,
     tone: 'neutral',
     items: [
-      'El estado del lugar, la limpieza o los servicios.',
+      'El estado final del lugar, la limpieza o los servicios.',
       'Aspectos legales, contratos o titularidad.',
-      'Que la estadía salga bien en todos los casos.',
+      'Cómo va a salir la estadía en todos los casos.',
     ],
   },
 ];
@@ -92,7 +92,7 @@ const supportCards: SupportCard[] = [
   {
     eyebrow: 'Hoy y lo que viene',
     title: 'Hoy operamos en San Clemente',
-    description: 'Ese es el alcance actual. Más adelante puede haber una seña resguardada, pero hoy no forma parte del flujo.',
+    description: 'Ese es el alcance actual. Si más adelante cambia el flujo de pago, lo vamos a mostrar claro. Hoy no forma parte de la app.',
     icon: Icons.MapPin,
     className: 'border-brand/15 bg-[radial-gradient(circle_at_top_right,rgba(67,56,202,0.12),transparent_42%),linear-gradient(180deg,rgba(255,255,255,0.99),rgba(248,250,252,0.98))] shadow-[0_18px_38px_-30px_rgba(15,23,42,0.18)] dark:border-brand/20 dark:bg-slate-900',
     iconWrapClassName: 'bg-brand/10 text-brand dark:bg-brand/15 dark:text-brand-light',
@@ -107,24 +107,24 @@ const faqGroups: FAQGroup[] = [
     description: 'Qué mirar antes de avanzar y qué no conviene dar por hecho.',
     items: [
       {
-        question: '¿Qué me aporta una propiedad verificada?',
+        question: '¿Qué me aporta ver información comprobada en una propiedad?',
         answer: 'Sirve para saber qué parte del aviso se pudo comprobar antes de hablar o pagar.',
         bullets: [
-          'Quién publica, si la ubicación coincide y si hay registro real del lugar.',
+          'Quién publica, si hay ubicación verificada y si existen reseñas reales o registro del lugar.',
           'No reemplaza una visita, pero evita decidir solo por promesas.',
         ],
         icon: Icons.ShieldCheck,
       },
       {
-        question: '¿La publicación garantiza la calidad de la estadía?',
-        answer: 'No. Verificado no significa que garanticemos limpieza, estado del lugar ni funcionamiento de los servicios.',
+        question: '¿Eso garantiza cómo va a salir la estadía?',
+        answer: 'No. Que algo esté comprobado no significa que la app garantice limpieza, estado del lugar ni funcionamiento de los servicios.',
         icon: Icons.Home,
       },
       {
         question: '¿Qué conviene revisar igual antes de pagar?',
         answer: 'Además de la verificación, conviene revisar lo básico de la publicación.',
         bullets: [
-          'Reseñas, fotos, ubicación y reglas de la propiedad.',
+          'Reseñas reales, fotos, ubicación y reglas de la propiedad.',
           'Lo que no esté claro, preguntalo antes de pagar.',
         ],
         icon: Icons.Search,
@@ -153,7 +153,7 @@ const roleGuides: RoleGuide[] = [
   {
     eyebrow: 'Para anfitriones',
     title: 'Mostrá lo importante desde el inicio',
-    description: 'Si el aviso deja claro quién publica, dónde está el lugar y qué parte fue validada, la consulta llega mejor.',
+    description: 'Si el aviso deja claro quién publica, dónde está el lugar y qué parte se pudo comprobar, la consulta llega mejor.',
     points: [
       'La otra persona entiende más rápido qué ofrecés.',
       'Bajan las preguntas que se resuelven leyendo.',
@@ -165,7 +165,7 @@ const roleGuides: RoleGuide[] = [
   {
     eyebrow: 'Para huéspedes',
     title: 'Revisá antes de reservar',
-    description: 'Podés ver quién publica, si la ubicación coincide y qué dijeron otras personas.',
+    description: 'Podés ver quién publica, si hay ubicación verificada y qué reseñas reales dejaron otras personas.',
     points: [
       'No arrancás solo con fotos y promesas.',
       'Podés comparar propiedades con más contexto.',
@@ -280,7 +280,7 @@ export const FAQPage: React.FC<FAQPageProps> = ({ onBack }) => {
         onBack={onBack}
         eyebrow="Ayuda"
         heading="Preguntas frecuentes"
-        description="Qué valida la app, qué no y qué conviene mirar antes de reservar o publicar."
+        description="Qué muestra la app, qué no comprobamos y qué conviene revisar antes de reservar o publicar."
         contentClassName="mx-auto w-full max-w-5xl"
       />
 
@@ -297,9 +297,9 @@ export const FAQPage: React.FC<FAQPageProps> = ({ onBack }) => {
               </div>
 
               <SectionTitle
-                eyebrow="Transparencia"
+                eyebrow="Información clara"
                 as="h2"
-                heading="Qué validamos y qué no"
+                heading="Qué mostramos y qué no comprobamos"
                 description="Mostramos qué parte del aviso se pudo comprobar y qué queda fuera de la app."
                 className="max-w-2xl"
               />
@@ -417,7 +417,7 @@ export const FAQPage: React.FC<FAQPageProps> = ({ onBack }) => {
             eyebrow="Para cada rol"
             as="h2"
             heading="Qué cambia si publicás o reservás"
-            description="La misma información sirve para publicar mejor o para reservar con menos dudas."
+            description="La misma información sirve para publicar mejor o para reservar mirando qué se pudo comprobar."
             className="max-w-3xl"
           />
 

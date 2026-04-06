@@ -9,7 +9,7 @@ describe('FAQPage', () => {
     render(<FAQPage onBack={onBack} />);
 
     expect(screen.getByRole('heading', { name: 'Preguntas frecuentes' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Qué validamos y qué no' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Qué mostramos y qué no comprobamos' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Preguntas que conviene resolver antes de avanzar' })).toBeInTheDocument();
     expect(screen.getByText('Mostrá lo importante desde el inicio')).toBeInTheDocument();
     expect(screen.getByText('Revisá antes de reservar')).toBeInTheDocument();

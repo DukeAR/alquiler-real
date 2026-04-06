@@ -14,8 +14,8 @@ describe('AboutPage', () => {
     );
 
     expect(screen.getByRole('heading', { name: 'Cómo funciona Alquiler Real' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Información clara para elegir sin adivinar' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Qué significa que algo esté verificado' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Elegí con información real antes de reservar' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Qué significa cada dato comprobado' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Anfitriones' }));
 

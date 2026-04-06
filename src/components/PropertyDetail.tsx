@@ -187,7 +187,7 @@ const getHostTenureLabel = (property: PropertyDetailData) => {
 const getReviewerLabel = (review: PropertyReviewItem) => {
   if (review.userName) return review.userName;
   if (review.reviewer_id) return `Huésped ${review.reviewer_id}`;
-  return 'Huésped verificado';
+  return 'Huésped';
 };
 
 const getInitial = (value?: string) => value?.trim().charAt(0).toUpperCase() || 'A';
@@ -247,34 +247,34 @@ const getReviewUsefulnessScore = (review: PropertyReviewItem) => {
 const getTraceabilityConfig = (level?: TraceabilityLevel) => {
   if (level === 'high') {
     return {
-      label: 'Verificación alta',
+      label: 'Más datos comprobados',
       badgeVariant: 'success' as const,
       noticeTone: 'success' as const,
-      description: 'La publicación reúne varias señales verificadas para ayudarte a decidir con más seguridad.',
-      noticeHeading: 'Publicación con señales fuertes de confianza',
-      noticeDescription: 'Entre fotos, ubicación y validaciones, hay más contexto real para comparar antes de reservar.',
+      description: 'Este aviso reúne más información revisada para comparar antes de decidir.',
+      noticeHeading: 'Hay más datos comprobados para revisar',
+      noticeDescription: 'Entre ubicación, registro visual y validaciones, tenés más contexto real antes de reservar.',
     };
   }
 
   if (level === 'medium') {
     return {
-      label: 'Verificación media',
+      label: 'Datos comprobados',
       badgeVariant: 'info' as const,
       noticeTone: 'info' as const,
-      description: 'Hay información útil para decidir, aunque conviene revisar detalles y despejar dudas con el anfitrión.',
-      noticeHeading: 'La publicación ya tiene una base confiable',
-      noticeDescription: 'Revisá comodidades, reseñas y validaciones para terminar de evaluar si te cierra.',
+      description: 'Hay información útil para revisar, aunque conviene mirar detalles y despejar dudas con el anfitrión.',
+      noticeHeading: 'Ya hay información concreta para comparar',
+      noticeDescription: 'Revisá ubicación verificada, identidad confirmada y reseñas reales para terminar de evaluar si te cierra.',
     };
   }
 
   if (level === 'low') {
     return {
-      label: 'Verificación inicial',
+      label: 'Pocos datos comprobados',
       badgeVariant: 'warning' as const,
       noticeTone: 'warning' as const,
-      description: 'Todavía hay pocas señales verificadas, así que conviene mirar la publicación con más atención.',
-      noticeHeading: 'Hay menos contexto verificado para decidir',
-      noticeDescription: 'Tomate un minuto para revisar reseñas, ubicación y hablar con el anfitrión antes de avanzar.',
+      description: 'Todavía hay poca información revisada, así que conviene mirar este aviso con más atención.',
+      noticeHeading: 'Todavía hay poco comprobado para comparar',
+      noticeDescription: 'Tomate un minuto para revisar reseñas reales, ubicación y hablar con el anfitrión antes de avanzar.',
     };
   }
 
@@ -439,8 +439,8 @@ export const PropertyDetailShell: React.FC<{
 
   const heroBadges = [
     property.isSuperHost ? { label: 'Superanfitrión', variant: 'warning', icon: Icons.Crown } : null,
-    property.isVerifiedProperty ? { label: 'Propiedad verificada', variant: 'success', icon: Icons.BadgeCheck } : null,
-    property.identityValidated ? { label: 'Anfitrión validado', variant: 'brand', icon: Icons.ShieldCheck } : null,
+    property.isVerifiedProperty ? { label: 'Más datos comprobados', variant: 'success', icon: Icons.BadgeCheck } : null,
+    property.identityValidated ? { label: 'Identidad confirmada', variant: 'brand', icon: Icons.ShieldCheck } : null,
     property.locationVerified ? { label: 'Ubicación verificada', variant: 'info', icon: Icons.MapPin } : null,
     traceability ? { label: traceability.label, variant: traceability.badgeVariant, icon: Icons.Target } : null,
   ].filter(Boolean).slice(0, 3) as IconBadge[];
@@ -454,43 +454,43 @@ export const PropertyDetailShell: React.FC<{
 
   const sidebarBadges = [
     traceability ? { label: traceability.label, variant: traceability.badgeVariant, icon: Icons.Shield } : null,
-    property.isVerifiedProperty ? { label: 'Verificada', variant: 'success', icon: Icons.BadgeCheck } : null,
-    property.locationVerified ? { label: 'Ubicación confirmada', variant: 'info', icon: Icons.Map } : null,
+    property.isVerifiedProperty ? { label: 'Más datos comprobados', variant: 'success', icon: Icons.BadgeCheck } : null,
+    property.locationVerified ? { label: 'Ubicación verificada', variant: 'info', icon: Icons.Map } : null,
   ].filter(Boolean) as IconBadge[];
 
   const hostSignalBadges = [
-    property.identityValidated ? { label: 'Identidad validada', variant: 'brand', icon: Icons.ShieldCheck } : null,
-    property.hasDigitalVerification || property.videoValidated ? { label: 'Validación digital', variant: 'info', icon: Icons.Video } : null,
-    property.hasPresencialVerification ? { label: 'Chequeo presencial', variant: 'success', icon: Icons.Home } : null,
+    property.identityValidated ? { label: 'Identidad confirmada', variant: 'brand', icon: Icons.ShieldCheck } : null,
+    property.hasDigitalVerification || property.videoValidated ? { label: property.videoValidated ? 'Registro visual' : 'Revisión digital', variant: 'info', icon: Icons.Video } : null,
+    property.hasPresencialVerification ? { label: 'Revisión presencial', variant: 'success', icon: Icons.Home } : null,
   ].filter(Boolean) as IconBadge[];
 
   const trustSignals = [
     property.isVerifiedProperty ? {
       icon: Icons.BadgeCheck,
-      label: 'Propiedad verificada',
-      description: 'La publicación suma controles adicionales para que puedas contrastar mejor la información visible.',
+      label: 'Más datos comprobados',
+      description: 'Este aviso suma información revisada para que compares mejor antes de decidir.',
     } : null,
     property.locationVerified ? {
       icon: Icons.Map,
       label: 'Ubicación verificada',
-      description: 'La ubicación publicada ya fue confirmada dentro de la plataforma.',
+      description: 'La ubicación publicada ya fue comprobada dentro de la plataforma.',
     } : null,
     property.identityValidated ? {
       icon: Icons.ShieldCheck,
-      label: 'Identidad del anfitrión',
-      description: 'El anfitrión validó su identidad para que sepas con quién estás hablando.',
+      label: 'Identidad confirmada',
+      description: 'La identidad del anfitrión ya fue confirmada para que sepas con quién hablás.',
     } : null,
     property.hasPresencialVerification ? {
       icon: Icons.Home,
-      label: 'Verificación presencial',
-      description: 'Hubo una visita al lugar para sumar una señal presencial sobre la publicación.',
+      label: 'Revisión presencial',
+      description: 'Hubo una revisión en el lugar para sumar contexto real sobre la propiedad.',
     } : null,
     property.hasDigitalVerification || property.videoValidated ? {
       icon: Icons.Video,
-      label: 'Validación digital',
+      label: property.videoValidated ? 'Registro visual' : 'Revisión digital',
       description: property.videoValidated
-        ? 'La publicación cuenta con material visual adicional para revisar mejor el estado real del lugar.'
-        : 'La publicación sumó una señal digital para que puedas revisar mejor el anuncio.',
+        ? 'Hay material visual adicional para revisar mejor el estado real del lugar.'
+        : 'Hay una revisión digital adicional para comparar mejor el anuncio.',
     } : null,
   ].filter(Boolean) as TrustSignal[];
 
@@ -748,11 +748,11 @@ export const PropertyDetailShell: React.FC<{
         <section className="space-y-6 md:space-y-8">
           {heroBadges.length > 0 ? (
             <div className="flex flex-wrap items-center gap-2">
-              {heroBadges.map((badge) => {
+              {heroBadges.map((badge, index) => {
                 const Icon = badge.icon;
 
                 return (
-                  <Badge key={badge.label} variant={badge.variant} size="md" className="gap-2">
+                  <Badge key={`${badge.label}-${index}`} variant={badge.variant} size="md" className="gap-2">
                     <Icon className="h-3.5 w-3.5" />
                     <span>{badge.label}</span>
                   </Badge>
@@ -767,7 +767,7 @@ export const PropertyDetailShell: React.FC<{
               visualLevel="h1"
               eyebrow="Detalle de la propiedad"
               heading={property.title}
-              description="Información real para tomar mejores decisiones antes de reservar."
+              description="Revisá qué se pudo comprobar antes de decidir."
               className="max-w-3xl"
             />
 
@@ -886,7 +886,7 @@ export const PropertyDetailShell: React.FC<{
                 <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600">
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-brand/10 px-3 py-1.5 font-semibold text-brand">
                     <Icons.Star className="h-4 w-4 fill-current" />
-                    <span>{ratingValue > 0 ? ratingValue.toFixed(1) : 'Nuevo'}</span>
+                    <span>{ratingValue > 0 ? ratingValue.toFixed(1) : 'Sin puntaje'}</span>
                   </span>
                   <span>{reviewCount > 0 ? formatReviewCount(reviewCount) : 'Sin reseñas todavía'}</span>
                 </div>
@@ -906,11 +906,11 @@ export const PropertyDetailShell: React.FC<{
 
             {sidebarBadges.length > 0 ? (
               <div className="mt-4 flex flex-wrap gap-2">
-                {sidebarBadges.map((badge) => {
+                {sidebarBadges.map((badge, index) => {
                   const Icon = badge.icon;
 
                   return (
-                    <Badge key={badge.label} variant={badge.variant} className="gap-2">
+                    <Badge key={`${badge.label}-${index}`} variant={badge.variant} className="gap-2">
                       <Icon className="h-3.5 w-3.5" />
                       <span>{badge.label}</span>
                     </Badge>
@@ -1131,7 +1131,7 @@ export const PropertyDetailShell: React.FC<{
                 <SectionTitle
                   eyebrow="Decisión"
                   heading="Lo importante para decidir"
-                  description="Un resumen corto de lo que cambia la decisión antes de reservar."
+                  description="Un resumen corto de lo que conviene mirar antes de reservar."
                 />
                 <p className="max-w-3xl text-base leading-8 text-slate-600">
                   {property.description || 'Todavía no hay descripción disponible.'}
@@ -1168,18 +1168,18 @@ export const PropertyDetailShell: React.FC<{
                   )}
                   <div className="min-w-0">
                     <p className="text-sm leading-6 text-slate-600">
-                      {property.host?.bio || 'Podés revisar sus señales de verificación y escribirle antes de reservar si querés despejar dudas.'}
+                      {property.host?.bio || 'Podés revisar qué se pudo comprobar y escribirle antes de reservar si querés despejar dudas.'}
                     </p>
                   </div>
                 </div>
 
                 {hostSignalBadges.length > 0 ? (
                   <div className="mt-4 flex flex-wrap gap-2">
-                    {hostSignalBadges.map((badge) => {
+                    {hostSignalBadges.map((badge, index) => {
                       const Icon = badge.icon;
 
                       return (
-                        <Badge key={badge.label} variant={badge.variant} className="gap-2">
+                        <Badge key={`${badge.label}-${index}`} variant={badge.variant} className="gap-2">
                           <Icon className="h-3.5 w-3.5" />
                           <span>{badge.label}</span>
                         </Badge>
@@ -1217,9 +1217,9 @@ export const PropertyDetailShell: React.FC<{
 
           <Card className="rounded-[32px] border-slate-200/80 bg-white p-6 shadow-[0_28px_70px_-50px_rgba(15,23,42,0.25)] sm:p-7">
             <SectionTitle
-              eyebrow="Confianza"
-              heading="Señales para decidir con más claridad"
-              description={traceability ? traceability.description : 'Revisá verificación, ubicación, historial y reseñas para decidir con más contexto.'}
+              eyebrow="Qué se pudo comprobar"
+              heading="Datos para revisar antes de reservar"
+              description={traceability ? traceability.description : 'Revisá ubicación verificada, identidad confirmada, historial y reseñas reales antes de decidir.'}
             />
 
             <div className="mt-6 space-y-4">
@@ -1233,21 +1233,21 @@ export const PropertyDetailShell: React.FC<{
 
               <NoticeBanner
                 tone={unresolvedReviewsCount > 0 ? 'warning' : 'success'}
-                heading={unresolvedReviewsCount > 0 ? `${unresolvedReviewsCount} ${unresolvedReviewsCount === 1 ? 'señal pendiente en reseñas' : 'señales pendientes en reseñas'}` : 'Sin alertas abiertas en reseñas'}
-                description={unresolvedReviewsCount > 0 ? 'Hay comentarios o situaciones en revisión. Vale la pena leer las reseñas y consultar antes de reservar.' : 'Hasta ahora no aparecen conflictos abiertos asociados a esta publicación.'}
+                heading={unresolvedReviewsCount > 0 ? `${unresolvedReviewsCount} ${unresolvedReviewsCount === 1 ? 'reseña pendiente de revisar' : 'reseñas pendientes de revisar'}` : 'Sin alertas abiertas en reseñas'}
+                description={unresolvedReviewsCount > 0 ? 'Hay comentarios o situaciones en revisión. Vale la pena leer las reseñas reales y consultar antes de reservar.' : 'Hasta ahora no aparecen conflictos abiertos asociados a este aviso.'}
               />
 
               {trustSignals.length > 0 ? (
                 <div className="grid gap-3 md:grid-cols-2">
-                  {trustSignals.map((signal) => (
-                    <TrustSignalCard key={signal.label} {...signal} />
+                  {trustSignals.map((signal, index) => (
+                    <TrustSignalCard key={`${signal.label}-${index}`} {...signal} />
                   ))}
                 </div>
               ) : (
                 <NoticeBanner
                   tone="info"
-                  heading="Todavía hay pocas señales extra"
-                  description="La publicación muestra la información base, pero conviene revisar reseñas y hablar con el anfitrión antes de avanzar."
+                  heading="Todavía hay pocos datos extra para revisar"
+                  description="Este aviso muestra la información base, pero conviene revisar reseñas reales y hablar con el anfitrión antes de avanzar."
                 />
               )}
 
@@ -1276,7 +1276,7 @@ export const PropertyDetailShell: React.FC<{
               <SectionTitle
                 eyebrow="Reseñas"
                 heading="Cómo fue la experiencia de otros huéspedes"
-                description={reviewCount > 0 ? 'Comentarios concretos para terminar de decidir con más seguridad.' : 'Todavía no hay reseñas publicadas para esta propiedad.'}
+                description={reviewCount > 0 ? 'Reseñas reales para sumar contexto antes de reservar.' : 'Todavía no hay reseñas reales publicadas para esta propiedad.'}
               />
 
               <Card padding="sm" variant="muted" className="w-full rounded-[28px] border-slate-200/80 bg-white lg:max-w-xs">
@@ -1285,7 +1285,7 @@ export const PropertyDetailShell: React.FC<{
                     <Icons.Star className="h-5 w-5 fill-current" />
                   </span>
                   <div>
-                    <div className="text-xl font-bold tracking-tight text-slate-950">{ratingValue > 0 ? ratingValue.toFixed(1) : 'Nuevo'}</div>
+                    <div className="text-xl font-bold tracking-tight text-slate-950">{ratingValue > 0 ? ratingValue.toFixed(1) : 'Sin puntaje'}</div>
                     <div className="text-sm text-slate-500">{reviewCount > 0 ? formatReviewCount(reviewCount) : 'Sin reseñas todavía'}</div>
                   </div>
                 </div>
@@ -1302,7 +1302,7 @@ export const PropertyDetailShell: React.FC<{
               <NoticeBanner
                 tone="info"
                 heading="Todavía no hay opiniones publicadas"
-                description="Cuando haya estadías completadas, vas a ver comentarios útiles para decidir con más claridad."
+                description="Cuando haya estadías completadas, vas a ver reseñas reales para comparar mejor."
               />
             )}
           </section>
