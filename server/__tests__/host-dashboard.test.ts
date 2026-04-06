@@ -117,6 +117,10 @@ describe('Host dashboard endpoint', () => {
               id: 'booking-1',
               status: 'pending',
               date: '12/10/2026',
+              startDate: '12/10/2026',
+              endDate: '15/10/2026',
+              guests: 2,
+              totalPrice: 320000,
               userId: 'guest-1',
               userName: 'Marina',
               propertyTitle: 'Casa del bosque',
@@ -184,7 +188,7 @@ describe('Host dashboard endpoint', () => {
               bookingId: 'booking-1',
               consultedBeforeReserve: true,
               savedProperty: true,
-              acceptedAgreement: false,
+              returnedToView: null,
             },
           ],
         };
@@ -221,15 +225,16 @@ describe('Host dashboard endpoint', () => {
         basicDetailsComplete: true,
       },
       operationSignals: [
-        { id: 'consulted-before', label: 'Consultó antes de reservar', active: true },
-        { id: 'saved-property', label: 'Guardó la propiedad', active: true },
-        { id: 'accepted-agreement', label: 'Aceptó el acuerdo de reserva', active: false },
+        { id: 'consulted-before', label: 'Consultó antes de reservar', active: true, source: 'api' },
+        { id: 'saved-property', label: 'Guardó la propiedad', active: true, source: 'api' },
+        { id: 'returned-to-view', label: 'Volvió a verla', active: false, source: 'pending' },
+        { id: 'completed-profile', label: 'Completó sus datos', active: true, source: 'derived' },
       ],
     });
     expect(res.body.contactedGuests[0].guestProfile).toMatchObject({
       identityVerified: true,
       memberSince: '2022-02-10',
-      operationSignals: [],
     });
+    expect(res.body.contactedGuests[0].guestProfile).not.toHaveProperty('operationSignals');
   });
 });

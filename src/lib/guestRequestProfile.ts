@@ -1,6 +1,8 @@
 import type {
   GuestHostReviewSnippet,
   GuestOperationSignal,
+  GuestOperationSignalSource,
+  GuestProfileCompletion,
   GuestRequestProfile,
   GuestRequestProfileDataAvailability,
   GuestRequestProfileDataSource,
@@ -24,9 +26,40 @@ type GuestRequestProfileSection =
   | 'operationSignals'
   | 'memberSince';
 
+const canonicalOperationSignals: Array<{
+  id: string;
+  label: string;
+  source: GuestOperationSignalSource;
+}> = [
+  { id: 'consulted-before', label: 'Consultó antes de reservar', source: 'api' },
+  { id: 'saved-property', label: 'Guardó la propiedad', source: 'api' },
+  { id: 'returned-to-view', label: 'Volvió a verla', source: 'pending' },
+  { id: 'completed-profile', label: 'Completó sus datos', source: 'derived' },
+];
+
 const hasOwn = <T extends object>(value: T, key: PropertyKey) => Object.prototype.hasOwnProperty.call(value, key);
 
 const isObject = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value);
+
+const isOperationSignalSource = (value: unknown): value is GuestOperationSignalSource => (
+  value === 'api' || value === 'derived' || value === 'pending'
+);
+
+const isCompletedProfileSignalActive = (profileCompletion?: Partial<GuestProfileCompletion> | null) => {
+  if (!profileCompletion) {
+    return false;
+  }
+
+  if (typeof profileCompletion.basicDetailsComplete === 'boolean') {
+    return profileCompletion.basicDetailsComplete;
+  }
+
+  if (typeof profileCompletion.profileComplete === 'boolean') {
+    return profileCompletion.profileComplete;
+  }
+
+  return false;
+};
 
 const createDataAvailability = (overrides?: Partial<GuestRequestProfileDataAvailability>): GuestRequestProfileDataAvailability => {
   const availability: GuestRequestProfileDataAvailability = {
@@ -85,7 +118,7 @@ const hasHostReviews = (profile: GuestRequestProfile) => (
 );
 
 const hasOperationActivity = (profile: GuestRequestProfile) => (
-  profile.dataAvailability.operationSignals && profile.operationSignals.some((signal) => signal.active)
+  profile.dataAvailability.operationSignals && profile.operationSignals.some((signal) => signal.active && signal.source !== 'derived')
 );
 
 export const getGuestRequestProfileScenario = (profile: GuestRequestProfile): GuestRequestProfileScenario => {
@@ -147,7 +180,7 @@ export const getGuestRequestProfileEmptyStateMessage = (
     if (section === 'platformHistory') return 'El historial de estadías y cancelaciones va a aparecer acá cuando haya datos cargados.';
     if (section === 'hostReviews') return 'Las reseñas de anfitriones van a aparecer acá cuando queden cargadas en la ficha.';
     if (section === 'profileCompletion') return 'El resumen del perfil va a aparecer acá cuando haya datos suficientes.';
-    if (section === 'operationSignals') return 'Lo que hizo dentro de esta solicitud va a aparecer acá cuando quede registrado.';
+    if (section === 'operationSignals') return 'Lo que hizo dentro de esta operación va a aparecer acá cuando quede registrado.';
     return 'La antigüedad de la cuenta va a aparecer acá cuando quede disponible.';
   }
 
@@ -156,7 +189,7 @@ export const getGuestRequestProfileEmptyStateMessage = (
     if (section === 'platformHistory') return 'Todavía no hay estadías previas o cancelaciones para revisar.';
     if (section === 'hostReviews') return 'Todavía no hay reseñas de anfitriones porque esta cuenta todavía no tiene estadías visibles.';
     if (section === 'profileCompletion') return 'Todavía no hay suficientes datos cargados para resumir el perfil.';
-    if (section === 'operationSignals') return 'Esta solicitud todavía no dejó movimientos para revisar dentro de la plataforma.';
+    if (section === 'operationSignals') return 'Todavía no hay movimientos visibles para revisar en esta operación.';
     return 'La fecha de alta de la cuenta todavía no aparece en la ficha.';
   }
 
@@ -164,7 +197,7 @@ export const getGuestRequestProfileEmptyStateMessage = (
   if (section === 'platformHistory') return 'Todavía falta cargar el historial de estadías y cancelaciones.';
   if (section === 'hostReviews') return 'Todavía no aparecen reseñas de anfitriones en esta ficha.';
   if (section === 'profileCompletion') return 'Todavía faltan datos para resumir el perfil.';
-  if (section === 'operationSignals') return 'Todavía no aparecen movimientos de esta solicitud dentro de la plataforma.';
+  if (section === 'operationSignals') return 'Todavía no aparecen movimientos de esta operación dentro de la plataforma.';
   return 'La fecha de alta de la cuenta todavía no aparece disponible.';
 };
 
@@ -178,10 +211,10 @@ export const getGuestRequestProfileReviewsEmptyMessage = (profile: GuestRequestP
 
 export const getGuestRequestProfileOperationEmptyMessage = (profile: GuestRequestProfile) => {
   if (getGuestRequestProfileScenario(profile) === 'new-guest') {
-    return 'Esta solicitud todavía no dejó movimientos para revisar dentro de la plataforma.';
+    return 'Todavía no hay movimientos visibles para revisar en esta operación.';
   }
 
-  return 'Todavía no hay movimientos registrados para esta solicitud.';
+  return 'Todavía no hay movimientos registrados para esta operación.';
 };
 
 const createEmptyGuestRequestProfile = (): GuestRequestProfile => {
@@ -224,18 +257,45 @@ const normalizeHostReviews = (value: unknown) => {
   });
 };
 
-const normalizeOperationSignals = (value: unknown) => {
+const normalizeOperationSignals = (value: unknown, profileCompletion?: Partial<GuestProfileCompletion> | null) => {
   if (!Array.isArray(value)) {
     return [] as GuestOperationSignal[];
   }
 
-  return value.slice(0, 3).map((signal, index) => {
+  const providedSignals = new Map<string, Partial<GuestOperationSignal>>();
+
+  value.forEach((signal) => {
     const candidate = (signal && typeof signal === 'object' ? signal : {}) as Partial<GuestOperationSignal>;
+    const signalId = typeof candidate.id === 'string' && candidate.id.trim() ? candidate.id : null;
+
+    if (!signalId) {
+      return;
+    }
+
+    providedSignals.set(signalId, candidate);
+  });
+
+  return canonicalOperationSignals.map((definition) => {
+    const candidate = providedSignals.get(definition.id);
+
+    if (candidate) {
+      return {
+        id: definition.id,
+        label: typeof candidate.label === 'string' && candidate.label.trim() ? candidate.label : definition.label,
+        active: typeof candidate.active === 'boolean'
+          ? candidate.active
+          : definition.id === 'completed-profile'
+            ? isCompletedProfileSignalActive(profileCompletion)
+            : false,
+        source: isOperationSignalSource(candidate.source) ? candidate.source : definition.source,
+      };
+    }
 
     return {
-      id: typeof candidate.id === 'string' && candidate.id.trim() ? candidate.id : `guest-signal-${index}`,
-      label: typeof candidate.label === 'string' && candidate.label.trim() ? candidate.label : 'Señal disponible',
-      active: typeof candidate.active === 'boolean' ? candidate.active : false,
+      id: definition.id,
+      label: definition.label,
+      active: definition.id === 'completed-profile' ? isCompletedProfileSignalActive(profileCompletion) : false,
+      source: definition.source,
     };
   });
 };
@@ -272,6 +332,18 @@ export const resolveGuestRequestProfile = (source: GuestRequestProfileSource, _i
     memberSince: typeof providedProfile.memberSince === 'string' && providedProfile.memberSince.trim().length > 0,
   });
 
+  const normalizedProfileCompletion = {
+    profileComplete: typeof profileCompletion?.profileComplete === 'boolean'
+      ? profileCompletion.profileComplete
+      : emptyProfile.profileCompletion.profileComplete,
+    photoUploaded: typeof profileCompletion?.photoUploaded === 'boolean'
+      ? profileCompletion.photoUploaded
+      : emptyProfile.profileCompletion.photoUploaded,
+    basicDetailsComplete: typeof profileCompletion?.basicDetailsComplete === 'boolean'
+      ? profileCompletion.basicDetailsComplete
+      : emptyProfile.profileCompletion.basicDetailsComplete,
+  };
+
   return {
     identityVerified: dataAvailability.identity && typeof providedProfile.identityVerified === 'boolean'
       ? providedProfile.identityVerified
@@ -282,18 +354,8 @@ export const resolveGuestRequestProfile = (source: GuestRequestProfileSource, _i
       cancellationsCount: getSafeCount(platformHistory?.cancellationsCount, emptyProfile.platformHistory.cancellationsCount),
     },
     hostReviews: normalizeHostReviews(providedProfile.hostReviews),
-    profileCompletion: {
-      profileComplete: typeof profileCompletion?.profileComplete === 'boolean'
-        ? profileCompletion.profileComplete
-        : emptyProfile.profileCompletion.profileComplete,
-      photoUploaded: typeof profileCompletion?.photoUploaded === 'boolean'
-        ? profileCompletion.photoUploaded
-        : emptyProfile.profileCompletion.photoUploaded,
-      basicDetailsComplete: typeof profileCompletion?.basicDetailsComplete === 'boolean'
-        ? profileCompletion.basicDetailsComplete
-        : emptyProfile.profileCompletion.basicDetailsComplete,
-    },
-    operationSignals: normalizeOperationSignals(providedProfile.operationSignals),
+    profileCompletion: normalizedProfileCompletion,
+    operationSignals: normalizeOperationSignals(providedProfile.operationSignals, normalizedProfileCompletion),
     memberSince: dataAvailability.memberSince && typeof providedProfile.memberSince === 'string' && providedProfile.memberSince.trim()
       ? providedProfile.memberSince
       : emptyProfile.memberSince,

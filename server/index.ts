@@ -1179,7 +1179,7 @@ type HostDashboardBookingSignalRow = {
   bookingId: string;
   consultedBeforeReserve?: boolean | null;
   savedProperty?: boolean | null;
-  acceptedAgreement?: boolean | null;
+  returnedToView?: boolean | null;
 };
 
 const isTruthyFlag = (value: unknown) => value === true || value === 1 || value === '1' || value === 't' || value === 'true';
@@ -1226,6 +1226,36 @@ const buildGuestRequestProfilePayload = (
   const emailVerified = isTruthyFlag(guest.emailVerified);
   const phoneVerified = isTruthyFlag(guest.phoneVerified);
   const identityVerified = isTruthyFlag(guest.identityVerified);
+  const completedProfileSignal = basicDetailsComplete;
+  const operationSignals = options.bookingSignals
+    ? [
+        {
+          id: 'consulted-before',
+          label: 'Consultó antes de reservar',
+          active: !!options.bookingSignals.consultedBeforeReserve,
+          source: 'api',
+        },
+        {
+          id: 'saved-property',
+          label: 'Guardó la propiedad',
+          active: !!options.bookingSignals.savedProperty,
+          source: 'api',
+        },
+        {
+          id: 'returned-to-view',
+          label: 'Volvió a verla',
+          active: !!options.bookingSignals.returnedToView,
+          // La app todavía no guarda reingresos a la publicación, así que este slot queda preparado.
+          source: typeof options.bookingSignals.returnedToView === 'boolean' ? 'api' : 'pending',
+        },
+        {
+          id: 'completed-profile',
+          label: 'Completó sus datos',
+          active: completedProfileSignal,
+          source: 'derived',
+        },
+      ]
+    : undefined;
 
   return {
     identityVerified,
@@ -1245,25 +1275,7 @@ const buildGuestRequestProfilePayload = (
       photoUploaded,
       basicDetailsComplete,
     },
-    operationSignals: options.bookingSignals
-      ? [
-          {
-            id: 'consulted-before',
-            label: 'Consultó antes de reservar',
-            active: !!options.bookingSignals.consultedBeforeReserve,
-          },
-          {
-            id: 'saved-property',
-            label: 'Guardó la propiedad',
-            active: !!options.bookingSignals.savedProperty,
-          },
-          {
-            id: 'accepted-agreement',
-            label: 'Aceptó el acuerdo de reserva',
-            active: !!options.bookingSignals.acceptedAgreement,
-          },
-        ]
-      : [],
+    ...(operationSignals ? { operationSignals } : {}),
     memberSince: toDateOnlyString(guest.memberSince),
   };
 };
@@ -1291,7 +1303,12 @@ app.get('/api/host/dashboard', async (req, res) => {
         [req.session.userId],
       ),
       db.query(
-        `SELECT b.id, b.status, TO_CHAR(b.start_date, 'DD/MM/YYYY') as date, b."userId",
+        `SELECT b.id, b.status, TO_CHAR(b.start_date, 'DD/MM/YYYY') as date,
+          TO_CHAR(b.start_date, 'DD/MM/YYYY') as "startDate",
+          TO_CHAR(b.end_date, 'DD/MM/YYYY') as "endDate",
+          COALESCE(b.guests, 1)::int as guests,
+          COALESCE(b.total_price, 0)::int as "totalPrice",
+          b."userId",
                 guest.name as "userName", p.title as "propertyTitle"
          FROM bookings b
          JOIN properties p ON b."propertyId" = p.id
@@ -1414,7 +1431,7 @@ app.get('/api/host/dashboard', async (req, res) => {
                         WHERE f.user_id = b."userId"
                           AND f.property_id = b."propertyId"
                       ) as "savedProperty",
-                      (COALESCE(b.contract_accepted, FALSE) OR b.status IN ('confirmed', 'completed')) as "acceptedAgreement"
+                      NULL::boolean as "returnedToView"
                FROM bookings b
                WHERE b.id = ANY($1::text[])`,
               [recentBookingIds, req.session.userId],

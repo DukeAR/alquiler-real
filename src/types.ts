@@ -80,10 +80,13 @@ export interface GuestProfileCompletion {
   basicDetailsComplete: boolean;
 }
 
+export type GuestOperationSignalSource = 'api' | 'derived' | 'pending';
+
 export interface GuestOperationSignal {
   id: string;
   label: string;
   active: boolean;
+  source: GuestOperationSignalSource;
 }
 
 export interface GuestRequestProfileDataAvailability {

@@ -183,22 +183,24 @@ describe('HostDashboard', () => {
     expect(screen.getAllByText('Marina').length).toBeGreaterThan(0);
     expect(screen.queryByRole('button', { name: 'Evaluar huésped' })).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Ver ficha del huésped' }));
-
     const profileCard = await screen.findByTestId('guest-request-profile-card');
 
-    expect(within(profileCard).getByText('Ficha del huésped')).toBeInTheDocument();
-    expect(within(profileCard).getByText('Identidad confirmada')).toBeInTheDocument();
+    expect(within(profileCard).getByText('Antes de aceptar, podés revisar esto')).toBeInTheDocument();
+    expect(within(profileCard).getByText('Datos del huésped')).toBeInTheDocument();
+    expect(within(profileCard).getByText('Señales de esta operación')).toBeInTheDocument();
+    expect(within(profileCard).getByText('Reseñas de anfitriones')).toBeInTheDocument();
+    expect(within(profileCard).getByText('Confirmada')).toBeInTheDocument();
     expect(within(profileCard).getByText('Estadías completadas')).toBeInTheDocument();
-    expect(within(profileCard).getByText('Conflictos')).toBeInTheDocument();
+    expect(within(profileCard).getByText('Conflictos reportados')).toBeInTheDocument();
     expect(within(profileCard).getByText('Consultó antes de reservar')).toBeInTheDocument();
-    expect(within(profileCard).getByText('Usuario desde 2022')).toBeInTheDocument();
+    expect(within(profileCard).getByText('Completó sus datos')).toBeInTheDocument();
+    expect(within(profileCard).getByText('2022')).toBeInTheDocument();
     expect(within(profileCard).getByText('La coordinación fue clara y la estadía avanzó sin cambios de último momento.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Ver ficha del huésped' })).not.toBeInTheDocument();
 
     const profileText = profileCard.textContent ?? '';
-    expect(profileText.indexOf('Qué hizo dentro de esta solicitud')).toBeLessThan(profileText.indexOf('Identidad'));
-    expect(profileText.indexOf('Identidad')).toBeLessThan(profileText.indexOf('Historial en la plataforma'));
-    expect(profileText.indexOf('Historial en la plataforma')).toBeLessThan(profileText.indexOf('Reseñas de anfitriones'));
+    expect(profileText.indexOf('Datos del huésped')).toBeLessThan(profileText.indexOf('Señales de esta operación'));
+    expect(profileText.indexOf('Señales de esta operación')).toBeLessThan(profileText.indexOf('Reseñas de anfitriones'));
   });
 
   test('shows explicit missing-data states when the guest profile is not structured yet', async () => {
@@ -247,16 +249,11 @@ describe('HostDashboard', () => {
 
     render(<HostDashboard onBack={vi.fn()} />);
 
-    expect(await screen.findByText('Ficha en preparación')).toBeInTheDocument();
-    expect(screen.getByText('Todavía estamos cargando sus primeros datos')).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Ver ficha del huésped' }));
-
     const profileCard = await screen.findByTestId('guest-request-profile-card');
 
     expect(within(profileCard).getByText('Estamos armando esta ficha')).toBeInTheDocument();
     expect(within(profileCard).getByText('Todavía se están cargando los primeros datos de esta cuenta.')).toBeInTheDocument();
-    expect(within(profileCard).getByText('La validación de identidad va a aparecer acá cuando termine de cargarse la ficha.')).toBeInTheDocument();
+    expect(within(profileCard).getAllByText('Todavía no disponible').length).toBeGreaterThan(0);
   });
 
   test('shows a specific copy for a guest with an account but no visible history yet', async () => {
@@ -337,16 +334,11 @@ describe('HostDashboard', () => {
 
     render(<HostDashboard onBack={vi.fn()} />);
 
-    expect(await screen.findByText('Cuenta sin historial todavía')).toBeInTheDocument();
-    expect(screen.getByText('Todavía no hay estadías ni reseñas para revisar')).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Ver ficha del huésped' }));
-
     const profileCard = await screen.findByTestId('guest-request-profile-card');
 
     expect(within(profileCard).getByText('Cuenta sin historial todavía')).toBeInTheDocument();
     expect(within(profileCard).getByText('Todavía no hay estadías ni reseñas de anfitriones para revisar.')).toBeInTheDocument();
     expect(within(profileCard).getByText('Todavía no hay reseñas de anfitriones porque esta cuenta todavía no tiene estadías visibles.')).toBeInTheDocument();
-    expect(within(profileCard).getByText('Esta solicitud todavía no dejó movimientos para revisar dentro de la plataforma.')).toBeInTheDocument();
+    expect(within(profileCard).getByText('Completó sus datos')).toBeInTheDocument();
   });
 });

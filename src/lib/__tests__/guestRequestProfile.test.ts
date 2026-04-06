@@ -74,4 +74,29 @@ describe('guestRequestProfile copy states', () => {
     });
     expect(getGuestRequestProfileEmptyStateMessage(profile, 'platformHistory')).toBe('Todavía falta cargar el historial de estadías y cancelaciones.');
   });
+
+  test('normalizes the decision signals in a fixed order and keeps pending tracking explicit', () => {
+    const profile = resolveGuestRequestProfile({
+      id: 'guest-4',
+      userName: 'Marina',
+      guestProfile: {
+        profileCompletion: {
+          profileComplete: true,
+          photoUploaded: true,
+          basicDetailsComplete: true,
+        },
+        operationSignals: [
+          { id: 'saved-property', label: 'Guardó la propiedad', active: true, source: 'api' },
+          { id: 'consulted-before', label: 'Consultó antes de reservar', active: true, source: 'api' },
+        ],
+      },
+    });
+
+    expect(profile.operationSignals).toEqual([
+      { id: 'consulted-before', label: 'Consultó antes de reservar', active: true, source: 'api' },
+      { id: 'saved-property', label: 'Guardó la propiedad', active: true, source: 'api' },
+      { id: 'returned-to-view', label: 'Volvió a verla', active: false, source: 'pending' },
+      { id: 'completed-profile', label: 'Completó sus datos', active: true, source: 'derived' },
+    ]);
+  });
 });

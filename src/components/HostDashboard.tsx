@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { apiJson } from '../lib/apiConfig';
-import { formatGuestMemberSinceYear, getGuestSnapshotDetail, getGuestSnapshotTitle, resolveGuestRequestProfile } from '../lib/guestRequestProfile';
+import { resolveGuestRequestProfile } from '../lib/guestRequestProfile';
 import { getPropertyVerificationBadge, getPropertyVerificationItems } from '../lib/propertyVerification';
 import { showToast } from '../lib/toast';
 import { Icons } from './Icons';
@@ -44,6 +44,26 @@ const getBookingStatusClassName = (status: string) => {
   }
 
   return 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-900/20 dark:text-emerald-300';
+};
+
+const getBookingSummaryItems = (booking: any) => {
+  const summaryItems = [] as string[];
+
+  if (typeof booking.startDate === 'string' && booking.startDate && typeof booking.endDate === 'string' && booking.endDate) {
+    summaryItems.push(`${booking.startDate} al ${booking.endDate}`);
+  } else if (typeof booking.date === 'string' && booking.date) {
+    summaryItems.push(booking.date);
+  }
+
+  if (typeof booking.guests === 'number' && booking.guests > 0) {
+    summaryItems.push(`${booking.guests} ${booking.guests === 1 ? 'huésped' : 'huéspedes'}`);
+  }
+
+  if (typeof booking.totalPrice === 'number' && booking.totalPrice > 0) {
+    summaryItems.push(`$${Math.floor(booking.totalPrice).toLocaleString('es-AR')}`);
+  }
+
+  return summaryItems;
 };
 
 export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
@@ -99,10 +119,10 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
   if (!dashboardData || dashboardData.properties?.length === 0) {
     if (isAddingProperty) {
       return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 py-12">
-          <div className="max-w-5xl mx-auto px-4 mb-6">
+        <div className="min-h-screen bg-slate-50 py-12 dark:bg-slate-950">
+          <div className="mx-auto mb-6 max-w-5xl px-4">
             <Button variant="ghost" onClick={() => setIsAddingProperty(false)} className="rounded-full px-3 py-2 text-sm text-slate-600 dark:text-slate-400">
-              <Icons.ArrowLeft className="w-4 h-4" /> Cancelar
+              <Icons.ArrowLeft className="h-4 w-4" /> Cancelar
             </Button>
           </div>
           <PropertyUploadForm onComplete={() => { setIsAddingProperty(false); void fetchData(); }} />
@@ -150,12 +170,6 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
     }
   };
 
-  const contactedGuests = Array.isArray(dashboardData?.contactedGuests)
-    ? dashboardData.contactedGuests.map((guest: any, index: number) => ({
-        ...guest,
-        guestProfile: resolveGuestRequestProfile(guest, index),
-      }))
-    : [];
   const hostProperties = Array.isArray(dashboardData?.properties) ? dashboardData.properties : [];
   const recentBookings = Array.isArray(dashboardData?.recentBookings)
     ? dashboardData.recentBookings.map((booking: any, index: number) => ({
@@ -164,37 +178,35 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
       }))
     : [];
 
-
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-20">
-      {/* Header */}
-      <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
-        <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
+    <div className="min-h-screen bg-slate-50 pb-20 dark:bg-slate-950">
+      <header className="border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+        <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4">
           <button
             onClick={onBack}
-            className="app-button-base rounded-full px-3 py-2 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-100 hover:text-brand dark:hover:bg-slate-800"
+            className="app-button-base rounded-full px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 hover:text-brand dark:text-slate-400 dark:hover:bg-slate-800"
           >
-            <Icons.ArrowLeft className="w-4 h-4" />
+            <Icons.ArrowLeft className="h-4 w-4" />
             Volver a explorar
           </button>
           <div className="flex items-center gap-3">
-            <div className="text-right hidden sm:block">
+            <div className="hidden text-right sm:block">
               <p className="app-title-4 dark:text-white">Panel de anfitrión</p>
               <p className="app-eyebrow">Tu actividad</p>
             </div>
-            <div className="w-10 h-10 rounded-full bg-brand/10 border border-brand/20 flex items-center justify-center">
-              <Icons.User className="w-5 h-5 text-brand" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-full border border-brand/20 bg-brand/10">
+              <Icons.User className="h-5 w-5 text-brand" />
             </div>
           </div>
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-4 py-8 space-y-8">
-        <section className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <main className="mx-auto max-w-5xl space-y-8 px-4 py-8">
+        <section className="grid grid-cols-1 gap-4 md:grid-cols-4">
           <div className={dashboardCardClass}>
             <p className="app-eyebrow mb-1">Calificación</p>
             <div className="flex items-center gap-2">
-              <Icons.Star className="w-6 h-6 text-brand fill-current" />
+              <Icons.Star className="h-6 w-6 fill-current text-brand" />
               <p className="text-3xl font-semibold text-slate-900 dark:text-white">{dashboardData.stats?.host_rating || '5.0'}</p>
             </div>
           </div>
@@ -206,53 +218,52 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
             <p className="app-eyebrow mb-1">Reservas recibidas</p>
             <p className="text-3xl font-semibold text-slate-900 dark:text-white">{dashboardData.stats?.total_bookings_hosted || 0}</p>
           </div>
-          <div className="bg-gradient-to-br from-brand to-brand-dark p-6 rounded-[32px] shadow-lg shadow-brand/20 text-white">
-            <p className="app-eyebrow text-white/60 mb-1">Ingresos estimados</p>
+          <div className="rounded-[32px] bg-gradient-to-br from-brand to-brand-dark p-6 text-white shadow-lg shadow-brand/20">
+            <p className="app-eyebrow mb-1 text-white/60">Ingresos estimados</p>
             <p className="text-3xl font-semibold">${Math.floor(dashboardData.estimatedIncome || 0).toLocaleString()}</p>
           </div>
         </section>
 
-        {/* Circular Progress & Trust Card */}
-        <section className={cn(dashboardSectionClass, 'overflow-hidden relative')}>
-          <div className="absolute top-0 right-0 w-64 h-64 bg-brand/5 rounded-full -mr-32 -mt-32 blur-3xl opacity-50" />
-          
-          <div className="relative z-10 flex flex-col md:flex-row gap-8 items-center">
-             <div className="relative w-32 h-32 flex items-center justify-center">
-                <svg className="w-full h-full transform -rotate-90">
-                  <circle cx="64" cy="64" r="58" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-slate-100 dark:text-slate-800" />
-                  <motion.circle
-                    cx="64"
-                    cy="64"
-                    r="58"
-                    stroke="currentColor"
-                    strokeWidth="8"
-                    fill="transparent"
-                    strokeDasharray={364.42}
-                    initial={{ strokeDashoffset: 364.42 }}
-                    animate={{ strokeDashoffset: 364.42 * (1 - (dashboardData.stats?.trust_score || 0) / 100) }}
-                    transition={{ duration: 1.5, ease: "easeOut" }}
-                    className="text-brand"
-                    strokeLinecap="round"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-2xl font-semibold text-slate-900 dark:text-white tracking-tight">{dashboardData.stats?.trust_score || 0}</span>
-                  <span className="app-eyebrow">Confianza</span>
+        <section className={cn(dashboardSectionClass, 'relative overflow-hidden')}>
+          <div className="absolute right-0 top-0 -mr-32 -mt-32 h-64 w-64 rounded-full bg-brand/5 blur-3xl opacity-50" />
+
+          <div className="relative z-10 flex flex-col items-center gap-8 md:flex-row">
+            <div className="relative flex h-32 w-32 items-center justify-center">
+              <svg className="h-full w-full -rotate-90 transform">
+                <circle cx="64" cy="64" r="58" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-slate-100 dark:text-slate-800" />
+                <motion.circle
+                  cx="64"
+                  cy="64"
+                  r="58"
+                  stroke="currentColor"
+                  strokeWidth="8"
+                  fill="transparent"
+                  strokeDasharray={364.42}
+                  initial={{ strokeDashoffset: 364.42 }}
+                  animate={{ strokeDashoffset: 364.42 * (1 - (dashboardData.stats?.trust_score || 0) / 100) }}
+                  transition={{ duration: 1.5, ease: 'easeOut' }}
+                  className="text-brand"
+                  strokeLinecap="round"
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">{dashboardData.stats?.trust_score || 0}</span>
+                <span className="app-eyebrow">Confianza</span>
+              </div>
+            </div>
+
+            <div className="flex-1 space-y-2">
+              <h3 className="app-title-4 dark:text-white">Cómo te ven</h3>
+              <p className="app-body-sm app-text-muted">Hoy tu perfil figura como <span className="font-semibold text-brand">{dashboardData.stats?.badge || 'Usuario nuevo'}</span>. Un mejor historial y avisos más completos ayudan a recibir consultas más directas.</p>
+              <div className="flex flex-wrap gap-2 pt-2">
+                <div className={cn(dashboardMutedTileClass, 'px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400')}>
+                  <span className="mr-1 text-brand">Calificación:</span> {dashboardData.stats?.host_rating || 5.0}
                 </div>
-             </div>
-             
-             <div className="flex-1 space-y-2">
-               <h3 className="app-title-4 dark:text-white">Cómo te ven</h3>
-               <p className="app-body-sm app-text-muted">Hoy tu perfil figura como <span className="text-brand font-semibold">{dashboardData.stats?.badge || 'Usuario nuevo'}</span>. Un mejor historial y avisos más completos ayudan a recibir consultas más directas.</p>
-                <div className="flex flex-wrap gap-2 pt-2">
-                   <div className={cn(dashboardMutedTileClass, 'px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400')}>
-                     <span className="text-brand mr-1">Calificación:</span> {dashboardData.stats?.host_rating || 5.0}
-                   </div>
-                   <div className={cn(dashboardMutedTileClass, 'px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400')}>
-                     <span className={cn('mr-1', dashboardData.stats?.host_verified ? 'text-emerald-500' : 'text-slate-400')}>Validado:</span> {dashboardData.stats?.host_verified ? 'Sí' : 'Pendiente'}
-                   </div>
+                <div className={cn(dashboardMutedTileClass, 'px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400')}>
+                  <span className={cn('mr-1', dashboardData.stats?.host_verified ? 'text-emerald-500' : 'text-slate-400')}>Validado:</span> {dashboardData.stats?.host_verified ? 'Sí' : 'Pendiente'}
                 </div>
-             </div>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -282,12 +293,15 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
                   <ul className="space-y-2.5">
                     {verificationItems.map((item) => (
                       <li key={`${property.id}-${item.key}`} className="flex items-start gap-3 text-sm leading-5">
-                        <span className={cn(
-                          'mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs font-semibold',
-                          item.status === 'complete'
-                            ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-900/20 dark:text-emerald-300'
-                            : 'border-slate-200 bg-white text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400',
-                        )} aria-hidden="true">
+                        <span
+                          className={cn(
+                            'mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs font-semibold',
+                            item.status === 'complete'
+                              ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-900/20 dark:text-emerald-300'
+                              : 'border-slate-200 bg-white text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400',
+                          )}
+                          aria-hidden="true"
+                        >
                           {item.status === 'complete' ? '✔' : '○'}
                         </span>
                         <div className="min-w-0">
@@ -303,11 +317,10 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
           </div>
         </section>
 
-        {/* Mis Propiedades Section */}
         <section className="space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="app-title-4 dark:text-white flex items-center gap-2">
-              <Icons.Home className="w-5 h-5 text-brand" />
+            <h2 className="app-title-4 flex items-center gap-2 dark:text-white">
+              <Icons.Home className="h-5 w-5 text-brand" />
               Tus propiedades
             </h2>
             <button onClick={() => setIsAddingProperty(true)} className="app-button-base rounded-[var(--app-radius-control)] bg-brand px-4 py-2 text-sm text-white hover:-translate-y-px hover:bg-brand-dark hover:shadow-[var(--app-shadow-brand)]">
@@ -320,8 +333,8 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
               <div key={prop.id}>
                 <div className="app-card flex flex-col gap-4 p-4 dark:border-slate-800 dark:bg-slate-900 md:flex-row md:items-center md:justify-between">
                   <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 rounded-xl bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                      <img src={prop.imageUrl || 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=200'} className="w-full h-full object-cover" />
+                    <div className="h-16 w-16 overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800">
+                      <img src={prop.imageUrl || 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=200'} className="h-full w-full object-cover" />
                     </div>
                     <div>
                       <h3 className="app-title-4 dark:text-white">{prop.title}</h3>
@@ -329,25 +342,26 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
                     </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-3">
-                    <button 
+                    <button
                       onClick={() => handleToggleStatus(prop.id, prop.status)}
                       className={cn(
-                        'px-3 py-1.5 rounded-full text-[11px] font-semibold uppercase tracking-[0.14em]',
+                        'rounded-full px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em]',
                         prop.status === 'active'
                           ? 'bg-brand/10 text-brand dark:bg-brand/15 dark:text-brand-light'
                           : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400',
-                      )}>
+                      )}
+                    >
                       {prop.status === 'active' ? 'Activo' : 'Pausado'}
                     </button>
                     <Button
                       type="button"
                       variant="secondary"
                       size="sm"
-                      onClick={() => setAvailabilityPropertyId((currentValue) => currentValue === prop.id ? null : prop.id)}
+                      onClick={() => setAvailabilityPropertyId((currentValue) => (currentValue === prop.id ? null : prop.id))}
                       className="rounded-full"
                     >
                       <>
-                        <Icons.Calendar className="w-4 h-4" />
+                        <Icons.Calendar className="h-4 w-4" />
                         {availabilityPropertyId === prop.id ? 'Ocultar disponibilidad' : 'Disponibilidad'}
                       </>
                     </Button>
@@ -362,128 +376,84 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
           </div>
         </section>
 
-
-        {/* Risk Dashboard Section */}
-        <section className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="app-title-4 dark:text-white flex items-center gap-2">
-              <Icons.ShieldAlert className="w-5 h-5 text-brand" />
-              Contexto del huésped
-            </h2>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className={dashboardSectionClass}>
-              <div className="flex items-center justify-between">
-                <h3 className="app-title-4 dark:text-white">Huéspedes con actividad reciente</h3>
-                <span className="app-eyebrow">Recientes</span>
-              </div>
-              <div className="space-y-3">
-                {contactedGuests.length > 0 ? contactedGuests.map((tenant: any) => (
-                  <div key={tenant.id || tenant.name} className={cn(dashboardMutedTileClass, 'flex items-center justify-between p-3')}>
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[10px] font-bold uppercase">
-                        {String(tenant.name || 'H').slice(0, 1)}
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-slate-900 dark:text-white">{tenant.name}</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                          {tenant.guestProfile.dataAvailability.memberSince
-                            ? `Usuario desde ${formatGuestMemberSinceYear(tenant.guestProfile.memberSince)}`
-                            : 'Antigüedad todavía no disponible'}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="app-eyebrow leading-none">{getGuestSnapshotTitle(tenant.guestProfile)}</p>
-                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{getGuestSnapshotDetail(tenant.guestProfile)}</p>
-                    </div>
-                  </div>
-                )) : (
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Todavía no hay huéspedes recientes para mostrar.</p>
-                )}
-              </div>
-            </div>
-
-            <div className="rounded-[var(--app-radius-card)] bg-slate-900 dark:bg-slate-800 p-8 text-white space-y-4 flex flex-col justify-center shadow-[var(--app-shadow-soft)]">
-              <div className="w-12 h-12 bg-brand/20 rounded-2xl flex items-center justify-center mb-2">
-                <Icons.Zap className="w-6 h-6 text-brand" />
-              </div>
-              <h3 className="app-title-4 text-white">Más contexto antes de aceptar</h3>
-              <p className="app-body-sm text-slate-100">
-                Abrí la ficha del huésped para revisar identidad, historial, reseñas y señales simples dentro de la plataforma antes de responder o aceptar.
-              </p>
-              <div className="pt-4">
-                <div className="flex items-center gap-2 app-eyebrow text-emerald-300">
-                  <span aria-hidden="true">✔</span> Información simple, sin puntajes ocultos
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Tenant Management Section */}
         <section className="space-y-6">
           <div className="flex items-center justify-between">
             <div className="space-y-1">
-              <h2 className="app-title-4 dark:text-white flex items-center gap-2">
-                <Icons.UserCheck className="w-5 h-5 text-brand" />
+              <h2 className="app-title-4 flex items-center gap-2 dark:text-white">
+                <Icons.UserCheck className="h-5 w-5 text-brand" />
                 Solicitudes y huéspedes
               </h2>
-              <p className="app-body-sm app-text-muted">Antes de aceptar una reserva, podés abrir la ficha del huésped y revisar información simple de la plataforma.</p>
+              <p className="app-body-sm app-text-muted">En las solicitudes pendientes, la ficha aparece debajo del resumen para que decidas con más información antes de seguir.</p>
             </div>
           </div>
 
           <div className="app-card overflow-hidden dark:border-slate-800 dark:bg-slate-900">
-            <div className="p-6 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
-              <p className="app-eyebrow">Solicitudes y estadías recientes</p>
+            <div className="border-b border-slate-100 bg-slate-50/50 p-6 dark:border-slate-800 dark:bg-slate-800/50">
+              <p className="app-eyebrow">Solicitudes y reservas recientes</p>
             </div>
             <div className="divide-y divide-slate-100 dark:divide-slate-800">
               {recentBookings.length > 0 ? (
                 recentBookings.map((booking: any) => {
                   const isExpanded = expandedBookingId === booking.id;
                   const canReviewBooking = booking.status === 'completed';
+                  const isDecisionStage = booking.status === 'pending';
+                  const shouldShowGuestProfile = isDecisionStage || isExpanded;
+                  const bookingSummaryItems = getBookingSummaryItems(booking);
 
                   return (
-                    <div key={booking.id} className="p-6 space-y-4">
-                      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                            <Icons.User className="w-6 h-6 text-slate-400" />
+                    <div key={booking.id} className="space-y-4 p-6">
+                      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                        <div className="flex items-start gap-4">
+                          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800">
+                            <Icons.User className="h-6 w-6 text-slate-400" />
                           </div>
-                          <div>
+                          <div className="space-y-2">
                             <p className="app-title-4 dark:text-white">{booking.userName || 'Huésped'}</p>
-                            <p className="app-body-sm app-text-muted">{booking.propertyTitle} • {booking.date}</p>
+                            <p className="app-body-sm app-text-muted">{booking.propertyTitle}</p>
+                            {bookingSummaryItems.length > 0 ? (
+                              <div className="flex flex-wrap gap-2">
+                                {bookingSummaryItems.map((item) => (
+                                  <span key={`${booking.id}-${item}`} className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                                    {item}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : null}
                           </div>
                         </div>
                         <div className="flex flex-col gap-2 sm:items-end">
                           <span className={cn('inline-flex items-center rounded-full border px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em]', getBookingStatusClassName(booking.status))}>
                             {getBookingStatusLabel(booking.status)}
                           </span>
-                          <div className="flex flex-wrap gap-2">
+                        </div>
+                      </div>
+
+                      {shouldShowGuestProfile ? (
+                        <GuestRequestProfileCard guestName={booking.userName || 'Huésped'} profile={booking.guestProfile} />
+                      ) : null}
+
+                      {!isDecisionStage || canReviewBooking ? (
+                        <div className="flex flex-wrap gap-2 pt-1 lg:justify-end">
+                          {!isDecisionStage ? (
                             <Button
                               type="button"
                               variant="secondary"
                               size="sm"
-                              onClick={() => setExpandedBookingId((currentValue) => currentValue === booking.id ? null : booking.id)}
+                              onClick={() => setExpandedBookingId((currentValue) => (currentValue === booking.id ? null : booking.id))}
                               className="rounded-full"
                             >
                               {isExpanded ? 'Ocultar ficha' : 'Ver ficha del huésped'}
                             </Button>
-                            {canReviewBooking ? (
-                              <button
-                                onClick={() => setReviewingBooking(booking)}
-                                className="app-button-base rounded-[var(--app-radius-control)] bg-brand px-4 py-2 text-sm text-white hover:-translate-y-px hover:bg-brand-dark hover:shadow-[var(--app-shadow-brand)]"
-                              >
-                                Evaluar huésped
-                              </button>
-                            ) : null}
-                          </div>
+                          ) : null}
+                          {canReviewBooking ? (
+                            <button
+                              onClick={() => setReviewingBooking(booking)}
+                              className="app-button-base rounded-[var(--app-radius-control)] bg-brand px-4 py-2 text-sm text-white hover:-translate-y-px hover:bg-brand-dark hover:shadow-[var(--app-shadow-brand)]"
+                            >
+                              Evaluar huésped
+                            </button>
+                          ) : null}
                         </div>
-                      </div>
-
-                      {isExpanded ? (
-                        <GuestRequestProfileCard guestName={booking.userName || 'Huésped'} profile={booking.guestProfile} />
                       ) : null}
                     </div>
                   );
@@ -493,12 +463,11 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
               )}
             </div>
           </div>
-          <p className="app-form-hint italic px-4">
-            * La ficha del huésped ordena la información disponible dentro de la plataforma. Las evaluaciones solo se habilitan después de una estadía finalizada.
+          <p className="app-form-hint px-4 italic">
+            * La ficha se ordena dentro del flujo real de la solicitud. Las evaluaciones siguen disponibles solo después de una estadía finalizada.
           </p>
         </section>
 
-        {/* Review Modal Integration */}
         {reviewingBooking && (
           <ReviewModal
             bookingId={reviewingBooking.id}
@@ -513,24 +482,23 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
           />
         )}
 
-        {/* Tips / Education */}
-        <section className="grid md:grid-cols-2 gap-6">
-          <div className="app-card border-brand/10 bg-brand/5 p-8 space-y-4 dark:border-brand/20 dark:bg-brand/10">
-            <Icons.Lightbulb className="w-8 h-8 text-brand" />
+        <section className="grid gap-6 md:grid-cols-2">
+          <div className="app-card space-y-4 border-brand/10 bg-brand/5 p-8 dark:border-brand/20 dark:bg-brand/10">
+            <Icons.Lightbulb className="h-8 w-8 text-brand" />
             <h3 className="app-title-4 text-slate-950 dark:text-slate-50">¿Por qué conviene verificar mejor?</h3>
             <p className="app-body-sm text-slate-700 dark:text-slate-300">
               Cuando el aviso deja claro quién publica, dónde está el lugar y qué ya fue comprobado, la decisión cuesta menos.
             </p>
           </div>
-          <div className="rounded-[var(--app-radius-card)] border border-slate-800 bg-slate-900 dark:bg-slate-800 p-8 text-white space-y-4 shadow-[var(--app-shadow-soft)]">
-            <Icons.Shield className="w-8 h-8 text-brand" />
-            <h3 className="app-title-4 text-white">Información real, mejores decisiones</h3>
-            <p className="app-body-sm text-slate-100">
+          <div className="rounded-[var(--app-radius-card)] border border-slate-800 bg-slate-900 p-8 text-white shadow-[var(--app-shadow-soft)] dark:bg-slate-800">
+            <Icons.Shield className="h-8 w-8 text-brand" />
+            <h3 className="mt-4 app-title-4 text-white">Información real, mejores decisiones</h3>
+            <p className="mt-4 app-body-sm text-slate-100">
               Completar verificaciones mejora tu aviso porque la otra persona entiende más rápido qué está viendo y qué ya fue revisado.
             </p>
-            <button className="app-button-base justify-start px-0 text-sm text-brand hover:underline">
+            <button className="app-button-base mt-4 justify-start px-0 text-sm text-brand hover:underline">
               Ver guía para anfitriones
-              <Icons.ExternalLink className="w-4 h-4" />
+              <Icons.ExternalLink className="h-4 w-4" />
             </button>
           </div>
         </section>

@@ -3,7 +3,6 @@ import { cn } from '../lib/utils';
 import {
   formatGuestMemberSinceYear,
   getGuestRequestProfileBannerCopy,
-  getGuestRequestProfileEmptyStateMessage,
   getGuestRequestProfileOperationEmptyMessage,
   getGuestRequestProfileReviewsEmptyMessage,
   getGuestRequestProfileScenario,
@@ -17,7 +16,7 @@ type GuestRequestProfileCardProps = {
 };
 
 const sectionLabelClass = 'text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500';
-const emptySectionClass = 'rounded-[18px] border border-dashed border-slate-200/90 bg-white/70 px-4 py-3 text-sm leading-6 text-slate-500 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-400';
+const emptySectionClass = 'rounded-[16px] bg-slate-50/90 px-4 py-3 text-sm leading-6 text-slate-500 dark:bg-slate-900/70 dark:text-slate-400';
 
 const formatReviewDate = (value: string) => {
   const parsedDate = new Date(value);
@@ -32,20 +31,40 @@ const formatReviewDate = (value: string) => {
   }).format(parsedDate);
 };
 
-const StatusItem = ({ checked, label }: { checked: boolean; label: string }) => (
-  <div className="flex items-start gap-3 text-sm leading-6 text-slate-700 dark:text-slate-300">
+const DataItem = ({ label, value, muted = false }: { label: string; value: string; muted?: boolean }) => (
+  <div className="rounded-[16px] bg-slate-50/85 px-3 py-3 dark:bg-slate-900/70">
+    <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400 dark:text-slate-500">{label}</p>
+    <p className={cn('mt-1 text-sm font-semibold leading-6 text-slate-900 dark:text-slate-50', muted && 'font-medium text-slate-500 dark:text-slate-400')}>{value}</p>
+  </div>
+);
+
+const SignalItem = ({
+  status,
+  label,
+}: {
+  status: 'active' | 'inactive' | 'pending';
+  label: string;
+}) => (
+  <div className="flex items-start gap-3 rounded-[16px] bg-slate-50/85 px-3 py-3 text-sm leading-6 text-slate-700 dark:bg-slate-900/70 dark:text-slate-300">
     <span
       aria-hidden="true"
       className={cn(
         'mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs font-semibold',
-        checked
+        status === 'active'
           ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-900/20 dark:text-emerald-300'
-          : 'border-slate-200 bg-white text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400',
+          : status === 'pending'
+            ? 'border-slate-200 bg-slate-100 text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'
+            : 'border-slate-200 bg-white text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400',
       )}
     >
-      {checked ? '✔' : '○'}
+      {status === 'active' ? '✔' : status === 'pending' ? '…' : '○'}
     </span>
-    <span>{label}</span>
+    <div>
+      <p>{label}</p>
+      {status === 'pending' ? (
+        <p className="text-xs font-medium text-slate-400 dark:text-slate-500">Todavía no disponible</p>
+      ) : null}
+    </div>
   </div>
 );
 
@@ -63,13 +82,6 @@ const SectionEmptyState = ({ message }: { message: string }) => (
 );
 
 export const GuestRequestProfileCard: React.FC<GuestRequestProfileCardProps> = ({ guestName, profile, className }) => {
-  const historyItems = [
-    { label: 'Estadías completadas', value: profile.platformHistory.completedStays },
-    { label: 'Conflictos', value: profile.platformHistory.conflictsCount },
-    { label: 'Cancelaciones', value: profile.platformHistory.cancellationsCount },
-  ];
-
-  const visibleSignals = profile.operationSignals.filter((signal) => signal.active);
   const missingSectionsCount = [
     profile.dataAvailability.identity,
     profile.dataAvailability.platformHistory,
@@ -80,96 +92,111 @@ export const GuestRequestProfileCard: React.FC<GuestRequestProfileCardProps> = (
   ].filter((value) => !value).length;
   const bannerCopy = getGuestRequestProfileBannerCopy(profile);
   const scenario = getGuestRequestProfileScenario(profile);
+  const visibleReviews = profile.hostReviews.slice(0, 2);
+  const pendingSignals = profile.operationSignals.filter((signal) => signal.source === 'pending');
+  const hasAnyActiveSignals = profile.operationSignals.some((signal) => signal.active);
+  const guestDataItems = [
+    {
+      label: 'Identidad',
+      value: profile.dataAvailability.identity
+        ? profile.identityVerified
+          ? 'Confirmada'
+          : 'No verificada'
+        : 'Todavía no disponible',
+      muted: !profile.dataAvailability.identity,
+    },
+    {
+      label: 'Usuario desde',
+      value: profile.dataAvailability.memberSince
+        ? formatGuestMemberSinceYear(profile.memberSince)
+        : 'Todavía no disponible',
+      muted: !profile.dataAvailability.memberSince,
+    },
+    {
+      label: 'Estadías completadas',
+      value: profile.dataAvailability.platformHistory
+        ? String(profile.platformHistory.completedStays)
+        : 'Todavía no disponible',
+      muted: !profile.dataAvailability.platformHistory,
+    },
+    {
+      label: 'Perfil',
+      value: profile.dataAvailability.profileCompletion
+        ? profile.profileCompletion.profileComplete
+          ? 'Completo'
+          : 'Incompleto'
+        : 'Todavía no disponible',
+      muted: !profile.dataAvailability.profileCompletion,
+    },
+  ];
+
+  if (profile.dataAvailability.platformHistory && profile.platformHistory.conflictsCount > 0) {
+    guestDataItems.splice(3, 0, {
+      label: 'Conflictos reportados',
+      value: String(profile.platformHistory.conflictsCount),
+      muted: false,
+    });
+  }
 
   return (
-    <div data-testid="guest-request-profile-card" className={cn('rounded-[26px] border border-slate-200/85 bg-slate-50/85 p-5 shadow-[0_18px_32px_-26px_rgba(15,23,42,0.14)] dark:border-slate-800 dark:bg-slate-950/80 md:p-6', className)}>
+    <div data-testid="guest-request-profile-card" className={cn('rounded-[22px] border border-slate-200/80 bg-white px-4 py-4 shadow-[0_18px_32px_-30px_rgba(15,23,42,0.18)] dark:border-slate-800 dark:bg-slate-950 md:px-5', className)}>
       <div className="space-y-1">
         <p className={sectionLabelClass}>Ficha del huésped</p>
-        <h4 className="text-[1rem] font-semibold leading-6 tracking-[-0.015em] text-slate-950 dark:text-slate-50">{guestName}</h4>
+        <h4 className="text-[1rem] font-semibold leading-6 tracking-[-0.015em] text-slate-950 dark:text-slate-50">Antes de aceptar, podés revisar esto</h4>
+        <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">Huésped: <span className="font-semibold text-slate-900 dark:text-slate-100">{guestName}</span></p>
       </div>
 
-      <div className="mt-5 space-y-5">
+      <div className="mt-4 space-y-4">
         {bannerCopy && (scenario === 'sync-pending' || scenario === 'new-guest' || (scenario === 'partial-profile' && missingSectionsCount > 0)) ? (
-          <div className="rounded-[18px] border border-dashed border-slate-200/90 bg-white/75 px-4 py-3 text-sm leading-6 text-slate-600 dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-300">
+          <div className="rounded-[16px] bg-slate-50/90 px-4 py-3 text-sm leading-6 text-slate-600 dark:bg-slate-900/70 dark:text-slate-300">
             <p className="font-semibold text-slate-900 dark:text-slate-100">{bannerCopy.title}</p>
             <p className="mt-1">{bannerCopy.description}</p>
           </div>
         ) : null}
 
         <section className="space-y-3 border-t border-slate-200/80 pt-4 dark:border-slate-800">
-          <p className={sectionLabelClass}>Qué hizo dentro de esta solicitud</p>
+          <p className={sectionLabelClass}>Datos del huésped</p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {guestDataItems.map((item) => (
+              <DataItem key={item.label} label={item.label} value={item.value} muted={item.muted} />
+            ))}
+          </div>
+        </section>
+
+        <section className="space-y-3 border-t border-slate-200/80 pt-4 dark:border-slate-800">
+          <p className={sectionLabelClass}>Señales de esta operación</p>
           {!profile.dataAvailability.operationSignals ? (
-            <SectionEmptyState message={getGuestRequestProfileEmptyStateMessage(profile, 'operationSignals')} />
-          ) : visibleSignals.length > 0 ? (
-            <div className="grid gap-3 sm:grid-cols-3">
-              {visibleSignals.map((signal) => (
-                <StatusItem key={signal.id} checked={signal.active} label={signal.label} />
-              ))}
-            </div>
+            <SectionEmptyState message="Todavía no hay una operación activa para mostrar acá." />
           ) : (
-            <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">{getGuestRequestProfileOperationEmptyMessage(profile)}</p>
-          )}
-        </section>
-
-        <section className="space-y-3 border-t border-slate-200/80 pt-4 dark:border-slate-800">
-          <p className={sectionLabelClass}>Identidad</p>
-          {profile.dataAvailability.identity ? (
-            <StatusItem checked={profile.identityVerified} label={profile.identityVerified ? 'Identidad confirmada' : 'Identidad no verificada'} />
-          ) : (
-            <SectionEmptyState message={getGuestRequestProfileEmptyStateMessage(profile, 'identity')} />
-          )}
-        </section>
-
-        <section className="space-y-3 border-t border-slate-200/80 pt-4 dark:border-slate-800">
-          <p className={sectionLabelClass}>Historial en la plataforma</p>
-          {profile.dataAvailability.platformHistory ? (
-            <div className="grid gap-3 sm:grid-cols-3">
-              {historyItems.map((item) => (
-                <div key={item.label} className="rounded-[18px] border border-slate-200/80 bg-white/92 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/80">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400 dark:text-slate-500">{item.label}</p>
-                  <p className="mt-1 text-lg font-semibold tracking-[-0.02em] text-slate-950 dark:text-slate-50">{item.value}</p>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <SectionEmptyState message={getGuestRequestProfileEmptyStateMessage(profile, 'platformHistory')} />
+            <>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {profile.operationSignals.map((signal) => (
+                  <SignalItem
+                    key={signal.id}
+                    status={signal.source === 'pending' ? 'pending' : signal.active ? 'active' : 'inactive'}
+                    label={signal.label}
+                  />
+                ))}
+              </div>
+              {!hasAnyActiveSignals && pendingSignals.length === 0 ? (
+                <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">{getGuestRequestProfileOperationEmptyMessage(profile)}</p>
+              ) : null}
+            </>
           )}
         </section>
 
         <section className="space-y-3 border-t border-slate-200/80 pt-4 dark:border-slate-800">
           <p className={sectionLabelClass}>Reseñas de anfitriones</p>
           {!profile.dataAvailability.hostReviews ? (
-            <SectionEmptyState message={getGuestRequestProfileEmptyStateMessage(profile, 'hostReviews')} />
-          ) : profile.hostReviews.length > 0 ? (
+            <SectionEmptyState message="Todavía no hay reseñas visibles para esta cuenta." />
+          ) : visibleReviews.length > 0 ? (
             <ul className="space-y-3">
-              {profile.hostReviews.slice(0, 3).map((review) => (
+              {visibleReviews.map((review) => (
                 <ReviewSnippet key={review.id} review={review} />
               ))}
             </ul>
           ) : (
             <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">{getGuestRequestProfileReviewsEmptyMessage(profile)}</p>
-          )}
-        </section>
-
-        <section className="space-y-3 border-t border-slate-200/80 pt-4 dark:border-slate-800">
-          <p className={sectionLabelClass}>Perfil completo</p>
-          {profile.dataAvailability.profileCompletion ? (
-            <div className="grid gap-3 sm:grid-cols-3">
-              <StatusItem checked={profile.profileCompletion.profileComplete} label="Perfil completo" />
-              <StatusItem checked={profile.profileCompletion.photoUploaded} label="Foto cargada" />
-              <StatusItem checked={profile.profileCompletion.basicDetailsComplete} label="Datos básicos completos" />
-            </div>
-          ) : (
-            <SectionEmptyState message={getGuestRequestProfileEmptyStateMessage(profile, 'profileCompletion')} />
-          )}
-        </section>
-
-        <section className="space-y-3 border-t border-slate-200/80 pt-4 dark:border-slate-800">
-          <p className={sectionLabelClass}>Antigüedad</p>
-          {profile.dataAvailability.memberSince ? (
-            <p className="text-sm font-semibold leading-6 text-slate-900 dark:text-slate-50">Usuario desde {formatGuestMemberSinceYear(profile.memberSince)}</p>
-          ) : (
-            <SectionEmptyState message={getGuestRequestProfileEmptyStateMessage(profile, 'memberSince')} />
           )}
         </section>
       </div>
