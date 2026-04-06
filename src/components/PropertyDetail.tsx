@@ -783,7 +783,7 @@ export const PropertyDetailShell: React.FC<{
               visualLevel="h1"
               eyebrow="Detalle de la propiedad"
               heading={property.title}
-              description="Revisá quién publica, dónde está y qué ya fue verificado antes de decidir."
+              description="Revisá ubicación, anfitrión y nivel de verificación antes de decidir."
               className="max-w-3xl"
             />
 
@@ -898,7 +898,7 @@ export const PropertyDetailShell: React.FC<{
                   <span className="text-3xl font-black tracking-tight text-slate-950">{nightly ? formatCurrency(nightly) : '—'}</span>
                   <span className="pb-1 text-sm font-medium text-slate-500">/ noche</span>
                 </div>
-                <p className="text-sm leading-6 text-slate-500">Revisá fechas, total y nivel de verificación antes de confirmar la estadía.</p>
+                <p className="text-sm leading-6 text-slate-500">Revisá fechas, total y verificación antes de confirmar la estadía.</p>
                 <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600">
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-brand/10 px-3 py-1.5 font-semibold text-brand">
                     <Icons.Star className="h-4 w-4 fill-current" />
@@ -1123,7 +1123,7 @@ export const PropertyDetailShell: React.FC<{
                 <SectionTitle
                   eyebrow="Decisión"
                   heading="Lo importante para decidir"
-                  description="Un resumen corto de lo que importa para elegir sin vueltas."
+                  description="Un resumen corto para ver si esta propiedad te cierra."
                 />
                 <p className="max-w-3xl text-base leading-8 text-slate-600">
                   {property.description || 'Todavía no hay descripción disponible.'}
@@ -1173,7 +1173,7 @@ export const PropertyDetailShell: React.FC<{
               <SectionTitle
                 eyebrow="Comodidades"
                 heading="Comodidades clave"
-                description="Lo que más pesa en la decisión, sin vueltas."
+                description="Lo más útil para comparar esta propiedad."
               />
               <ul className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {property.amenities?.map((amenity) => (
@@ -1197,11 +1197,12 @@ export const PropertyDetailShell: React.FC<{
               <SectionTitle
                 eyebrow="Verificación"
                 heading="Nivel de verificación"
-                description="Qué ya fue verificado en este aviso."
+                description="Lo que ya se revisó en este aviso."
               />
 
-              <div className="rounded-[24px] border border-slate-200/80 bg-slate-50/80 px-4 py-4 lg:min-w-[240px]">
-                <p className="text-sm font-semibold text-slate-900">{completedVerificationCount} de {verificationItems.length} verificaciones completadas</p>
+              <div className="rounded-[24px] border border-slate-200/80 bg-slate-50/80 px-4 py-4 lg:min-w-[260px]">
+                <p className="text-base font-semibold text-slate-900">{completedVerificationCount} de {verificationItems.length} verificaciones completadas</p>
+                <p className="mt-1 text-xs leading-5 text-slate-500">Cuanto más completo esté, más fácil es comparar.</p>
                 <div className="mt-3 flex items-center gap-2" aria-label={`${completedVerificationCount} de ${verificationItems.length} verificaciones completadas`}>
                   {verificationItems.map((item) => (
                     <span
@@ -1216,7 +1217,7 @@ export const PropertyDetailShell: React.FC<{
               </div>
             </div>
 
-            <ul className="mt-6 divide-y divide-slate-200/80 border-t border-slate-200/80">
+            <ul className="mt-5 divide-y divide-slate-200/80 border-t border-slate-200/80">
               {verificationItems.map((item) => (
                 <VerificationChecklistRow key={item.title} item={item} />
               ))}
@@ -1234,7 +1235,7 @@ export const PropertyDetailShell: React.FC<{
               <SectionTitle
                 eyebrow="Reseñas"
                 heading="Cómo fue la experiencia de otros huéspedes"
-                description={reviewCount > 0 ? 'Reseñas reales para decidir con más claridad.' : 'Todavía no hay reseñas reales publicadas para esta propiedad.'}
+                description={reviewCount > 0 ? 'Experiencias reales para decidir mejor.' : 'Todavía no hay reseñas reales publicadas para esta propiedad.'}
               />
 
               <Card padding="sm" variant="muted" className="w-full rounded-[28px] border-slate-200/80 bg-white lg:max-w-xs">

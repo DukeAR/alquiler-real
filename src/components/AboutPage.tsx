@@ -381,7 +381,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
         onBack={onBack}
         eyebrow="Información clara"
         heading="Cómo funciona Alquiler Real"
-        description="Qué información muestra la app, qué ya fue verificado y qué conviene revisar antes de reservar."
+        description="Qué información muestra la app, qué ya está verificado y qué conviene mirar antes de reservar."
         contentClassName="mx-auto w-full max-w-5xl"
       />
 
@@ -430,8 +430,8 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                     <SectionTitle
                       eyebrow="Proyecto"
                       as="h2"
-                      heading="Lo importante para decidir sin vueltas"
-                      description="Quién publica, dónde está el lugar, cómo se ve y qué dijeron otras personas, en una lectura clara."
+                      heading="Lo importante para decidir en una sola lectura"
+                      description="Quién publica, dónde está el lugar, cómo se ve y qué dijeron otras personas, ordenado y claro."
                       className="max-w-2xl"
                     />
                     <div className="space-y-4">
@@ -650,7 +650,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                   <SectionTitle
                     eyebrow="Huéspedes"
                     as="h2"
-                    heading="Mirá qué ya fue verificado"
+                    heading="Qué mirar antes de reservar"
                     description="Antes de reservar, podés ver quién publica, dónde está el lugar y qué reseñas dejaron otras personas."
                     className="max-w-2xl"
                   />
@@ -678,7 +678,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
 
                     <div className="space-y-3">
                       {[
-                        'Podés ver quién publica y qué parte del aviso se pudo comprobar.',
+                        'Podés ver quién publica y qué ya se revisó en el aviso.',
                         'Podés comparar ubicación verificada, reseñas reales y fotos en la misma lectura.',
                         'La decisión sigue siendo tuya.',
                       ].map((point) => (

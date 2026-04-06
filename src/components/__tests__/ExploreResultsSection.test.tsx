@@ -67,7 +67,7 @@ describe('ExploreResultsSection', () => {
     renderSection();
 
     expect(screen.getByRole('heading', { name: 'Primero revisá estas opciones' })).toBeInTheDocument();
-    expect(screen.getByText('En cada una podés ver quién publica, dónde está y qué parte del aviso ya fue revisada.')).toBeInTheDocument();
+    expect(screen.getByText('Cada aviso te muestra quién publica, dónde está y qué ya se pudo confirmar.')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Más opciones para comparar' })).toBeInTheDocument();
     expect(screen.getByText('Casa frente al mar')).toBeInTheDocument();
     expect(screen.getByText('Departamento luminoso')).toBeInTheDocument();

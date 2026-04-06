@@ -241,7 +241,7 @@ export const ExploreResultsSection = ({
         <section className="space-y-5 md:space-y-6">
           <SectionTitle
             heading="Primero revisá estas opciones"
-            description="En cada una podés ver quién publica, dónde está y qué parte del aviso ya fue revisada."
+            description="Cada aviso te muestra quién publica, dónde está y qué ya se pudo confirmar."
             className="max-w-2xl"
           />
 
@@ -272,7 +272,7 @@ export const ExploreResultsSection = ({
                   : hasActiveFilters
                     ? `${formatPropertyCount(listingProperties.length)} para revisar en esta búsqueda.`
                     : listingProperties.length > 0
-                      ? `${formatPropertyCount(listingProperties.length)} para seguir comparando antes de decidir.`
+                      ? `${formatPropertyCount(listingProperties.length)} para seguir comparando con más criterio.`
                       : 'No hay más propiedades para revisar por ahora.'}
                 className="max-w-2xl"
               />

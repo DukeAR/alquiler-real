@@ -14,7 +14,7 @@ describe('AboutPage', () => {
     );
 
     expect(screen.getByRole('heading', { name: 'Cómo funciona Alquiler Real' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Lo importante para decidir sin vueltas' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Lo importante para decidir en una sola lectura' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Qué puede aparecer como verificado' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Anfitriones' }));
@@ -27,7 +27,7 @@ describe('AboutPage', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Huéspedes' }));
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Mirá qué ya fue verificado' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Qué mirar antes de reservar' })).toBeInTheDocument();
     });
     expect(screen.getByText('Explorá con la información a la vista')).toBeInTheDocument();
 

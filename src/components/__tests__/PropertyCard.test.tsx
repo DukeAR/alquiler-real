@@ -56,7 +56,7 @@ describe('PropertyCard', () => {
     expect(screen.getByText('Precio por noche')).toBeInTheDocument();
     expect(screen.getByText('/ noche')).toBeInTheDocument();
     expect(screen.getByText('12 reseñas reales')).toBeInTheDocument();
-    expect(screen.getByText('Revisá ubicación, precio y qué ya fue verificado antes de decidir.')).toBeInTheDocument();
+    expect(screen.getByText('Revisá ubicación, precio y verificación antes de decidir.')).toBeInTheDocument();
     expect(screen.getByText('Ver detalle')).toBeInTheDocument();
   });
 

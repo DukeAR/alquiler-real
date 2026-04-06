@@ -10,7 +10,7 @@ type ExploreHeroProps = {
   onLocationSelect: (location: LocationSuggestion) => void;
 };
 
-const trustLine = 'Ves rápido quién publica, dónde está el lugar y qué parte del aviso ya fue revisada.';
+const trustLine = 'Comparás rápido quién publica, dónde está el lugar y qué ya se pudo confirmar.';
 
 export const ExploreHero = ({
   searchValue,
@@ -42,7 +42,7 @@ export const ExploreHero = ({
             </p>
           </div>
           <form
-            className="w-full max-w-[58rem] rounded-[24px] border border-white/75 bg-white/97 p-5 shadow-[0_24px_54px_-34px_rgba(15,23,42,0.26)] md:p-6 lg:p-7"
+            className="w-full max-w-[58rem] rounded-[24px] border border-white/75 bg-white/97 p-5 shadow-[0_24px_54px_-34px_rgba(15,23,42,0.26)] backdrop-blur-sm md:p-6 lg:p-7"
             onSubmit={(event) => {
               event.preventDefault();
               onSearchSubmit();
@@ -67,7 +67,7 @@ export const ExploreHero = ({
               <Button
                 type="submit"
                 size="lg"
-                className="h-16 w-full rounded-[16px] bg-slate-950 px-6 text-[0.98rem] font-semibold tracking-[-0.01em] text-white shadow-[0_18px_36px_-28px_rgba(15,23,42,0.42)] hover:-translate-y-[1px] hover:bg-slate-900 hover:shadow-[0_22px_44px_-30px_rgba(15,23,42,0.48)] active:translate-y-0 active:scale-[0.995] lg:w-auto lg:min-w-[192px] lg:flex-none"
+                className="h-16 w-full rounded-[16px] bg-slate-950 px-6 text-[0.98rem] font-semibold tracking-[-0.01em] text-white shadow-[0_18px_36px_-28px_rgba(15,23,42,0.42)] hover:-translate-y-[1px] hover:bg-slate-900 hover:shadow-[0_22px_44px_-30px_rgba(15,23,42,0.48)] active:translate-y-0 active:scale-[0.995] lg:w-auto lg:min-w-[208px] lg:flex-none"
               >
                 Ver alojamientos
               </Button>

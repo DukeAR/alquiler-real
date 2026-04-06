@@ -19,6 +19,6 @@ describe('ExploreHero', () => {
     expect(screen.getByText('No podemos elegir por vos, pero te damos claridad en todo el proceso para que decidas tranquilo.')).toBeInTheDocument();
     expect(screen.getByLabelText('Zona o ciudad')).toHaveAttribute('placeholder', 'Buscá una zona, ciudad o barrio');
     expect(screen.getByRole('button', { name: 'Ver alojamientos' })).toBeInTheDocument();
-    expect(screen.getByText('Ves rápido quién publica, dónde está el lugar y qué parte del aviso ya fue revisada.')).toBeInTheDocument();
+    expect(screen.getByText('Comparás rápido quién publica, dónde está el lugar y qué ya se pudo confirmar.')).toBeInTheDocument();
   });
 });

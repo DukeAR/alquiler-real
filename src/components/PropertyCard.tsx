@@ -216,7 +216,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         ) : null}
 
         <div className="mt-auto flex items-end justify-between gap-4 border-t border-slate-100/90 pt-4">
-          <p className="text-[13px] font-medium leading-6 text-slate-500">Revisá ubicación, precio y qué ya fue verificado antes de decidir.</p>
+          <p className="text-[13px] font-medium leading-6 text-slate-500">Revisá ubicación, precio y verificación antes de decidir.</p>
           {onClick ? (
             <div className="inline-flex items-center gap-2 text-[13.5px] font-semibold tracking-[-0.01em] text-slate-700 transition-colors duration-150 group-hover:text-slate-950">
               <span>{isFavoritesVariant ? 'Abrir detalle' : 'Ver detalle'}</span>
