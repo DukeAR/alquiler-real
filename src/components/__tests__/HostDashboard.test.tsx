@@ -431,6 +431,57 @@ describe('HostDashboard', () => {
     );
   });
 
+  test('shows the host-specific custody message when the protected deposit is already held', async () => {
+    apiJsonMock.mockResolvedValue({
+      stats: {
+        host_rating: 4.9,
+        total_bookings_hosted: 3,
+        trust_score: 88,
+        badge: 'Verificado',
+        host_verified: true,
+      },
+      properties: [
+        {
+          id: 'prop-1',
+          title: 'Casa del bosque',
+          location: 'Pinamar',
+          price: 150000,
+          status: 'active',
+          reviewsCount: 8,
+          rating: 4.9,
+          imageUrl: 'https://example.com/property.jpg',
+          verificationScore: 4,
+          verificationItems: [
+            { key: 'identity', label: 'Identidad confirmada', description: 'Sabés con quién estás hablando.', status: 'complete' },
+          ],
+        },
+      ],
+      recentBookings: [
+        {
+          id: 'booking-held-message',
+          status: 'confirmed',
+          requestMode: 'protected',
+          depositStatus: 'held',
+          userId: 'guest-6',
+          userName: 'Elena',
+          propertyTitle: 'Casa del bosque',
+          startDate: '2026-10-14',
+          endDate: '2026-10-18',
+          guests: 2,
+          totalPrice: 540000,
+        },
+      ],
+      estimatedIncome: 250000,
+    });
+
+    render(<HostDashboard onBack={vi.fn()} />);
+
+    expect(await screen.findAllByText('Seña en custodia')).not.toHaveLength(0);
+    expect(screen.getByText('La seña ya fue recibida')).toBeInTheDocument();
+    expect(screen.getByText('El huésped confirmó la seña a través de la plataforma. El monto queda en custodia y se libera cuando el huésped confirma su llegada al lugar.')).toBeInTheDocument();
+    expect(screen.getByText('Vas a poder ver el estado y el momento de liberación desde esta reserva.')).toBeInTheDocument();
+  });
+
   test('lets the host cancel a protected reservation and shows the automatic refund state', async () => {
     apiJsonMock.mockImplementation(async (url: string, options?: RequestInit) => {
       if (url === '/api/host/dashboard') {

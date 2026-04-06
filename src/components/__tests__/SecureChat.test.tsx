@@ -204,6 +204,34 @@ describe('SecureChat', () => {
     expect(screen.getByRole('button', { name: /Confirmar llegada/i })).toBeInTheDocument();
   });
 
+  test('shows the host-specific custody message when the protected deposit is already held', async () => {
+    useAuthMock.mockReturnValue({ user: { id: 'host-1' } });
+    fetchConversationsMock.mockResolvedValue([
+      {
+        ...baseConversation,
+        booking_id: 'booking-held-1',
+        bookingStatus: 'confirmed',
+        requestMode: 'protected',
+        requestStatus: 'accepted',
+        depositStatus: 'held',
+        requestStartDate: '2026-05-10',
+        requestEndDate: '2026-05-14',
+        requestGuests: 2,
+        requestTotalPrice: 410000,
+      },
+    ]);
+    fetchMessagesMock.mockResolvedValue([]);
+
+    renderChat();
+
+    expect(await screen.findAllByText('Seña en custodia')).not.toHaveLength(0);
+    expect(screen.getByText('La seña ya fue recibida')).toBeInTheDocument();
+    expect(screen.getByText('El huésped confirmó la seña a través de la plataforma. El monto queda en custodia y se libera cuando el huésped confirma su llegada al lugar.')).toBeInTheDocument();
+    expect(screen.getByText('Vas a poder ver el estado y el momento de liberación desde esta reserva.')).toBeInTheDocument();
+    expect(screen.getByText('Huésped')).toBeInTheDocument();
+    expect(screen.getByText('Confirmar llegada')).toBeInTheDocument();
+  });
+
   test('lets the guest report an arrival problem from the protected chat summary', async () => {
     useAuthMock.mockReturnValue({ user: { id: 'tenant-1' } });
     fetchConversationsMock.mockResolvedValue([

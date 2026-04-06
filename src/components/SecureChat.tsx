@@ -124,6 +124,7 @@ const getSuggestionTexts = (requestContext: ReservationRequestContext | null, is
     bookingStatus: requestContext.bookingStatus,
     depositStatus: requestContext.depositStatus,
     cancellationActor: requestContext.cancellationActor,
+    viewerRole: isTenant ? 'guest' : 'host',
   });
 
   if (flow.stage === 'request-accepted' && requestContext.mode === 'direct') {
@@ -520,6 +521,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
         bookingStatus: activeRequestContext.bookingStatus,
         depositStatus: activeRequestContext.depositStatus,
         cancellationActor: activeRequestContext.cancellationActor,
+        viewerRole: isTenantConversation ? 'guest' : 'host',
       })
     : null;
   const requestAccepted = Boolean(flowCopy && flowCopy.stage && flowCopy.stage !== 'request-pending');
@@ -677,6 +679,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                           <div>
                             <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">{requestDescription}</p>
                             {requestGuidance ? <p className="mt-2 text-sm font-medium text-slate-900 dark:text-slate-100">{requestGuidance}</p> : null}
+                            {flowCopy?.trackingHint ? <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">{flowCopy.trackingHint}</p> : null}
                           </div>
                         </div>
 

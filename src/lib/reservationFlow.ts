@@ -22,6 +22,7 @@ export type ReservationFlowStageWithIssues =
   | 'host-cancelled';
 
 export type ReservationFlowActor = 'guest' | 'host' | 'platform' | 'none';
+export type ReservationFlowViewerRole = 'guest' | 'host';
 
 type ReservationFlowInput = {
   mode?: ReservationRequestMode | null;
@@ -29,6 +30,7 @@ type ReservationFlowInput = {
   bookingStatus?: BookingStatus | null;
   depositStatus?: ReservationDepositStatus | null;
   cancellationActor?: ReservationCancellationActor | null;
+  viewerRole?: ReservationFlowViewerRole;
 };
 
 export type ReservationFlowCopy = {
@@ -41,6 +43,7 @@ export type ReservationFlowCopy = {
   nextStepLabel?: string;
   modelLabel?: string;
   directDepositHint?: string;
+  trackingHint?: string;
 };
 
 export const getReservationFlowStage = ({
@@ -112,6 +115,7 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
   }
 
   const modelLabel = input.mode === 'protected' ? 'Reserva protegida' : 'Acuerdo directo';
+  const viewerRole = input.viewerRole ?? 'guest';
 
   switch (stage) {
     case 'request-pending':
@@ -161,6 +165,20 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
         nextActor: 'none',
       };
     case 'protected-deposit-held':
+      if (viewerRole === 'host') {
+        return {
+          stage,
+          modelLabel,
+          statusLabel: 'Seña en custodia',
+          description: 'La seña ya fue recibida',
+          supportText: 'El huésped confirmó la seña a través de la plataforma. El monto queda en custodia y se libera cuando el huésped confirma su llegada al lugar.',
+          trackingHint: 'Vas a poder ver el estado y el momento de liberación desde esta reserva.',
+          nextActor: 'guest',
+          nextActorLabel: 'Huésped',
+          nextStepLabel: 'Confirmar llegada',
+        };
+      }
+
       return {
         stage,
         modelLabel,

@@ -127,6 +127,7 @@ export const MyBookings = () => {
     bookingStatus: booking.status,
     depositStatus: booking.depositStatus,
     cancellationActor: booking.cancellationActor,
+    viewerRole: 'guest',
   });
 
   const updateBookingState = (nextBooking: Booking) => {
@@ -386,6 +387,7 @@ export const MyBookings = () => {
                           <p className="text-[10px] font-black uppercase tracking-[0.14em] text-brand">{bookingFlow.statusLabel}</p>
                           <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">{bookingFlow.description}</p>
                           {bookingFlow.supportText ? <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">{bookingFlow.supportText}</p> : null}
+                          {bookingFlow.trackingHint ? <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">{bookingFlow.trackingHint}</p> : null}
                         </div>
 
                         {bookingFlow.stage === 'request-accepted' ? (
