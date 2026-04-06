@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { apiFetch, apiJson } from '../lib/apiConfig';
+import { apiJson } from '../lib/apiConfig';
 import { LoadingState } from './LoadingState';
 import { Icons } from './Icons';
 import BookingConfirmationModal from './BookingConfirmationModal';
@@ -17,10 +17,11 @@ import {
   trackVerificationPreferenceOpen,
   trackVerificationPreferenceSave,
 } from '../lib/verificationPreference';
-import { type Property as AppProperty } from '../types';
+import { type Property as AppProperty, type ReservationRequestContext, type ReservationRequestMode } from '../types';
 import { useFavorites } from '../hooks/useFavorites';
 import { useBookings } from '../hooks/useBookings';
 import { useAuth } from '../hooks/useAuth';
+import { sendMessage, startConversation } from '../services/geminiService';
 import { Button } from './ui/Button';
 import { Badge } from './ui/Badge';
 import { Card } from './ui/Card';
@@ -165,6 +166,29 @@ const formatGuestSelection = (adults: number, childrenCount: number) => {
   }
 
   return `${adults} ${adults === 1 ? 'adulto' : 'adultos'} · ${childrenCount} ${childrenCount === 1 ? 'menor' : 'menores'}`;
+};
+
+const formatRequestDate = (value: string) => {
+  const parsed = parseLocalIso(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+
+  return parsed.toLocaleDateString('es-AR', {
+    day: 'numeric',
+    month: 'short',
+  });
+};
+
+const buildInitialRequestMessage = (requestContext: ReservationRequestContext) => {
+  const dateRangeLabel = `${formatRequestDate(requestContext.startDate)} al ${formatRequestDate(requestContext.endDate)}`;
+  const guestLabel = `${requestContext.guests} ${requestContext.guests === 1 ? 'huésped' : 'huéspedes'}`;
+
+  if (requestContext.mode === 'protected') {
+    return `Hola ${requestContext.hostName}, te mandé una solicitud de reserva protegida para ${requestContext.propertyTitle} del ${dateRangeLabel} para ${guestLabel}. El total estimado es ${formatCurrency(requestContext.totalPrice)}. Quedo atento a tu respuesta por acá.`;
+  }
+
+  return `Hola ${requestContext.hostName}, me interesa ${requestContext.propertyTitle} del ${dateRangeLabel} para ${guestLabel}. El total estimado me da ${formatCurrency(requestContext.totalPrice)}. Si te sirve, lo coordinamos por acá.`;
 };
 
 const getHostName = (property: PropertyDetailData) => property.host?.name || property.hostName || 'Anfitrión';
@@ -493,7 +517,7 @@ export const PropertyDetailShell: React.FC<{
   const [bookingError, setBookingError] = useState<BookingErrorState | null>(null);
   const [confirmOpen, setConfirmOpen] = useState<boolean>(false);
   const [isGuestPickerOpen, setIsGuestPickerOpen] = useState(false);
-  const [bookingSubmitting, setBookingSubmitting] = useState(false);
+  const [bookingSubmitMode, setBookingSubmitMode] = useState<ReservationRequestMode | null>(null);
   const [bookingSubmitNotice, setBookingSubmitNotice] = useState<BookingConfirmationNotice | null>(null);
   const [bookingSuccess, setBookingSuccess] = useState<BookingSuccessState | null>(null);
   const [availabilityRefreshToken, setAvailabilityRefreshToken] = useState(0);
@@ -582,7 +606,7 @@ export const PropertyDetailShell: React.FC<{
         : canReserve
           ? {
               tone: 'success',
-              heading: 'Ya podés seguir',
+              heading: 'Ya podés enviar la solicitud',
               description: `${formatCurrency(total)} total · ${nights} ${nights === 1 ? 'noche' : 'noches'} · ${formatGuestSelection(adults, childrenCount)}.`,
             }
           : {
@@ -594,14 +618,14 @@ export const PropertyDetailShell: React.FC<{
             };
 
   const reserveButtonLabel = canReserve
-    ? 'Revisar reserva'
+    ? 'Solicitar reserva'
     : !checkIn && !checkOut
       ? 'Elegí fechas'
       : hasPartialDates
         ? 'Elegí salida'
         : guestCapacityExceeded
           ? 'Ajustá los huéspedes'
-          : 'Revisar reserva';
+          : 'Solicitar reserva';
 
   const dateFieldHelper = !checkIn && !checkOut
     ? 'Elegí ingreso y salida.'
@@ -616,8 +640,15 @@ export const PropertyDetailShell: React.FC<{
     : 'Elegí cuántas personas viajan.';
 
   const resetBookingSubmitState = () => {
-    setBookingSubmitting(false);
+    setBookingSubmitMode(null);
     setBookingSubmitNotice(null);
+  };
+
+  const resetBookingDraft = () => {
+    setCheckIn('');
+    setCheckOut('');
+    setAdults(1);
+    setChildrenCount(0);
   };
 
   const clearBookingFeedback = () => {
@@ -658,7 +689,7 @@ export const PropertyDetailShell: React.FC<{
   }, [isGuestPickerOpen]);
 
   const closeBookingConfirmation = () => {
-    if (bookingSubmitting) return;
+    if (bookingSubmitMode) return;
     setConfirmOpen(false);
     resetBookingSubmitState();
   };
@@ -707,24 +738,112 @@ export const PropertyDetailShell: React.FC<{
     setConfirmOpen(true);
   };
 
-  const handleConfirmBooking = async () => {
+  const buildReservationRequestContext = (
+    mode: ReservationRequestMode,
+    bookingId?: string,
+    bookingStatus?: ReservationRequestContext['bookingStatus'],
+  ): ReservationRequestContext => ({
+    propertyId: property.id ?? '',
+    propertyTitle: property.title,
+    hostName,
+    startDate: checkIn,
+    endDate: checkOut,
+    guests: guestCount,
+    nightly,
+    nights,
+    totalPrice: total,
+    mode,
+    bookingId,
+    bookingStatus,
+  });
+
+  const prepareConversationForRequest = async (requestContext: ReservationRequestContext, bookingId?: string) => {
+    if (!property.id || !property.hostId) {
+      throw new Error('No pudimos preparar el chat de esta propiedad. Probá de nuevo.');
+    }
+
+    const conversation = await startConversation(property.id, property.hostId, bookingId);
+
+    try {
+      await sendMessage(conversation.id, buildInitialRequestMessage(requestContext), property.hostId);
+      return { conversationId: conversation.id, initialMessageSent: true };
+    } catch (error) {
+      console.error('Request message error', error);
+      return { conversationId: conversation.id, initialMessageSent: false };
+    }
+  };
+
+  const navigateToConversation = (conversationId: string, requestContext: ReservationRequestContext) => {
+    navigate(`/chat/${conversationId}`, { state: { requestContext } });
+  };
+
+  const openLoginForRequest = (title: string, description: string) => {
+    setConfirmOpen(false);
+    resetBookingSubmitState();
+    showToast(title, description, 'warning');
+    import('../lib/modal').then((m) => m.showLoginModal());
+  };
+
+  const handleStartDirectRequest = async () => {
     if (!property.id) {
       setBookingSubmitNotice({
         tone: 'error',
-        heading: 'No pudimos confirmar la estadía',
-        description: 'Falta identificar la propiedad antes de reservar. Probá recargando la página.',
+        heading: 'No pudimos abrir el chat',
+        description: 'Falta identificar la propiedad antes de seguir. Probá recargando la página.',
       });
       return;
     }
 
     if (!user) {
-      closeBookingConfirmation();
-      showToast('Necesitás iniciar sesión', 'Iniciá sesión para confirmar la estadía.', 'warning');
-      import('../lib/modal').then((m) => m.showLoginModal());
+      openLoginForRequest('Necesitás iniciar sesión', 'Iniciá sesión para abrir el chat o mandar una solicitud.');
       return;
     }
 
-    setBookingSubmitting(true);
+    setBookingSubmitMode('direct');
+    setBookingSubmitNotice(null);
+
+    const requestContext = buildReservationRequestContext('direct');
+
+    try {
+      const { conversationId, initialMessageSent } = await prepareConversationForRequest(requestContext);
+
+      setConfirmOpen(false);
+      resetBookingSubmitState();
+      navigateToConversation(conversationId, requestContext);
+      showToast(
+        'Chat abierto',
+        initialMessageSent
+          ? 'Ya le mandaste tu propuesta al anfitrión y la conversación quedó abierta.'
+          : 'Abrimos el chat, pero la propuesta automática no salió. Podés seguir desde ahí.',
+        initialMessageSent ? 'success' : 'warning',
+      );
+    } catch (error) {
+      console.error('Direct request error', error);
+      setBookingSubmitMode(null);
+      setBookingSubmitNotice({
+        tone: 'error',
+        heading: 'No pudimos abrir el chat',
+        description: error instanceof Error ? error.message : 'Intentá de nuevo en unos segundos.',
+      });
+    }
+  };
+
+  const handleStartProtectedRequest = async () => {
+    if (!property.id) {
+      setBookingSubmitNotice({
+        tone: 'error',
+        heading: 'No pudimos enviar la solicitud',
+        description: 'Falta identificar la propiedad antes de seguir. Probá recargando la página.',
+      });
+      return;
+    }
+
+    if (!user) {
+      openLoginForRequest('Necesitás iniciar sesión', 'Iniciá sesión para mandar una solicitud protegida.');
+      return;
+    }
+
+    setBookingSubmitMode('protected');
     setBookingSubmitNotice(null);
 
     const result = await createBooking({
@@ -733,15 +852,14 @@ export const PropertyDetailShell: React.FC<{
       endDate: checkOut,
       guests: guestCount,
       totalPrice: total,
+      requestMode: 'protected',
     });
 
     if (!result.ok) {
-      setBookingSubmitting(false);
+      setBookingSubmitMode(null);
 
       if (result.error.status === 401) {
-        closeBookingConfirmation();
-        showToast('Necesitás iniciar sesión', 'Iniciá sesión para confirmar la estadía.', 'warning');
-        import('../lib/modal').then((m) => m.showLoginModal());
+        openLoginForRequest('Necesitás iniciar sesión', 'Iniciá sesión para mandar una solicitud protegida.');
         return;
       }
 
@@ -756,36 +874,41 @@ export const PropertyDetailShell: React.FC<{
       const tone = result.error.field === 'guests' || result.error.code === 'DATES_UNAVAILABLE' ? 'warning' : 'error';
       setBookingSubmitNotice({
         tone,
-        heading: tone === 'warning' ? 'Revisá los datos antes de confirmar' : 'No pudimos confirmar la estadía',
+        heading: tone === 'warning' ? 'Revisá los datos antes de enviar' : 'No pudimos enviar la solicitud',
         description: result.error.message,
       });
       return;
     }
 
     const bookedTotal = result.data.booking?.totalPrice ?? result.data.pricing.total ?? total;
+    const requestContext = buildReservationRequestContext('protected', result.data.booking.id, result.data.booking.status);
 
-    setBookingSubmitting(false);
     setBookingError(null);
     setConfirmOpen(false);
-    setBookingSubmitNotice(null);
-    setBookingSuccess({
-      bookingId: result.data.booking.id,
-      nights: result.data.pricing.nights,
-      total: bookedTotal,
-      guestSummary: formatGuestSelection(adults, childrenCount),
-      stayCode: result.data.booking.stay_code,
-    });
-    setCheckIn('');
-    setCheckOut('');
-    setAdults(1);
-    setChildrenCount(0);
+    resetBookingSubmitState();
+    resetBookingDraft();
     setAvailabilityRefreshToken((currentValue) => currentValue + 1);
 
-    showToast(
-      'Estadía confirmada',
-      `Reservaste ${result.data.pricing.nights} ${result.data.pricing.nights === 1 ? 'noche' : 'noches'} por ${formatCurrency(bookedTotal)}. Ya la podés ver en Mis reservas.`,
-      'success',
-    );
+    try {
+      const { conversationId, initialMessageSent } = await prepareConversationForRequest(requestContext, result.data.booking.id);
+
+      navigateToConversation(conversationId, requestContext);
+      showToast(
+        'Solicitud enviada',
+        initialMessageSent
+          ? `La reserva protegida quedó pendiente por ${formatCurrency(bookedTotal)} y ya abrimos el chat para seguir con ${hostName}.`
+          : 'La solicitud quedó pendiente. Abrimos el chat, pero la propuesta automática no salió; seguí desde ahí.',
+        initialMessageSent ? 'success' : 'warning',
+      );
+    } catch (error) {
+      console.error('Protected request conversation error', error);
+      showToast(
+        'Solicitud enviada',
+        'La reserva protegida quedó pendiente. No pudimos abrir el chat ahora, pero la vas a ver en Mis reservas.',
+        'success',
+      );
+      navigate('/my-bookings');
+    }
   };
 
   const onLightboxKey = (e: KeyboardEvent) => {
@@ -833,7 +956,7 @@ export const PropertyDetailShell: React.FC<{
               visualLevel="h1"
               eyebrow="Detalle de la propiedad"
               heading={property.title}
-              description="Revisá ubicación, anfitrión y qué parte del aviso ya fue comprobada antes de reservar."
+              description="Revisá ubicación, anfitrión y qué parte del aviso ya fue comprobada antes de mandar una solicitud."
               className="max-w-3xl"
             />
 
@@ -943,12 +1066,12 @@ export const PropertyDetailShell: React.FC<{
           <Card variant="elevated" className="rounded-[30px] border-slate-200/80 bg-white p-4 shadow-[0_30px_80px_-50px_rgba(15,23,42,0.35)] sm:p-5">
             <div className="flex items-start justify-between gap-4 border-b border-slate-200/70 pb-4">
               <div className="space-y-2">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Antes de reservar</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Armá tu solicitud</p>
                 <div className="flex items-end gap-2">
                   <span className="text-[2.55rem] font-black tracking-tight text-slate-950 sm:text-[2.9rem]">{nightly ? formatCurrency(nightly) : '—'}</span>
                   <span className="pb-1 text-sm font-medium text-slate-500">/ noche</span>
                 </div>
-                <p className="text-sm leading-6 text-slate-500">Elegí fechas para ver el total.</p>
+                <p className="text-sm leading-6 text-slate-500">Elegí fechas para ver el total y después decidí si querés hablar primero o dejar la solicitud protegida.</p>
                 <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600">
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-brand/10 px-3 py-1.5 font-semibold text-brand">
                     <Icons.Star className="h-4 w-4 fill-current" />
@@ -1157,19 +1280,20 @@ export const PropertyDetailShell: React.FC<{
                 </Button>
 
                 <Button type="button" variant="secondary" fullWidth onClick={onContact} className="rounded-2xl border-slate-200 bg-white">
-                  Hablar con el anfitrión
+                  Abrir chat
                 </Button>
               </div>
 
               <p className="text-center text-xs leading-5 text-slate-500">
-                No se confirma nada hasta que revises la estadía final.
+                Primero revisás la propuesta y después elegís si querés conversar o dejarla protegida en la app.
               </p>
             </form>
 
             <BookingConfirmationModal
               isOpen={confirmOpen}
               onClose={closeBookingConfirmation}
-              onConfirm={handleConfirmBooking}
+              onStartDirect={handleStartDirectRequest}
+              onStartProtected={handleStartProtectedRequest}
               propertyTitle={property.title}
               hostName={hostName}
               checkIn={checkIn}
@@ -1179,7 +1303,7 @@ export const PropertyDetailShell: React.FC<{
               children={childrenCount}
               nightly={nightly}
               total={total}
-              confirmLoading={bookingSubmitting}
+              actionLoadingMode={bookingSubmitMode}
               submitNotice={bookingSubmitNotice}
             />
           </Card>
@@ -1206,7 +1330,7 @@ export const PropertyDetailShell: React.FC<{
           <Card className="rounded-[32px] border-slate-200/80 bg-white p-6 shadow-[0_28px_70px_-50px_rgba(15,23,42,0.25)] sm:p-7">
             <div className="space-y-4">
               <SectionTitle
-                eyebrow="Antes de reservar"
+                eyebrow="Antes de decidir"
                 heading="Lo importante de este aviso"
                 description="Un resumen corto para ver si este lugar te cierra."
               />
@@ -1349,6 +1473,7 @@ export const PropertyDetailShell: React.FC<{
 
 export const PropertyDetail: React.FC = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [property, setProperty] = useState<PropertyDetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [mainIndex, setMainIndex] = useState(0);
@@ -1405,27 +1530,23 @@ export const PropertyDetail: React.FC = () => {
 
   const handleContact = async () => {
     if (!user) {
-      showToast('Necesitás iniciar sesión', 'Iniciá sesión para hablar con el anfitrión.', 'warning');
+      showToast('Necesitás iniciar sesión', 'Iniciá sesión para abrir el chat con el anfitrión.', 'warning');
       import('../lib/modal').then(m => m.showLoginModal());
       return;
     }
+
+    if (!property.id || !property.hostId) {
+      showToast('Chat', 'No pudimos abrir el chat de esta propiedad. Probá de nuevo.', 'error');
+      return;
+    }
+
     try {
-      const res = await apiFetch('/api/leads', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ propertyId: property.id, message: 'Interesado en la propiedad' })
-      });
-         if (res.status === 401) {
-           showToast('Necesitás iniciar sesión', 'Iniciá sesión para hablar con el anfitrión.', 'warning');
-           // open login modal instead of redirect
-           import('../lib/modal').then(m => m.showLoginModal());
-           return;
-         }
-      if (!res.ok) throw new Error('server');
-      showToast('Consulta', 'Listo. Tu consulta ya quedó enviada y el anfitrión te va a responder.', 'success');
+      const conversation = await startConversation(property.id, property.hostId);
+      navigate(`/chat/${conversation.id}`);
+      showToast('Chat abierto', 'Ya abrimos el chat para que sigas la conversación con el anfitrión.', 'success');
     } catch (err) {
       console.error('Contact error', err);
-      showToast('Consulta', 'No pudimos enviar tu consulta. Intentá de nuevo.', 'error');
+      showToast('Chat', 'No pudimos abrir el chat. Intentá de nuevo.', 'error');
     }
   };
 

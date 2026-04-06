@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect, useState, type ReactNode } from 'react';
-import { Navigate, Route, Routes, useNavigate, useParams } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { RequireAuth, RequireRole } from './app/guards/AuthGuards';
 import { apiJson } from './lib/apiConfig';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -11,7 +11,7 @@ import { LoadingState } from './components/LoadingState';
 import { ExplorePage } from './components/explore/ExplorePage';
 import { FavoritesProvider } from './contexts/FavoritesContext';
 import { useAuth } from './hooks/useAuth';
-import { type HostProfile } from './services/geminiService';
+import { type HostProfile, type ReservationRequestContext } from './services/geminiService';
 
 const LazyAboutPage = lazy(() => import('./components/AboutPage.tsx'));
 const LazyChangePassword = lazy(() => import('./components/ChangePassword').then((module) => ({ default: module.ChangePassword })));
@@ -98,11 +98,13 @@ export default function App() {
 
 const SecureChatWrapper = () => {
   const { id } = useParams();
+  const location = useLocation();
+  const initialRequestContext = (location.state as { requestContext?: ReservationRequestContext } | null)?.requestContext ?? null;
 
   return (
     <div className="flex h-screen flex-col pt-4 md:pt-0">
       <div className="flex-1 overflow-hidden">
-        <LazySecureChat initialConversationId={id === 'all' ? undefined : id} />
+        <LazySecureChat initialConversationId={id === 'all' ? undefined : id} initialRequestContext={initialRequestContext} />
       </div>
     </div>
   );

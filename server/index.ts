@@ -1922,6 +1922,9 @@ app.post('/api/bookings', async (req, res) => {
     return sendBookingError(res, 401, 'AUTH_REQUIRED', AUTH_REQUIRED_ERROR);
   }
 
+  const requestMode = req.body?.requestMode === 'protected' ? 'protected' : 'standard';
+  const bookingStatus = requestMode === 'protected' ? 'pending' : 'confirmed';
+
   const risk = await checkUserRisk(userId);
   if (risk.blocked) {
     return sendBookingError(res, 403, 'BOOKING_BLOCKED', risk.reason || 'No pudimos validar tu cuenta para reservar.');
@@ -1934,7 +1937,7 @@ app.post('/api/bookings', async (req, res) => {
   const guests = Number(req.body?.guests);
 
   if (typeof propertyId !== 'string' || !propertyId.trim()) {
-    return sendBookingError(res, 400, 'PROPERTY_ID_REQUIRED', 'Elegí la propiedad antes de reservar.', 'propertyId');
+    return sendBookingError(res, 400, 'PROPERTY_ID_REQUIRED', 'Elegí la propiedad antes de seguir.', 'propertyId');
   }
 
   if (!startDate) {
@@ -1985,12 +1988,12 @@ app.post('/api/bookings', async (req, res) => {
     const property = propertyResult.rows[0];
     if (property.status && property.status !== 'active') {
       await client.query('ROLLBACK');
-      return sendBookingError(res, 422, 'PROPERTY_INACTIVE', 'Esta propiedad no está disponible para reservar ahora.', 'propertyId');
+      return sendBookingError(res, 422, 'PROPERTY_INACTIVE', 'Esta propiedad no está disponible para nuevas solicitudes ahora.', 'propertyId');
     }
 
     if (property.hostId && property.hostId === userId) {
       await client.query('ROLLBACK');
-      return sendBookingError(res, 422, 'OWN_PROPERTY_BOOKING', 'No podés reservar tu propia publicación.', 'propertyId');
+      return sendBookingError(res, 422, 'OWN_PROPERTY_BOOKING', 'No podés avanzar sobre tu propia publicación.', 'propertyId');
     }
 
     const maxGuests = Number(property.maxGuests) || 0;
@@ -2008,7 +2011,7 @@ app.post('/api/bookings', async (req, res) => {
     const nightlyPrice = Number(property.price) || 0;
     if (nightlyPrice <= 0) {
       await client.query('ROLLBACK');
-      return sendBookingError(res, 422, 'INVALID_PROPERTY_PRICE', 'Esta propiedad no tiene un precio válido para reservar.', 'propertyId');
+      return sendBookingError(res, 422, 'INVALID_PROPERTY_PRICE', 'Esta propiedad no tiene un precio válido para continuar.', 'propertyId');
     }
 
     const totalPrice = Number((nightlyPrice * nights).toFixed(2));
@@ -2062,11 +2065,11 @@ app.post('/api/bookings', async (req, res) => {
 
     const insertResult = await client.query(
       `INSERT INTO bookings (id, "propertyId", "userId", status, start_date, end_date, total_price, guests, stay_code, contract_json)
-       VALUES ($1, $2, $3, 'confirmed', $4, $5, $6, $7, $8, $9)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING id, "propertyId", "userId", status, date, stay_code, verified,
                  start_date as "startDate", end_date as "endDate", total_price as "totalPrice",
                  guests, contract_accepted as "contractAccepted", contract_json as "contractJson"`,
-      [bookingId, propertyId, userId, startDate.iso, endDate.iso, totalPrice, guests, stay_code, JSON.stringify(contract)]
+      [bookingId, propertyId, userId, bookingStatus, startDate.iso, endDate.iso, totalPrice, guests, stay_code, JSON.stringify(contract)]
     );
 
     await client.query('COMMIT');
@@ -2083,12 +2086,14 @@ app.post('/api/bookings', async (req, res) => {
       endDate: endDate.iso,
       guests,
       totalPrice,
+      requestMode,
       clientTotalPrice: Number.isFinite(Number(rawTotalPrice)) ? Number(rawTotalPrice) : undefined,
     });
 
     res.status(201).json({
       booking,
       contract,
+      requestMode,
       pricing: {
         nights,
         nightly: nightlyPrice,
@@ -2101,7 +2106,14 @@ app.post('/api/bookings', async (req, res) => {
     }
 
     console.error('Error al crear reserva:', err);
-    sendBookingError(res, 500, 'BOOKING_CREATE_FAILED', 'No pudimos confirmar la reserva. Intentá de nuevo.');
+    sendBookingError(
+      res,
+      500,
+      'BOOKING_CREATE_FAILED',
+      requestMode === 'protected'
+        ? 'No pudimos enviar la solicitud protegida. Intentá de nuevo.'
+        : 'No pudimos confirmar la reserva. Intentá de nuevo.',
+    );
   } finally {
     client?.release();
   }
@@ -2185,11 +2197,14 @@ app.get('/api/conversations', async (req, res) => {
     const result = await db.query(
       `SELECT c.*, 
               u_tenant.name as "tenantName", u_host.name as "hostName",
-              p.title as "propertyTitle", p."imageUrl" as "propertyImage"
+              p.title as "propertyTitle", p."imageUrl" as "propertyImage",
+              b.status as "bookingStatus", b.start_date as "startDate", b.end_date as "endDate",
+              b.guests, b.total_price as "totalPrice"
        FROM conversations c
        JOIN users u_tenant ON c.tenant_id = u_tenant.id
        JOIN users u_host ON c.host_id = u_host.id
        JOIN properties p ON c.property_id = p.id
+       LEFT JOIN bookings b ON c.booking_id = b.id
        WHERE c.tenant_id = $1 OR c.host_id = $1
        ORDER BY c.updated_at DESC`,
       [userId]
@@ -2251,24 +2266,83 @@ app.post('/api/conversations', async (req, res) => {
   const userId = req.session.userId;
   if (!userId) return res.status(401).json({ error: AUTH_REQUIRED_ERROR });
 
-  const { propertyId, hostId } = req.body;
-  if (userId === hostId) return res.status(400).json({ error: 'No podés iniciar un chat con tu propia propiedad.' });
+  const propertyId = typeof req.body?.propertyId === 'string' ? req.body.propertyId.trim() : '';
+  const requestedBookingId = typeof req.body?.bookingId === 'string' ? req.body.bookingId.trim() : '';
+
+  if (!propertyId) {
+    return res.status(400).json({ error: 'Elegí la propiedad antes de abrir el chat.' });
+  }
 
   try {
+    const propertyResult = await db.query(
+      `SELECT id, "hostId"
+       FROM properties
+       WHERE id = $1
+       LIMIT 1`,
+      [propertyId],
+    );
+
+    if (propertyResult.rows.length === 0) {
+      return res.status(404).json({ error: 'No encontramos esa propiedad.' });
+    }
+
+    const property = propertyResult.rows[0];
+    const hostId = property.hostId as string | undefined;
+
+    if (!hostId) {
+      return res.status(422).json({ error: 'Esta propiedad no tiene un anfitrión disponible para chatear.' });
+    }
+
+    if (userId === hostId) {
+      return res.status(400).json({ error: 'No podés iniciar un chat con tu propia propiedad.' });
+    }
+
+    let bookingId: string | null = null;
+
+    if (requestedBookingId) {
+      const bookingResult = await db.query(
+        `SELECT id, "propertyId", "userId"
+         FROM bookings
+         WHERE id = $1
+         LIMIT 1`,
+        [requestedBookingId],
+      );
+
+      const booking = bookingResult.rows[0];
+
+      if (!booking || booking.userId !== userId || booking.propertyId !== propertyId) {
+        return res.status(400).json({ error: 'No pudimos vincular esa solicitud con este chat.' });
+      }
+
+      bookingId = booking.id;
+    }
+
     const existing = await db.query(
-      `SELECT id FROM conversations WHERE tenant_id = $1 AND host_id = $2 AND property_id = $3`,
+      `SELECT * FROM conversations WHERE tenant_id = $1 AND host_id = $2 AND property_id = $3`,
       [userId, hostId, propertyId]
     );
 
     if (existing.rows.length > 0) {
+      if (bookingId && existing.rows[0].booking_id !== bookingId) {
+        const updated = await db.query(
+          `UPDATE conversations
+           SET booking_id = $1, updated_at = NOW()
+           WHERE id = $2
+           RETURNING *`,
+          [bookingId, existing.rows[0].id],
+        );
+
+        return res.json(updated.rows[0]);
+      }
+
       return res.json(existing.rows[0]);
     }
 
     const id = `conv_${Date.now()}`;
     const result = await db.query(
-      `INSERT INTO conversations (id, tenant_id, host_id, property_id) 
-       VALUES ($1, $2, $3, $4) RETURNING *`,
-      [id, userId, hostId, propertyId]
+      `INSERT INTO conversations (id, tenant_id, host_id, property_id, booking_id) 
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [id, userId, hostId, propertyId, bookingId]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {

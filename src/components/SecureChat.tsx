@@ -9,8 +9,111 @@ import {
 } from '../services/geminiService';
 import { ReportModal } from './ReportModal';
 import { useAuth } from '../hooks/useAuth';
+import { type ReservationRequestContext } from '../types';
 
-export const SecureChat: React.FC<{ initialConversationId?: string }> = ({ initialConversationId }) => {
+const formatRequestDate = (value?: string) => {
+  if (!value) {
+    return null;
+  }
+
+  const [year, month, day] = value.split('-').map(Number);
+  const parsed = new Date(year, month - 1, day);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+
+  return parsed.toLocaleDateString('es-AR', {
+    day: 'numeric',
+    month: 'short',
+  });
+};
+
+const getNightCount = (startDate?: string, endDate?: string) => {
+  if (!startDate || !endDate) {
+    return 0;
+  }
+
+  const [startYear, startMonth, startDay] = startDate.split('-').map(Number);
+  const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
+  const start = new Date(Date.UTC(startYear, startMonth - 1, startDay));
+  const end = new Date(Date.UTC(endYear, endMonth - 1, endDay));
+
+  return Math.max(0, Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
+};
+
+const getActiveRequestContext = (
+  activeConversation: Conversation | null,
+  initialConversationId?: string,
+  initialRequestContext?: ReservationRequestContext | null,
+): ReservationRequestContext | null => {
+  if (!activeConversation) {
+    return null;
+  }
+
+  if (activeConversation.booking_id && activeConversation.startDate && activeConversation.endDate) {
+    const nights = getNightCount(activeConversation.startDate, activeConversation.endDate);
+    const totalPrice = Number(activeConversation.totalPrice) || 0;
+
+    return {
+      propertyId: activeConversation.property_id,
+      propertyTitle: activeConversation.propertyTitle || 'Propiedad',
+      hostName: activeConversation.hostName || 'Anfitrión',
+      startDate: activeConversation.startDate,
+      endDate: activeConversation.endDate,
+      guests: Number(activeConversation.guests) || 1,
+      nightly: nights > 0 ? totalPrice / nights : 0,
+      nights,
+      totalPrice,
+      mode: 'protected',
+      bookingId: activeConversation.booking_id,
+      bookingStatus: activeConversation.bookingStatus,
+    };
+  }
+
+  if (initialConversationId && activeConversation.id === initialConversationId && initialRequestContext) {
+    return initialRequestContext;
+  }
+
+  return null;
+};
+
+const getSuggestionTexts = (requestContext: ReservationRequestContext | null, isTenant: boolean) => {
+  if (!requestContext) {
+    return [] as string[];
+  }
+
+  if (requestContext.mode === 'protected') {
+    return isTenant
+      ? [
+          '¿Te sirven estas fechas?',
+          '¿Hay algo importante que deba tener en cuenta antes de avanzar?',
+          'Si te cierra, seguimos por la reserva protegida.',
+        ]
+      : [
+          'Sí, estas fechas me sirven.',
+          'Antes de responder, quiero confirmar estos puntos:',
+          'Si te parece, lo seguimos por la reserva protegida.',
+        ];
+  }
+
+  return isTenant
+    ? [
+        '¿Te sirven estas fechas?',
+        '¿Qué incluye el precio?',
+        '¿Hay algo del ingreso o de la estadía que convenga coordinar ahora?',
+      ]
+    : [
+        'Sí, esas fechas están disponibles.',
+        'Te cuento qué incluye el precio:',
+        'Si querés, coordinamos los detalles por acá.',
+      ];
+};
+
+export const SecureChat: React.FC<{ initialConversationId?: string; initialRequestContext?: ReservationRequestContext | null }> = ({
+  initialConversationId,
+  initialRequestContext = null,
+}) => {
   const { user } = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConv, setActiveConv] = useState<Conversation | null>(null);
@@ -113,6 +216,25 @@ export const SecureChat: React.FC<{ initialConversationId?: string }> = ({ initi
 
   if (loading) return <LoadingState message="Cargando conversaciones..." description="Estamos trayendo tus mensajes para que retomes la charla desde donde quedó." />;
 
+  const activeRequestContext = getActiveRequestContext(activeConv, initialConversationId, initialRequestContext);
+  const isTenantConversation = Boolean(user && activeConv && user.id === activeConv.tenant_id);
+  const suggestionTexts = getSuggestionTexts(activeRequestContext, isTenantConversation);
+  const requestDateLabel = activeRequestContext
+    ? `${formatRequestDate(activeRequestContext.startDate)} al ${formatRequestDate(activeRequestContext.endDate)}`
+    : null;
+  const requestHeading = activeRequestContext
+    ? activeRequestContext.mode === 'protected'
+      ? activeRequestContext.bookingStatus === 'confirmed'
+        ? 'Reserva protegida confirmada'
+        : 'Solicitud protegida pendiente'
+      : 'Propuesta abierta por chat'
+    : null;
+  const requestDescription = activeRequestContext
+    ? activeRequestContext.mode === 'protected'
+      ? 'La solicitud ya quedó asentada en la app mientras seguís conversando por acá con el anfitrión.'
+      : 'Todavía no bloquea fechas ni deja una reserva protegida. Sirve para conversar antes de decidir cómo seguir.'
+    : 'Dejá por acá fechas, montos y cambios importantes para que la conversación quede clara.';
+
   return (
     <div className="flex h-screen bg-white dark:bg-slate-950 overflow-hidden pt-4 md:pt-0">
       {/* Sidebar List */}
@@ -188,7 +310,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string }> = ({ initi
                    <h3 className="font-black text-sm uppercase tracking-tight">
                      {user?.id === activeConv.tenant_id ? activeConv.hostName : activeConv.tenantName}
                    </h3>
-                   <p className="text-[10px] font-bold text-brand uppercase tracking-widest">Disponible en la app</p>
+                   <p className="text-[10px] font-bold text-brand uppercase tracking-widest">{activeConv.propertyTitle || 'Disponible en la app'}</p>
                 </div>
               </div>
               <button onClick={() => setShowReportModal(true)} className="p-3 text-slate-400 hover:text-red-500 transition-colors">
@@ -196,14 +318,71 @@ export const SecureChat: React.FC<{ initialConversationId?: string }> = ({ initi
               </button>
             </div>
 
-            {/* Safety Alert */}
-            <div className="bg-amber-50 dark:bg-amber-900/10 p-4 border-b border-amber-100 dark:border-amber-900/30">
-               <div className="flex gap-3 max-w-2xl mx-auto items-center">
-                  <Icons.ShieldAlert className="w-5 h-5 text-amber-600 shrink-0" />
-                  <p className="text-[10px] text-amber-800 dark:text-amber-300 font-bold leading-tight uppercase tracking-tight">
-                    Antes de transferir dinero, dejá la conversación y la reserva registradas acá. Eso te deja todo más claro si necesitás revisar algo después.
-                  </p>
-               </div>
+            <div className="border-b border-slate-100 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-900/30">
+              <div className="mx-auto max-w-3xl space-y-3">
+                {activeRequestContext ? (
+                  <div className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+                    <div className="flex flex-col gap-4">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="space-y-2">
+                          <div className="flex flex-wrap gap-2">
+                            <span className={cn(
+                              'inline-flex items-center gap-2 rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em]',
+                              activeRequestContext.mode === 'protected'
+                                ? 'bg-brand/10 text-brand'
+                                : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
+                            )}>
+                              {activeRequestContext.mode === 'protected' ? <Icons.ShieldCheck className="h-3.5 w-3.5" /> : <Icons.MessageSquare className="h-3.5 w-3.5" />}
+                              <span>{activeRequestContext.mode === 'protected' ? 'Reserva protegida' : 'Chat directo'}</span>
+                            </span>
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-slate-950 dark:text-white">{requestHeading}</p>
+                            <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">{requestDescription}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid gap-2 sm:grid-cols-3">
+                        <div className="rounded-2xl bg-slate-50 px-3 py-3 text-sm dark:bg-slate-900">
+                          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Fechas</p>
+                          <p className="mt-1 font-semibold text-slate-900 dark:text-white">{requestDateLabel}</p>
+                        </div>
+                        <div className="rounded-2xl bg-slate-50 px-3 py-3 text-sm dark:bg-slate-900">
+                          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Huéspedes</p>
+                          <p className="mt-1 font-semibold text-slate-900 dark:text-white">{activeRequestContext.guests} {activeRequestContext.guests === 1 ? 'huésped' : 'huéspedes'}</p>
+                        </div>
+                        <div className="rounded-2xl bg-slate-50 px-3 py-3 text-sm dark:bg-slate-900">
+                          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Total estimado</p>
+                          <p className="mt-1 font-semibold text-slate-900 dark:text-white">
+                            {new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(activeRequestContext.totalPrice || 0)}
+                          </p>
+                        </div>
+                      </div>
+
+                      {suggestionTexts.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {suggestionTexts.map((suggestion) => (
+                            <button
+                              key={suggestion}
+                              type="button"
+                              onClick={() => setInputText(suggestion)}
+                              className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition-colors hover:border-brand/30 hover:text-brand dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+                            >
+                              {suggestion}
+                            </button>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : null}
+
+                <div className="flex gap-3 rounded-[24px] border border-slate-200/80 bg-white px-4 py-3 text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300">
+                  <Icons.ShieldCheck className="h-4 w-4 shrink-0 text-brand" />
+                  <p className="leading-5">Dejá por acá fechas, montos y cambios importantes. Si después necesitás revisar algo, queda todo mucho más claro.</p>
+                </div>
+              </div>
             </div>
 
             {/* Messages */}

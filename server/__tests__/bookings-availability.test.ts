@@ -2,11 +2,12 @@ import request from 'supertest';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 const queryMock = vi.fn();
+const getClientMock = vi.fn();
 
 vi.mock('../config/db', () => ({
   db: {
     query: (text: string, params?: unknown[]) => queryMock(text, params),
-    getClient: vi.fn(),
+    getClient: (...args: unknown[]) => getClientMock(...args),
   },
 }));
 
@@ -52,6 +53,138 @@ const getDateInArgentina = (offsetDays: number) => {
 describe('Bookings and availability endpoints', () => {
   beforeEach(() => {
     queryMock.mockReset();
+    getClientMock.mockReset();
+  });
+
+  test('POST /api/bookings creates a pending protected request when requestMode is protected', async () => {
+    const clientQueryMock = vi.fn();
+
+    getClientMock.mockResolvedValue({
+      query: clientQueryMock,
+      release: vi.fn(),
+    });
+
+    queryMock.mockImplementation(async (text: string) => {
+      if (text.includes('SELECT risk_score, role, is_identity_verified FROM users')) {
+        return { rows: [{ risk_score: 10, role: 'tenant', is_identity_verified: true }] };
+      }
+
+      if (text.includes(LOG_ACTIVITY_QUERY_SNIPPET)) {
+        return { rows: [] };
+      }
+
+      throw new Error(`Unexpected query: ${text}`);
+    });
+
+    clientQueryMock.mockImplementation(async (text: string, params?: unknown[]) => {
+      if (text === 'BEGIN' || text === 'COMMIT') {
+        return { rows: [] };
+      }
+
+      if (text.includes('SELECT pg_advisory_xact_lock')) {
+        return { rows: [] };
+      }
+
+      if (text.includes('FROM properties') && text.includes('WHERE id = $1')) {
+        return {
+          rows: [
+            {
+              id: 'prop-1',
+              title: 'Casa del bosque',
+              location: 'Pinamar',
+              price: 120000,
+              status: 'active',
+              hostName: 'Mariana',
+              hostId: 'host-1',
+              maxGuests: 4,
+            },
+          ],
+        };
+      }
+
+      if (text.includes('FROM bookings') && text.includes('LIMIT 1')) {
+        return { rows: [] };
+      }
+
+      if (text.includes('SELECT name FROM users')) {
+        return { rows: [{ name: 'Lucía' }] };
+      }
+
+      if (text.includes('INSERT INTO bookings')) {
+        expect(params?.[3]).toBe('pending');
+
+        return {
+          rows: [
+            {
+              id: 'booking-1',
+              propertyId: 'prop-1',
+              userId: 'user-1',
+              status: 'pending',
+              startDate: '2099-09-20',
+              endDate: '2099-09-23',
+              totalPrice: 360000,
+              guests: 2,
+              stay_code: 'AR1234',
+              contractAccepted: false,
+              contractJson: '{}',
+            },
+          ],
+        };
+      }
+
+      throw new Error(`Unexpected client query: ${text}`);
+    });
+
+    const res = await request(app)
+      .post('/api/bookings')
+      .set('x-test-user-id', 'user-1')
+      .send({
+        propertyId: 'prop-1',
+        startDate: '2099-09-20',
+        endDate: '2099-09-23',
+        guests: 2,
+        requestMode: 'protected',
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.requestMode).toBe('protected');
+    expect(res.body.booking.status).toBe('pending');
+  });
+
+  test('POST /api/conversations reuses the property conversation and links the booking id', async () => {
+    queryMock.mockImplementation(async (text: string, params?: unknown[]) => {
+      if (text.includes('FROM properties') && text.includes('LIMIT 1')) {
+        return { rows: [{ id: 'prop-1', hostId: 'host-1' }] };
+      }
+
+      if (text.includes('FROM bookings') && text.includes('WHERE id = $1')) {
+        return { rows: [{ id: 'booking-1', propertyId: 'prop-1', userId: 'user-1' }] };
+      }
+
+      if (text.includes('SELECT * FROM conversations')) {
+        expect(params).toEqual(['user-1', 'host-1', 'prop-1']);
+        return { rows: [{ id: 'conv-1', booking_id: null, property_id: 'prop-1', tenant_id: 'user-1', host_id: 'host-1' }] };
+      }
+
+      if (text.includes('UPDATE conversations')) {
+        return { rows: [{ id: 'conv-1', booking_id: 'booking-1', property_id: 'prop-1', tenant_id: 'user-1', host_id: 'host-1' }] };
+      }
+
+      throw new Error(`Unexpected query: ${text}`);
+    });
+
+    const res = await request(app)
+      .post('/api/conversations')
+      .set('x-test-user-id', 'user-1')
+      .send({
+        propertyId: 'prop-1',
+        hostId: 'frontend-host-id-that-should-be-ignored',
+        bookingId: 'booking-1',
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.id).toBe('conv-1');
+    expect(res.body.booking_id).toBe('booking-1');
   });
 
   test('GET /api/properties/:id/availability merges booking and manual blocks with metadata', async () => {

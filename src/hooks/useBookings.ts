@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { apiFetch, apiJson } from '../lib/apiConfig';
-import { Booking } from '../types';
+import { Booking, type ReservationRequestMode } from '../types';
 
 export type { Booking };
 
@@ -12,6 +12,7 @@ export interface BookingCreatePayload {
   endDate: string;
   guests: number;
   totalPrice?: number;
+  requestMode?: ReservationRequestMode;
 }
 
 export interface BookingCreateError {
@@ -42,7 +43,7 @@ type UseBookingsOptions = {
 const DEFAULT_BOOKING_ERROR: BookingCreateError = {
   status: 500,
   code: 'BOOKING_CREATE_FAILED',
-  message: 'No pudimos confirmar la reserva. Intentá de nuevo.',
+  message: 'No pudimos registrar la solicitud. Intentá de nuevo.',
 };
 
 const parseBookingError = async (response: Response): Promise<BookingCreateError> => {
@@ -95,7 +96,12 @@ const normalizeCreateBookingResponse = (
       id: typeof payload?.id === 'string' ? payload.id : '',
       propertyId: request.propertyId,
       userId: typeof payload?.userId === 'string' ? payload.userId : '',
-      status: payload?.status === 'pending' || payload?.status === 'completed' || payload?.status === 'cancelled' ? payload.status : 'confirmed',
+      status:
+        payload?.status === 'pending' || payload?.status === 'completed' || payload?.status === 'cancelled'
+          ? payload.status
+          : request.requestMode === 'protected'
+            ? 'pending'
+            : 'confirmed',
       startDate: request.startDate,
       endDate: request.endDate,
       guests: request.guests,
@@ -139,11 +145,11 @@ export function useBookings(options: UseBookingsOptions = {}) {
     void fetchBookings();
   }, [autoLoad]);
 
-  const createBooking = async ({ propertyId, startDate, endDate, guests, totalPrice }: BookingCreatePayload): Promise<BookingCreateResult> => {
+  const createBooking = async ({ propertyId, startDate, endDate, guests, totalPrice, requestMode }: BookingCreatePayload): Promise<BookingCreateResult> => {
     try {
       const response = await apiFetch('/api/bookings', {
         method: 'POST',
-        body: JSON.stringify({ propertyId, startDate, endDate, guests, totalPrice }),
+        body: JSON.stringify({ propertyId, startDate, endDate, guests, totalPrice, requestMode }),
         includeCredentials: true,
       });
 
@@ -152,7 +158,7 @@ export function useBookings(options: UseBookingsOptions = {}) {
       }
 
       const payload = await response.json();
-      const data = normalizeCreateBookingResponse(payload, { propertyId, startDate, endDate, guests, totalPrice });
+  const data = normalizeCreateBookingResponse(payload, { propertyId, startDate, endDate, guests, totalPrice, requestMode });
       void fetchBookings();
 
       return { ok: true, data };

@@ -2,19 +2,19 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, test, vi } from 'vitest';
 
 import BookingConfirmationModal from '../BookingConfirmationModal';
-import { formatBookingDateTime, getCancellationDeadlineFromStartDate } from '../../lib/bookingDates';
 
 describe('BookingConfirmationModal', () => {
-  test('renders the refreshed reservation summary and confirms the booking', () => {
+  test('renders the request summary and lets the user choose the protected path', () => {
     const onClose = vi.fn();
-    const onConfirm = vi.fn();
-    const cancellationDeadlineLabel = formatBookingDateTime(getCancellationDeadlineFromStartDate('2026-04-10'));
+    const onStartDirect = vi.fn();
+    const onStartProtected = vi.fn();
 
     render(
       <BookingConfirmationModal
         isOpen
         onClose={onClose}
-        onConfirm={onConfirm}
+        onStartDirect={onStartDirect}
+        onStartProtected={onStartProtected}
         propertyTitle="Casa frente al mar"
         hostName="Laura"
         checkIn="2026-04-10"
@@ -28,24 +28,28 @@ describe('BookingConfirmationModal', () => {
     );
 
     expect(screen.getByRole('dialog')).toBeInTheDocument();
-    expect(screen.getByText('Estadía lista para confirmar')).toBeInTheDocument();
+    expect(screen.getByText('Solicitud lista para enviar')).toBeInTheDocument();
     expect(screen.getAllByText('Casa frente al mar').length).toBeGreaterThan(0);
     expect(screen.getByText('Laura')).toBeInTheDocument();
-    expect(screen.getByText('Vas a ver todos los detalles antes de finalizar.')).toBeInTheDocument();
-    expect(screen.getByText(new RegExp(`hasta el ${cancellationDeadlineLabel}`))).toBeInTheDocument();
+    expect(screen.getByText('Cómo querés mandar esta solicitud')).toBeInTheDocument();
+    expect(screen.getByText('Acordar directamente')).toBeInTheDocument();
+    expect(screen.getByText('Reserva protegida')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /confirmar estadía/i }));
-    expect(onConfirm).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button', { name: /enviar solicitud protegida/i }));
+    expect(onStartProtected).toHaveBeenCalledTimes(1);
+    expect(onStartDirect).not.toHaveBeenCalled();
   });
 
   test('supports closing with escape and the secondary action', async () => {
     const onClose = vi.fn();
+    const onStartDirect = vi.fn();
 
     render(
       <BookingConfirmationModal
         isOpen
         onClose={onClose}
-        onConfirm={vi.fn()}
+        onStartDirect={onStartDirect}
+        onStartProtected={vi.fn()}
         propertyTitle="Casa frente al mar"
         hostName="Laura"
         checkIn="2026-04-10"
@@ -67,5 +71,8 @@ describe('BookingConfirmationModal', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /seguir revisando/i }));
     expect(onClose).toHaveBeenCalledTimes(2);
+
+    fireEvent.click(screen.getByRole('button', { name: /abrir chat con esta propuesta/i }));
+    expect(onStartDirect).toHaveBeenCalledTimes(1);
   });
 });

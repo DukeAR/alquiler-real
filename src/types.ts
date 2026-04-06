@@ -112,11 +112,30 @@ export interface GuestRequestProfile {
   dataSource: GuestRequestProfileDataSource;
 }
 
+export type BookingStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled';
+
+export type ReservationRequestMode = 'direct' | 'protected';
+
+export interface ReservationRequestContext {
+  propertyId: string;
+  propertyTitle: string;
+  hostName: string;
+  startDate: string;
+  endDate: string;
+  guests: number;
+  nightly: number;
+  nights: number;
+  totalPrice: number;
+  mode: ReservationRequestMode;
+  bookingId?: string;
+  bookingStatus?: BookingStatus;
+}
+
 export interface Booking {
   id: string;
   propertyId: string;
   userId: string;
-  status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
+  status: BookingStatus;
   userName?: string;
   propertyTitle?: string;
   imageUrl?: string;
@@ -145,6 +164,11 @@ export interface Conversation {
   propertyTitle?: string;
   propertyImage?: string;
   last_message?: string;
+  bookingStatus?: BookingStatus;
+  startDate?: string;
+  endDate?: string;
+  guests?: number;
+  totalPrice?: number;
   updated_at: string;
   created_at: string;
 }

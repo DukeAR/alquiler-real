@@ -124,10 +124,10 @@ export async function sendMessage(convId: string, content: string, receiverId: s
   });
 }
 
-export async function startConversation(propertyId: string, hostId: string): Promise<Conversation> {
+export async function startConversation(propertyId: string, hostId: string, bookingId?: string): Promise<Conversation> {
   return apiJson<Conversation>('/api/conversations', {
     method: 'POST',
-    body: JSON.stringify({ propertyId, hostId })
+    body: JSON.stringify({ propertyId, hostId, bookingId })
   });
 }
 

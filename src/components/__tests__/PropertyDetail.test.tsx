@@ -1,6 +1,6 @@
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation, useParams } from 'react-router-dom';
 import FavoritesProvider from '../../contexts/FavoritesContext';
 import { AuthProvider } from '../../contexts/AuthContext';
 import { showLoginModal } from '../../lib/modal';
@@ -51,6 +51,7 @@ const sampleProperty = {
   locationVerified: true,
   traceabilityLevel: 'high',
   hostName: 'Mariana',
+  hostId: 'h1',
   hostSince: '2021-04-10',
   hostExperienceYears: 4,
   unresolvedReviewsCount: 0,
@@ -74,12 +75,26 @@ const sampleProperty = {
   },
 };
 
+const ChatRoute = () => {
+  const { id } = useParams();
+  const location = useLocation();
+  const requestContext = (location.state as { requestContext?: { mode?: string } } | null)?.requestContext;
+
+  return (
+    <div>
+      <p>Chat abierto {id}</p>
+      {requestContext?.mode ? <p>Modo: {requestContext.mode}</p> : null}
+    </div>
+  );
+};
+
 const renderPropertyDetail = () => {
   render(
     <AuthProvider>
       <MemoryRouter initialEntries={["/detail/p1"]}>
         <Routes>
           <Route path="/detail/:id" element={<FavoritesProvider><PropertyDetail /></FavoritesProvider>} />
+          <Route path="/chat/:id" element={<ChatRoute />} />
           <Route path="/login" element={<div>Login Page</div>} />
         </Routes>
       </MemoryRouter>
@@ -103,9 +118,31 @@ const isoPlusDays = (days: number) => {
 beforeEach(() => {
   clearVerificationPreferenceState();
 
-  (apiJson as any).mockImplementation(async (url: string) => {
+  (apiJson as any).mockImplementation(async (url: string, options?: RequestInit) => {
     if (url.endsWith('/reviews')) return [{ id: 'r1', reviewer_id: 'u1', rating: 5, comment: 'Buen lugar' }];
     if (url === '/api/bookings') return [];
+    if (url === '/api/conversations' && options?.method === 'POST') {
+      return {
+        id: 'conv-1',
+        property_id: 'p1',
+        tenant_id: 'u1',
+        host_id: 'h1',
+        hostName: 'Mariana',
+        propertyTitle: 'Casa de prueba',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+    }
+    if (url === '/api/messages' && options?.method === 'POST') {
+      return {
+        id: 'msg-1',
+        conversation_id: 'conv-1',
+        sender_id: 'u1',
+        receiver_id: 'h1',
+        content: 'Hola',
+        created_at: new Date().toISOString(),
+      };
+    }
     return sampleProperty;
   });
 
@@ -174,12 +211,14 @@ describe('PropertyDetail', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
 
-  test('contact button renders', async () => {
+  test('secondary CTA opens the chat route', async () => {
     renderPropertyDetail();
 
-    // Just verify property detailloads without errors
     await waitFor(() => expect(screen.getByText('Casa de prueba')).toBeDefined());
-    expect(screen.getByRole('button', { name: /hablar con el anfitrión/i })).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: /abrir chat/i }));
+
+    await waitFor(() => expect(screen.getByText('Chat abierto conv-1')).toBeDefined());
   });
 
   test('renders clearer amenities and trust sections', async () => {
@@ -297,7 +336,7 @@ describe('PropertyDetail', () => {
     expect(screen.getByText('Máximo: 4 huéspedes.')).toBeDefined();
   });
 
-  test('smoke: selects date range and confirms booking from the sidebar', async () => {
+  test('smoke: selects date range and sends a protected request from the sidebar', async () => {
     renderPropertyDetail();
 
     await waitFor(() => expect(screen.getByText('Casa de prueba')).toBeDefined());
@@ -311,11 +350,45 @@ describe('PropertyDetail', () => {
     fireEvent.click(screen.getByRole('button', { name: new RegExp(checkInIso) }));
     fireEvent.click(screen.getByRole('button', { name: new RegExp(checkOutIso) }));
 
-    fireEvent.click(screen.getByRole('button', { name: /^revisar reserva$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^solicitar reserva$/i }));
 
-    await waitFor(() => expect(screen.getByText('Confirmá tu estadía', { selector: 'h3' })).toBeDefined());
+    await waitFor(() => expect(screen.getByText('Cómo querés mandar esta solicitud', { selector: 'h3' })).toBeDefined());
 
     const bookingCalls: Array<{ url: string; options: RequestInit }> = [];
+    const apiJsonCalls: Array<{ url: string; options?: RequestInit }> = [];
+
+    (apiJson as any).mockImplementation(async (url: string, options?: RequestInit) => {
+      apiJsonCalls.push({ url, options });
+
+      if (url.endsWith('/reviews')) return [{ id: 'r1', reviewer_id: 'u1', rating: 5, comment: 'Buen lugar' }];
+      if (url === '/api/bookings') return [];
+      if (url === '/api/conversations' && options?.method === 'POST') {
+        return {
+          id: 'conv-1',
+          property_id: 'p1',
+          booking_id: 'booking-1',
+          tenant_id: 'u1',
+          host_id: 'h1',
+          hostName: 'Mariana',
+          propertyTitle: 'Casa de prueba',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+      }
+      if (url === '/api/messages' && options?.method === 'POST') {
+        return {
+          id: 'msg-1',
+          conversation_id: 'conv-1',
+          sender_id: 'u1',
+          receiver_id: 'h1',
+          content: 'Hola Mariana',
+          created_at: new Date().toISOString(),
+        };
+      }
+
+      return sampleProperty;
+    });
+
     (apiFetch as any).mockImplementation(async (url: string, options: RequestInit = {}) => {
       if (url === '/api/auth/me') {
         return {
@@ -336,7 +409,7 @@ describe('PropertyDetail', () => {
               id: 'booking-1',
               propertyId: 'p1',
               userId: 'u1',
-              status: 'confirmed',
+              status: 'pending',
               startDate: checkInIso,
               endDate: checkOutIso,
               guests: 1,
@@ -353,7 +426,7 @@ describe('PropertyDetail', () => {
     });
 
     const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
-    fireEvent.click(screen.getByRole('button', { name: /confirmar estadía/i }));
+    fireEvent.click(screen.getByRole('button', { name: /enviar solicitud protegida/i }));
 
     await waitFor(() => expect(dispatchSpy).toHaveBeenCalled());
     expect(bookingCalls).toHaveLength(1);
@@ -363,12 +436,22 @@ describe('PropertyDetail', () => {
       endDate: checkOutIso,
       guests: 1,
       totalPrice: 360,
+      requestMode: 'protected',
     });
+    expect(apiJsonCalls).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ url: '/api/conversations' }),
+        expect.objectContaining({ url: '/api/messages' }),
+      ]),
+    );
     expect(
       dispatchSpy.mock.calls.some(([event]) => event instanceof CustomEvent && event.type === 'app-notification')
     ).toBe(true);
 
-    await waitFor(() => expect(screen.queryByText('Confirmá tu estadía', { selector: 'h3' })).toBeNull());
+    await waitFor(() => expect(screen.getByText('Chat abierto conv-1')).toBeDefined());
+    expect(screen.getByText('Modo: protected')).toBeDefined();
+
+    await waitFor(() => expect(screen.queryByText('Cómo querés mandar esta solicitud', { selector: 'h3' })).toBeNull());
   });
 
   test('smoke: keeps the booking CTA disabled until dates are complete', async () => {
@@ -382,7 +465,7 @@ describe('PropertyDetail', () => {
     expect(screen.getByText('Faltan las fechas')).toBeInTheDocument();
     expect(screen.getByText('Elegí ingreso y salida para ver el total.')).toBeInTheDocument();
 
-    expect(screen.queryByText('Confirmá tu estadía', { selector: 'h3' })).toBeNull();
+    expect(screen.queryByText('Cómo querés mandar esta solicitud', { selector: 'h3' })).toBeNull();
   });
 
   test('asks for login when trying to confirm a reservation without a session', async () => {
@@ -411,13 +494,13 @@ describe('PropertyDetail', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: new RegExp(checkInIso) })).toBeDefined());
     fireEvent.click(screen.getByRole('button', { name: new RegExp(checkInIso) }));
     fireEvent.click(screen.getByRole('button', { name: new RegExp(checkOutIso) }));
-    fireEvent.click(screen.getByRole('button', { name: /^revisar reserva$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^solicitar reserva$/i }));
 
-    await waitFor(() => expect(screen.getByText('Confirmá tu estadía', { selector: 'h3' })).toBeDefined());
+    await waitFor(() => expect(screen.getByText('Cómo querés mandar esta solicitud', { selector: 'h3' })).toBeDefined());
 
-    fireEvent.click(screen.getByRole('button', { name: /confirmar estadía/i }));
+    fireEvent.click(screen.getByRole('button', { name: /enviar solicitud protegida/i }));
 
     await waitFor(() => expect(showLoginModal).toHaveBeenCalledTimes(1));
-    await waitFor(() => expect(screen.queryByText('Confirmá tu estadía', { selector: 'h3' })).toBeNull());
+    await waitFor(() => expect(screen.queryByText('Cómo querés mandar esta solicitud', { selector: 'h3' })).toBeNull());
   });
 });

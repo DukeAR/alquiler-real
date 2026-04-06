@@ -1,12 +1,13 @@
 import React, { useEffect, useId, useState } from 'react';
 import { formatCurrency } from '../lib/utils';
+import { type ReservationRequestMode } from '../types';
 import { Icons } from './Icons';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 import { NoticeBanner } from './ui/NoticeBanner';
 import { SectionTitle } from './ui/SectionTitle';
-import { formatBookingDateOnly, formatBookingDateTime, getCancellationDeadlineFromStartDate } from '../lib/bookingDates';
+import { formatBookingDateOnly } from '../lib/bookingDates';
 
 type DecisionItemProps = {
   icon: React.ComponentType<{ className?: string }>;
@@ -19,7 +20,8 @@ type DecisionItemProps = {
 interface Props {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: () => void;
+  onStartDirect: () => void;
+  onStartProtected: () => void;
   propertyTitle: string;
   hostName: string;
   checkIn: string;
@@ -29,7 +31,7 @@ interface Props {
   children: number;
   nightly: number;
   total: number;
-  confirmLoading?: boolean;
+  actionLoadingMode?: ReservationRequestMode | null;
   submitNotice?: {
     tone: React.ComponentProps<typeof NoticeBanner>['tone'];
     heading: string;
@@ -68,7 +70,8 @@ const DecisionItemCard: React.FC<DecisionItemProps> = ({ icon: Icon, label, valu
 const BookingConfirmationModal: React.FC<Props> = ({
   isOpen,
   onClose,
-  onConfirm,
+  onStartDirect,
+  onStartProtected,
   propertyTitle,
   hostName,
   checkIn,
@@ -78,26 +81,25 @@ const BookingConfirmationModal: React.FC<Props> = ({
   children,
   nightly,
   total,
-  confirmLoading = false,
+  actionLoadingMode = null,
   submitNotice = null,
 }) => {
   const [shouldRender, setShouldRender] = useState(isOpen);
   const [visible, setVisible] = useState(false);
   const titleId = useId();
   const descriptionId = useId();
-  const cancellationDeadlineLabel = formatBookingDateTime(getCancellationDeadlineFromStartDate(checkIn));
   const decisionItems: DecisionItemProps[] = [
     {
       icon: Icons.Home,
       label: 'Propiedad',
       value: propertyTitle,
-      helper: 'La opción que estás por confirmar.',
+      helper: 'La propuesta que estás por mandar.',
     },
     {
       icon: Icons.UserCheck,
       label: 'Anfitrión',
       value: hostName,
-      helper: 'Con quién vas a coordinar la estadía.',
+      helper: 'Con quién vas a seguir la charla.',
     },
     {
       icon: Icons.Calendar,
@@ -113,13 +115,12 @@ const BookingConfirmationModal: React.FC<Props> = ({
       accent: true,
     },
   ];
+  const isBusy = actionLoadingMode !== null;
 
   const activeNotice = submitNotice ?? {
     tone: 'info' as const,
-    heading: 'Revisá la decisión antes de confirmar',
-    description: cancellationDeadlineLabel
-      ? `Las fechas, la cantidad de huéspedes y el total ya reflejan tu selección actual. Si confirmás ahora, vas a poder cancelarla desde la app hasta el ${cancellationDeadlineLabel}.`
-      : 'Las fechas, la cantidad de huéspedes y el total ya reflejan tu selección actual. Después vas a poder cancelar solo hasta 24 horas antes del ingreso.',
+    heading: 'Elegí cómo querés seguir',
+    description: 'Podés abrir el chat para coordinar primero o dejar la solicitud protegida en la app. En ambos casos vas a seguir la conversación por mensajes.',
   };
 
   useEffect(() => {
@@ -135,11 +136,11 @@ const BookingConfirmationModal: React.FC<Props> = ({
   }, [isOpen]);
 
   useEffect(() => {
-    if (!visible || confirmLoading) return;
+    if (!visible || isBusy) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [visible, confirmLoading, onClose]);
+  }, [visible, isBusy, onClose]);
 
   if (!shouldRender) return null;
 
@@ -148,7 +149,7 @@ const BookingConfirmationModal: React.FC<Props> = ({
       <div
         className={`absolute inset-0 bg-slate-950/60 backdrop-blur-sm transition-opacity duration-200 ease-out ${visible ? 'opacity-100' : 'opacity-0'}`}
         onClick={() => {
-          if (!confirmLoading) {
+          if (!isBusy) {
             onClose();
           }
         }}
@@ -172,26 +173,30 @@ const BookingConfirmationModal: React.FC<Props> = ({
             <div className="space-y-4">
               <div className="flex flex-wrap gap-2">
                 <Badge variant="brand" size="md" className="gap-2">
-                  <Icons.Calendar className="h-3.5 w-3.5" />
-                  <span>Estadía lista para confirmar</span>
+                  <Icons.MessageSquare className="h-3.5 w-3.5" />
+                  <span>Solicitud lista para enviar</span>
                 </Badge>
                 <Badge variant="neutral" size="md" className="gap-2">
                   <Icons.Clock className="h-3.5 w-3.5" />
                   <span>{nights} {nights === 1 ? 'noche' : 'noches'}</span>
+                </Badge>
+                <Badge variant="neutral" size="md" className="gap-2">
+                  <Icons.FileSpreadsheet className="h-3.5 w-3.5" />
+                  <span>{formatCurrency(total)} estimado</span>
                 </Badge>
               </div>
 
               <SectionTitle
                 as="h3"
                 visualLevel="h3"
-                heading="Confirmá tu estadía"
-                description="Revisá la decisión final antes de confirmarla."
+                heading="Cómo querés mandar esta solicitud"
+                description="Las fechas, huéspedes y total ya reflejan tu selección actual. Ahora elegí si querés hablar primero o dejarla protegida en la app."
                 headingClassName="font-semibold tracking-tight"
                 className="pr-2"
               />
             </div>
 
-            <Button onClick={onClose} variant="ghost" size="icon" aria-label="Cerrar confirmación de estadía" className="h-10 w-10 rounded-full p-0 text-slate-500 hover:bg-slate-100 hover:text-slate-700" disabled={confirmLoading}>
+            <Button onClick={onClose} variant="ghost" size="icon" aria-label="Cerrar solicitud" className="h-10 w-10 rounded-full p-0 text-slate-500 hover:bg-slate-100 hover:text-slate-700" disabled={isBusy}>
               <Icons.X className="h-5 w-5" />
             </Button>
           </div>
@@ -207,13 +212,64 @@ const BookingConfirmationModal: React.FC<Props> = ({
 
           <NoticeBanner tone={activeNotice.tone} heading={activeNotice.heading} description={activeNotice.description} />
 
-          <p className="text-sm font-medium text-slate-600">
-            Vas a ver todos los detalles antes de finalizar.
-          </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Card padding="md" variant="muted" className="rounded-[28px] border-slate-200/80 bg-white">
+              <div className="flex h-full flex-col gap-4">
+                <div className="space-y-2">
+                  <Badge variant="neutral" size="md" className="gap-2">
+                    <Icons.MessageSquare className="h-3.5 w-3.5" />
+                    <span>Acordar directamente</span>
+                  </Badge>
+                  <p className="text-base font-semibold text-slate-950">Abrís el chat con esta propuesta</p>
+                  <p className="text-sm leading-6 text-slate-600">
+                    Sirve si querés conversar primero. Las fechas no se bloquean y no queda una reserva protegida registrada todavía.
+                  </p>
+                </div>
+
+                <Button
+                  onClick={onStartDirect}
+                  variant="secondary"
+                  size="lg"
+                  className="mt-auto rounded-2xl"
+                  loading={actionLoadingMode === 'direct'}
+                  loadingLabel="Abriendo chat..."
+                  disabled={isBusy && actionLoadingMode !== 'direct'}
+                >
+                  Abrir chat con esta propuesta
+                </Button>
+              </div>
+            </Card>
+
+            <Card padding="md" variant="muted" className="rounded-[28px] border-brand/15 bg-brand/5">
+              <div className="flex h-full flex-col gap-4">
+                <div className="space-y-2">
+                  <Badge variant="brand" size="md" className="gap-2">
+                    <Icons.ShieldCheck className="h-3.5 w-3.5" />
+                    <span>Reserva protegida</span>
+                  </Badge>
+                  <p className="text-base font-semibold text-slate-950">La solicitud queda pendiente en la app</p>
+                  <p className="text-sm leading-6 text-slate-600">
+                    Conviene si querés dejar fechas, huéspedes y total asentados desde ahora mientras esperás la respuesta del anfitrión.
+                  </p>
+                </div>
+
+                <Button
+                  onClick={onStartProtected}
+                  variant="primary"
+                  size="lg"
+                  className="mt-auto rounded-2xl"
+                  loading={actionLoadingMode === 'protected'}
+                  loadingLabel="Enviando solicitud..."
+                  disabled={isBusy && actionLoadingMode !== 'protected'}
+                >
+                  Enviar solicitud protegida
+                </Button>
+              </div>
+            </Card>
+          </div>
 
           <div className="flex flex-col-reverse gap-3 sm:flex-row">
-            <Button onClick={onClose} variant="secondary" size="lg" className="flex-1 rounded-2xl" disabled={confirmLoading}>Seguir revisando</Button>
-            <Button onClick={onConfirm} variant="primary" size="lg" className="flex-1 rounded-2xl" loading={confirmLoading} loadingLabel="Confirmando estadía...">Confirmar estadía</Button>
+            <Button onClick={onClose} variant="secondary" size="lg" className="flex-1 rounded-2xl" disabled={isBusy}>Seguir revisando</Button>
           </div>
         </div>
       </Card>
