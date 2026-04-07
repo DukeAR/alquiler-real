@@ -11,7 +11,7 @@ import { apiFetch } from '../../lib/apiConfig';
 const mockedApiFetch = vi.mocked(apiFetch);
 
 const AuthHarness = () => {
-  const { login, updateProfile, user, error, loading, status, sessionError, refresh } = useAuthContext();
+  const { login, updateProfile, user, error, loading, status, sessionError, refresh, setActiveMode } = useAuthContext();
 
   return (
     <div>
@@ -21,12 +21,16 @@ const AuthHarness = () => {
       <button type="button" onClick={() => void updateProfile({ name: 'Nuevo Nombre', zone: 'Costa del Este' })}>
         Guardar perfil
       </button>
+      <button type="button" onClick={() => void setActiveMode('host')}>
+        Cambiar modo
+      </button>
       <button type="button" onClick={() => void refresh()}>
         Refrescar sesión
       </button>
       <div data-testid="user-email">{user?.email || 'guest'}</div>
       <div data-testid="user-name">{user?.name || 'guest'}</div>
       <div data-testid="user-role">{user?.role || 'guest'}</div>
+      <div data-testid="user-mode">{user?.activeMode || 'guest'}</div>
       <div data-testid="user-interests">{user?.interests || ''}</div>
       <div data-testid="loading">{String(loading)}</div>
       <div data-testid="status">{status}</div>
@@ -76,6 +80,7 @@ describe('AuthProvider', () => {
     await waitFor(() => expect(screen.getByTestId('user-email')).toHaveTextContent('test@test.com'));
     expect(screen.getByTestId('user-name')).toHaveTextContent('Test User');
     expect(screen.getByTestId('user-role')).toHaveTextContent('tenant');
+    expect(screen.getByTestId('user-mode')).toHaveTextContent('guest');
     expect(screen.getByTestId('user-interests')).toHaveTextContent('["mate","futbol"]');
     expect(screen.getByTestId('status')).toHaveTextContent('authenticated');
     expect(screen.getByTestId('error')).toHaveTextContent('');
@@ -127,6 +132,7 @@ describe('AuthProvider', () => {
     await waitFor(() => expect(screen.getByTestId('user-email')).toHaveTextContent('fallback@test.com'));
     expect(screen.getByTestId('user-name')).toHaveTextContent('Fallback User');
     expect(screen.getByTestId('user-role')).toHaveTextContent('host');
+    expect(screen.getByTestId('user-mode')).toHaveTextContent('host');
     expect(screen.getByTestId('status')).toHaveTextContent('authenticated');
     expect(screen.getByTestId('error')).toHaveTextContent('');
     expect(mockedApiFetch).toHaveBeenCalledTimes(3);
@@ -274,5 +280,49 @@ describe('AuthProvider', () => {
     await waitFor(() => expect(screen.getByTestId('session-error')).toHaveTextContent('session unavailable'));
     expect(screen.getByTestId('user-email')).toHaveTextContent('persisted@test.com');
     expect(screen.getByTestId('status')).toHaveTextContent('authenticated');
+  });
+
+  test('updates the active mode in context when the account context changes', async () => {
+    mockedApiFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          user: {
+            id: 'u5',
+            name: 'Mode User',
+            email: 'mode@test.com',
+            role: 'tenant',
+            activeMode: 'guest',
+          },
+        }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          user: {
+            id: 'u5',
+            name: 'Mode User',
+            email: 'mode@test.com',
+            role: 'tenant',
+            activeMode: 'host',
+          },
+        }),
+      } as Response);
+
+    render(
+      <AuthProvider>
+        <AuthHarness />
+      </AuthProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('user-email')).toHaveTextContent('mode@test.com'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cambiar modo' }));
+
+    await waitFor(() => expect(screen.getByTestId('user-mode')).toHaveTextContent('host'));
+    expect(mockedApiFetch.mock.calls[1]?.[0]).toBe('/api/auth/context');
+    expect(JSON.parse(String(mockedApiFetch.mock.calls[1]?.[1]?.body))).toEqual({ mode: 'host' });
   });
 });

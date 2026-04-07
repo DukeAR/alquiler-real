@@ -43,6 +43,10 @@ vi.mock('../LoginModal', () => ({
   default: () => null,
 }));
 
+vi.mock('../ui/AccountModeSwitch', () => ({
+  AccountModeSwitch: () => <div data-testid="account-mode-switch">Mode switch</div>,
+}));
+
 const renderShell = async () => {
   await act(async () => {
     render(
@@ -97,6 +101,9 @@ describe('AppShell', () => {
         name: 'Ana',
         email: 'ana@test.com',
         role: 'tenant',
+        canGuest: true,
+        canHost: false,
+        activeMode: 'guest',
       },
       loading: false,
       status: 'authenticated',
@@ -107,6 +114,7 @@ describe('AppShell', () => {
 
     expect(screen.getAllByRole('button', { name: 'Guardados' })).not.toHaveLength(0);
     expect(screen.queryByRole('button', { name: 'Creá tu cuenta' })).not.toBeInTheDocument();
+    expect(screen.getByTestId('account-mode-switch')).toBeInTheDocument();
   });
 
   test('marks Guardados as seen when an authenticated user opens the section', async () => {
@@ -116,6 +124,9 @@ describe('AppShell', () => {
         name: 'Ana',
         email: 'ana@test.com',
         role: 'tenant',
+        canGuest: true,
+        canHost: false,
+        activeMode: 'guest',
       },
       loading: false,
       status: 'authenticated',

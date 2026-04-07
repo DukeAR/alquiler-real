@@ -12,6 +12,9 @@ vi.mock('../../hooks/useAuth', () => ({
       name: 'Fede Test',
       email: 'fede@test.com',
       role: 'tenant',
+      canGuest: true,
+      canHost: false,
+      activeMode: 'guest',
       interests: JSON.stringify(['🏖️ Playa y Mar', '🍲 Gastronomía']),
       bio: 'Viajo con tiempo y me gustan los lugares prolijos.',
       trustScore: 78,
@@ -22,7 +25,12 @@ vi.mock('../../hooks/useAuth', () => ({
     },
     logout: logoutMock,
     refresh: refreshMock,
+    updateProfile: vi.fn(async () => true),
   }),
+}));
+
+vi.mock('../ui/AccountModeSwitch', () => ({
+  AccountModeSwitch: () => <div>Mode switch</div>,
 }));
 
 import { ProfileViewNew } from '../ProfileViewNew';

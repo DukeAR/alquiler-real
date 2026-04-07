@@ -45,6 +45,10 @@ vi.mock('../../lib/toast', () => ({
   showToast: (...args: unknown[]) => showToastMock(...args),
 }));
 
+vi.mock('../ui/AccountModeSwitch', () => ({
+  AccountModeSwitch: () => <div>Mode switch</div>,
+}));
+
 import { MyBookings } from '../MyBookings';
 
 describe('MyBookings', () => {

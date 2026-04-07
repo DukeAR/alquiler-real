@@ -1,11 +1,16 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { apiFetch } from '../lib/apiConfig';
 
+export type UserMode = 'guest' | 'host';
+
 export interface User {
     id: string;
     name: string;
     email: string;
     role: 'tenant' | 'host';
+    canGuest: boolean;
+    canHost: boolean;
+    activeMode: UserMode;
     memberSince?: string;
     createdAt?: string;
     phone?: string;
@@ -48,7 +53,8 @@ interface AuthContextType {
     error: string | null;
     sessionError: string | null;
     login: (email: string, password: string) => Promise<boolean>;
-    register: (email: string, password: string, role: User['role'], fullName: string, zone: string, phone?: string, bio?: string, interests?: string[]) => Promise<boolean>;
+    register: (email: string, password: string, fullName: string, zone: string, phone?: string, bio?: string, interests?: string[]) => Promise<boolean>;
+    setActiveMode: (mode: UserMode) => Promise<boolean>;
     logout: () => Promise<void>;
     refresh: () => Promise<AuthRefreshResult>;
     updateProfile: (payload: UpdateProfilePayload) => Promise<boolean>;
@@ -81,6 +87,9 @@ const normalizeUser = (user: any): User => ({
     ...user,
     name: user?.name || 'Usuario',
     role: user?.role === 'host' ? 'host' : 'tenant',
+    canGuest: user?.canGuest !== false,
+    canHost: Boolean(user?.canHost || user?.role === 'host'),
+    activeMode: user?.activeMode === 'host' ? 'host' : user?.activeMode === 'guest' ? 'guest' : user?.role === 'host' ? 'host' : 'guest',
     interests: normalizeInterests(user?.interests),
 });
 
@@ -95,7 +104,7 @@ const getProfileFallbackMessage = (status: number) => {
     }
 };
 
-const readUserFromResponse = async (response: Response, source: 'login' | 'register' | 'profile') => {
+const readUserFromResponse = async (response: Response, source: 'login' | 'register' | 'profile' | 'context') => {
     try {
         const data = await response.json();
         return data.user ? normalizeUser(data.user) : null;
@@ -281,7 +290,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     }, [loadCurrentUser]);
 
-    const syncUserFromResponse = useCallback(async (response: Response, source: 'login' | 'register' | 'profile') => {
+    const syncUserFromResponse = useCallback(async (response: Response, source: 'login' | 'register' | 'profile' | 'context') => {
         const nextUser = await readUserFromResponse(response, source);
 
         if (nextUser) {
@@ -337,14 +346,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     };
 
-    const register = async (email: string, password: string, role: User['role'], fullName: string, zone: string, phone?: string, bio?: string, interests?: string[]) => {
+    const register = async (email: string, password: string, fullName: string, zone: string, phone?: string, bio?: string, interests?: string[]) => {
         setError(null);
         try {
             const normalizedEmail = email.trim().toLowerCase();
             const response = await apiFetch('/api/auth/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: normalizedEmail, password, role, fullName, zone, phone, bio, interests }),
+                body: JSON.stringify({ email: normalizedEmail, password, fullName, zone, phone, bio, interests }),
                 includeCredentials: true
             });
             if (response.ok) {
@@ -368,6 +377,36 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             return false;
         }
     };
+
+    const setActiveMode = useCallback(async (mode: UserMode) => {
+        setError(null);
+
+        try {
+            const response = await apiFetch('/api/auth/context', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ mode }),
+                includeCredentials: true,
+            });
+
+            if (response.ok) {
+                const session = await syncUserFromResponse(response, 'context');
+                if (session.status !== 'authenticated') {
+                    setError(session.error || 'No pudimos confirmar el cambio de modo. Intentá de nuevo.');
+                    return false;
+                }
+                return true;
+            }
+
+            const errorMsg = await getAuthErrorMessage(response, 'No pudimos cambiar tu modo. Intentá de nuevo.');
+            setError(errorMsg);
+            return false;
+        } catch (err) {
+            console.error('[AuthContext] Set active mode error:', err);
+            setError(err instanceof Error ? err.message : 'No pudimos cambiar tu modo. Intentá de nuevo.');
+            return false;
+        }
+    }, [syncUserFromResponse]);
 
     const updateProfile = async (payload: UpdateProfilePayload) => {
         setError(null);
@@ -415,7 +454,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const clearError = () => setError(null);
 
     return (
-        <AuthContext.Provider value={{ user, loading, isAuthenticated: Boolean(user), status, error, sessionError, login, logout, register, refresh: () => syncSession({ preserveUserOnError: true }), updateProfile, clearError }}>
+        <AuthContext.Provider value={{ user, loading, isAuthenticated: Boolean(user), status, error, sessionError, login, logout, register, setActiveMode, refresh: () => syncSession({ preserveUserOnError: true }), updateProfile, clearError }}>
             {children}
         </AuthContext.Provider>
     );

@@ -4,6 +4,7 @@ import { Icons } from './Icons';
 import { NotificationToast } from './NotificationToast';
 import { AIAssistant } from './AIAssistant';
 import { NotificationsMenu } from './NotificationsMenu';
+import { AccountModeSwitch } from './ui/AccountModeSwitch';
 import { useAuth } from '../hooks/useAuth';
 import { useFavorites } from '../hooks/useFavorites';
 import { useNotifications } from '../hooks/useNotifications';
@@ -245,6 +246,8 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
             </nav>
 
             <div className="flex items-center gap-1.5 sm:gap-2">
+              {isAuthenticated && user ? <AccountModeSwitch className="hidden lg:inline-flex" compact /> : null}
+
               <NotificationsMenu
                 status={notifications.status}
                 notifications={notifications.notifications}
@@ -255,17 +258,6 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                 onMarkAllAsRead={notifications.markAllAsRead}
                 onLoginRequired={openLoginModal}
               />
-
-              {isAuthenticated && user?.role === 'host' ? (
-                <button
-                  type="button"
-                  onClick={() => navigate('/host-dashboard')}
-                  className="app-button-secondary hidden md:inline-flex"
-                >
-                  <Icons.Home className="h-4 w-4" />
-                  Panel anfitrión
-                </button>
-              ) : null}
 
               {isAuthenticated && user ? (
                 <>

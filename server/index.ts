@@ -327,7 +327,7 @@ const checkUserRisk = async (userId: string) => {
   return { blocked: false, riskScore: user.risk_score, isVerified: !!user.is_identity_verified };
 };
 
-const AUTH_USER_SELECT = `id, email, role, name, zone, phone, bio, interests,
+const AUTH_USER_SELECT = `id, email, role, is_host as "isHost", active_mode as "activeMode", name, zone, phone, bio, interests,
   member_since as "memberSince",
   created_at as "createdAt",
         profile_photo as "profilePhoto",
@@ -343,7 +343,10 @@ const AUTH_USER_SELECT = `id, email, role, name, zone, phone, bio, interests,
 const normalizeAuthUser = (user: any) => ({
   ...user,
   name: user?.name || 'Usuario',
-  role: user?.role === 'host' ? 'host' : 'tenant',
+  role: user?.role === 'host' ? 'host' : user?.role === 'blocked' ? 'blocked' : 'tenant',
+  canGuest: user?.role !== 'blocked',
+  canHost: Boolean(user?.isHost || user?.role === 'host'),
+  activeMode: user?.activeMode === 'host' ? 'host' : user?.activeMode === 'guest' ? 'guest' : user?.role === 'host' ? 'host' : 'guest',
   interests: (() => {
     if (!user?.interests) return [];
     try { return JSON.parse(user.interests); } catch { return user.interests; }
@@ -408,10 +411,9 @@ app.get('/api/auth/me', async (req, res) => {
 
 // POST /api/auth/register
 app.post('/api/auth/register', async (req, res) => {
-  const { email, password, role, fullName, zone, phone, bio, interests } = req.body;
+  const { email, password, fullName, zone, phone, bio, interests } = req.body;
   const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
   const normalizedPassword = typeof password === 'string' ? password : '';
-  const normalizedRole = role === 'host' || role === 'tenant' ? role : '';
   const normalizedFullName = typeof fullName === 'string' ? fullName.trim() : '';
   const normalizedZone = typeof zone === 'string' ? zone.trim() || null : null;
   const normalizedPhone = typeof phone === 'string' ? phone.trim() || null : null;
@@ -420,7 +422,7 @@ app.post('/api/auth/register', async (req, res) => {
     ? interests.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
     : [];
 
-  if (!normalizedEmail || !normalizedPassword || !normalizedRole || !normalizedFullName) {
+  if (!normalizedEmail || !normalizedPassword || !normalizedFullName) {
     return res.status(400).json({ error: 'Completá los campos obligatorios.' });
   }
 
@@ -432,10 +434,10 @@ app.post('/api/auth/register', async (req, res) => {
     const hashedPassword = await bcrypt.hash(normalizedPassword, 10);
     const id = `user_${Date.now()}`;
     const result = await db.query(
-      `INSERT INTO users (id, email, password_hash, role, name, zone, phone, bio, interests)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      `INSERT INTO users (id, email, password_hash, role, active_mode, name, zone, phone, bio, interests)
+       VALUES ($1, $2, $3, 'tenant', 'guest', $4, $5, $6, $7, $8)
        RETURNING id`,
-      [id, normalizedEmail, hashedPassword, normalizedRole, normalizedFullName, normalizedZone, normalizedPhone, normalizedBio, JSON.stringify(normalizedInterests)]
+      [id, normalizedEmail, hashedPassword, normalizedFullName, normalizedZone, normalizedPhone, normalizedBio, JSON.stringify(normalizedInterests)]
     );
     const user = await getAuthUserById(result.rows[0].id);
 
@@ -621,6 +623,35 @@ app.put('/api/auth/profile', async (req, res) => {
   }
 });
 
+app.put('/api/auth/context', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: AUTH_REQUIRED_ERROR });
+
+  const nextMode = req.body?.mode === 'host' ? 'host' : req.body?.mode === 'guest' ? 'guest' : null;
+
+  if (!nextMode) {
+    return res.status(400).json({ error: 'Elegí un contexto válido para continuar.' });
+  }
+
+  try {
+    await db.query(
+      `UPDATE users
+       SET active_mode = $1
+       WHERE id = $2`,
+      [nextMode, req.session.userId],
+    );
+
+    const user = await getAuthUserById(req.session.userId);
+    if (!user) {
+      return res.status(404).json({ error: 'No encontramos esa cuenta.' });
+    }
+
+    res.json({ user });
+  } catch (err) {
+    console.error('Error en auth-context:', err);
+    res.status(500).json({ error: 'No pudimos cambiar tu modo ahora. Intentá de nuevo.' });
+  }
+});
+
 app.post('/api/verification/validate-id', memoryUpload.single('idImage'), async (req, res) => {
   if (!req.session.userId) {
     return res.status(401).json({ error: AUTH_REQUIRED_ERROR });
@@ -657,7 +688,7 @@ app.post('/api/verification/complete', async (req, res) => {
   }
 
   try {
-    const result = await db.query(`SELECT role, dni_number, dni_front FROM users WHERE id = $1`, [req.session.userId]);
+    const result = await db.query(`SELECT role, is_host as "isHost", active_mode as "activeMode", dni_number, dni_front FROM users WHERE id = $1`, [req.session.userId]);
     const user = result.rows[0];
 
     if (!user) {
@@ -673,9 +704,9 @@ app.post('/api/verification/complete', async (req, res) => {
        SET identity_validated = TRUE,
            is_identity_verified = TRUE,
            validation_level = CASE WHEN validation_level = 'trusted_user' THEN validation_level ELSE 'verified_dni' END,
-           host_verified = CASE WHEN $1 = 'host' THEN TRUE ELSE host_verified END
-       WHERE id = $2`,
-      [user.role, req.session.userId],
+           host_verified = host_verified
+       WHERE id = $1`,
+      [req.session.userId],
     );
 
     const nextUser = await getAuthUserById(req.session.userId);
@@ -743,7 +774,7 @@ app.get('/api/verification/status', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: AUTH_REQUIRED_ERROR });
   try {
     const result = await db.query(
-            `SELECT identity_validated, validation_level, role, rating, total_reviews,
+            `SELECT identity_validated, validation_level, role, is_host as "isHost", active_mode as "activeMode", rating, total_reviews,
               dni_front, dni_back, selfie_with_dni
        FROM users WHERE id = $1`,
       [req.session.userId]
@@ -751,7 +782,9 @@ app.get('/api/verification/status', async (req, res) => {
     const user = result.rows[0];
     if (!user) return res.status(404).json({ error: 'No encontramos esa cuenta.' });
 
-    const utilityBillResult = user.role === 'host'
+    const isHostContext = Boolean(user.isHost || user.role === 'host' || user.activeMode === 'host');
+
+    const utilityBillResult = isHostContext
       ? await db.query(
           `SELECT id FROM user_verification_documents
            WHERE user_id = $1 AND document_type = 'utility_bill'
@@ -793,7 +826,11 @@ app.get('/api/verification/status', async (req, res) => {
       nextLevel: level === 'basic' ? 'verified_dni' : (level === 'verified_dni' ? 'trusted_user' : 'trusted_user'),
       progress,
       checks,
-      missingRequirements: level === 'basic' ? ['Validar DNI', 'Selfie'] : (level === 'verified_dni' ? ['Historial de reservas positivas'] : []),
+      missingRequirements: level === 'basic'
+        ? isHostContext
+          ? ['Validar DNI', 'Selfie', ...(hasUtilityBill ? [] : ['Comprobante de servicios'])]
+          : ['Validar DNI', 'Selfie']
+        : (level === 'verified_dni' ? ['Historial de reservas positivas'] : []),
       benefits: {
         current: level === 'basic' ? ['Navegar propiedades'] : (level === 'verified_dni' ? ['Insignia de verificado', 'Prioridad en consultas'] : ['Nivel destacado', 'Garantía de confianza']),
         next: level === 'basic' ? ['Insignia de verificado'] : (level === 'verified_dni' ? ['Nivel destacado'] : [])
@@ -1017,9 +1054,12 @@ const getHostProfileData = async (hostId: string) => {
               email_verified as "emailVerified",
               identity_validated as "identityValidated",
               member_since as "memberSince",
-              risk_score as "riskScore"
+              risk_score as "riskScore",
+              role,
+              is_host as "isHost",
+              total_properties as "totalProperties"
        FROM users
-       WHERE id = $1 AND role = 'host'`,
+       WHERE id = $1`,
       [hostId],
     ),
     db.query(
@@ -1065,6 +1105,11 @@ const getHostProfileData = async (hostId: string) => {
 
   const host = hostResult.rows[0];
   const properties = propertiesResult.rows;
+
+  if (!host.isHost && host.role !== 'host' && Number(host.totalProperties || 0) <= 0 && properties.length === 0) {
+    return null;
+  }
+
   const bookings = bookingsResult.rows;
   const guestReviews = reviewsResult.rows;
   const conversations = conversationsResult.rows;
@@ -1533,7 +1578,15 @@ app.post('/api/properties', async (req, res) => {
       [id, title, location, price, req.session.userId, description, imageUrl, lat, lng]
     );
     // Update host total_properties
-    await db.query('UPDATE users SET total_properties = total_properties + 1 WHERE id = $1', [req.session.userId]);
+    await db.query(
+      `UPDATE users
+       SET total_properties = total_properties + 1,
+           is_host = TRUE,
+           role = 'host',
+           active_mode = 'host'
+       WHERE id = $1`,
+      [req.session.userId],
+    );
     res.status(201).json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ error: 'No pudimos publicar la propiedad. Intentá de nuevo.' });
@@ -3275,8 +3328,8 @@ app.post('/api/reviews', async (req, res) => {
     // Lógica Simple de Insignias
     await db.query(
       `UPDATE users SET badge = CASE 
-        WHEN role = 'host' AND host_rating >= 4.7 AND total_properties >= 3 THEN 'Anfitrion destacado'
-        WHEN role = 'tenant' AND rating >= 4.5 THEN 'Huesped confiable'
+        WHEN (COALESCE(is_host, FALSE) OR role = 'host') AND host_rating >= 4.7 AND total_properties >= 3 THEN 'Anfitrion destacado'
+        WHEN rating >= 4.5 THEN 'Huesped confiable'
         WHEN identity_validated THEN 'Verificado'
         ELSE 'Nuevo usuario'
       END WHERE id = $1`,

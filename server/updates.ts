@@ -195,16 +195,16 @@ const seedDemoCatalog = async () => {
         `INSERT INTO users (
           id, email, password_hash, role, name, zone, phone, bio, interests,
           member_since, created_at, identity_validated, email_verified, phone_verified,
-          validation_level, profile_photo, rating, total_reviews, is_host, host_verified,
+          validation_level, active_mode, profile_photo, rating, total_reviews, is_host, host_verified,
           host_rating, total_properties, total_bookings_hosted, badge, trust_score, risk_score,
           is_email_verified, is_phone_verified, is_identity_verified
         )
         VALUES (
           $1, $2, $3, $4, $5, $6, $7, $8, $9,
           $10, $11, $12, $13, $14,
-          $15, $16, 0, 0, $17, $18,
-          0, 0, 0, $19, $20, $21,
-          $22, $23, $24
+          $15, $16, $17, 0, 0, $18, $19,
+          0, 0, 0, $20, $21, $22,
+          $23, $24, $25
         )
         ON CONFLICT (id) DO UPDATE SET
           email = EXCLUDED.email,
@@ -221,6 +221,7 @@ const seedDemoCatalog = async () => {
           email_verified = EXCLUDED.email_verified,
           phone_verified = EXCLUDED.phone_verified,
           validation_level = EXCLUDED.validation_level,
+          active_mode = EXCLUDED.active_mode,
           profile_photo = EXCLUDED.profile_photo,
           is_host = EXCLUDED.is_host,
           host_verified = EXCLUDED.host_verified,
@@ -246,6 +247,7 @@ const seedDemoCatalog = async () => {
           user.emailVerified,
           user.phoneVerified,
           user.validationLevel,
+          user.role === 'host' ? 'host' : 'guest',
           user.profilePhoto,
           user.role === 'host',
           user.role === 'host' && user.identityValidated,
@@ -509,6 +511,7 @@ export const initDB = async () => {
       email TEXT UNIQUE NOT NULL,
       password_hash TEXT NOT NULL,
       role TEXT CHECK (role IN ('tenant', 'host')) NOT NULL DEFAULT 'tenant',
+      active_mode TEXT CHECK (active_mode IN ('guest', 'host')) NOT NULL DEFAULT 'guest',
       name TEXT NOT NULL DEFAULT 'Usuario',
       zone TEXT,
       phone TEXT,
@@ -547,6 +550,7 @@ export const initDB = async () => {
       BEGIN ALTER TABLE users ADD COLUMN password_hash TEXT DEFAULT ''; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE users ADD COLUMN zone TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'tenant'; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE users ADD COLUMN active_mode TEXT DEFAULT 'guest'; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE users ADD COLUMN email_verified BOOLEAN DEFAULT FALSE; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE users ADD COLUMN phone_verified BOOLEAN DEFAULT FALSE; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE users ADD COLUMN identity_validated BOOLEAN DEFAULT FALSE; EXCEPTION WHEN duplicate_column THEN NULL; END;
@@ -567,6 +571,15 @@ export const initDB = async () => {
       BEGIN ALTER TABLE users ADD COLUMN is_phone_verified BOOLEAN DEFAULT FALSE; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE users ADD COLUMN is_identity_verified BOOLEAN DEFAULT FALSE; EXCEPTION WHEN duplicate_column THEN NULL; END;
     END $$;
+  `);
+
+  await db.query(`
+    UPDATE users
+    SET active_mode = CASE
+      WHEN active_mode IN ('guest', 'host') THEN active_mode
+      WHEN role = 'host' THEN 'host'
+      ELSE 'guest'
+    END;
   `);
 
   // ============================================================

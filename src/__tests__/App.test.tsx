@@ -181,7 +181,7 @@ describe('App routing states', () => {
     expect(await screen.findByText('Login page')).toBeInTheDocument();
   });
 
-  test('redirects tenants away from the host dashboard', async () => {
+  test('allows any authenticated user into the host dashboard', async () => {
     useAuthMock.mockReturnValue({
       loading: false,
       user: {
@@ -189,6 +189,9 @@ describe('App routing states', () => {
         name: 'Tenant User',
         email: 'tenant@test.com',
         role: 'tenant',
+        canGuest: true,
+        canHost: false,
+        activeMode: 'guest',
       },
       status: 'authenticated',
       refresh: vi.fn(async () => ({
@@ -197,6 +200,9 @@ describe('App routing states', () => {
           name: 'Tenant User',
           email: 'tenant@test.com',
           role: 'tenant',
+          canGuest: true,
+          canHost: false,
+          activeMode: 'guest',
         },
         status: 'authenticated',
         error: null,
@@ -209,7 +215,7 @@ describe('App routing states', () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText('Profile page')).toBeInTheDocument();
+    expect(await screen.findByText('Host dashboard')).toBeInTheDocument();
   });
 
   test('allows hosts into the host dashboard', async () => {
@@ -220,6 +226,9 @@ describe('App routing states', () => {
         name: 'Host User',
         email: 'host@test.com',
         role: 'host',
+        canGuest: true,
+        canHost: true,
+        activeMode: 'host',
       },
       status: 'authenticated',
       refresh: vi.fn(async () => ({
@@ -228,6 +237,9 @@ describe('App routing states', () => {
           name: 'Host User',
           email: 'host@test.com',
           role: 'host',
+          canGuest: true,
+          canHost: true,
+          activeMode: 'host',
         },
         status: 'authenticated',
         error: null,

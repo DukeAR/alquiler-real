@@ -39,6 +39,11 @@ describe('Protected auth and verification endpoints - unauthenticated', () => {
     expect(res.status).toBe(401);
   });
 
+  test('PUT /api/auth/context -> 401 when not logged in', async () => {
+    const res = await request(app).put('/api/auth/context').send({ mode: 'host' });
+    expect(res.status).toBe(401);
+  });
+
   test('POST /api/verification/validate-id -> 401 when not logged in', async () => {
     const res = await request(app)
       .post('/api/verification/validate-id')

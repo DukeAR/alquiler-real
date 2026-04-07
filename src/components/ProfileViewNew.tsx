@@ -18,6 +18,7 @@ import { FormField } from './ui/FormField';
 import { Input } from './ui/Input';
 import { NoticeBanner } from './ui/NoticeBanner';
 import { PageHeader } from './ui/PageHeader';
+import { AccountModeSwitch } from './ui/AccountModeSwitch';
 import { SectionTitle } from './ui/SectionTitle';
 
 type ReviewTab = 'received' | 'written';
@@ -201,9 +202,10 @@ export const ProfileViewNew = () => {
     return null;
   }
 
+  const isHostMode = user.activeMode === 'host';
   const userInterests = parseInterests(user.interests);
   const memberSinceLabel = formatMonthYear(user.memberSince ?? user.createdAt);
-  const verificationChecks = buildVerificationChecks(validationData?.checks, user.role === 'host');
+  const verificationChecks = buildVerificationChecks(validationData?.checks, isHostMode);
   const completedChecks = verificationChecks.filter((item) => item.done).length;
   const progressPercent = Math.round(
     typeof validationData?.progress === 'number'
@@ -214,7 +216,7 @@ export const ProfileViewNew = () => {
   );
   const currentReviews = reviewTab === 'received' ? reviews.received : reviews.written;
   const reviewCountLabel = currentReviews.length === 1 ? '1 reseña' : `${currentReviews.length} reseñas`;
-  const ratingValue = normalizeRating(user.role === 'host' ? user.hostRating : user.rating);
+  const ratingValue = normalizeRating(isHostMode ? user.hostRating : user.rating);
   const riskScore = normalizeRating(user.riskScore);
   const validationLevel = validationData?.level ?? 'BASICO';
   const preferencesSummary = [
@@ -250,12 +252,15 @@ export const ProfileViewNew = () => {
         onBack={() => navigate('/')}
         eyebrow="Perfil"
         heading="Mi perfil"
-        description="Todo lo importante de tu cuenta, en un solo lugar."
+        description={isHostMode ? 'Estás viendo tu cuenta en modo anfitrión.' : 'Estás viendo tu cuenta en modo huésped.'}
         action={
-          <Button type="button" variant="secondary" onClick={() => navigate('/edit-profile')} className="hidden sm:inline-flex">
-            <Icons.User className="h-4 w-4" />
-            Editar perfil
-          </Button>
+          <div className="flex items-center gap-2">
+            <AccountModeSwitch className="hidden md:inline-flex" compact />
+            <Button type="button" variant="secondary" onClick={() => navigate('/edit-profile')} className="hidden sm:inline-flex">
+              <Icons.User className="h-4 w-4" />
+              Editar perfil
+            </Button>
+          </div>
         }
         contentClassName="app-page items-center"
       />
@@ -295,7 +300,7 @@ export const ProfileViewNew = () => {
                   <div className="flex flex-wrap items-center justify-center gap-2">
                     <Badge variant="brand" size="md">
                       <Icons.UserCheck className="h-3.5 w-3.5" />
-                      {user.role === 'host' ? 'Anfitrión' : 'Huésped'}
+                      {isHostMode ? 'Modo anfitrión' : 'Modo huésped'}
                     </Badge>
                     {(user as { zone?: string }).zone ? (
                       <Badge variant="neutral" size="md">
@@ -321,6 +326,10 @@ export const ProfileViewNew = () => {
                   <Icons.User className="h-4 w-4" />
                   Editar perfil
                 </Button>
+
+                <div className="sm:hidden">
+                  <AccountModeSwitch className="w-full justify-center" />
+                </div>
               </Card>
 
               <Card padding="lg" className="space-y-5 dark:border-slate-800 dark:bg-slate-900">
@@ -351,14 +360,12 @@ export const ProfileViewNew = () => {
                     description="Revisá tus próximas estadías y el historial."
                     onClick={() => navigate('/my-bookings')}
                   />
-                  {user.role === 'host' ? (
-                    <ActionRow
-                      icon={<Icons.LayoutDashboard className="h-5 w-5" />}
-                      label="Panel de anfitrión"
-                      description="Gestioná tus propiedades y reservas."
-                      onClick={() => navigate('/host-dashboard')}
-                    />
-                  ) : null}
+                  <ActionRow
+                    icon={<Icons.LayoutDashboard className="h-5 w-5" />}
+                    label={isHostMode ? 'Panel de anfitrión' : 'Activar modo anfitrión'}
+                    description={isHostMode ? 'Gestioná tus propiedades y reservas.' : 'Publicá propiedades y administralas sin crear otra cuenta.'}
+                    onClick={() => navigate('/host-dashboard')}
+                  />
                   <ActionRow
                     icon={<Icons.AlertTriangle className="h-5 w-5" />}
                     label="Reportar un problema"
@@ -582,8 +589,8 @@ export const ProfileViewNew = () => {
                       <span className="font-medium text-slate-900 dark:text-slate-100">{formatShortDate(activity?.last_booking_date)}</span>
                     </div>
                     <div className="flex items-center justify-between gap-4 text-sm">
-                      <span className="text-slate-500 dark:text-slate-400">Rol actual en la app</span>
-                      <span className="font-medium text-slate-900 dark:text-slate-100">{user.role === 'host' ? 'Anfitrión' : 'Huésped'}</span>
+                      <span className="text-slate-500 dark:text-slate-400">Modo actual en la app</span>
+                      <span className="font-medium text-slate-900 dark:text-slate-100">{isHostMode ? 'Anfitrión' : 'Huésped'}</span>
                     </div>
                   </div>
                 </Card>
@@ -668,7 +675,7 @@ export const ProfileViewNew = () => {
 
       {showVerification ? (
         <DocumentVerificationModal
-          userType={user.role as 'tenant' | 'host'}
+          userType={isHostMode ? 'host' : 'tenant'}
           currentVerification={verificationPayload}
           onSubmitted={async () => {
             await refresh();

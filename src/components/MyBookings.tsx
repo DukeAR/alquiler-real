@@ -8,6 +8,7 @@ import { acceptContract, cancelBooking, confirmArrival, payProtectedDeposit, rep
 import { EmptyState } from './EmptyState';
 import { ErrorState } from './ErrorState';
 import { Badge } from './ui/Badge';
+import { AccountModeSwitch } from './ui/AccountModeSwitch';
 import { Button } from './ui/Button';
 import { LoadingState } from './LoadingState';
 import { formatBookingDateOnly, formatBookingDateTime, getCancellationDeadlineFromStartDate, isBookingCheckInReached } from '../lib/bookingDates';
@@ -303,11 +304,14 @@ export const MyBookings = () => {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-24">
       <header className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-b border-slate-200 dark:border-slate-800">
-        <div className="p-4 flex items-center gap-4 max-w-2xl mx-auto">
-          <button onClick={() => navigate('/profile')} className="p-3 bg-slate-100 dark:bg-slate-800 rounded-2xl text-slate-600 dark:text-slate-400 hover:bg-brand/10 hover:text-brand transition-all" type="button">
-            <Icons.ArrowLeft className="w-5 h-5" />
-          </button>
-          <h1 className="font-black text-xl uppercase tracking-tight">Mis reservas</h1>
+        <div className="p-4 flex flex-wrap items-center justify-between gap-3 max-w-2xl mx-auto">
+          <div className="flex items-center gap-4">
+            <button onClick={() => navigate('/profile')} className="p-3 bg-slate-100 dark:bg-slate-800 rounded-2xl text-slate-600 dark:text-slate-400 hover:bg-brand/10 hover:text-brand transition-all" type="button">
+              <Icons.ArrowLeft className="w-5 h-5" />
+            </button>
+            <h1 className="font-black text-xl uppercase tracking-tight">Mis reservas</h1>
+          </div>
+          <AccountModeSwitch compact />
         </div>
       </header>
 

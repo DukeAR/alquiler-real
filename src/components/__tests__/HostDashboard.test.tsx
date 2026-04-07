@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 const apiJsonMock = vi.fn();
 const showToastMock = vi.fn();
 const navigateMock = vi.fn();
+const setActiveModeMock = vi.fn();
 
 const ARGENTINA_TIME_ZONE = 'America/Argentina/Buenos_Aires';
 
@@ -31,6 +32,18 @@ vi.mock('../../lib/toast', () => ({
   showToast: (...args: unknown[]) => showToastMock(...args),
 }));
 
+vi.mock('../../hooks/useAuth', () => ({
+  useAuth: () => ({
+    user: {
+      id: 'host-1',
+      activeMode: 'host',
+      canGuest: true,
+      canHost: true,
+    },
+    setActiveMode: setActiveModeMock,
+  }),
+}));
+
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
 
@@ -48,6 +61,10 @@ vi.mock('../ReviewModal', () => ({
   ReviewModal: () => <div>ReviewModal</div>,
 }));
 
+vi.mock('../ui/AccountModeSwitch', () => ({
+  AccountModeSwitch: () => <div>Mode switch</div>,
+}));
+
 import { HostDashboard } from '../HostDashboard';
 
 describe('HostDashboard', () => {
@@ -55,6 +72,7 @@ describe('HostDashboard', () => {
     apiJsonMock.mockReset();
     showToastMock.mockReset();
     navigateMock.mockReset();
+    setActiveModeMock.mockReset();
     vi.spyOn(window, 'confirm').mockReturnValue(true);
   });
 

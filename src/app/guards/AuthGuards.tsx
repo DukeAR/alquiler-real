@@ -66,7 +66,15 @@ export const RequireRole = ({ children, allowedRoles }: { children: ReactNode; a
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }
 
-  if (!allowedRoles.includes(user.role)) {
+  const canAccess = allowedRoles.some((role) => {
+    if (role === 'host') {
+      return user.canHost || user.activeMode === 'host' || user.role === 'host';
+    }
+
+    return user.canGuest;
+  });
+
+  if (!canAccess) {
     return <Navigate to="/profile" replace />;
   }
 

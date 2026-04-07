@@ -1,6 +1,6 @@
 import { Suspense, lazy, useEffect, useState, type ReactNode } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { RequireAuth, RequireRole } from './app/guards/AuthGuards';
+import { RequireAuth } from './app/guards/AuthGuards';
 import { apiJson } from './lib/apiConfig';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { AppShell } from './components/AppShell';
@@ -25,7 +25,6 @@ const LazyProfileViewNew = lazy(() => import('./components/ProfileViewNew.tsx'))
 const LazyPropertyDetail = lazy(() => import('./components/PropertyDetail'));
 const LazyRegister = lazy(() => import('./components/Register').then((module) => ({ default: module.Register })));
 const LazySecureChat = lazy(() => import('./components/SecureChat').then((module) => ({ default: module.SecureChat })));
-const LazyTenantProfileView = lazy(() => import('./components/TenantProfileView').then((module) => ({ default: module.TenantProfileView })));
 const LazyDocumentVerificationFlow = lazy(() => import('./components/verification/DocumentVerificationFlow').then((module) => ({ default: module.DocumentVerificationFlow })));
 
 const HOST_PROFILE_NOT_FOUND_MESSAGE = 'No encontramos lo que buscás.';
@@ -85,8 +84,8 @@ export default function App() {
               <Route path="/verify" element={<Navigate to="/verification" replace />} />
               <Route path="/chat/:id" element={<RequireAuth><SecureChatWrapper /></RequireAuth>} />
               <Route path="/my-bookings" element={<RequireAuth><LazyMyBookings /></RequireAuth>} />
-              <Route path="/host-dashboard" element={<RequireRole allowedRoles={['host']}><HostDashboardWrapper /></RequireRole>} />
-              <Route path="/tenant-profile" element={<RequireRole allowedRoles={['tenant']}><TenantProfileWrapper /></RequireRole>} />
+              <Route path="/host-dashboard" element={<RequireAuth><HostDashboardWrapper /></RequireAuth>} />
+              <Route path="/tenant-profile" element={<Navigate to="/profile" replace />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Suspense>
@@ -118,11 +117,6 @@ const AboutPageWrapper = () => {
 const HostDashboardWrapper = () => {
   const navigate = useNavigate();
   return <LazyHostDashboard onBack={() => navigate(-1)} />;
-};
-
-const TenantProfileWrapper = () => {
-  const navigate = useNavigate();
-  return <LazyTenantProfileView onBack={() => navigate(-1)} />;
 };
 
 const HostProfileWrapper = () => {

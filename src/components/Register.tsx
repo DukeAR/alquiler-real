@@ -40,7 +40,6 @@ export const Register = ({ mode = 'login' }: RegisterProps) => {
     const [password, setPassword] = useState('');
     const [fullName, setFullName] = useState('');
     const [phone, setPhone] = useState('');
-    const [role, setRole] = useState<'tenant' | 'host'>('tenant');
     const [zone, setZone] = useState('San Clemente del Tuyú');
     const [bio, setBio] = useState('');
     const [interests, setInterests] = useState<string[]>([]);
@@ -74,7 +73,7 @@ export const Register = ({ mode = 'login' }: RegisterProps) => {
         setIsSubmitting(true);
 
         try {
-            const success = await register(email.trim(), password, role, fullName.trim(), zone, phone.trim(), bio.trim(), interests);
+            const success = await register(email.trim(), password, fullName.trim(), zone, phone.trim(), bio.trim(), interests);
 
             if (success) {
                 navigate(getPostAuthRedirect(location.state, '/profile'), { replace: true });
@@ -192,11 +191,16 @@ export const Register = ({ mode = 'login' }: RegisterProps) => {
                         Alquiler Real
                     </h1>
                     <p className="text-sm text-slate-500 font-medium tracking-wide uppercase">
-                        Empezá a revisar mejor antes de reservar
+                        Una sola cuenta para reservar o publicar
                     </p>
                 </div>
 
                 {authErrorBanner ? <div className="mb-6">{authErrorBanner}</div> : null}
+
+                <div className="mb-6 rounded-3xl border border-brand/15 bg-brand/5 px-4 py-4 text-sm text-slate-700 dark:border-brand/20 dark:bg-brand/10 dark:text-slate-200">
+                    <p className="font-semibold tracking-tight text-slate-900 dark:text-white">Tu cuenta no se separa entre huésped y anfitrión.</p>
+                    <p className="mt-1 leading-6">Entrás una vez, explorás como huésped y cuando quieras podés activar el modo anfitrión para publicar desde la misma cuenta.</p>
+                </div>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <FormField label="Email" htmlFor="auth-email">
@@ -226,44 +230,10 @@ export const Register = ({ mode = 'login' }: RegisterProps) => {
                         />
                     </FormField>
 
-                    <div className="my-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                        <button
-                            type="button"
-                            onClick={() => setRole('tenant')}
-                            className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 outline-none ${role === 'tenant'
-                                ? 'border-brand bg-brand/5 text-brand'
-                                : 'border-slate-200 dark:border-slate-700 text-slate-500 hover:border-brand/30'
-                                }`}
-                        >
-                            <Icons.User className="w-6 h-6" />
-                            <span className="text-xs font-bold uppercase tracking-wider">Huésped</span>
-                            <span className="text-[10px] text-center opacity-80 font-medium">Quiero reservar</span>
-                        </button>
-
-                        <button
-                            type="button"
-                            onClick={() => setRole('host')}
-                            className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 outline-none ${role === 'host'
-                                ? 'border-brand bg-brand/5 text-brand'
-                                : 'border-slate-200 dark:border-slate-700 text-slate-500 hover:border-brand/30'
-                                }`}
-                        >
-                            <Icons.Home className="w-6 h-6" />
-                            <span className="text-xs font-bold uppercase tracking-wider">Anfitrión</span>
-                            <span className="text-[10px] text-center opacity-80 font-medium">Quiero publicar una propiedad</span>
-                        </button>
+                    <div className="rounded-2xl border border-amber-200 bg-amber-50/90 p-4 text-sm text-amber-900 dark:border-amber-800/30 dark:bg-amber-900/20 dark:text-amber-200">
+                        <p className="font-bold mb-1">Si después querés publicar, lo activás desde tu cuenta.</p>
+                        <p className="text-xs leading-5">Para publicar con datos verificables más adelante vas a necesitar DNI, selfie con DNI y comprobante de servicios.</p>
                     </div>
-
-                    {role === 'host' && (
-                        <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-2xl border border-amber-200 dark:border-amber-800/30 text-sm text-amber-800 dark:text-amber-300">
-                            <p className="font-bold mb-1">📋 Para publicar con datos verificables vas a necesitar:</p>
-                            <ul className="text-xs space-y-1">
-                                <li>• DNI (frente y dorso)</li>
-                                <li>• Selfie con DNI</li>
-                                <li>• Comprobante de servicios a tu nombre</li>
-                            </ul>
-                        </div>
-                    )}
 
                     <div className="space-y-4">
                         <div>

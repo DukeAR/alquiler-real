@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 import { apiJson } from '../lib/apiConfig';
 import { resolveGuestRequestProfile } from '../lib/guestRequestProfile';
 import { getPropertyVerificationBadge, getPropertyVerificationItems } from '../lib/propertyVerification';
@@ -16,6 +17,7 @@ import { LoadingState } from './LoadingState';
 import { PropertyUploadForm } from './PropertyUploadForm';
 import { ReviewModal } from './ReviewModal';
 import { Button } from './ui/Button';
+import { AccountModeSwitch } from './ui/AccountModeSwitch';
 import { isBookingCheckInReached } from '../lib/bookingDates';
 import { getReservationFlowCopy } from '../lib/reservationFlow';
 
@@ -110,6 +112,7 @@ const getBookingSummaryItems = (booking: any) => {
 
 export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
   const navigate = useNavigate();
+  const { user, setActiveMode } = useAuth();
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -122,6 +125,12 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
   useEffect(() => {
     void fetchData();
   }, []);
+
+  useEffect(() => {
+    if (user?.activeMode !== 'host') {
+      void setActiveMode('host');
+    }
+  }, [setActiveMode, user?.activeMode]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -313,7 +322,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
   return (
     <div className="min-h-screen bg-slate-50 pb-20 dark:bg-slate-950">
       <header className="border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-        <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4">
+        <div className="mx-auto flex min-h-16 max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-3">
           <button
             onClick={onBack}
             className="app-button-base rounded-full px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 hover:text-brand dark:text-slate-400 dark:hover:bg-slate-800"
@@ -322,6 +331,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
             Volver a explorar
           </button>
           <div className="flex items-center gap-3">
+            <AccountModeSwitch compact />
             <div className="hidden text-right sm:block">
               <p className="app-title-4 dark:text-white">Panel de anfitrión</p>
               <p className="app-eyebrow">Tu actividad</p>
