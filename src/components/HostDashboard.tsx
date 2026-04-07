@@ -5,8 +5,8 @@ import { apiJson } from '../lib/apiConfig';
 import { isBookingCheckInReached } from '../lib/bookingDates';
 import { resolveGuestRequestProfile } from '../lib/guestRequestProfile';
 import { getPropertyVerificationBadge, getPropertyVerificationItems } from '../lib/propertyVerification';
-import { getReservationFlowCopy } from '../lib/reservationFlow';
-import { acceptConversationRequest } from '../services/geminiService';
+import { getReservationFlowCopy, getReservationNextActorDisplayLabel, getReservationNextStepDisplayLabel } from '../lib/reservationFlow';
+import { acceptConversationRequest, confirmDirectDeposit } from '../services/geminiService';
 import { showToast } from '../lib/toast';
 import { cn } from '../lib/utils';
 import { AccountModeSwitch } from './ui/AccountModeSwitch';
@@ -273,7 +273,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
   const [reviewingBooking, setReviewingBooking] = useState<any>(null);
   const [availabilityPropertyId, setAvailabilityPropertyId] = useState<string | null>(null);
   const [expandedBookingId, setExpandedBookingId] = useState<string | null>(null);
-  const [processingBookingAction, setProcessingBookingAction] = useState<{ bookingId: string; action: 'accept-request' | 'cancel-host' | 'report-no-show' } | null>(null);
+  const [processingBookingAction, setProcessingBookingAction] = useState<{ bookingId: string; action: 'accept-request' | 'confirm-direct-deposit' | 'cancel-host' | 'report-no-show' } | null>(null);
 
   useEffect(() => {
     void fetchData();
@@ -369,6 +369,32 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
     }
   };
 
+  const handleConfirmDirectDeposit = async (booking: any) => {
+    if (!booking.conversationId) {
+      return;
+    }
+
+    setProcessingBookingAction({ bookingId: booking.id, action: 'confirm-direct-deposit' });
+
+    try {
+      const updatedConversation = await confirmDirectDeposit(booking.conversationId);
+
+      updateRecentBooking({
+        ...booking,
+        conversationId: updatedConversation.id,
+        requestMode: updatedConversation.requestMode ?? booking.requestMode,
+        depositStatus: updatedConversation.depositStatus ?? booking.depositStatus,
+        status: updatedConversation.bookingStatus ?? booking.status,
+      });
+
+      showToast('Reserva confirmada', 'La seña ya quedó confirmada y la reserva sigue por chat con los últimos detalles.', 'success');
+    } catch (err) {
+      showToast('Reserva', err instanceof Error ? err.message : 'No pudimos confirmar la recepción de la seña desde el panel.', 'error');
+    } finally {
+      setProcessingBookingAction(null);
+    }
+  };
+
   const handleReportNoShow = async (booking: any) => {
     setProcessingBookingAction({ bookingId: booking.id, action: 'report-no-show' });
 
@@ -379,7 +405,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
       });
 
       updateRecentBooking(response.booking);
-      showToast('Pendiente de confirmación', 'El no show quedó informado y la seña sigue en pausa hasta que se revise.', 'success');
+      showToast('Llegada en revisión', 'El no show quedó informado y la seña sigue en pausa mientras la plataforma revisa qué pasó.', 'success');
     } catch (err) {
       showToast('No show', err instanceof Error ? err.message : 'No pudimos registrar el no show.', 'error');
     } finally {
@@ -700,6 +726,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
     const arrivalActionsAvailable = isBookingCheckInReached(booking.startDate);
     const showBookingFlowPanel = booking.status !== 'completed' && Boolean(booking.requestMode && bookingFlow.stage && bookingFlow.stage !== 'reservation-confirmed');
     const canAcceptRequest = Boolean(booking.conversationId && bookingFlow.stage === 'request-pending');
+    const canConfirmDirectDeposit = Boolean(booking.conversationId && bookingFlow.stage === 'direct-deposit-reported');
     const canOpenChat = Boolean(booking.conversationId);
     const canCancelAsHost = (booking.status === 'pending' || booking.status === 'confirmed')
       && bookingFlow.stage !== 'host-cancelled'
@@ -708,6 +735,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
       && bookingFlow.stage !== 'protected-no-show-pending';
     const canReportProtectedNoShow = booking.requestMode === 'protected' && bookingFlow.stage === 'protected-deposit-held' && arrivalActionsAvailable;
     const isAcceptingRequest = processingBookingAction?.bookingId === booking.id && processingBookingAction?.action === 'accept-request';
+    const isConfirmingDirectDeposit = processingBookingAction?.bookingId === booking.id && processingBookingAction?.action === 'confirm-direct-deposit';
     const isCancelingAsHost = processingBookingAction?.bookingId === booking.id && processingBookingAction?.action === 'cancel-host';
     const isReportingNoShow = processingBookingAction?.bookingId === booking.id && processingBookingAction?.action === 'report-no-show';
 
@@ -765,7 +793,23 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
                   >
                     <>
                       <Icons.CheckCircle2 className="h-4 w-4" />
-                      {booking.requestMode === 'protected' ? 'Aceptar solicitud' : 'Aceptar propuesta'}
+                      {bookingFlow.primaryActionLabel}
+                    </>
+                  </Button>
+                ) : null}
+
+                {canConfirmDirectDeposit ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => void handleConfirmDirectDeposit(booking)}
+                    loading={isConfirmingDirectDeposit}
+                    loadingLabel="Confirmando..."
+                    className="rounded-full"
+                  >
+                    <>
+                      <Icons.CheckCircle2 className="h-4 w-4" />
+                      {bookingFlow.primaryActionLabel}
                     </>
                   </Button>
                 ) : null}
@@ -778,11 +822,11 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
                 </div>
                 <div className="rounded-2xl bg-white/80 px-3 py-3 text-sm dark:bg-slate-900/70">
                   <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Actúa ahora</p>
-                  <p className="mt-1 font-semibold text-slate-900 dark:text-white">{bookingFlow.nextActorLabel ?? 'No hace falta'}</p>
+                  <p className="mt-1 font-semibold text-slate-900 dark:text-white">{getReservationNextActorDisplayLabel(bookingFlow)}</p>
                 </div>
                 <div className="rounded-2xl bg-white/80 px-3 py-3 text-sm dark:bg-slate-900/70">
                   <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Próximo paso</p>
-                  <p className="mt-1 font-semibold text-slate-900 dark:text-white">{bookingFlow.nextStepLabel ?? 'Solo dejar contexto por chat'}</p>
+                  <p className="mt-1 font-semibold text-slate-900 dark:text-white">{getReservationNextStepDisplayLabel(bookingFlow)}</p>
                 </div>
               </div>
             </div>
@@ -828,13 +872,13 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
               >
                 <>
                   <Icons.AlertTriangle className="h-4 w-4" />
-                  Marcar no show
+                  {bookingFlow.primaryActionLabel}
                 </>
               </Button>
             ) : null}
             {booking.requestMode === 'protected' && bookingFlow.stage === 'protected-deposit-held' && !arrivalActionsAvailable ? (
               <div className="rounded-full bg-slate-100 px-4 py-2 text-xs font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-300">
-                Marcar no show se habilita el día del ingreso.
+                {bookingFlow.pendingActionHint}
               </div>
             ) : null}
             {canCancelAsHost ? (

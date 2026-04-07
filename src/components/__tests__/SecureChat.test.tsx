@@ -129,7 +129,7 @@ describe('SecureChat', () => {
     expect(screen.getByText('Cuando ambos confirman, la reserva queda registrada.')).toBeInTheDocument();
     expect(screen.getByText('Revisá que el titular coincida con quien publica antes de transferir.')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /Confirmar seña/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Informar seña/i }));
 
     await waitFor(() => {
       expect(reportDirectDepositMock).toHaveBeenCalledWith('conv-1');
@@ -310,7 +310,7 @@ describe('SecureChat', () => {
     expect(screen.getByText('La seña ya fue recibida')).toBeInTheDocument();
     expect(screen.getByText('El huésped confirmó la seña a través de la plataforma. El monto queda en custodia y se libera cuando el huésped confirma su llegada al lugar.')).toBeInTheDocument();
     expect(screen.getByText('Vas a poder ver el estado y el momento de liberación desde esta reserva.')).toBeInTheDocument();
-    expect(screen.getByText('Ambos')).toBeInTheDocument();
+    expect(screen.getByText('Sin acción pendiente')).toBeInTheDocument();
     expect(screen.getAllByText('Coordinar llegada').length).toBeGreaterThan(0);
   });
 
@@ -432,7 +432,7 @@ describe('SecureChat', () => {
     renderChat();
 
     expect(await screen.findAllByText('Seña en custodia')).not.toHaveLength(0);
-    expect(screen.getByText('Confirmar llegada y reportar un problema se habilitan el día del ingreso.')).toBeInTheDocument();
+    expect(screen.getByText('Confirmar llegada o reportar un problema se habilitan el día del ingreso.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Confirmar llegada/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Reportar problema/i })).not.toBeInTheDocument();
   });
@@ -458,7 +458,7 @@ describe('SecureChat', () => {
           conversation_id: 'conv-1',
           sender_id: 'host-1',
           receiver_id: 'tenant-1',
-          content: 'El anfitrión aceptó tu propuesta. Ya pueden coordinar los detalles.',
+          content: 'El anfitrión aceptó tu propuesta. Si ya enviaste la seña, informala por acá.',
           is_system: true,
           created_at: '2026-04-06T12:10:00.000Z',
         },
@@ -486,7 +486,7 @@ describe('SecureChat', () => {
     expect(screen.getByText('Huésped')).toBeInTheDocument();
     expect(showToastMock).toHaveBeenCalledWith(
       'Propuesta aceptada',
-      'La propuesta ya quedó aceptada y el chat pasó al cierre de detalles.',
+      'La propuesta ya quedó aceptada. El siguiente paso es que el huésped informe la seña por chat.',
       'success',
     );
   });
@@ -530,7 +530,7 @@ describe('SecureChat', () => {
     expect(await screen.findAllByText('Reserva confirmada')).not.toHaveLength(0);
     expect(showToastMock).toHaveBeenCalledWith(
       'Reserva confirmada',
-      'La reserva ya quedó registrada y el chat sigue disponible para cerrar detalles.',
+      'La seña ya quedó confirmada y la reserva sigue por chat con los últimos detalles.',
       'success',
     );
   });

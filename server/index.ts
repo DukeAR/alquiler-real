@@ -218,8 +218,8 @@ const mapActivityLogToNotification = (row: any) => {
         id: row.id,
         title: metadata.requestMode === 'protected' ? 'Solicitud aceptada' : 'Propuesta aceptada',
         message: metadata.requestMode === 'protected'
-          ? 'Ya podés avanzar con una reserva protegida y coordinar lo que falta por chat.'
-          : 'Tu propuesta fue aceptada. Ya podés coordinar los últimos detalles con el anfitrión.',
+          ? 'Ya podés pagar la seña desde la app y seguir por chat con el anfitrión.'
+          : 'Tu propuesta fue aceptada. Si ya enviaste la seña, informala por chat para cerrar la reserva.',
         type: 'success',
         createdAt,
         unread,

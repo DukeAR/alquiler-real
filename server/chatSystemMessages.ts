@@ -38,16 +38,16 @@ export type ChatSystemMessageContext = {
 
 export const CHAT_SYSTEM_MESSAGE_COPY: Record<ChatSystemMessageKey, string> = {
   'conversation-start': 'Podés hacer todas las preguntas necesarias antes de avanzar.',
-  'request-sent': 'La propuesta inicial ya quedó enviada en el chat.',
+  'request-sent': 'La solicitud o la propuesta ya quedó enviada en el chat.',
   'request-accepted': 'La otra parte aceptó avanzar.',
   'before-payment': 'Antes de avanzar, revisá la información del aviso y con quién estás hablando.',
   'protected-payment': 'En la reserva protegida, la seña se mantiene en custodia hasta tu llegada.',
-  'direct-after-payment': 'Cuando ambas partes confirmen, la reserva queda registrada.',
-  'protected-after-payment': 'La seña está en custodia. Se libera cuando confirmás tu llegada.',
+  'direct-after-payment': 'La seña ya quedó informada y el siguiente paso depende de la otra parte.',
+  'protected-after-payment': 'La reserva protegida sigue avanzando y la seña cambia de estado según la llegada.',
   'before-arrival': 'Coordiná horario y detalles con el anfitrión antes de llegar.',
   'protected-arrival': 'Cuando estés en el lugar, podés confirmar tu llegada para continuar.',
-  problem: 'Si algo no coincide con lo acordado, podés reportarlo desde acá.',
-  'review-prompt': 'Podés dejar una opinión para ayudar a otros usuarios.',
+  problem: 'Si algo no coincide con lo acordado, reportalo desde acá para dejarlo asentado.',
+  'review-prompt': 'La estadía ya terminó. Si querés, dejá una opinión para ayudar a otros usuarios.',
 };
 
 const PROTECTED_AFTER_PAYMENT_STATUSES = new Set<ReservationDepositStatus>([
@@ -108,9 +108,34 @@ export const getRequestSentMessage = (mode: ReservationRequestMode) => (
 
 export const getRequestAcceptedMessage = (mode: ReservationRequestMode) => (
   mode === 'protected'
-    ? 'El anfitrión aceptó tu solicitud. Ya podés avanzar con la reserva protegida.'
-    : 'El anfitrión aceptó tu propuesta. Ya pueden coordinar los detalles.'
+    ? 'El anfitrión aceptó tu solicitud. El siguiente paso es pagar la seña desde la app.'
+    : 'El anfitrión aceptó tu propuesta. Si ya enviaste la seña, informala por acá.'
 );
+
+const getDirectAfterPaymentMessage = (depositStatus: ReservationDepositStatus | null) => {
+  if (depositStatus === 'reported') {
+    return 'La seña ya quedó informada. Falta que el anfitrión confirme la recepción para registrar la reserva.';
+  }
+
+  return 'La seña ya quedó confirmada. La reserva está registrada y pueden seguir por chat con los detalles finales.';
+};
+
+const getProtectedAfterPaymentMessage = (depositStatus: ReservationDepositStatus | null) => {
+  switch (depositStatus) {
+    case 'held':
+      return 'La seña ya quedó en custodia. Se libera cuando confirmás tu llegada.';
+    case 'review':
+      return 'La llegada quedó en revisión y la seña sigue en pausa mientras la plataforma analiza qué pasó.';
+    case 'pending_confirmation':
+      return 'La llegada quedó en revisión y la seña sigue en pausa mientras se revisa el no show informado.';
+    case 'released':
+      return 'La llegada ya quedó confirmada y la seña salió de custodia.';
+    case 'refunded':
+      return 'La reserva se cerró y la seña ya fue devuelta.';
+    default:
+      return CHAT_SYSTEM_MESSAGE_COPY['protected-after-payment'];
+  }
+};
 
 export const getChatSystemMessages = (context: ChatSystemMessageContext): ChatSystemMessage[] => {
   const messages: ChatSystemMessage[] = [
@@ -129,12 +154,14 @@ export const getChatSystemMessages = (context: ChatSystemMessageContext): ChatSy
   const hasRequest = Boolean(mode && requestStartDate && requestEndDate);
   const directAfterPayment = mode === 'direct' && depositStatus !== null && DIRECT_AFTER_PAYMENT_STATUSES.has(depositStatus);
   const protectedAfterPayment = mode === 'protected' && depositStatus !== null && PROTECTED_AFTER_PAYMENT_STATUSES.has(depositStatus);
+  const hasDirectArrivalCoordinationStage = mode === 'direct' && depositStatus === 'confirmed' && context.bookingStatus === 'confirmed';
+  const hasProtectedArrivalCoordinationStage = mode === 'protected' && depositStatus === 'held' && context.bookingStatus === 'confirmed';
   const isBeforePaymentStage = requestStatus === 'accepted'
     && context.bookingStatus !== 'cancelled'
     && context.bookingStatus !== 'completed'
     && !directAfterPayment
     && !protectedAfterPayment;
-  const hasArrivalCoordinationStage = context.bookingStatus === 'confirmed' && (directAfterPayment || protectedAfterPayment);
+  const hasArrivalCoordinationStage = hasDirectArrivalCoordinationStage || hasProtectedArrivalCoordinationStage;
   const hasProtectedArrivalConfirmationStage = mode === 'protected'
     && depositStatus === 'held'
     && hasArrivalCoordinationStage
@@ -171,14 +198,14 @@ export const getChatSystemMessages = (context: ChatSystemMessageContext): ChatSy
   if (directAfterPayment) {
     messages.push({
       key: 'direct-after-payment',
-      content: CHAT_SYSTEM_MESSAGE_COPY['direct-after-payment'],
+      content: getDirectAfterPaymentMessage(depositStatus),
     });
   }
 
   if (protectedAfterPayment) {
     messages.push({
       key: 'protected-after-payment',
-      content: CHAT_SYSTEM_MESSAGE_COPY['protected-after-payment'],
+      content: getProtectedAfterPaymentMessage(depositStatus),
     });
   }
 

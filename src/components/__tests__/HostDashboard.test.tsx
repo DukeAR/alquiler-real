@@ -549,7 +549,7 @@ describe('HostDashboard', () => {
 
     render(<HostDashboard onBack={vi.fn()} />);
 
-    fireEvent.click(await screen.findByRole('button', { name: /Marcar no show/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Informar no show/i }));
 
     await waitFor(() => {
       expect(apiJsonMock).toHaveBeenCalledWith(
@@ -558,12 +558,12 @@ describe('HostDashboard', () => {
       );
     });
 
-    expect(await screen.findAllByText('Pendiente de confirmación')).not.toHaveLength(0);
-    expect(screen.getByText('La seña no se libera automáticamente mientras se confirma el no show.')).toBeInTheDocument();
-    expect(screen.getByText('La plataforma deja la seña en pausa hasta revisar lo que pasó.')).toBeInTheDocument();
+    expect(await screen.findAllByText('Llegada en revisión')).not.toHaveLength(0);
+    expect(screen.getByText('La seña quedó en pausa mientras se revisa el no show informado.')).toBeInTheDocument();
+    expect(screen.getByText('La plataforma revisa qué pasó antes de decidir cómo sigue la seña.')).toBeInTheDocument();
     expect(showToastMock).toHaveBeenCalledWith(
-      'Pendiente de confirmación',
-      'El no show quedó informado y la seña sigue en pausa hasta que se revise.',
+      'Llegada en revisión',
+      'El no show quedó informado y la seña sigue en pausa mientras la plataforma revisa qué pasó.',
       'success',
     );
   });
@@ -614,8 +614,8 @@ describe('HostDashboard', () => {
     render(<HostDashboard onBack={vi.fn()} />);
 
     expect(await screen.findAllByText('Seña en custodia')).not.toHaveLength(0);
-    expect(screen.getByText('Marcar no show se habilita el día del ingreso.')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Marcar no show/i })).not.toBeInTheDocument();
+    expect(screen.getByText('Informar no show se habilita el día del ingreso.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Informar no show/i })).not.toBeInTheDocument();
   });
 
   test('shows the host-specific custody message when the protected deposit is already held', async () => {

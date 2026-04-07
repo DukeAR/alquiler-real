@@ -159,8 +159,8 @@ const advanceToConfirmationStep = async (mode: 'direct' | 'protected' = 'direct'
     fireEvent.click(screen.getByLabelText(/reserva protegida/i));
     expect(screen.getByLabelText(/reserva protegida/i)).toBeChecked();
   } else {
-    fireEvent.click(screen.getByLabelText(/acordar directamente/i));
-    expect(screen.getByLabelText(/acordar directamente/i)).toBeChecked();
+    fireEvent.click(screen.getByLabelText(/acuerdo directo/i));
+    expect(screen.getByLabelText(/acuerdo directo/i)).toBeChecked();
   }
 
   fireEvent.click(screen.getByRole('button', { name: /^siguiente$/i }));
@@ -273,7 +273,7 @@ describe('PropertyDetail', () => {
 
     expect(screen.getByText('Elegí las fechas')).toBeDefined();
     expect(screen.queryByText('Definí quiénes viajan')).toBeNull();
-    expect(screen.queryByText('Acordar directamente')).toBeNull();
+    expect(screen.queryByText('Acuerdo directo')).toBeNull();
 
     const checkInIso = isoPlusDays(2);
     const checkOutIso = isoPlusDays(5);
@@ -287,14 +287,14 @@ describe('PropertyDetail', () => {
 
     const nextButton = screen.getByRole('button', { name: /^siguiente$/i });
 
-    expect(screen.getByLabelText(/acordar directamente/i)).not.toBeChecked();
+    expect(screen.getByLabelText(/acuerdo directo/i)).not.toBeChecked();
     expect(screen.getByLabelText(/reserva protegida/i)).not.toBeChecked();
     expect(nextButton).toBeDisabled();
     expect(screen.getByText('Elegí una opción para habilitar el siguiente paso.')).toBeDefined();
 
-    fireEvent.click(screen.getByLabelText(/acordar directamente/i));
+    fireEvent.click(screen.getByLabelText(/acuerdo directo/i));
 
-    expect(screen.getByLabelText(/acordar directamente/i)).toBeChecked();
+    expect(screen.getByLabelText(/acuerdo directo/i)).toBeChecked();
     expect(nextButton).not.toBeDisabled();
     expect(screen.queryByText('Elegí una opción para habilitar el siguiente paso.')).toBeNull();
   });
@@ -380,7 +380,7 @@ describe('PropertyDetail', () => {
     fireEvent.click(within(mobileContext).getByRole('button', { name: /seguir al modo/i }));
     await waitFor(() => expect(screen.getByText('Elegí cómo querés avanzar')).toBeDefined());
 
-    fireEvent.click(screen.getByLabelText(/acordar directamente/i));
+    fireEvent.click(screen.getByLabelText(/acuerdo directo/i));
     expect(within(mobileContext).getByRole('button', { name: /seguir al resumen/i })).toBeDefined();
   });
 
@@ -710,7 +710,7 @@ describe('PropertyDetail', () => {
 
     expect(reserveButton).toBeDisabled();
     expect(screen.getByText('Elegí las fechas')).toBeInTheDocument();
-    expect(screen.queryByText('Acordar directamente')).toBeNull();
+    expect(screen.queryByText('Acuerdo directo')).toBeNull();
   });
 
   test('asks for login when trying to confirm a reservation without a session', async () => {

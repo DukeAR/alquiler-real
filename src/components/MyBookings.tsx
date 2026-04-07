@@ -11,7 +11,7 @@ import {
   parseBookingDateOnly,
 } from '../lib/bookingDates';
 import { getPropertyVerificationBadge, sortPropertiesByCatalogOrder } from '../lib/propertyVerification';
-import { getReservationFlowCopy } from '../lib/reservationFlow';
+import { getReservationFlowCopy, getReservationNextActorDisplayLabel, getReservationNextStepDisplayLabel } from '../lib/reservationFlow';
 import { showToast } from '../lib/toast';
 import { cn } from '../lib/utils';
 import { useAuth } from '../hooks/useAuth';
@@ -713,7 +713,7 @@ export const MyBookings = () => {
     description: highlightedStay.conversationId
       ? 'Tenés el chat listo para coordinar horario, llegada y cualquier detalle final con el anfitrión.'
       : 'Entrá a la reserva para revisar fechas, estado y próximos pasos antes del ingreso.',
-    actionLabel: highlightedStay.conversationId ? 'Retomar chat' : 'Ver reserva',
+    actionLabel: highlightedStay.conversationId ? 'Abrir chat' : 'Ver reserva',
     icon: <Icons.Calendar className="h-5 w-5" />,
     onAction: () => (
       highlightedStay.conversationId
@@ -737,7 +737,7 @@ export const MyBookings = () => {
     eyebrow: 'Conversación activa',
     title: `Retomá el chat de ${relevantConversations[0].propertyTitle || 'esta propiedad'}`,
     description: 'Quedó actividad reciente y te conviene seguir desde la conversación para no perder el contexto de la reserva.',
-    actionLabel: 'Retomar conversación',
+    actionLabel: 'Abrir chat',
     icon: <Icons.MessageSquare className="h-5 w-5" />,
     onAction: () => navigate(`/chat/${relevantConversations[0].id}`),
   } : null);
@@ -822,7 +822,7 @@ export const MyBookings = () => {
             <div className="min-w-[12rem] rounded-[24px] border border-slate-200/80 bg-slate-50/80 px-4 py-4 text-left dark:border-slate-700 dark:bg-slate-800/60 lg:text-right">
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Costo total</p>
               <p className="mt-2 text-2xl font-semibold tracking-tight text-brand">{formatCurrency(booking.totalPrice)}</p>
-              <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">Próximo paso: {bookingFlow.nextStepLabel || 'Coordinar por chat'}</p>
+              <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">Próximo paso: {getReservationNextStepDisplayLabel(bookingFlow)}</p>
             </div>
           </div>
 
@@ -833,11 +833,11 @@ export const MyBookings = () => {
             </div>
             <div className="rounded-[24px] border border-slate-200/80 bg-white/90 px-4 py-4 dark:border-slate-800 dark:bg-slate-950/30">
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Actúa ahora</p>
-              <p className="mt-2 text-sm font-semibold text-slate-950 dark:text-slate-50">{bookingFlow.nextActorLabel || 'No hace falta'}</p>
+              <p className="mt-2 text-sm font-semibold text-slate-950 dark:text-slate-50">{getReservationNextActorDisplayLabel(bookingFlow)}</p>
             </div>
             <div className="rounded-[24px] border border-slate-200/80 bg-white/90 px-4 py-4 dark:border-slate-800 dark:bg-slate-950/30">
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Próximo paso</p>
-              <p className="mt-2 text-sm font-semibold text-slate-950 dark:text-slate-50">{bookingFlow.nextStepLabel || 'Solo coordinar por chat'}</p>
+              <p className="mt-2 text-sm font-semibold text-slate-950 dark:text-slate-50">{getReservationNextStepDisplayLabel(bookingFlow)}</p>
             </div>
           </div>
 
@@ -927,7 +927,7 @@ export const MyBookings = () => {
                     >
                       <>
                         <Icons.ShieldCheck className="h-4 w-4" />
-                        Pagar seña
+                        {bookingFlow.primaryActionLabel}
                       </>
                     </Button>
                   ) : null}
@@ -943,7 +943,7 @@ export const MyBookings = () => {
                     >
                       <>
                         <Icons.CheckCircle2 className="h-4 w-4" />
-                        Confirmar llegada
+                        {bookingFlow.primaryActionLabel}
                       </>
                     </Button>
                   ) : null}
@@ -960,7 +960,7 @@ export const MyBookings = () => {
                     >
                       <>
                         <Icons.AlertTriangle className="h-4 w-4" />
-                        Reportar problema
+                        {bookingFlow.secondaryActionLabel}
                       </>
                     </Button>
                   ) : null}
@@ -969,7 +969,7 @@ export const MyBookings = () => {
 
               {bookingFlow.stage === 'protected-deposit-held' && !arrivalActionsAvailable ? (
                 <div className="mt-4 rounded-[20px] border border-white/80 bg-white/80 px-4 py-3 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-300">
-                  Confirmar llegada y reportar un problema se habilitan el día del ingreso.
+                  {bookingFlow.pendingActionHint}
                 </div>
               ) : null}
             </div>
@@ -1096,7 +1096,7 @@ export const MyBookings = () => {
                           <Button type="button" variant="secondary" onClick={() => navigate(`/chat/${highlightedStay.conversationId}`)}>
                             <>
                               <Icons.MessageSquare className="h-4 w-4" />
-                              Retomar chat
+                              Abrir chat
                             </>
                           </Button>
                         ) : null}
@@ -1364,7 +1364,7 @@ export const MyBookings = () => {
                   <Button type="button" variant="secondary" size="sm" onClick={() => navigate(`/chat/${conversation.id}`)} className="rounded-full">
                     <>
                       <Icons.ArrowRight className="h-4 w-4" />
-                      Retomar chat
+                      Abrir chat
                     </>
                   </Button>
                 </div>

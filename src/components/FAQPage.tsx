@@ -155,9 +155,9 @@ const faqGroups: FAQGroup[] = [
       },
       {
         question: '¿Qué pasa si hay no show o un problema reportado al llegar?',
-        answer: 'En reserva protegida, la seña no se libera automáticamente. Puede quedar pendiente de confirmación o en revisión hasta cerrar qué corresponde.',
+        answer: 'En reserva protegida, la seña no se libera automáticamente. La llegada puede quedar en revisión o la seña puede pasar a revisión hasta cerrar qué corresponde.',
         bullets: [
-          'Si el huésped no llega, la seña puede quedar pendiente de confirmación.',
+          'Si el huésped no llega, la llegada queda en revisión mientras la plataforma confirma qué pasó.',
           'Si la propiedad no coincide de forma sustancial o surge un problema al llegar, la seña puede quedar en revisión.',
         ],
         icon: Icons.AlertTriangle,
@@ -179,7 +179,7 @@ const roleGuides: RoleGuide[] = [
     points: [
       'En reserva protegida, la seña recién entra después de tu aceptación.',
       'Si cancelás una reserva protegida, la seña se devuelve.',
-      'Si informás un no show, la seña no se libera sola: queda pendiente de confirmación.',
+      'Si informás un no show, la llegada queda en revisión y la seña sigue en pausa hasta que se revise.',
     ],
     icon: Icons.Home,
     tone: 'dark',

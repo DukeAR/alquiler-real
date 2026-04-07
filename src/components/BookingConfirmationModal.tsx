@@ -218,9 +218,9 @@ const BookingConfirmationModal: React.FC<Props> = ({
                 <div className="space-y-2">
                   <Badge variant="neutral" size="md" className="gap-2">
                     <Icons.MessageSquare className="h-3.5 w-3.5" />
-                    <span>Acordar directamente</span>
+                    <span>Acuerdo directo</span>
                   </Badge>
-                  <p className="text-base font-semibold text-slate-950">Abrís un chat para acordar</p>
+                  <p className="text-base font-semibold text-slate-950">Mandás una propuesta por chat</p>
                   <p className="text-sm leading-6 text-slate-600">
                     Sirve si querés conversar primero. Las fechas no se bloquean y la plataforma no interviene en la seña.
                   </p>
@@ -235,7 +235,7 @@ const BookingConfirmationModal: React.FC<Props> = ({
                   loadingLabel="Abriendo chat..."
                   disabled={isBusy && actionLoadingMode !== 'direct'}
                 >
-                  Abrir chat para acordar
+                  Enviar propuesta por chat
                 </Button>
               </div>
             </Card>

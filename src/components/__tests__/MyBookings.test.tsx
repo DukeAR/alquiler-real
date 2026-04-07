@@ -354,7 +354,9 @@ describe('MyBookings', () => {
       </MemoryRouter>,
     );
 
-    fireEvent.click(await screen.findByRole('button', { name: /Abrir chat/i }));
+    const [openChatButton] = await screen.findAllByRole('button', { name: /Abrir chat/i });
+
+    fireEvent.click(openChatButton);
 
     expect(await screen.findByText('Chat abierto')).toBeInTheDocument();
   });
@@ -497,7 +499,7 @@ describe('MyBookings', () => {
     );
 
     expect(await screen.findAllByText('Seña en custodia')).not.toHaveLength(0);
-    expect(screen.getByText('Confirmar llegada y reportar un problema se habilitan el día del ingreso.')).toBeInTheDocument();
+    expect(screen.getByText('Confirmar llegada o reportar un problema se habilitan el día del ingreso.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Confirmar llegada/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Reportar problema/i })).not.toBeInTheDocument();
   });
@@ -579,7 +581,7 @@ describe('MyBookings', () => {
     expect(await screen.findAllByText('Canceló el anfitrión')).not.toHaveLength(0);
     expect(screen.getByText('La reserva ya no sigue activa.')).toBeInTheDocument();
     expect(screen.getByText('Si la seña ya estaba en custodia, se devuelve.')).toBeInTheDocument();
-    expect(screen.getByText('Devolver seña')).toBeInTheDocument();
+    expect(screen.getByText('Esperar devolución')).toBeInTheDocument();
   });
 
   test('cancels a future reservation and updates the status in place', async () => {

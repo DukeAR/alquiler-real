@@ -11,7 +11,7 @@ import { ReportModal } from './ReportModal';
 import { useAuth } from '../hooks/useAuth';
 import { type ReservationRequestContext } from '../types';
 import { formatBookingDateShort, getBookingDateOnlyValue, isBookingCheckInReached } from '../lib/bookingDates';
-import { getReservationFlowCopy, getReservationFlowMilestones, type ReservationFlowMilestone, type ReservationFlowMilestoneKey, type ReservationFlowMilestoneState } from '../lib/reservationFlow';
+import { getReservationFlowCopy, getReservationFlowMilestones, getReservationNextActorDisplayLabel, getReservationNextStepDisplayLabel, type ReservationFlowMilestone, type ReservationFlowMilestoneKey, type ReservationFlowMilestoneState } from '../lib/reservationFlow';
 
 const formatRequestDate = (value?: string) => {
   if (!value) {
@@ -217,11 +217,11 @@ const getSuggestionTexts = (requestContext: ReservationRequestContext | null, is
   if (flow.stage === 'request-accepted' && requestContext.mode === 'direct') {
     return isTenant
       ? [
-          'Te aviso por acá cuando la seña quede enviada.',
+          'Cuando la envíe, informo la seña por acá.',
           '¿Hay algo más que convenga dejar cerrado ahora?',
         ]
       : [
-          'Quedo atento a la seña.',
+          'Quedo atento a que el huésped informe la seña.',
           'Si querés, dejamos acordados los detalles finales por acá.',
         ];
   }
@@ -241,7 +241,7 @@ const getSuggestionTexts = (requestContext: ReservationRequestContext | null, is
   if (flow.stage === 'request-accepted' && requestContext.mode === 'protected') {
     return isTenant
       ? [
-          'Voy con el pago de la seña desde la app.',
+          'Voy a pagar la seña desde la app.',
           'Mientras tanto, dejamos definidos los detalles de llegada.',
         ]
       : [
@@ -464,8 +464,8 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
       showToast(
         acceptedMode === 'protected' ? 'Solicitud aceptada' : 'Propuesta aceptada',
         acceptedMode === 'protected'
-          ? 'La solicitud ya quedó aceptada y el chat pasó al cierre de detalles.'
-          : 'La propuesta ya quedó aceptada y el chat pasó al cierre de detalles.',
+          ? 'La solicitud ya quedó aceptada. El siguiente paso es que el huésped pague la seña desde la app.'
+          : 'La propuesta ya quedó aceptada. El siguiente paso es que el huésped informe la seña por chat.',
         'success',
       );
     } catch (err) {
@@ -535,7 +535,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
       const updatedConversation = await confirmDirectDeposit(activeConv.id);
       applyConversationUpdate(updatedConversation);
       await loadMessages(activeConv.id);
-      showToast('Reserva confirmada', 'La reserva ya quedó registrada y el chat sigue disponible para cerrar detalles.', 'success');
+      showToast('Reserva confirmada', 'La seña ya quedó confirmada y la reserva sigue por chat con los últimos detalles.', 'success');
     } catch (err) {
       showToast('Reserva', err instanceof Error ? err.message : 'No pudimos confirmar la recepción de la seña.', 'error');
     } finally {
@@ -711,7 +711,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
       || flowCopy?.stage === 'reservation-confirmed'),
   );
   const arrivalActionsHint = flowCopy?.stage === 'protected-deposit-held' && !arrivalActionsAvailable
-    ? 'Confirmar llegada y reportar un problema se habilitan el día del ingreso.'
+    ? flowCopy.pendingActionHint
     : null;
   const arrivalCoordinationDraft = isTenantConversation
     ? '¿Qué horario de llegada te queda mejor?'
@@ -889,7 +889,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                               className="inline-flex items-center justify-center gap-2 rounded-2xl bg-brand px-4 py-3 text-sm font-semibold text-white shadow-[0_18px_38px_-28px_rgba(67,56,202,0.5)] transition-transform hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-70"
                             >
                               {processingFlowAction === 'report-direct-deposit' ? <Icons.Loader2 className="h-4 w-4 animate-spin" /> : <Icons.MessageSquare className="h-4 w-4" />}
-                              <span>{processingFlowAction === 'report-direct-deposit' ? 'Confirmando...' : 'Confirmar seña'}</span>
+                              <span>{processingFlowAction === 'report-direct-deposit' ? 'Informando...' : flowCopy?.primaryActionLabel}</span>
                             </button>
                           ) : null}
                           {canConfirmDirectDeposit ? (
@@ -900,7 +900,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                               className="inline-flex items-center justify-center gap-2 rounded-2xl bg-brand px-4 py-3 text-sm font-semibold text-white shadow-[0_18px_38px_-28px_rgba(67,56,202,0.5)] transition-transform hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-70"
                             >
                               {processingFlowAction === 'confirm-direct-deposit' ? <Icons.Loader2 className="h-4 w-4 animate-spin" /> : <Icons.CheckCircle2 className="h-4 w-4" />}
-                              <span>{processingFlowAction === 'confirm-direct-deposit' ? 'Confirmando...' : 'Confirmar recepción'}</span>
+                              <span>{processingFlowAction === 'confirm-direct-deposit' ? 'Confirmando...' : flowCopy?.primaryActionLabel}</span>
                             </button>
                           ) : null}
                           {canPayProtectedDeposit ? (
@@ -911,7 +911,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                               className="inline-flex items-center justify-center gap-2 rounded-2xl bg-brand px-4 py-3 text-sm font-semibold text-white shadow-[0_18px_38px_-28px_rgba(67,56,202,0.5)] transition-transform hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-70"
                             >
                               {processingFlowAction === 'pay-protected-deposit' ? <Icons.Loader2 className="h-4 w-4 animate-spin" /> : <Icons.ShieldCheck className="h-4 w-4" />}
-                              <span>{processingFlowAction === 'pay-protected-deposit' ? 'Registrando...' : 'Pagar seña'}</span>
+                              <span>{processingFlowAction === 'pay-protected-deposit' ? 'Registrando...' : flowCopy?.primaryActionLabel}</span>
                             </button>
                           ) : null}
                           {canConfirmArrival ? (
@@ -922,7 +922,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                               className="inline-flex items-center justify-center gap-2 rounded-2xl bg-brand px-4 py-3 text-sm font-semibold text-white shadow-[0_18px_38px_-28px_rgba(67,56,202,0.5)] transition-transform hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-70"
                             >
                               {processingFlowAction === 'confirm-arrival' ? <Icons.Loader2 className="h-4 w-4 animate-spin" /> : <Icons.CheckCircle2 className="h-4 w-4" />}
-                              <span>{processingFlowAction === 'confirm-arrival' ? 'Confirmando...' : 'Confirmar llegada'}</span>
+                              <span>{processingFlowAction === 'confirm-arrival' ? 'Confirmando...' : flowCopy?.primaryActionLabel}</span>
                             </button>
                           ) : null}
                           {canReportArrivalProblem ? (
@@ -933,7 +933,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                               className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition-transform hover:-translate-y-px hover:border-brand/30 hover:text-brand dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 disabled:cursor-not-allowed disabled:opacity-70"
                             >
                               {processingFlowAction === 'report-arrival-problem' ? <Icons.Loader2 className="h-4 w-4 animate-spin" /> : <Icons.AlertTriangle className="h-4 w-4" />}
-                              <span>{processingFlowAction === 'report-arrival-problem' ? 'Informando...' : 'Reportar problema'}</span>
+                              <span>{processingFlowAction === 'report-arrival-problem' ? 'Informando...' : flowCopy?.secondaryActionLabel}</span>
                             </button>
                           ) : null}
                           {canCoordinateArrival ? (
@@ -980,11 +980,11 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                         </div>
                         <div className="rounded-2xl bg-slate-50 px-3 py-3 text-sm dark:bg-slate-900">
                           <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Actúa ahora</p>
-                          <p className="mt-1 font-semibold text-slate-900 dark:text-white">{isExpiredPendingRequest ? 'Huésped' : flowCopy?.nextActorLabel ?? 'Nadie'}</p>
+                          <p className="mt-1 font-semibold text-slate-900 dark:text-white">{isExpiredPendingRequest ? 'Huésped' : (flowCopy ? getReservationNextActorDisplayLabel(flowCopy) : 'Sin acción pendiente')}</p>
                         </div>
                         <div className="rounded-2xl bg-slate-50 px-3 py-3 text-sm dark:bg-slate-900">
                           <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Próximo paso</p>
-                          <p className="mt-1 font-semibold text-slate-900 dark:text-white">{isExpiredPendingRequest ? (isTenantConversation ? 'Enviar nueva solicitud' : 'Esperar nueva solicitud') : flowCopy?.nextStepLabel ?? 'Solo coordinar por chat'}</p>
+                          <p className="mt-1 font-semibold text-slate-900 dark:text-white">{isExpiredPendingRequest ? (isTenantConversation ? 'Enviar nueva solicitud' : 'Esperar nueva solicitud') : (flowCopy ? getReservationNextStepDisplayLabel(flowCopy) : 'Seguir por chat si hace falta')}</p>
                         </div>
                       </div>
 

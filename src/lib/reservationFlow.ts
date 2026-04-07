@@ -43,6 +43,9 @@ export type ReservationFlowCopy = {
   nextActor: ReservationFlowActor;
   nextActorLabel?: string;
   nextStepLabel?: string;
+  primaryActionLabel?: string;
+  secondaryActionLabel?: string;
+  pendingActionHint?: string;
   modelLabel?: string;
   directDepositHint?: string;
   trackingHint?: string;
@@ -72,7 +75,7 @@ const getDepositMilestoneLabel = (
     }
 
     if (stage === 'protected-no-show-pending') {
-      return 'Pendiente de confirmación';
+      return 'Llegada en revisión';
     }
 
     return 'Seña en custodia';
@@ -217,6 +220,9 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
         nextStepLabel: viewerRole === 'host'
           ? input.mode === 'protected' ? 'Aceptar solicitud' : 'Aceptar propuesta'
           : 'Esperar respuesta',
+        primaryActionLabel: viewerRole === 'host'
+          ? input.mode === 'protected' ? 'Aceptar solicitud' : 'Aceptar propuesta'
+          : undefined,
       };
     case 'request-accepted':
       return {
@@ -237,7 +243,10 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
         nextActorLabel: 'Huésped',
         nextStepLabel: input.mode === 'protected'
           ? viewerRole === 'host' ? 'Esperar pago de seña' : 'Pagar seña'
-          : viewerRole === 'host' ? 'Esperar confirmación de seña' : 'Confirmar seña',
+          : viewerRole === 'host' ? 'Esperar que el huésped informe la seña' : 'Informar seña',
+        primaryActionLabel: viewerRole === 'guest'
+          ? input.mode === 'protected' ? 'Pagar seña' : 'Informar seña'
+          : undefined,
         directDepositHint: input.mode === 'direct' ? 'Revisá que el titular coincida con quien publica antes de transferir.' : undefined,
       };
     case 'direct-deposit-reported':
@@ -250,6 +259,7 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
         nextActor: 'host',
         nextActorLabel: 'Anfitrión',
         nextStepLabel: 'Confirmar recepción',
+        primaryActionLabel: 'Confirmar recepción',
         directDepositHint: 'Revisá que el titular coincida con quien publica antes de transferir.',
       };
     case 'reservation-confirmed':
@@ -262,8 +272,8 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
           ? 'Próximo paso: coordiná horario de llegada con el huésped.'
           : 'Próximo paso: coordiná horario de llegada con el anfitrión.',
         nextActor: 'none',
-        nextActorLabel: 'Ambos',
-        nextStepLabel: 'Coordinar llegada',
+        nextActorLabel: 'Sin acción pendiente',
+        nextStepLabel: 'Seguir por chat si hace falta',
       };
     case 'protected-deposit-held':
       if (viewerRole === 'host') {
@@ -275,8 +285,10 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
           supportText: 'El huésped confirmó la seña a través de la plataforma. El monto queda en custodia y se libera cuando el huésped confirma su llegada al lugar.',
           trackingHint: 'Vas a poder ver el estado y el momento de liberación desde esta reserva.',
           nextActor: 'none',
-          nextActorLabel: 'Ambos',
+          nextActorLabel: 'Sin acción pendiente',
           nextStepLabel: 'Coordinar llegada',
+          primaryActionLabel: 'Informar no show',
+          pendingActionHint: 'Informar no show se habilita el día del ingreso.',
         };
       }
 
@@ -288,8 +300,11 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
         supportText: 'Próximo paso: coordiná horario de llegada con el anfitrión.',
         trackingHint: 'Si surge un problema al llegar, podés reportarlo desde la app.',
         nextActor: 'none',
-        nextActorLabel: 'Ambos',
+        nextActorLabel: 'Sin acción pendiente',
         nextStepLabel: 'Coordinar llegada',
+        primaryActionLabel: 'Confirmar llegada',
+        secondaryActionLabel: 'Reportar problema',
+        pendingActionHint: 'Confirmar llegada o reportar un problema se habilitan el día del ingreso.',
       };
     case 'protected-deposit-review':
       return {
@@ -300,18 +315,18 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
         supportText: 'La plataforma revisa lo que pasó antes de definir cómo sigue la seña.',
         nextActor: 'platform',
         nextActorLabel: 'Plataforma',
-        nextStepLabel: 'Revisar reporte',
+        nextStepLabel: 'Esperar revisión',
       };
     case 'protected-no-show-pending':
       return {
         stage,
         modelLabel,
-        statusLabel: 'Pendiente de confirmación',
-        description: 'La seña no se libera automáticamente mientras se confirma el no show.',
-        supportText: 'La plataforma deja la seña en pausa hasta revisar lo que pasó.',
+        statusLabel: 'Llegada en revisión',
+        description: 'La seña quedó en pausa mientras se revisa el no show informado.',
+        supportText: 'La plataforma revisa qué pasó antes de decidir cómo sigue la seña.',
         nextActor: 'platform',
         nextActorLabel: 'Plataforma',
-        nextStepLabel: 'Confirmar no show',
+        nextStepLabel: 'Esperar revisión',
       };
     case 'protected-deposit-released':
       return {
@@ -320,6 +335,8 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
         statusLabel: 'Seña liberada',
         description: 'La llegada ya quedó confirmada y la seña salió de custodia.',
         nextActor: 'none',
+        nextActorLabel: 'Sin acción pendiente',
+        nextStepLabel: 'Seguir por chat si hace falta',
       };
     case 'guest-cancelled':
       return {
@@ -337,10 +354,10 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
           : 'none',
         nextActorLabel: input.mode === 'protected' && (input.depositStatus === 'review' || input.depositStatus === 'held' || input.depositStatus === 'pending_confirmation')
           ? 'Plataforma'
-          : undefined,
+          : 'Sin acción pendiente',
         nextStepLabel: input.mode === 'protected' && (input.depositStatus === 'review' || input.depositStatus === 'held' || input.depositStatus === 'pending_confirmation')
-          ? 'Revisar seña'
-          : undefined,
+          ? 'Esperar revisión'
+          : 'Seguir por chat si hace falta',
       };
     case 'host-cancelled':
       return {
@@ -352,8 +369,8 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
           ? 'Si la seña ya estaba en custodia, se devuelve.'
           : 'La plataforma solo informa el estado. Si hubo una seña, la resolución queda entre ustedes.',
         nextActor: input.mode === 'protected' ? 'platform' : 'none',
-        nextActorLabel: input.mode === 'protected' ? 'Plataforma' : undefined,
-        nextStepLabel: input.mode === 'protected' ? 'Devolver seña' : undefined,
+        nextActorLabel: input.mode === 'protected' ? 'Plataforma' : 'Sin acción pendiente',
+        nextStepLabel: input.mode === 'protected' ? 'Esperar devolución' : 'Seguir por chat si hace falta',
       };
     default:
       return {
@@ -364,3 +381,11 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
       };
   }
 };
+
+export const getReservationNextActorDisplayLabel = (flow: ReservationFlowCopy) => (
+  flow.nextActorLabel ?? 'Sin acción pendiente'
+);
+
+export const getReservationNextStepDisplayLabel = (flow: ReservationFlowCopy) => (
+  flow.nextStepLabel ?? 'Seguir por chat si hace falta'
+);

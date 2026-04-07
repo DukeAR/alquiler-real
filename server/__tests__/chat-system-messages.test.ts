@@ -71,7 +71,7 @@ describe('chatSystemMessages', () => {
       'direct-after-payment',
       'before-arrival',
     ]);
-    expect(messages[2]?.content).toBe('El anfitrión aceptó tu propuesta. Ya pueden coordinar los detalles.');
+    expect(messages[2]?.content).toBe('El anfitrión aceptó tu propuesta. Si ya enviaste la seña, informala por acá.');
   });
 
   test('adds protected arrival and problem guidance when check-in day arrives', () => {

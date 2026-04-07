@@ -19,7 +19,7 @@ describe('reservationFlow milestones', () => {
     ]);
   });
 
-  test('shows pending confirmation as the current protected deposit milestone for no-show reviews', () => {
+  test('shows arrival review as the current protected deposit milestone for no-show reviews', () => {
     const milestones = getReservationFlowMilestones({
       mode: 'protected',
       requestStatus: 'accepted',
@@ -31,7 +31,7 @@ describe('reservationFlow milestones', () => {
     expect(milestones).toEqual([
       { key: 'request', label: 'Solicitud recibida', state: 'completed' },
       { key: 'accepted', label: 'Aceptada', state: 'completed' },
-      { key: 'deposit', label: 'Pendiente de confirmación', state: 'current' },
+      { key: 'deposit', label: 'Llegada en revisión', state: 'current' },
       { key: 'confirmed', label: 'Confirmada', state: 'upcoming' },
     ]);
   });

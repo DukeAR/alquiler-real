@@ -273,10 +273,10 @@ const RESERVATION_MODE_CONTENT: Record<ReservationRequestMode, {
 }> = {
   direct: {
     title: 'Acuerdo directo',
-    description: 'Abrís el chat con la propuesta ya cargada.',
+    description: 'Mandás una propuesta por chat con fechas, huéspedes y total ya cargados.',
     helper: 'La seña se coordina por fuera de la app.',
     confirmationHeading: 'La propuesta se manda por chat',
-    confirmationDescription: 'Al enviar, el anfitrión recibe fechas, huéspedes y total dentro de la conversación.',
+    confirmationDescription: 'Al enviarla, el anfitrión recibe fechas, huéspedes y total dentro de la conversación.',
   },
   protected: {
     title: 'Reserva protegida',
@@ -1112,7 +1112,7 @@ export const PropertyDetailShell: React.FC<{
     }
 
     if (!user) {
-      openLoginForRequest('Necesitás iniciar sesión', 'Iniciá sesión para abrir el chat o mandar una solicitud.');
+      openLoginForRequest('Necesitás iniciar sesión', 'Iniciá sesión para abrir el chat o mandar una propuesta.');
       return;
     }
 
@@ -1127,10 +1127,10 @@ export const PropertyDetailShell: React.FC<{
       resetBookingSubmitState();
       navigateToConversation(conversationId, { ...requestContext, requestCreatedAt });
       showToast(
-        'Chat abierto para acordar',
+        'Propuesta enviada',
         initialMessageSent
           ? 'Ya le mandaste tu propuesta al anfitrión. Los próximos pasos siguen por chat y la seña se coordina por fuera de la app.'
-          : 'Abrimos el chat, pero la propuesta automática no salió. Podés seguir desde ahí.',
+          : 'La propuesta quedó abierta en chat, pero el mensaje automático no salió. Podés seguir desde ahí.',
         initialMessageSent ? 'success' : 'warning',
       );
     } catch (error) {
@@ -1650,7 +1650,7 @@ export const PropertyDetailShell: React.FC<{
                         mode="direct"
                         selected={selectedRequestMode === 'direct'}
                         disabled={bookingSubmitMode !== null}
-                        title="Acordar directamente"
+                        title="Acuerdo directo"
                         description={RESERVATION_MODE_CONTENT.direct.description}
                         helper={RESERVATION_MODE_CONTENT.direct.helper}
                         onSelect={(mode) => {
