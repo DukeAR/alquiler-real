@@ -46,6 +46,8 @@ const sampleProperty = {
   location: 'Ciudad Test',
   amenities: ['Wifi rápido', 'Cocina equipada', 'Entrada autónoma'],
   maxGuests: 4,
+  bedrooms: 3,
+  bathrooms: 2,
   isVerifiedProperty: true,
   identityValidated: true,
   locationVerified: true,
@@ -344,6 +346,10 @@ describe('PropertyDetail', () => {
 
     await waitForPropertyHeading();
 
+    expect(screen.getByText('Precio por noche')).toBeDefined();
+    expect(screen.getByText('Hasta 4 huéspedes')).toBeDefined();
+    expect(screen.getByText('3 dormitorios')).toBeDefined();
+    expect(screen.getByText('2 baños')).toBeDefined();
     expect(screen.getByText('Lo importante de este aviso')).toBeDefined();
     expect(screen.getByText('Comodidades clave')).toBeDefined();
     expect(screen.getByText('Wifi rápido')).toBeDefined();
@@ -352,7 +358,9 @@ describe('PropertyDetail', () => {
     expect(screen.getByText('Este aviso ya tiene varias comprobaciones hechas.')).toBeDefined();
     expect(screen.getByText('3 de 5 comprobaciones')).toBeDefined();
     expect(screen.getByText('✔ ✔ ✔ ○ ○')).toBeDefined();
-    expect(screen.getByText('Ubicación: Ciudad Test.')).toBeDefined();
+    expect(screen.getByText('Puede alojar hasta 4 huéspedes.')).toBeDefined();
+    expect(screen.getByText('Tiene 3 dormitorios.')).toBeDefined();
+    expect(screen.getByText('Tiene 2 baños.')).toBeDefined();
     expect(screen.getAllByText('Identidad confirmada').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Ubicación verificada').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Material real del lugar').length).toBeGreaterThan(0);

@@ -66,7 +66,7 @@ type IconBadge = {
   icon: IconComponent;
 };
 
-type DetailStatProps = {
+type EssentialInfoItem = {
   icon: IconComponent;
   label: string;
   value: string;
@@ -144,9 +144,21 @@ const formatReviewCount = (count: number) => {
   return count === 1 ? '1 reseña' : `${count} reseñas`;
 };
 
-const formatGuestCapacity = (maxGuests?: number) => {
+const getPositiveNumber = (value: unknown) => {
+  const numericValue = Number(value);
+
+  if (!Number.isFinite(numericValue) || numericValue <= 0) {
+    return null;
+  }
+
+  return numericValue;
+};
+
+const formatCountLabel = (count: number, singular: string, plural: string) => `${count} ${count === 1 ? singular : plural}`;
+
+const formatGuestCapacity = (maxGuests?: number | null) => {
   if (!maxGuests) return null;
-  return `Hasta ${maxGuests} ${maxGuests === 1 ? 'huésped' : 'huéspedes'}`;
+  return `Hasta ${formatCountLabel(maxGuests, 'huésped', 'huéspedes')}`;
 };
 
 const formatReviewDate = (value?: string) => {
@@ -172,7 +184,7 @@ const formatGuestSelection = (adults: number, childrenCount: number) => {
   return `${adults} ${adults === 1 ? 'adulto' : 'adultos'} · ${childrenCount} ${childrenCount === 1 ? 'menor' : 'menores'}`;
 };
 
-const formatGuestCountLabel = (guestCount: number) => `${guestCount} ${guestCount === 1 ? 'huésped' : 'huéspedes'}`;
+const formatGuestCountLabel = (guestCount: number) => formatCountLabel(guestCount, 'huésped', 'huéspedes');
 
 const formatRequestDate = (value: string) => {
   const parsed = parseLocalIso(value);
@@ -297,9 +309,14 @@ const getPropertyTypeLabel = (property: PropertyDetailData) => {
   if (explicitType?.includes('apartment') || explicitType?.includes('depto') || explicitType?.includes('depart')) return 'Departamento';
   if (explicitType?.includes('cabin') || explicitType?.includes('caba')) return 'Cabaña';
 
-  const title = property.title.toLowerCase();
+  const title = property.title
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
 
   if (title.includes('casa')) return 'Casa';
+  if (title.includes('duplex') || title.includes('chalet') || /(^|\s)ph($|\s)/.test(title)) return 'Casa';
+  if (title.includes('monoambiente')) return 'Departamento';
   if (title.includes('depto') || title.includes('depart')) return 'Departamento';
   if (title.includes('caba')) return 'Cabaña';
 
@@ -342,19 +359,15 @@ const getReviewUsefulnessScore = (review: PropertyReviewItem) => {
     + (/\d/.test(comment) ? 10 : 0);
 };
 
-const DetailStat: React.FC<DetailStatProps> = ({ icon: Icon, label, value }) => {
+const EssentialInfoCard: React.FC<EssentialInfoItem> = ({ icon: Icon, label, value }) => {
   return (
-    <Card padding="sm" variant="muted" className="rounded-[28px] border-slate-200/80 bg-white/90">
-      <div className="flex items-start gap-3">
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-[0_16px_30px_-24px_rgba(15,23,42,0.7)]">
+    <div className="rounded-[26px] border border-slate-200/80 bg-slate-50/80 px-4 py-4 shadow-[0_18px_36px_-34px_rgba(15,23,42,0.16)]">
+      <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-slate-900 shadow-[0_18px_36px_-34px_rgba(15,23,42,0.22)]">
           <Icon className="h-5 w-5" />
-        </span>
-        <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">{label}</p>
-          <p className="mt-1 text-sm font-semibold leading-6 text-slate-900">{value}</p>
-        </div>
-      </div>
-    </Card>
+      </span>
+      <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">{label}</p>
+      <p className="mt-1 text-sm font-semibold leading-6 text-slate-900">{value}</p>
+    </div>
   );
 };
 
@@ -653,8 +666,11 @@ export const PropertyDetailShell: React.FC<{
 
   const reviewCount = Math.max(Number(property.reviewsCount) || 0, reviews.length);
   const ratingValue = Number(property.rating) || 0;
-  const guestCapacity = formatGuestCapacity(property.maxGuests);
-  const nightly = Number(property?.price) || 0;
+  const nightly = getPositiveNumber(property?.price) ?? 0;
+  const maxGuestsNumber = getPositiveNumber(property.maxGuests);
+  const bedroomsCount = getPositiveNumber(property.bedrooms);
+  const bathroomsCount = getPositiveNumber(property.bathrooms);
+  const guestCapacity = formatGuestCapacity(maxGuestsNumber);
   const hostName = getHostName(property);
   const hostTenureLabel = getHostTenureLabel(property);
   const propertyTypeLabel = getPropertyTypeLabel(property);
@@ -671,15 +687,13 @@ export const PropertyDetailShell: React.FC<{
     property.hasPresencialVerification ? { label: 'Verificación presencial', variant: 'success', icon: Icons.Home } : null,
   ].filter(Boolean).slice(0, 3) as IconBadge[];
 
-  const decisionSummaryStats = [
-    { label: 'Ubicación', value: property.location, icon: Icons.MapPin },
-    guestCapacity ? { label: 'Para', value: guestCapacity.replace('Hasta ', ''), icon: Icons.Users } : null,
-    nightly ? { label: 'Precio por noche', value: formatCurrency(nightly), icon: Icons.FileSpreadsheet } : null,
-    { label: 'Rating', value: ratingValue > 0 ? `${ratingValue.toFixed(1)} · ${formatReviewCount(reviewCount)}` : 'Sin reseñas todavía', icon: Icons.Star },
-  ].filter(Boolean) as DetailStatProps[];
-
   const hasAmenities = (property.amenities?.length ?? 0) > 0;
-  const maxGuestsNumber = typeof property.maxGuests === 'number' && property.maxGuests > 0 ? property.maxGuests : null;
+  const essentialInfoItems = [
+    guestCapacity ? { label: 'Capacidad', value: guestCapacity, icon: Icons.Users } : null,
+    bedroomsCount ? { label: 'Dormitorios', value: formatCountLabel(bedroomsCount, 'dormitorio', 'dormitorios'), icon: Icons.BedDouble } : null,
+    bathroomsCount ? { label: 'Baños', value: formatCountLabel(bathroomsCount, 'baño', 'baños'), icon: Icons.Bath } : null,
+    !bedroomsCount || !bathroomsCount ? { label: 'Tipo', value: propertyTypeLabel, icon: Icons.Home } : null,
+  ].filter(Boolean) as EssentialInfoItem[];
 
   const todayISO = formatLocalIso(new Date());
 
@@ -687,9 +701,10 @@ export const PropertyDetailShell: React.FC<{
   const nights = (checkIn && checkOut) ? Math.max(0, Math.round((parseLocalIso(checkOut).getTime() - parseLocalIso(checkIn).getTime()) / (1000*60*60*24))) : 0;
   const total = nights * nightly;
   const decisionHighlights = [
-    property.location ? `Ubicación: ${property.location}.` : null,
-    guestCapacity ? `${guestCapacity}.` : null,
-    decisionAmenityLabel ? `Comodidades clave: ${decisionAmenityLabel}.` : null,
+    guestCapacity ? `Puede alojar hasta ${formatCountLabel(maxGuestsNumber ?? 0, 'huésped', 'huéspedes')}.` : null,
+    bedroomsCount ? `Tiene ${formatCountLabel(bedroomsCount, 'dormitorio', 'dormitorios')}.` : null,
+    bathroomsCount ? `Tiene ${formatCountLabel(bathroomsCount, 'baño', 'baños')}.` : null,
+    decisionAmenityLabel ? `Comodidades destacadas: ${decisionAmenityLabel}.` : null,
     `Tipo de propiedad: ${propertyTypeLabel}.`,
   ].filter(Boolean) as string[];
   const visibleReviews = [...reviews]
@@ -1181,23 +1196,6 @@ export const PropertyDetailShell: React.FC<{
             </div>
           ) : null}
 
-          <div className="space-y-4">
-            <SectionTitle
-              as="h1"
-              visualLevel="h1"
-              eyebrow="Detalle de la propiedad"
-              heading={property.title}
-              description="Revisá ubicación, anfitrión y qué parte del aviso ya fue comprobada antes de mandar una solicitud."
-              className="max-w-3xl"
-            />
-
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              {decisionSummaryStats.map((stat) => (
-                <DetailStat key={`${stat.label}-${stat.value}`} {...stat} />
-              ))}
-            </div>
-          </div>
-
           <Card padding="none" variant="elevated" className="overflow-hidden rounded-[32px] border-slate-200/80 bg-white shadow-[0_34px_80px_-50px_rgba(15,23,42,0.35)]">
             <div className="grid gap-0 lg:grid-cols-[104px_minmax(0,1fr)]">
               <div className="hidden lg:flex flex-col gap-3 border-r border-slate-200/70 bg-slate-50/80 p-4">
@@ -1238,10 +1236,14 @@ export const PropertyDetailShell: React.FC<{
                       Ver todas las fotos
                     </Button>
                   </div>
-                  <div className="absolute inset-x-0 bottom-0 z-10 flex items-end justify-between gap-4 bg-gradient-to-t from-slate-950/75 via-slate-950/20 to-transparent p-4 text-white sm:p-5">
-                    <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/70">Vista principal</p>
-                      <p className="mt-1 text-sm font-medium text-white/90">{property.location}</p>
+                  <div className="absolute inset-x-0 bottom-0 z-10 flex items-end justify-between gap-4 bg-gradient-to-t from-slate-950/80 via-slate-950/30 to-transparent p-4 text-white sm:p-5">
+                    <div className="max-w-2xl">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/70">{propertyTypeLabel}</p>
+                      <h1 className="mt-2 text-2xl font-semibold tracking-tight text-white sm:text-[2.1rem]">{property.title}</h1>
+                      <div className="mt-2 inline-flex items-center gap-2 text-sm font-medium text-white/90">
+                        <Icons.MapPin className="h-4 w-4" />
+                        <span>{property.location}</span>
+                      </div>
                     </div>
                     <button
                       type="button"
@@ -1291,6 +1293,42 @@ export const PropertyDetailShell: React.FC<{
               </div>
             </div>
           </Card>
+
+          <Card className="rounded-[32px] border-slate-200/80 bg-white p-5 shadow-[0_28px_70px_-50px_rgba(15,23,42,0.25)] sm:p-6">
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,220px)_minmax(0,1fr)] xl:items-start">
+              <div className="space-y-2.5">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Precio por noche</p>
+                <div className="flex items-end gap-2">
+                  <span className="text-[2.6rem] font-black tracking-tight text-slate-950 sm:text-[2.9rem]">{nightly ? formatCurrency(nightly) : '—'}</span>
+                  <span className="pb-1 text-sm font-medium text-slate-500">/ noche</span>
+                </div>
+                <p className="text-sm leading-6 text-slate-500">
+                  {ratingValue > 0
+                    ? `${ratingValue.toFixed(1)} · ${formatReviewCount(reviewCount)}`
+                    : reviewCount > 0
+                      ? formatReviewCount(reviewCount)
+                      : 'Todavía sin reseñas publicadas.'}
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                {essentialInfoItems.length > 0 ? (
+                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    {essentialInfoItems.map((item) => (
+                      <EssentialInfoCard key={`${item.label}-${item.value}`} {...item} />
+                    ))}
+                  </div>
+                ) : null}
+
+                {decisionAmenityLabel ? (
+                  <div className="rounded-[26px] border border-slate-200/80 bg-slate-50/80 px-4 py-4 shadow-[0_18px_36px_-34px_rgba(15,23,42,0.16)]">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Puntos clave</p>
+                    <p className="mt-2 text-sm font-semibold leading-6 text-slate-900">{decisionAmenityLabel}</p>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </Card>
         </section>
 
         <aside className="mx-auto w-full max-w-2xl xl:max-w-none xl:self-start">
@@ -1300,10 +1338,7 @@ export const PropertyDetailShell: React.FC<{
                 <div className="space-y-2">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Reservá en 4 pasos</p>
                   <p className="text-lg font-semibold tracking-tight text-slate-950 sm:text-xl">{property.title}</p>
-                  <div className="flex items-end gap-2">
-                    <span className="text-[2.55rem] font-black tracking-tight text-slate-950 sm:text-[2.9rem]">{nightly ? formatCurrency(nightly) : '—'}</span>
-                    <span className="pb-1 text-sm font-medium text-slate-500">/ noche</span>
-                  </div>
+                  <p className="text-sm font-medium text-slate-500">{nightly ? `${formatCurrency(nightly)} por noche` : 'Precio a confirmar'}</p>
                   <div className="pt-1">
                     <Button
                       type="button"
@@ -1675,29 +1710,12 @@ export const PropertyDetailShell: React.FC<{
         </aside>
 
         <main className="space-y-8 xl:col-start-1 xl:row-start-2">
-          <div className="space-y-3">
-            {verificationGuidanceMessage ? (
-              <p className="text-sm font-medium leading-6 text-slate-600">
-                {verificationGuidanceMessage}
-              </p>
-            ) : null}
-            <PropertyVerificationPanel details={verificationDetails} />
-          </div>
-
-          <HostTrustPanel
-            hostName={hostName}
-            hostTenureLabel={hostTenureLabel}
-            hostAvatarUrl={property.host?.avatarUrl}
-            hostTrustLevelLabel={hostTrustLevelLabel}
-            items={hostTrust.items}
-          />
-
           <Card className="rounded-[32px] border-slate-200/80 bg-white p-6 shadow-[0_28px_70px_-50px_rgba(15,23,42,0.25)] sm:p-7">
             <div className="space-y-4">
               <SectionTitle
                 eyebrow="Antes de decidir"
                 heading="Lo importante de este aviso"
-                description="Un resumen corto para ver si este lugar te cierra."
+                description="Descripción completa y datos concretos para ver si este lugar te cierra."
               />
               <p className="max-w-3xl text-base leading-8 text-slate-600">
                 {property.description || 'Todavía no hay descripción disponible.'}
@@ -1739,6 +1757,23 @@ export const PropertyDetailShell: React.FC<{
               </ul>
             </Card>
           ) : null}
+
+          <div className="space-y-3">
+            {verificationGuidanceMessage ? (
+              <p className="text-sm font-medium leading-6 text-slate-600">
+                {verificationGuidanceMessage}
+              </p>
+            ) : null}
+            <PropertyVerificationPanel details={verificationDetails} />
+          </div>
+
+          <HostTrustPanel
+            hostName={hostName}
+            hostTenureLabel={hostTenureLabel}
+            hostAvatarUrl={property.host?.avatarUrl}
+            hostTrustLevelLabel={hostTrustLevelLabel}
+            items={hostTrust.items}
+          />
 
           <section className="space-y-5">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">

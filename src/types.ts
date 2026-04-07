@@ -43,6 +43,8 @@ export interface Property {
   reviewsCount: number;
   isSuperHost?: boolean;
   maxGuests?: number;
+  bedrooms?: number;
+  bathrooms?: number;
   propertyRelationshipVerified?: boolean;
   hasPresencialVerification?: boolean;
   hasDigitalVerification?: boolean;
