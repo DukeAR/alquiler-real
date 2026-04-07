@@ -34,12 +34,26 @@ type PropertyVerificationLike = {
 };
 
 type PropertySortLike = PropertyVerificationLike & {
+  title?: string;
+  location?: string;
+  propertyType?: string;
+  maxGuests?: number;
   rating?: number;
   reviewsCount?: number;
   price?: number;
 };
 
 export type PropertyCatalogSort = 'verification' | 'rating' | 'price';
+
+export type PropertyCatalogSortContext = {
+  searchQuery?: string;
+  filters?: {
+    guests?: string | number;
+    type?: string;
+    minPrice?: string | number;
+    maxPrice?: string | number;
+  };
+};
 
 const normalizeVerificationStatus = (status?: PropertyVerificationStatus) => status === 'complete' ? 'complete' : 'pending';
 
@@ -84,6 +98,117 @@ const clampVerificationScore = (score: number) => {
   return Math.max(0, Math.min(VERIFICATION_SCORE_MAX, Math.round(score)));
 };
 
+const normalizeCatalogText = (value?: string) => (value ?? '')
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase()
+  .trim();
+
+const parsePositiveNumber = (value?: string | number) => {
+  const numericValue = Number(value);
+
+  if (!Number.isFinite(numericValue) || numericValue <= 0) {
+    return null;
+  }
+
+  return numericValue;
+};
+
+const derivePropertyTypeLabel = (property: Pick<PropertySortLike, 'propertyType' | 'title'>) => {
+  const explicitType = normalizeCatalogText(property.propertyType);
+
+  if (explicitType.includes('house') || explicitType.includes('casa')) return 'casa';
+  if (explicitType.includes('apartment') || explicitType.includes('depto') || explicitType.includes('depart')) return 'departamento';
+  if (explicitType.includes('cabin') || explicitType.includes('caba')) return 'cabana';
+
+  const title = normalizeCatalogText(property.title);
+
+  if (title.includes('casa')) return 'casa';
+  if (title.includes('duplex') || title.includes('chalet') || /(^|\s)ph($|\s)/.test(title)) return 'casa';
+  if (title.includes('monoambiente')) return 'departamento';
+  if (title.includes('depto') || title.includes('depart')) return 'departamento';
+  if (title.includes('caba')) return 'cabana';
+
+  return 'alojamiento';
+};
+
+const getSearchRelevanceScore = (property: PropertySortLike, searchQuery?: string) => {
+  const normalizedQuery = normalizeCatalogText(searchQuery);
+
+  if (!normalizedQuery) {
+    return 0;
+  }
+
+  const normalizedLocation = normalizeCatalogText(property.location);
+  const normalizedTitle = normalizeCatalogText(property.title);
+  const queryTokens = normalizedQuery.split(/\s+/).filter(Boolean);
+  let score = 0;
+
+  if (normalizedLocation === normalizedQuery) {
+    score += 120;
+  } else if (normalizedLocation.startsWith(normalizedQuery)) {
+    score += 90;
+  } else if (normalizedLocation.includes(normalizedQuery)) {
+    score += 60;
+  }
+
+  if (normalizedTitle.includes(normalizedQuery)) {
+    score += 35;
+  }
+
+  if (queryTokens.length > 1) {
+    const locationMatches = queryTokens.filter((token) => normalizedLocation.includes(token)).length;
+    const titleMatches = queryTokens.filter((token) => normalizedTitle.includes(token)).length;
+
+    score += (locationMatches * 10) + (titleMatches * 6);
+  }
+
+  return score;
+};
+
+const getGuestsRelevanceScore = (property: PropertySortLike, guests?: string | number) => {
+  const requestedGuests = parsePositiveNumber(guests);
+  const maxGuests = parsePositiveNumber(property.maxGuests);
+
+  if (!requestedGuests || requestedGuests <= 1 || !maxGuests || maxGuests < requestedGuests) {
+    return 0;
+  }
+
+  return Math.max(0, 40 - ((maxGuests - requestedGuests) * 6));
+};
+
+const getTypeRelevanceScore = (property: PropertySortLike, type?: string) => {
+  const normalizedType = normalizeCatalogText(type);
+
+  if (!normalizedType) {
+    return 0;
+  }
+
+  const explicitType = normalizeCatalogText(property.propertyType);
+  const derivedType = derivePropertyTypeLabel(property);
+  const normalizedTitle = normalizeCatalogText(property.title);
+
+  if (explicitType.includes(normalizedType) || derivedType.includes(normalizedType)) {
+    return 45;
+  }
+
+  if (normalizedTitle.includes(normalizedType)) {
+    return 20;
+  }
+
+  return 0;
+};
+
+const getPropertyRelevanceScore = (property: PropertySortLike, context?: PropertyCatalogSortContext) => {
+  if (!context) {
+    return 0;
+  }
+
+  return getSearchRelevanceScore(property, context.searchQuery)
+    + getGuestsRelevanceScore(property, context.filters?.guests)
+    + getTypeRelevanceScore(property, context.filters?.type);
+};
+
 export const getPropertyVerificationItems = (property: PropertyVerificationLike): PropertyVerificationItem[] => {
   if (Array.isArray(property.verificationItems) && property.verificationItems.length > 0) {
     return property.verificationItems.slice(0, VERIFICATION_SCORE_MAX).map((item, index) => ({
@@ -124,11 +249,7 @@ export const getPropertyVerificationGuidanceLabel = (
   const score = getPropertyVerificationScore(property);
 
   if (score >= HIGH_VERIFICATION_HIGHLIGHT_MIN_SCORE && options?.isTopResult) {
-    return 'Mejor verificado';
-  }
-
-  if (score >= REAL_VERIFICATION_FILTER_MIN_SCORE) {
-    return 'Alto nivel de verificación';
+    return 'Más verificado';
   }
 
   return null;
@@ -186,20 +307,21 @@ export const getPropertyVerificationDetails = (property: PropertyVerificationLik
   };
 };
 
-export const sortPropertiesByCatalogOrder = <T extends PropertySortLike>(items: T[], sortBy: PropertyCatalogSort) => {
+export const sortPropertiesByCatalogOrder = <T extends PropertySortLike>(
+  items: T[],
+  sortBy: PropertyCatalogSort,
+  context?: PropertyCatalogSortContext,
+) => {
   const sortedItems = [...items];
 
   sortedItems.sort((left, right) => {
     const verificationDifference = getPropertyVerificationScore(right) - getPropertyVerificationScore(left);
     const ratingDifference = Number(right.rating || 0) - Number(left.rating || 0);
     const reviewsDifference = Number(right.reviewsCount || 0) - Number(left.reviewsCount || 0);
+    const relevanceDifference = getPropertyRelevanceScore(right, context) - getPropertyRelevanceScore(left, context);
     const priceDifference = Number(left.price || 0) - Number(right.price || 0);
 
     if (sortBy === 'price') {
-      if (priceDifference !== 0) {
-        return priceDifference;
-      }
-
       if (verificationDifference !== 0) {
         return verificationDifference;
       }
@@ -208,7 +330,19 @@ export const sortPropertiesByCatalogOrder = <T extends PropertySortLike>(items: 
         return ratingDifference;
       }
 
-      return reviewsDifference;
+      if (reviewsDifference !== 0) {
+        return reviewsDifference;
+      }
+
+      if (relevanceDifference !== 0) {
+        return relevanceDifference;
+      }
+
+      if (priceDifference !== 0) {
+        return priceDifference;
+      }
+
+      return String(left.title || '').localeCompare(String(right.title || ''), 'es');
     }
 
     if (sortBy === 'rating') {
@@ -216,11 +350,23 @@ export const sortPropertiesByCatalogOrder = <T extends PropertySortLike>(items: 
         return ratingDifference;
       }
 
+      if (reviewsDifference !== 0) {
+        return reviewsDifference;
+      }
+
       if (verificationDifference !== 0) {
         return verificationDifference;
       }
 
-      return reviewsDifference;
+      if (relevanceDifference !== 0) {
+        return relevanceDifference;
+      }
+
+      if (priceDifference !== 0) {
+        return priceDifference;
+      }
+
+      return String(left.title || '').localeCompare(String(right.title || ''), 'es');
     }
 
     if (verificationDifference !== 0) {
@@ -231,7 +377,19 @@ export const sortPropertiesByCatalogOrder = <T extends PropertySortLike>(items: 
       return ratingDifference;
     }
 
-    return reviewsDifference;
+    if (reviewsDifference !== 0) {
+      return reviewsDifference;
+    }
+
+    if (relevanceDifference !== 0) {
+      return relevanceDifference;
+    }
+
+    if (priceDifference !== 0) {
+      return priceDifference;
+    }
+
+    return String(left.title || '').localeCompare(String(right.title || ''), 'es');
   });
 
   return sortedItems;

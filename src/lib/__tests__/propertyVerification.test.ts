@@ -56,9 +56,9 @@ describe('propertyVerification', () => {
   });
 
   test('derives Explore guidance labels from the real verification score and top-result position', () => {
-    expect(getPropertyVerificationGuidanceLabel({ verificationScore: 4 }, { isTopResult: true })).toBe('Mejor verificado');
-    expect(getPropertyVerificationGuidanceLabel({ verificationScore: 4 }, { isTopResult: false })).toBe('Alto nivel de verificación');
-    expect(getPropertyVerificationGuidanceLabel({ verificationScore: 3 }, { isTopResult: false })).toBe('Alto nivel de verificación');
+    expect(getPropertyVerificationGuidanceLabel({ verificationScore: 4 }, { isTopResult: true })).toBe('Más verificado');
+    expect(getPropertyVerificationGuidanceLabel({ verificationScore: 4 }, { isTopResult: false })).toBeNull();
+    expect(getPropertyVerificationGuidanceLabel({ verificationScore: 3 }, { isTopResult: false })).toBeNull();
     expect(getPropertyVerificationGuidanceLabel({ verificationScore: 2 }, { isTopResult: true })).toBeNull();
   });
 
@@ -84,6 +84,16 @@ describe('propertyVerification', () => {
       { id: 'p2', verificationScore: 4, rating: 4.1, price: 100_000 },
       { id: 'p3', verificationScore: 5, rating: 4.9, price: 120_000 },
     ], 'price');
+
+    expect(sorted.map((property) => property.id)).toEqual(['p3', 'p2', 'p1']);
+  });
+
+  test('uses search relevance after respaldo and reseñas when comparing similar results', () => {
+    const sorted = sortPropertiesByCatalogOrder([
+      { id: 'p1', title: 'Casa con jardín', location: 'Pinamar norte', verificationScore: 4, rating: 4.7, reviewsCount: 8, price: 110_000 },
+      { id: 'p2', title: 'Casa cerca del centro', location: 'Villa Gesell centro', verificationScore: 4, rating: 4.7, reviewsCount: 8, price: 105_000 },
+      { id: 'p3', title: 'Departamento con balcón', location: 'Villa Gesell sur', verificationScore: 4, rating: 4.5, reviewsCount: 12, price: 99_000 },
+    ], 'verification', { searchQuery: 'Villa Gesell' });
 
     expect(sorted.map((property) => property.id)).toEqual(['p2', 'p1', 'p3']);
   });

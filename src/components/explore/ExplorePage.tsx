@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { apiJson } from '../../lib/apiConfig';
 import { useFavorites } from '../../hooks/useFavorites';
 import type { Property } from '../../services/geminiService';
-import { sortPropertiesByCatalogOrder } from '../../lib/propertyVerification';
+import { meetsRealVerificationFilter, sortPropertiesByCatalogOrder } from '../../lib/propertyVerification';
 import {
   getVerificationPreferenceState,
   trackVerificationPreferenceSave,
@@ -119,9 +119,12 @@ export const ExplorePage = () => {
     setVisibleCount(9);
   }, [filters, searchQuery, sortBy]);
 
-  const featuredProperties = sortPropertiesByCatalogOrder(properties, 'verification')
+  const sortContext = { searchQuery, filters };
+
+  const featuredProperties = sortPropertiesByCatalogOrder(properties, 'verification', sortContext)
+    .filter((property) => meetsRealVerificationFilter(property))
     .slice(0, 3);
-  const orderedProperties = sortPropertiesByCatalogOrder(properties, sortBy);
+  const orderedProperties = sortPropertiesByCatalogOrder(properties, sortBy, sortContext);
 
   const featuredIds = new Set(featuredProperties.map((property) => property.id));
   const hasActiveFilters = Boolean(searchQuery || filters.minPrice || filters.maxPrice || filters.type || filters.verifiedOnly);

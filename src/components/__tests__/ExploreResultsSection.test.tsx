@@ -85,12 +85,12 @@ describe('ExploreResultsSection', () => {
   test('renders the decision-oriented hierarchy on the home results view', () => {
     renderSection();
 
-    expect(screen.getByRole('heading', { name: 'Primero revisá estos avisos' })).toBeInTheDocument();
-    expect(screen.getByText('Acá ves precio, ubicación, rating y qué parte del aviso ya fue comprobada.')).toBeInTheDocument();
-    expect(screen.getAllByText('Mostramos primero los avisos con mayor nivel de verificación.').length).toBeGreaterThan(0);
-    expect(screen.getByText('Mejor verificado')).toBeInTheDocument();
-    expect(screen.getByText('Alto nivel de verificación')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Más avisos para revisar' })).toBeInTheDocument();
+    expect(screen.getByText('Mostramos primero los avisos con mayor nivel de verificación y mejor respaldo.')).toBeInTheDocument();
+    expect(screen.getByText('Después siguen las opciones con mejor combinación de reseñas y señales concretas.')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Avisos para mirar primero' })).toBeInTheDocument();
+    expect(screen.getByText('Acá ves tipo de propiedad, ubicación, precio, rating y nivel de verificación en una sola lectura.')).toBeInTheDocument();
+    expect(screen.getByText('Más verificado')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Más opciones' })).toBeInTheDocument();
     expect(screen.getByText('Casa frente al mar')).toBeInTheDocument();
     expect(screen.getByText('Departamento luminoso')).toBeInTheDocument();
     expect(screen.queryByText('Cabaña entre pinos')).toBeInTheDocument();

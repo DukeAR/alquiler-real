@@ -46,6 +46,7 @@ const sampleProperty = {
   reviewsCount: 12,
   isSuperHost: true,
   maxGuests: 5,
+  propertyType: 'house',
   propertyRelationshipVerified: true,
   hasPresencialVerification: true,
   isVerifiedProperty: true,
@@ -63,18 +64,20 @@ describe('PropertyCard', () => {
     render(
       <PropertyCard
         property={sampleProperty}
-        verificationGuidanceLabel="Mejor verificado"
+        verificationGuidanceLabel="Más verificado"
         onClick={vi.fn()}
       />,
     );
 
     expect(screen.getByText('Casa frente al mar')).toBeInTheDocument();
+    expect(screen.getByText('Casa')).toBeInTheDocument();
     expect(screen.getByText('Santa Teresita')).toBeInTheDocument();
     expect(screen.getByText('Precio por noche')).toBeInTheDocument();
     expect(screen.getByText('/ noche')).toBeInTheDocument();
     expect(screen.getByText('4.8')).toBeInTheDocument();
-    expect(screen.getByText('Verificación')).toBeInTheDocument();
-    expect(screen.getByText('Mejor verificado')).toBeInTheDocument();
+    expect(screen.getByText('12 reseñas')).toBeInTheDocument();
+    expect(screen.getByText('Nivel de verificación')).toBeInTheDocument();
+    expect(screen.getByText('Más verificado')).toBeInTheDocument();
     expect(screen.getByText('4 de 5 comprobaciones')).toBeInTheDocument();
     expect(screen.getByText('✔✔✔✔○')).toBeInTheDocument();
     expect(screen.queryByText('Anfitrión con buen historial')).toBeNull();
@@ -97,8 +100,7 @@ describe('PropertyCard', () => {
 
     expect(screen.getByText('2 de 5 comprobaciones')).toBeInTheDocument();
     expect(screen.getByText('✔✔○○○')).toBeInTheDocument();
-    expect(screen.queryByText('Mejor verificado')).toBeNull();
-    expect(screen.queryByText('Alto nivel de verificación')).toBeNull();
+    expect(screen.queryByText('Más verificado')).toBeNull();
   });
 
   test('keeps the card focused on verification even when the host trust level changes', () => {
@@ -131,11 +133,11 @@ describe('PropertyCard', () => {
           ...sampleProperty,
           propertyRelationshipVerified: false,
         }}
-        verificationGuidanceLabel="Alto nivel de verificación"
+        verificationGuidanceLabel="Más verificado"
       />,
     );
 
-    expect(screen.getByText('Alto nivel de verificación')).toBeInTheDocument();
+    expect(screen.getByText('Más verificado')).toBeInTheDocument();
     expect(screen.getByText('3 de 5 comprobaciones')).toBeInTheDocument();
   });
 
@@ -150,7 +152,7 @@ describe('PropertyCard', () => {
     const verificationBlock = screen.getByLabelText('4 de 5 comprobaciones').parentElement?.parentElement;
 
     expect(verificationBlock).toHaveClass('border-emerald-200/80');
-    expect(screen.getByText('Verificación')).toHaveClass('text-emerald-700');
+    expect(screen.getByText('Nivel de verificación')).toHaveClass('text-emerald-700');
   });
 
   test('keeps the favorites variant free of Explore guidance labels', () => {
@@ -158,8 +160,7 @@ describe('PropertyCard', () => {
 
     expect(screen.getByText('4 de 5 comprobaciones')).toBeInTheDocument();
     expect(screen.getByText('✔✔✔✔○')).toBeInTheDocument();
-    expect(screen.queryByText('Mejor verificado')).toBeNull();
-    expect(screen.queryByText('Alto nivel de verificación')).toBeNull();
+    expect(screen.queryByText('Más verificado')).toBeNull();
     expect(screen.queryByText('Anfitrión con buen historial')).toBeNull();
     expect(screen.getByText('Abrir detalle')).toBeInTheDocument();
     expect(screen.queryByText('Ver detalle')).toBeNull();

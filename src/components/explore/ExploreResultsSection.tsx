@@ -85,11 +85,12 @@ export const ExploreResultsSection = ({
       .slice(0, TOP_VERIFIED_RESULTS_COUNT)
       .map((property) => property.id),
   );
-  const verificationSortDescription = sortBy === 'verification'
-    ? 'Mostramos primero los avisos con mayor nivel de verificación.'
-    : sortBy === 'rating'
-      ? 'Ordenados por mejor calificación, sin sacar de vista la verificación.'
-      : 'Ordenados por precio, sin sacar de vista la verificación.';
+  const rankingLead = 'Mostramos primero los avisos con mayor nivel de verificación y mejor respaldo.';
+  const rankingDetail = sortBy === 'rating'
+    ? 'Cuando el respaldo se parece, suben los mejor calificados.'
+    : sortBy === 'price'
+      ? 'El precio se usa solo para desempatar entre avisos parecidos.'
+      : 'Después siguen las opciones con mejor combinación de reseñas y señales concretas.';
 
   const summaryEyebrow = viewMode === 'map'
     ? 'Mapa'
@@ -254,6 +255,13 @@ export const ExploreResultsSection = ({
 
   return (
     <section className="space-y-8 md:space-y-10">
+      {!loading && hasAnyResults ? (
+        <div className="space-y-1 rounded-[24px] border border-slate-200/80 bg-white/90 px-4 py-3.5 shadow-[0_18px_36px_-34px_rgba(15,23,42,0.16)]">
+          <p className="text-sm font-medium leading-6 text-slate-700">{rankingLead}</p>
+          <p className="text-[12.5px] leading-5 text-slate-500">{rankingDetail}</p>
+        </div>
+      ) : null}
+
       {showSummaryCard ? summaryCard : null}
 
       {showHomeBlocks && showingStaleResults ? (
@@ -268,15 +276,12 @@ export const ExploreResultsSection = ({
         <section className="space-y-5 md:space-y-6">
           <div className="max-w-2xl space-y-2">
             <SectionTitle
-              heading="Primero revisá estos avisos"
-              description="Acá ves precio, ubicación, rating y qué parte del aviso ya fue comprobada."
+              heading="Avisos para mirar primero"
+              description="Acá ves tipo de propiedad, ubicación, precio, rating y nivel de verificación en una sola lectura."
               className="max-w-2xl"
             />
             {!loading ? (
               <>
-                <p className="text-[12.5px] leading-5 text-slate-500">
-                  {verificationSortDescription}
-                </p>
                 {verificationPreferenceHint}
               </>
             ) : null}
@@ -307,7 +312,7 @@ export const ExploreResultsSection = ({
           <div className="flex flex-col gap-4 border-b border-slate-200/70 pb-5 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-2xl">
               <SectionTitle
-                heading={hasActiveFilters ? 'Resultados para revisar' : 'Más avisos para revisar'}
+                heading={hasActiveFilters ? 'Resultados para revisar' : 'Más opciones'}
                 description={loading
                   ? 'Estamos actualizando los avisos disponibles.'
                   : hasActiveFilters
@@ -319,11 +324,6 @@ export const ExploreResultsSection = ({
               />
               {!loading && !showFeaturedSection ? (
                 <>
-                  {listingProperties.length > 0 ? (
-                    <p className="mt-2 text-[12.5px] leading-5 text-slate-500">
-                      {verificationSortDescription}
-                    </p>
-                  ) : null}
                   {verificationPreferenceHint}
                 </>
               ) : null}

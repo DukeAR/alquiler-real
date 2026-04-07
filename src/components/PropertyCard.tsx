@@ -8,6 +8,38 @@ import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 
+const normalizePropertyText = (value?: string) => (value ?? '')
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase()
+  .trim();
+
+const getPropertyTypeLabel = (property: Property) => {
+  const explicitType = normalizePropertyText(property.propertyType);
+
+  if (explicitType.includes('house') || explicitType.includes('casa')) return 'Casa';
+  if (explicitType.includes('apartment') || explicitType.includes('depto') || explicitType.includes('depart')) return 'Departamento';
+  if (explicitType.includes('cabin') || explicitType.includes('caba')) return 'Cabaña';
+
+  const title = normalizePropertyText(property.title);
+
+  if (title.includes('casa')) return 'Casa';
+  if (title.includes('duplex') || title.includes('chalet') || /(^|\s)ph($|\s)/.test(title)) return 'Casa';
+  if (title.includes('monoambiente')) return 'Departamento';
+  if (title.includes('depto') || title.includes('depart')) return 'Departamento';
+  if (title.includes('caba')) return 'Cabaña';
+
+  return 'Alojamiento';
+};
+
+const formatReviewCount = (count: number) => {
+  if (count <= 0) {
+    return 'Sin reseñas';
+  }
+
+  return count === 1 ? '1 reseña' : `${count} reseñas`;
+};
+
 interface PropertyCardProps {
   property: Property;
   onClick?: () => void;
@@ -31,9 +63,11 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   const user = auth.user;
   const imageSrc = property.imageUrl || 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=900&q=80';
   const rating = Number(property.rating || 0);
+  const reviewsCount = Number(property.reviewsCount || 0);
   const isFavoritesVariant = variant === 'favorites';
   const verificationBadge = getPropertyVerificationBadge(property);
   const shouldEmphasizeVerification = emphasizeVerification && !isFavoritesVariant;
+  const propertyTypeLabel = getPropertyTypeLabel(property);
 
   const ratingLabel = rating > 0 ? rating.toFixed(1) : 'Sin puntaje';
 
@@ -105,10 +139,17 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
 
       <div className="flex flex-1 flex-col gap-4 p-4 sm:p-5 md:p-6">
         <div className="space-y-2">
-          <p className="flex items-center gap-1.5 text-[13px] font-semibold leading-5 tracking-[0.01em] text-slate-600">
-            <Icons.MapPin className="h-4 w-4 shrink-0 text-brand" />
-            <span className="truncate">{property.location}</span>
-          </p>
+          <div className="flex flex-wrap items-center gap-2 text-[12px] font-semibold leading-5 tracking-[0.01em] text-slate-600">
+            <span className="inline-flex items-center gap-1.5">
+              <Icons.Home className="h-4 w-4 shrink-0 text-slate-400" />
+              <span>{propertyTypeLabel}</span>
+            </span>
+            <span className="h-1 w-1 rounded-full bg-slate-300" />
+            <span className="inline-flex min-w-0 items-center gap-1.5">
+              <Icons.MapPin className="h-4 w-4 shrink-0 text-brand" />
+              <span className="truncate">{property.location}</span>
+            </span>
+          </div>
           <h3 className="line-clamp-2 text-[1.04rem] font-semibold leading-[1.35] tracking-[-0.02em] text-slate-950 transition-colors duration-150 group-hover:text-slate-950 sm:text-[1.08rem] md:text-[1.12rem]">{property.title}</h3>
         </div>
 
@@ -129,6 +170,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
                 <Icons.Star className="h-4 w-4 fill-brand text-brand" />
                 {ratingLabel}
               </div>
+              <p className="mt-1 text-[11px] font-medium text-slate-500">{formatReviewCount(reviewsCount)}</p>
             </div>
           </div>
         </Card>
@@ -146,7 +188,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
               <p className={cn(
                 'text-[10px] font-semibold uppercase tracking-[0.16em]',
                 shouldEmphasizeVerification ? 'text-emerald-700' : 'text-slate-400',
-              )}>Verificación</p>
+              )}>Nivel de verificación</p>
               <div className="mt-1 flex flex-wrap items-center gap-2">
                 {verificationGuidanceLabel ? (
                   <Badge

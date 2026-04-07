@@ -68,9 +68,9 @@ export const ExploreFiltersBar = ({
                 onChange={(event) => onSortChange(event.target.value as ExploreSort)}
                 className="app-control h-11 min-w-0 w-full rounded-[14px] bg-white px-4 text-[0.94rem] font-semibold tracking-[-0.01em] text-slate-700 outline-none shadow-none sm:min-w-[170px]"
               >
-                <option value="verification">Más verificados</option>
+                <option value="verification">Más respaldo</option>
                 <option value="rating">Mejor calificados</option>
-                <option value="price">Precio</option>
+                <option value="price">Precio dentro del respaldo</option>
               </select>
             </label>
 
