@@ -648,6 +648,8 @@ export const PropertyDetailShell: React.FC<{
   const [bookingSubmitNotice, setBookingSubmitNotice] = useState<BookingConfirmationNotice | null>(null);
   const [availabilityRefreshToken, setAvailabilityRefreshToken] = useState(0);
   const bookingStepPanelRef = useRef<HTMLDivElement | null>(null);
+  const datePickerTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const pendingDatePickerOpenRef = useRef(false);
 
   const reviewCount = Math.max(Number(property.reviewsCount) || 0, reviews.length);
   const ratingValue = Number(property.rating) || 0;
@@ -715,6 +717,7 @@ export const PropertyDetailShell: React.FC<{
   const mobileBookingSummary = hasCompleteDates
     ? `${nightsSummaryLabel} · ${guestCountLabel} · ${formatCurrency(total)}`
     : `${guestCountLabel} · Total al elegir fechas`;
+  const bookingEntryCtaLabel = hasCompleteDates ? 'Cambiar fechas' : 'Ver disponibilidad';
   const currentBookingStepIndex = BOOKING_STEP_CONFIG.findIndex((step) => step.key === bookingStep);
   const currentBookingStep = BOOKING_STEP_CONFIG[currentBookingStepIndex] ?? BOOKING_STEP_CONFIG[0];
   const selectedModeContent = selectedRequestMode ? RESERVATION_MODE_CONTENT[selectedRequestMode] : null;
@@ -761,6 +764,30 @@ export const PropertyDetailShell: React.FC<{
     panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, [bookingStep]);
 
+  useEffect(() => {
+    if (bookingStep !== 'dates' || !pendingDatePickerOpenRef.current) {
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      const trigger = datePickerTriggerRef.current;
+
+      if (!trigger) {
+        return;
+      }
+
+      pendingDatePickerOpenRef.current = false;
+
+      if (trigger.getAttribute('aria-expanded') !== 'true') {
+        trigger.click();
+      } else {
+        trigger.focus();
+      }
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [bookingStep]);
+
   const handleAdultsChange = (nextValue: number) => {
     setAdults(Math.max(1, nextValue));
     clearBookingFeedback();
@@ -773,6 +800,35 @@ export const PropertyDetailShell: React.FC<{
 
   const goToBookingStep = (nextStep: BookingStep) => {
     setBookingStep(nextStep);
+  };
+
+  const handleOpenBookingEntry = () => {
+    clearBookingFeedback();
+    resetBookingSubmitState();
+
+    if (bookingStepPanelRef.current && typeof bookingStepPanelRef.current.scrollIntoView === 'function') {
+      bookingStepPanelRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    if (bookingStep !== 'dates') {
+      pendingDatePickerOpenRef.current = true;
+      goToBookingStep('dates');
+      return;
+    }
+
+    window.requestAnimationFrame(() => {
+      const trigger = datePickerTriggerRef.current;
+
+      if (!trigger) {
+        return;
+      }
+
+      if (trigger.getAttribute('aria-expanded') !== 'true') {
+        trigger.click();
+      } else {
+        trigger.focus();
+      }
+    });
   };
 
   const handleAdvanceBookingStep = () => {
@@ -1098,7 +1154,7 @@ export const PropertyDetailShell: React.FC<{
   }, [lightboxOpen, images.length, mainIndex]);
 
   return (
-    <div className="mx-auto max-w-7xl px-4 pb-[calc(env(safe-area-inset-bottom)+7.25rem)] pt-6 md:px-6 lg:pb-16 lg:px-8">
+    <div className="mx-auto max-w-7xl px-4 pb-[calc(env(safe-area-inset-bottom)+11rem)] pt-6 md:px-6 lg:pb-16 lg:px-8">
       <button
         type="button"
         onClick={() => navigate(-1)}
@@ -1248,7 +1304,22 @@ export const PropertyDetailShell: React.FC<{
                     <span className="text-[2.55rem] font-black tracking-tight text-slate-950 sm:text-[2.9rem]">{nightly ? formatCurrency(nightly) : '—'}</span>
                     <span className="pb-1 text-sm font-medium text-slate-500">/ noche</span>
                   </div>
-                  <p className="text-sm leading-6 text-slate-500">Primero marcás fechas, después definís huéspedes y al final elegís si seguís por chat o dejás la solicitud en la app.</p>
+                  <div className="pt-1">
+                    <Button
+                      type="button"
+                      variant="primary"
+                      size="lg"
+                      fullWidth
+                      onClick={handleOpenBookingEntry}
+                      className="rounded-2xl shadow-[0_24px_46px_-28px_rgba(67,56,202,0.42)]"
+                    >
+                      <>
+                        <Icons.Calendar className="h-4 w-4" />
+                        {bookingEntryCtaLabel}
+                      </>
+                    </Button>
+                    <p className="mt-2 text-xs font-medium text-slate-500">Elegí fechas para ver el total y avanzar</p>
+                  </div>
                   <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600">
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-brand/10 px-3 py-1.5 font-semibold text-brand">
                       <Icons.Star className="h-4 w-4 fill-current" />
@@ -1369,6 +1440,7 @@ export const PropertyDetailShell: React.FC<{
                       minDate={todayISO}
                       onChange={clearBookingFeedback}
                       monthsToShow={1}
+                      triggerButtonRef={datePickerTriggerRef}
                     />
 
                     {bookingError?.field === 'dates' ? (
@@ -1712,15 +1784,31 @@ export const PropertyDetailShell: React.FC<{
           aria-label="Resumen móvil de la reserva"
           className="pointer-events-auto mx-auto max-w-xl rounded-[26px] border border-slate-200/90 bg-white/96 px-4 py-3 shadow-[0_-18px_40px_-30px_rgba(15,23,42,0.28)] backdrop-blur"
         >
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-slate-950">{property.title}</p>
-              <p className="mt-1 truncate text-xs leading-5 text-slate-500">{mobileBookingSummary}</p>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-slate-950">{property.title}</p>
+                <p className="mt-1 truncate text-xs leading-5 text-slate-500">{mobileBookingSummary}</p>
+              </div>
+              <div className="shrink-0 text-right">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">/ noche</p>
+                <p className="mt-1 text-sm font-bold text-slate-950">{nightly ? formatCurrency(nightly) : '—'}</p>
+              </div>
             </div>
-            <div className="shrink-0 text-right">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">/ noche</p>
-              <p className="mt-1 text-sm font-bold text-slate-950">{nightly ? formatCurrency(nightly) : '—'}</p>
-            </div>
+            <Button
+              type="button"
+              variant="primary"
+              size="lg"
+              fullWidth
+              onClick={handleOpenBookingEntry}
+              className="rounded-2xl shadow-[0_24px_46px_-28px_rgba(67,56,202,0.42)]"
+            >
+              <>
+                <Icons.Calendar className="h-4 w-4" />
+                {bookingEntryCtaLabel}
+              </>
+            </Button>
+            <p className="text-center text-[11px] font-medium leading-5 text-slate-500">Elegí fechas para ver el total y avanzar</p>
           </div>
         </section>
       </div>

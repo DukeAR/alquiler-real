@@ -17,6 +17,7 @@ type Props = {
   availabilityRefreshToken?: number;
   mode?: 'booking' | 'blocking';
   monthsToShow?: 1 | 2;
+  triggerButtonRef?: React.Ref<HTMLButtonElement>;
 };
 
 type AvailabilityRange = {
@@ -163,7 +164,7 @@ const expandBlockedDates = (ranges: AvailabilityRange[]) => {
 
 const getMonthLabel = (date: Date) => date.toLocaleString('es-AR', { month: 'long', year: 'numeric' });
 
-const DateRangePicker: React.FC<Props> = ({ checkIn, checkOut, setCheckIn, setCheckOut, minDate, onChange, propertyId, availabilityRefreshToken = 0, mode = 'booking', monthsToShow = 2 }) => {
+const DateRangePicker: React.FC<Props> = ({ checkIn, checkOut, setCheckIn, setCheckOut, minDate, onChange, propertyId, availabilityRefreshToken = 0, mode = 'booking', monthsToShow = 2, triggerButtonRef }) => {
   const todayIso = minDate || formatIso(new Date());
   const [visible, setVisible] = useState<Date>(() => new Date());
   const [hoverIso, setHoverIso] = useState<string | null>(null);
@@ -326,6 +327,21 @@ const DateRangePicker: React.FC<Props> = ({ checkIn, checkOut, setCheckIn, setCh
   const restoreFocusToTrigger = () => {
     const frame = window.requestAnimationFrame(() => triggerRef.current?.focus());
     return () => window.cancelAnimationFrame(frame);
+  };
+
+  const handleTriggerRef = (node: HTMLButtonElement | null) => {
+    triggerRef.current = node;
+
+    if (!triggerButtonRef) {
+      return;
+    }
+
+    if (typeof triggerButtonRef === 'function') {
+      triggerButtonRef(node);
+      return;
+    }
+
+    triggerButtonRef.current = node;
   };
 
   const handleDayClick = (date: Date) => {
@@ -528,7 +544,7 @@ const DateRangePicker: React.FC<Props> = ({ checkIn, checkOut, setCheckIn, setCh
   return (
     <div ref={containerRef} className="relative w-full">
       <Button
-        ref={triggerRef}
+        ref={handleTriggerRef}
         type="button"
         variant="outline"
         size="auto"

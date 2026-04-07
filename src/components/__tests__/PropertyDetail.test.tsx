@@ -104,6 +104,10 @@ const renderPropertyDetail = () => {
 
 const waitForPropertyHeading = () => waitFor(() => expect(screen.getByRole('heading', { name: 'Casa de prueba' })).toBeDefined());
 
+const getDesktopBookingContext = () => screen.getByRole('region', { name: /contexto de la reserva/i });
+
+const getMobileBookingSummary = () => screen.getByRole('region', { name: /resumen móvil de la reserva/i });
+
 const formatIso = (date: Date) => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -280,31 +284,51 @@ describe('PropertyDetail', () => {
     expect(screen.queryByText('Todavía no elegiste cómo avanzar')).toBeNull();
   });
 
+  test('uses a dominant availability CTA to open the calendar directly', async () => {
+    renderPropertyDetail();
+
+    await waitForPropertyHeading();
+
+    const desktopContext = getDesktopBookingContext();
+
+    expect(within(desktopContext).getByRole('button', { name: /ver disponibilidad/i })).toBeDefined();
+    expect(within(desktopContext).getByText('Elegí fechas para ver el total y avanzar')).toBeDefined();
+
+    fireEvent.click(within(desktopContext).getByRole('button', { name: /ver disponibilidad/i }));
+
+    await waitFor(() => expect(screen.getByRole('dialog', { name: /selector de rango de fechas/i })).toBeDefined());
+  });
+
   test('keeps a persistent reservation context updated while the user advances', async () => {
     renderPropertyDetail();
 
     await waitForPropertyHeading();
 
-    const desktopContext = screen.getByRole('region', { name: /contexto de la reserva/i });
-    const mobileContext = screen.getByRole('region', { name: /resumen móvil de la reserva/i });
+    const desktopContext = getDesktopBookingContext();
+    const mobileContext = getMobileBookingSummary();
 
     expect(within(desktopContext).getByText('Casa de prueba')).toBeDefined();
+    expect(within(desktopContext).getByRole('button', { name: /ver disponibilidad/i })).toBeDefined();
     expect(within(desktopContext).getByText('Todavía no elegiste fechas')).toBeDefined();
     expect(within(desktopContext).getByText('Se definen al elegir fechas')).toBeDefined();
     expect(within(desktopContext).getByText('1 huésped')).toBeDefined();
     expect(within(desktopContext).getByText('Elegí fechas para calcularlo')).toBeDefined();
     expect(within(mobileContext).getByText('Casa de prueba')).toBeDefined();
     expect(within(mobileContext).getByText('1 huésped · Total al elegir fechas')).toBeDefined();
+    expect(within(mobileContext).getByRole('button', { name: /ver disponibilidad/i })).toBeDefined();
+    expect(within(mobileContext).getByText('Elegí fechas para ver el total y avanzar')).toBeDefined();
 
     const checkInIso = isoPlusDays(2);
     const checkOutIso = isoPlusDays(5);
 
     await selectDateRange(checkInIso, checkOutIso);
 
+    expect(within(desktopContext).getByRole('button', { name: /cambiar fechas/i })).toBeDefined();
     expect(within(desktopContext).getByText('3 noches')).toBeDefined();
     expect(within(desktopContext).getByText(new RegExp('360'))).toBeDefined();
     expect(within(desktopContext).queryByText('Todavía no elegiste fechas')).toBeNull();
     expect(within(mobileContext).getByText(/3 noches · 1 huésped ·/i)).toBeDefined();
+    expect(within(mobileContext).getByRole('button', { name: /cambiar fechas/i })).toBeDefined();
 
     fireEvent.click(screen.getByRole('button', { name: /^siguiente$/i }));
     await waitFor(() => expect(screen.getByText('Definí quiénes viajan')).toBeDefined());
