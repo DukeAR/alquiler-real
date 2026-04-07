@@ -115,6 +115,37 @@ const isoPlusDays = (days: number) => {
   return formatIso(next);
 };
 
+const selectDateRange = async (checkInIso: string, checkOutIso: string) => {
+  fireEvent.click(screen.getByRole('button', { name: /abrir calendario de fechas/i }));
+
+  await waitFor(() => expect(screen.getByRole('button', { name: new RegExp(checkInIso) })).toBeDefined());
+  fireEvent.click(screen.getByRole('button', { name: new RegExp(checkInIso) }));
+  fireEvent.click(screen.getByRole('button', { name: new RegExp(checkOutIso) }));
+};
+
+const advanceToConfirmationStep = async (mode: 'direct' | 'protected' = 'direct') => {
+  const checkInIso = isoPlusDays(2);
+  const checkOutIso = isoPlusDays(5);
+
+  await selectDateRange(checkInIso, checkOutIso);
+
+  fireEvent.click(screen.getByRole('button', { name: /^siguiente$/i }));
+  await waitFor(() => expect(screen.getByText('Definí quiénes viajan')).toBeDefined());
+
+  fireEvent.click(screen.getByRole('button', { name: /^siguiente$/i }));
+  await waitFor(() => expect(screen.getByText('Elegí cómo querés avanzar')).toBeDefined());
+
+  if (mode === 'protected') {
+    fireEvent.click(screen.getByLabelText(/reserva protegida/i));
+    expect(screen.getByLabelText(/reserva protegida/i)).toBeChecked();
+  }
+
+  fireEvent.click(screen.getByRole('button', { name: /^siguiente$/i }));
+  await waitFor(() => expect(screen.getByText('Revisá el resumen final')).toBeDefined());
+
+  return { checkInIso, checkOutIso };
+};
+
 beforeEach(() => {
   clearVerificationPreferenceState();
 
@@ -211,14 +242,28 @@ describe('PropertyDetail', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
 
-  test('secondary CTA opens the chat route', async () => {
+  test('shows one booking step at a time and reaches the mode choice with direct selected by default', async () => {
     renderPropertyDetail();
 
     await waitFor(() => expect(screen.getByText('Casa de prueba')).toBeDefined());
 
-    fireEvent.click(screen.getByRole('button', { name: /abrir chat/i }));
+    expect(screen.getByText('Elegí las fechas')).toBeDefined();
+    expect(screen.queryByText('Definí quiénes viajan')).toBeNull();
+    expect(screen.queryByText('Acordar directamente')).toBeNull();
 
-    await waitFor(() => expect(screen.getByText('Chat abierto conv-1')).toBeDefined());
+    const checkInIso = isoPlusDays(2);
+    const checkOutIso = isoPlusDays(5);
+
+    await selectDateRange(checkInIso, checkOutIso);
+    fireEvent.click(screen.getByRole('button', { name: /^siguiente$/i }));
+    await waitFor(() => expect(screen.getByText('Definí quiénes viajan')).toBeDefined());
+
+    fireEvent.click(screen.getByRole('button', { name: /^siguiente$/i }));
+    await waitFor(() => expect(screen.getByText('Elegí cómo querés avanzar')).toBeDefined());
+
+    expect(screen.getByLabelText(/acordar directamente/i)).toBeChecked();
+    expect(screen.getByLabelText(/reserva protegida/i)).not.toBeChecked();
+    expect(screen.getAllByText('Las fechas no se bloquean y la plataforma no interviene en la seña.').length).toBeGreaterThan(0);
   });
 
   test('renders clearer amenities and trust sections', async () => {
@@ -320,9 +365,12 @@ describe('PropertyDetail', () => {
 
     await waitFor(() => expect(screen.getByText('Casa de prueba')).toBeDefined());
 
-    expect(screen.getByText('Faltan las fechas')).toBeDefined();
+    const checkInIso = isoPlusDays(2);
+    const checkOutIso = isoPlusDays(5);
 
-    fireEvent.click(screen.getByRole('button', { name: /abrir selector de huéspedes/i }));
+    await selectDateRange(checkInIso, checkOutIso);
+    fireEvent.click(screen.getByRole('button', { name: /^siguiente$/i }));
+    await waitFor(() => expect(screen.getByText('Definí quiénes viajan')).toBeDefined());
 
     const addAdultButton = screen.getByRole('button', { name: /sumar adulto/i });
     const addChildButton = screen.getByRole('button', { name: /sumar menor/i });
@@ -336,22 +384,18 @@ describe('PropertyDetail', () => {
     expect(screen.getByText('Máximo: 4 huéspedes.')).toBeDefined();
   });
 
-  test('shows the inline advance choice with direct agreement selected by default', async () => {
+  test('shows the final confirmation step with editable summary rows', async () => {
     renderPropertyDetail();
 
     await waitFor(() => expect(screen.getByText('Casa de prueba')).toBeDefined());
 
-    expect(screen.getByText('Cómo querés avanzar')).toBeDefined();
-    expect(screen.getByText('Cómo funciona esta reserva')).toBeDefined();
-    expect(screen.getByText('Enviás solicitud')).toBeDefined();
-    expect(screen.getByText('Hablás con el anfitrión')).toBeDefined();
-    expect(screen.getByText('Confirmás la seña')).toBeDefined();
-    expect(screen.getByText('Coordinás llegada')).toBeDefined();
-    expect(screen.getByLabelText(/acordar directamente/i)).toBeChecked();
-    expect(screen.getByLabelText(/reserva protegida/i)).not.toBeChecked();
-    expect(screen.getByText('Las fechas no se bloquean y la plataforma no interviene en la seña.')).toBeDefined();
-    expect(screen.getByText('Fechas, huéspedes y total quedan asentados desde ahora.')).toBeDefined();
-    expect(screen.getByText('Si elegís acuerdo directo, la seña se coordina por fuera de la app y conviene verificar al titular antes de transferir.')).toBeDefined();
+    await advanceToConfirmationStep('direct');
+
+    expect(screen.getByText('Revisá el resumen final')).toBeDefined();
+    expect(screen.getAllByText('Acuerdo directo').length).toBeGreaterThan(0);
+    expect(screen.getByText('Tu propuesta se abre directo en el chat')).toBeDefined();
+    expect(screen.getAllByRole('button', { name: /editar/i })).toHaveLength(3);
+    expect(screen.getByRole('button', { name: /^solicitar reserva$/i })).toBeDefined();
   });
 
   test('smoke: sends a direct request by default and opens the contextual chat', async () => {
@@ -359,14 +403,7 @@ describe('PropertyDetail', () => {
 
     await waitFor(() => expect(screen.getByText('Casa de prueba')).toBeDefined());
 
-    const checkInIso = isoPlusDays(2);
-    const checkOutIso = isoPlusDays(5);
-
-    fireEvent.click(screen.getByRole('button', { name: /abrir calendario de fechas/i }));
-
-    await waitFor(() => expect(screen.getByRole('button', { name: new RegExp(checkInIso) })).toBeDefined());
-    fireEvent.click(screen.getByRole('button', { name: new RegExp(checkInIso) }));
-    fireEvent.click(screen.getByRole('button', { name: new RegExp(checkOutIso) }));
+    await advanceToConfirmationStep('direct');
 
     const bookingCalls: Array<{ url: string; options: RequestInit }> = [];
     const apiJsonCalls: Array<{ url: string; options?: RequestInit }> = [];
@@ -418,7 +455,7 @@ describe('PropertyDetail', () => {
       return { ok: true, status: 200, json: async () => ({}) };
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /^abrir chat para acordar$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^solicitar reserva$/i }));
 
     expect(bookingCalls).toHaveLength(0);
 
@@ -440,16 +477,7 @@ describe('PropertyDetail', () => {
 
     await waitFor(() => expect(screen.getByText('Casa de prueba')).toBeDefined());
 
-    const checkInIso = isoPlusDays(2);
-    const checkOutIso = isoPlusDays(5);
-
-    fireEvent.click(screen.getByRole('button', { name: /abrir calendario de fechas/i }));
-
-    await waitFor(() => expect(screen.getByRole('button', { name: new RegExp(checkInIso) })).toBeDefined());
-    fireEvent.click(screen.getByRole('button', { name: new RegExp(checkInIso) }));
-    fireEvent.click(screen.getByRole('button', { name: new RegExp(checkOutIso) }));
-    fireEvent.click(screen.getByLabelText(/reserva protegida/i));
-    expect(screen.getByLabelText(/reserva protegida/i)).toBeChecked();
+    const { checkInIso, checkOutIso } = await advanceToConfirmationStep('protected');
 
     const bookingCalls: Array<{ url: string; options: RequestInit }> = [];
     const apiJsonCalls: Array<{ url: string; options?: RequestInit }> = [];
@@ -523,7 +551,7 @@ describe('PropertyDetail', () => {
     });
 
     const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
-    fireEvent.click(screen.getByRole('button', { name: /^enviar solicitud protegida$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^solicitar reserva$/i }));
 
     await waitFor(() => expect(dispatchSpy).toHaveBeenCalled());
     expect(bookingCalls).toHaveLength(1);
@@ -554,13 +582,11 @@ describe('PropertyDetail', () => {
 
     await waitFor(() => expect(screen.getByText('Casa de prueba')).toBeDefined());
 
-    const reserveButton = screen.getByRole('button', { name: /^elegí fechas$/i });
+    const reserveButton = screen.getByRole('button', { name: /^siguiente$/i });
 
     expect(reserveButton).toBeDisabled();
-    expect(screen.getByText('Faltan las fechas')).toBeInTheDocument();
-    expect(screen.getByText('Elegí ingreso y salida para ver el total.')).toBeInTheDocument();
-    expect(screen.getByText('Cómo querés avanzar')).toBeInTheDocument();
-    expect(screen.getByLabelText(/acordar directamente/i)).toBeChecked();
+    expect(screen.getByText('Elegí las fechas')).toBeInTheDocument();
+    expect(screen.queryByText('Acordar directamente')).toBeNull();
   });
 
   test('asks for login when trying to confirm a reservation without a session', async () => {
@@ -581,16 +607,8 @@ describe('PropertyDetail', () => {
     await waitFor(() => expect(screen.getByText('Casa de prueba')).toBeDefined());
     expect(screen.queryByRole('button', { name: /guardar en guardados/i })).toBeNull();
 
-    const checkInIso = isoPlusDays(2);
-    const checkOutIso = isoPlusDays(5);
-
-    fireEvent.click(screen.getByRole('button', { name: /abrir calendario de fechas/i }));
-
-    await waitFor(() => expect(screen.getByRole('button', { name: new RegExp(checkInIso) })).toBeDefined());
-    fireEvent.click(screen.getByRole('button', { name: new RegExp(checkInIso) }));
-    fireEvent.click(screen.getByRole('button', { name: new RegExp(checkOutIso) }));
-    fireEvent.click(screen.getByLabelText(/reserva protegida/i));
-    fireEvent.click(screen.getByRole('button', { name: /^enviar solicitud protegida$/i }));
+    await advanceToConfirmationStep('protected');
+    fireEvent.click(screen.getByRole('button', { name: /^solicitar reserva$/i }));
 
     await waitFor(() => expect(showLoginModal).toHaveBeenCalledTimes(1));
   });
