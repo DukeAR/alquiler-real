@@ -2,7 +2,7 @@ import React from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { Icons } from './Icons';
 import { cn, formatCurrency } from '../lib/utils';
-import { getPropertyVerificationBadge } from '../lib/propertyVerification';
+import { HIGH_VERIFICATION_HIGHLIGHT_MIN_SCORE, getPropertyVerificationBadge } from '../lib/propertyVerification';
 import { Property } from '../services/geminiService';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
@@ -68,6 +68,9 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   const verificationBadge = getPropertyVerificationBadge(property);
   const shouldEmphasizeVerification = emphasizeVerification && !isFavoritesVariant;
   const propertyTypeLabel = getPropertyTypeLabel(property);
+  const verificationTagLabel = !isFavoritesVariant && verificationBadge.score >= HIGH_VERIFICATION_HIGHLIGHT_MIN_SCORE
+    ? verificationGuidanceLabel || 'Más verificado'
+    : null;
 
   const ratingLabel = rating > 0 ? rating.toFixed(1) : 'Sin puntaje';
 
@@ -102,7 +105,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
       onKeyDown={handleCardKeyDown}
       className={cn(
         'group flex h-full flex-col overflow-hidden border-slate-200/80 bg-white/98 transition-[transform,box-shadow,border-color,background-color] duration-200 ease-out',
-        onClick && 'cursor-pointer hover:-translate-y-[1px] hover:border-slate-300/90 hover:shadow-[0_24px_46px_-34px_rgba(15,23,42,0.24)] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-slate-900/10',
+        onClick && 'cursor-pointer hover:-translate-y-[2px] hover:border-slate-300/90 hover:shadow-[0_28px_48px_-34px_rgba(15,23,42,0.24)] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-brand/10',
         isFavoritesVariant && 'bg-white shadow-[var(--app-shadow-soft)]',
       )}
     >
@@ -110,12 +113,24 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         <img 
           src={imageSrc} 
           alt={property.title}
-          className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.018]"
+          className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.012]"
           referrerPolicy="no-referrer"
         />
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-slate-950/18 via-slate-950/5 to-transparent" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-slate-950/24 via-slate-950/8 to-transparent" />
         
-        <div className="absolute inset-x-0 top-0 flex items-start justify-end gap-3 p-4">
+        <div className="absolute inset-x-0 top-0 flex items-start justify-between gap-3 p-4">
+          {verificationTagLabel ? (
+            <Badge
+              variant="neutral"
+              size="sm"
+              className="border-white/70 bg-white/94 text-slate-700 shadow-[0_14px_26px_-22px_rgba(15,23,42,0.26)] backdrop-blur-sm"
+            >
+              {verificationTagLabel}
+            </Badge>
+          ) : (
+            <span />
+          )}
+
           {user ? (
             <Button
               type="button"
@@ -138,89 +153,56 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
       </div>
 
       <div className="flex flex-1 flex-col gap-4 p-4 sm:p-5 md:p-6">
-        <div className="space-y-2">
-          <div className="flex flex-wrap items-center gap-2 text-[12px] font-semibold leading-5 tracking-[0.01em] text-slate-600">
-            <span className="inline-flex items-center gap-1.5">
-              <Icons.Home className="h-4 w-4 shrink-0 text-slate-400" />
-              <span>{propertyTypeLabel}</span>
-            </span>
-            <span className="h-1 w-1 rounded-full bg-slate-300" />
-            <span className="inline-flex min-w-0 items-center gap-1.5">
-              <Icons.MapPin className="h-4 w-4 shrink-0 text-brand" />
-              <span className="truncate">{property.location}</span>
-            </span>
-          </div>
+        <div className="space-y-2.5">
+          <p className="line-clamp-1 text-[12.5px] font-semibold leading-5 tracking-[0.01em] text-slate-500">
+            <span>{propertyTypeLabel}</span>
+            <span className="mx-1.5 text-slate-300"> {'·'} </span>
+            <span className="text-slate-600">{property.location}</span>
+          </p>
           <h3 className="line-clamp-2 text-[1.04rem] font-semibold leading-[1.35] tracking-[-0.02em] text-slate-950 transition-colors duration-150 group-hover:text-slate-950 sm:text-[1.08rem] md:text-[1.12rem]">{property.title}</h3>
         </div>
 
-        <Card padding="sm" variant="muted" className="rounded-[22px] border-slate-200/80 bg-slate-50/80">
-          <div className="flex items-start justify-between gap-4">
-            <div className="space-y-1">
-              <span className="block text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Precio por noche</span>
-              <div className="flex items-end gap-2">
-                <span className="block text-[1.32rem] font-semibold tracking-[-0.03em] text-slate-950 md:text-[1.46rem]">
-                  {formatCurrency(Number(property.price) || 0)}
-                </span>
-                <span className="pb-1 text-xs font-medium text-slate-500">/ noche</span>
-              </div>
-            </div>
-
-            <div className="shrink-0 rounded-[20px] border border-slate-200/80 bg-white/96 px-3 py-2 text-right shadow-[0_12px_24px_-18px_rgba(15,23,42,0.18)]">
-              <div className="flex items-center justify-end gap-1.5 text-sm font-semibold text-slate-900">
-                <Icons.Star className="h-4 w-4 fill-brand text-brand" />
-                {ratingLabel}
-              </div>
-              <p className="mt-1 text-[11px] font-medium text-slate-500">{formatReviewCount(reviewsCount)}</p>
-            </div>
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0 flex-1">
+            <p className="text-[1.55rem] font-black leading-none tracking-[-0.04em] text-slate-950 md:text-[1.75rem]">
+              {formatCurrency(Number(property.price) || 0)}
+              {' '}
+              <span className="text-sm font-medium tracking-normal text-slate-500">por noche</span>
+            </p>
           </div>
-        </Card>
 
-        <div
-          className={cn(
-            'rounded-[22px] border px-4 py-3.5 transition-[border-color,background-color,box-shadow] duration-200',
-            shouldEmphasizeVerification
-              ? 'border-emerald-200/80 bg-emerald-50/70 shadow-[0_18px_36px_-32px_rgba(22,163,74,0.38)]'
-              : 'border-slate-200/80 bg-white',
-          )}
-        >
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <p className={cn(
-                'text-[10px] font-semibold uppercase tracking-[0.16em]',
-                shouldEmphasizeVerification ? 'text-emerald-700' : 'text-slate-400',
-              )}>Nivel de verificación</p>
-              <div className="mt-1 flex flex-wrap items-center gap-2">
-                {verificationGuidanceLabel ? (
-                  <Badge
-                    variant="neutral"
-                    size="sm"
-                    className={cn(
-                      'border-slate-200/90 bg-slate-50/90 text-slate-600',
-                      shouldEmphasizeVerification && 'border-emerald-200/90 bg-white text-emerald-700',
-                    )}
-                  >
-                    {verificationGuidanceLabel}
-                  </Badge>
-                ) : null}
-                <span className={cn(
-                  'text-[13px] font-semibold leading-5',
-                  shouldEmphasizeVerification ? 'text-emerald-950' : 'text-slate-800',
-                )}>
-                  {verificationBadge.label}
-                </span>
-              </div>
+          <div className="shrink-0 pt-0.5 text-right">
+            <div className="inline-flex items-center justify-end gap-1.5 text-sm font-semibold text-slate-900">
+              <Icons.Star className="h-4 w-4 fill-brand text-brand" />
+              <span>{ratingLabel}</span>
             </div>
-
-            <span
-              aria-label={verificationBadge.summaryLabel}
-              className={cn(
-                'shrink-0 font-mono text-[11px] font-semibold tracking-[0.14em]',
-                shouldEmphasizeVerification ? 'text-emerald-700' : 'text-slate-500',
-              )}
-            >
-              {verificationBadge.visual}
-            </span>
+            <p className="mt-1 text-[11px] font-medium text-slate-500">{formatReviewCount(reviewsCount)}</p>
           </div>
+        </div>
+
+        <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
+          <div className="min-w-0">
+            <p className={cn(
+              'text-[11px] font-medium leading-5 text-slate-500',
+              shouldEmphasizeVerification && 'text-emerald-700',
+            )}>Nivel de verificación</p>
+            <p className={cn(
+              'mt-0.5 text-[13px] font-semibold leading-5 text-slate-900',
+              shouldEmphasizeVerification && 'text-emerald-900',
+            )}>
+              {verificationBadge.label}
+            </p>
+          </div>
+
+          <span
+            aria-label={verificationBadge.summaryLabel}
+            className={cn(
+              'shrink-0 font-mono text-[11px] font-semibold tracking-[0.14em]',
+              shouldEmphasizeVerification ? 'text-emerald-700' : 'text-slate-500',
+            )}
+          >
+            {verificationBadge.visual}
+          </span>
         </div>
 
         <div className="mt-auto flex items-end justify-end gap-4 border-t border-slate-100/90 pt-4">

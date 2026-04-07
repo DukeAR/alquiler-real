@@ -72,8 +72,9 @@ describe('PropertyCard', () => {
     expect(screen.getByText('Casa frente al mar')).toBeInTheDocument();
     expect(screen.getByText('Casa')).toBeInTheDocument();
     expect(screen.getByText('Santa Teresita')).toBeInTheDocument();
-    expect(screen.getByText('Precio por noche')).toBeInTheDocument();
-    expect(screen.getByText('/ noche')).toBeInTheDocument();
+    expect(screen.getByText(/120\.000/)).toBeInTheDocument();
+    expect(screen.getByText('por noche')).toBeInTheDocument();
+    expect(screen.queryByText('Precio por noche')).toBeNull();
     expect(screen.getByText('4.8')).toBeInTheDocument();
     expect(screen.getByText('12 reseñas')).toBeInTheDocument();
     expect(screen.getByText('Nivel de verificación')).toBeInTheDocument();
@@ -126,22 +127,18 @@ describe('PropertyCard', () => {
     expect(screen.queryByText('Anfitrión con buen historial')).toBeNull();
   });
 
-  test('renders the guided high-verification label when Explore passes it', () => {
+  test('shows the subtle high-verification badge automatically when the score reaches 4', () => {
     render(
       <PropertyCard
-        property={{
-          ...sampleProperty,
-          propertyRelationshipVerified: false,
-        }}
-        verificationGuidanceLabel="Más verificado"
+        property={sampleProperty}
       />,
     );
 
     expect(screen.getByText('Más verificado')).toBeInTheDocument();
-    expect(screen.getByText('3 de 5 comprobaciones')).toBeInTheDocument();
+    expect(screen.getByText('4 de 5 comprobaciones')).toBeInTheDocument();
   });
 
-  test('makes the verification block slightly more visible when Explore detects sustained interest', () => {
+  test('makes the verification line slightly more visible without turning it into a heavy green block', () => {
     render(
       <PropertyCard
         property={sampleProperty}
@@ -149,9 +146,9 @@ describe('PropertyCard', () => {
       />,
     );
 
-    const verificationBlock = screen.getByLabelText('4 de 5 comprobaciones').parentElement?.parentElement;
+    const verificationBlock = screen.getByLabelText('4 de 5 comprobaciones').parentElement;
 
-    expect(verificationBlock).toHaveClass('border-emerald-200/80');
+    expect(verificationBlock).not.toHaveClass('bg-emerald-50/70');
     expect(screen.getByText('Nivel de verificación')).toHaveClass('text-emerald-700');
   });
 
