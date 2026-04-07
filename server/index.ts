@@ -1567,15 +1567,47 @@ app.post('/api/properties', async (req, res) => {
   
   const risk = await checkUserRisk(req.session.userId);
   if (risk.blocked) return res.status(403).json({ error: risk.reason });
-  if (!risk.isVerified) return res.status(403).json({ error: 'Para publicar, primero verificá tu identidad con DNI.' });
 
-  const { title, location, price, description, imageUrl, lat, lng } = req.body;
+  const { title, location, price, description, imageUrl, lat, lng, maxGuests, bedrooms, bathrooms, propertyType } = req.body;
+  const normalizedTitle = typeof title === 'string' ? title.trim() : '';
+  const normalizedLocation = typeof location === 'string' ? location.trim() : '';
+  const normalizedDescription = typeof description === 'string' ? description.trim() : '';
+  const normalizedImageUrl = typeof imageUrl === 'string' ? imageUrl.trim() : '';
+  const normalizedPrice = Number(price);
+  const normalizedLat = lat === null || lat === undefined || lat === '' ? null : Number(lat);
+  const normalizedLng = lng === null || lng === undefined || lng === '' ? null : Number(lng);
+  const normalizedMaxGuests = Number(maxGuests);
+  const normalizedBedrooms = Number(bedrooms);
+  const normalizedBathrooms = Number(bathrooms);
+  const normalizedPropertyType = typeof propertyType === 'string' ? propertyType.trim().toLowerCase() : '';
+
+  if (!normalizedTitle || !normalizedLocation || !Number.isFinite(normalizedPrice) || normalizedPrice <= 0) {
+    return res.status(400).json({ error: 'Completá el tipo, la ubicación y el precio para publicar.' });
+  }
+
   try {
     const id = `prop_${Date.now()}`;
     const result = await db.query(
-      `INSERT INTO properties (id, title, location, price, "hostId", description, "imageUrl", lat, lng, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'active') RETURNING *`,
-      [id, title, location, price, req.session.userId, description, imageUrl, lat, lng]
+      `INSERT INTO properties (
+         id, title, location, price, "hostId", description, "imageUrl", lat, lng, status,
+         "maxGuests", bedrooms, bathrooms, property_type
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'active', $10, $11, $12, $13) RETURNING *`,
+      [
+        id,
+        normalizedTitle,
+        normalizedLocation,
+        normalizedPrice,
+        req.session.userId,
+        normalizedDescription,
+        normalizedImageUrl || null,
+        Number.isFinite(normalizedLat) ? normalizedLat : null,
+        Number.isFinite(normalizedLng) ? normalizedLng : null,
+        Number.isFinite(normalizedMaxGuests) && normalizedMaxGuests > 0 ? normalizedMaxGuests : 1,
+        Number.isFinite(normalizedBedrooms) && normalizedBedrooms > 0 ? normalizedBedrooms : 1,
+        Number.isFinite(normalizedBathrooms) && normalizedBathrooms > 0 ? normalizedBathrooms : 1,
+        normalizedPropertyType || 'house',
+      ]
     );
     // Update host total_properties
     await db.query(

@@ -53,7 +53,7 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
-vi.mock('../PropertyUploadForm', () => ({
+vi.mock('../PropertyUploadForm.tsx', () => ({
   PropertyUploadForm: () => <div>PropertyUploadForm</div>,
 }));
 

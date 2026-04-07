@@ -11,8 +11,14 @@ vi.mock('../config/db', () => ({
 }));
 
 vi.mock('express-session', () => ({
-  default: ((_options?: unknown) => (req: { session?: Record<string, never> }, _res: unknown, next: () => void) => {
+  default: ((_options?: unknown) => (req: { headers: Record<string, string | string[] | undefined>; session?: { userId?: string } }, _res: unknown, next: () => void) => {
+    const testUserId = req.headers['x-test-user-id'];
     req.session = {};
+
+    if (typeof testUserId === 'string' && testUserId) {
+      req.session.userId = testUserId;
+    }
+
     next();
   }) as unknown,
 }));
@@ -154,5 +160,71 @@ describe('Properties endpoints', () => {
     ]));
     expect(queryMock).toHaveBeenCalledTimes(1);
     expect(queryMock.mock.calls[0][0]).not.toContain('p.is_verified_property = TRUE');
+  });
+
+  test('POST /api/properties publishes the first property without forcing prior identity verification', async () => {
+    queryMock.mockImplementation(async (text: string) => {
+      if (text.includes('SELECT risk_score, role, is_identity_verified FROM users')) {
+        return { rows: [{ risk_score: 0, role: 'tenant', is_identity_verified: false }] };
+      }
+
+      if (text.includes('INSERT INTO properties')) {
+        return {
+          rows: [
+            {
+              id: 'prop_new',
+              title: 'Casa en Santa Teresita',
+              location: 'Santa Teresita · Calle 35',
+              price: 98000,
+              hostId: 'user-1',
+              description: 'Lista para publicarse.',
+              imageUrl: 'https://example.com/photo.jpg',
+              maxGuests: 4,
+              bedrooms: 2,
+              bathrooms: 1,
+              property_type: 'house',
+              status: 'active',
+            },
+          ],
+        };
+      }
+
+      if (text.includes('UPDATE users') && text.includes('total_properties = total_properties + 1')) {
+        return { rows: [] };
+      }
+
+      throw new Error(`Unexpected query: ${text}`);
+    });
+
+    const res = await request(app)
+      .post('/api/properties')
+      .set('x-test-user-id', 'user-1')
+      .send({
+        title: 'Casa en Santa Teresita',
+        location: 'Santa Teresita · Calle 35',
+        price: 98000,
+        description: 'Lista para publicarse.',
+        imageUrl: 'https://example.com/photo.jpg',
+        maxGuests: 4,
+        bedrooms: 2,
+        bathrooms: 1,
+        propertyType: 'house',
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body).toMatchObject({
+      id: 'prop_new',
+      title: 'Casa en Santa Teresita',
+      location: 'Santa Teresita · Calle 35',
+      price: 98000,
+      maxGuests: 4,
+      bedrooms: 2,
+      bathrooms: 1,
+      property_type: 'house',
+      status: 'active',
+    });
+    expect(queryMock).toHaveBeenCalledTimes(3);
+    expect(queryMock.mock.calls[1]?.[0]).toContain('INSERT INTO properties');
+    expect(queryMock.mock.calls[2]?.[0]).toContain('UPDATE users');
   });
 });

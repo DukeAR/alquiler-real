@@ -14,7 +14,7 @@ import { cn } from '../lib/utils';
 import { EmptyState } from './EmptyState';
 import { ErrorState } from './ErrorState';
 import { LoadingState } from './LoadingState';
-import { PropertyUploadForm } from './PropertyUploadForm';
+import { PropertyUploadForm } from './PropertyUploadForm.tsx';
 import { ReviewModal } from './ReviewModal';
 import { Button } from './ui/Button';
 import { AccountModeSwitch } from './ui/AccountModeSwitch';
@@ -117,6 +117,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isAddingProperty, setIsAddingProperty] = useState(false);
+  const [showPublishingFlow, setShowPublishingFlow] = useState(false);
   const [reviewingBooking, setReviewingBooking] = useState<any>(null);
   const [availabilityPropertyId, setAvailabilityPropertyId] = useState<string | null>(null);
   const [expandedBookingId, setExpandedBookingId] = useState<string | null>(null);
@@ -258,15 +259,15 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
   }
 
   if (!dashboardData || dashboardData.properties?.length === 0) {
-    if (isAddingProperty) {
+    if (isAddingProperty || showPublishingFlow) {
       return (
         <div className="min-h-screen bg-slate-50 py-12 dark:bg-slate-950">
           <div className="mx-auto mb-6 max-w-5xl px-4">
-            <Button variant="ghost" onClick={() => setIsAddingProperty(false)} className="rounded-full px-3 py-2 text-sm text-slate-600 dark:text-slate-400">
+            <Button variant="ghost" onClick={() => { setIsAddingProperty(false); setShowPublishingFlow(false); }} className="rounded-full px-3 py-2 text-sm text-slate-600 dark:text-slate-400">
               <Icons.ArrowLeft className="h-4 w-4" /> Cancelar
             </Button>
           </div>
-          <PropertyUploadForm onComplete={() => { setIsAddingProperty(false); void fetchData(); }} />
+          <PropertyUploadForm onComplete={() => { setIsAddingProperty(false); setShowPublishingFlow(false); void fetchData(); }} />
         </div>
       );
     }
@@ -279,10 +280,10 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
             tone="soft"
             visual={<Icons.LayoutDashboard className="h-10 w-10" />}
             title="Todavía no publicaste propiedades"
-            description="Publicá tu primera propiedad con datos claros para aparecer mejor y recibir preguntas más concretas."
+            description="Publicá rápido lo esencial y seguí mejorando el aviso con fotos, verificaciones y ajustes cuando quieras."
             action={{
               label: 'Publicá tu primera propiedad',
-              onClick: () => setIsAddingProperty(true),
+              onClick: () => { setIsAddingProperty(true); setShowPublishingFlow(true); },
             }}
             secondaryAction={{
               label: 'Volver a explorar',
@@ -465,8 +466,8 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
               <Icons.Home className="h-5 w-5 text-brand" />
               Tus propiedades
             </h2>
-            <button onClick={() => setIsAddingProperty(true)} className="app-button-base rounded-[var(--app-radius-control)] bg-brand px-4 py-2 text-sm text-white hover:-translate-y-px hover:bg-brand-dark hover:shadow-[var(--app-shadow-brand)]">
-              Publicar una propiedad
+            <button onClick={() => { setIsAddingProperty(true); setShowPublishingFlow(true); }} className="app-button-base rounded-[var(--app-radius-control)] bg-brand px-4 py-2 text-sm text-white hover:-translate-y-px hover:bg-brand-dark hover:shadow-[var(--app-shadow-brand)]">
+              Publicar otra propiedad
             </button>
           </div>
 
