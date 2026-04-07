@@ -14,6 +14,7 @@ import { getPropertyVerificationBadge, sortPropertiesByCatalogOrder } from '../l
 import { getReservationFlowCopy } from '../lib/reservationFlow';
 import { showToast } from '../lib/toast';
 import { cn } from '../lib/utils';
+import { useAuth } from '../hooks/useAuth';
 import { useUserReservations } from '../hooks/useUserReservations';
 import {
   acceptContract,
@@ -373,6 +374,7 @@ const getHighlightedStayDescription = (booking: Booking) => {
 
 export const MyBookings = () => {
   const navigate = useNavigate();
+  const { user, setActiveMode } = useAuth();
   const {
     reservations: bookings,
     setReservations: setBookings,
@@ -391,6 +393,16 @@ export const MyBookings = () => {
     bookingId: string;
     action: 'pay-deposit' | 'confirm-arrival' | 'report-arrival-problem';
   } | null>(null);
+
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    if (user.activeMode !== 'guest' && user.canGuest !== false) {
+      void setActiveMode('guest');
+    }
+  }, [setActiveMode, user]);
 
   useEffect(() => {
     if (loading || loadError) {

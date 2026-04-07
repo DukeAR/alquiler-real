@@ -10,6 +10,7 @@ const payProtectedDepositMock = vi.fn();
 const confirmArrivalMock = vi.fn();
 const reportArrivalProblemMock = vi.fn();
 const showToastMock = vi.fn();
+const setActiveModeMock = vi.fn();
 
 const ARGENTINA_TIME_ZONE = 'America/Argentina/Buenos_Aires';
 
@@ -71,6 +72,18 @@ vi.mock('../../lib/toast', () => ({
   showToast: (...args: unknown[]) => showToastMock(...args),
 }));
 
+vi.mock('../../hooks/useAuth', () => ({
+  useAuth: () => ({
+    user: {
+      id: 'user-1',
+      activeMode: 'host',
+      canGuest: true,
+      canHost: true,
+    },
+    setActiveMode: setActiveModeMock,
+  }),
+}));
+
 vi.mock('../ui/AccountModeSwitch', () => ({
   AccountModeSwitch: () => <div>Mode switch</div>,
 }));
@@ -86,6 +99,7 @@ describe('MyBookings', () => {
     confirmArrivalMock.mockReset();
     reportArrivalProblemMock.mockReset();
     showToastMock.mockReset();
+    setActiveModeMock.mockReset();
     vi.spyOn(window, 'confirm').mockReturnValue(true);
   });
 
@@ -106,6 +120,20 @@ describe('MyBookings', () => {
 
     expect(await screen.findByText('Todavía no tenés reservas')).toBeInTheDocument();
     expect(apiJsonMock.mock.calls.filter((call) => call[0] === '/api/bookings/all')).toHaveLength(2);
+  });
+
+  test('switches the account mode back to guest when opening the guest dashboard', async () => {
+    mockDashboardApi({ bookings: [] });
+
+    render(
+      <MemoryRouter>
+        <MyBookings />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText('Todavía no tenés reservas');
+
+    expect(setActiveModeMock).toHaveBeenCalledWith('guest');
   });
 
   test('shows the guest control center hierarchy with reservations, saved properties and conversations', async () => {
