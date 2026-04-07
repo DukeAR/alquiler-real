@@ -1,71 +1,456 @@
-import { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Icons } from './Icons';
-import { Booking } from '../types';
-import { cn } from '../lib/utils';
+import { apiJson } from '../lib/apiConfig';
+import {
+  formatBookingDateOnly,
+  formatBookingDateShort,
+  formatBookingDateTime,
+  getBookingDateOnlyValue,
+  getCancellationDeadlineFromStartDate,
+  isBookingCheckInReached,
+  parseBookingDateOnly,
+} from '../lib/bookingDates';
+import { getPropertyVerificationBadge, sortPropertiesByCatalogOrder } from '../lib/propertyVerification';
+import { getReservationFlowCopy } from '../lib/reservationFlow';
 import { showToast } from '../lib/toast';
-import { acceptContract, cancelBooking, confirmArrival, payProtectedDeposit, reportArrivalProblem } from '../services/geminiService';
+import { cn } from '../lib/utils';
+import { useUserReservations } from '../hooks/useUserReservations';
+import {
+  acceptContract,
+  cancelBooking,
+  confirmArrival,
+  payProtectedDeposit,
+  reportArrivalProblem,
+} from '../services/geminiService';
+import type { Booking, Conversation, Property } from '../types';
 import { EmptyState } from './EmptyState';
 import { ErrorState } from './ErrorState';
-import { Badge } from './ui/Badge';
-import { AccountModeSwitch } from './ui/AccountModeSwitch';
-import { Button } from './ui/Button';
+import { Icons } from './Icons';
 import { LoadingState } from './LoadingState';
-import { formatBookingDateOnly, formatBookingDateTime, getCancellationDeadlineFromStartDate, isBookingCheckInReached } from '../lib/bookingDates';
-import { useUserReservations } from '../hooks/useUserReservations';
-import { getReservationFlowCopy, getReservationFlowMilestones, type ReservationFlowMilestoneKey, type ReservationFlowMilestoneState } from '../lib/reservationFlow';
+import { Badge } from './ui/Badge';
+import { Button } from './ui/Button';
+import { Card } from './ui/Card';
+import { SectionTitle } from './ui/SectionTitle';
+import { AccountModeSwitch } from './ui/AccountModeSwitch';
+
+const UPCOMING_STAY_WINDOW_DAYS = 21;
+const RECENT_CONVERSATION_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+const RESERVATIONS_SECTION_ID = 'guest-dashboard-reservations';
+const SAVED_SECTION_ID = 'guest-dashboard-saved';
+const CONVERSATIONS_SECTION_ID = 'guest-dashboard-conversations';
+
+type BookingGroupKey = 'requests' | 'accepted' | 'upcoming' | 'closed';
+
+type ContractState = {
+  id: string;
+  accepted?: boolean;
+  guestName?: string;
+  hostName?: string;
+  propertyTitle?: string;
+  location?: string;
+  rules?: string[];
+};
+
+type PriorityAction = {
+  id: string;
+  eyebrow: string;
+  title: string;
+  description: string;
+  actionLabel: string;
+  icon: React.ReactNode;
+  onAction: () => void;
+};
+
+type SummaryMetricProps = {
+  label: string;
+  value: string;
+  helper: string;
+  icon: React.ReactNode;
+};
+
+type PriorityActionRowProps = PriorityAction;
+
+type BookingGroupProps = {
+  title: string;
+  description: string;
+  count: number;
+  emptyText: string;
+  children: React.ReactNode;
+};
+
+const SummaryMetric = ({ label, value, helper, icon }: SummaryMetricProps) => (
+  <div className="rounded-[28px] border border-slate-200/80 bg-white/96 p-5 shadow-[0_18px_42px_-36px_rgba(15,23,42,0.26)] dark:border-slate-800 dark:bg-slate-900/92">
+    <div className="flex items-center justify-between gap-3">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">{label}</p>
+      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-brand/10 text-brand dark:bg-brand/15 dark:text-brand-light">
+        {icon}
+      </div>
+    </div>
+    <p className="mt-4 text-3xl font-semibold tracking-tight text-slate-950 dark:text-slate-50">{value}</p>
+    <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">{helper}</p>
+  </div>
+);
+
+const PriorityActionRow = ({ eyebrow, title, description, actionLabel, icon, onAction }: PriorityActionRowProps) => (
+  <div className="flex flex-col gap-4 rounded-[28px] border border-slate-200/80 bg-white/96 p-5 shadow-[0_18px_42px_-36px_rgba(15,23,42,0.22)] dark:border-slate-800 dark:bg-slate-900/92 md:flex-row md:items-center md:justify-between">
+    <div className="flex items-start gap-4">
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand/10 text-brand dark:bg-brand/15 dark:text-brand-light">
+        {icon}
+      </div>
+      <div className="space-y-1.5">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">{eyebrow}</p>
+        <p className="text-base font-semibold text-slate-950 dark:text-slate-50">{title}</p>
+        <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">{description}</p>
+      </div>
+    </div>
+    <Button type="button" variant="secondary" size="sm" onClick={onAction} className="shrink-0 rounded-full">
+      <>
+        {actionLabel}
+        <Icons.ArrowRight className="h-4 w-4" />
+      </>
+    </Button>
+  </div>
+);
+
+const BookingGroup = ({ title, description, count, emptyText, children }: BookingGroupProps) => (
+  <Card padding="none" className="overflow-hidden">
+    <div className="border-b border-slate-100 bg-slate-50/70 px-5 py-4 dark:border-slate-800 dark:bg-slate-800/50 sm:px-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="space-y-1">
+          <h3 className="text-base font-semibold text-slate-950 dark:text-slate-50">{title}</h3>
+          <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">{description}</p>
+        </div>
+        <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+          {count}
+        </span>
+      </div>
+    </div>
+    {count > 0 ? children : <p className="px-6 py-6 text-sm leading-6 text-slate-500 dark:text-slate-400">{emptyText}</p>}
+  </Card>
+);
+
+const formatCurrency = (value?: number) => (
+  new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(value || 0)
+);
+
+const getBookingElementId = (bookingId: string) => `guest-booking-${bookingId}`;
+
+const scrollToTarget = (targetId: string) => {
+  if (typeof document === 'undefined') {
+    return false;
+  }
+
+  const target = document.getElementById(targetId);
+  if (!target) {
+    return false;
+  }
+
+  target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  return true;
+};
+
+const getTodayDate = () => parseBookingDateOnly(getBookingDateOnlyValue(new Date()));
+
+const getDaysUntilDate = (value?: string | null) => {
+  const parsedDate = parseBookingDateOnly(value);
+  const today = getTodayDate();
+
+  if (!parsedDate || !today) {
+    return null;
+  }
+
+  return Math.round((parsedDate.getTime() - today.getTime()) / DAY_MS);
+};
+
+const isWithinUpcomingWindow = (value?: string | null) => {
+  const daysUntilDate = getDaysUntilDate(value);
+  return daysUntilDate !== null && daysUntilDate >= 0 && daysUntilDate <= UPCOMING_STAY_WINDOW_DAYS;
+};
+
+const isFutureBookingDate = (value?: string | null) => {
+  const daysUntilDate = getDaysUntilDate(value);
+  return daysUntilDate !== null && daysUntilDate >= 0;
+};
+
+const parseInstant = (value?: string | null) => {
+  if (!value) {
+    return null;
+  }
+
+  const parsedDate = new Date(value);
+  return Number.isNaN(parsedDate.getTime()) ? null : parsedDate;
+};
+
+const formatConversationUpdatedAt = (value?: string | null) => {
+  const parsedDate = parseInstant(value);
+  if (!parsedDate) {
+    return 'Sin actualización reciente';
+  }
+
+  const differenceInDays = Math.floor((Date.now() - parsedDate.getTime()) / DAY_MS);
+
+  if (differenceInDays <= 0) {
+    return 'Hoy';
+  }
+
+  if (differenceInDays === 1) {
+    return 'Ayer';
+  }
+
+  if (differenceInDays < 7) {
+    return `Hace ${differenceInDays} días`;
+  }
+
+  return new Intl.DateTimeFormat('es-AR', {
+    day: 'numeric',
+    month: 'short',
+  }).format(parsedDate);
+};
+
+const compareBookingsByStartDate = (left: Booking, right: Booking) => {
+  const leftDays = getDaysUntilDate(left.startDate);
+  const rightDays = getDaysUntilDate(right.startDate);
+
+  if (leftDays === null && rightDays === null) {
+    return String(left.propertyTitle || '').localeCompare(String(right.propertyTitle || ''), 'es');
+  }
+
+  if (leftDays === null) {
+    return 1;
+  }
+
+  if (rightDays === null) {
+    return -1;
+  }
+
+  return leftDays - rightDays;
+};
+
+const isResolvedProperty = (value: unknown): value is Property => {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const candidate = value as Partial<Property>;
+  return typeof candidate.id === 'string'
+    && typeof candidate.title === 'string'
+    && candidate.title.trim().length > 0
+    && typeof candidate.location === 'string';
+};
+
+const isResolvedConversation = (value: unknown): value is Conversation => {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const candidate = value as Partial<Conversation>;
+  return typeof candidate.id === 'string'
+    && typeof candidate.property_id === 'string'
+    && typeof candidate.updated_at === 'string';
+};
+
+const getBookingRequestStatus = (booking: Booking) => {
+  if (booking.requestMode !== 'protected') {
+    return undefined;
+  }
+
+  return booking.depositStatus === 'held' || booking.depositStatus === 'released' || booking.status === 'confirmed'
+    ? 'accepted'
+    : 'pending';
+};
+
+const getBookingFlow = (booking: Booking) => getReservationFlowCopy({
+  mode: booking.requestMode,
+  requestStatus: getBookingRequestStatus(booking),
+  bookingStatus: booking.status,
+  depositStatus: booking.depositStatus,
+  cancellationActor: booking.cancellationActor,
+  viewerRole: 'guest',
+});
+
+const getConversationFlow = (conversation: Conversation, relatedBooking?: Booking) => getReservationFlowCopy({
+  mode: relatedBooking?.requestMode ?? conversation.requestMode,
+  requestStatus: relatedBooking ? getBookingRequestStatus(relatedBooking) : conversation.requestStatus,
+  bookingStatus: relatedBooking?.status ?? conversation.bookingStatus,
+  depositStatus: relatedBooking?.depositStatus ?? conversation.depositStatus,
+  cancellationActor: relatedBooking?.cancellationActor ?? conversation.cancellationActor,
+  viewerRole: 'guest',
+});
+
+const getBookingStatusVariant = (booking: Booking): 'neutral' | 'brand' | 'success' | 'warning' | 'danger' => {
+  const flow = getBookingFlow(booking);
+
+  if (flow.stage === 'host-cancelled') {
+    return 'danger';
+  }
+
+  if (flow.stage === 'guest-cancelled' || flow.stage === 'protected-deposit-review' || flow.stage === 'protected-no-show-pending') {
+    return 'warning';
+  }
+
+  if (flow.stage === 'request-accepted' || flow.stage === 'protected-deposit-held') {
+    return 'brand';
+  }
+
+  if (flow.stage === 'protected-deposit-released' || flow.stage === 'reservation-confirmed') {
+    return 'success';
+  }
+
+  switch (booking.status) {
+    case 'confirmed':
+      return 'brand';
+    case 'completed':
+      return 'success';
+    case 'cancelled':
+      return 'neutral';
+    default:
+      return 'neutral';
+  }
+};
+
+const getBookingStatusText = (booking: Booking) => {
+  const flow = getBookingFlow(booking);
+
+  if (flow.statusLabel) {
+    return flow.statusLabel;
+  }
+
+  switch (booking.status) {
+    case 'confirmed':
+      return 'Confirmada';
+    case 'pending':
+      return 'Pendiente';
+    case 'completed':
+      return 'Finalizada';
+    case 'cancelled':
+      return 'Cancelada';
+    default:
+      return booking.status;
+  }
+};
+
+const getBookingGroupKey = (booking: Booking): BookingGroupKey => {
+  const flow = getBookingFlow(booking);
+
+  if (booking.status === 'completed' || booking.status === 'cancelled') {
+    return 'closed';
+  }
+
+  if (flow.stage === 'request-pending' || flow.stage === 'request-accepted' || flow.stage === 'direct-deposit-reported') {
+    return 'requests';
+  }
+
+  if (isBookingCheckInReached(booking.startDate) || isWithinUpcomingWindow(booking.startDate) || flow.stage === 'protected-deposit-review' || flow.stage === 'protected-no-show-pending') {
+    return 'upcoming';
+  }
+
+  return 'accepted';
+};
+
+const getHighlightedStayDescription = (booking: Booking) => {
+  const flow = getBookingFlow(booking);
+
+  if (flow.stage === 'protected-deposit-held' && isBookingCheckInReached(booking.startDate)) {
+    return 'Tu estadía ya empezó. Desde acá podés confirmar la llegada o reportar un problema sin salir del panel.';
+  }
+
+  if (flow.stage === 'protected-deposit-held') {
+    return 'La reserva ya quedó protegida. Dejala a mano para coordinar la llegada cuando se acerque el ingreso.';
+  }
+
+  if (flow.stage === 'protected-deposit-released') {
+    return 'La llegada ya quedó confirmada. Usá este acceso rápido para seguir el chat y cualquier ajuste de la estadía.';
+  }
+
+  if (booking.conversationId) {
+    return 'Ya tenés el chat listo para coordinar horario, llegada y cualquier detalle final con el anfitrión.';
+  }
+
+  return 'Entrá a la reserva para revisar fechas, estado y los próximos pasos antes del ingreso.';
+};
 
 export const MyBookings = () => {
   const navigate = useNavigate();
-  const { reservations: bookings, setReservations: setBookings, loading, error: loadError, reload: fetchBookings } = useUserReservations();
-  const [selectedContract, setSelectedContract] = useState<any>(null);
+  const {
+    reservations: bookings,
+    setReservations: setBookings,
+    loading,
+    error: loadError,
+    reload: fetchBookings,
+  } = useUserReservations();
+  const [favorites, setFavorites] = useState<Property[]>([]);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [favoritesLoadError, setFavoritesLoadError] = useState<string | null>(null);
+  const [conversationsLoadError, setConversationsLoadError] = useState<string | null>(null);
+  const [selectedContract, setSelectedContract] = useState<ContractState | null>(null);
   const [accepting, setAccepting] = useState(false);
   const [cancelingBookingId, setCancelingBookingId] = useState<string | null>(null);
-  const [processingBookingAction, setProcessingBookingAction] = useState<{ bookingId: string; action: 'pay-deposit' | 'confirm-arrival' | 'report-arrival-problem' } | null>(null);
+  const [processingBookingAction, setProcessingBookingAction] = useState<{
+    bookingId: string;
+    action: 'pay-deposit' | 'confirm-arrival' | 'report-arrival-problem';
+  } | null>(null);
 
-  const handleAcceptContract = async (bookingId: string) => {
-    setAccepting(true);
-
-    try {
-      await acceptContract(bookingId);
-      setBookings((currentBookings) =>
-        currentBookings.map((booking) =>
-          booking.id === bookingId ? { ...booking, contractAccepted: true } : booking,
-        ),
-      );
-      setSelectedContract((currentContract: any) =>
-        currentContract && currentContract.id === bookingId
-          ? { ...currentContract, accepted: true }
-          : currentContract,
-      );
-      showToast('Condiciones aceptadas', 'Ya registramos la aceptación y quedó asociada a tu reserva.', 'success');
-    } catch (err) {
-      showToast('Condiciones', 'No pudimos registrar la aceptación. Intentá de nuevo.', 'error');
-    } finally {
-      setAccepting(false);
+  useEffect(() => {
+    if (loading || loadError) {
+      return;
     }
-  };
 
-  const formatDate = (dateStr?: string) => {
-    return formatBookingDateOnly(dateStr);
-  };
+    let cancelled = false;
 
-  const formatCurrency = (value?: number) => {
-    return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(value || 0);
-  };
+    const loadSupplementalData = async () => {
+      const [favoritesResult, conversationsResult] = await Promise.allSettled([
+        apiJson<unknown[]>('/api/favorites', { includeCredentials: true }),
+        apiJson<unknown[]>('/api/conversations', { includeCredentials: true }),
+      ]);
+
+      if (cancelled) {
+        return;
+      }
+
+      if (favoritesResult.status === 'fulfilled') {
+        const nextFavorites = Array.isArray(favoritesResult.value)
+          ? favoritesResult.value.filter(isResolvedProperty)
+          : [];
+        setFavorites(nextFavorites);
+        setFavoritesLoadError(null);
+      } else {
+        setFavorites([]);
+        setFavoritesLoadError('No pudimos actualizar tus guardados ahora.');
+      }
+
+      if (conversationsResult.status === 'fulfilled') {
+        const nextConversations = Array.isArray(conversationsResult.value)
+          ? conversationsResult.value.filter(isResolvedConversation)
+          : [];
+        setConversations(nextConversations);
+        setConversationsLoadError(null);
+      } else {
+        setConversations([]);
+        setConversationsLoadError('No pudimos actualizar tus conversaciones ahora.');
+      }
+    };
+
+    void loadSupplementalData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [loading, loadError]);
+
+  const formatDate = (dateStr?: string) => formatBookingDateOnly(dateStr);
 
   const getCancellationDeadline = (booking: Booking) => {
     if (booking.cancellationDeadline) {
-      const parsed = new Date(booking.cancellationDeadline);
-      return Number.isNaN(parsed.getTime()) ? null : parsed;
+      const parsedDate = new Date(booking.cancellationDeadline);
+      return Number.isNaN(parsedDate.getTime()) ? null : parsedDate;
     }
 
     return getCancellationDeadlineFromStartDate(booking.startDate);
   };
 
-  const getCancellationDeadlineLabel = (booking: Booking) => {
-    return formatBookingDateTime(getCancellationDeadline(booking));
-  };
+  const getCancellationDeadlineLabel = (booking: Booking) => formatBookingDateTime(getCancellationDeadline(booking));
 
   const canCancelBooking = (booking: Booking) => {
     if (booking.status !== 'pending' && booking.status !== 'confirmed') {
@@ -82,6 +467,50 @@ export const MyBookings = () => {
     }
 
     return Date.now() < cancellationDeadline.getTime();
+  };
+
+  const openContract = (booking: Booking) => {
+    if (!booking.contractJson) {
+      return;
+    }
+
+    try {
+      const parsedContract = JSON.parse(booking.contractJson) as Omit<ContractState, 'id' | 'accepted'>;
+      setSelectedContract({
+        ...parsedContract,
+        id: booking.id,
+        accepted: booking.contractAccepted,
+      });
+    } catch {
+      showToast('Condiciones', 'No pudimos abrir las condiciones de esta reserva.', 'error');
+    }
+  };
+
+  const updateBookingState = (nextBooking: Booking) => {
+    setBookings((currentBookings) => currentBookings.map((currentBooking) => (
+      currentBooking.id === nextBooking.id ? { ...currentBooking, ...nextBooking } : currentBooking
+    )));
+  };
+
+  const handleAcceptContract = async (bookingId: string) => {
+    setAccepting(true);
+
+    try {
+      await acceptContract(bookingId);
+      setBookings((currentBookings) => currentBookings.map((booking) => (
+        booking.id === bookingId ? { ...booking, contractAccepted: true } : booking
+      )));
+      setSelectedContract((currentContract) => (
+        currentContract && currentContract.id === bookingId
+          ? { ...currentContract, accepted: true }
+          : currentContract
+      ));
+      showToast('Condiciones aceptadas', 'Ya registramos la aceptación y quedó asociada a tu reserva.', 'success');
+    } catch {
+      showToast('Condiciones', 'No pudimos registrar la aceptación. Intentá de nuevo.', 'error');
+    } finally {
+      setAccepting(false);
+    }
   };
 
   const handleCancelBooking = async (booking: Booking) => {
@@ -102,94 +531,15 @@ export const MyBookings = () => {
 
     try {
       const response = await cancelBooking(booking.id);
-      const nextBooking = response.booking;
-
-      setBookings((currentBookings) =>
-        currentBookings.map((currentBooking) =>
-          currentBooking.id === booking.id ? { ...currentBooking, ...nextBooking } : currentBooking,
-        ),
-      );
-
+      setBookings((currentBookings) => currentBookings.map((currentBooking) => (
+        currentBooking.id === booking.id ? { ...currentBooking, ...response.booking } : currentBooking
+      )));
       showToast('Reserva cancelada', 'La reserva se canceló y las fechas volvieron a quedar disponibles.', 'success');
-    } catch (err) {
-      showToast('Reserva', err instanceof Error ? err.message : 'No pudimos cancelar la reserva. Intentá de nuevo.', 'error');
+    } catch (error) {
+      showToast('Reserva', error instanceof Error ? error.message : 'No pudimos cancelar la reserva. Intentá de nuevo.', 'error');
     } finally {
       setCancelingBookingId(null);
     }
-  };
-
-  const getBookingFlow = (booking: Booking) => getReservationFlowCopy({
-    mode: booking.requestMode,
-    requestStatus: booking.requestMode === 'protected'
-      ? booking.depositStatus === 'held' || booking.depositStatus === 'released' || booking.status === 'confirmed'
-        ? 'accepted'
-        : 'pending'
-      : undefined,
-    bookingStatus: booking.status,
-    depositStatus: booking.depositStatus,
-    cancellationActor: booking.cancellationActor,
-    viewerRole: 'guest',
-  });
-
-  const getBookingMilestones = (booking: Booking) => getReservationFlowMilestones({
-    mode: booking.requestMode,
-    requestStatus: booking.requestMode === 'protected'
-      ? booking.depositStatus === 'held' || booking.depositStatus === 'released' || booking.status === 'confirmed'
-        ? 'accepted'
-        : 'pending'
-      : undefined,
-    bookingStatus: booking.status,
-    depositStatus: booking.depositStatus,
-    cancellationActor: booking.cancellationActor,
-    viewerRole: 'guest',
-  });
-
-  const getFlowMilestoneIcon = (key: ReservationFlowMilestoneKey, mode?: Booking['requestMode']) => {
-    if (key === 'request') {
-      return Icons.MessageSquare;
-    }
-
-    if (key === 'accepted') {
-      return Icons.Check;
-    }
-
-    if (key === 'deposit') {
-      return mode === 'protected' ? Icons.ShieldCheck : Icons.Clock;
-    }
-
-    return Icons.CheckCircle2;
-  };
-
-  const getFlowMilestoneClasses = (state: ReservationFlowMilestoneState) => {
-    if (state === 'completed') {
-      return 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-900/20 dark:text-emerald-300';
-    }
-
-    if (state === 'current') {
-      return 'border-brand/20 bg-brand/10 text-brand dark:border-brand/25 dark:bg-brand/15 dark:text-brand-light';
-    }
-
-    return 'border-slate-200 bg-white/80 text-slate-500 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-400';
-  };
-
-  const getFlowMilestoneStateLabel = (state: ReservationFlowMilestoneState) => {
-    if (state === 'completed') {
-      return 'Hecho';
-    }
-
-    if (state === 'current') {
-      return 'Ahora';
-    }
-
-    return 'Sigue';
-  };
-
-  const updateBookingState = (nextBooking: Booking) => {
-    setBookings((currentBookings) =>
-      currentBookings.map((currentBooking) =>
-        currentBooking.id === nextBooking.id ? { ...currentBooking, ...nextBooking } : currentBooking,
-      ),
-    );
   };
 
   const handlePayDeposit = async (bookingId: string) => {
@@ -199,8 +549,8 @@ export const MyBookings = () => {
       const nextBooking = await payProtectedDeposit(bookingId);
       updateBookingState(nextBooking);
       showToast('Seña en custodia', 'La seña ya quedó resguardada en la plataforma hasta que confirmes la llegada.', 'success');
-    } catch (err) {
-      showToast('Seña', err instanceof Error ? err.message : 'No pudimos registrar el pago de la seña.', 'error');
+    } catch (error) {
+      showToast('Seña', error instanceof Error ? error.message : 'No pudimos registrar el pago de la seña.', 'error');
     } finally {
       setProcessingBookingAction(null);
     }
@@ -213,8 +563,8 @@ export const MyBookings = () => {
       const nextBooking = await confirmArrival(bookingId);
       updateBookingState(nextBooking);
       showToast('Seña liberada', 'La llegada quedó confirmada y la seña pasó a liberación.', 'success');
-    } catch (err) {
-      showToast('Llegada', err instanceof Error ? err.message : 'No pudimos confirmar la llegada.', 'error');
+    } catch (error) {
+      showToast('Llegada', error instanceof Error ? error.message : 'No pudimos confirmar la llegada.', 'error');
     } finally {
       setProcessingBookingAction(null);
     }
@@ -227,55 +577,420 @@ export const MyBookings = () => {
       const nextBooking = await reportArrivalProblem(bookingId);
       updateBookingState(nextBooking);
       showToast('Seña en revisión', 'El problema quedó informado y la seña pasó a revisión.', 'success');
-    } catch (err) {
-      showToast('Problema', err instanceof Error ? err.message : 'No pudimos registrar el problema. Intentá de nuevo.', 'error');
+    } catch (error) {
+      showToast('Problema', error instanceof Error ? error.message : 'No pudimos registrar el problema. Intentá de nuevo.', 'error');
     } finally {
       setProcessingBookingAction(null);
     }
   };
 
-  const getStatusColor = (booking: Booking) => {
-    const flow = getBookingFlow(booking);
+  const sortedRequestBookings = bookings.filter((booking) => getBookingGroupKey(booking) === 'requests').slice().sort(compareBookingsByStartDate);
+  const sortedAcceptedBookings = bookings.filter((booking) => getBookingGroupKey(booking) === 'accepted').slice().sort(compareBookingsByStartDate);
+  const sortedUpcomingBookings = bookings.filter((booking) => getBookingGroupKey(booking) === 'upcoming').slice().sort(compareBookingsByStartDate);
+  const sortedClosedBookings = bookings.filter((booking) => getBookingGroupKey(booking) === 'closed').slice().sort(compareBookingsByStartDate);
 
-    if (flow.stage === 'host-cancelled') {
-      return 'danger';
-    }
+  const currentStay = sortedUpcomingBookings.find((booking) => isBookingCheckInReached(booking.startDate)) ?? null;
+  const nextFutureStay = [...sortedUpcomingBookings, ...sortedAcceptedBookings]
+    .filter((booking) => isFutureBookingDate(booking.startDate))
+    .sort(compareBookingsByStartDate)[0] ?? null;
+  const highlightedStay = currentStay ?? nextFutureStay;
 
-    if (flow.stage === 'guest-cancelled' || flow.stage === 'protected-deposit-review' || flow.stage === 'protected-no-show-pending') {
-      return 'warning';
-    }
+  const bookingsByConversationId = new Map(
+    bookings
+      .filter((booking): booking is Booking & { conversationId: string } => typeof booking.conversationId === 'string' && booking.conversationId.length > 0)
+      .map((booking) => [booking.conversationId, booking]),
+  );
 
-    if (flow.stage === 'request-accepted' || flow.stage === 'protected-deposit-held') {
-      return 'brand';
-    }
+  const allRelevantConversations = conversations
+    .filter((conversation) => {
+      const relatedBooking = bookingsByConversationId.get(conversation.id);
+      const updatedAt = parseInstant(conversation.updated_at);
 
-    if (flow.stage === 'protected-deposit-released' || flow.stage === 'reservation-confirmed') {
-      return 'success';
-    }
+      if (relatedBooking && getBookingGroupKey(relatedBooking) !== 'closed') {
+        return true;
+      }
 
-    switch (booking.status) {
-      case 'confirmed': return 'brand';
-      case 'pending': return 'neutral';
-      case 'cancelled': return 'neutral';
-      case 'completed': return 'success';
-      default: return 'neutral';
+      if (conversation.requestMode || conversation.requestStatus || conversation.bookingStatus === 'pending') {
+        return true;
+      }
+
+      return Boolean(updatedAt && (Date.now() - updatedAt.getTime()) <= RECENT_CONVERSATION_WINDOW_MS);
+    })
+    .sort((left, right) => {
+      const leftValue = parseInstant(left.updated_at)?.getTime() ?? 0;
+      const rightValue = parseInstant(right.updated_at)?.getTime() ?? 0;
+      return rightValue - leftValue;
+    });
+
+  const relevantConversations = allRelevantConversations.slice(0, 4);
+  const usefulSavedProperties = sortPropertiesByCatalogOrder(favorites, 'verification').slice(0, 3);
+
+  const activeReservationsCount = sortedAcceptedBookings.length + sortedUpcomingBookings.length;
+  const pendingRequestsCount = sortedRequestBookings.length;
+  const openConversationsCount = allRelevantConversations.length;
+
+  const scrollToBooking = (bookingId: string) => {
+    if (!scrollToTarget(getBookingElementId(bookingId))) {
+      scrollToTarget(RESERVATIONS_SECTION_ID);
     }
   };
 
-  const getStatusText = (booking: Booking) => {
+  const addPriorityAction = (actions: PriorityAction[], action: PriorityAction | null) => {
+    if (!action || actions.some((currentAction) => currentAction.id === action.id)) {
+      return;
+    }
+
+    actions.push(action);
+  };
+
+  const priorityActions: PriorityAction[] = [];
+
+  const arrivalActionBooking = bookings.find((booking) => {
     const flow = getBookingFlow(booking);
+    return flow.stage === 'protected-deposit-held' && isBookingCheckInReached(booking.startDate);
+  }) ?? null;
 
-    if (flow.statusLabel) {
-      return flow.statusLabel;
-    }
+  const contractActionBooking = bookings.find((booking) => Boolean(booking.contractJson) && !booking.contractAccepted) ?? null;
+  const depositActionBooking = bookings.find((booking) => getBookingFlow(booking).stage === 'request-accepted') ?? null;
+  const pendingResponseBooking = bookings.find((booking) => getBookingFlow(booking).stage === 'request-pending') ?? null;
 
-    switch (booking.status) {
-      case 'confirmed': return 'Confirmada';
-      case 'pending': return 'Pendiente';
-      case 'cancelled': return 'Cancelada';
-      case 'completed': return 'Finalizada';
-      default: return booking.status;
-    }
+  addPriorityAction(priorityActions, arrivalActionBooking ? {
+    id: `arrival-${arrivalActionBooking.id}`,
+    eyebrow: 'Resolver hoy',
+    title: `Tu llegada a ${arrivalActionBooking.propertyTitle || 'esta reserva'} ya pide confirmación`,
+    description: 'Hoy ya podés confirmar el ingreso o reportar un problema si la reserva protegida no salió como esperabas.',
+    actionLabel: 'Ir a la reserva',
+    icon: <Icons.CheckCircle2 className="h-5 w-5" />,
+    onAction: () => scrollToBooking(arrivalActionBooking.id),
+  } : null);
+
+  addPriorityAction(priorityActions, contractActionBooking ? {
+    id: `contract-${contractActionBooking.id}`,
+    eyebrow: 'Antes de viajar',
+    title: `Revisá las condiciones de ${contractActionBooking.propertyTitle || 'tu reserva'}`,
+    description: 'Te conviene dejar aceptadas las condiciones para tener todo el acuerdo ordenado dentro de la reserva.',
+    actionLabel: 'Abrir condiciones',
+    icon: <Icons.FileText className="h-5 w-5" />,
+    onAction: () => openContract(contractActionBooking),
+  } : null);
+
+  addPriorityAction(priorityActions, depositActionBooking ? {
+    id: `deposit-${depositActionBooking.id}`,
+    eyebrow: 'Tu paso pendiente',
+    title: `Pagá la seña de ${depositActionBooking.propertyTitle || 'esta reserva'}`,
+    description: 'El anfitrión ya aceptó la solicitud. Falta tu pago dentro de la app para dejar la reserva protegida y confirmada.',
+    actionLabel: 'Ver solicitud',
+    icon: <Icons.ShieldCheck className="h-5 w-5" />,
+    onAction: () => scrollToBooking(depositActionBooking.id),
+  } : null);
+
+  addPriorityAction(priorityActions, pendingResponseBooking ? {
+    id: `pending-${pendingResponseBooking.id}`,
+    eyebrow: 'Seguimiento',
+    title: `Retomá la solicitud de ${pendingResponseBooking.propertyTitle || 'esta propiedad'}`,
+    description: 'Todavía sigue en curso. Entrá a la reserva para ver el estado, la ventana de cancelación y el chat vinculado.',
+    actionLabel: 'Ver solicitud',
+    icon: <Icons.MessageSquare className="h-5 w-5" />,
+    onAction: () => scrollToBooking(pendingResponseBooking.id),
+  } : null);
+
+  addPriorityAction(priorityActions, highlightedStay ? {
+    id: `stay-${highlightedStay.id}`,
+    eyebrow: currentStay ? 'En curso' : 'Lo que sigue',
+    title: `${currentStay ? 'Seguís con' : 'Tu próxima estadía es'} ${highlightedStay.propertyTitle || 'esta reserva'}`,
+    description: highlightedStay.conversationId
+      ? 'Tenés el chat listo para coordinar horario, llegada y cualquier detalle final con el anfitrión.'
+      : 'Entrá a la reserva para revisar fechas, estado y próximos pasos antes del ingreso.',
+    actionLabel: highlightedStay.conversationId ? 'Retomar chat' : 'Ver reserva',
+    icon: <Icons.Calendar className="h-5 w-5" />,
+    onAction: () => (
+      highlightedStay.conversationId
+        ? navigate(`/chat/${highlightedStay.conversationId}`)
+        : scrollToBooking(highlightedStay.id)
+    ),
+  } : null);
+
+  addPriorityAction(priorityActions, usefulSavedProperties[0] ? {
+    id: `saved-${usefulSavedProperties[0].id}`,
+    eyebrow: 'Guardados útiles',
+    title: `Volvé a ${usefulSavedProperties[0].title}`,
+    description: 'Lo dejamos arriba porque ya tiene mejor nivel de verificación y te sirve para comparar rápido con lo que ya reservaste.',
+    actionLabel: 'Ver guardado',
+    icon: <Icons.Heart className="h-5 w-5" />,
+    onAction: () => navigate(`/detail/${usefulSavedProperties[0].id}`),
+  } : null);
+
+  addPriorityAction(priorityActions, relevantConversations[0] ? {
+    id: `conversation-${relevantConversations[0].id}`,
+    eyebrow: 'Conversación activa',
+    title: `Retomá el chat de ${relevantConversations[0].propertyTitle || 'esta propiedad'}`,
+    description: 'Quedó actividad reciente y te conviene seguir desde la conversación para no perder el contexto de la reserva.',
+    actionLabel: 'Retomar conversación',
+    icon: <Icons.MessageSquare className="h-5 w-5" />,
+    onAction: () => navigate(`/chat/${relevantConversations[0].id}`),
+  } : null);
+
+  if (priorityActions.length < 2) {
+    addPriorityAction(priorityActions, {
+      id: 'explore-properties',
+      eyebrow: 'Sin urgencias',
+      title: 'Aprovechá para seguir explorando propiedades',
+      description: 'Si todavía no cerraste tu próxima estadía, podés volver a explorar y comparar opciones desde la home.',
+      actionLabel: 'Explorar',
+      icon: <Icons.Search className="h-5 w-5" />,
+      onAction: () => navigate('/'),
+    });
+  }
+
+  if (priorityActions.length < 2) {
+    addPriorityAction(priorityActions, {
+      id: 'faq-help',
+      eyebrow: 'Cómo seguir',
+      title: 'Revisá las preguntas frecuentes antes de reservar',
+      description: 'Ahí vas a encontrar cómo se confirma la seña, qué pasa con la llegada y cómo se gestiona una cancelación.',
+      actionLabel: 'Ver ayuda',
+      icon: <Icons.Info className="h-5 w-5" />,
+      onAction: () => navigate('/faq'),
+    });
+  }
+
+  const renderBookingCard = (booking: Booking) => {
+    const cancellationDeadlineLabel = getCancellationDeadlineLabel(booking);
+    const isCancelable = canCancelBooking(booking);
+    const bookingFlow = getBookingFlow(booking);
+    const showReservationFlowPanel = Boolean(booking.requestMode && bookingFlow.stage && bookingFlow.stage !== 'reservation-confirmed');
+    const isPayingDeposit = processingBookingAction?.bookingId === booking.id && processingBookingAction.action === 'pay-deposit';
+    const isConfirmingArrival = processingBookingAction?.bookingId === booking.id && processingBookingAction.action === 'confirm-arrival';
+    const isReportingArrivalProblem = processingBookingAction?.bookingId === booking.id && processingBookingAction.action === 'report-arrival-problem';
+    const arrivalActionsAvailable = isBookingCheckInReached(booking.startDate);
+
+    return (
+      <div
+        key={booking.id}
+        id={getBookingElementId(booking.id)}
+        className="border-t border-slate-100 px-5 py-5 first:border-t-0 dark:border-slate-800 sm:px-6"
+      >
+        <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+              <img
+                src={booking.imageUrl || 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=600&q=80'}
+                alt={booking.propertyTitle || 'Propiedad'}
+                className="h-24 w-full rounded-[24px] object-cover sm:w-36"
+              />
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant={getBookingStatusVariant(booking)} size="md">{getBookingStatusText(booking)}</Badge>
+                  {booking.requestMode ? <Badge variant="neutral" size="md">{booking.requestMode === 'protected' ? 'Reserva protegida' : 'Acuerdo directo'}</Badge> : null}
+                  {booking.contractAccepted ? <Badge variant="success" size="md">Condiciones firmadas</Badge> : null}
+                </div>
+
+                <div className="space-y-1">
+                  <h3 className="text-lg font-semibold tracking-tight text-slate-950 dark:text-slate-50">{booking.propertyTitle || 'Propiedad'}</h3>
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-slate-500 dark:text-slate-400">
+                    {booking.location ? (
+                      <span className="inline-flex items-center gap-1.5">
+                        <Icons.MapPin className="h-4 w-4" />
+                        {booking.location}
+                      </span>
+                    ) : null}
+                    <span className="inline-flex items-center gap-1.5">
+                      <Icons.Calendar className="h-4 w-4" />
+                      {formatDate(booking.startDate)} <span className="text-slate-300 dark:text-slate-600">→</span> {formatDate(booking.endDate)}
+                    </span>
+                    <span className="inline-flex items-center gap-1.5">
+                      <Icons.Users className="h-4 w-4" />
+                      {booking.guests || 1} {(booking.guests || 1) === 1 ? 'huésped' : 'huéspedes'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="min-w-[12rem] rounded-[24px] border border-slate-200/80 bg-slate-50/80 px-4 py-4 text-left dark:border-slate-700 dark:bg-slate-800/60 lg:text-right">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Costo total</p>
+              <p className="mt-2 text-2xl font-semibold tracking-tight text-brand">{formatCurrency(booking.totalPrice)}</p>
+              <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">Próximo paso: {bookingFlow.nextStepLabel || 'Coordinar por chat'}</p>
+            </div>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-3">
+            <div className="rounded-[24px] border border-slate-200/80 bg-white/90 px-4 py-4 dark:border-slate-800 dark:bg-slate-950/30">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Estado actual</p>
+              <p className="mt-2 text-sm font-semibold text-slate-950 dark:text-slate-50">{bookingFlow.statusLabel || getBookingStatusText(booking)}</p>
+            </div>
+            <div className="rounded-[24px] border border-slate-200/80 bg-white/90 px-4 py-4 dark:border-slate-800 dark:bg-slate-950/30">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Actúa ahora</p>
+              <p className="mt-2 text-sm font-semibold text-slate-950 dark:text-slate-50">{bookingFlow.nextActorLabel || 'No hace falta'}</p>
+            </div>
+            <div className="rounded-[24px] border border-slate-200/80 bg-white/90 px-4 py-4 dark:border-slate-800 dark:bg-slate-950/30">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Próximo paso</p>
+              <p className="mt-2 text-sm font-semibold text-slate-950 dark:text-slate-50">{bookingFlow.nextStepLabel || 'Solo coordinar por chat'}</p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {booking.conversationId ? (
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => navigate(`/chat/${booking.conversationId}`)}
+                className="rounded-full"
+              >
+                <>
+                  <Icons.MessageSquare className="h-4 w-4" />
+                  Abrir chat
+                </>
+              </Button>
+            ) : null}
+
+            {booking.contractJson ? (
+              <Button
+                type="button"
+                variant={booking.contractAccepted ? 'secondary' : 'outline'}
+                size="sm"
+                onClick={() => openContract(booking)}
+                className="rounded-full"
+              >
+                <>
+                  <Icons.FileText className="h-4 w-4" />
+                  {booking.contractAccepted ? 'Firmado' : 'Ver condiciones'}
+                </>
+              </Button>
+            ) : null}
+
+            {isCancelable ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => void handleCancelBooking(booking)}
+                loading={cancelingBookingId === booking.id}
+                loadingLabel="Cancelando..."
+                className="rounded-full"
+              >
+                <>
+                  <Icons.X className="h-4 w-4" />
+                  Cancelar reserva
+                </>
+              </Button>
+            ) : null}
+          </div>
+
+          {(booking.status === 'pending' || booking.status === 'confirmed') && booking.startDate && bookingFlow.stage !== 'protected-deposit-review' && bookingFlow.stage !== 'protected-no-show-pending' ? (
+            <div className={cn(
+              'rounded-[24px] border px-4 py-3 text-sm leading-6',
+              isCancelable
+                ? 'border-brand/10 bg-brand/5 text-slate-700 dark:border-brand/20 dark:bg-brand/10 dark:text-slate-200'
+                : 'border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-800 dark:bg-slate-800/40 dark:text-slate-300',
+            )}>
+              {isCancelable && cancellationDeadlineLabel
+                ? `Podés cancelarla desde la app hasta el ${cancellationDeadlineLabel}.`
+                : cancellationDeadlineLabel
+                  ? `La cancelación online estuvo disponible hasta el ${cancellationDeadlineLabel}. Si necesitás ayuda, escribile al anfitrión cuanto antes.`
+                  : 'Ya no está dentro del plazo para cancelarla online. Si necesitás ayuda, escribile al anfitrión cuanto antes.'}
+            </div>
+          ) : null}
+
+          {showReservationFlowPanel ? (
+            <div className="rounded-[24px] border border-brand/10 bg-brand/5 p-4 dark:border-brand/20 dark:bg-brand/10">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div className="space-y-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-brand">{bookingFlow.statusLabel}</p>
+                  <p className="text-sm font-semibold text-slate-950 dark:text-slate-50">{bookingFlow.description}</p>
+                  {bookingFlow.supportText ? <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">{bookingFlow.supportText}</p> : null}
+                  {bookingFlow.trackingHint ? <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">{bookingFlow.trackingHint}</p> : null}
+                </div>
+
+                <div className="flex flex-wrap gap-2 lg:justify-end">
+                  {bookingFlow.stage === 'request-accepted' ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => void handlePayDeposit(booking.id)}
+                      loading={isPayingDeposit}
+                      loadingLabel="Registrando pago..."
+                      className="rounded-full"
+                    >
+                      <>
+                        <Icons.ShieldCheck className="h-4 w-4" />
+                        Pagar seña
+                      </>
+                    </Button>
+                  ) : null}
+
+                  {bookingFlow.stage === 'protected-deposit-held' && arrivalActionsAvailable ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => void handleConfirmProtectedArrival(booking.id)}
+                      loading={isConfirmingArrival}
+                      loadingLabel="Confirmando llegada..."
+                      className="rounded-full"
+                    >
+                      <>
+                        <Icons.CheckCircle2 className="h-4 w-4" />
+                        Confirmar llegada
+                      </>
+                    </Button>
+                  ) : null}
+
+                  {bookingFlow.stage === 'protected-deposit-held' && arrivalActionsAvailable ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => void handleReportProtectedArrivalProblem(booking.id)}
+                      loading={isReportingArrivalProblem}
+                      loadingLabel="Informando problema..."
+                      className="rounded-full"
+                    >
+                      <>
+                        <Icons.AlertTriangle className="h-4 w-4" />
+                        Reportar problema
+                      </>
+                    </Button>
+                  ) : null}
+                </div>
+              </div>
+
+              {bookingFlow.stage === 'protected-deposit-held' && !arrivalActionsAvailable ? (
+                <div className="mt-4 rounded-[20px] border border-white/80 bg-white/80 px-4 py-3 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-300">
+                  Confirmar llegada y reportar un problema se habilitan el día del ingreso.
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+          {(bookingFlow.stage === 'reservation-confirmed' || (!booking.requestMode && booking.status === 'confirmed')) ? (
+            <div className="rounded-[24px] border border-brand/10 bg-brand/5 p-4 dark:border-brand/20 dark:bg-brand/10">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-brand shadow-[var(--app-shadow-subtle)] dark:bg-slate-900 dark:text-brand-light">
+                    <Icons.CheckCircle2 className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-brand">Datos para el ingreso</p>
+                    <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">Código de ingreso: {booking.stay_code || 'Se confirma desde el chat'}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-4 rounded-[20px] border border-white/80 bg-white/80 px-4 py-3 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-300">
+                Próximo paso: coordiná horario de llegada con el anfitrión.
+              </div>
+            </div>
+          ) : null}
+
+          {booking.status === 'cancelled' && !showReservationFlowPanel ? (
+            <div className="rounded-[24px] border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-300">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Reserva cancelada</p>
+              <p className="mt-2">Las fechas se liberaron y ya no hay ingreso asociado a esta estadía.</p>
+            </div>
+          ) : null}
+        </div>
+      </div>
+    );
   };
 
   if (loading) {
@@ -302,366 +1017,425 @@ export const MyBookings = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-24">
-      <header className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-b border-slate-200 dark:border-slate-800">
-        <div className="p-4 flex flex-wrap items-center justify-between gap-3 max-w-2xl mx-auto">
-          <div className="flex items-center gap-4">
-            <button onClick={() => navigate('/profile')} className="p-3 bg-slate-100 dark:bg-slate-800 rounded-2xl text-slate-600 dark:text-slate-400 hover:bg-brand/10 hover:text-brand transition-all" type="button">
-              <Icons.ArrowLeft className="w-5 h-5" />
-            </button>
-            <h1 className="font-black text-xl uppercase tracking-tight">Mis reservas</h1>
-          </div>
-          <AccountModeSwitch compact />
-        </div>
-      </header>
+    <div className="app-page py-6 md:py-8">
+      <div className="space-y-6 md:space-y-8">
+        <Card
+          variant="elevated"
+          padding="none"
+          className="overflow-hidden border-slate-200/80 bg-[radial-gradient(circle_at_top_right,rgba(79,70,229,0.16),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.98))] shadow-[0_32px_72px_-44px_rgba(15,23,42,0.42)]"
+        >
+          <div className="p-6 md:p-8">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => navigate('/profile')}
+                  className="flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200/80 bg-white/90 text-slate-600 transition-colors hover:border-brand/20 hover:text-brand dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-300"
+                >
+                  <Icons.ArrowLeft className="h-5 w-5" />
+                </button>
+                <Badge variant="brand" size="md">
+                  <Icons.LayoutDashboard className="h-3.5 w-3.5" />
+                  Centro de control
+                </Badge>
+              </div>
+              <AccountModeSwitch compact />
+            </div>
 
-      <main className="max-w-xl mx-auto p-6 space-y-8">
-        {bookings.length === 0 ? (
-          <EmptyState
-            eyebrow="Reservas"
-            tone="soft"
-            icon={<Icons.Calendar className="h-12 w-12 text-brand" />}
-            title="Todavía no tenés reservas"
-            description="Cuando reserves una propiedad, acá vas a ver fechas, estado y condiciones de la estadía."
-            action={{
-              label: 'Explorá propiedades',
-              onClick: () => navigate('/'),
-            }}
-          />
-        ) : (
-          bookings.map((booking) => {
-            const cancellationDeadlineLabel = getCancellationDeadlineLabel(booking);
-            const isCancelable = canCancelBooking(booking);
-            const bookingFlow = getBookingFlow(booking);
-            const bookingMilestones = getBookingMilestones(booking);
-            const showReservationFlowPanel = Boolean(booking.requestMode && bookingFlow.stage && bookingFlow.stage !== 'reservation-confirmed');
-            const isPayingDeposit = processingBookingAction?.bookingId === booking.id && processingBookingAction.action === 'pay-deposit';
-            const isConfirmingArrival = processingBookingAction?.bookingId === booking.id && processingBookingAction.action === 'confirm-arrival';
-            const isReportingArrivalProblem = processingBookingAction?.bookingId === booking.id && processingBookingAction.action === 'report-arrival-problem';
-            const arrivalActionsAvailable = isBookingCheckInReached(booking.startDate);
-
-            return (
-            <div
-              key={booking.id}
-              className="group bg-white dark:bg-slate-900 rounded-[40px] overflow-hidden shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-100 dark:border-slate-800 hover:border-brand/30 transition-all"
-            >
-              <div className="relative h-48 overflow-hidden">
-                <img
-                  src={booking.imageUrl || 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=600&q=80'}
-                  alt={booking.propertyTitle}
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+            <div className="mt-6 grid gap-6 xl:grid-cols-[1.5fr,1fr]">
+              <div className="space-y-5">
+                <SectionTitle
+                  eyebrow="Mis reservas"
+                  heading="Tus próximos pasos, tus estadías y tus chats en un solo lugar."
+                  description="El panel ahora prioriza lo que tenés abierto, lo que conviene resolver primero y lo que vale la pena retomar sin mezclar estados ni repetir información."
+                  as="h1"
+                  visualLevel="h2"
+                  className="max-w-3xl"
                 />
-                <div className="absolute top-4 right-4">
-                  <Badge
-                    variant={getStatusColor(booking) as 'neutral' | 'brand' | 'success' | 'warning' | 'danger'}
-                    size="md"
-                    className="shadow-lg"
-                  >
-                    {getStatusText(booking)}
-                  </Badge>
-                </div>
-                <div className="absolute inset-x-0 bottom-0 p-6 bg-gradient-to-t from-black/80 to-transparent">
-                  <h3 className="font-black text-white text-xl uppercase tracking-tight leading-none">{booking.propertyTitle || 'Propiedad'}</h3>
-                  <p className="text-xs font-bold text-white/70 uppercase tracking-widest mt-1">{booking.location}</p>
+
+                <div className="rounded-[32px] border border-white/80 bg-white/88 p-5 shadow-[0_20px_42px_-34px_rgba(15,23,42,0.3)] dark:border-slate-800 dark:bg-slate-900/88">
+                  {highlightedStay ? (
+                    <div className="space-y-4">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="brand" size="md">{currentStay ? 'Estadía en curso' : 'Próxima estadía'}</Badge>
+                        <Badge variant={getBookingStatusVariant(highlightedStay)} size="md">{getBookingStatusText(highlightedStay)}</Badge>
+                      </div>
+
+                      <div className="space-y-2">
+                        <h2 className="text-2xl font-semibold tracking-tight text-slate-950 dark:text-slate-50">{highlightedStay.propertyTitle || 'Tu próxima reserva'}</h2>
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-slate-600 dark:text-slate-300">
+                          {highlightedStay.location ? (
+                            <span className="inline-flex items-center gap-1.5">
+                              <Icons.MapPin className="h-4 w-4 text-brand" />
+                              {highlightedStay.location}
+                            </span>
+                          ) : null}
+                          <span className="inline-flex items-center gap-1.5">
+                            <Icons.Calendar className="h-4 w-4 text-brand" />
+                            {formatDate(highlightedStay.startDate)} <span className="text-slate-300 dark:text-slate-600">→</span> {formatDate(highlightedStay.endDate)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <p className="max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">{getHighlightedStayDescription(highlightedStay)}</p>
+
+                      <div className="flex flex-wrap gap-2">
+                        {highlightedStay.conversationId ? (
+                          <Button type="button" variant="secondary" onClick={() => navigate(`/chat/${highlightedStay.conversationId}`)}>
+                            <>
+                              <Icons.MessageSquare className="h-4 w-4" />
+                              Retomar chat
+                            </>
+                          </Button>
+                        ) : null}
+                        <Button type="button" onClick={() => scrollToBooking(highlightedStay.id)}>
+                          <>
+                            <Icons.ArrowRight className="h-4 w-4" />
+                            Ver reserva
+                          </>
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <Badge variant="neutral" size="md">Sin próxima estadía confirmada</Badge>
+                      <div className="space-y-2">
+                        <h2 className="text-2xl font-semibold tracking-tight text-slate-950 dark:text-slate-50">Todavía no tenés una próxima estadía activa</h2>
+                        <p className="max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">
+                          Cuando avances una solicitud o cierres una reserva, acá vas a ver el próximo ingreso, el estado real y la acción que más conviene retomar primero.
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <Button type="button" variant="secondary" onClick={() => navigate('/')}>
+                          <>
+                            <Icons.Search className="h-4 w-4" />
+                            Explorar propiedades
+                          </>
+                        </Button>
+                        {usefulSavedProperties.length > 0 ? (
+                          <Button type="button" onClick={() => scrollToTarget(SAVED_SECTION_ID)}>
+                            <>
+                              <Icons.Heart className="h-4 w-4" />
+                              Ver guardados
+                            </>
+                          </Button>
+                        ) : null}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              <div className="p-8 space-y-6">
-                <div className="flex justify-between items-center bg-slate-50 dark:bg-slate-800/50 rounded-3xl p-4">
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Estadía</p>
-                    <div className="flex items-center gap-3">
-                      <Icons.Calendar className="w-4 h-4 text-brand" />
-                      <span className="text-sm font-black text-slate-700 dark:text-slate-300">
-                        {formatDate(booking.startDate)} <span className="text-slate-300 font-normal">→</span> {formatDate(booking.endDate)}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Huéspedes</p>
-                    <span className="text-sm font-black text-slate-700 dark:text-slate-300">{booking.guests || 1}</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between">
-                   <div>
-                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Costo total</p>
-                     <p className="text-2xl font-black text-brand tracking-tighter">{formatCurrency(booking.totalPrice)}</p>
-                   </div>
-                   <div className="flex flex-wrap justify-end gap-2">
-                     {booking.conversationId ? (
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => navigate(`/chat/${booking.conversationId}`)}
-                          className="rounded-2xl px-4 text-[10px] font-black uppercase tracking-widest"
-                        >
-                          <>
-                            <Icons.MessageSquare className="w-4 h-4" />
-                            Abrir chat
-                          </>
-                        </Button>
-                     ) : null}
-                     {booking.contractJson && (
-                        <button
-                          type="button"
-                          onClick={() => setSelectedContract({ ...JSON.parse(booking.contractJson!), id: booking.id, accepted: booking.contractAccepted })}
-                          className={cn(
-                            "px-4 py-2 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center gap-2",
-                            booking.contractAccepted 
-                              ? "bg-brand/10 text-brand dark:bg-brand/15 dark:text-brand-light border border-brand/15 dark:border-brand/20"
-                              : "bg-brand/10 text-brand hover:bg-brand hover:text-white"
-                          )}
-                        >
-                          <Icons.FileText className="w-4 h-4" />
-                          {booking.contractAccepted ? 'Firmado' : 'Ver condiciones'}
-                        </button>
-                     )}
-                     {isCancelable && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => void handleCancelBooking(booking)}
-                          loading={cancelingBookingId === booking.id}
-                          loadingLabel="Cancelando..."
-                          className="rounded-2xl px-4 text-[10px] font-black uppercase tracking-widest"
-                        >
-                          <>
-                            <Icons.X className="w-4 h-4" />
-                            Cancelar reserva
-                          </>
-                        </Button>
-                     )}
-                   </div>
-                </div>
-
-                {(booking.status === 'pending' || booking.status === 'confirmed') && booking.startDate && bookingFlow.stage !== 'protected-deposit-review' && bookingFlow.stage !== 'protected-no-show-pending' ? (
-                  <div className={cn(
-                    'rounded-2xl border px-4 py-3 text-xs font-semibold leading-5',
-                    isCancelable
-                      ? 'border-brand/10 bg-brand/5 text-slate-700 dark:border-brand/20 dark:bg-brand/10 dark:text-slate-200'
-                      : 'border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-800 dark:bg-slate-800/40 dark:text-slate-300',
-                  )}>
-                    {isCancelable && cancellationDeadlineLabel
-                      ? `Podés cancelarla desde la app hasta el ${cancellationDeadlineLabel}.`
-                      : cancellationDeadlineLabel
-                        ? `La cancelación online estuvo disponible hasta el ${cancellationDeadlineLabel}. Si necesitás ayuda, escribile al anfitrión cuanto antes.`
-                        : 'Ya no está dentro del plazo para cancelarla online. Si necesitás ayuda, escribile al anfitrión cuanto antes.'}
-                  </div>
-                ) : null}
-
-                {showReservationFlowPanel ? (
-                  <div className="rounded-[28px] border border-brand/15 bg-brand/5 p-4 dark:border-brand/20 dark:bg-brand/10">
-                    <div className="space-y-4">
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                        <div className="space-y-1">
-                          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-brand">{bookingFlow.statusLabel}</p>
-                          <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">{bookingFlow.description}</p>
-                          {bookingFlow.supportText ? <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">{bookingFlow.supportText}</p> : null}
-                          {bookingFlow.trackingHint ? <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">{bookingFlow.trackingHint}</p> : null}
-                        </div>
-
-                        {bookingFlow.stage === 'request-accepted' ? (
-                          <Button
-                            type="button"
-                            size="sm"
-                            onClick={() => void handlePayDeposit(booking.id)}
-                            loading={isPayingDeposit}
-                            loadingLabel="Registrando pago..."
-                            className="rounded-2xl"
-                          >
-                            <>
-                              <Icons.ShieldCheck className="w-4 h-4" />
-                              Pagar seña
-                            </>
-                          </Button>
-                        ) : null}
-
-                        {bookingFlow.stage === 'protected-deposit-held' && arrivalActionsAvailable ? (
-                          <Button
-                            type="button"
-                            size="sm"
-                            onClick={() => void handleConfirmProtectedArrival(booking.id)}
-                            loading={isConfirmingArrival}
-                            loadingLabel="Confirmando llegada..."
-                            className="rounded-2xl"
-                          >
-                            <>
-                              <Icons.CheckCircle2 className="w-4 h-4" />
-                              Confirmar llegada
-                            </>
-                          </Button>
-                        ) : null}
-
-                        {bookingFlow.stage === 'protected-deposit-held' && arrivalActionsAvailable ? (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => void handleReportProtectedArrivalProblem(booking.id)}
-                            loading={isReportingArrivalProblem}
-                            loadingLabel="Informando problema..."
-                            className="rounded-2xl"
-                          >
-                            <>
-                              <Icons.AlertTriangle className="w-4 h-4" />
-                              Reportar problema
-                            </>
-                          </Button>
-                        ) : null}
-
-                        {bookingFlow.stage === 'protected-deposit-held' && !arrivalActionsAvailable ? (
-                          <div className="rounded-2xl bg-white/80 px-3 py-3 text-xs font-medium text-slate-500 dark:bg-slate-900/70 dark:text-slate-300">
-                            Confirmar llegada y reportar un problema se habilitan el día del ingreso.
-                          </div>
-                        ) : null}
-                      </div>
-
-                      {bookingMilestones.length > 0 ? (
-                        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-                          {bookingMilestones.map((milestone) => {
-                            const MilestoneIcon = getFlowMilestoneIcon(milestone.key, booking.requestMode);
-
-                            return (
-                              <div key={milestone.key} className={cn('rounded-2xl border px-3 py-3 text-sm', getFlowMilestoneClasses(milestone.state))}>
-                                <div className="flex items-center gap-2">
-                                  <MilestoneIcon className="h-4 w-4" />
-                                  <p className="text-[10px] font-black uppercase tracking-[0.14em]">{getFlowMilestoneStateLabel(milestone.state)}</p>
-                                </div>
-                                <p className="mt-2 font-semibold">{milestone.label}</p>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ) : null}
-
-                      <div className="grid gap-2 md:grid-cols-3">
-                        <div className="rounded-2xl bg-white/80 px-3 py-3 text-sm dark:bg-slate-900/70">
-                          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Estado actual</p>
-                          <p className="mt-1 font-semibold text-slate-900 dark:text-white">{bookingFlow.statusLabel}</p>
-                        </div>
-                        <div className="rounded-2xl bg-white/80 px-3 py-3 text-sm dark:bg-slate-900/70">
-                          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Actúa ahora</p>
-                          <p className="mt-1 font-semibold text-slate-900 dark:text-white">{bookingFlow.nextActorLabel ?? 'No hace falta'}</p>
-                        </div>
-                        <div className="rounded-2xl bg-white/80 px-3 py-3 text-sm dark:bg-slate-900/70">
-                          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Próximo paso</p>
-                          <p className="mt-1 font-semibold text-slate-900 dark:text-white">{bookingFlow.nextStepLabel ?? 'Solo coordinar por chat'}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ) : null}
-
-                {(bookingFlow.stage === 'reservation-confirmed' || (!booking.requestMode && booking.status === 'confirmed')) && (
-                  <div className="rounded-2xl border border-brand/10 bg-brand/5 p-4 dark:border-brand/20 dark:bg-brand/10">
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-3">
-                        <Icons.CheckCircle2 className="w-5 h-5 text-brand" />
-                        <div>
-                          <p className="text-[10px] font-black text-brand dark:text-brand-light uppercase tracking-widest">Datos para el ingreso</p>
-                          <p className="text-xs font-bold text-slate-700/80 dark:text-slate-300/80">Código de ingreso: {booking.stay_code}</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="mt-3 flex items-start gap-3 rounded-2xl border border-white/80 bg-white/80 px-3 py-3 text-xs text-slate-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-300">
-                      <Icons.Calendar className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
-                      <p className="leading-5">Próximo paso: coordiná horario de llegada con el anfitrión.</p>
-                    </div>
-                  </div>
-                )}
-
-                {booking.status === 'cancelled' && !showReservationFlowPanel && (
-                  <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center gap-3">
-                    <Icons.AlertTriangle className="w-5 h-5 text-slate-500" />
-                    <div>
-                      <p className="text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Reserva cancelada</p>
-                      <p className="text-xs font-bold text-slate-600 dark:text-slate-400">Las fechas se liberaron y ya no hay ingreso asociado a esta estadía.</p>
-                    </div>
-                  </div>
-                )}
+              <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
+                <SummaryMetric
+                  label="Solicitudes pendientes"
+                  value={String(pendingRequestsCount)}
+                  helper={pendingRequestsCount > 0 ? 'Hay solicitudes que todavía esperan respuesta, pago de seña o una decisión tuya.' : 'No tenés solicitudes abiertas ahora.'}
+                  icon={<Icons.ListTodo className="h-5 w-5" />}
+                />
+                <SummaryMetric
+                  label="Reservas activas"
+                  value={String(activeReservationsCount)}
+                  helper={activeReservationsCount > 0 ? 'Contamos solo reservas que siguen activas y todavía piden coordinación o seguimiento.' : 'No hay reservas activas en este momento.'}
+                  icon={<Icons.Home className="h-5 w-5" />}
+                />
+                <SummaryMetric
+                  label="Chats para retomar"
+                  value={String(openConversationsCount)}
+                  helper={openConversationsCount > 0 ? 'Priorizamos conversaciones ligadas a reservas activas o con movimiento reciente.' : 'No hay conversaciones que necesiten seguimiento ahora.'}
+                  icon={<Icons.MessageSquare className="h-5 w-5" />}
+                />
               </div>
             </div>
-          );
-          })
-        )}
-      </main>
+          </div>
+        </Card>
 
-      {/* Contract Modal */}
-      {selectedContract && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-md bg-slate-950/40">
-           <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-[48px] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
-              <div className="p-8 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
-                    <h2 className="text-2xl font-black uppercase tracking-tight">Condiciones de la reserva</h2>
-              <button type="button" onClick={() => setSelectedContract(null)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
-                    <Icons.X className="w-6 h-6" />
-                 </button>
-              </div>
-              <div className="p-8 max-h-[60vh] overflow-y-auto space-y-8 no-scrollbar">
-                 <div className="space-y-6">
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                        <div className="space-y-1">
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Huésped</p>
-                          <p className="text-sm font-black truncate">{selectedContract.guestName}</p>
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Anfitrión</p>
-                          <p className="text-sm font-black truncate">{selectedContract.hostName}</p>
-                        </div>
+        <section className="space-y-4" aria-labelledby="guest-dashboard-priorities">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <SectionTitle
+              eyebrow="Qué conviene hacer ahora"
+              heading="Priorizamos lo que te mueve una reserva de verdad."
+              description="Estas acciones salen del estado real de tus reservas, tus chats y tus guardados para que no tengas que reconstruir el contexto cada vez que entrás."
+              as="h2"
+              visualLevel="h3"
+              className="max-w-3xl"
+            />
+          </div>
+
+          <div className="grid gap-4">
+            {priorityActions.slice(0, 3).map((action) => (
+              <PriorityActionRow key={action.id} {...action} />
+            ))}
+          </div>
+        </section>
+
+        <section id={RESERVATIONS_SECTION_ID} className="space-y-4" aria-labelledby="guest-dashboard-bookings">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <SectionTitle
+              eyebrow="Mis reservas"
+              heading="Cada reserva en el tramo donde realmente está."
+              description="Separamos solicitudes, reservas ya aceptadas, próximas estadías y cierres para que cada fila te diga propiedad, fechas, estado y siguiente paso sin repetir bloques ni métricas inútiles."
+              as="h2"
+              visualLevel="h3"
+              className="max-w-3xl"
+            />
+          </div>
+
+          {bookings.length === 0 ? (
+            <EmptyState
+              eyebrow="Reservas"
+              tone="soft"
+              icon={<Icons.Calendar className="h-12 w-12 text-brand" />}
+              title="Todavía no tenés reservas"
+              description="Cuando reserves una propiedad, acá vas a ver fechas, estado, chat, condiciones y los próximos pasos de cada estadía."
+              action={{
+                label: 'Explorá propiedades',
+                onClick: () => navigate('/'),
+              }}
+            />
+          ) : (
+            <div className="grid gap-4">
+              <BookingGroup
+                title="Solicitudes enviadas"
+                description="Lo que todavía espera respuesta, pago de seña o confirmación dentro del flujo de reserva."
+                count={sortedRequestBookings.length}
+                emptyText="No hay solicitudes abiertas ahora."
+              >
+                {sortedRequestBookings.map(renderBookingCard)}
+              </BookingGroup>
+
+              <BookingGroup
+                title="Reservas aceptadas"
+                description="Reservas activas que ya están encaminadas, pero todavía no entraron en la ventana de ingreso."
+                count={sortedAcceptedBookings.length}
+                emptyText="No hay reservas aceptadas fuera de la ventana de ingreso."
+              >
+                {sortedAcceptedBookings.map(renderBookingCard)}
+              </BookingGroup>
+
+              <BookingGroup
+                title="Próximas estadías"
+                description="Ingresos cercanos o estadías en curso que piden coordinación, confirmación o seguimiento fino."
+                count={sortedUpcomingBookings.length}
+                emptyText="No hay ingresos cercanos para resolver ahora."
+              >
+                {sortedUpcomingBookings.map(renderBookingCard)}
+              </BookingGroup>
+
+              <BookingGroup
+                title="Finalizadas"
+                description="Reservas cerradas o canceladas que conviene dejar visibles para revisar el cierre y el historial."
+                count={sortedClosedBookings.length}
+                emptyText="Todavía no tenés reservas cerradas."
+              >
+                {sortedClosedBookings.map(renderBookingCard)}
+              </BookingGroup>
+            </div>
+          )}
+        </section>
+
+        <section id={SAVED_SECTION_ID} className="space-y-4" aria-labelledby="guest-dashboard-saved">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <SectionTitle
+              eyebrow="Guardados útiles"
+              heading="Lo que te conviene volver a mirar antes de decidir."
+              description="Mostramos primero los guardados con mejor nivel de verificación para que retomes comparaciones reales, no una lista plana de favoritos."
+              as="h2"
+              visualLevel="h3"
+              className="max-w-3xl"
+            />
+
+            <Button type="button" variant="secondary" size="sm" onClick={() => navigate('/favorites')} className="rounded-full">
+              <>
+                <Icons.Heart className="h-4 w-4" />
+                Ver todos
+              </>
+            </Button>
+          </div>
+
+          <Card padding="none">
+            {favoritesLoadError ? <p className="px-6 py-6 text-sm leading-6 text-slate-500 dark:text-slate-400">{favoritesLoadError}</p> : null}
+
+            {!favoritesLoadError && usefulSavedProperties.length === 0 ? (
+              <p className="px-6 py-6 text-sm leading-6 text-slate-500 dark:text-slate-400">Todavía no hay guardados relevantes para retomar desde este panel.</p>
+            ) : null}
+
+            {!favoritesLoadError && usefulSavedProperties.length > 0 ? usefulSavedProperties.map((property, index) => {
+              const verificationBadge = getPropertyVerificationBadge(property);
+
+              return (
+                <div key={property.id} className={cn('flex flex-col gap-4 px-5 py-5 sm:px-6 md:flex-row md:items-center md:justify-between', index > 0 && 'border-t border-slate-100 dark:border-slate-800')}>
+                  <div className="flex items-start gap-4">
+                    <img
+                      src={property.imageUrl}
+                      alt={property.title}
+                      className="h-20 w-28 rounded-[20px] object-cover"
+                    />
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="brand" size="md">{verificationBadge.summaryLabel}</Badge>
+                        <Badge variant="neutral" size="md">{formatCurrency(property.price)}</Badge>
+                      </div>
+                      <div>
+                        <h3 className="text-base font-semibold text-slate-950 dark:text-slate-50">{property.title}</h3>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">{property.location}</p>
+                      </div>
+                      <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">{verificationBadge.label}. Te sirve para comparar rápido antes de volver a reservar.</p>
+                    </div>
+                  </div>
+
+                  <Button type="button" variant="secondary" size="sm" onClick={() => navigate(`/detail/${property.id}`)} className="rounded-full">
+                    <>
+                      <Icons.ArrowRight className="h-4 w-4" />
+                      Ver propiedad
+                    </>
+                  </Button>
+                </div>
+              );
+            }) : null}
+          </Card>
+        </section>
+
+        <section id={CONVERSATIONS_SECTION_ID} className="space-y-4" aria-labelledby="guest-dashboard-conversations">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <SectionTitle
+              eyebrow="Conversaciones"
+              heading="Retomá cada chat con el estado de la reserva al lado."
+              description="Acá sólo quedan las conversaciones que siguen abiertas, están ligadas a una reserva activa o tuvieron movimiento reciente y todavía importan para decidir o viajar."
+              as="h2"
+              visualLevel="h3"
+              className="max-w-3xl"
+            />
+
+            <Button type="button" variant="secondary" size="sm" onClick={() => navigate('/chat/all')} className="rounded-full">
+              <>
+                <Icons.MessageSquare className="h-4 w-4" />
+                Ver chats
+              </>
+            </Button>
+          </div>
+
+          <Card padding="none">
+            {conversationsLoadError ? <p className="px-6 py-6 text-sm leading-6 text-slate-500 dark:text-slate-400">{conversationsLoadError}</p> : null}
+
+            {!conversationsLoadError && relevantConversations.length === 0 ? (
+              <p className="px-6 py-6 text-sm leading-6 text-slate-500 dark:text-slate-400">No hay conversaciones que necesiten seguimiento ahora.</p>
+            ) : null}
+
+            {!conversationsLoadError && relevantConversations.length > 0 ? relevantConversations.map((conversation, index) => {
+              const relatedBooking = bookingsByConversationId.get(conversation.id);
+              const conversationFlow = getConversationFlow(conversation, relatedBooking);
+              const conversationStatus = conversationFlow.statusLabel || (relatedBooking ? getBookingStatusText(relatedBooking) : 'Chat activo');
+              const conversationVariant = relatedBooking ? getBookingStatusVariant(relatedBooking) : 'neutral';
+
+              return (
+                <div key={conversation.id} className={cn('flex flex-col gap-4 px-5 py-5 sm:px-6 md:flex-row md:items-start md:justify-between', index > 0 && 'border-t border-slate-100 dark:border-slate-800')}>
+                  <div className="space-y-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant={conversationVariant} size="md">{conversationStatus}</Badge>
+                      <Badge variant="neutral" size="md">Actualizada {formatConversationUpdatedAt(conversation.updated_at)}</Badge>
                     </div>
 
                     <div className="space-y-1">
-                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Propiedad</p>
-                       <p className="text-sm font-black uppercase tracking-tight">{selectedContract.propertyTitle}</p>
-                       <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{selectedContract.location}</p>
+                      <h3 className="text-base font-semibold text-slate-950 dark:text-slate-50">{conversation.propertyTitle || 'Conversación activa'}</h3>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">
+                        {conversation.hostName ? `Con ${conversation.hostName}` : 'Con tu anfitrión'}
+                        {relatedBooking?.startDate ? ` · Ingreso ${formatBookingDateShort(relatedBooking.startDate)}` : ''}
+                      </p>
                     </div>
 
-                    <div className="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-[32px] border border-slate-100 dark:border-slate-800/50 space-y-4">
-                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Condiciones de la estadía</p>
-                       <ul className="space-y-3">
-                          {(selectedContract.rules || []).map((rule: string, i: number) => (
-                             <li key={i} className="flex gap-3 text-xs font-bold leading-relaxed text-slate-600 dark:text-slate-400">
-                                <Icons.Check className="w-4 h-4 text-slate-400 shrink-0" />
-                                {rule}
-                             </li>
-                          ))}
-                       </ul>
-                    </div>
+                    <p className="max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">
+                      {conversation.last_message || conversationFlow.description || 'Abrí el chat para retomar la conversación desde el último intercambio.'}
+                    </p>
+                  </div>
 
-                    <div className="space-y-4 opacity-50">
-                       <p className="text-[10px] font-bold text-center text-slate-400 leading-relaxed uppercase tracking-tighter">
-                            Al aceptar, confirmás que leíste las condiciones. Antes de transferir dinero, revisá la identidad y los datos de la reserva.
-                       </p>
-                    </div>
-                 </div>
+                  <Button type="button" variant="secondary" size="sm" onClick={() => navigate(`/chat/${conversation.id}`)} className="rounded-full">
+                    <>
+                      <Icons.ArrowRight className="h-4 w-4" />
+                      Retomar chat
+                    </>
+                  </Button>
+                </div>
+              );
+            }) : null}
+          </Card>
+        </section>
+      </div>
+
+      {selectedContract ? (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-md bg-slate-950/40">
+          <div className="w-full max-w-lg overflow-hidden rounded-[40px] border border-slate-200/80 bg-white shadow-[0_32px_72px_-42px_rgba(15,23,42,0.42)] dark:border-slate-800 dark:bg-slate-900">
+            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5 dark:border-slate-800">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Condiciones de la reserva</p>
+                <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950 dark:text-slate-50">Leé el acuerdo antes de seguir</h2>
               </div>
-              <div className="p-8 bg-slate-50 dark:bg-slate-800/30 border-t border-slate-100 dark:border-slate-800">
-                 {!selectedContract.accepted ? (
-                    <Button
-                      onClick={() => void handleAcceptContract(selectedContract.id)}
-                      loading={accepting}
-                      loadingLabel="Confirmando condiciones..."
-                      fullWidth
-                      size="lg"
-                      className="h-16 rounded-[32px] text-lg font-black uppercase tracking-widest shadow-2xl shadow-brand/20"
-                    >
-                      <>
-                        <Icons.ShieldCheck className="w-6 h-6" />
-                        Aceptar condiciones
-                      </>
-                    </Button>
-                 ) : (
-                    <div className="w-full py-6 bg-brand text-white rounded-[32px] font-black text-lg tracking-widest uppercase flex items-center justify-center gap-3 shadow-xl shadow-brand/20">
-                       <Icons.CheckCircle2 className="w-6 h-6" />
-                        Condiciones aceptadas
-                    </div>
-                 )}
+              <button type="button" onClick={() => setSelectedContract(null)} className="flex h-10 w-10 items-center justify-center rounded-2xl text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100">
+                <Icons.X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="max-h-[60vh] space-y-6 overflow-y-auto px-6 py-6">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Huésped</p>
+                  <p className="text-sm font-semibold text-slate-950 dark:text-slate-50">{selectedContract.guestName}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Anfitrión</p>
+                  <p className="text-sm font-semibold text-slate-950 dark:text-slate-50">{selectedContract.hostName}</p>
+                </div>
               </div>
-           </div>
+
+              <div className="space-y-1">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Propiedad</p>
+                <p className="text-base font-semibold text-slate-950 dark:text-slate-50">{selectedContract.propertyTitle}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">{selectedContract.location}</p>
+              </div>
+
+              <div className="rounded-[28px] border border-slate-200/80 bg-slate-50/80 p-5 dark:border-slate-800 dark:bg-slate-800/50">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Condiciones de la estadía</p>
+                <ul className="mt-4 space-y-3">
+                  {(selectedContract.rules || []).map((rule, index) => (
+                    <li key={`${selectedContract.id}-${index}`} className="flex gap-3 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                      <Icons.Check className="mt-1 h-4 w-4 shrink-0 text-brand" />
+                      <span>{rule}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <p className="text-center text-sm leading-6 text-slate-500 dark:text-slate-400">
+                Al aceptar, confirmás que leíste las condiciones. Antes de transferir dinero, revisá la identidad y los datos de la reserva.
+              </p>
+            </div>
+
+            <div className="border-t border-slate-100 bg-slate-50/80 px-6 py-5 dark:border-slate-800 dark:bg-slate-800/30">
+              {!selectedContract.accepted ? (
+                <Button
+                  type="button"
+                  onClick={() => void handleAcceptContract(selectedContract.id)}
+                  loading={accepting}
+                  loadingLabel="Confirmando condiciones..."
+                  fullWidth
+                  size="lg"
+                  className="rounded-[24px]"
+                >
+                  <>
+                    <Icons.ShieldCheck className="h-5 w-5" />
+                    Aceptar condiciones
+                  </>
+                </Button>
+              ) : (
+                <div className="flex items-center justify-center gap-3 rounded-[24px] bg-brand px-5 py-4 text-base font-semibold text-white shadow-[var(--app-shadow-brand)]">
+                  <Icons.CheckCircle2 className="h-5 w-5" />
+                  Condiciones aceptadas
+                </div>
+              )}
+            </div>
+          </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 };

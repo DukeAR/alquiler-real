@@ -29,6 +29,32 @@ const getRelativeArgentinaDate = (offsetDays: number) => {
   return `${year}-${month}-${day}`;
 };
 
+const mockDashboardApi = ({
+  bookings = [],
+  favorites = [],
+  conversations = [],
+}: {
+  bookings?: unknown[];
+  favorites?: unknown[];
+  conversations?: unknown[];
+}) => {
+  apiJsonMock.mockImplementation((url: string) => {
+    if (url === '/api/bookings/all') {
+      return Promise.resolve(bookings);
+    }
+
+    if (url === '/api/favorites') {
+      return Promise.resolve(favorites);
+    }
+
+    if (url === '/api/conversations') {
+      return Promise.resolve(conversations);
+    }
+
+    return Promise.resolve([]);
+  });
+};
+
 vi.mock('../../lib/apiConfig', () => ({
   apiJson: (...args: unknown[]) => apiJsonMock(...args),
 }));
@@ -79,7 +105,81 @@ describe('MyBookings', () => {
     fireEvent.click(screen.getByRole('button', { name: /Intentar de nuevo/i }));
 
     expect(await screen.findByText('Todavía no tenés reservas')).toBeInTheDocument();
-    expect(apiJsonMock).toHaveBeenCalledTimes(2);
+    expect(apiJsonMock.mock.calls.filter((call) => call[0] === '/api/bookings/all')).toHaveLength(2);
+  });
+
+  test('shows the guest control center hierarchy with reservations, saved properties and conversations', async () => {
+    const arrivalDate = getRelativeArgentinaDate(10);
+    const departureDate = getRelativeArgentinaDate(14);
+    const now = new Date().toISOString();
+
+    mockDashboardApi({
+      bookings: [
+        {
+          id: 'booking-dashboard-1',
+          propertyId: 'property-1',
+          userId: 'user-1',
+          conversationId: 'conv-dashboard-1',
+          status: 'confirmed',
+          requestMode: 'protected',
+          depositStatus: 'held',
+          propertyTitle: 'Casa en la laguna',
+          location: 'Chascomús',
+          startDate: arrivalDate,
+          endDate: departureDate,
+          guests: 2,
+          totalPrice: 320000,
+          contractAccepted: true,
+        },
+      ],
+      favorites: [
+        {
+          id: 'saved-property-1',
+          title: 'Loft con terraza',
+          location: 'Colegiales',
+          imageUrl: 'https://example.com/loft.jpg',
+          price: 210000,
+          identityValidated: true,
+          locationVerified: true,
+          videoValidated: true,
+          propertyRelationshipVerified: false,
+          hasPresencialVerification: false,
+        },
+      ],
+      conversations: [
+        {
+          id: 'conv-dashboard-1',
+          property_id: 'property-1',
+          tenant_id: 'user-1',
+          host_id: 'host-1',
+          hostName: 'Marina',
+          propertyTitle: 'Casa en la laguna',
+          last_message: 'Quedó pendiente coordinar el horario de llegada.',
+          bookingStatus: 'confirmed',
+          requestMode: 'protected',
+          depositStatus: 'held',
+          updated_at: now,
+          created_at: now,
+        },
+      ],
+    });
+
+    render(
+      <MemoryRouter>
+        <MyBookings />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('Tus próximos pasos, tus estadías y tus chats en un solo lugar.')).toBeInTheDocument();
+    expect(screen.getByText('Solicitudes pendientes')).toBeInTheDocument();
+    expect(screen.getByText('Reservas activas')).toBeInTheDocument();
+    expect(screen.getByText('Chats para retomar')).toBeInTheDocument();
+    expect(screen.getByText('Qué conviene hacer ahora')).toBeInTheDocument();
+    expect(screen.getAllByText('Guardados útiles')).not.toHaveLength(0);
+    expect(screen.getAllByText('Conversaciones')).not.toHaveLength(0);
+    expect(await screen.findByText('Loft con terraza')).toBeInTheDocument();
+    expect(await screen.findByText('3 de 5 comprobaciones')).toBeInTheDocument();
+    expect(await screen.findByText('Quedó pendiente coordinar el horario de llegada.')).toBeInTheDocument();
   });
 
   test('marks the agreement as accepted and emits success feedback', async () => {
@@ -191,7 +291,7 @@ describe('MyBookings', () => {
     });
 
     expect(await screen.findAllByText('Seña en custodia')).not.toHaveLength(0);
-    expect(screen.getByText('La seña se mantiene protegida hasta tu llegada.')).toBeInTheDocument();
+    expect(screen.getAllByText('La seña se mantiene protegida hasta tu llegada.')).not.toHaveLength(0);
     expect(showToastMock).toHaveBeenCalledWith(
       'Seña en custodia',
       'La seña ya quedó resguardada en la plataforma hasta que confirmes la llegada.',
@@ -281,7 +381,7 @@ describe('MyBookings', () => {
     });
 
     expect(await screen.findAllByText('Seña liberada')).not.toHaveLength(0);
-    expect(screen.getByText('La llegada ya quedó confirmada y la seña salió de custodia.')).toBeInTheDocument();
+    expect(screen.getAllByText('La llegada ya quedó confirmada y la seña salió de custodia.')).not.toHaveLength(0);
   });
 
   test('lets the guest report an arrival problem while the protected deposit is in custody', async () => {
@@ -334,7 +434,7 @@ describe('MyBookings', () => {
     });
 
     expect(await screen.findAllByText('Seña en revisión')).not.toHaveLength(0);
-    expect(screen.getByText('Quedó reportado un problema al llegar y la seña pasó a revisión.')).toBeInTheDocument();
+    expect(screen.getAllByText('Quedó reportado un problema al llegar y la seña pasó a revisión.')).not.toHaveLength(0);
     expect(screen.getByText('La plataforma revisa lo que pasó antes de definir cómo sigue la seña.')).toBeInTheDocument();
     expect(showToastMock).toHaveBeenCalledWith(
       'Seña en revisión',
