@@ -224,12 +224,12 @@ const DateRangePicker: React.FC<Props> = ({ checkIn, checkOut, setCheckIn, setCh
         selectionTitle: !checkIn
           ? 'Elegí ingreso y salida'
           : !checkOut
-            ? 'Elegí la salida'
-            : `${nights} ${nights === 1 ? 'noche seleccionada' : 'noches seleccionadas'}`,
+            ? 'Ahora marcá la salida'
+            : `${nights} ${nights === 1 ? 'noche lista' : 'noches listas'}`,
         selectionDescription: !checkIn
           ? 'Primero ingreso, después salida.'
           : !checkOut
-            ? `Ingreso: ${formatDisplay(checkIn)}. Falta la salida.`
+            ? `Ingreso ${formatDisplay(checkIn)}. Falta la salida.`
             : `${formatDisplay(checkIn)} al ${formatDisplay(checkOut)}.`,
         triggerSummary: hasCompleteRange
           ? `${formatDisplay(checkIn)} al ${formatDisplay(checkOut)}`
@@ -242,9 +242,9 @@ const DateRangePicker: React.FC<Props> = ({ checkIn, checkOut, setCheckIn, setCh
         startHint: 'Marcá tu fecha de llegada.',
         endHint: 'Elegí cuándo termina la estadía.',
         helper: hasCompleteRange
-          ? 'Si querés, podés cambiar las fechas.'
+          ? 'Si hace falta, cambiá las fechas.'
           : hasPartialRange
-            ? 'Elegí la salida para ver el total.'
+            ? 'Falta la salida.'
             : 'Primero elegí ingreso y después salida.',
       };
 
@@ -674,7 +674,7 @@ const DateRangePicker: React.FC<Props> = ({ checkIn, checkOut, setCheckIn, setCh
                   bookingMode ? (
                     <div className="flex items-start gap-2 rounded-[18px] bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-600">
                       <Icons.Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
-                      <span>Estamos trayendo la disponibilidad para bloquear las fechas ocupadas.</span>
+                      <span>Traemos las fechas ocupadas.</span>
                     </div>
                   ) : (
                     <NoticeBanner

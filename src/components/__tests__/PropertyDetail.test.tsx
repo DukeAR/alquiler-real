@@ -110,6 +110,18 @@ const getDesktopBookingContext = () => screen.getByRole('region', { name: /conte
 
 const getMobileBookingSummary = () => screen.getByRole('region', { name: /resumen móvil de la reserva/i });
 
+const DEFAULT_WINDOW_WIDTH = window.innerWidth;
+
+const setWindowWidth = (width: number) => {
+  Object.defineProperty(window, 'innerWidth', {
+    configurable: true,
+    writable: true,
+    value: width,
+  });
+
+  window.dispatchEvent(new Event('resize'));
+};
+
 const formatIso = (date: Date) => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -215,6 +227,7 @@ beforeEach(() => {
 
 afterEach(() => {
   clearVerificationPreferenceState();
+  setWindowWidth(DEFAULT_WINDOW_WIDTH);
   vi.restoreAllMocks();
 });
 
@@ -277,13 +290,13 @@ describe('PropertyDetail', () => {
     expect(screen.getByLabelText(/acordar directamente/i)).not.toBeChecked();
     expect(screen.getByLabelText(/reserva protegida/i)).not.toBeChecked();
     expect(nextButton).toBeDisabled();
-    expect(screen.getByText('Todavía no elegiste cómo avanzar')).toBeDefined();
+    expect(screen.getByText('Elegí una opción para habilitar el siguiente paso.')).toBeDefined();
 
     fireEvent.click(screen.getByLabelText(/acordar directamente/i));
 
     expect(screen.getByLabelText(/acordar directamente/i)).toBeChecked();
     expect(nextButton).not.toBeDisabled();
-    expect(screen.queryByText('Todavía no elegiste cómo avanzar')).toBeNull();
+    expect(screen.queryByText('Elegí una opción para habilitar el siguiente paso.')).toBeNull();
   });
 
   test('uses a dominant availability CTA to open the calendar directly', async () => {
@@ -338,6 +351,37 @@ describe('PropertyDetail', () => {
 
     expect(within(desktopContext).getByText('2 huéspedes')).toBeDefined();
     expect(within(mobileContext).getByText(/3 noches · 2 huéspedes ·/i)).toBeDefined();
+  });
+
+  test('uses one sticky mobile CTA through the guided booking flow', async () => {
+    setWindowWidth(390);
+
+    renderPropertyDetail();
+
+    await waitForPropertyHeading();
+
+    const mobileContext = getMobileBookingSummary();
+
+    expect(within(mobileContext).getByRole('button', { name: /elegir fechas/i })).toBeDefined();
+    expect(screen.queryByRole('button', { name: /^siguiente$/i })).toBeNull();
+
+    const checkInIso = isoPlusDays(2);
+    const checkOutIso = isoPlusDays(5);
+
+    await selectDateRange(checkInIso, checkOutIso);
+
+    expect(within(mobileContext).getByRole('button', { name: /seguir con huéspedes/i })).toBeDefined();
+
+    fireEvent.click(within(mobileContext).getByRole('button', { name: /seguir con huéspedes/i }));
+    await waitFor(() => expect(screen.getByText('Definí quiénes viajan')).toBeDefined());
+
+    expect(within(mobileContext).getByRole('button', { name: /seguir al modo/i })).toBeDefined();
+
+    fireEvent.click(within(mobileContext).getByRole('button', { name: /seguir al modo/i }));
+    await waitFor(() => expect(screen.getByText('Elegí cómo querés avanzar')).toBeDefined());
+
+    fireEvent.click(screen.getByLabelText(/acordar directamente/i));
+    expect(within(mobileContext).getByRole('button', { name: /seguir al resumen/i })).toBeDefined();
   });
 
   test('renders clearer amenities and trust sections', async () => {

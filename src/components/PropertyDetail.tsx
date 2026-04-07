@@ -186,6 +186,14 @@ const formatGuestSelection = (adults: number, childrenCount: number) => {
 
 const formatGuestCountLabel = (guestCount: number) => formatCountLabel(guestCount, 'huésped', 'huéspedes');
 
+const getIsMobileBookingLayout = () => {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+
+  return window.innerWidth < 1024;
+};
+
 const formatRequestDate = (value: string) => {
   const parsed = parseLocalIso(value);
   if (Number.isNaN(parsed.getTime())) {
@@ -229,28 +237,28 @@ const BOOKING_STEP_CONFIG: BookingStepConfig[] = [
   {
     key: 'dates',
     title: 'Elegí las fechas',
-    description: 'Marcá ingreso y salida. Después seguís con huéspedes.',
+    description: 'Marcá ingreso y salida para empezar.',
     shortLabel: 'Fechas',
     icon: Icons.Calendar,
   },
   {
     key: 'guests',
     title: 'Definí quiénes viajan',
-    description: 'Ajustá cuántas personas viajan sin volver a cargar las fechas.',
+    description: 'Ajustá cuántas personas viajan.',
     shortLabel: 'Huéspedes',
     icon: Icons.Users,
   },
   {
     key: 'mode',
     title: 'Elegí cómo querés avanzar',
-    description: 'Elegí si querés seguir por chat o dejar la solicitud registrada en la app.',
+    description: 'Elegí si seguís por chat o con reserva protegida.',
     shortLabel: 'Cómo avanzar',
     icon: Icons.MessageSquare,
   },
   {
     key: 'confirm',
     title: 'Revisá el resumen final',
-    description: 'Revisá todo antes de mandárselo al anfitrión.',
+    description: 'Revisá y mandá la solicitud.',
     shortLabel: 'Confirmación',
     icon: Icons.CheckCircle2,
   },
@@ -265,17 +273,17 @@ const RESERVATION_MODE_CONTENT: Record<ReservationRequestMode, {
 }> = {
   direct: {
     title: 'Acuerdo directo',
-    description: 'Abrís el chat con fechas y huéspedes ya cargados para seguir la conversación por ahí.',
-    helper: 'La app no bloquea fechas ni interviene en la seña.',
-    confirmationHeading: 'La propuesta queda lista en el chat',
+    description: 'Abrís el chat con la propuesta ya cargada.',
+    helper: 'La seña se coordina por fuera de la app.',
+    confirmationHeading: 'La propuesta se manda por chat',
     confirmationDescription: 'Al enviar, el anfitrión recibe fechas, huéspedes y total dentro de la conversación.',
   },
   protected: {
     title: 'Reserva protegida',
-    description: 'La solicitud queda registrada en la app y seguís por chat con todo ya asentado.',
-    helper: 'Fechas, huéspedes y total quedan asentados desde ahora.',
-    confirmationHeading: 'La solicitud queda registrada en la app',
-    confirmationDescription: 'Al enviarla, el anfitrión la ve en el chat y vos la seguís desde Mis reservas.',
+    description: 'La solicitud queda registrada en la app.',
+    helper: 'Después seguís por chat con todo asentado.',
+    confirmationHeading: 'La solicitud queda registrada',
+    confirmationDescription: 'También la vas a ver en Mis reservas.',
   },
 };
 
@@ -531,13 +539,13 @@ const GuestCounterCard: React.FC<GuestCounterCardProps> = ({
         <p className="mt-1 text-xs leading-5 text-slate-500">{helper}</p>
       </div>
 
-      <div className="flex items-center gap-2 rounded-full border border-slate-200/90 bg-white px-2 py-1.5 shadow-[0_12px_24px_-20px_rgba(15,23,42,0.12)]">
+      <div className="flex items-center gap-2 rounded-full border border-slate-200/90 bg-white px-2 py-1.5 shadow-[0_12px_24px_-20px_rgba(15,23,42,0.12)] sm:px-2">
         <Button
           type="button"
           variant="outline"
           size="sm"
           onClick={onDecrement}
-          className="h-9 w-9 rounded-full p-0 font-semibold"
+          className="h-10 w-10 rounded-full p-0 font-semibold sm:h-9 sm:w-9"
           aria-label={decrementLabel}
           disabled={decrementDisabled}
         >
@@ -554,7 +562,7 @@ const GuestCounterCard: React.FC<GuestCounterCardProps> = ({
           variant="outline"
           size="sm"
           onClick={onIncrement}
-          className="h-9 w-9 rounded-full p-0 font-semibold"
+          className="h-10 w-10 rounded-full p-0 font-semibold sm:h-9 sm:w-9"
           aria-label={incrementLabel}
           disabled={incrementDisabled}
         >
@@ -660,6 +668,7 @@ export const PropertyDetailShell: React.FC<{
   const [bookingSubmitMode, setBookingSubmitMode] = useState<ReservationRequestMode | null>(null);
   const [bookingSubmitNotice, setBookingSubmitNotice] = useState<BookingConfirmationNotice | null>(null);
   const [availabilityRefreshToken, setAvailabilityRefreshToken] = useState(0);
+  const [isMobileBookingLayout, setIsMobileBookingLayout] = useState(getIsMobileBookingLayout);
   const bookingStepPanelRef = useRef<HTMLDivElement | null>(null);
   const datePickerTriggerRef = useRef<HTMLButtonElement | null>(null);
   const pendingDatePickerOpenRef = useRef(false);
@@ -719,6 +728,7 @@ export const PropertyDetailShell: React.FC<{
     })
     .slice(0, 4);
   const hasCompleteDates = Boolean(checkIn && checkOut);
+  const hasSelectedDates = Boolean(checkIn || checkOut);
   const guestCapacityReached = Boolean(maxGuestsNumber && guestCount >= maxGuestsNumber);
   const guestCapacityExceeded = Boolean(maxGuestsNumber && guestCount > maxGuestsNumber);
   const canRemoveAdult = adults > 1;
@@ -733,6 +743,31 @@ export const PropertyDetailShell: React.FC<{
     ? `${nightsSummaryLabel} · ${guestCountLabel} · ${formatCurrency(total)}`
     : `${guestCountLabel} · Total al elegir fechas`;
   const bookingEntryCtaLabel = hasCompleteDates ? 'Cambiar fechas' : 'Ver disponibilidad';
+  const mobilePrimaryActionLabel = bookingStep === 'dates'
+    ? hasCompleteDates
+      ? 'Seguir con huéspedes'
+      : hasSelectedDates
+        ? 'Completar fechas'
+        : 'Elegir fechas'
+    : bookingStep === 'guests'
+      ? 'Seguir al modo'
+      : bookingStep === 'mode'
+        ? 'Seguir al resumen'
+        : selectedRequestMode === 'protected'
+          ? 'Enviar solicitud'
+          : 'Abrir chat';
+  const mobilePrimaryActionDisabled = bookingStep === 'mode'
+    ? !selectedRequestMode
+    : bookingStep === 'confirm'
+      ? !canReserve || bookingSubmitMode !== null || !selectedRequestMode
+      : false;
+  const mobileStepStatusLabel = bookingStep === 'dates'
+    ? (hasCompleteDates ? mobileBookingSummary : null)
+    : bookingStep === 'guests'
+      ? dateSelectionSummary
+      : bookingStep === 'mode'
+        ? `${nightsSummaryLabel} · ${guestCountLabel}`
+        : mobileBookingSummary;
   const currentBookingStepIndex = BOOKING_STEP_CONFIG.findIndex((step) => step.key === bookingStep);
   const currentBookingStep = BOOKING_STEP_CONFIG[currentBookingStepIndex] ?? BOOKING_STEP_CONFIG[0];
   const selectedModeContent = selectedRequestMode ? RESERVATION_MODE_CONTENT[selectedRequestMode] : null;
@@ -770,13 +805,26 @@ export const PropertyDetailShell: React.FC<{
   };
 
   useEffect(() => {
+    const syncLayout = () => {
+      setIsMobileBookingLayout(getIsMobileBookingLayout());
+    };
+
+    syncLayout();
+    window.addEventListener('resize', syncLayout);
+
+    return () => {
+      window.removeEventListener('resize', syncLayout);
+    };
+  }, []);
+
+  useEffect(() => {
     const panel = bookingStepPanelRef.current;
 
     if (!panel || typeof panel.scrollIntoView !== 'function') {
       return;
     }
 
-    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [bookingStep]);
 
   useEffect(() => {
@@ -822,7 +870,7 @@ export const PropertyDetailShell: React.FC<{
     resetBookingSubmitState();
 
     if (bookingStepPanelRef.current && typeof bookingStepPanelRef.current.scrollIntoView === 'function') {
-      bookingStepPanelRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      bookingStepPanelRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
     if (bookingStep !== 'dates') {
@@ -921,8 +969,7 @@ export const PropertyDetailShell: React.FC<{
     }
   };
 
-  const handleReserve = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const submitReservationRequest = async () => {
     if (bookingSubmitMode) {
       return;
     }
@@ -967,6 +1014,30 @@ export const PropertyDetailShell: React.FC<{
     }
 
     await handleStartDirectRequest();
+  };
+
+  const handleMobilePrimaryAction = async () => {
+    if (bookingStep === 'dates') {
+      if (hasCompleteDates) {
+        handleAdvanceBookingStep();
+        return;
+      }
+
+      handleOpenBookingEntry();
+      return;
+    }
+
+    if (bookingStep === 'confirm') {
+      await submitReservationRequest();
+      return;
+    }
+
+    handleAdvanceBookingStep();
+  };
+
+  const handleReserve = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await submitReservationRequest();
   };
 
   const buildReservationRequestContext = (
@@ -1336,25 +1407,27 @@ export const PropertyDetailShell: React.FC<{
             <div className="flex items-start justify-between gap-4 border-b border-slate-200/70 pb-4">
               <section role="region" aria-label="Contexto de la reserva" className="min-w-0 flex-1 space-y-3 sm:space-y-4">
                 <div className="space-y-2">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Reservá en 4 pasos</p>
-                  <p className="text-base font-semibold tracking-tight text-slate-950 sm:text-xl">{property.title}</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{isMobileBookingLayout ? 'Reserva guiada' : 'Reservá en 4 pasos'}</p>
+                  {!isMobileBookingLayout ? <p className="text-base font-semibold tracking-tight text-slate-950 sm:text-xl">{property.title}</p> : null}
                   <p className="text-sm font-medium text-slate-500">{nightly ? `${formatCurrency(nightly)} por noche` : 'Precio a confirmar'}</p>
-                  <div className="pt-1">
-                    <Button
-                      type="button"
-                      variant="primary"
-                      size="lg"
-                      fullWidth
-                      onClick={handleOpenBookingEntry}
-                      className="rounded-2xl shadow-[0_24px_46px_-28px_rgba(67,56,202,0.42)]"
-                    >
-                      <>
-                        <Icons.Calendar className="h-4 w-4" />
-                        {bookingEntryCtaLabel}
-                      </>
-                    </Button>
-                    <p className="mt-2 text-xs font-medium text-slate-500">Elegí fechas para ver el total y avanzar</p>
-                  </div>
+                  {!isMobileBookingLayout ? (
+                    <div className="pt-1">
+                      <Button
+                        type="button"
+                        variant="primary"
+                        size="lg"
+                        fullWidth
+                        onClick={handleOpenBookingEntry}
+                        className="rounded-2xl shadow-[0_24px_46px_-28px_rgba(67,56,202,0.42)]"
+                      >
+                        <>
+                          <Icons.Calendar className="h-4 w-4" />
+                          {bookingEntryCtaLabel}
+                        </>
+                      </Button>
+                      <p className="mt-2 text-xs font-medium text-slate-500">Elegí fechas para ver el total y avanzar</p>
+                    </div>
+                  ) : null}
                   <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600 sm:text-sm">
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-brand/10 px-3 py-1.5 font-semibold text-brand">
                       <Icons.Star className="h-4 w-4 fill-current" />
@@ -1410,54 +1483,80 @@ export const PropertyDetailShell: React.FC<{
             </div>
 
             <form className="mt-5 space-y-5" onSubmit={handleReserve}>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" aria-label="Progreso de la reserva">
-                {BOOKING_STEP_CONFIG.map((step, index) => {
-                  const StepIcon = step.icon;
-                  const isCurrent = index === currentBookingStepIndex;
-                  const isCompleted = index < currentBookingStepIndex;
+              <div aria-label="Progreso de la reserva" className="space-y-3">
+                {isMobileBookingLayout ? (
+                  <div className="rounded-[22px] border border-slate-200 bg-slate-50/80 px-4 py-3 shadow-[0_18px_36px_-34px_rgba(15,23,42,0.16)]">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Paso {currentBookingStepIndex + 1} de 4</p>
+                        <p className="mt-1 text-sm font-semibold text-slate-950">{currentBookingStep.shortLabel}</p>
+                      </div>
+                      <div className="flex items-center gap-1.5" aria-hidden="true">
+                        {BOOKING_STEP_CONFIG.map((step, index) => (
+                          <span
+                            key={step.key}
+                            className={cn(
+                              'h-2 w-2 rounded-full bg-slate-200 transition-all',
+                              index === currentBookingStepIndex && 'w-6 rounded-full bg-brand',
+                              index < currentBookingStepIndex && 'bg-emerald-500',
+                            )}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    {BOOKING_STEP_CONFIG.map((step, index) => {
+                      const StepIcon = step.icon;
+                      const isCurrent = index === currentBookingStepIndex;
+                      const isCompleted = index < currentBookingStepIndex;
 
-                  return (
-                    <div
-                      key={step.key}
-                      className={cn(
-                        'rounded-[22px] border px-2.5 py-2.5 text-left transition-colors sm:px-3 sm:py-3',
-                        isCurrent
-                          ? 'border-brand/30 bg-brand/8 shadow-[0_18px_36px_-30px_rgba(67,56,202,0.3)]'
-                          : isCompleted
-                            ? 'border-emerald-200 bg-emerald-50/80'
-                            : 'border-slate-200 bg-slate-50/80',
-                      )}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span
+                      return (
+                        <div
+                          key={step.key}
                           className={cn(
-                            'flex h-8 w-8 items-center justify-center rounded-full',
+                            'rounded-[22px] border px-2.5 py-2.5 text-left transition-colors sm:px-3 sm:py-3',
                             isCurrent
-                              ? 'bg-brand text-white'
+                              ? 'border-brand/30 bg-brand/8 shadow-[0_18px_36px_-30px_rgba(67,56,202,0.3)]'
                               : isCompleted
-                                ? 'bg-emerald-600 text-white'
-                                : 'bg-white text-slate-500',
+                                ? 'border-emerald-200 bg-emerald-50/80'
+                                : 'border-slate-200 bg-slate-50/80',
                           )}
                         >
-                          <StepIcon className="h-4 w-4" />
-                        </span>
-                        <span className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">{index + 1}</span>
-                      </div>
-                      <p className="mt-2 text-xs font-semibold leading-5 text-slate-900">{step.shortLabel}</p>
-                    </div>
-                  );
-                })}
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={cn(
+                                'flex h-8 w-8 items-center justify-center rounded-full',
+                                isCurrent
+                                  ? 'bg-brand text-white'
+                                  : isCompleted
+                                    ? 'bg-emerald-600 text-white'
+                                    : 'bg-white text-slate-500',
+                              )}
+                            >
+                              <StepIcon className="h-4 w-4" />
+                            </span>
+                            <span className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">{index + 1}</span>
+                          </div>
+                          <p className="mt-2 text-xs font-semibold leading-5 text-slate-900">{step.shortLabel}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               <div
                 ref={bookingStepPanelRef}
                 key={bookingStep}
-                className="animate-[booking-step-in_220ms_var(--app-interaction-ease)] rounded-[28px] border border-slate-200/80 bg-slate-50/70 p-4 shadow-[0_24px_56px_-42px_rgba(15,23,42,0.22)] sm:p-5"
+                className="animate-[booking-step-in_220ms_var(--app-interaction-ease)] rounded-[26px] border border-slate-200/80 bg-slate-50/70 p-4 shadow-[0_24px_56px_-42px_rgba(15,23,42,0.22)] sm:rounded-[28px] sm:p-5"
               >
                 <div className="space-y-1.5">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Paso {currentBookingStepIndex + 1} de 4</p>
                   <h3 className="text-xl font-semibold tracking-tight text-slate-950">{currentBookingStep.title}</h3>
                   <p className="text-sm leading-6 text-slate-600">{currentBookingStep.description}</p>
+                  {isMobileBookingLayout && mobileStepStatusLabel ? <p className="text-sm font-medium text-slate-600">{mobileStepStatusLabel}</p> : null}
                 </div>
 
                 {bookingStep === 'dates' ? (
@@ -1486,8 +1585,8 @@ export const PropertyDetailShell: React.FC<{
                         {bookingError.message}
                       </p>
                     ) : hasCompleteDates ? (
-                      <div className="rounded-[20px] bg-white px-4 py-3 text-sm text-slate-600 shadow-[0_18px_36px_-34px_rgba(15,23,42,0.18)]">
-                        {nights} {nights === 1 ? 'noche seleccionada' : 'noches seleccionadas'} para {formatGuestSelection(adults, childrenCount)}.
+                      <div className="rounded-[18px] border border-brand/10 bg-white px-4 py-3 text-sm font-medium text-slate-700 shadow-[0_18px_36px_-34px_rgba(15,23,42,0.18)]">
+                        {mobileBookingSummary}
                       </div>
                     ) : null}
                   </div>
@@ -1525,15 +1624,14 @@ export const PropertyDetailShell: React.FC<{
                       </div>
                     </div>
 
-                    <div className="rounded-[20px] bg-white px-4 py-3 text-sm text-slate-600 shadow-[0_18px_36px_-34px_rgba(15,23,42,0.18)]">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Selección actual</p>
-                      <p className="mt-1 text-base font-semibold text-slate-950">{formatGuestSelection(adults, childrenCount)}</p>
+                    <div className="rounded-[18px] bg-slate-900/[0.03] px-4 py-3 text-sm text-slate-600">
+                      <p className="font-semibold text-slate-950">{formatGuestSelection(adults, childrenCount)}</p>
                       <p className="mt-1 text-xs leading-5 text-slate-500">
                         {maxGuestsNumber
                           ? guestCapacityReached
                             ? `Máximo: ${maxGuestsNumber} ${maxGuestsNumber === 1 ? 'huésped' : 'huéspedes'}.`
-                            : `Hasta ${maxGuestsNumber} ${maxGuestsNumber === 1 ? 'huésped' : 'huéspedes'}.`
-                          : 'Elegí cuántas personas viajan.'}
+                            : `Capacidad hasta ${maxGuestsNumber} ${maxGuestsNumber === 1 ? 'huésped' : 'huéspedes'}.`
+                          : 'Podés ajustarlo si hace falta.'}
                       </p>
                     </div>
 
@@ -1576,18 +1674,14 @@ export const PropertyDetailShell: React.FC<{
                       />
                     </div>
 
-                    <div className="rounded-[20px] bg-white px-4 py-3 text-sm text-slate-600 shadow-[0_18px_36px_-34px_rgba(15,23,42,0.18)]">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Selección actual</p>
+                    <div className="rounded-[18px] bg-slate-900/[0.03] px-4 py-3 text-sm text-slate-600">
                       {selectedModeContent ? (
                         <>
-                          <p className="mt-1 text-base font-semibold text-slate-950">{selectedModeContent.title}</p>
-                          <p className="mt-1 leading-6">{selectedModeContent.helper}</p>
+                          <p className="font-semibold text-slate-950">{selectedModeContent.title}</p>
+                          <p className="mt-1 text-xs leading-5 text-slate-500">{selectedModeContent.helper}</p>
                         </>
                       ) : (
-                        <>
-                          <p className="mt-1 text-base font-semibold text-slate-950">Todavía no elegiste cómo avanzar</p>
-                          <p className="mt-1 leading-6">Elegí una opción para habilitar Siguiente. Si querés hablar primero, seguís por chat. Si querés dejar todo asentado, mandás la solicitud protegida.</p>
-                        </>
+                        <p className="text-xs leading-5 text-slate-500">Elegí una opción para habilitar el siguiente paso.</p>
                       )}
                     </div>
 
@@ -1602,13 +1696,13 @@ export const PropertyDetailShell: React.FC<{
                 {bookingStep === 'confirm' && selectedModeContent ? (
                   <div className="mt-5 space-y-4">
                     <div className="space-y-3 rounded-[24px] border border-slate-200/80 bg-white p-4 shadow-[0_18px_36px_-30px_rgba(15,23,42,0.14)]">
-                      <div className="flex items-center justify-between gap-4 border-b border-slate-200/70 pb-3">
+                      <div className="flex items-end justify-between gap-4 border-b border-slate-200/70 pb-3">
                         <div>
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Resumen</p>
-                          <p className="mt-1 text-base font-semibold text-slate-950">{property.title}</p>
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Listo para enviar</p>
+                          <p className="mt-1 text-base font-semibold text-slate-950">{selectedModeContent.title}</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Total estimado</p>
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Total</p>
                           <p className="mt-1 text-2xl font-black tracking-tight text-slate-950">{formatCurrency(total)}</p>
                         </div>
                       </div>
@@ -1618,7 +1712,7 @@ export const PropertyDetailShell: React.FC<{
                           <div>
                             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Fechas</p>
                             <p className="mt-1 font-semibold text-slate-950">{formatRequestDate(checkIn)} al {formatRequestDate(checkOut)}</p>
-                            <p className="mt-1">{nights} {nights === 1 ? 'noche' : 'noches'} · {formatCurrency(nightly)} por noche</p>
+                            <p className="mt-1">{nights} {nights === 1 ? 'noche' : 'noches'}</p>
                           </div>
                           <button type="button" onClick={() => goToBookingStep('dates')} className="text-xs font-semibold text-brand transition-colors hover:text-brand-dark">
                             Editar
@@ -1629,7 +1723,6 @@ export const PropertyDetailShell: React.FC<{
                           <div>
                             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Huéspedes</p>
                             <p className="mt-1 font-semibold text-slate-950">{formatGuestSelection(adults, childrenCount)}</p>
-                            {maxGuestsNumber ? <p className="mt-1">Capacidad máxima: {maxGuestsNumber} {maxGuestsNumber === 1 ? 'huésped' : 'huéspedes'}.</p> : null}
                           </div>
                           <button type="button" onClick={() => goToBookingStep('guests')} className="text-xs font-semibold text-brand transition-colors hover:text-brand-dark">
                             Editar
@@ -1638,9 +1731,9 @@ export const PropertyDetailShell: React.FC<{
 
                         <div className="flex items-start justify-between gap-3 border-t border-slate-200/70 pt-3">
                           <div>
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Cómo avanzás</p>
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Cómo seguís</p>
                             <p className="mt-1 font-semibold text-slate-950">{selectedModeContent.title}</p>
-                            <p className="mt-1">{selectedModeContent.helper}</p>
+                            <p className="mt-1">{selectedModeContent.description}</p>
                           </div>
                           <button type="button" onClick={() => goToBookingStep('mode')} className="text-xs font-semibold text-brand transition-colors hover:text-brand-dark">
                             Editar
@@ -1661,53 +1754,55 @@ export const PropertyDetailShell: React.FC<{
                 ) : null}
               </div>
 
-              <div className="space-y-3">
-                <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="sm:min-w-[120px]">
-                    {bookingStep !== 'dates' ? (
-                      <Button type="button" variant="secondary" onClick={handleRetreatBookingStep} className="w-full rounded-2xl border-slate-200 bg-white sm:w-auto">
-                        Volver
+              {!isMobileBookingLayout ? (
+                <div className="space-y-3">
+                  <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="sm:min-w-[120px]">
+                      {bookingStep !== 'dates' ? (
+                        <Button type="button" variant="secondary" onClick={handleRetreatBookingStep} className="w-full rounded-2xl border-slate-200 bg-white sm:w-auto">
+                          Volver
+                        </Button>
+                      ) : null}
+                    </div>
+
+                    {bookingStep !== 'confirm' ? (
+                      <Button
+                        type="button"
+                        variant="primary"
+                        size="lg"
+                        onClick={handleAdvanceBookingStep}
+                        disabled={isAdvanceDisabled}
+                        className="w-full rounded-2xl shadow-[0_24px_46px_-28px_rgba(67,56,202,0.42)] sm:w-auto sm:min-w-[160px]"
+                      >
+                        <>
+                          <span>Siguiente</span>
+                          <Icons.ArrowRight className="h-4 w-4" />
+                        </>
                       </Button>
-                    ) : null}
+                    ) : (
+                      <Button
+                        type="submit"
+                        variant="primary"
+                        size="lg"
+                        disabled={!canReserve || bookingSubmitMode !== null}
+                        aria-disabled={!canReserve || bookingSubmitMode !== null}
+                        className="w-full rounded-2xl shadow-[0_24px_46px_-28px_rgba(67,56,202,0.42)] sm:w-auto sm:min-w-[220px]"
+                        loading={bookingSubmitMode !== null}
+                        loadingLabel={bookingSubmitMode === 'protected' ? 'Enviando solicitud...' : 'Abriendo chat...'}
+                      >
+                        <>
+                          <Icons.ArrowRight className="h-4 w-4" />
+                          Solicitar reserva
+                        </>
+                      </Button>
+                    )}
                   </div>
 
-                  {bookingStep !== 'confirm' ? (
-                    <Button
-                      type="button"
-                      variant="primary"
-                      size="lg"
-                      onClick={handleAdvanceBookingStep}
-                      disabled={isAdvanceDisabled}
-                      className="w-full rounded-2xl shadow-[0_24px_46px_-28px_rgba(67,56,202,0.42)] sm:w-auto sm:min-w-[160px]"
-                    >
-                      <>
-                        <span>Siguiente</span>
-                        <Icons.ArrowRight className="h-4 w-4" />
-                      </>
-                    </Button>
-                  ) : (
-                    <Button
-                      type="submit"
-                      variant="primary"
-                      size="lg"
-                      disabled={!canReserve || bookingSubmitMode !== null}
-                      aria-disabled={!canReserve || bookingSubmitMode !== null}
-                      className="w-full rounded-2xl shadow-[0_24px_46px_-28px_rgba(67,56,202,0.42)] sm:w-auto sm:min-w-[220px]"
-                      loading={bookingSubmitMode !== null}
-                      loadingLabel={bookingSubmitMode === 'protected' ? 'Enviando solicitud...' : 'Abriendo chat...'}
-                    >
-                      <>
-                        <Icons.ArrowRight className="h-4 w-4" />
-                        Solicitar reserva
-                      </>
-                    </Button>
-                  )}
+                  <p className="text-center text-xs leading-5 text-slate-500">
+                    Podés volver un paso atrás sin perder lo que ya elegiste.
+                  </p>
                 </div>
-
-                <p className="text-center text-xs leading-5 text-slate-500">
-                  Podés volver un paso atrás sin perder lo que ya elegiste.
-                </p>
-              </div>
+              ) : null}
             </form>
           </Card>
         </aside>
@@ -1822,25 +1917,68 @@ export const PropertyDetailShell: React.FC<{
           aria-label="Resumen móvil de la reserva"
           className="pointer-events-auto mx-auto max-w-xl rounded-[24px] border border-slate-200/90 bg-white/96 px-4 py-3 shadow-[0_-18px_40px_-30px_rgba(15,23,42,0.28)] backdrop-blur"
         >
-          <div className="space-y-2.5">
-            <div className="flex items-center justify-between gap-3">
-              <p className="min-w-0 truncate text-xs font-medium leading-5 text-slate-600">{mobileBookingSummary}</p>
-              <p className="shrink-0 text-sm font-bold text-slate-950">{nightly ? `${formatCurrency(nightly)} / noche` : '—'}</p>
+          {isMobileBookingLayout ? (
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">Paso {currentBookingStepIndex + 1} de 4</p>
+                  <p className="mt-1 truncate text-xs font-medium leading-5 text-slate-600">{mobileBookingSummary}</p>
+                </div>
+                <p className="shrink-0 text-sm font-bold text-slate-950">{nightly ? `${formatCurrency(nightly)} / noche` : '—'}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                {bookingStep !== 'dates' ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="lg"
+                    onClick={handleRetreatBookingStep}
+                    className="rounded-2xl border-slate-200 bg-white px-4"
+                  >
+                    Atrás
+                  </Button>
+                ) : null}
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="lg"
+                  fullWidth
+                  onClick={() => {
+                    void handleMobilePrimaryAction();
+                  }}
+                  className="rounded-2xl shadow-[0_24px_46px_-28px_rgba(67,56,202,0.42)]"
+                  disabled={mobilePrimaryActionDisabled}
+                  loading={bookingStep === 'confirm' && bookingSubmitMode !== null}
+                  loadingLabel={bookingSubmitMode === 'protected' ? 'Enviando solicitud...' : 'Abriendo chat...'}
+                >
+                  <>
+                    {bookingStep === 'dates' ? <Icons.Calendar className="h-4 w-4" /> : <Icons.ArrowRight className="h-4 w-4" />}
+                    {mobilePrimaryActionLabel}
+                  </>
+                </Button>
+              </div>
             </div>
-            <Button
-              type="button"
-              variant="primary"
-              size="lg"
-              fullWidth
-              onClick={handleOpenBookingEntry}
-              className="rounded-2xl shadow-[0_24px_46px_-28px_rgba(67,56,202,0.42)]"
-            >
-              <>
-                <Icons.Calendar className="h-4 w-4" />
-                {bookingEntryCtaLabel}
-              </>
-            </Button>
-          </div>
+          ) : (
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between gap-3">
+                <p className="min-w-0 truncate text-xs font-medium leading-5 text-slate-600">{mobileBookingSummary}</p>
+                <p className="shrink-0 text-sm font-bold text-slate-950">{nightly ? `${formatCurrency(nightly)} / noche` : '—'}</p>
+              </div>
+              <Button
+                type="button"
+                variant="primary"
+                size="lg"
+                fullWidth
+                onClick={handleOpenBookingEntry}
+                className="rounded-2xl shadow-[0_24px_46px_-28px_rgba(67,56,202,0.42)]"
+              >
+                <>
+                  <Icons.Calendar className="h-4 w-4" />
+                  {bookingEntryCtaLabel}
+                </>
+              </Button>
+            </div>
+          )}
         </section>
       </div>
 
