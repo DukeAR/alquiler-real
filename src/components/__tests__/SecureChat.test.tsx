@@ -272,7 +272,7 @@ describe('SecureChat', () => {
 
     renderChat();
 
-    expect(await screen.findByText('Podés avanzar con una reserva protegida.')).toBeInTheDocument();
+    expect(await screen.findByText('El anfitrión ya aceptó. Para seguir, pagá la seña desde la app.')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Pagar seña/i }));
 
@@ -482,7 +482,7 @@ describe('SecureChat', () => {
     });
 
     expect(await screen.findAllByText('Propuesta aceptada')).not.toHaveLength(0);
-    expect(screen.getByText('La propuesta ya fue aceptada. Confirmá por acá cuando hayas enviado la seña.')).toBeInTheDocument();
+    expect(screen.getByText('Ya la aceptaste. Esperá que el huésped confirme la seña por acá.')).toBeInTheDocument();
     expect(screen.getByText('Huésped')).toBeInTheDocument();
     expect(showToastMock).toHaveBeenCalledWith(
       'Propuesta aceptada',

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 const apiJsonMock = vi.fn();
 const showToastMock = vi.fn();
+const navigateMock = vi.fn();
 
 const ARGENTINA_TIME_ZONE = 'America/Argentina/Buenos_Aires';
 
@@ -30,6 +31,15 @@ vi.mock('../../lib/toast', () => ({
   showToast: (...args: unknown[]) => showToastMock(...args),
 }));
 
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
+
+  return {
+    ...actual,
+    useNavigate: () => navigateMock,
+  };
+});
+
 vi.mock('../PropertyUploadForm', () => ({
   PropertyUploadForm: () => <div>PropertyUploadForm</div>,
 }));
@@ -44,6 +54,7 @@ describe('HostDashboard', () => {
   beforeEach(() => {
     apiJsonMock.mockReset();
     showToastMock.mockReset();
+    navigateMock.mockReset();
     vi.spyOn(window, 'confirm').mockReturnValue(true);
   });
 
@@ -220,6 +231,92 @@ describe('HostDashboard', () => {
     const profileText = profileCard.textContent ?? '';
     expect(profileText.indexOf('Datos del huésped')).toBeLessThan(profileText.indexOf('Señales de esta operación'));
     expect(profileText.indexOf('Señales de esta operación')).toBeLessThan(profileText.indexOf('Reseñas de anfitriones'));
+  });
+
+  test('lets the host accept a pending request from the dashboard and open its chat', async () => {
+    apiJsonMock.mockImplementation(async (url: string, options?: RequestInit) => {
+      if (url === '/api/host/dashboard') {
+        return {
+          stats: {
+            host_rating: 4.9,
+            total_bookings_hosted: 4,
+            trust_score: 88,
+            badge: 'Verificado',
+            host_verified: true,
+          },
+          properties: [
+            {
+              id: 'prop-1',
+              title: 'Casa del bosque',
+              location: 'Pinamar',
+              price: 150000,
+              status: 'active',
+              reviewsCount: 8,
+              rating: 4.9,
+              imageUrl: 'https://example.com/property.jpg',
+              verificationScore: 4,
+              verificationItems: [
+                { key: 'identity', label: 'Identidad confirmada', description: 'Sabés con quién estás hablando.', status: 'complete' },
+              ],
+            },
+          ],
+          recentBookings: [
+            {
+              id: 'booking-accept',
+              status: 'pending',
+              requestMode: 'protected',
+              conversationId: 'conv-accept',
+              userId: 'guest-accept',
+              userName: 'Marina',
+              propertyTitle: 'Casa del bosque',
+              startDate: '2026-10-12',
+              endDate: '2026-10-16',
+              guests: 2,
+              totalPrice: 320000,
+            },
+          ],
+          contactedGuests: [],
+          estimatedIncome: 250000,
+        };
+      }
+
+      if (url === '/api/conversations/conv-accept/accept-request' && options?.method === 'POST') {
+        return {
+          id: 'conv-accept',
+          requestMode: 'protected',
+          bookingStatus: 'confirmed',
+          depositStatus: null,
+        };
+      }
+
+      return {};
+    });
+
+    render(<HostDashboard onBack={vi.fn()} />);
+
+    expect(await screen.findByRole('button', { name: /Aceptar solicitud/i })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Abrir chat/i }));
+
+    expect(navigateMock).toHaveBeenCalledWith('/chat/conv-accept');
+
+    fireEvent.click(screen.getByRole('button', { name: /Aceptar solicitud/i }));
+
+    await waitFor(() => {
+      expect(apiJsonMock).toHaveBeenCalledWith(
+        '/api/conversations/conv-accept/accept-request',
+        expect.objectContaining({ method: 'POST' }),
+      );
+    });
+
+    expect(await screen.findAllByText('Solicitud aceptada')).not.toHaveLength(0);
+    expect(screen.getByText('Ya la aceptaste. Ahora el huésped tiene que pagar la seña desde la app.')).toBeInTheDocument();
+    expect(screen.getByText('La reserva queda confirmada cuando la seña entra en custodia.')).toBeInTheDocument();
+    expect(showToastMock).toHaveBeenCalledWith(
+      'Solicitud aceptada',
+      'La solicitud quedó aceptada. Ahora el huésped tiene que pagar la seña desde la app.',
+      'success',
+    );
   });
 
   test('shows explicit missing-data states when the guest profile is not structured yet', async () => {

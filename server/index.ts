@@ -1324,6 +1324,7 @@ app.get('/api/host/dashboard', async (req, res) => {
           COALESCE(b.guests, 1)::int as guests,
           COALESCE(b.total_price, 0)::int as "totalPrice",
               b.cancellation_actor as "cancellationActor",
+          c.id as "conversationId",
           COALESCE(c.deposit_status, b.deposit_status) as "depositStatus",
           COALESCE(b.request_mode, CASE WHEN c.booking_id IS NOT NULL THEN 'protected' ELSE 'direct' END) as "requestMode",
           b."userId",
@@ -1725,6 +1726,7 @@ const BOOKING_SELECT_QUERY = `SELECT b.id, b."propertyId", b."userId", b.status,
   b.start_date as "startDate", b.end_date as "endDate", b.total_price as "totalPrice",
   b.guests, b.contract_accepted as "contractAccepted", b.contract_json as "contractJson",
   b.cancellation_actor as "cancellationActor",
+  c.id as "conversationId",
   COALESCE(c.deposit_status, b.deposit_status) as "depositStatus",
   COALESCE(b.request_mode, CASE WHEN c.booking_id IS NOT NULL THEN 'protected' ELSE 'direct' END) as "requestMode",
   p.title as "propertyTitle", p."imageUrl", p.location
@@ -2078,6 +2080,7 @@ const getUserBookingById = async (userId: string, bookingId: string) => {
             b.start_date as "startDate", b.end_date as "endDate", b.total_price as "totalPrice",
             b.guests, b.contract_accepted as "contractAccepted", b.contract_json as "contractJson",
           b.cancellation_actor as "cancellationActor",
+            c.id as "conversationId",
             COALESCE(c.deposit_status, b.deposit_status) as "depositStatus",
             COALESCE(b.request_mode, CASE WHEN c.booking_id IS NOT NULL THEN 'protected' ELSE 'direct' END) as "requestMode",
             p.title as "propertyTitle", p."imageUrl", p.location
@@ -2098,6 +2101,7 @@ const getHostBookingById = async (hostId: string, bookingId: string) => {
             b.start_date as "startDate", b.end_date as "endDate", b.total_price as "totalPrice",
             b.guests, b.contract_accepted as "contractAccepted", b.contract_json as "contractJson",
             b.cancellation_actor as "cancellationActor",
+            c.id as "conversationId",
             COALESCE(c.deposit_status, b.deposit_status) as "depositStatus",
             COALESCE(b.request_mode, CASE WHEN c.booking_id IS NOT NULL THEN 'protected' ELSE 'direct' END) as "requestMode",
             p.title as "propertyTitle", p."imageUrl", p.location

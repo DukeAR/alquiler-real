@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { formatBookingDateTime, getCancellationDeadlineFromStartDate } from '../../lib/bookingDates';
 
 const apiJsonMock = vi.fn();
@@ -134,6 +134,7 @@ describe('MyBookings', () => {
         id: 'booking-protected-1',
         propertyId: 'property-1',
         userId: 'user-1',
+        conversationId: 'conv-protected-1',
         status: 'confirmed',
         requestMode: 'protected',
         propertyTitle: 'Casa frente al bosque',
@@ -174,8 +175,9 @@ describe('MyBookings', () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findAllByText('Solicitud aceptada')).not.toHaveLength(0);
-    expect(screen.getByText('Podés avanzar con una reserva protegida.')).toBeInTheDocument();
+  expect(await screen.findAllByText('Solicitud aceptada')).not.toHaveLength(0);
+  expect(screen.getByText('El anfitrión ya aceptó. Para seguir, pagá la seña desde la app.')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /Abrir chat/i })).toBeInTheDocument();
     expect(screen.getAllByText('Pagar seña')).not.toHaveLength(0);
 
     fireEvent.click(screen.getByRole('button', { name: /Pagar seña/i }));
@@ -191,6 +193,38 @@ describe('MyBookings', () => {
       'La seña ya quedó resguardada en la plataforma hasta que confirmes la llegada.',
       'success',
     );
+  });
+
+  test('opens the linked chat from a reservation card', async () => {
+    apiJsonMock.mockResolvedValue([
+      {
+        id: 'booking-chat-1',
+        propertyId: 'property-9',
+        userId: 'user-1',
+        conversationId: 'conv-chat-1',
+        status: 'confirmed',
+        propertyTitle: 'Loft con patio interno',
+        location: 'Colegiales',
+        startDate: '2099-09-10',
+        endDate: '2099-09-14',
+        guests: 2,
+        totalPrice: 360000,
+        contractAccepted: true,
+      },
+    ]);
+
+    render(
+      <MemoryRouter initialEntries={['/my-bookings']}>
+        <Routes>
+          <Route path="/my-bookings" element={<MyBookings />} />
+          <Route path="/chat/:id" element={<div>Chat abierto</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: /Abrir chat/i }));
+
+    expect(await screen.findByText('Chat abierto')).toBeInTheDocument();
   });
 
   test('lets the guest confirm arrival once the protected deposit is in custody', async () => {

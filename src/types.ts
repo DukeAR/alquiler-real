@@ -147,6 +147,7 @@ export interface Booking {
   id: string;
   propertyId: string;
   userId: string;
+  conversationId?: string;
   status: BookingStatus;
   userName?: string;
   propertyTitle?: string;

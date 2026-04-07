@@ -224,9 +224,15 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
         modelLabel,
         statusLabel: input.mode === 'protected' ? 'Solicitud aceptada' : 'Propuesta aceptada',
         description: input.mode === 'protected'
-          ? 'Podés avanzar con una reserva protegida.'
-          : 'La propuesta ya fue aceptada. Confirmá por acá cuando hayas enviado la seña.',
-        supportText: input.mode === 'direct' ? 'Cuando ambos confirman, la reserva queda registrada.' : undefined,
+          ? viewerRole === 'host'
+            ? 'Ya la aceptaste. Ahora el huésped tiene que pagar la seña desde la app.'
+            : 'El anfitrión ya aceptó. Para seguir, pagá la seña desde la app.'
+          : viewerRole === 'host'
+            ? 'Ya la aceptaste. Esperá que el huésped confirme la seña por acá.'
+            : 'La propuesta ya fue aceptada. Confirmá por acá cuando hayas enviado la seña.',
+        supportText: input.mode === 'protected'
+          ? 'La reserva queda confirmada cuando la seña entra en custodia.'
+          : 'Cuando ambos confirman, la reserva queda registrada.',
         nextActor: 'guest',
         nextActorLabel: 'Huésped',
         nextStepLabel: input.mode === 'protected'

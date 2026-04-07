@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { apiJson } from '../lib/apiConfig';
 import { resolveGuestRequestProfile } from '../lib/guestRequestProfile';
 import { getPropertyVerificationBadge, getPropertyVerificationItems } from '../lib/propertyVerification';
+import { acceptConversationRequest } from '../services/geminiService';
 import { showToast } from '../lib/toast';
 import { Icons } from './Icons';
 import GuestRequestProfileCard from './GuestRequestProfileCard';
@@ -107,6 +109,7 @@ const getBookingSummaryItems = (booking: any) => {
 };
 
 export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
+  const navigate = useNavigate();
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -114,7 +117,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
   const [reviewingBooking, setReviewingBooking] = useState<any>(null);
   const [availabilityPropertyId, setAvailabilityPropertyId] = useState<string | null>(null);
   const [expandedBookingId, setExpandedBookingId] = useState<string | null>(null);
-  const [processingBookingAction, setProcessingBookingAction] = useState<{ bookingId: string; action: 'cancel-host' | 'report-no-show' } | null>(null);
+  const [processingBookingAction, setProcessingBookingAction] = useState<{ bookingId: string; action: 'accept-request' | 'cancel-host' | 'report-no-show' } | null>(null);
 
   useEffect(() => {
     void fetchData();
@@ -147,6 +150,39 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
         )),
       };
     });
+  };
+
+  const handleAcceptRequest = async (booking: any) => {
+    if (!booking.conversationId) {
+      return;
+    }
+
+    setProcessingBookingAction({ bookingId: booking.id, action: 'accept-request' });
+
+    try {
+      const updatedConversation = await acceptConversationRequest(booking.conversationId);
+      const acceptedMode = updatedConversation.requestMode === 'direct' ? 'direct' : 'protected';
+
+      updateRecentBooking({
+        ...booking,
+        conversationId: updatedConversation.id,
+        requestMode: updatedConversation.requestMode ?? booking.requestMode,
+        depositStatus: updatedConversation.depositStatus ?? booking.depositStatus,
+        status: updatedConversation.bookingStatus ?? (acceptedMode === 'protected' ? 'confirmed' : booking.status),
+      });
+
+      showToast(
+        acceptedMode === 'direct' ? 'Propuesta aceptada' : 'Solicitud aceptada',
+        acceptedMode === 'direct'
+          ? 'La propuesta quedó aceptada. Seguí por el chat para cerrar la seña.'
+          : 'La solicitud quedó aceptada. Ahora el huésped tiene que pagar la seña desde la app.',
+        'success',
+      );
+    } catch (err) {
+      showToast('Solicitud', err instanceof Error ? err.message : 'No pudimos aceptar la solicitud desde el panel.', 'error');
+    } finally {
+      setProcessingBookingAction(null);
+    }
   };
 
   const handleCancelBookingAsHost = async (booking: any) => {
@@ -479,7 +515,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
                 <Icons.UserCheck className="h-5 w-5 text-brand" />
                 Solicitudes y huéspedes
               </h2>
-              <p className="app-body-sm app-text-muted">En las solicitudes pendientes, la ficha aparece debajo del resumen para que decidas con más información antes de seguir.</p>
+              <p className="app-body-sm app-text-muted">Si una solicitud sigue pendiente, desde acá podés revisar la ficha, abrir el chat y aceptarla sin salir del panel.</p>
             </div>
           </div>
 
@@ -497,9 +533,12 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
                   const bookingSummaryItems = getBookingSummaryItems(booking);
                   const bookingFlow = getBookingFlow(booking);
                   const arrivalActionsAvailable = isBookingCheckInReached(booking.startDate);
-                  const showBookingFlowPanel = Boolean(booking.requestMode && bookingFlow.stage && bookingFlow.stage !== 'request-pending' && bookingFlow.stage !== 'reservation-confirmed');
+                  const showBookingFlowPanel = Boolean(booking.requestMode && bookingFlow.stage && bookingFlow.stage !== 'reservation-confirmed');
+                  const canAcceptRequest = Boolean(booking.conversationId && bookingFlow.stage === 'request-pending');
+                  const canOpenChat = Boolean(booking.conversationId);
                   const canCancelAsHost = (booking.status === 'pending' || booking.status === 'confirmed') && bookingFlow.stage !== 'host-cancelled' && bookingFlow.stage !== 'guest-cancelled' && bookingFlow.stage !== 'protected-deposit-review' && bookingFlow.stage !== 'protected-no-show-pending';
                   const canReportProtectedNoShow = booking.requestMode === 'protected' && bookingFlow.stage === 'protected-deposit-held' && arrivalActionsAvailable;
+                  const isAcceptingRequest = processingBookingAction?.bookingId === booking.id && processingBookingAction?.action === 'accept-request';
                   const isCancelingAsHost = processingBookingAction?.bookingId === booking.id && processingBookingAction?.action === 'cancel-host';
                   const isReportingNoShow = processingBookingAction?.bookingId === booking.id && processingBookingAction?.action === 'report-no-show';
 
@@ -538,11 +577,29 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
                       {showBookingFlowPanel ? (
                         <div className="rounded-[26px] border border-brand/15 bg-brand/5 p-4 dark:border-brand/20 dark:bg-brand/10">
                           <div className="space-y-4">
-                            <div className="space-y-1">
-                              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-brand">{bookingFlow.statusLabel}</p>
-                              <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">{bookingFlow.description}</p>
-                              {bookingFlow.supportText ? <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">{bookingFlow.supportText}</p> : null}
-                              {bookingFlow.trackingHint ? <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">{bookingFlow.trackingHint}</p> : null}
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                              <div className="space-y-1">
+                                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-brand">{bookingFlow.statusLabel}</p>
+                                <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">{bookingFlow.description}</p>
+                                {bookingFlow.supportText ? <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">{bookingFlow.supportText}</p> : null}
+                                {bookingFlow.trackingHint ? <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">{bookingFlow.trackingHint}</p> : null}
+                              </div>
+
+                              {canAcceptRequest ? (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  onClick={() => void handleAcceptRequest(booking)}
+                                  loading={isAcceptingRequest}
+                                  loadingLabel="Aceptando..."
+                                  className="rounded-full"
+                                >
+                                  <>
+                                    <Icons.CheckCircle2 className="h-4 w-4" />
+                                    {booking.requestMode === 'protected' ? 'Aceptar solicitud' : 'Aceptar propuesta'}
+                                  </>
+                                </Button>
+                              ) : null}
                             </div>
 
                             <div className="grid gap-2 md:grid-cols-3">
@@ -563,8 +620,22 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
                         </div>
                       ) : null}
 
-                      {!isDecisionStage || canReviewBooking || canCancelAsHost || canReportProtectedNoShow ? (
+                      {!isDecisionStage || canReviewBooking || canCancelAsHost || canReportProtectedNoShow || canOpenChat ? (
                         <div className="flex flex-wrap gap-2 pt-1 lg:justify-end">
+                          {canOpenChat ? (
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => navigate(`/chat/${booking.conversationId}`)}
+                              className="rounded-full"
+                            >
+                              <>
+                                <Icons.MessageSquare className="h-4 w-4" />
+                                Abrir chat
+                              </>
+                            </Button>
+                          ) : null}
                           {!isDecisionStage ? (
                             <Button
                               type="button"

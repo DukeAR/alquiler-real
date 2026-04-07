@@ -384,7 +384,21 @@ export const MyBookings = () => {
                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Costo total</p>
                      <p className="text-2xl font-black text-brand tracking-tighter">{formatCurrency(booking.totalPrice)}</p>
                    </div>
-                   <div className="flex gap-2">
+                   <div className="flex flex-wrap justify-end gap-2">
+                     {booking.conversationId ? (
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => navigate(`/chat/${booking.conversationId}`)}
+                          className="rounded-2xl px-4 text-[10px] font-black uppercase tracking-widest"
+                        >
+                          <>
+                            <Icons.MessageSquare className="w-4 h-4" />
+                            Abrir chat
+                          </>
+                        </Button>
+                     ) : null}
                      {booking.contractJson && (
                         <button
                           type="button"
