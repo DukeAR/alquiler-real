@@ -172,6 +172,8 @@ const formatGuestSelection = (adults: number, childrenCount: number) => {
   return `${adults} ${adults === 1 ? 'adulto' : 'adultos'} · ${childrenCount} ${childrenCount === 1 ? 'menor' : 'menores'}`;
 };
 
+const formatGuestCountLabel = (guestCount: number) => `${guestCount} ${guestCount === 1 ? 'huésped' : 'huéspedes'}`;
+
 const formatRequestDate = (value: string) => {
   const parsed = parseLocalIso(value);
   if (Number.isNaN(parsed.getTime())) {
@@ -182,6 +184,22 @@ const formatRequestDate = (value: string) => {
     day: 'numeric',
     month: 'short',
   });
+};
+
+const formatDateSelectionSummary = (checkIn: string, checkOut: string) => {
+  if (!checkIn && !checkOut) {
+    return 'Todavía no elegiste fechas';
+  }
+
+  if (checkIn && !checkOut) {
+    return `Ingreso ${formatRequestDate(checkIn)} · Falta salida`;
+  }
+
+  if (!checkIn && checkOut) {
+    return `Salida ${formatRequestDate(checkOut)} · Falta ingreso`;
+  }
+
+  return `${formatRequestDate(checkIn)} al ${formatRequestDate(checkOut)}`;
 };
 
 const buildInitialRequestMessage = (requestContext: ReservationRequestContext) => {
@@ -690,16 +708,16 @@ export const PropertyDetailShell: React.FC<{
   const canRemoveChildren = childrenCount > 0;
   const canAddGuest = !guestCapacityReached;
   const canReserve = hasCompleteDates && nights > 0 && !guestCapacityExceeded;
+  const guestCountLabel = formatGuestCountLabel(guestCount);
+  const dateSelectionSummary = formatDateSelectionSummary(checkIn, checkOut);
+  const nightsSummaryLabel = hasCompleteDates ? `${nights} ${nights === 1 ? 'noche' : 'noches'}` : 'Se definen al elegir fechas';
+  const totalSummaryLabel = hasCompleteDates ? formatCurrency(total) : 'Elegí fechas para calcularlo';
+  const mobileBookingSummary = hasCompleteDates
+    ? `${nightsSummaryLabel} · ${guestCountLabel} · ${formatCurrency(total)}`
+    : `${guestCountLabel} · Total al elegir fechas`;
   const currentBookingStepIndex = BOOKING_STEP_CONFIG.findIndex((step) => step.key === bookingStep);
   const currentBookingStep = BOOKING_STEP_CONFIG[currentBookingStepIndex] ?? BOOKING_STEP_CONFIG[0];
   const selectedModeContent = selectedRequestMode ? RESERVATION_MODE_CONTENT[selectedRequestMode] : null;
-  const bookingContextBadges = [
-    hasCompleteDates ? { icon: Icons.Calendar, label: `${formatRequestDate(checkIn)} al ${formatRequestDate(checkOut)}` } : null,
-    bookingStep !== 'dates' ? { icon: Icons.Users, label: formatGuestSelection(adults, childrenCount) } : null,
-    bookingStep === 'confirm' && selectedModeContent
-      ? { icon: selectedRequestMode === 'protected' ? Icons.ShieldCheck : Icons.MessageSquare, label: selectedModeContent.title }
-      : null,
-  ].filter(Boolean) as Array<{ icon: IconComponent; label: string }>;
   const confirmationNotice: BookingConfirmationNotice | null = bookingSubmitNotice
     ?? (selectedModeContent
       ? {
@@ -1080,7 +1098,7 @@ export const PropertyDetailShell: React.FC<{
   }, [lightboxOpen, images.length, mainIndex]);
 
   return (
-    <div className="mx-auto max-w-7xl px-4 pb-16 pt-6 md:px-6 lg:px-8">
+    <div className="mx-auto max-w-7xl px-4 pb-[calc(env(safe-area-inset-bottom)+7.25rem)] pt-6 md:px-6 lg:pb-16 lg:px-8">
       <button
         type="button"
         onClick={() => navigate(-1)}
@@ -1222,21 +1240,51 @@ export const PropertyDetailShell: React.FC<{
         <aside className="mx-auto w-full max-w-2xl xl:max-w-none xl:self-start">
           <Card variant="elevated" className="rounded-[30px] border-slate-200/80 bg-white p-4 shadow-[0_30px_80px_-50px_rgba(15,23,42,0.35)] sm:p-5">
             <div className="flex items-start justify-between gap-4 border-b border-slate-200/70 pb-4">
-              <div className="space-y-2">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Reservá en 4 pasos</p>
-                <div className="flex items-end gap-2">
-                  <span className="text-[2.55rem] font-black tracking-tight text-slate-950 sm:text-[2.9rem]">{nightly ? formatCurrency(nightly) : '—'}</span>
-                  <span className="pb-1 text-sm font-medium text-slate-500">/ noche</span>
+              <section role="region" aria-label="Contexto de la reserva" className="min-w-0 flex-1 space-y-4">
+                <div className="space-y-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Reservá en 4 pasos</p>
+                  <p className="text-lg font-semibold tracking-tight text-slate-950 sm:text-xl">{property.title}</p>
+                  <div className="flex items-end gap-2">
+                    <span className="text-[2.55rem] font-black tracking-tight text-slate-950 sm:text-[2.9rem]">{nightly ? formatCurrency(nightly) : '—'}</span>
+                    <span className="pb-1 text-sm font-medium text-slate-500">/ noche</span>
+                  </div>
+                  <p className="text-sm leading-6 text-slate-500">Primero marcás fechas, después definís huéspedes y al final elegís si seguís por chat o dejás la solicitud en la app.</p>
+                  <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-brand/10 px-3 py-1.5 font-semibold text-brand">
+                      <Icons.Star className="h-4 w-4 fill-current" />
+                      <span>{ratingValue > 0 ? ratingValue.toFixed(1) : 'Sin puntaje'}</span>
+                    </span>
+                    <span>{reviewCount > 0 ? formatReviewCount(reviewCount) : 'Sin reseñas todavía'}</span>
+                  </div>
                 </div>
-                <p className="text-sm leading-6 text-slate-500">Primero marcás fechas, después definís huéspedes y al final elegís si seguís por chat o dejás la solicitud en la app.</p>
-                <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600">
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-brand/10 px-3 py-1.5 font-semibold text-brand">
-                    <Icons.Star className="h-4 w-4 fill-current" />
-                    <span>{ratingValue > 0 ? ratingValue.toFixed(1) : 'Sin puntaje'}</span>
-                  </span>
-                  <span>{reviewCount > 0 ? formatReviewCount(reviewCount) : 'Sin reseñas todavía'}</span>
+
+                <div className="rounded-[26px] border border-slate-200/80 bg-slate-50/80 p-4 shadow-[0_18px_36px_-34px_rgba(15,23,42,0.18)]">
+                  <div className="flex items-start gap-3">
+                    <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-brand/10 text-brand">
+                      <Icons.Home className="h-4.5 w-4.5" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Lo que estás armando</p>
+                      <p className="mt-1 text-sm font-medium leading-6 text-slate-600">{dateSelectionSummary}</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 grid gap-2.5 text-sm text-slate-600">
+                    <div className="flex items-center justify-between gap-3 rounded-[18px] bg-white px-3.5 py-3 shadow-[0_18px_36px_-36px_rgba(15,23,42,0.18)]">
+                      <span className="text-slate-500">Noches</span>
+                      <span className="font-semibold text-slate-950">{nightsSummaryLabel}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3 rounded-[18px] bg-white px-3.5 py-3 shadow-[0_18px_36px_-36px_rgba(15,23,42,0.18)]">
+                      <span className="text-slate-500">Huéspedes</span>
+                      <span className="font-semibold text-slate-950">{guestCountLabel}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3 rounded-[18px] bg-white px-3.5 py-3 shadow-[0_18px_36px_-36px_rgba(15,23,42,0.18)]">
+                      <span className="text-slate-500">Total estimado</span>
+                      <span className="font-semibold text-slate-950">{totalSummaryLabel}</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              </section>
 
               {user ? (
                 <Button
@@ -1291,24 +1339,6 @@ export const PropertyDetailShell: React.FC<{
                   );
                 })}
               </div>
-
-              {bookingContextBadges.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {bookingContextBadges.map((badge) => {
-                    const BadgeIcon = badge.icon;
-
-                    return (
-                      <span
-                        key={badge.label}
-                        className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700"
-                      >
-                        <BadgeIcon className="h-3.5 w-3.5 text-slate-500" />
-                        <span>{badge.label}</span>
-                      </span>
-                    );
-                  })}
-                </div>
-              ) : null}
 
               <div
                 ref={bookingStepPanelRef}
@@ -1674,6 +1704,25 @@ export const PropertyDetailShell: React.FC<{
             )}
           </section>
         </main>
+      </div>
+
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-4 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] lg:hidden">
+        <section
+          role="region"
+          aria-label="Resumen móvil de la reserva"
+          className="pointer-events-auto mx-auto max-w-xl rounded-[26px] border border-slate-200/90 bg-white/96 px-4 py-3 shadow-[0_-18px_40px_-30px_rgba(15,23,42,0.28)] backdrop-blur"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-slate-950">{property.title}</p>
+              <p className="mt-1 truncate text-xs leading-5 text-slate-500">{mobileBookingSummary}</p>
+            </div>
+            <div className="shrink-0 text-right">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">/ noche</p>
+              <p className="mt-1 text-sm font-bold text-slate-950">{nightly ? formatCurrency(nightly) : '—'}</p>
+            </div>
+          </div>
+        </section>
       </div>
 
       {lightboxOpen ? (

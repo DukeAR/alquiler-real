@@ -1,5 +1,5 @@
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation, useParams } from 'react-router-dom';
 import FavoritesProvider from '../../contexts/FavoritesContext';
 import { AuthProvider } from '../../contexts/AuthContext';
@@ -101,6 +101,8 @@ const renderPropertyDetail = () => {
     </AuthProvider>
   );
 };
+
+const waitForPropertyHeading = () => waitFor(() => expect(screen.getByRole('heading', { name: 'Casa de prueba' })).toBeDefined());
 
 const formatIso = (date: Date) => {
   const year = date.getFullYear();
@@ -215,7 +217,7 @@ describe('PropertyDetail', () => {
     renderPropertyDetail();
 
     // wait for title to appear
-    await waitFor(() => expect(screen.getByText('Casa de prueba')).toBeDefined());
+    await waitForPropertyHeading();
 
     const mainImg = screen.getByAltText(/imagen 1/i);
     expect(mainImg).toBeTruthy();
@@ -233,7 +235,7 @@ describe('PropertyDetail', () => {
   test('opens lightbox on main image click and closes with Escape', async () => {
     renderPropertyDetail();
 
-    await waitFor(() => expect(screen.getByText('Casa de prueba')).toBeDefined());
+    await waitForPropertyHeading();
     const mainImg = screen.getByAltText(/imagen 1/i);
     fireEvent.click(mainImg);
 
@@ -248,7 +250,7 @@ describe('PropertyDetail', () => {
   test('shows one booking step at a time and asks to choose how to continue before advancing', async () => {
     renderPropertyDetail();
 
-    await waitFor(() => expect(screen.getByText('Casa de prueba')).toBeDefined());
+    await waitForPropertyHeading();
 
     expect(screen.getByText('Elegí las fechas')).toBeDefined();
     expect(screen.queryByText('Definí quiénes viajan')).toBeNull();
@@ -278,10 +280,45 @@ describe('PropertyDetail', () => {
     expect(screen.queryByText('Todavía no elegiste cómo avanzar')).toBeNull();
   });
 
+  test('keeps a persistent reservation context updated while the user advances', async () => {
+    renderPropertyDetail();
+
+    await waitForPropertyHeading();
+
+    const desktopContext = screen.getByRole('region', { name: /contexto de la reserva/i });
+    const mobileContext = screen.getByRole('region', { name: /resumen móvil de la reserva/i });
+
+    expect(within(desktopContext).getByText('Casa de prueba')).toBeDefined();
+    expect(within(desktopContext).getByText('Todavía no elegiste fechas')).toBeDefined();
+    expect(within(desktopContext).getByText('Se definen al elegir fechas')).toBeDefined();
+    expect(within(desktopContext).getByText('1 huésped')).toBeDefined();
+    expect(within(desktopContext).getByText('Elegí fechas para calcularlo')).toBeDefined();
+    expect(within(mobileContext).getByText('Casa de prueba')).toBeDefined();
+    expect(within(mobileContext).getByText('1 huésped · Total al elegir fechas')).toBeDefined();
+
+    const checkInIso = isoPlusDays(2);
+    const checkOutIso = isoPlusDays(5);
+
+    await selectDateRange(checkInIso, checkOutIso);
+
+    expect(within(desktopContext).getByText('3 noches')).toBeDefined();
+    expect(within(desktopContext).getByText(new RegExp('360'))).toBeDefined();
+    expect(within(desktopContext).queryByText('Todavía no elegiste fechas')).toBeNull();
+    expect(within(mobileContext).getByText(/3 noches · 1 huésped ·/i)).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: /^siguiente$/i }));
+    await waitFor(() => expect(screen.getByText('Definí quiénes viajan')).toBeDefined());
+
+    fireEvent.click(screen.getByRole('button', { name: /sumar adulto/i }));
+
+    expect(within(desktopContext).getByText('2 huéspedes')).toBeDefined();
+    expect(within(mobileContext).getByText(/3 noches · 2 huéspedes ·/i)).toBeDefined();
+  });
+
   test('renders clearer amenities and trust sections', async () => {
     renderPropertyDetail();
 
-    await waitFor(() => expect(screen.getByText('Casa de prueba')).toBeDefined());
+    await waitForPropertyHeading();
 
     expect(screen.getByText('Lo importante de este aviso')).toBeDefined();
     expect(screen.getByText('Comodidades clave')).toBeDefined();
@@ -319,7 +356,7 @@ describe('PropertyDetail', () => {
 
     renderPropertyDetail();
 
-    await waitFor(() => expect(screen.getByText('Casa de prueba')).toBeDefined());
+    await waitForPropertyHeading();
 
     expect(screen.getByText('4 de 5 comprobaciones')).toBeDefined();
     expect(screen.getByText('Este aviso muestra más cosas comprobadas que la mayoría.')).toBeDefined();
@@ -339,7 +376,7 @@ describe('PropertyDetail', () => {
 
     renderPropertyDetail();
 
-    await waitFor(() => expect(screen.getByText('Casa de prueba')).toBeDefined());
+    await waitForPropertyHeading();
 
     expect(getVerificationPreferenceState().openedHighVerificationPropertyIds).toEqual(['p1']);
     expect(getVerificationPreferenceState().caresAboutVerification).toBe(false);
@@ -362,7 +399,7 @@ describe('PropertyDetail', () => {
 
     renderPropertyDetail();
 
-    await waitFor(() => expect(screen.getByText('Casa de prueba')).toBeDefined());
+    await waitForPropertyHeading();
 
     expect(screen.getByText('Nivel de verificación')).toBeDefined();
     expect(screen.getByText('1 de 5 comprobaciones')).toBeDefined();
@@ -375,7 +412,7 @@ describe('PropertyDetail', () => {
   test('guides the booking flow and stops guest selection at capacity', async () => {
     renderPropertyDetail();
 
-    await waitFor(() => expect(screen.getByText('Casa de prueba')).toBeDefined());
+    await waitForPropertyHeading();
 
     const checkInIso = isoPlusDays(2);
     const checkOutIso = isoPlusDays(5);
@@ -399,7 +436,7 @@ describe('PropertyDetail', () => {
   test('shows the final confirmation step with editable summary rows', async () => {
     renderPropertyDetail();
 
-    await waitFor(() => expect(screen.getByText('Casa de prueba')).toBeDefined());
+    await waitForPropertyHeading();
 
     await advanceToConfirmationStep('direct');
 
@@ -413,7 +450,7 @@ describe('PropertyDetail', () => {
   test('smoke: sends a direct request by default and opens the contextual chat', async () => {
     renderPropertyDetail();
 
-    await waitFor(() => expect(screen.getByText('Casa de prueba')).toBeDefined());
+    await waitForPropertyHeading();
 
     await advanceToConfirmationStep('direct');
 
@@ -487,7 +524,7 @@ describe('PropertyDetail', () => {
   test('smoke: selects date range and sends a protected request from the sidebar', async () => {
     renderPropertyDetail();
 
-    await waitFor(() => expect(screen.getByText('Casa de prueba')).toBeDefined());
+    await waitForPropertyHeading();
 
     const { checkInIso, checkOutIso } = await advanceToConfirmationStep('protected');
 
@@ -592,7 +629,7 @@ describe('PropertyDetail', () => {
   test('smoke: keeps the booking CTA disabled until dates are complete', async () => {
     renderPropertyDetail();
 
-    await waitFor(() => expect(screen.getByText('Casa de prueba')).toBeDefined());
+    await waitForPropertyHeading();
 
     const reserveButton = screen.getByRole('button', { name: /^siguiente$/i });
 
@@ -616,7 +653,7 @@ describe('PropertyDetail', () => {
 
     renderPropertyDetail();
 
-    await waitFor(() => expect(screen.getByText('Casa de prueba')).toBeDefined());
+    await waitForPropertyHeading();
     expect(screen.queryByRole('button', { name: /guardar en guardados/i })).toBeNull();
 
     await advanceToConfirmationStep('protected');
