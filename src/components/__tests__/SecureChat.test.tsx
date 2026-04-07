@@ -214,6 +214,36 @@ describe('SecureChat', () => {
     expect(screen.queryByText('Elegí una conversación para ver el historial')).not.toBeInTheDocument();
   });
 
+  test('opens the only available conversation by default on the chat inbox route', async () => {
+    useAuthMock.mockReturnValue({ user: { id: 'tenant-1' } });
+    fetchConversationsMock.mockResolvedValue([
+      {
+        ...baseConversation,
+        id: 'conv-real',
+        requestMode: 'direct',
+        requestStatus: 'pending',
+        requestStartDate: '2026-05-10',
+        requestEndDate: '2026-05-13',
+        requestGuests: 2,
+        requestTotalPrice: 320000,
+      },
+    ]);
+    fetchMessagesMock.mockResolvedValue([]);
+
+    render(
+      <MemoryRouter initialEntries={['/chat/all']}>
+        <Routes>
+          <Route path="/chat/all" element={<SecureChat />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(fetchMessagesMock).toHaveBeenCalledWith('conv-real');
+    });
+    expect(screen.queryByText('Elegí una conversación para ver el historial')).not.toBeInTheDocument();
+  });
+
   test('advances a protected reservation from payment to custody inside the chat summary', async () => {
     const arrivalDate = getRelativeArgentinaDate(0);
     const departureDate = getRelativeArgentinaDate(4);

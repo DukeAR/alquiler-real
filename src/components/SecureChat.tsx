@@ -359,6 +359,12 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
       if (conversations.length === 1) {
         setActiveConv(conversations[0]);
       }
+
+      return;
+    }
+
+    if (conversations.length === 1) {
+      setActiveConv(conversations[0]);
     }
   }, [initialConversationId, conversations]);
 
