@@ -11,6 +11,24 @@ const confirmArrivalMock = vi.fn();
 const reportArrivalProblemMock = vi.fn();
 const showToastMock = vi.fn();
 
+const ARGENTINA_TIME_ZONE = 'America/Argentina/Buenos_Aires';
+
+const getRelativeArgentinaDate = (offsetDays: number) => {
+  const date = new Date(Date.now() + offsetDays * 24 * 60 * 60 * 1000);
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: ARGENTINA_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+
+  const year = parts.find((part) => part.type === 'year')?.value ?? '';
+  const month = parts.find((part) => part.type === 'month')?.value ?? '';
+  const day = parts.find((part) => part.type === 'day')?.value ?? '';
+
+  return `${year}-${month}-${day}`;
+};
+
 vi.mock('../../lib/apiConfig', () => ({
   apiJson: (...args: unknown[]) => apiJsonMock(...args),
 }));
@@ -176,6 +194,9 @@ describe('MyBookings', () => {
   });
 
   test('lets the guest confirm arrival once the protected deposit is in custody', async () => {
+    const arrivalDate = getRelativeArgentinaDate(0);
+    const departureDate = getRelativeArgentinaDate(4);
+
     apiJsonMock.mockResolvedValue([
       {
         id: 'booking-protected-2',
@@ -186,8 +207,8 @@ describe('MyBookings', () => {
         depositStatus: 'held',
         propertyTitle: 'Departamento luminoso',
         location: 'Belgrano',
-        startDate: '2026-06-01',
-        endDate: '2026-06-05',
+        startDate: arrivalDate,
+        endDate: departureDate,
         guests: 2,
         totalPrice: 410000,
         contractAccepted: true,
@@ -202,8 +223,8 @@ describe('MyBookings', () => {
       depositStatus: 'released',
       propertyTitle: 'Departamento luminoso',
       location: 'Belgrano',
-      startDate: '2026-06-01',
-      endDate: '2026-06-05',
+      startDate: arrivalDate,
+      endDate: departureDate,
       guests: 2,
       totalPrice: 410000,
       contractAccepted: true,
@@ -226,6 +247,9 @@ describe('MyBookings', () => {
   });
 
   test('lets the guest report an arrival problem while the protected deposit is in custody', async () => {
+    const arrivalDate = getRelativeArgentinaDate(0);
+    const departureDate = getRelativeArgentinaDate(5);
+
     apiJsonMock.mockResolvedValue([
       {
         id: 'booking-protected-3',
@@ -236,8 +260,8 @@ describe('MyBookings', () => {
         depositStatus: 'held',
         propertyTitle: 'Cabaña entre pinos',
         location: 'Villa La Angostura',
-        startDate: '2026-07-11',
-        endDate: '2026-07-16',
+        startDate: arrivalDate,
+        endDate: departureDate,
         guests: 2,
         totalPrice: 680000,
         contractAccepted: true,
@@ -252,8 +276,8 @@ describe('MyBookings', () => {
       depositStatus: 'review',
       propertyTitle: 'Cabaña entre pinos',
       location: 'Villa La Angostura',
-      startDate: '2026-07-11',
-      endDate: '2026-07-16',
+      startDate: arrivalDate,
+      endDate: departureDate,
       guests: 2,
       totalPrice: 680000,
       contractAccepted: true,
@@ -279,6 +303,37 @@ describe('MyBookings', () => {
       'El problema quedó informado y la seña pasó a revisión.',
       'success',
     );
+  });
+
+  test('explains that arrival actions unlock on the check-in day when the deposit is already in custody', async () => {
+    apiJsonMock.mockResolvedValue([
+      {
+        id: 'booking-protected-future',
+        propertyId: 'property-7',
+        userId: 'user-1',
+        status: 'confirmed',
+        requestMode: 'protected',
+        depositStatus: 'held',
+        propertyTitle: 'Casa junto al bosque',
+        location: 'Cariló',
+        startDate: getRelativeArgentinaDate(6),
+        endDate: getRelativeArgentinaDate(9),
+        guests: 2,
+        totalPrice: 560000,
+        contractAccepted: true,
+      },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <MyBookings />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findAllByText('Seña en custodia')).not.toHaveLength(0);
+    expect(screen.getByText('Confirmar llegada y reportar un problema se habilitan el día del ingreso.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Confirmar llegada/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Reportar problema/i })).not.toBeInTheDocument();
   });
 
   test('keeps a protected guest cancellation visible with platform review guidance', async () => {

@@ -10,33 +10,28 @@ import {
 import { ReportModal } from './ReportModal';
 import { useAuth } from '../hooks/useAuth';
 import { type ReservationRequestContext } from '../types';
-import { getReservationFlowCopy, getReservationFlowMilestones, type ReservationFlowMilestoneKey, type ReservationFlowMilestoneState } from '../lib/reservationFlow';
+import { formatBookingDateShort, getBookingDateOnlyValue, isBookingCheckInReached } from '../lib/bookingDates';
+import { getReservationFlowCopy, getReservationFlowMilestones, type ReservationFlowMilestone, type ReservationFlowMilestoneKey, type ReservationFlowMilestoneState } from '../lib/reservationFlow';
 
 const formatRequestDate = (value?: string) => {
   if (!value) {
     return null;
   }
 
-  const [year, month, day] = value.split('-').map(Number);
-  const parsed = new Date(year, month - 1, day);
-
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-
-  return parsed.toLocaleDateString('es-AR', {
-    day: 'numeric',
-    month: 'short',
-  });
+  const normalizedDate = getBookingDateOnlyValue(value);
+  return normalizedDate ? formatBookingDateShort(normalizedDate) : value;
 };
 
 const getNightCount = (startDate?: string, endDate?: string) => {
-  if (!startDate || !endDate) {
+  const normalizedStartDate = getBookingDateOnlyValue(startDate);
+  const normalizedEndDate = getBookingDateOnlyValue(endDate);
+
+  if (!normalizedStartDate || !normalizedEndDate) {
     return 0;
   }
 
-  const [startYear, startMonth, startDay] = startDate.split('-').map(Number);
-  const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
+  const [startYear, startMonth, startDay] = normalizedStartDate.split('-').map(Number);
+  const [endYear, endMonth, endDay] = normalizedEndDate.split('-').map(Number);
   const start = new Date(Date.UTC(startYear, startMonth - 1, startDay));
   const end = new Date(Date.UTC(endYear, endMonth - 1, endDay));
 
@@ -621,10 +616,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
   const requestDateLabel = activeRequestContext
     ? `${formatRequestDate(activeRequestContext.startDate)} al ${formatRequestDate(activeRequestContext.endDate)}`
     : null;
-  const requestHeading = flowCopy?.statusLabel ?? null;
-  const requestDescription = flowCopy?.description ?? 'Dejá por acá fechas, montos y cambios importantes para que la conversación quede clara.';
-  const requestGuidance = flowCopy?.supportText ?? null;
-  const flowMilestones = activeRequestContext
+  const flowMilestonesBase = activeRequestContext
     ? getReservationFlowMilestones({
         mode: activeRequestContext.mode,
         requestStatus: activeRequestContext.requestStatus,
@@ -638,6 +630,25 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
     ? getRequestDeadline(activeRequestContext?.requestCreatedAt ?? activeConv?.requestCreatedAt)
     : null;
   const isRequestExpired = Boolean(requestDeadline && Date.now() > requestDeadline.getTime());
+  const isExpiredPendingRequest = Boolean(flowCopy?.stage === 'request-pending' && isRequestExpired);
+  const requestHeading = isExpiredPendingRequest ? 'Solicitud vencida' : flowCopy?.statusLabel ?? null;
+  const requestDescription = isExpiredPendingRequest
+    ? isTenantConversation
+      ? 'La solicitud venció porque no hubo respuesta dentro del plazo.'
+      : 'La solicitud venció porque no se respondió dentro del plazo.'
+    : flowCopy?.description ?? 'Dejá por acá fechas, montos y cambios importantes para que la conversación quede clara.';
+  const requestGuidance = isExpiredPendingRequest
+    ? isTenantConversation
+      ? 'Si todavía querés avanzar, mandá otro mensaje o abrí una nueva solicitud.'
+      : 'Si todavía quieren avanzar, el huésped tiene que abrir una nueva solicitud.'
+    : flowCopy?.supportText ?? null;
+  const flowMilestones: ReservationFlowMilestone[] = isExpiredPendingRequest
+    ? flowMilestonesBase.map((milestone, index) => ({
+        ...milestone,
+        label: index === 0 ? 'Solicitud vencida' : milestone.label,
+        state: index === 0 ? 'current' : 'upcoming',
+      }))
+    : flowMilestonesBase;
   const requestCreatedAtDate = parseTimestampValue(activeRequestContext?.requestCreatedAt ?? activeConv?.requestCreatedAt);
   const counterpartyId = user && activeConv
     ? user.id === activeConv.tenant_id
@@ -672,8 +683,9 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
   const canReportDirectDeposit = Boolean(isTenantConversation && activeRequestContext?.mode === 'direct' && flowCopy?.stage === 'request-accepted');
   const canConfirmDirectDeposit = Boolean(isHostConversation && activeRequestContext?.mode === 'direct' && flowCopy?.stage === 'direct-deposit-reported');
   const canPayProtectedDeposit = Boolean(isTenantConversation && activeRequestContext?.mode === 'protected' && flowCopy?.stage === 'request-accepted' && activeRequestContext.bookingId);
-  const canConfirmArrival = Boolean(isTenantConversation && activeRequestContext?.mode === 'protected' && flowCopy?.stage === 'protected-deposit-held' && activeRequestContext.bookingId);
-  const canReportArrivalProblem = Boolean(isTenantConversation && activeRequestContext?.mode === 'protected' && flowCopy?.stage === 'protected-deposit-held' && activeRequestContext.bookingId);
+  const arrivalActionsAvailable = isBookingCheckInReached(activeRequestContext?.startDate);
+  const canConfirmArrival = Boolean(isTenantConversation && activeRequestContext?.mode === 'protected' && flowCopy?.stage === 'protected-deposit-held' && activeRequestContext.bookingId && arrivalActionsAvailable);
+  const canReportArrivalProblem = Boolean(isTenantConversation && activeRequestContext?.mode === 'protected' && flowCopy?.stage === 'protected-deposit-held' && activeRequestContext.bookingId && arrivalActionsAvailable);
   const canCoordinateArrival = Boolean(
     activeRequestContext
     && (flowCopy?.stage === 'request-accepted'
@@ -681,6 +693,9 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
       || flowCopy?.stage === 'protected-deposit-held'
       || flowCopy?.stage === 'reservation-confirmed'),
   );
+  const arrivalActionsHint = flowCopy?.stage === 'protected-deposit-held' && !arrivalActionsAvailable
+    ? 'Confirmar llegada y reportar un problema se habilitan el día del ingreso.'
+    : null;
   const arrivalCoordinationDraft = isTenantConversation
     ? '¿Qué horario de llegada te queda mejor?'
     : 'Si querés, definimos ahora el horario de llegada.';
@@ -914,13 +929,13 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                               <span>Coordinar llegada</span>
                             </button>
                           ) : null}
-                          {isHostConversation && flowCopy?.stage === 'request-pending' && isRequestExpired ? (
-                            <span className="inline-flex items-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700 dark:border-amber-900/30 dark:bg-amber-900/20 dark:text-amber-300">
-                              <Icons.Clock className="h-4 w-4" />
-                              <span>Solicitud vencida</span>
-                            </span>
-                          ) : null}
                         </div>
+
+                        {arrivalActionsHint ? (
+                          <p className="rounded-2xl bg-white/70 px-4 py-3 text-xs font-medium text-slate-500 dark:bg-slate-900/70 dark:text-slate-300">
+                            {arrivalActionsHint}
+                          </p>
+                        ) : null}
                       </div>
 
                       {flowMilestones.length > 0 ? (
@@ -944,15 +959,15 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                       <div className="grid gap-2 md:grid-cols-3">
                         <div className="rounded-2xl bg-slate-50 px-3 py-3 text-sm dark:bg-slate-900">
                           <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Estado actual</p>
-                          <p className="mt-1 font-semibold text-slate-900 dark:text-white">{flowCopy?.statusLabel ?? 'Sin estado'}</p>
+                          <p className="mt-1 font-semibold text-slate-900 dark:text-white">{requestHeading ?? 'Sin estado'}</p>
                         </div>
                         <div className="rounded-2xl bg-slate-50 px-3 py-3 text-sm dark:bg-slate-900">
                           <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Actúa ahora</p>
-                          <p className="mt-1 font-semibold text-slate-900 dark:text-white">{flowCopy?.nextActorLabel ?? 'Nadie'}</p>
+                          <p className="mt-1 font-semibold text-slate-900 dark:text-white">{isExpiredPendingRequest ? 'Huésped' : flowCopy?.nextActorLabel ?? 'Nadie'}</p>
                         </div>
                         <div className="rounded-2xl bg-slate-50 px-3 py-3 text-sm dark:bg-slate-900">
                           <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Próximo paso</p>
-                          <p className="mt-1 font-semibold text-slate-900 dark:text-white">{flowCopy?.nextStepLabel ?? 'Solo coordinar por chat'}</p>
+                          <p className="mt-1 font-semibold text-slate-900 dark:text-white">{isExpiredPendingRequest ? (isTenantConversation ? 'Enviar nueva solicitud' : 'Esperar nueva solicitud') : flowCopy?.nextStepLabel ?? 'Solo coordinar por chat'}</p>
                         </div>
                       </div>
 

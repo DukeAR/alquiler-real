@@ -1790,7 +1790,7 @@ const getEnrichedConversationById = async (conversationId: string) => {
     [conversationId],
   );
 
-  return result.rows[0] ?? null;
+  return result.rows[0] ? normalizeConversationRecord(result.rows[0]) : null;
 };
 
 const getFormatterPart = (parts: Intl.DateTimeFormatPart[], type: Intl.DateTimeFormatPartTypes) => (
@@ -1813,11 +1813,52 @@ const normalizeDateOnlyValue = (value: unknown) => {
     return value;
   }
 
-  if (value instanceof Date && !Number.isNaN(value.getTime())) {
-    return value.toISOString().slice(0, 10);
+  if (typeof value === 'string' || value instanceof Date) {
+    const parsed = parseTimestampValue(value);
+    if (parsed) {
+      return formatDateOnlyInBookingTimeZone(parsed);
+    }
   }
 
   return null;
+};
+
+const hasBookingReachedStartDate = (value: unknown, now = new Date()) => {
+  const normalizedStartDate = normalizeDateOnlyValue(value);
+  const today = formatDateOnlyInBookingTimeZone(now);
+
+  return Boolean(normalizedStartDate && normalizedStartDate <= today);
+};
+
+const normalizeBookingRecord = <T extends { startDate?: unknown; endDate?: unknown }>(booking: T) => {
+  const normalizedStartDate = normalizeDateOnlyValue(booking.startDate);
+  const normalizedEndDate = normalizeDateOnlyValue(booking.endDate);
+
+  return {
+    ...booking,
+    ...(booking.startDate !== undefined ? { startDate: normalizedStartDate ?? booking.startDate } : {}),
+    ...(booking.endDate !== undefined ? { endDate: normalizedEndDate ?? booking.endDate } : {}),
+  };
+};
+
+const normalizeConversationRecord = <T extends {
+  startDate?: unknown;
+  endDate?: unknown;
+  requestStartDate?: unknown;
+  requestEndDate?: unknown;
+}>(conversation: T) => {
+  const normalizedStartDate = normalizeDateOnlyValue(conversation.startDate);
+  const normalizedEndDate = normalizeDateOnlyValue(conversation.endDate);
+  const normalizedRequestStartDate = normalizeDateOnlyValue(conversation.requestStartDate);
+  const normalizedRequestEndDate = normalizeDateOnlyValue(conversation.requestEndDate);
+
+  return {
+    ...conversation,
+    ...(conversation.startDate !== undefined ? { startDate: normalizedStartDate ?? conversation.startDate } : {}),
+    ...(conversation.endDate !== undefined ? { endDate: normalizedEndDate ?? conversation.endDate } : {}),
+    ...(conversation.requestStartDate !== undefined ? { requestStartDate: normalizedRequestStartDate ?? conversation.requestStartDate } : {}),
+    ...(conversation.requestEndDate !== undefined ? { requestEndDate: normalizedRequestEndDate ?? conversation.requestEndDate } : {}),
+  };
 };
 
 const parseTimestampValue = (value: unknown) => {
@@ -2016,11 +2057,12 @@ const getCancellationDeadline = (bookingStartDate: Date) => {
   return new Date(bookingStartDate.getTime() - CANCELLATION_WINDOW_MS);
 };
 
-const attachBookingDerivedFields = <T extends { startDate?: string | null }>(booking: T) => {
-  const bookingStartDate = parseDateOnly(booking.startDate);
+const attachBookingDerivedFields = <T extends { startDate?: string | null; endDate?: string | null }>(booking: T) => {
+  const normalizedBooking = normalizeBookingRecord(booking);
+  const bookingStartDate = parseDateOnly(normalizedBooking.startDate);
 
   return {
-    ...booking,
+    ...normalizedBooking,
     cancellationDeadline: bookingStartDate ? getCancellationDeadline(bookingStartDate.date).toISOString() : null,
   };
 };
@@ -2459,6 +2501,10 @@ app.post('/api/bookings/:id/report-arrival-problem', async (req, res) => {
       return sendBookingError(res, 422, 'BOOKING_NOT_IN_CUSTODY', 'Primero necesitás tener la seña en custodia para reportar este problema.');
     }
 
+    if (!hasBookingReachedStartDate(booking.startDate)) {
+      return sendBookingError(res, 422, 'BOOKING_ARRIVAL_PROBLEM_TOO_EARLY', 'Vas a poder reportar un problema desde el día del ingreso.');
+    }
+
     await db.query(
       `UPDATE bookings
        SET deposit_status = 'review'
@@ -2503,6 +2549,10 @@ app.post('/api/bookings/:id/report-no-show', async (req, res) => {
 
     if (booking.depositStatus !== 'held') {
       return sendBookingError(res, 422, 'BOOKING_NOT_IN_CUSTODY', 'Primero necesitás tener la seña en custodia para informar este no show.');
+    }
+
+    if (!hasBookingReachedStartDate(booking.startDate)) {
+      return sendBookingError(res, 422, 'BOOKING_NO_SHOW_TOO_EARLY', 'Vas a poder informar un no show desde el día del ingreso.');
     }
 
     await db.query(
@@ -2556,7 +2606,7 @@ app.get('/api/conversations', async (req, res) => {
        ORDER BY c.updated_at DESC`,
       [userId]
     );
-    res.json(result.rows);
+    res.json(result.rows.map((row) => normalizeConversationRecord(row)));
   } catch (err) {
     res.status(500).json({ error: 'No pudimos cargar tus conversaciones.' });
   }
@@ -2692,30 +2742,53 @@ app.post('/api/conversations', async (req, res) => {
         || requestTotalPrice !== null;
 
       if (shouldUpdateExisting) {
+        const shouldReplaceRequestContext = hasRequestContext;
+        const nextBookingId = shouldReplaceRequestContext
+          ? bookingId ?? null
+          : bookingId ?? existingConversation.booking_id ?? null;
+
         const updated = await db.query(
           `UPDATE conversations
-           SET booking_id = COALESCE($1, booking_id),
+           SET booking_id = $1,
                request_mode = COALESCE($2, request_mode),
-               request_status = CASE WHEN request_status = 'accepted' THEN 'accepted' ELSE COALESCE($3, request_status, 'pending') END,
+               request_status = CASE
+                 WHEN $10 THEN COALESCE($3, 'pending')
+                 ELSE COALESCE($3, request_status, 'pending')
+               END,
                request_created_at = CASE
-                 WHEN request_status = 'accepted' THEN request_created_at
-                 WHEN $8::timestamp IS NOT NULL THEN $8::timestamp
+                 WHEN $10 THEN $8::timestamp
                  ELSE request_created_at
                END,
-               request_start_date = COALESCE($4, request_start_date),
-               request_end_date = COALESCE($5, request_end_date),
-               request_guests = COALESCE($6, request_guests),
-               request_total_price = COALESCE($7, request_total_price),
+               request_start_date = CASE
+                 WHEN $10 THEN $4::date
+                 ELSE COALESCE($4, request_start_date)
+               END,
+               request_end_date = CASE
+                 WHEN $10 THEN $5::date
+                 ELSE COALESCE($5, request_end_date)
+               END,
+               request_guests = CASE
+                 WHEN $10 THEN $6
+                 ELSE COALESCE($6, request_guests)
+               END,
+               request_total_price = CASE
+                 WHEN $10 THEN $7
+                 ELSE COALESCE($7, request_total_price)
+               END,
+               deposit_status = CASE
+                 WHEN $10 THEN NULL
+                 ELSE deposit_status
+               END,
                updated_at = NOW()
            WHERE id = $9
            RETURNING *`,
-          [bookingId, requestMode, requestStatus, requestStartDate, requestEndDate, requestGuests, requestTotalPrice, requestCreatedAt, existingConversation.id],
+          [nextBookingId, requestMode, requestStatus, requestStartDate, requestEndDate, requestGuests, requestTotalPrice, requestCreatedAt, existingConversation.id, shouldReplaceRequestContext],
         );
 
-        return res.json(updated.rows[0]);
+        return res.json(normalizeConversationRecord(updated.rows[0]));
       }
 
-      return res.json(existingConversation);
+      return res.json(normalizeConversationRecord(existingConversation));
     }
 
     const id = `conv_${Date.now()}`;
@@ -2727,7 +2800,7 @@ app.post('/api/conversations', async (req, res) => {
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
       [id, userId, hostId, propertyId, bookingId, requestMode, requestStatus, requestCreatedAt, requestStartDate, requestEndDate, requestGuests, requestTotalPrice]
     );
-    res.status(201).json(result.rows[0]);
+    res.status(201).json(normalizeConversationRecord(result.rows[0]));
   } catch (err) {
     res.status(500).json({ error: 'No pudimos iniciar la conversación. Intentá de nuevo.' });
   }
@@ -3069,6 +3142,10 @@ app.post('/api/bookings/:id/confirm-arrival', async (req, res) => {
 
     if (booking.depositStatus !== 'held') {
       return sendBookingError(res, 422, 'BOOKING_NOT_IN_CUSTODY', 'Primero necesitás tener la seña en custodia para confirmar la llegada.');
+    }
+
+    if (!hasBookingReachedStartDate(booking.startDate)) {
+      return sendBookingError(res, 422, 'BOOKING_ARRIVAL_TOO_EARLY', 'Vas a poder confirmar la llegada desde el día del ingreso.');
     }
 
     await db.query(

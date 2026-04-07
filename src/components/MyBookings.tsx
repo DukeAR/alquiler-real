@@ -10,7 +10,7 @@ import { ErrorState } from './ErrorState';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { LoadingState } from './LoadingState';
-import { formatBookingDateOnly, formatBookingDateTime, getCancellationDeadlineFromStartDate } from '../lib/bookingDates';
+import { formatBookingDateOnly, formatBookingDateTime, getCancellationDeadlineFromStartDate, isBookingCheckInReached } from '../lib/bookingDates';
 import { useUserReservations } from '../hooks/useUserReservations';
 import { getReservationFlowCopy, getReservationFlowMilestones, type ReservationFlowMilestoneKey, type ReservationFlowMilestoneState } from '../lib/reservationFlow';
 
@@ -334,6 +334,7 @@ export const MyBookings = () => {
             const isPayingDeposit = processingBookingAction?.bookingId === booking.id && processingBookingAction.action === 'pay-deposit';
             const isConfirmingArrival = processingBookingAction?.bookingId === booking.id && processingBookingAction.action === 'confirm-arrival';
             const isReportingArrivalProblem = processingBookingAction?.bookingId === booking.id && processingBookingAction.action === 'report-arrival-problem';
+            const arrivalActionsAvailable = isBookingCheckInReached(booking.startDate);
 
             return (
             <div
@@ -460,7 +461,7 @@ export const MyBookings = () => {
                           </Button>
                         ) : null}
 
-                        {bookingFlow.stage === 'protected-deposit-held' ? (
+                        {bookingFlow.stage === 'protected-deposit-held' && arrivalActionsAvailable ? (
                           <Button
                             type="button"
                             size="sm"
@@ -476,7 +477,7 @@ export const MyBookings = () => {
                           </Button>
                         ) : null}
 
-                        {bookingFlow.stage === 'protected-deposit-held' ? (
+                        {bookingFlow.stage === 'protected-deposit-held' && arrivalActionsAvailable ? (
                           <Button
                             type="button"
                             variant="outline"
@@ -491,6 +492,12 @@ export const MyBookings = () => {
                               Reportar problema
                             </>
                           </Button>
+                        ) : null}
+
+                        {bookingFlow.stage === 'protected-deposit-held' && !arrivalActionsAvailable ? (
+                          <div className="rounded-2xl bg-white/80 px-3 py-3 text-xs font-medium text-slate-500 dark:bg-slate-900/70 dark:text-slate-300">
+                            Confirmar llegada y reportar un problema se habilitan el día del ingreso.
+                          </div>
                         ) : null}
                       </div>
 

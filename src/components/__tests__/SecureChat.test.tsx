@@ -14,6 +14,24 @@ const confirmArrivalMock = vi.fn();
 const reportArrivalProblemMock = vi.fn();
 const showToastMock = vi.fn();
 
+const ARGENTINA_TIME_ZONE = 'America/Argentina/Buenos_Aires';
+
+const getRelativeArgentinaDate = (offsetDays: number) => {
+  const date = new Date(Date.now() + offsetDays * 24 * 60 * 60 * 1000);
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: ARGENTINA_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+
+  const year = parts.find((part) => part.type === 'year')?.value ?? '';
+  const month = parts.find((part) => part.type === 'month')?.value ?? '';
+  const day = parts.find((part) => part.type === 'day')?.value ?? '';
+
+  return `${year}-${month}-${day}`;
+};
+
 vi.mock('../../hooks/useAuth', () => ({
   useAuth: () => useAuthMock(),
 }));
@@ -167,6 +185,9 @@ describe('SecureChat', () => {
   });
 
   test('advances a protected reservation from payment to custody inside the chat summary', async () => {
+    const arrivalDate = getRelativeArgentinaDate(0);
+    const departureDate = getRelativeArgentinaDate(4);
+
     useAuthMock.mockReturnValue({ user: { id: 'tenant-1' } });
     fetchConversationsMock.mockResolvedValue([
       {
@@ -175,8 +196,8 @@ describe('SecureChat', () => {
         bookingStatus: 'confirmed',
         requestMode: 'protected',
         requestStatus: 'accepted',
-        requestStartDate: '2026-05-10',
-        requestEndDate: '2026-05-14',
+        requestStartDate: arrivalDate,
+        requestEndDate: departureDate,
         requestGuests: 3,
         requestTotalPrice: 540000,
       },
@@ -251,12 +272,44 @@ describe('SecureChat', () => {
 
     renderChat();
 
-    expect(await screen.findAllByText('Solicitud enviada')).not.toHaveLength(0);
+    expect(await screen.findAllByText('Solicitud vencida')).not.toHaveLength(0);
+    expect(screen.getByText('La solicitud venció porque no hubo respuesta dentro del plazo.')).toBeInTheDocument();
+    expect(screen.getByText('Si todavía querés avanzar, mandá otro mensaje o abrí una nueva solicitud.')).toBeInTheDocument();
     expect(screen.getByText(/El plazo de respuesta terminó/i)).toBeInTheDocument();
     expect(screen.getByText('Todavía no hubo respuesta. Podés enviar otro mensaje o ver otras opciones.')).toBeInTheDocument();
+    expect(screen.getByText('Enviar nueva solicitud')).toBeInTheDocument();
+  });
+
+  test('shows an expired protected request as closed for the host and removes the accept CTA', async () => {
+    useAuthMock.mockReturnValue({ user: { id: 'host-1' } });
+    fetchConversationsMock.mockResolvedValue([
+      {
+        ...baseConversation,
+        requestMode: 'protected',
+        requestStatus: 'pending',
+        requestCreatedAt: new Date(Date.now() - 30 * 60 * 60 * 1000).toISOString(),
+        requestStartDate: '2026-05-10',
+        requestEndDate: '2026-05-13',
+        requestGuests: 2,
+        requestTotalPrice: 320000,
+      },
+    ]);
+    fetchMessagesMock.mockResolvedValue([]);
+
+    renderChat();
+
+    expect(await screen.findAllByText('Solicitud vencida')).not.toHaveLength(0);
+    expect(screen.getByText('La solicitud venció porque no se respondió dentro del plazo.')).toBeInTheDocument();
+    expect(screen.getByText('Si todavía quieren avanzar, el huésped tiene que abrir una nueva solicitud.')).toBeInTheDocument();
+    expect(screen.getByText(/Esta solicitud venció/i)).toBeInTheDocument();
+    expect(screen.getByText('Esperar nueva solicitud')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Aceptar solicitud/i })).not.toBeInTheDocument();
   });
 
   test('lets the guest report an arrival problem from the protected chat summary', async () => {
+    const arrivalDate = getRelativeArgentinaDate(0);
+    const departureDate = getRelativeArgentinaDate(4);
+
     useAuthMock.mockReturnValue({ user: { id: 'tenant-1' } });
     fetchConversationsMock.mockResolvedValue([
       {
@@ -266,8 +319,8 @@ describe('SecureChat', () => {
         requestMode: 'protected',
         requestStatus: 'accepted',
         depositStatus: 'held',
-        requestStartDate: '2026-06-10',
-        requestEndDate: '2026-06-14',
+        requestStartDate: arrivalDate,
+        requestEndDate: departureDate,
         requestGuests: 2,
         requestTotalPrice: 430000,
       },
@@ -296,6 +349,32 @@ describe('SecureChat', () => {
       'El problema quedó informado y la seña pasó a revisión.',
       'success',
     );
+  });
+
+  test('keeps arrival actions locked until the check-in day for protected stays already in custody', async () => {
+    useAuthMock.mockReturnValue({ user: { id: 'tenant-1' } });
+    fetchConversationsMock.mockResolvedValue([
+      {
+        ...baseConversation,
+        booking_id: 'booking-3',
+        bookingStatus: 'confirmed',
+        requestMode: 'protected',
+        requestStatus: 'accepted',
+        depositStatus: 'held',
+        requestStartDate: getRelativeArgentinaDate(5),
+        requestEndDate: getRelativeArgentinaDate(8),
+        requestGuests: 2,
+        requestTotalPrice: 390000,
+      },
+    ]);
+    fetchMessagesMock.mockResolvedValue([]);
+
+    renderChat();
+
+    expect(await screen.findAllByText('Seña en custodia')).not.toHaveLength(0);
+    expect(screen.getByText('Confirmar llegada y reportar un problema se habilitan el día del ingreso.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Confirmar llegada/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Reportar problema/i })).not.toBeInTheDocument();
   });
 
   test('lets the host accept a pending request and updates the chat context', async () => {

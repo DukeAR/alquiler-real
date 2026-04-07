@@ -35,6 +35,20 @@ const parseInstant = (value?: string | Date | null) => {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
 
+export const getBookingDateOnlyValue = (value?: string | Date | null) => {
+  if (typeof value === 'string' && DATE_ONLY_PATTERN.test(value)) {
+    return value;
+  }
+
+  const parsed = parseInstant(value);
+  if (!parsed) {
+    return null;
+  }
+
+  const parts = getBookingDateOnlyParts(parsed);
+  return `${parts.year}-${parts.month}-${parts.day}`;
+};
+
 export const parseBookingDateOnly = (value?: string | null) => {
   if (typeof value !== 'string' || !DATE_ONLY_PATTERN.test(value)) {
     return null;
@@ -53,10 +67,11 @@ export const parseBookingDateOnly = (value?: string | null) => {
   return parsed;
 };
 
-export const formatBookingDateOnly = (value?: string | null) => {
-  const parsed = parseBookingDateOnly(value);
+export const formatBookingDateOnly = (value?: string | Date | null) => {
+  const normalized = getBookingDateOnlyValue(value);
+  const parsed = parseBookingDateOnly(normalized);
   if (!parsed) {
-    return value ?? '-';
+    return typeof value === 'string' ? value : '-';
   }
 
   return new Intl.DateTimeFormat('es-AR', {
@@ -67,13 +82,35 @@ export const formatBookingDateOnly = (value?: string | null) => {
   }).format(parsed);
 };
 
-export const getCancellationDeadlineFromStartDate = (value?: string | null) => {
-  const parsed = parseBookingDateOnly(value);
+export const formatBookingDateShort = (value?: string | Date | null) => {
+  const normalized = getBookingDateOnlyValue(value);
+  const parsed = parseBookingDateOnly(normalized);
+  if (!parsed) {
+    return typeof value === 'string' ? value : '-';
+  }
+
+  return new Intl.DateTimeFormat('es-AR', {
+    timeZone: BOOKING_TIME_ZONE,
+    day: 'numeric',
+    month: 'short',
+  }).format(parsed);
+};
+
+export const getCancellationDeadlineFromStartDate = (value?: string | Date | null) => {
+  const normalized = getBookingDateOnlyValue(value);
+  const parsed = parseBookingDateOnly(normalized);
   if (!parsed) {
     return null;
   }
 
   return new Date(parsed.getTime() - CANCELLATION_WINDOW_MS);
+};
+
+export const isBookingCheckInReached = (startDate?: string | Date | null, now = new Date()) => {
+  const normalizedStartDate = getBookingDateOnlyValue(startDate);
+  const normalizedToday = getBookingDateOnlyValue(now);
+
+  return Boolean(normalizedStartDate && normalizedToday && normalizedStartDate <= normalizedToday);
 };
 
 export const formatBookingDateTime = (value?: string | Date | null) => {

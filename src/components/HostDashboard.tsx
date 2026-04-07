@@ -14,6 +14,7 @@ import { LoadingState } from './LoadingState';
 import { PropertyUploadForm } from './PropertyUploadForm';
 import { ReviewModal } from './ReviewModal';
 import { Button } from './ui/Button';
+import { isBookingCheckInReached } from '../lib/bookingDates';
 import { getReservationFlowCopy } from '../lib/reservationFlow';
 
 interface HostDashboardProps {
@@ -495,9 +496,10 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
                   const shouldShowGuestProfile = isDecisionStage || isExpanded;
                   const bookingSummaryItems = getBookingSummaryItems(booking);
                   const bookingFlow = getBookingFlow(booking);
+                  const arrivalActionsAvailable = isBookingCheckInReached(booking.startDate);
                   const showBookingFlowPanel = Boolean(booking.requestMode && bookingFlow.stage && bookingFlow.stage !== 'request-pending' && bookingFlow.stage !== 'reservation-confirmed');
                   const canCancelAsHost = (booking.status === 'pending' || booking.status === 'confirmed') && bookingFlow.stage !== 'host-cancelled' && bookingFlow.stage !== 'guest-cancelled' && bookingFlow.stage !== 'protected-deposit-review' && bookingFlow.stage !== 'protected-no-show-pending';
-                  const canReportProtectedNoShow = booking.requestMode === 'protected' && bookingFlow.stage === 'protected-deposit-held';
+                  const canReportProtectedNoShow = booking.requestMode === 'protected' && bookingFlow.stage === 'protected-deposit-held' && arrivalActionsAvailable;
                   const isCancelingAsHost = processingBookingAction?.bookingId === booking.id && processingBookingAction?.action === 'cancel-host';
                   const isReportingNoShow = processingBookingAction?.bookingId === booking.id && processingBookingAction?.action === 'report-no-show';
 
@@ -589,6 +591,11 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
                                 Marcar no show
                               </>
                             </Button>
+                          ) : null}
+                          {booking.requestMode === 'protected' && bookingFlow.stage === 'protected-deposit-held' && !arrivalActionsAvailable ? (
+                            <div className="rounded-full bg-slate-100 px-4 py-2 text-xs font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+                              Marcar no show se habilita el día del ingreso.
+                            </div>
                           ) : null}
                           {canCancelAsHost ? (
                             <Button

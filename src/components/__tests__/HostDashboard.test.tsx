@@ -4,6 +4,24 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 const apiJsonMock = vi.fn();
 const showToastMock = vi.fn();
 
+const ARGENTINA_TIME_ZONE = 'America/Argentina/Buenos_Aires';
+
+const getRelativeArgentinaDate = (offsetDays: number) => {
+  const date = new Date(Date.now() + offsetDays * 24 * 60 * 60 * 1000);
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: ARGENTINA_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+
+  const year = parts.find((part) => part.type === 'year')?.value ?? '';
+  const month = parts.find((part) => part.type === 'month')?.value ?? '';
+  const day = parts.find((part) => part.type === 'day')?.value ?? '';
+
+  return `${year}-${month}-${day}`;
+};
+
 vi.mock('../../lib/apiConfig', () => ({
   apiJson: (...args: unknown[]) => apiJsonMock(...args),
 }));
@@ -344,6 +362,9 @@ describe('HostDashboard', () => {
   });
 
   test('lets the host mark a protected no show and keeps the deposit pending confirmation', async () => {
+    const arrivalDate = getRelativeArgentinaDate(0);
+    const departureDate = getRelativeArgentinaDate(4);
+
     apiJsonMock.mockImplementation(async (url: string, options?: RequestInit) => {
       if (url === '/api/host/dashboard') {
         return {
@@ -379,8 +400,8 @@ describe('HostDashboard', () => {
               userId: 'guest-4',
               userName: 'Sofía',
               propertyTitle: 'Casa del bosque',
-              startDate: '2026-09-14',
-              endDate: '2026-09-18',
+              startDate: arrivalDate,
+              endDate: departureDate,
               guests: 2,
               totalPrice: 540000,
             },
@@ -399,8 +420,8 @@ describe('HostDashboard', () => {
             userId: 'guest-4',
             userName: 'Sofía',
             propertyTitle: 'Casa del bosque',
-            startDate: '2026-09-14',
-            endDate: '2026-09-18',
+            startDate: arrivalDate,
+            endDate: departureDate,
             guests: 2,
             totalPrice: 540000,
           },
@@ -429,6 +450,56 @@ describe('HostDashboard', () => {
       'El no show quedó informado y la seña sigue en pausa hasta que se revise.',
       'success',
     );
+  });
+
+  test('keeps the no show action unavailable before the check-in day', async () => {
+    apiJsonMock.mockResolvedValue({
+      stats: {
+        host_rating: 4.9,
+        total_bookings_hosted: 3,
+        trust_score: 88,
+        badge: 'Verificado',
+        host_verified: true,
+      },
+      properties: [
+        {
+          id: 'prop-1',
+          title: 'Casa del bosque',
+          location: 'Pinamar',
+          price: 150000,
+          status: 'active',
+          reviewsCount: 8,
+          rating: 4.9,
+          imageUrl: 'https://example.com/property.jpg',
+          verificationScore: 4,
+          verificationItems: [
+            { key: 'identity', label: 'Identidad confirmada', description: 'Sabés con quién estás hablando.', status: 'complete' },
+          ],
+        },
+      ],
+      recentBookings: [
+        {
+          id: 'booking-future-no-show',
+          status: 'confirmed',
+          requestMode: 'protected',
+          depositStatus: 'held',
+          userId: 'guest-8',
+          userName: 'Malena',
+          propertyTitle: 'Casa del bosque',
+          startDate: getRelativeArgentinaDate(7),
+          endDate: getRelativeArgentinaDate(10),
+          guests: 2,
+          totalPrice: 510000,
+        },
+      ],
+      estimatedIncome: 250000,
+    });
+
+    render(<HostDashboard onBack={vi.fn()} />);
+
+    expect(await screen.findAllByText('Seña en custodia')).not.toHaveLength(0);
+    expect(screen.getByText('Marcar no show se habilita el día del ingreso.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Marcar no show/i })).not.toBeInTheDocument();
   });
 
   test('shows the host-specific custody message when the protected deposit is already held', async () => {
@@ -563,7 +634,7 @@ describe('HostDashboard', () => {
 
     expect(await screen.findAllByText('Canceló el anfitrión')).not.toHaveLength(0);
     expect(screen.getByText('La reserva ya no sigue activa.')).toBeInTheDocument();
-    expect(screen.getByText('La seña se devuelve automáticamente.')).toBeInTheDocument();
+    expect(screen.getByText('Si la seña ya estaba en custodia, se devuelve.')).toBeInTheDocument();
     expect(showToastMock).toHaveBeenCalledWith(
       'Reserva cancelada',
       'La reserva quedó cancelada y la seña se devuelve automáticamente.',

@@ -67,6 +67,14 @@ const getDepositMilestoneLabel = (
   stage: ReservationFlowStageWithIssues | null,
 ) => {
   if (mode === 'protected') {
+    if (stage === 'protected-deposit-review') {
+      return 'Seña en revisión';
+    }
+
+    if (stage === 'protected-no-show-pending') {
+      return 'Pendiente de confirmación';
+    }
+
     return 'Seña en custodia';
   }
 

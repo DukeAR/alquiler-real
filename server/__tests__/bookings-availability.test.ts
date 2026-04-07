@@ -187,6 +187,75 @@ describe('Bookings and availability endpoints', () => {
     expect(res.body.booking_id).toBe('booking-1');
   });
 
+  test('POST /api/conversations resets an accepted conversation when a new direct request starts on the same property', async () => {
+    queryMock.mockImplementation(async (text: string, params?: unknown[]) => {
+      if (text.includes('FROM properties') && text.includes('LIMIT 1')) {
+        return { rows: [{ id: 'prop-1', hostId: 'host-1' }] };
+      }
+
+      if (text.includes('SELECT * FROM conversations')) {
+        return {
+          rows: [{
+            id: 'conv-1',
+            booking_id: 'booking-old',
+            property_id: 'prop-1',
+            tenant_id: 'user-1',
+            host_id: 'host-1',
+            request_status: 'accepted',
+            deposit_status: 'held',
+          }],
+        };
+      }
+
+      if (text.includes('UPDATE conversations')) {
+        expect(params?.[0]).toBeNull();
+        expect(params?.[1]).toBe('direct');
+        expect(params?.[2]).toBe('pending');
+        expect(params?.[3]).toBe('2099-09-20');
+        expect(params?.[4]).toBe('2099-09-23');
+        expect(params?.[5]).toBe(2);
+        expect(params?.[6]).toBe(360000);
+        expect(params?.[9]).toBe(true);
+
+        return {
+          rows: [{
+            id: 'conv-1',
+            booking_id: null,
+            property_id: 'prop-1',
+            tenant_id: 'user-1',
+            host_id: 'host-1',
+            request_mode: 'direct',
+            request_status: 'pending',
+            request_start_date: '2099-09-20',
+            request_end_date: '2099-09-23',
+            request_guests: 2,
+            request_total_price: 360000,
+            deposit_status: null,
+          }],
+        };
+      }
+
+      throw new Error(`Unexpected query: ${text}`);
+    });
+
+    const res = await request(app)
+      .post('/api/conversations')
+      .set('x-test-user-id', 'user-1')
+      .send({
+        propertyId: 'prop-1',
+        requestMode: 'direct',
+        startDate: '2099-09-20',
+        endDate: '2099-09-23',
+        guests: 2,
+        totalPrice: 360000,
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.booking_id).toBeNull();
+    expect(res.body.request_status).toBe('pending');
+    expect(res.body.deposit_status).toBeNull();
+  });
+
   test('GET /api/conversations/:id/messages injects the first reservation guidance messages into the chat', async () => {
     const insertedSystemKeys: string[] = [];
 
@@ -612,6 +681,8 @@ describe('Bookings and availability endpoints', () => {
 
   test('POST /api/bookings/:id/confirm-arrival releases a protected deposit after arrival', async () => {
     let bookingLookupCount = 0;
+    const arrivalDate = getDateInArgentina(0);
+    const departureDate = getDateInArgentina(3);
 
     queryMock.mockImplementation(async (text: string, params?: unknown[]) => {
       if (text.includes(BOOKING_LOOKUP_QUERY_SNIPPET) && text.includes('LIMIT 1')) {
@@ -624,8 +695,8 @@ describe('Bookings and availability endpoints', () => {
               propertyId: 'prop-1',
               userId: 'user-1',
               status: 'confirmed',
-              startDate: '2099-09-20',
-              endDate: '2099-09-23',
+              startDate: arrivalDate,
+              endDate: departureDate,
               totalPrice: 360000,
               guests: 2,
               contractAccepted: false,
@@ -659,6 +730,44 @@ describe('Bookings and availability endpoints', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.booking.depositStatus).toBe('released');
+  });
+
+  test('POST /api/bookings/:id/confirm-arrival rejects confirmations before the check-in day', async () => {
+    queryMock.mockImplementation(async (text: string) => {
+      if (text.includes(BOOKING_LOOKUP_QUERY_SNIPPET) && text.includes('LIMIT 1')) {
+        return {
+          rows: [
+            {
+              id: 'booking-early-arrival',
+              propertyId: 'prop-1',
+              userId: 'user-1',
+              status: 'confirmed',
+              startDate: getDateInArgentina(2),
+              endDate: getDateInArgentina(5),
+              totalPrice: 360000,
+              guests: 2,
+              contractAccepted: false,
+              contractJson: '{}',
+              requestMode: 'protected',
+              depositStatus: 'held',
+              propertyTitle: 'Casa del bosque',
+              imageUrl: 'https://example.com/property.jpg',
+              location: 'Pinamar',
+            },
+          ],
+        };
+      }
+
+      throw new Error(`Unexpected query: ${text}`);
+    });
+
+    const res = await request(app)
+      .post('/api/bookings/booking-early-arrival/confirm-arrival')
+      .set('x-test-user-id', 'user-1');
+
+    expect(res.status).toBe(422);
+    expect(res.body.code).toBe('BOOKING_ARRIVAL_TOO_EARLY');
+    expect(res.body.message).toBe('Vas a poder confirmar la llegada desde el día del ingreso.');
   });
 
   test('GET /api/properties/:id/availability merges booking and manual blocks with metadata', async () => {
@@ -946,6 +1055,8 @@ describe('Bookings and availability endpoints', () => {
 
   test('POST /api/bookings/:id/report-arrival-problem moves the protected deposit into review', async () => {
     let bookingLookupCount = 0;
+    const arrivalDate = getDateInArgentina(0);
+    const departureDate = getDateInArgentina(3);
 
     queryMock.mockImplementation(async (text: string, params?: unknown[]) => {
       if (text.includes(BOOKING_LOOKUP_QUERY_SNIPPET) && text.includes('WHERE b."userId" = $1 AND b.id = $2')) {
@@ -958,8 +1069,8 @@ describe('Bookings and availability endpoints', () => {
               propertyId: 'prop-5',
               userId: 'user-1',
               status: 'confirmed',
-              startDate: getDateInArgentina(6),
-              endDate: getDateInArgentina(9),
+              startDate: arrivalDate,
+              endDate: departureDate,
               totalPrice: 360000,
               guests: 2,
               contractAccepted: true,
@@ -996,8 +1107,49 @@ describe('Bookings and availability endpoints', () => {
     expect(res.body.booking.depositStatus).toBe('review');
   });
 
+  test('POST /api/bookings/:id/report-arrival-problem rejects reports before the check-in day', async () => {
+    queryMock.mockImplementation(async (text: string) => {
+      if (text.includes(BOOKING_LOOKUP_QUERY_SNIPPET) && text.includes('WHERE b."userId" = $1 AND b.id = $2')) {
+        return {
+          rows: [
+            {
+              id: 'booking-arrival-problem-early',
+              propertyId: 'prop-5',
+              userId: 'user-1',
+              status: 'confirmed',
+              startDate: getDateInArgentina(3),
+              endDate: getDateInArgentina(6),
+              totalPrice: 360000,
+              guests: 2,
+              contractAccepted: true,
+              contractJson: null,
+              requestMode: 'protected',
+              depositStatus: 'held',
+              cancellationActor: null,
+              propertyTitle: 'Depto céntrico',
+              imageUrl: 'https://example.com/property.jpg',
+              location: 'Mendoza',
+            },
+          ],
+        };
+      }
+
+      throw new Error(`Unexpected query: ${text}`);
+    });
+
+    const res = await request(app)
+      .post('/api/bookings/booking-arrival-problem-early/report-arrival-problem')
+      .set('x-test-user-id', 'user-1');
+
+    expect(res.status).toBe(422);
+    expect(res.body.code).toBe('BOOKING_ARRIVAL_PROBLEM_TOO_EARLY');
+    expect(res.body.message).toBe('Vas a poder reportar un problema desde el día del ingreso.');
+  });
+
   test('POST /api/bookings/:id/report-no-show keeps the protected deposit pending confirmation', async () => {
     let bookingLookupCount = 0;
+    const arrivalDate = getDateInArgentina(0);
+    const departureDate = getDateInArgentina(3);
 
     queryMock.mockImplementation(async (text: string, params?: unknown[]) => {
       if (text.includes(BOOKING_LOOKUP_QUERY_SNIPPET) && text.includes('WHERE p."hostId" = $1 AND b.id = $2')) {
@@ -1010,8 +1162,8 @@ describe('Bookings and availability endpoints', () => {
               propertyId: 'prop-6',
               userId: 'tenant-2',
               status: 'confirmed',
-              startDate: getDateInArgentina(5),
-              endDate: getDateInArgentina(8),
+              startDate: arrivalDate,
+              endDate: departureDate,
               totalPrice: 455000,
               guests: 2,
               contractAccepted: true,
@@ -1046,5 +1198,44 @@ describe('Bookings and availability endpoints', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.booking.depositStatus).toBe('pending_confirmation');
+  });
+
+  test('POST /api/bookings/:id/report-no-show rejects no-show reports before the check-in day', async () => {
+    queryMock.mockImplementation(async (text: string) => {
+      if (text.includes(BOOKING_LOOKUP_QUERY_SNIPPET) && text.includes('WHERE p."hostId" = $1 AND b.id = $2')) {
+        return {
+          rows: [
+            {
+              id: 'booking-no-show-early',
+              propertyId: 'prop-6',
+              userId: 'tenant-2',
+              status: 'confirmed',
+              startDate: getDateInArgentina(4),
+              endDate: getDateInArgentina(7),
+              totalPrice: 455000,
+              guests: 2,
+              contractAccepted: true,
+              contractJson: null,
+              requestMode: 'protected',
+              depositStatus: 'held',
+              cancellationActor: null,
+              propertyTitle: 'Casa en la sierra',
+              imageUrl: 'https://example.com/property.jpg',
+              location: 'Tandil',
+            },
+          ],
+        };
+      }
+
+      throw new Error(`Unexpected query: ${text}`);
+    });
+
+    const res = await request(app)
+      .post('/api/bookings/booking-no-show-early/report-no-show')
+      .set('x-test-user-id', 'host-1');
+
+    expect(res.status).toBe(422);
+    expect(res.body.code).toBe('BOOKING_NO_SHOW_TOO_EARLY');
+    expect(res.body.message).toBe('Vas a poder informar un no show desde el día del ingreso.');
   });
 });
