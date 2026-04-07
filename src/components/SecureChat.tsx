@@ -346,8 +346,19 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
 
   useEffect(() => {
     if (initialConversationId) {
-      const conv = conversations.find(c => c.id === initialConversationId);
-      if (conv) setActiveConv(conv);
+      const conv = conversations.find((conversation) => (
+        conversation.id === initialConversationId
+        || conversation.booking_id === initialConversationId
+      ));
+
+      if (conv) {
+        setActiveConv(conv);
+        return;
+      }
+
+      if (conversations.length === 1) {
+        setActiveConv(conversations[0]);
+      }
     }
   }, [initialConversationId, conversations]);
 
@@ -738,13 +749,13 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
         : 'Dejá por acá fechas, montos y cambios importantes. Si después necesitás revisar algo, queda todo mucho más claro.';
 
   return (
-    <div className="flex h-screen bg-white dark:bg-slate-950 overflow-hidden pt-4 md:pt-0">
+    <div className="flex h-screen overflow-hidden bg-white pt-2 dark:bg-slate-950 sm:pt-4 md:pt-0">
       {/* Sidebar List */}
       <div className={cn(
         "w-full md:w-80 border-r border-slate-100 dark:border-slate-800 flex flex-col transition-all",
         activeConv ? "hidden md:flex" : "flex"
       )}>
-        <div className="p-6 border-b border-slate-100 dark:border-slate-800">
+        <div className="border-b border-slate-100 p-4 dark:border-slate-800 sm:p-6">
           <h2 className="text-xl font-black uppercase tracking-tight">Mensajes</h2>
         </div>
 
@@ -755,7 +766,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
           </div>
         )}
 
-        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+        <div className="flex-1 space-y-2 overflow-y-auto p-3 sm:p-4">
           {conversations.length === 0 && !error ? (
             <div className="text-center py-12 text-slate-400 text-xs font-bold uppercase tracking-widest">Todavía no tenés conversaciones</div>
           ) : (
@@ -764,7 +775,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                 key={c.id}
                 onClick={() => setActiveConv(c)}
                 className={cn(
-                  "w-full p-4 rounded-3xl text-left transition-all flex items-center gap-4",
+                  "flex w-full items-center gap-4 rounded-[24px] p-3 text-left transition-all sm:rounded-3xl sm:p-4",
                   activeConv?.id === c.id 
                     ? "bg-brand text-white shadow-xl shadow-brand/20" 
                     : "hover:bg-slate-50 dark:hover:bg-slate-900"
@@ -803,9 +814,9 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
         ) : (
           <>
             {/* Header */}
-            <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between glass">
-              <div className="flex items-center gap-4">
-                <button onClick={() => setActiveConv(null)} className="md:hidden p-2">
+            <div className="glass flex items-center justify-between border-b border-slate-100 p-3.5 dark:border-slate-800 sm:p-4">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <button onClick={() => setActiveConv(null)} className="rounded-full p-2 md:hidden">
                   <Icons.ChevronLeft className="w-6 h-6" />
                 </button>
                 <div>
@@ -815,7 +826,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                    <p className="text-[10px] font-bold text-brand uppercase tracking-widest">{activeConv.propertyTitle || 'Disponible en la app'}</p>
                 </div>
               </div>
-              <button onClick={() => setShowReportModal(true)} className="p-3 text-slate-400 hover:text-red-500 transition-colors">
+              <button onClick={() => setShowReportModal(true)} className="rounded-full p-2.5 text-slate-400 transition-colors hover:text-red-500">
                 <Icons.AlertTriangle className="w-5 h-5" />
               </button>
             </div>
@@ -852,7 +863,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                           </div>
                         </div>
 
-                        <div className="flex flex-wrap gap-3">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3">
                           {canAcceptRequest ? (
                             <button
                               type="button"

@@ -1332,12 +1332,12 @@ export const PropertyDetailShell: React.FC<{
         </section>
 
         <aside className="mx-auto w-full max-w-2xl xl:max-w-none xl:self-start">
-          <Card variant="elevated" className="rounded-[30px] border-slate-200/80 bg-white p-4 shadow-[0_30px_80px_-50px_rgba(15,23,42,0.35)] sm:p-5">
+          <Card variant="elevated" className="rounded-[30px] border-slate-200/80 bg-white p-3.5 shadow-[0_30px_80px_-50px_rgba(15,23,42,0.35)] sm:p-5">
             <div className="flex items-start justify-between gap-4 border-b border-slate-200/70 pb-4">
-              <section role="region" aria-label="Contexto de la reserva" className="min-w-0 flex-1 space-y-4">
+              <section role="region" aria-label="Contexto de la reserva" className="min-w-0 flex-1 space-y-3 sm:space-y-4">
                 <div className="space-y-2">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Reservá en 4 pasos</p>
-                  <p className="text-lg font-semibold tracking-tight text-slate-950 sm:text-xl">{property.title}</p>
+                  <p className="text-base font-semibold tracking-tight text-slate-950 sm:text-xl">{property.title}</p>
                   <p className="text-sm font-medium text-slate-500">{nightly ? `${formatCurrency(nightly)} por noche` : 'Precio a confirmar'}</p>
                   <div className="pt-1">
                     <Button
@@ -1355,7 +1355,7 @@ export const PropertyDetailShell: React.FC<{
                     </Button>
                     <p className="mt-2 text-xs font-medium text-slate-500">Elegí fechas para ver el total y avanzar</p>
                   </div>
-                  <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600">
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600 sm:text-sm">
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-brand/10 px-3 py-1.5 font-semibold text-brand">
                       <Icons.Star className="h-4 w-4 fill-current" />
                       <span>{ratingValue > 0 ? ratingValue.toFixed(1) : 'Sin puntaje'}</span>
@@ -1364,7 +1364,7 @@ export const PropertyDetailShell: React.FC<{
                   </div>
                 </div>
 
-                <div className="rounded-[26px] border border-slate-200/80 bg-slate-50/80 p-4 shadow-[0_18px_36px_-34px_rgba(15,23,42,0.18)]">
+                <div className="hidden rounded-[26px] border border-slate-200/80 bg-slate-50/80 p-4 shadow-[0_18px_36px_-34px_rgba(15,23,42,0.18)] sm:block">
                   <div className="flex items-start gap-3">
                     <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-brand/10 text-brand">
                       <Icons.Home className="h-4.5 w-4.5" />
@@ -1399,7 +1399,10 @@ export const PropertyDetailShell: React.FC<{
                   aria-label={isFav ? 'Quitar de guardados' : 'Guardar en guardados'}
                   variant="secondary"
                   size="icon"
-                  className={isFav ? 'border-brand bg-brand text-white hover:border-brand hover:bg-brand-dark hover:text-white' : 'border-slate-200 bg-white text-slate-700 hover:border-brand/30 hover:text-brand'}
+                  className={cn(
+                    'hidden sm:inline-flex',
+                    isFav ? 'border-brand bg-brand text-white hover:border-brand hover:bg-brand-dark hover:text-white' : 'border-slate-200 bg-white text-slate-700 hover:border-brand/30 hover:text-brand',
+                  )}
                 >
                   <Icons.Heart className="h-5 w-5" />
                 </Button>
@@ -1407,7 +1410,7 @@ export const PropertyDetailShell: React.FC<{
             </div>
 
             <form className="mt-5 space-y-5" onSubmit={handleReserve}>
-              <div className="grid grid-cols-4 gap-2" aria-label="Progreso de la reserva">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" aria-label="Progreso de la reserva">
                 {BOOKING_STEP_CONFIG.map((step, index) => {
                   const StepIcon = step.icon;
                   const isCurrent = index === currentBookingStepIndex;
@@ -1417,7 +1420,7 @@ export const PropertyDetailShell: React.FC<{
                     <div
                       key={step.key}
                       className={cn(
-                        'rounded-[22px] border px-3 py-3 text-left transition-colors',
+                        'rounded-[22px] border px-2.5 py-2.5 text-left transition-colors sm:px-3 sm:py-3',
                         isCurrent
                           ? 'border-brand/30 bg-brand/8 shadow-[0_18px_36px_-30px_rgba(67,56,202,0.3)]'
                           : isCompleted
@@ -1813,22 +1816,16 @@ export const PropertyDetailShell: React.FC<{
         </main>
       </div>
 
-      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-4 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] lg:hidden">
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] lg:hidden">
         <section
           role="region"
           aria-label="Resumen móvil de la reserva"
-          className="pointer-events-auto mx-auto max-w-xl rounded-[26px] border border-slate-200/90 bg-white/96 px-4 py-3 shadow-[0_-18px_40px_-30px_rgba(15,23,42,0.28)] backdrop-blur"
+          className="pointer-events-auto mx-auto max-w-xl rounded-[24px] border border-slate-200/90 bg-white/96 px-4 py-3 shadow-[0_-18px_40px_-30px_rgba(15,23,42,0.28)] backdrop-blur"
         >
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-slate-950">{property.title}</p>
-                <p className="mt-1 truncate text-xs leading-5 text-slate-500">{mobileBookingSummary}</p>
-              </div>
-              <div className="shrink-0 text-right">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">/ noche</p>
-                <p className="mt-1 text-sm font-bold text-slate-950">{nightly ? formatCurrency(nightly) : '—'}</p>
-              </div>
+              <p className="min-w-0 truncate text-xs font-medium leading-5 text-slate-600">{mobileBookingSummary}</p>
+              <p className="shrink-0 text-sm font-bold text-slate-950">{nightly ? `${formatCurrency(nightly)} / noche` : '—'}</p>
             </div>
             <Button
               type="button"
@@ -1843,7 +1840,6 @@ export const PropertyDetailShell: React.FC<{
                 {bookingEntryCtaLabel}
               </>
             </Button>
-            <p className="text-center text-[11px] font-medium leading-5 text-slate-500">Elegí fechas para ver el total y avanzar</p>
           </div>
         </section>
       </div>

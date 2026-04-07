@@ -38,16 +38,16 @@ export const ExploreFiltersBar = ({
 }: ExploreFiltersBarProps) => {
   return (
     <section>
-      <Card padding="none" className="app-surface border-slate-200/85 bg-white/94 p-4 shadow-[0_18px_38px_-28px_rgba(15,23,42,0.2)] backdrop-blur-xl md:p-5">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-          <div className="flex w-fit items-center rounded-[18px] border border-slate-200/80 bg-slate-100/80 p-1">
+      <Card padding="none" className="app-surface border-slate-200/85 bg-white/94 p-3 shadow-[0_18px_38px_-28px_rgba(15,23,42,0.2)] backdrop-blur-xl sm:p-4 md:p-5">
+        <div className="flex flex-col gap-3 sm:gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div className="grid w-full grid-cols-2 items-center rounded-[18px] border border-slate-200/80 bg-slate-100/80 p-1 xl:w-fit">
             {(['grid', 'map'] as const).map((mode) => (
               <button
                 key={mode}
                 type="button"
                 onClick={() => onViewModeChange(mode)}
                 className={cn(
-                  'flex items-center gap-2 rounded-[14px] px-3.5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.12em] transition-[background-color,color,box-shadow,transform] duration-150',
+                  'flex flex-1 items-center justify-center gap-2 rounded-[14px] px-3 py-2.5 text-[11px] font-semibold uppercase tracking-[0.12em] transition-[background-color,color,box-shadow,transform] duration-150 sm:px-3.5',
                   viewMode === mode ? 'bg-white text-slate-900 shadow-[0_14px_24px_-18px_rgba(15,23,42,0.18)]' : 'text-slate-500 hover:bg-white/75 hover:text-slate-700',
                 )}
               >
@@ -88,15 +88,17 @@ export const ExploreFiltersBar = ({
 
               <span className="min-w-0">
                 <span className="block text-[13px] font-semibold leading-5 text-slate-800">
-                  Solo con verificaciones reales
+                  <span className="sm:hidden">Solo avisos verificados</span>
+                  <span className="hidden sm:inline">Solo con verificaciones reales</span>
                 </span>
                 <span className="block text-[11.5px] leading-4 text-slate-500">
-                  3 o más comprobaciones concretas
+                  <span className="sm:hidden">3+ comprobaciones</span>
+                  <span className="hidden sm:inline">3 o más comprobaciones concretas</span>
                 </span>
               </span>
             </label>
 
-            <div className="grid min-w-0 grid-cols-2 gap-2 sm:w-full xl:flex xl:w-auto xl:items-center">
+            <div className="grid min-w-0 grid-cols-2 gap-2 sm:w-full sm:col-span-2 xl:flex xl:w-auto xl:items-center">
               <Input
                 type="number"
                 inputMode="numeric"
@@ -124,7 +126,7 @@ export const ExploreFiltersBar = ({
                 onClick={onClear}
                 variant="ghost"
                 size="sm"
-                className="w-full rounded-[14px] px-3.5 text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 sm:w-auto xl:w-auto"
+                className="w-full rounded-[14px] px-3.5 text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 sm:col-span-2 sm:w-auto xl:w-auto"
               >
                 <Icons.X className="h-4 w-4" />
                 Limpiar filtros

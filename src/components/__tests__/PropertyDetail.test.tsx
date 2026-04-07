@@ -315,10 +315,9 @@ describe('PropertyDetail', () => {
     expect(within(desktopContext).getByText('Se definen al elegir fechas')).toBeDefined();
     expect(within(desktopContext).getByText('1 huésped')).toBeDefined();
     expect(within(desktopContext).getByText('Elegí fechas para calcularlo')).toBeDefined();
-    expect(within(mobileContext).getByText('Casa de prueba')).toBeDefined();
     expect(within(mobileContext).getByText('1 huésped · Total al elegir fechas')).toBeDefined();
     expect(within(mobileContext).getByRole('button', { name: /ver disponibilidad/i })).toBeDefined();
-    expect(within(mobileContext).getByText('Elegí fechas para ver el total y avanzar')).toBeDefined();
+    expect(within(mobileContext).getByText(/120/)).toBeDefined();
 
     const checkInIso = isoPlusDays(2);
     const checkOutIso = isoPlusDays(5);

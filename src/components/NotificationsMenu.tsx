@@ -161,7 +161,7 @@ export const NotificationsMenu: React.FC<NotificationsMenuProps> = ({
     }
 
     return (
-      <div className="max-h-72 overflow-y-auto">
+      <div className="max-h-[calc(min(70vh,32rem)-4.75rem)] overflow-y-auto sm:max-h-72">
         {notifications.map((notification) => (
           <div key={notification.id} className="border-b border-slate-100/90 px-5 py-4 transition-colors hover:bg-slate-50/70 last:border-b-0">
             <div className="flex items-start gap-3">
@@ -185,12 +185,12 @@ export const NotificationsMenu: React.FC<NotificationsMenuProps> = ({
   }, [errorMessage, notifications, onLoginRequired, onRefresh, status]);
 
   return (
-    <div ref={containerRef} className="relative hidden md:block">
+    <div ref={containerRef} className="relative">
       <button
         ref={buttonRef}
         type="button"
         onClick={handleToggle}
-        className="app-icon-button"
+        className="app-icon-button h-10 w-10 sm:h-11 sm:w-11"
         aria-label={buttonLabel}
         aria-expanded={isOpen}
         aria-controls="app-notifications-panel"
@@ -208,12 +208,12 @@ export const NotificationsMenu: React.FC<NotificationsMenuProps> = ({
           id="app-notifications-panel"
           aria-label="Panel de notificaciones"
           style={{ top: `${panelTop}px` }}
-          className="fixed right-4 z-[9999] w-[22rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded-[28px] border border-slate-200/90 bg-white/98 shadow-[0_24px_50px_-30px_rgba(15,23,42,0.28)] backdrop-blur-xl"
+          className="fixed inset-x-3 z-[9999] max-h-[min(70vh,32rem)] overflow-hidden rounded-[24px] border border-slate-200/90 bg-white/98 shadow-[0_24px_50px_-30px_rgba(15,23,42,0.28)] backdrop-blur-xl sm:inset-x-auto sm:right-4 sm:w-[22rem] sm:max-w-[calc(100vw-2rem)] sm:rounded-[28px]"
         >
-          <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/70 px-5 py-4">
+          <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/70 px-4 py-3 sm:px-5 sm:py-4">
             <div>
               <h3 className="text-sm font-semibold tracking-tight text-slate-900">Notificaciones</h3>
-              <p className="mt-1 text-[11px] font-medium text-slate-500">Tu actividad reciente</p>
+              <p className="mt-1 hidden text-[11px] font-medium text-slate-500 sm:block">Tu actividad reciente</p>
             </div>
             <div className="flex items-center gap-2">
               {status !== 'logged-out' ? (
