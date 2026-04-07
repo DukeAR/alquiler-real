@@ -1,37 +1,108 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { apiJson } from '../lib/apiConfig';
+import { isBookingCheckInReached } from '../lib/bookingDates';
 import { resolveGuestRequestProfile } from '../lib/guestRequestProfile';
 import { getPropertyVerificationBadge, getPropertyVerificationItems } from '../lib/propertyVerification';
+import { getReservationFlowCopy } from '../lib/reservationFlow';
 import { acceptConversationRequest } from '../services/geminiService';
 import { showToast } from '../lib/toast';
-import { Icons } from './Icons';
-import GuestRequestProfileCard from './GuestRequestProfileCard';
-import HostAvailabilityPanel from './HostAvailabilityPanel';
-import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
+import { AccountModeSwitch } from './ui/AccountModeSwitch';
+import { Button } from './ui/Button';
 import { EmptyState } from './EmptyState';
 import { ErrorState } from './ErrorState';
+import GuestRequestProfileCard from './GuestRequestProfileCard';
+import HostAvailabilityPanel from './HostAvailabilityPanel';
+import { Icons } from './Icons';
 import { LoadingState } from './LoadingState';
 import { PropertyUploadForm } from './PropertyUploadForm.tsx';
 import { ReviewModal } from './ReviewModal';
-import { Button } from './ui/Button';
-import { AccountModeSwitch } from './ui/AccountModeSwitch';
-import { isBookingCheckInReached } from '../lib/bookingDates';
-import { getReservationFlowCopy } from '../lib/reservationFlow';
 
 interface HostDashboardProps {
   onBack: () => void;
 }
 
-const dashboardCardClass = 'app-card p-6 dark:border-slate-800 dark:bg-slate-900';
-const dashboardSectionClass = 'app-card p-6 md:p-8 space-y-6 dark:border-slate-800 dark:bg-slate-900';
-const dashboardMutedTileClass = 'rounded-[var(--app-radius-control)] border border-slate-100 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/50';
+const dashboardSectionClass = 'app-card space-y-6 p-6 md:p-8 dark:border-slate-800 dark:bg-slate-900';
+const PROPERTIES_SECTION_ID = 'host-dashboard-properties';
+const REQUESTS_SECTION_ID = 'host-dashboard-requests';
 
-const getHostVerificationStatusText = (status: 'complete' | 'pending') => (
-  status === 'complete' ? 'Ya está completa.' : 'Todavía falta completarla.'
+const parseDashboardDate = (value?: string | null) => {
+  if (!value) {
+    return null;
+  }
+
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(value)) {
+    const [day, month, year] = value.split('/').map(Number);
+    const parsedDate = new Date(year, month - 1, day);
+    return Number.isNaN(parsedDate.getTime()) ? null : parsedDate;
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [year, month, day] = value.split('-').map(Number);
+    const parsedDate = new Date(year, month - 1, day);
+    return Number.isNaN(parsedDate.getTime()) ? null : parsedDate;
+  }
+
+  const parsedDate = new Date(value);
+  return Number.isNaN(parsedDate.getTime()) ? null : parsedDate;
+};
+
+const formatDashboardDate = (value?: string | null) => {
+  const parsedDate = parseDashboardDate(value);
+
+  if (!parsedDate) {
+    return value || 'Sin fecha';
+  }
+
+  return new Intl.DateTimeFormat('es-AR', {
+    day: '2-digit',
+    month: '2-digit',
+  }).format(parsedDate);
+};
+
+const isFutureOrToday = (date: Date | null) => {
+  if (!date) {
+    return false;
+  }
+
+  const comparisonDate = new Date(date);
+  comparisonDate.setHours(0, 0, 0, 0);
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  return comparisonDate >= today;
+};
+
+const formatCountLabel = (count: number, singular: string, plural: string) => (
+  `${count} ${count === 1 ? singular : plural}`
 );
+
+const formatLabelList = (labels: string[], limit: number) => {
+  const visibleLabels = labels.slice(0, limit);
+  const remaining = labels.length - visibleLabels.length;
+
+  if (remaining > 0) {
+    return `${visibleLabels.join(', ')} y ${remaining} más`;
+  }
+
+  return visibleLabels.join(', ');
+};
+
+const toSafeCount = (value: unknown) => {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) ? Math.max(0, Math.round(numericValue)) : 0;
+};
+
+const scrollToSection = (sectionId: string) => {
+  if (typeof document === 'undefined') {
+    return;
+  }
+
+  document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
 
 const getBookingFlow = (booking: any) => getReservationFlowCopy({
   mode: booking.requestMode,
@@ -47,20 +118,28 @@ const getBookingFlow = (booking: any) => getReservationFlowCopy({
 });
 
 const getBookingStatusLabel = (booking: any) => {
+  const status = booking.status;
+
+  if (status === 'completed') {
+    return 'Estadía finalizada';
+  }
+
   const flow = getBookingFlow(booking);
 
   if (flow.statusLabel) {
     return flow.statusLabel;
   }
 
-  const status = booking.status;
   if (status === 'pending') return 'Solicitud pendiente';
   if (status === 'confirmed') return 'Reserva confirmada';
-  if (status === 'completed') return 'Estadía finalizada';
   return 'Estado no disponible';
 };
 
 const getBookingStatusClassName = (booking: any) => {
+  if (booking.status === 'completed') {
+    return 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-900/20 dark:text-emerald-300';
+  }
+
   const flow = getBookingFlow(booking);
 
   if (flow.stage === 'host-cancelled') {
@@ -110,6 +189,78 @@ const getBookingSummaryItems = (booking: any) => {
   return summaryItems;
 };
 
+type DashboardMetricTileProps = {
+  label: string;
+  value: string;
+  helper: string;
+  accent?: 'brand' | 'neutral';
+};
+
+const DashboardMetricTile = ({ label, value, helper, accent = 'neutral' }: DashboardMetricTileProps) => (
+  <div className="rounded-[28px] border border-slate-200/80 bg-white/92 p-5 shadow-[0_18px_46px_-38px_rgba(15,23,42,0.3)] dark:border-slate-800 dark:bg-slate-900/90">
+    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">{label}</p>
+    <p className={cn('mt-3 text-3xl font-semibold tracking-tight', accent === 'brand' ? 'text-brand' : 'text-slate-950 dark:text-slate-50')}>
+      {value}
+    </p>
+    <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">{helper}</p>
+  </div>
+);
+
+type PriorityActionRowProps = {
+  eyebrow: string;
+  title: string;
+  description: string;
+  actionLabel: string;
+  icon: React.ReactNode;
+  onAction: () => void;
+};
+
+const PriorityActionRow = ({ eyebrow, title, description, actionLabel, icon, onAction }: PriorityActionRowProps) => (
+  <div className="flex flex-col gap-4 rounded-[28px] border border-slate-200/80 bg-white/94 p-5 shadow-[0_18px_42px_-36px_rgba(15,23,42,0.22)] dark:border-slate-800 dark:bg-slate-900/90 md:flex-row md:items-center md:justify-between">
+    <div className="flex items-start gap-4">
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand/10 text-brand dark:bg-brand/15 dark:text-brand-light">
+        {icon}
+      </div>
+      <div className="space-y-1.5">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">{eyebrow}</p>
+        <p className="text-base font-semibold text-slate-950 dark:text-slate-50">{title}</p>
+        <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">{description}</p>
+      </div>
+    </div>
+    <Button type="button" variant="secondary" size="sm" onClick={onAction} className="shrink-0 rounded-full">
+      <>
+        {actionLabel}
+        <Icons.ArrowRight className="h-4 w-4" />
+      </>
+    </Button>
+  </div>
+);
+
+type BookingGroupProps = {
+  title: string;
+  description: string;
+  count: number;
+  emptyText: string;
+  children: React.ReactNode;
+};
+
+const BookingGroup = ({ title, description, count, emptyText, children }: BookingGroupProps) => (
+  <div className="app-card overflow-hidden dark:border-slate-800 dark:bg-slate-900">
+    <div className="border-b border-slate-100 bg-slate-50/70 px-5 py-4 dark:border-slate-800 dark:bg-slate-800/50 sm:px-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="space-y-1">
+          <h3 className="text-base font-semibold text-slate-950 dark:text-slate-50">{title}</h3>
+          <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">{description}</p>
+        </div>
+        <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+          {count}
+        </span>
+      </div>
+    </div>
+    {count > 0 ? children : <p className="px-6 py-6 text-sm leading-6 text-slate-500 dark:text-slate-400">{emptyText}</p>}
+  </div>
+);
+
 export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
   const navigate = useNavigate();
   const { user, setActiveMode } = useAuth();
@@ -118,6 +269,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isAddingProperty, setIsAddingProperty] = useState(false);
   const [showPublishingFlow, setShowPublishingFlow] = useState(false);
+  const [focusedPropertyId, setFocusedPropertyId] = useState<string | null>(null);
   const [reviewingBooking, setReviewingBooking] = useState<any>(null);
   const [availabilityPropertyId, setAvailabilityPropertyId] = useState<string | null>(null);
   const [expandedBookingId, setExpandedBookingId] = useState<string | null>(null);
@@ -235,6 +387,486 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
     }
   };
 
+  const handleToggleStatus = async (id: string, currentStatus: string) => {
+    try {
+      const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+      await apiJson(`/api/properties/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ status: newStatus }),
+        includeCredentials: true,
+      });
+      showToast('Publicación actualizada', newStatus === 'active' ? 'La propiedad volvió a quedar visible.' : 'La propiedad quedó pausada y ya no recibe reservas nuevas.', 'success');
+      void fetchData();
+    } catch (err) {
+      console.error(err);
+      showToast('Publicación', err instanceof Error ? err.message : 'No pudimos actualizar el estado de la propiedad.', 'error');
+    }
+  };
+
+  const recentBookings = useMemo(
+    () => (Array.isArray(dashboardData?.recentBookings)
+      ? dashboardData.recentBookings.map((booking: any, index: number) => ({
+          ...booking,
+          guestProfile: resolveGuestRequestProfile(booking, index),
+          parsedStartDate: parseDashboardDate(
+            typeof booking.startDate === 'string' && booking.startDate
+              ? booking.startDate
+              : typeof booking.date === 'string'
+                ? booking.date
+                : null,
+          ),
+        }))
+      : []),
+    [dashboardData?.recentBookings],
+  );
+
+  const derivedPropertyStatsByTitle = useMemo(() => {
+    const stats = new Map<string, { pendingRequestsCount: number; activeReservationsCount: number; nextArrivalDate: string | null }>();
+
+    recentBookings.forEach((booking: any) => {
+      const propertyTitle = typeof booking.propertyTitle === 'string' ? booking.propertyTitle.trim() : '';
+
+      if (!propertyTitle) {
+        return;
+      }
+
+      const currentValue = stats.get(propertyTitle) ?? {
+        pendingRequestsCount: 0,
+        activeReservationsCount: 0,
+        nextArrivalDate: null,
+      };
+
+      if (booking.status === 'pending') {
+        currentValue.pendingRequestsCount += 1;
+      }
+
+      if (booking.status === 'confirmed') {
+        currentValue.activeReservationsCount += 1;
+
+        const formattedDate = typeof booking.startDate === 'string' && booking.startDate
+          ? booking.startDate
+          : typeof booking.date === 'string' && booking.date
+            ? booking.date
+            : null;
+        const currentArrivalDate = parseDashboardDate(currentValue.nextArrivalDate);
+        const bookingArrivalDate = parseDashboardDate(formattedDate);
+
+        if (isFutureOrToday(bookingArrivalDate) && (!currentArrivalDate || (bookingArrivalDate && bookingArrivalDate < currentArrivalDate))) {
+          currentValue.nextArrivalDate = formattedDate;
+        }
+      }
+
+      stats.set(propertyTitle, currentValue);
+    });
+
+    return stats;
+  }, [recentBookings]);
+
+  const hostProperties = useMemo(() => {
+    const properties = Array.isArray(dashboardData?.properties) ? dashboardData.properties : [];
+
+    return properties
+      .map((property: any) => {
+        const fallbackStats = derivedPropertyStatsByTitle.get(typeof property.title === 'string' ? property.title.trim() : '') ?? {
+          pendingRequestsCount: 0,
+          activeReservationsCount: 0,
+          nextArrivalDate: null,
+        };
+        const verificationItems = getPropertyVerificationItems(property);
+        const verificationBadge = getPropertyVerificationBadge({ ...property, verificationItems });
+
+        return {
+          ...property,
+          pendingRequestsCount: Math.max(toSafeCount(property.pendingRequestsCount), fallbackStats.pendingRequestsCount),
+          activeReservationsCount: Math.max(toSafeCount(property.activeReservationsCount), fallbackStats.activeReservationsCount),
+          nextArrivalDate: typeof property.nextArrivalDate === 'string' && property.nextArrivalDate
+            ? property.nextArrivalDate
+            : fallbackStats.nextArrivalDate,
+          verificationBadge,
+          verificationItems,
+          completedVerificationItems: verificationItems.filter((item) => item.status === 'complete'),
+          pendingVerificationItems: verificationItems.filter((item) => item.status !== 'complete'),
+        };
+      })
+      .sort((left: any, right: any) => {
+        const leftIsActive = left.status === 'active' ? 1 : 0;
+        const rightIsActive = right.status === 'active' ? 1 : 0;
+
+        if (leftIsActive !== rightIsActive) {
+          return rightIsActive - leftIsActive;
+        }
+
+        if (left.pendingRequestsCount !== right.pendingRequestsCount) {
+          return right.pendingRequestsCount - left.pendingRequestsCount;
+        }
+
+        const leftArrival = parseDashboardDate(left.nextArrivalDate);
+        const rightArrival = parseDashboardDate(right.nextArrivalDate);
+
+        if (leftArrival && rightArrival && leftArrival.getTime() !== rightArrival.getTime()) {
+          return leftArrival.getTime() - rightArrival.getTime();
+        }
+
+        if (leftArrival && !rightArrival) {
+          return -1;
+        }
+
+        if (!leftArrival && rightArrival) {
+          return 1;
+        }
+
+        return String(left.title || '').localeCompare(String(right.title || ''), 'es');
+      });
+  }, [dashboardData?.properties, derivedPropertyStatsByTitle]);
+
+  const pendingRequestBookings = useMemo(
+    () => recentBookings.filter((booking: any) => booking.status === 'pending'),
+    [recentBookings],
+  );
+
+  const upcomingArrivalBookings = useMemo(
+    () => recentBookings
+      .filter((booking: any) => booking.status === 'confirmed' && isFutureOrToday(booking.parsedStartDate))
+      .sort((left: any, right: any) => {
+        const leftTime = left.parsedStartDate instanceof Date ? left.parsedStartDate.getTime() : Number.MAX_SAFE_INTEGER;
+        const rightTime = right.parsedStartDate instanceof Date ? right.parsedStartDate.getTime() : Number.MAX_SAFE_INTEGER;
+        return leftTime - rightTime;
+      }),
+    [recentBookings],
+  );
+
+  const upcomingArrivalBookingIds = useMemo(
+    () => new Set(upcomingArrivalBookings.map((booking: any) => booking.id)),
+    [upcomingArrivalBookings],
+  );
+
+  const acceptedReservationBookings = useMemo(
+    () => recentBookings.filter((booking: any) => (
+      booking.status !== 'pending'
+      && !upcomingArrivalBookingIds.has(booking.id)
+    )),
+    [recentBookings, upcomingArrivalBookingIds],
+  );
+
+  const nextArrivalFromProperties = useMemo(
+    () => hostProperties
+      .filter((property: any) => isFutureOrToday(parseDashboardDate(property.nextArrivalDate)))
+      .sort((left: any, right: any) => {
+        const leftTime = parseDashboardDate(left.nextArrivalDate)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+        const rightTime = parseDashboardDate(right.nextArrivalDate)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+        return leftTime - rightTime;
+      })[0] ?? null,
+    [hostProperties],
+  );
+
+  const dashboardOverview = useMemo(() => {
+    const activePropertiesCount = hostProperties.filter((property: any) => property.status === 'active').length;
+    const pendingRequestsCount = Math.max(
+      hostProperties.reduce((total: number, property: any) => total + toSafeCount(property.pendingRequestsCount), 0),
+      pendingRequestBookings.length,
+    );
+    const activeReservationsCount = Math.max(
+      hostProperties.reduce((total: number, property: any) => total + toSafeCount(property.activeReservationsCount), 0),
+      recentBookings.filter((booking: any) => booking.status === 'confirmed').length,
+    );
+
+    if (nextArrivalFromProperties) {
+      return {
+        activePropertiesCount,
+        pendingRequestsCount,
+        activeReservationsCount,
+        nextArrival: {
+          dateLabel: formatDashboardDate(nextArrivalFromProperties.nextArrivalDate),
+          helper: nextArrivalFromProperties.title || 'Próxima llegada',
+        },
+      };
+    }
+
+    const fallbackNextArrival = upcomingArrivalBookings[0];
+
+    return {
+      activePropertiesCount,
+      pendingRequestsCount,
+      activeReservationsCount,
+      nextArrival: fallbackNextArrival
+        ? {
+            dateLabel: formatDashboardDate(fallbackNextArrival.startDate || fallbackNextArrival.date),
+            helper: [fallbackNextArrival.propertyTitle, fallbackNextArrival.userName].filter(Boolean).join(' · '),
+          }
+        : null,
+    };
+  }, [hostProperties, nextArrivalFromProperties, pendingRequestBookings.length, recentBookings, upcomingArrivalBookings]);
+
+  const priorityActions = useMemo(() => {
+    const actions = [] as Array<{
+      id: string;
+      eyebrow: string;
+      title: string;
+      description: string;
+      actionLabel: string;
+      icon: React.ReactNode;
+      kind: 'requests' | 'property' | 'availability';
+      propertyId?: string;
+    }>;
+
+    if (dashboardOverview.pendingRequestsCount > 0) {
+      actions.push({
+        id: 'pending-requests',
+        eyebrow: 'Solicitudes',
+        title: formatCountLabel(dashboardOverview.pendingRequestsCount, 'solicitud pendiente', 'solicitudes pendientes'),
+        description: 'Resolverlas primero evita que el intercambio se enfríe y te ordena el resto del panel.',
+        actionLabel: 'Ver solicitudes',
+        icon: <Icons.MessageSquare className="h-5 w-5" />,
+        kind: 'requests',
+      });
+    }
+
+    const propertyNeedingVerification = hostProperties.find((property: any) => property.pendingVerificationItems.length > 0);
+
+    if (propertyNeedingVerification) {
+      actions.push({
+        id: 'missing-verifications',
+        eyebrow: 'Verificación',
+        title: `Completar verificaciones de ${propertyNeedingVerification.title}`,
+        description: propertyNeedingVerification.pendingVerificationItems.length === 1
+          ? `Le falta ${propertyNeedingVerification.pendingVerificationItems[0]?.label?.toLowerCase() || 'una comprobación'} para quedar más claro.`
+          : `Le faltan ${propertyNeedingVerification.pendingVerificationItems.length} verificaciones. Completar verificaciones ayuda a que otros elijan con más claridad.`,
+        actionLabel: 'Ver publicaciones',
+        icon: <Icons.Shield className="h-5 w-5" />,
+        kind: 'property',
+        propertyId: propertyNeedingVerification.id,
+      });
+    }
+
+    const pausedProperty = hostProperties.find((property: any) => property.status !== 'active');
+    const availabilityProperty = hostProperties.find((property: any) => property.status === 'active') || hostProperties[0];
+
+    if (pausedProperty) {
+      actions.push({
+        id: 'paused-property',
+        eyebrow: 'Estado del aviso',
+        title: `Revisar ${pausedProperty.title}`,
+        description: 'Hoy está pausado. Si querés volver a moverlo, repasá el aviso y activalo cuando lo veas listo.',
+        actionLabel: 'Ver publicaciones',
+        icon: <Icons.Home className="h-5 w-5" />,
+        kind: 'property',
+        propertyId: pausedProperty.id,
+      });
+    } else if (availabilityProperty) {
+      actions.push({
+        id: 'availability',
+        eyebrow: 'Disponibilidad',
+        title: `Revisar disponibilidad de ${availabilityProperty.title}`,
+        description: availabilityProperty.nextArrivalDate
+          ? `Tu próxima llegada para este aviso está marcada para el ${formatDashboardDate(availabilityProperty.nextArrivalDate)}.`
+          : 'Dejá claras las fechas disponibles para responder menos dudas por chat.',
+        actionLabel: 'Editar disponibilidad',
+        icon: <Icons.Calendar className="h-5 w-5" />,
+        kind: 'availability',
+        propertyId: availabilityProperty.id,
+      });
+    }
+
+    return actions.slice(0, 3);
+  }, [dashboardOverview.pendingRequestsCount, hostProperties]);
+
+  const handlePriorityAction = (action: { kind: 'requests' | 'property' | 'availability'; propertyId?: string }) => {
+    if (action.kind === 'requests') {
+      scrollToSection(REQUESTS_SECTION_ID);
+      if (pendingRequestBookings[0]?.id) {
+        setExpandedBookingId(pendingRequestBookings[0].id);
+      }
+      return;
+    }
+
+    if (action.propertyId) {
+      setFocusedPropertyId(action.propertyId);
+    }
+
+    if (action.kind === 'availability' && action.propertyId) {
+      setAvailabilityPropertyId(action.propertyId);
+    }
+
+    scrollToSection(PROPERTIES_SECTION_ID);
+  };
+
+  const renderBookingEntry = (booking: any) => {
+    const isExpanded = expandedBookingId === booking.id;
+    const canReviewBooking = booking.status === 'completed';
+    const isDecisionStage = booking.status === 'pending';
+    const shouldShowGuestProfile = isDecisionStage || isExpanded;
+    const bookingSummaryItems = getBookingSummaryItems(booking);
+    const bookingFlow = getBookingFlow(booking);
+    const arrivalActionsAvailable = isBookingCheckInReached(booking.startDate);
+    const showBookingFlowPanel = booking.status !== 'completed' && Boolean(booking.requestMode && bookingFlow.stage && bookingFlow.stage !== 'reservation-confirmed');
+    const canAcceptRequest = Boolean(booking.conversationId && bookingFlow.stage === 'request-pending');
+    const canOpenChat = Boolean(booking.conversationId);
+    const canCancelAsHost = (booking.status === 'pending' || booking.status === 'confirmed')
+      && bookingFlow.stage !== 'host-cancelled'
+      && bookingFlow.stage !== 'guest-cancelled'
+      && bookingFlow.stage !== 'protected-deposit-review'
+      && bookingFlow.stage !== 'protected-no-show-pending';
+    const canReportProtectedNoShow = booking.requestMode === 'protected' && bookingFlow.stage === 'protected-deposit-held' && arrivalActionsAvailable;
+    const isAcceptingRequest = processingBookingAction?.bookingId === booking.id && processingBookingAction?.action === 'accept-request';
+    const isCancelingAsHost = processingBookingAction?.bookingId === booking.id && processingBookingAction?.action === 'cancel-host';
+    const isReportingNoShow = processingBookingAction?.bookingId === booking.id && processingBookingAction?.action === 'report-no-show';
+
+    return (
+      <div key={booking.id} className="space-y-4 px-5 py-5 sm:px-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex items-start gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800">
+              <Icons.User className="h-6 w-6 text-slate-400" />
+            </div>
+            <div className="space-y-2">
+              <p className="app-title-4 dark:text-white">{booking.userName || 'Huésped'}</p>
+              <p className="app-body-sm app-text-muted">{booking.propertyTitle}</p>
+              {bookingSummaryItems.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {bookingSummaryItems.map((item) => (
+                    <span key={`${booking.id}-${item}`} className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                      {item}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          </div>
+          <div className="flex flex-col gap-2 sm:items-end">
+            <span className={cn('inline-flex items-center rounded-full border px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em]', getBookingStatusClassName(booking))}>
+              {getBookingStatusLabel(booking)}
+            </span>
+          </div>
+        </div>
+
+        {shouldShowGuestProfile ? (
+          <GuestRequestProfileCard guestName={booking.userName || 'Huésped'} profile={booking.guestProfile} />
+        ) : null}
+
+        {showBookingFlowPanel ? (
+          <div className="rounded-[26px] border border-brand/15 bg-brand/5 p-4 dark:border-brand/20 dark:bg-brand/10">
+            <div className="space-y-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="space-y-1">
+                  <p className="text-[10px] font-black uppercase tracking-[0.14em] text-brand">{bookingFlow.statusLabel}</p>
+                  <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">{bookingFlow.description}</p>
+                  {bookingFlow.supportText ? <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">{bookingFlow.supportText}</p> : null}
+                  {bookingFlow.trackingHint ? <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">{bookingFlow.trackingHint}</p> : null}
+                </div>
+
+                {canAcceptRequest ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => void handleAcceptRequest(booking)}
+                    loading={isAcceptingRequest}
+                    loadingLabel="Aceptando..."
+                    className="rounded-full"
+                  >
+                    <>
+                      <Icons.CheckCircle2 className="h-4 w-4" />
+                      {booking.requestMode === 'protected' ? 'Aceptar solicitud' : 'Aceptar propuesta'}
+                    </>
+                  </Button>
+                ) : null}
+              </div>
+
+              <div className="grid gap-2 md:grid-cols-3">
+                <div className="rounded-2xl bg-white/80 px-3 py-3 text-sm dark:bg-slate-900/70">
+                  <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Estado actual</p>
+                  <p className="mt-1 font-semibold text-slate-900 dark:text-white">{bookingFlow.statusLabel}</p>
+                </div>
+                <div className="rounded-2xl bg-white/80 px-3 py-3 text-sm dark:bg-slate-900/70">
+                  <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Actúa ahora</p>
+                  <p className="mt-1 font-semibold text-slate-900 dark:text-white">{bookingFlow.nextActorLabel ?? 'No hace falta'}</p>
+                </div>
+                <div className="rounded-2xl bg-white/80 px-3 py-3 text-sm dark:bg-slate-900/70">
+                  <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Próximo paso</p>
+                  <p className="mt-1 font-semibold text-slate-900 dark:text-white">{bookingFlow.nextStepLabel ?? 'Solo dejar contexto por chat'}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {!isDecisionStage || canReviewBooking || canCancelAsHost || canReportProtectedNoShow || canOpenChat ? (
+          <div className="flex flex-wrap gap-2 pt-1 lg:justify-end">
+            {canOpenChat ? (
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => navigate(`/chat/${booking.conversationId}`)}
+                className="rounded-full"
+              >
+                <>
+                  <Icons.MessageSquare className="h-4 w-4" />
+                  Abrir chat
+                </>
+              </Button>
+            ) : null}
+            {!isDecisionStage ? (
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => setExpandedBookingId((currentValue) => (currentValue === booking.id ? null : booking.id))}
+                className="rounded-full"
+              >
+                {isExpanded ? 'Ocultar ficha' : 'Ver ficha del huésped'}
+              </Button>
+            ) : null}
+            {canReportProtectedNoShow ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => void handleReportNoShow(booking)}
+                loading={isReportingNoShow}
+                loadingLabel="Informando no show..."
+                className="rounded-full"
+              >
+                <>
+                  <Icons.AlertTriangle className="h-4 w-4" />
+                  Marcar no show
+                </>
+              </Button>
+            ) : null}
+            {booking.requestMode === 'protected' && bookingFlow.stage === 'protected-deposit-held' && !arrivalActionsAvailable ? (
+              <div className="rounded-full bg-slate-100 px-4 py-2 text-xs font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+                Marcar no show se habilita el día del ingreso.
+              </div>
+            ) : null}
+            {canCancelAsHost ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => void handleCancelBookingAsHost(booking)}
+                loading={isCancelingAsHost}
+                loadingLabel="Cancelando..."
+                className="rounded-full"
+              >
+                <>
+                  <Icons.X className="h-4 w-4" />
+                  Cancelar reserva
+                </>
+              </Button>
+            ) : null}
+            {canReviewBooking ? (
+              <button
+                onClick={() => setReviewingBooking(booking)}
+                className="app-button-base rounded-[var(--app-radius-control)] bg-brand px-4 py-2 text-sm text-white hover:-translate-y-px hover:bg-brand-dark hover:shadow-[var(--app-shadow-brand)]"
+              >
+                Evaluar huésped
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <LoadingState
@@ -296,34 +928,10 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
     );
   }
 
-  const handleToggleStatus = async (id: string, currentStatus: string) => {
-    try {
-      const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
-      await apiJson(`/api/properties/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify({ status: newStatus }),
-        includeCredentials: true,
-      });
-      showToast('Publicación actualizada', newStatus === 'active' ? 'La propiedad volvió a quedar visible.' : 'La propiedad quedó pausada y ya no recibe reservas nuevas.', 'success');
-      void fetchData();
-    } catch (err) {
-      console.error(err);
-      showToast('Publicación', err instanceof Error ? err.message : 'No pudimos actualizar el estado de la propiedad.', 'error');
-    }
-  };
-
-  const hostProperties = Array.isArray(dashboardData?.properties) ? dashboardData.properties : [];
-  const recentBookings = Array.isArray(dashboardData?.recentBookings)
-    ? dashboardData.recentBookings.map((booking: any, index: number) => ({
-        ...booking,
-        guestProfile: resolveGuestRequestProfile(booking, index),
-      }))
-    : [];
-
   return (
     <div className="min-h-screen bg-slate-50 pb-20 dark:bg-slate-950">
       <header className="border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-        <div className="mx-auto flex min-h-16 max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-3">
+        <div className="mx-auto flex min-h-16 max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">
           <button
             onClick={onBack}
             className="app-button-base rounded-full px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 hover:text-brand dark:text-slate-400 dark:hover:bg-slate-800"
@@ -335,7 +943,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
             <AccountModeSwitch compact />
             <div className="hidden text-right sm:block">
               <p className="app-title-4 dark:text-white">Panel de anfitrión</p>
-              <p className="app-eyebrow">Tu actividad</p>
+              <p className="app-eyebrow">Estado actual y próximos pasos</p>
             </div>
             <div className="flex h-10 w-10 items-center justify-center rounded-full border border-brand/20 bg-brand/10">
               <Icons.User className="h-5 w-5 text-brand" />
@@ -344,377 +952,247 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl space-y-8 px-4 py-8">
-        <section className="grid grid-cols-1 gap-4 md:grid-cols-4">
-          <div className={dashboardCardClass}>
-            <p className="app-eyebrow mb-1">Calificación</p>
-            <div className="flex items-center gap-2">
-              <Icons.Star className="h-6 w-6 fill-current text-brand" />
-              <p className="text-3xl font-semibold text-slate-900 dark:text-white">{dashboardData.stats?.host_rating || '5.0'}</p>
+      <main className="mx-auto max-w-6xl space-y-8 px-4 py-8">
+        <section className={dashboardSectionClass}>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div className="space-y-2">
+              <p className="app-eyebrow">Estado actual</p>
+              <h1 className="text-2xl font-semibold tracking-tight text-slate-950 dark:text-slate-50">Lo importante de hoy</h1>
+              <p className="max-w-3xl text-sm leading-7 text-slate-600 dark:text-slate-300">
+                En pocos segundos podés ver cómo están tus avisos, qué quedó pendiente y dónde conviene actuar primero.
+              </p>
             </div>
+            <Button type="button" onClick={() => { setIsAddingProperty(true); setShowPublishingFlow(true); }} className="rounded-full">
+              <>
+                <Icons.Home className="h-4 w-4" />
+                Publicar otra propiedad
+              </>
+            </Button>
           </div>
-          <div className={dashboardCardClass}>
-            <p className="app-eyebrow mb-1">Propiedades</p>
-            <p className="text-3xl font-semibold text-brand">{dashboardData.properties?.length || 0}</p>
-          </div>
-          <div className={dashboardCardClass}>
-            <p className="app-eyebrow mb-1">Reservas recibidas</p>
-            <p className="text-3xl font-semibold text-slate-900 dark:text-white">{dashboardData.stats?.total_bookings_hosted || 0}</p>
-          </div>
-          <div className="rounded-[32px] bg-gradient-to-br from-brand to-brand-dark p-6 text-white shadow-lg shadow-brand/20">
-            <p className="app-eyebrow mb-1 text-white/60">Ingresos estimados</p>
-            <p className="text-3xl font-semibold">${Math.floor(dashboardData.estimatedIncome || 0).toLocaleString()}</p>
-          </div>
-        </section>
 
-        <section className={cn(dashboardSectionClass, 'relative overflow-hidden')}>
-          <div className="absolute right-0 top-0 -mr-32 -mt-32 h-64 w-64 rounded-full bg-brand/5 blur-3xl opacity-50" />
-
-          <div className="relative z-10 flex flex-col items-center gap-8 md:flex-row">
-            <div className="relative flex h-32 w-32 items-center justify-center">
-              <svg className="h-full w-full -rotate-90 transform">
-                <circle cx="64" cy="64" r="58" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-slate-100 dark:text-slate-800" />
-                <motion.circle
-                  cx="64"
-                  cy="64"
-                  r="58"
-                  stroke="currentColor"
-                  strokeWidth="8"
-                  fill="transparent"
-                  strokeDasharray={364.42}
-                  initial={{ strokeDashoffset: 364.42 }}
-                  animate={{ strokeDashoffset: 364.42 * (1 - (dashboardData.stats?.trust_score || 0) / 100) }}
-                  transition={{ duration: 1.5, ease: 'easeOut' }}
-                  className="text-brand"
-                  strokeLinecap="round"
-                />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">{dashboardData.stats?.trust_score || 0}</span>
-                <span className="app-eyebrow">Confianza</span>
-              </div>
-            </div>
-
-            <div className="flex-1 space-y-2">
-              <h3 className="app-title-4 dark:text-white">Cómo te ven</h3>
-              <p className="app-body-sm app-text-muted">Hoy tu perfil figura como <span className="font-semibold text-brand">{dashboardData.stats?.badge || 'Usuario nuevo'}</span>. Un mejor historial y avisos más completos ayudan a recibir consultas más directas.</p>
-              <div className="flex flex-wrap gap-2 pt-2">
-                <div className={cn(dashboardMutedTileClass, 'px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400')}>
-                  <span className="mr-1 text-brand">Calificación:</span> {dashboardData.stats?.host_rating || 5.0}
-                </div>
-                <div className={cn(dashboardMutedTileClass, 'px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400')}>
-                  <span className={cn('mr-1', dashboardData.stats?.host_verified ? 'text-emerald-500' : 'text-slate-400')}>Validado:</span> {dashboardData.stats?.host_verified ? 'Sí' : 'Pendiente'}
-                </div>
-              </div>
-            </div>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <DashboardMetricTile
+              label="Publicaciones activas"
+              value={String(dashboardOverview.activePropertiesCount)}
+              helper={dashboardOverview.activePropertiesCount > 0 ? 'Avisos visibles y recibiendo movimiento.' : 'Todavía no tenés avisos activos.'}
+              accent="brand"
+            />
+            <DashboardMetricTile
+              label="Solicitudes pendientes"
+              value={String(dashboardOverview.pendingRequestsCount)}
+              helper={dashboardOverview.pendingRequestsCount > 0 ? 'Requieren respuesta para no perder ritmo.' : 'No hay solicitudes esperando respuesta ahora.'}
+            />
+            <DashboardMetricTile
+              label="Reservas activas"
+              value={String(dashboardOverview.activeReservationsCount)}
+              helper={dashboardOverview.activeReservationsCount > 0 ? 'Reservas confirmadas o en curso.' : 'No hay reservas activas en este momento.'}
+            />
+            <DashboardMetricTile
+              label="Próxima llegada"
+              value={dashboardOverview.nextArrival?.dateLabel || 'Sin fecha'}
+              helper={dashboardOverview.nextArrival?.helper || 'No hay llegadas confirmadas por ahora.'}
+            />
           </div>
         </section>
 
         <section className={dashboardSectionClass}>
           <div className="space-y-2">
-            <h2 className="app-title-4 dark:text-white">Completá lo que falta en cada aviso</h2>
-            <p className="app-body-sm app-text-muted">Cuanto más completo esté tu aviso, más arriba aparece en los resultados.</p>
+            <p className="app-eyebrow">Qué hacer ahora</p>
+            <h2 className="app-title-4 dark:text-white">Qué conviene hacer ahora</h2>
+            <p className="app-body-sm app-text-muted">Priorizamos solo lo que hoy mueve más tu panel. No hace falta resolver todo junto.</p>
           </div>
 
-          <div className="grid gap-4 xl:grid-cols-2">
-            {hostProperties.map((property: any) => {
-              const verificationBadge = getPropertyVerificationBadge(property);
-              const verificationItems = getPropertyVerificationItems(property);
+          <div className="space-y-3">
+            {priorityActions.map((action) => (
+              <PriorityActionRow
+                key={action.id}
+                eyebrow={action.eyebrow}
+                title={action.title}
+                description={action.description}
+                actionLabel={action.actionLabel}
+                icon={action.icon}
+                onAction={() => handlePriorityAction(action)}
+              />
+            ))}
+          </div>
+        </section>
+
+        <section id={PROPERTIES_SECTION_ID} className={dashboardSectionClass}>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Icons.Home className="h-5 w-5 text-brand" />
+              <h2 className="app-title-4 dark:text-white">Tus publicaciones</h2>
+            </div>
+            <p className="app-body-sm app-text-muted">Cuanto más completo esté tu aviso, más arriba aparece en los resultados.</p>
+            <p className="app-body-sm app-text-muted">Completar verificaciones ayuda a que otros elijan con más claridad.</p>
+          </div>
+
+          <div className="overflow-hidden rounded-[var(--app-radius-card)] border border-slate-200/80 bg-white/94 dark:border-slate-800 dark:bg-slate-900/94">
+            {hostProperties.map((property: any, index: number) => {
+              const completedLabels = property.completedVerificationItems.map((item: any) => item.label);
+              const pendingLabels = property.pendingVerificationItems.map((item: any) => item.label);
 
               return (
-                <div key={`verification-${property.id}`} className={cn(dashboardMutedTileClass, 'space-y-4 p-5')}>
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900 dark:text-white">{property.title}</p>
-                      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{verificationBadge.label}</p>
+                <div key={property.id}>
+                  <div
+                    className={cn(
+                      'grid gap-5 px-5 py-5 transition-colors sm:px-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_auto]',
+                      index > 0 && 'border-t border-slate-100 dark:border-slate-800',
+                      focusedPropertyId === property.id && 'bg-brand/5 dark:bg-brand/10',
+                    )}
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className="h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-slate-100 dark:bg-slate-800">
+                        <img src={property.imageUrl || 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=200'} alt={property.title} className="h-full w-full object-cover" />
+                      </div>
+
+                      <div className="min-w-0 space-y-3">
+                        <div className="space-y-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="text-base font-semibold text-slate-950 dark:text-slate-50">{property.title}</h3>
+                            <span
+                              className={cn(
+                                'rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em]',
+                                property.status === 'active'
+                                  ? 'bg-brand/10 text-brand dark:bg-brand/15 dark:text-brand-light'
+                                  : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300',
+                              )}
+                            >
+                              {property.status === 'active' ? 'Activo' : 'Pausado'}
+                            </span>
+                          </div>
+                          <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">{property.location}</p>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2 text-xs">
+                          <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                            {property.pendingRequestsCount > 0 ? formatCountLabel(property.pendingRequestsCount, 'solicitud pendiente', 'solicitudes pendientes') : 'Sin solicitudes pendientes'}
+                          </span>
+                          <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                            {property.activeReservationsCount > 0 ? formatCountLabel(property.activeReservationsCount, 'reserva activa', 'reservas activas') : 'Sin reservas activas'}
+                          </span>
+                          {property.nextArrivalDate ? (
+                            <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                              Próxima llegada {formatDashboardDate(property.nextArrivalDate)}
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
                     </div>
-                    <span className="font-mono text-[11px] font-semibold tracking-[0.14em] text-slate-500 dark:text-slate-400">
-                      {verificationBadge.visual}
-                    </span>
+
+                    <div className="space-y-2.5">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Verificación</p>
+                      <p className="text-sm font-semibold text-slate-950 dark:text-slate-50">{property.verificationBadge.summaryLabel}</p>
+                      <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">
+                        {pendingLabels.length === 0
+                          ? 'Las comprobaciones visibles de este aviso ya están completas.'
+                          : `Te falta completar ${formatCountLabel(pendingLabels.length, 'verificación', 'verificaciones')}.`}
+                      </p>
+                      {completedLabels.length > 0 ? (
+                        <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">Completas: {formatLabelList(completedLabels, 3)}.</p>
+                      ) : null}
+                      {pendingLabels.length > 0 ? (
+                        <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">Falta: {formatLabelList(pendingLabels, 2)}.</p>
+                      ) : null}
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 xl:justify-end">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => navigate(`/detail/${property.id}`)}
+                        className="rounded-full"
+                      >
+                        <>
+                          <Icons.ExternalLink className="h-4 w-4" />
+                          Ver aviso
+                        </>
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => {
+                          setFocusedPropertyId(property.id);
+                          setAvailabilityPropertyId((currentValue) => (currentValue === property.id ? null : property.id));
+                        }}
+                        className="rounded-full"
+                      >
+                        <>
+                          <Icons.Calendar className="h-4 w-4" />
+                          {availabilityPropertyId === property.id ? 'Ocultar disponibilidad' : 'Editar disponibilidad'}
+                        </>
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => void handleToggleStatus(property.id, property.status)}
+                        className="rounded-full"
+                      >
+                        {property.status === 'active' ? 'Pausar aviso' : 'Activar aviso'}
+                      </Button>
+                    </div>
                   </div>
 
-                  <ul className="space-y-2.5">
-                    {verificationItems.map((item) => (
-                      <li key={`${property.id}-${item.key}`} className="flex items-start gap-3 text-sm leading-5">
-                        <span
-                          className={cn(
-                            'mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs font-semibold',
-                            item.status === 'complete'
-                              ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-900/20 dark:text-emerald-300'
-                              : 'border-slate-200 bg-white text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400',
-                          )}
-                          aria-hidden="true"
-                        >
-                          {item.status === 'complete' ? '✔' : '○'}
-                        </span>
-                        <div className="min-w-0">
-                          <p className="font-semibold text-slate-900 dark:text-white">{item.label}</p>
-                          <p className="text-slate-500 dark:text-slate-400">{getHostVerificationStatusText(item.status)}</p>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
+                  {availabilityPropertyId === property.id ? (
+                    <div className="border-t border-slate-100 bg-slate-50/70 px-5 py-5 dark:border-slate-800 dark:bg-slate-950/60 sm:px-6">
+                      <HostAvailabilityPanel propertyId={property.id} propertyTitle={property.title} />
+                    </div>
+                  ) : null}
                 </div>
               );
             })}
           </div>
         </section>
 
-        <section className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="app-title-4 flex items-center gap-2 dark:text-white">
-              <Icons.Home className="h-5 w-5 text-brand" />
-              Tus propiedades
-            </h2>
-            <button onClick={() => { setIsAddingProperty(true); setShowPublishingFlow(true); }} className="app-button-base rounded-[var(--app-radius-control)] bg-brand px-4 py-2 text-sm text-white hover:-translate-y-px hover:bg-brand-dark hover:shadow-[var(--app-shadow-brand)]">
-              Publicar otra propiedad
-            </button>
+        <section id={REQUESTS_SECTION_ID} className="space-y-5">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Icons.UserCheck className="h-5 w-5 text-brand" />
+              <h2 className="app-title-4 dark:text-white">Solicitudes y reservas</h2>
+            </div>
+            <p className="app-body-sm app-text-muted">Las separamos por prioridad para que veas primero lo que requiere respuesta y después lo ya encaminado.</p>
           </div>
 
-          <div className="grid gap-4">
-            {dashboardData.properties.map((prop: any) => (
-              <div key={prop.id}>
-                <div className="app-card flex flex-col gap-4 p-4 dark:border-slate-800 dark:bg-slate-900 md:flex-row md:items-center md:justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="h-16 w-16 overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800">
-                      <img src={prop.imageUrl || 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=200'} className="h-full w-full object-cover" />
-                    </div>
-                    <div>
-                      <h3 className="app-title-4 dark:text-white">{prop.title}</h3>
-                      <p className="app-body-sm app-text-muted">${prop.price} / noche • {prop.reviewsCount} reseñas</p>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-3">
-                    <button
-                      onClick={() => handleToggleStatus(prop.id, prop.status)}
-                      className={cn(
-                        'rounded-full px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em]',
-                        prop.status === 'active'
-                          ? 'bg-brand/10 text-brand dark:bg-brand/15 dark:text-brand-light'
-                          : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400',
-                      )}
-                    >
-                      {prop.status === 'active' ? 'Activo' : 'Pausado'}
-                    </button>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => setAvailabilityPropertyId((currentValue) => (currentValue === prop.id ? null : prop.id))}
-                      className="rounded-full"
-                    >
-                      <>
-                        <Icons.Calendar className="h-4 w-4" />
-                        {availabilityPropertyId === prop.id ? 'Ocultar disponibilidad' : 'Disponibilidad'}
-                      </>
-                    </Button>
-                  </div>
-                </div>
-
-                {availabilityPropertyId === prop.id ? (
-                  <HostAvailabilityPanel propertyId={prop.id} propertyTitle={prop.title} />
-                ) : null}
+          <div className="space-y-4">
+            <BookingGroup
+              title="Solicitudes pendientes"
+              description="Lo que hoy requiere respuesta directa desde el panel."
+              count={pendingRequestBookings.length}
+              emptyText="No hay solicitudes pendientes ahora."
+            >
+              <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                {pendingRequestBookings.map((booking: any) => renderBookingEntry(booking))}
               </div>
-            ))}
+            </BookingGroup>
+
+            <BookingGroup
+              title="Próximas llegadas"
+              description="Reservas confirmadas que conviene tener presentes primero."
+              count={upcomingArrivalBookings.length}
+              emptyText="No hay próximas llegadas confirmadas por ahora."
+            >
+              <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                {upcomingArrivalBookings.map((booking: any) => renderBookingEntry(booking))}
+              </div>
+            </BookingGroup>
+
+            <BookingGroup
+              title="Reservas aceptadas"
+              description="Reservas ya confirmadas, finalizadas o con seguimiento en curso."
+              count={acceptedReservationBookings.length}
+              emptyText="Todavía no hay reservas aceptadas para revisar."
+            >
+              <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                {acceptedReservationBookings.map((booking: any) => renderBookingEntry(booking))}
+              </div>
+            </BookingGroup>
           </div>
-        </section>
 
-        <section className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <h2 className="app-title-4 flex items-center gap-2 dark:text-white">
-                <Icons.UserCheck className="h-5 w-5 text-brand" />
-                Solicitudes y huéspedes
-              </h2>
-              <p className="app-body-sm app-text-muted">Si una solicitud sigue pendiente, desde acá podés revisar la ficha, abrir el chat y aceptarla sin salir del panel.</p>
-            </div>
-          </div>
-
-          <div className="app-card overflow-hidden dark:border-slate-800 dark:bg-slate-900">
-            <div className="border-b border-slate-100 bg-slate-50/50 p-6 dark:border-slate-800 dark:bg-slate-800/50">
-              <p className="app-eyebrow">Solicitudes y reservas recientes</p>
-            </div>
-            <div className="divide-y divide-slate-100 dark:divide-slate-800">
-              {recentBookings.length > 0 ? (
-                recentBookings.map((booking: any) => {
-                  const isExpanded = expandedBookingId === booking.id;
-                  const canReviewBooking = booking.status === 'completed';
-                  const isDecisionStage = booking.status === 'pending';
-                  const shouldShowGuestProfile = isDecisionStage || isExpanded;
-                  const bookingSummaryItems = getBookingSummaryItems(booking);
-                  const bookingFlow = getBookingFlow(booking);
-                  const arrivalActionsAvailable = isBookingCheckInReached(booking.startDate);
-                  const showBookingFlowPanel = Boolean(booking.requestMode && bookingFlow.stage && bookingFlow.stage !== 'reservation-confirmed');
-                  const canAcceptRequest = Boolean(booking.conversationId && bookingFlow.stage === 'request-pending');
-                  const canOpenChat = Boolean(booking.conversationId);
-                  const canCancelAsHost = (booking.status === 'pending' || booking.status === 'confirmed') && bookingFlow.stage !== 'host-cancelled' && bookingFlow.stage !== 'guest-cancelled' && bookingFlow.stage !== 'protected-deposit-review' && bookingFlow.stage !== 'protected-no-show-pending';
-                  const canReportProtectedNoShow = booking.requestMode === 'protected' && bookingFlow.stage === 'protected-deposit-held' && arrivalActionsAvailable;
-                  const isAcceptingRequest = processingBookingAction?.bookingId === booking.id && processingBookingAction?.action === 'accept-request';
-                  const isCancelingAsHost = processingBookingAction?.bookingId === booking.id && processingBookingAction?.action === 'cancel-host';
-                  const isReportingNoShow = processingBookingAction?.bookingId === booking.id && processingBookingAction?.action === 'report-no-show';
-
-                  return (
-                    <div key={booking.id} className="space-y-4 p-6">
-                      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                        <div className="flex items-start gap-4">
-                          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800">
-                            <Icons.User className="h-6 w-6 text-slate-400" />
-                          </div>
-                          <div className="space-y-2">
-                            <p className="app-title-4 dark:text-white">{booking.userName || 'Huésped'}</p>
-                            <p className="app-body-sm app-text-muted">{booking.propertyTitle}</p>
-                            {bookingSummaryItems.length > 0 ? (
-                              <div className="flex flex-wrap gap-2">
-                                {bookingSummaryItems.map((item) => (
-                                  <span key={`${booking.id}-${item}`} className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                                    {item}
-                                  </span>
-                                ))}
-                              </div>
-                            ) : null}
-                          </div>
-                        </div>
-                        <div className="flex flex-col gap-2 sm:items-end">
-                          <span className={cn('inline-flex items-center rounded-full border px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em]', getBookingStatusClassName(booking))}>
-                            {getBookingStatusLabel(booking)}
-                          </span>
-                        </div>
-                      </div>
-
-                      {shouldShowGuestProfile ? (
-                        <GuestRequestProfileCard guestName={booking.userName || 'Huésped'} profile={booking.guestProfile} />
-                      ) : null}
-
-                      {showBookingFlowPanel ? (
-                        <div className="rounded-[26px] border border-brand/15 bg-brand/5 p-4 dark:border-brand/20 dark:bg-brand/10">
-                          <div className="space-y-4">
-                            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                              <div className="space-y-1">
-                                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-brand">{bookingFlow.statusLabel}</p>
-                                <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">{bookingFlow.description}</p>
-                                {bookingFlow.supportText ? <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">{bookingFlow.supportText}</p> : null}
-                                {bookingFlow.trackingHint ? <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">{bookingFlow.trackingHint}</p> : null}
-                              </div>
-
-                              {canAcceptRequest ? (
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  onClick={() => void handleAcceptRequest(booking)}
-                                  loading={isAcceptingRequest}
-                                  loadingLabel="Aceptando..."
-                                  className="rounded-full"
-                                >
-                                  <>
-                                    <Icons.CheckCircle2 className="h-4 w-4" />
-                                    {booking.requestMode === 'protected' ? 'Aceptar solicitud' : 'Aceptar propuesta'}
-                                  </>
-                                </Button>
-                              ) : null}
-                            </div>
-
-                            <div className="grid gap-2 md:grid-cols-3">
-                              <div className="rounded-2xl bg-white/80 px-3 py-3 text-sm dark:bg-slate-900/70">
-                                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Estado actual</p>
-                                <p className="mt-1 font-semibold text-slate-900 dark:text-white">{bookingFlow.statusLabel}</p>
-                              </div>
-                              <div className="rounded-2xl bg-white/80 px-3 py-3 text-sm dark:bg-slate-900/70">
-                                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Actúa ahora</p>
-                                <p className="mt-1 font-semibold text-slate-900 dark:text-white">{bookingFlow.nextActorLabel ?? 'No hace falta'}</p>
-                              </div>
-                              <div className="rounded-2xl bg-white/80 px-3 py-3 text-sm dark:bg-slate-900/70">
-                                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Próximo paso</p>
-                                <p className="mt-1 font-semibold text-slate-900 dark:text-white">{bookingFlow.nextStepLabel ?? 'Solo dejar contexto por chat'}</p>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ) : null}
-
-                      {!isDecisionStage || canReviewBooking || canCancelAsHost || canReportProtectedNoShow || canOpenChat ? (
-                        <div className="flex flex-wrap gap-2 pt-1 lg:justify-end">
-                          {canOpenChat ? (
-                            <Button
-                              type="button"
-                              variant="secondary"
-                              size="sm"
-                              onClick={() => navigate(`/chat/${booking.conversationId}`)}
-                              className="rounded-full"
-                            >
-                              <>
-                                <Icons.MessageSquare className="h-4 w-4" />
-                                Abrir chat
-                              </>
-                            </Button>
-                          ) : null}
-                          {!isDecisionStage ? (
-                            <Button
-                              type="button"
-                              variant="secondary"
-                              size="sm"
-                              onClick={() => setExpandedBookingId((currentValue) => (currentValue === booking.id ? null : booking.id))}
-                              className="rounded-full"
-                            >
-                              {isExpanded ? 'Ocultar ficha' : 'Ver ficha del huésped'}
-                            </Button>
-                          ) : null}
-                          {canReportProtectedNoShow ? (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => void handleReportNoShow(booking)}
-                              loading={isReportingNoShow}
-                              loadingLabel="Informando no show..."
-                              className="rounded-full"
-                            >
-                              <>
-                                <Icons.AlertTriangle className="h-4 w-4" />
-                                Marcar no show
-                              </>
-                            </Button>
-                          ) : null}
-                          {booking.requestMode === 'protected' && bookingFlow.stage === 'protected-deposit-held' && !arrivalActionsAvailable ? (
-                            <div className="rounded-full bg-slate-100 px-4 py-2 text-xs font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-300">
-                              Marcar no show se habilita el día del ingreso.
-                            </div>
-                          ) : null}
-                          {canCancelAsHost ? (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => void handleCancelBookingAsHost(booking)}
-                              loading={isCancelingAsHost}
-                              loadingLabel="Cancelando..."
-                              className="rounded-full"
-                            >
-                              <>
-                                <Icons.X className="h-4 w-4" />
-                                Cancelar reserva
-                              </>
-                            </Button>
-                          ) : null}
-                          {canReviewBooking ? (
-                            <button
-                              onClick={() => setReviewingBooking(booking)}
-                              className="app-button-base rounded-[var(--app-radius-control)] bg-brand px-4 py-2 text-sm text-white hover:-translate-y-px hover:bg-brand-dark hover:shadow-[var(--app-shadow-brand)]"
-                            >
-                              Evaluar huésped
-                            </button>
-                          ) : null}
-                        </div>
-                      ) : null}
-                    </div>
-                  );
-                })
-              ) : (
-                <p className="p-8 text-center app-body-sm app-text-muted">Todavía no hay solicitudes o estadías para revisar.</p>
-              )}
-            </div>
-          </div>
           <p className="app-form-hint px-4 italic">
-            * La ficha se ordena dentro del flujo real de la solicitud. Las evaluaciones siguen disponibles solo después de una estadía finalizada.
+            * La ficha del huésped sigue dentro del flujo real de cada solicitud o reserva. Las evaluaciones se mantienen disponibles después de una estadía finalizada.
           </p>
         </section>
 
@@ -727,31 +1205,10 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
             onClose={() => setReviewingBooking(null)}
             onComplete={() => {
               setReviewingBooking(null);
-              fetchData();
+              void fetchData();
             }}
           />
         )}
-
-        <section className="grid gap-6 md:grid-cols-2">
-          <div className="app-card space-y-4 border-brand/10 bg-brand/5 p-8 dark:border-brand/20 dark:bg-brand/10">
-            <Icons.Lightbulb className="h-8 w-8 text-brand" />
-            <h3 className="app-title-4 text-slate-950 dark:text-slate-50">¿Por qué conviene verificar mejor?</h3>
-            <p className="app-body-sm text-slate-700 dark:text-slate-300">
-              Cuando el aviso deja claro quién publica, dónde está el lugar y qué ya fue comprobado, la decisión cuesta menos.
-            </p>
-          </div>
-          <div className="rounded-[var(--app-radius-card)] border border-slate-800 bg-slate-900 p-8 text-white shadow-[var(--app-shadow-soft)] dark:bg-slate-800">
-            <Icons.Shield className="h-8 w-8 text-brand" />
-            <h3 className="mt-4 app-title-4 text-white">Información real, mejores decisiones</h3>
-            <p className="mt-4 app-body-sm text-slate-100">
-              Completar verificaciones mejora tu aviso porque la otra persona entiende más rápido qué está viendo y qué ya fue revisado.
-            </p>
-            <button className="app-button-base mt-4 justify-start px-0 text-sm text-brand hover:underline">
-              Ver guía para anfitriones
-              <Icons.ExternalLink className="h-4 w-4" />
-            </button>
-          </div>
-        </section>
       </main>
     </div>
   );

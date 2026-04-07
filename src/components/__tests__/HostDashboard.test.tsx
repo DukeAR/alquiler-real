@@ -65,7 +65,7 @@ vi.mock('../ui/AccountModeSwitch', () => ({
   AccountModeSwitch: () => <div>Mode switch</div>,
 }));
 
-import { HostDashboard } from '../HostDashboard';
+import { HostDashboard } from '../HostDashboard.tsx';
 
 describe('HostDashboard', () => {
   beforeEach(() => {
@@ -128,12 +128,13 @@ describe('HostDashboard', () => {
 
     render(<HostDashboard onBack={vi.fn()} />);
 
-    expect(await screen.findByText('Completá lo que falta en cada aviso')).toBeInTheDocument();
+    expect(await screen.findByText('Qué conviene hacer ahora')).toBeInTheDocument();
+    expect(screen.getByText('Tus publicaciones')).toBeInTheDocument();
     expect(screen.getByText('Cuanto más completo esté tu aviso, más arriba aparece en los resultados.')).toBeInTheDocument();
     expect(screen.getByText('4 de 5 comprobaciones')).toBeInTheDocument();
-    expect(screen.getByText(/Todavía falta completarla/i)).toBeInTheDocument();
+    expect(screen.getByText(/Te falta completar 1 verificación/i)).toBeInTheDocument();
 
-    fireEvent.click(await screen.findByRole('button', { name: /Disponibilidad/i }));
+    fireEvent.click((await screen.findAllByRole('button', { name: /Disponibilidad/i }))[1]!);
 
     expect(await screen.findByText('Calendario de publicación')).toBeInTheDocument();
     expect(screen.getByText('Bloqueado manualmente')).toBeInTheDocument();
@@ -227,7 +228,7 @@ describe('HostDashboard', () => {
 
     render(<HostDashboard onBack={vi.fn()} />);
 
-    expect(await screen.findByText('Solicitudes y huéspedes')).toBeInTheDocument();
+    expect(await screen.findByText('Solicitudes y reservas')).toBeInTheDocument();
     expect(screen.getAllByText('Marina').length).toBeGreaterThan(0);
     expect(screen.queryByRole('button', { name: 'Evaluar huésped' })).not.toBeInTheDocument();
 

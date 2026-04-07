@@ -1355,9 +1355,28 @@ app.get('/api/host/dashboard', async (req, res) => {
                 p."hostId", p."hostName", p."identityValidated", p."locationVerified", p."videoValidated",
                 p."hasPresencialVerification", p."hasDigitalVerification", p.property_type as "propertyType",
                 p.is_verified_property as "isVerifiedProperty",
+                COALESCE(booking_summary.pending_requests_count, 0)::int as "pendingRequestsCount",
+                COALESCE(booking_summary.active_reservations_count, 0)::int as "activeReservationsCount",
+                booking_summary.next_arrival_date as "nextArrivalDate",
                 ${PROPERTY_HOST_TRUST_SELECT}
          FROM properties p
          ${PROPERTY_HOST_TRUST_JOINS}
+         LEFT JOIN (
+           SELECT "propertyId" as property_id,
+                  COUNT(*) FILTER (WHERE status = 'pending')::int as pending_requests_count,
+                  COUNT(*) FILTER (WHERE status = 'confirmed')::int as active_reservations_count,
+                  TO_CHAR(
+                    MIN(start_date) FILTER (
+                      WHERE status = 'confirmed'
+                        AND start_date IS NOT NULL
+                        AND start_date >= CURRENT_DATE
+                    ),
+                    'DD/MM/YYYY'
+                  ) as next_arrival_date
+           FROM bookings
+           WHERE status <> 'cancelled'
+           GROUP BY "propertyId"
+         ) booking_summary ON booking_summary.property_id = p.id
          WHERE "hostId" = $1
          ORDER BY p.created_at DESC`,
         [req.session.userId],

@@ -64,6 +64,9 @@ describe('Host dashboard endpoint', () => {
               isVerifiedProperty: false,
               hostProfileName: 'Laura',
               propertyType: 'house',
+              pendingRequestsCount: 2,
+              activeReservationsCount: 1,
+              nextArrivalDate: '18/10/2026',
             },
           ],
         };
@@ -93,6 +96,9 @@ describe('Host dashboard endpoint', () => {
     expect(res.body.properties[0]).toMatchObject({
       id: 'prop-1',
       verificationScore: 4,
+      pendingRequestsCount: 2,
+      activeReservationsCount: 1,
+      nextArrivalDate: '18/10/2026',
     });
     expect(res.body.properties[0].verificationItems).toEqual(expect.arrayContaining([
       expect.objectContaining({ key: 'identity', status: 'complete' }),
