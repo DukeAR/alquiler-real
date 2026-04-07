@@ -72,7 +72,7 @@ type DetailStatProps = {
   value: string;
 };
 
-type BookingFieldKey = 'dates' | 'guests';
+type BookingFieldKey = 'dates' | 'guests' | 'mode';
 
 type BookingErrorState = {
   field: BookingFieldKey;
@@ -199,28 +199,28 @@ const BOOKING_STEP_CONFIG: BookingStepConfig[] = [
   {
     key: 'dates',
     title: 'Elegí las fechas',
-    description: 'Primero definimos ingreso y salida. Después seguís con huéspedes y forma de avanzar.',
+    description: 'Marcá ingreso y salida. Después seguís con huéspedes.',
     shortLabel: 'Fechas',
     icon: Icons.Calendar,
   },
   {
     key: 'guests',
     title: 'Definí quiénes viajan',
-    description: 'Elegí la cantidad de personas sin perder las fechas que ya marcaste.',
+    description: 'Ajustá cuántas personas viajan sin volver a cargar las fechas.',
     shortLabel: 'Huéspedes',
     icon: Icons.Users,
   },
   {
     key: 'mode',
     title: 'Elegí cómo querés avanzar',
-    description: 'Decidí si preferís seguir por chat o dejar la solicitud protegida en la app.',
+    description: 'Elegí si querés seguir por chat o dejar la solicitud registrada en la app.',
     shortLabel: 'Cómo avanzar',
     icon: Icons.MessageSquare,
   },
   {
     key: 'confirm',
     title: 'Revisá el resumen final',
-    description: 'Antes de enviar, confirmá fechas, huéspedes y la forma elegida para avanzar.',
+    description: 'Revisá todo antes de mandárselo al anfitrión.',
     shortLabel: 'Confirmación',
     icon: Icons.CheckCircle2,
   },
@@ -235,17 +235,17 @@ const RESERVATION_MODE_CONTENT: Record<ReservationRequestMode, {
 }> = {
   direct: {
     title: 'Acuerdo directo',
-    description: 'Abrís el chat con esta propuesta y coordinás los detalles por fuera de la app.',
-    helper: 'Las fechas no se bloquean y la plataforma no interviene en la seña.',
-    confirmationHeading: 'Tu propuesta se abre directo en el chat',
-    confirmationDescription: 'Al enviar, las fechas, los huéspedes y el total quedan listos en la conversación para seguir desde ahí.',
+    description: 'Abrís el chat con fechas y huéspedes ya cargados para seguir la conversación por ahí.',
+    helper: 'La app no bloquea fechas ni interviene en la seña.',
+    confirmationHeading: 'La propuesta queda lista en el chat',
+    confirmationDescription: 'Al enviar, el anfitrión recibe fechas, huéspedes y total dentro de la conversación.',
   },
   protected: {
     title: 'Reserva protegida',
-    description: 'La solicitud queda registrada en la app y la seña se mantiene en custodia hasta la llegada.',
+    description: 'La solicitud queda registrada en la app y seguís por chat con todo ya asentado.',
     helper: 'Fechas, huéspedes y total quedan asentados desde ahora.',
-    confirmationHeading: 'La solicitud queda registrada desde la app',
-    confirmationDescription: 'Cuando la envíes, el anfitrión la ve en el chat y después podés pagar la seña desde ahí.',
+    confirmationHeading: 'La solicitud queda registrada en la app',
+    confirmationDescription: 'Al enviarla, el anfitrión la ve en el chat y vos la seguís desde Mis reservas.',
   },
 };
 
@@ -624,7 +624,7 @@ export const PropertyDetailShell: React.FC<{
   const [adults, setAdults] = useState<number>(1);
   const [childrenCount, setChildrenCount] = useState<number>(0);
   const [bookingStep, setBookingStep] = useState<BookingStep>('dates');
-  const [selectedRequestMode, setSelectedRequestMode] = useState<ReservationRequestMode>('direct');
+  const [selectedRequestMode, setSelectedRequestMode] = useState<ReservationRequestMode | null>(null);
   const [bookingError, setBookingError] = useState<BookingErrorState | null>(null);
   const [bookingSubmitMode, setBookingSubmitMode] = useState<ReservationRequestMode | null>(null);
   const [bookingSubmitNotice, setBookingSubmitNotice] = useState<BookingConfirmationNotice | null>(null);
@@ -692,17 +692,27 @@ export const PropertyDetailShell: React.FC<{
   const canReserve = hasCompleteDates && nights > 0 && !guestCapacityExceeded;
   const currentBookingStepIndex = BOOKING_STEP_CONFIG.findIndex((step) => step.key === bookingStep);
   const currentBookingStep = BOOKING_STEP_CONFIG[currentBookingStepIndex] ?? BOOKING_STEP_CONFIG[0];
-  const selectedModeContent = RESERVATION_MODE_CONTENT[selectedRequestMode];
+  const selectedModeContent = selectedRequestMode ? RESERVATION_MODE_CONTENT[selectedRequestMode] : null;
   const bookingContextBadges = [
     hasCompleteDates ? { icon: Icons.Calendar, label: `${formatRequestDate(checkIn)} al ${formatRequestDate(checkOut)}` } : null,
     bookingStep !== 'dates' ? { icon: Icons.Users, label: formatGuestSelection(adults, childrenCount) } : null,
-    bookingStep === 'confirm' ? { icon: selectedRequestMode === 'protected' ? Icons.ShieldCheck : Icons.MessageSquare, label: selectedModeContent.title } : null,
+    bookingStep === 'confirm' && selectedModeContent
+      ? { icon: selectedRequestMode === 'protected' ? Icons.ShieldCheck : Icons.MessageSquare, label: selectedModeContent.title }
+      : null,
   ].filter(Boolean) as Array<{ icon: IconComponent; label: string }>;
-  const confirmationNotice: BookingConfirmationNotice = bookingSubmitNotice ?? {
-    tone: selectedRequestMode === 'protected' ? 'info' : 'success',
-    heading: selectedModeContent.confirmationHeading,
-    description: selectedModeContent.confirmationDescription,
-  };
+  const confirmationNotice: BookingConfirmationNotice | null = bookingSubmitNotice
+    ?? (selectedModeContent
+      ? {
+          tone: selectedRequestMode === 'protected' ? 'info' : 'success',
+          heading: selectedModeContent.confirmationHeading,
+          description: selectedModeContent.confirmationDescription,
+        }
+      : null);
+  const isAdvanceDisabled = bookingStep === 'dates'
+    ? !canReserve
+    : bookingStep === 'mode'
+      ? !selectedRequestMode
+      : false;
 
   const resetBookingSubmitState = () => {
     setBookingSubmitMode(null);
@@ -715,7 +725,7 @@ export const PropertyDetailShell: React.FC<{
     setAdults(1);
     setChildrenCount(0);
     setBookingStep('dates');
-    setSelectedRequestMode('direct');
+    setSelectedRequestMode(null);
   };
 
   const clearBookingFeedback = () => {
@@ -796,6 +806,11 @@ export const PropertyDetailShell: React.FC<{
     }
 
     if (bookingStep === 'mode') {
+      if (!selectedRequestMode) {
+        setBookingError({ field: 'mode', message: 'Elegí cómo querés avanzar para seguir.' });
+        return;
+      }
+
       setBookingError(null);
       goToBookingStep('confirm');
     }
@@ -847,6 +862,11 @@ export const PropertyDetailShell: React.FC<{
         field: 'guests',
         message: `Máximo ${maxGuestsNumber} ${maxGuestsNumber === 1 ? 'huésped' : 'huéspedes'}. Ajustá la cantidad para seguir.`,
       });
+      return;
+    }
+    if (!selectedRequestMode) {
+      setBookingStep('mode');
+      setBookingError({ field: 'mode', message: 'Elegí cómo querés avanzar antes de enviar.' });
       return;
     }
     setBookingError(null);
@@ -1208,7 +1228,7 @@ export const PropertyDetailShell: React.FC<{
                   <span className="text-[2.55rem] font-black tracking-tight text-slate-950 sm:text-[2.9rem]">{nightly ? formatCurrency(nightly) : '—'}</span>
                   <span className="pb-1 text-sm font-medium text-slate-500">/ noche</span>
                 </div>
-                <p className="text-sm leading-6 text-slate-500">Una decisión por paso para que avances sin mezclar fechas, huéspedes y modo de reserva al mismo tiempo.</p>
+                <p className="text-sm leading-6 text-slate-500">Primero marcás fechas, después definís huéspedes y al final elegís si seguís por chat o dejás la solicitud en la app.</p>
                 <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600">
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-brand/10 px-3 py-1.5 font-semibold text-brand">
                     <Icons.Star className="h-4 w-4 fill-current" />
@@ -1397,6 +1417,7 @@ export const PropertyDetailShell: React.FC<{
                         helper={RESERVATION_MODE_CONTENT.direct.helper}
                         onSelect={(mode) => {
                           setSelectedRequestMode(mode);
+                          setBookingError(null);
                           setBookingSubmitNotice(null);
                         }}
                       />
@@ -1409,6 +1430,7 @@ export const PropertyDetailShell: React.FC<{
                         helper={RESERVATION_MODE_CONTENT.protected.helper}
                         onSelect={(mode) => {
                           setSelectedRequestMode(mode);
+                          setBookingError(null);
                           setBookingSubmitNotice(null);
                         }}
                       />
@@ -1416,13 +1438,28 @@ export const PropertyDetailShell: React.FC<{
 
                     <div className="rounded-[20px] bg-white px-4 py-3 text-sm text-slate-600 shadow-[0_18px_36px_-34px_rgba(15,23,42,0.18)]">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Selección actual</p>
-                      <p className="mt-1 text-base font-semibold text-slate-950">{selectedModeContent.title}</p>
-                      <p className="mt-1 leading-6">{selectedModeContent.helper}</p>
+                      {selectedModeContent ? (
+                        <>
+                          <p className="mt-1 text-base font-semibold text-slate-950">{selectedModeContent.title}</p>
+                          <p className="mt-1 leading-6">{selectedModeContent.helper}</p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="mt-1 text-base font-semibold text-slate-950">Todavía no elegiste cómo avanzar</p>
+                          <p className="mt-1 leading-6">Elegí una opción para habilitar Siguiente. Si querés hablar primero, seguís por chat. Si querés dejar todo asentado, mandás la solicitud protegida.</p>
+                        </>
+                      )}
                     </div>
+
+                    {bookingError?.field === 'mode' ? (
+                      <p className="rounded-[20px] border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                        {bookingError.message}
+                      </p>
+                    ) : null}
                   </div>
                 ) : null}
 
-                {bookingStep === 'confirm' ? (
+                {bookingStep === 'confirm' && selectedModeContent ? (
                   <div className="mt-5 space-y-4">
                     <div className="space-y-3 rounded-[24px] border border-slate-200/80 bg-white p-4 shadow-[0_18px_36px_-30px_rgba(15,23,42,0.14)]">
                       <div className="flex items-center justify-between gap-4 border-b border-slate-200/70 pb-3">
@@ -1472,12 +1509,14 @@ export const PropertyDetailShell: React.FC<{
                       </div>
                     </div>
 
-                    <NoticeBanner
-                      tone={confirmationNotice.tone}
-                      heading={confirmationNotice.heading}
-                      description={confirmationNotice.description}
-                      className="shadow-none"
-                    />
+                    {confirmationNotice ? (
+                      <NoticeBanner
+                        tone={confirmationNotice.tone}
+                        heading={confirmationNotice.heading}
+                        description={confirmationNotice.description}
+                        className="shadow-none"
+                      />
+                    ) : null}
                   </div>
                 ) : null}
               </div>
@@ -1498,7 +1537,7 @@ export const PropertyDetailShell: React.FC<{
                       variant="primary"
                       size="lg"
                       onClick={handleAdvanceBookingStep}
-                      disabled={bookingStep === 'dates' ? !canReserve : false}
+                      disabled={isAdvanceDisabled}
                       className="w-full rounded-2xl shadow-[0_24px_46px_-28px_rgba(67,56,202,0.42)] sm:w-auto sm:min-w-[160px]"
                     >
                       <>

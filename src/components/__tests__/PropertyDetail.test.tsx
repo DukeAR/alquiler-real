@@ -138,6 +138,9 @@ const advanceToConfirmationStep = async (mode: 'direct' | 'protected' = 'direct'
   if (mode === 'protected') {
     fireEvent.click(screen.getByLabelText(/reserva protegida/i));
     expect(screen.getByLabelText(/reserva protegida/i)).toBeChecked();
+  } else {
+    fireEvent.click(screen.getByLabelText(/acordar directamente/i));
+    expect(screen.getByLabelText(/acordar directamente/i)).toBeChecked();
   }
 
   fireEvent.click(screen.getByRole('button', { name: /^siguiente$/i }));
@@ -242,7 +245,7 @@ describe('PropertyDetail', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
 
-  test('shows one booking step at a time and reaches the mode choice with direct selected by default', async () => {
+  test('shows one booking step at a time and asks to choose how to continue before advancing', async () => {
     renderPropertyDetail();
 
     await waitFor(() => expect(screen.getByText('Casa de prueba')).toBeDefined());
@@ -261,9 +264,18 @@ describe('PropertyDetail', () => {
     fireEvent.click(screen.getByRole('button', { name: /^siguiente$/i }));
     await waitFor(() => expect(screen.getByText('Elegí cómo querés avanzar')).toBeDefined());
 
-    expect(screen.getByLabelText(/acordar directamente/i)).toBeChecked();
+    const nextButton = screen.getByRole('button', { name: /^siguiente$/i });
+
+    expect(screen.getByLabelText(/acordar directamente/i)).not.toBeChecked();
     expect(screen.getByLabelText(/reserva protegida/i)).not.toBeChecked();
-    expect(screen.getAllByText('Las fechas no se bloquean y la plataforma no interviene en la seña.').length).toBeGreaterThan(0);
+    expect(nextButton).toBeDisabled();
+    expect(screen.getByText('Todavía no elegiste cómo avanzar')).toBeDefined();
+
+    fireEvent.click(screen.getByLabelText(/acordar directamente/i));
+
+    expect(screen.getByLabelText(/acordar directamente/i)).toBeChecked();
+    expect(nextButton).not.toBeDisabled();
+    expect(screen.queryByText('Todavía no elegiste cómo avanzar')).toBeNull();
   });
 
   test('renders clearer amenities and trust sections', async () => {
@@ -393,7 +405,7 @@ describe('PropertyDetail', () => {
 
     expect(screen.getByText('Revisá el resumen final')).toBeDefined();
     expect(screen.getAllByText('Acuerdo directo').length).toBeGreaterThan(0);
-    expect(screen.getByText('Tu propuesta se abre directo en el chat')).toBeDefined();
+    expect(screen.getAllByRole('status').length).toBeGreaterThan(0);
     expect(screen.getAllByRole('button', { name: /editar/i })).toHaveLength(3);
     expect(screen.getByRole('button', { name: /^solicitar reserva$/i })).toBeDefined();
   });
