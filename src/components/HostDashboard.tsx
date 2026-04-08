@@ -12,7 +12,7 @@ import { showToast } from '../lib/toast';
 import { cn } from '../lib/utils';
 import { AccountModeSwitch } from './ui/AccountModeSwitch';
 import { Button } from './ui/Button';
-import { VerificationHighlights, VerificationMeter } from './ui/VerificationMeter';
+import { VerificationMeter, VerificationSnippetList } from './ui/VerificationMeter';
 import { EmptyState } from './EmptyState';
 import { ErrorState } from './ErrorState';
 import GuestRequestProfileCard from './GuestRequestProfileCard';
@@ -1094,12 +1094,17 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
               <h2 className="app-title-4 dark:text-white">Tus publicaciones</h2>
             </div>
             <p className="app-body-sm app-text-muted">Mostramos qué está comprobado para que otros puedan decidir mejor sobre tu aviso.</p>
-            <p className="app-body-sm app-text-muted">Completar verificaciones ayuda a que otros elijan con más claridad.</p>
+            <p className="app-body-sm app-text-muted">Desde acá podés sumar información validada o revisar lo que ya quedó visible en cada aviso.</p>
           </div>
 
           <div className="overflow-hidden rounded-[var(--app-radius-card)] border border-slate-200/80 bg-white/94 dark:border-slate-800 dark:bg-slate-900/94">
             {hostProperties.map((property: any, index: number) => {
               const pendingLabels = property.pendingVerificationItems.map((item: any) => item.label);
+              const pendingKeys = new Set(property.pendingVerificationItems.map((item: any) => item.key));
+              const showVerificationReviewAction = pendingKeys.has('identity') || pendingKeys.has('location');
+              const showMaterialAction = pendingKeys.has('material');
+              const showHistoryGuidance = pendingKeys.has('history');
+              const showOnsiteAction = pendingKeys.has('onsite') && property.premiumOnsiteOffer && !property.premiumOnsiteOffer.completed;
               const propertyVerificationSummary = {
                 score: property.verificationBadge.score,
                 maxScore: property.verificationBadge.max,
@@ -1164,25 +1169,67 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
                             : pendingLabels.length === 1
                               ? 'Te falta 1 comprobación para completar este aviso.'
                               : `Te faltan ${pendingLabels.length} comprobaciones para completar este aviso.`}
-                          tone={pendingLabels.length === 0 ? 'success' : 'brand'}
+                          tone={pendingLabels.length === 0 ? 'success' : 'neutral'}
                         />
 
-                        <div className="mt-3 space-y-2.5">
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
-                            {pendingLabels.length === 0 ? 'Ya comprobado' : 'Falta completar'}
-                          </p>
-                          <VerificationHighlights
-                            summary={propertyVerificationSummary}
-                            order={pendingLabels.length === 0 ? 'complete-first' : 'pending-first'}
-                            limit={2}
-                          />
-                        </div>
+                        {property.completedVerificationItems.length > 0 ? (
+                          <div className="mt-3 space-y-2.5">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">Qué ya está comprobado</p>
+                            <VerificationSnippetList
+                              summary={propertyVerificationSummary}
+                              status="complete"
+                              limit={2}
+                              showDescriptions={false}
+                            />
+                          </div>
+                        ) : null}
+
+                        {pendingLabels.length > 0 ? (
+                          <div className="mt-3 space-y-2.5">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">Acciones para sumar información validada</p>
+                            <div className="flex flex-wrap gap-2">
+                              {showVerificationReviewAction ? (
+                                <Button
+                                  type="button"
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => navigate(`/detail/${property.id}`)}
+                                  className="rounded-full"
+                                >
+                                  <>
+                                    <Icons.Shield className="h-4 w-4" />
+                                    Completar verificación
+                                  </>
+                                </Button>
+                              ) : null}
+
+                              {showMaterialAction ? (
+                                <Button
+                                  type="button"
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => navigate(`/detail/${property.id}`)}
+                                  className="rounded-full"
+                                >
+                                  <>
+                                    <Icons.ImagePlus className="h-4 w-4" />
+                                    Agregar material
+                                  </>
+                                </Button>
+                              ) : null}
+                            </div>
+
+                            {showHistoryGuidance ? (
+                              <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">El historial real se suma cuando el aviso ya tiene reservas o reseñas visibles.</p>
+                            ) : null}
+                          </div>
+                        ) : null}
                       </div>
 
-                      {property.premiumOnsiteOffer && !property.premiumOnsiteOffer.completed ? (
+                      {showOnsiteAction ? (
                         <div className="rounded-[20px] border border-indigo-200/70 bg-indigo-50/70 p-3 dark:border-indigo-900/40 dark:bg-indigo-950/30">
                           <p className="text-[10px] font-black uppercase tracking-[0.14em] text-indigo-700 dark:text-indigo-300">Comprobación adicional</p>
-                          <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-100">Podés sumar una revisión presencial para agregar otra comprobación visible en este aviso.</p>
+                          <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-100">Podés solicitar una verificación presencial para sumar otra comprobación visible en este aviso.</p>
                           <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
                             {property.premiumOnsiteOffer.complimentaryReason
                               ? property.premiumOnsiteOffer.complimentaryReason
@@ -1195,7 +1242,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
                             onClick={() => setActivePremiumOffer(property.premiumOnsiteOffer)}
                           >
                             <Icons.ShieldCheck className="h-4 w-4" />
-                            {property.premiumOnsiteOffer.ctaLabel}
+                            Solicitar verificación presencial
                           </Button>
                         </div>
                       ) : null}
@@ -1211,7 +1258,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
                       >
                         <>
                           <Icons.ExternalLink className="h-4 w-4" />
-                          {pendingLabels.length > 0 ? 'Ver aviso y completar' : 'Ver aviso'}
+                          Ver aviso
                         </>
                       </Button>
                       <Button

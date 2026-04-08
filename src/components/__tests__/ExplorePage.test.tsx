@@ -85,6 +85,9 @@ describe('ExplorePage', () => {
         price: 120000,
         rating: 4.8,
         reviewsCount: 12,
+        identityValidated: true,
+        locationVerified: true,
+        videoValidated: true,
         verificationScore: 4,
       },
     ]);

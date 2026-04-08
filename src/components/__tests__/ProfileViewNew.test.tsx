@@ -154,6 +154,9 @@ describe('ProfileViewNew', () => {
     expect(screen.getByText('Lo que ajusta lo que ves')).toBeInTheDocument();
     expect(screen.getByText('Tu perfil tiene 1 de 5 comprobaciones')).toBeInTheDocument();
     expect(screen.getByText('Mostramos solo qué ya fue comprobado y qué falta completar en tu cuenta.')).toBeInTheDocument();
+    expect(screen.getByText('Qué ya está comprobado')).toBeInTheDocument();
+    expect(screen.getByText('Qué podrías sumar si te sirve')).toBeInTheDocument();
+    expect(screen.getByText(/Si querés sumar más información validada, hoy podés revisar:/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Confirmar email/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Agregar teléfono/i })).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /Activar comprobación sin cargo/i }).length).toBeGreaterThan(0);

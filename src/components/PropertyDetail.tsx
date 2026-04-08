@@ -25,7 +25,7 @@ import { Badge } from './ui/Badge';
 import { Card } from './ui/Card';
 import { NoticeBanner } from './ui/NoticeBanner';
 import { SectionTitle } from './ui/SectionTitle';
-import { VerificationHighlights, VerificationMeter } from './ui/VerificationMeter';
+import { VerificationMeter, VerificationSnippetList } from './ui/VerificationMeter';
 
 const FALLBACK = 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=1200&q=80&auto=format&fit=crop';
 
@@ -1438,13 +1438,21 @@ export const PropertyDetailShell: React.FC<{
                   </div>
                 </div>
 
-                <div className="rounded-[26px] border border-slate-200/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(238,242,255,0.78))] p-4 shadow-[0_18px_36px_-34px_rgba(15,23,42,0.18)] dark:border-slate-800 dark:bg-slate-900/80">
-                  <VerificationMeter
+                <div
+                  data-testid="property-verification-preview"
+                  className="rounded-[26px] border border-slate-200/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(238,242,255,0.78))] p-4 shadow-[0_18px_36px_-34px_rgba(15,23,42,0.18)] dark:border-slate-800 dark:bg-slate-900/80"
+                >
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">Comprobaciones del aviso</p>
+                  <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">Qué ya está comprobado en este aviso.</p>
+                  <VerificationSnippetList
                     summary={verificationDetails}
-                    eyebrow="Comprobaciones del aviso"
-                    tone={verificationDetails.score >= 4 ? 'brand' : 'neutral'}
+                    status="complete"
+                    limit={3}
+                    showDescriptions={false}
+                    className="mt-3"
+                    itemClassName="bg-white/92 dark:bg-slate-950/70"
+                    emptyText="Todavía no hay comprobaciones visibles en este aviso."
                   />
-                  <VerificationHighlights summary={verificationDetails} className="mt-3" />
                 </div>
 
                 <div className="hidden rounded-[26px] border border-slate-200/80 bg-slate-50/80 p-4 shadow-[0_18px_36px_-34px_rgba(15,23,42,0.18)] sm:block">

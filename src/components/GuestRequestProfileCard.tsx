@@ -8,7 +8,7 @@ import {
   getGuestRequestProfileScenario,
 } from '../lib/guestRequestProfile';
 import type { GuestHostReviewSnippet, GuestRequestProfile } from '../types';
-import { getVerificationPendingCount, VerificationHighlights, VerificationMeter } from './ui/VerificationMeter';
+import { VerificationMeter, VerificationSnippetList } from './ui/VerificationMeter';
 
 type GuestRequestProfileCardProps = {
   guestName: string;
@@ -96,7 +96,6 @@ export const GuestRequestProfileCard: React.FC<GuestRequestProfileCardProps> = (
   const visibleReviews = profile.hostReviews.slice(0, 2);
   const pendingSignals = profile.operationSignals.filter((signal) => signal.source === 'pending');
   const hasAnyActiveSignals = profile.operationSignals.some((signal) => signal.active);
-  const pendingVerificationCount = getVerificationPendingCount(profile.verificationSummary);
   const guestDataItems = [
     {
       label: 'Identidad',
@@ -160,14 +159,15 @@ export const GuestRequestProfileCard: React.FC<GuestRequestProfileCardProps> = (
           <VerificationMeter
             summary={profile.verificationSummary}
             eyebrow="Comprobaciones del huésped"
-            helper={pendingVerificationCount === 0
-              ? 'La ficha ya muestra las 5 comprobaciones visibles de esta cuenta.'
-              : pendingVerificationCount === 1
-                ? 'Todavía falta 1 comprobación visible en esta ficha.'
-                : `Todavía faltan ${pendingVerificationCount} comprobaciones visibles en esta ficha.`}
-            tone={pendingVerificationCount === 0 ? 'success' : 'neutral'}
+            helper="Mostramos qué ya está comprobado en esta cuenta."
+            tone="neutral"
           />
-          <VerificationHighlights summary={profile.verificationSummary} />
+          <VerificationSnippetList
+            summary={profile.verificationSummary}
+            status="complete"
+            showDescriptions={false}
+            emptyText="Todavía no hay comprobaciones visibles en esta cuenta."
+          />
         </section>
 
         <section className="space-y-3 border-t border-slate-200/80 pt-4 dark:border-slate-800">

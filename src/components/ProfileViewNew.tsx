@@ -18,12 +18,11 @@ import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 import { FormField } from './ui/FormField';
 import { Input } from './ui/Input';
-import { NoticeBanner } from './ui/NoticeBanner';
 import { PageHeader } from './ui/PageHeader';
 import { AccountModeSwitch } from './ui/AccountModeSwitch';
 import { SectionTitle } from './ui/SectionTitle';
 import type { VerificationSummaryLike } from './ui/VerificationMeter';
-import { VerificationHighlights, VerificationMeter } from './ui/VerificationMeter';
+import { VerificationMeter, VerificationSnippetList } from './ui/VerificationMeter';
 
 type ReviewTab = 'received' | 'written';
 
@@ -99,15 +98,6 @@ const formatPriceLabel = (value?: number | string | null) => {
   }
 
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(numeric);
-};
-
-const normalizeRating = (value: unknown) => {
-  const numeric = typeof value === 'number' ? value : Number(value);
-  if (Number.isNaN(numeric)) {
-    return 0;
-  }
-
-  return numeric;
 };
 
 const buildFallbackVerificationSummary = (checks?: ValidationChecks): VerificationSummaryLike => {
@@ -266,11 +256,8 @@ export const ProfileViewNew = () => {
   const pendingChecks = Math.max(0, totalChecks - completedChecks);
   const currentReviews = reviewTab === 'received' ? reviews.received : reviews.written;
   const reviewCountLabel = currentReviews.length === 1 ? '1 reseña' : `${currentReviews.length} reseñas`;
-  const ratingValue = normalizeRating(isHostMode ? user.hostRating : user.rating);
-  const riskScore = normalizeRating(user.riskScore);
   const validationLevel = validationData?.level ?? 'INICIAL';
   const verificationSummary = validationData?.summary ?? 'Mostramos qué ya fue comprobado y qué falta completar en tu cuenta.';
-  const verificationNextStep = validationData?.nextStep ?? 'Completá lo que te falte para sumar más comprobaciones visibles.';
   const premiumDocumentaryOffer = validationData?.premiumDocumentaryOffer ?? null;
   const canConfirmEmail = Boolean(validationData?.checks && !validationData.checks.emailVerified);
   const canConfirmPhone = Boolean(validationData?.checks && !validationData.checks.phoneVerified && user.phone);
@@ -292,6 +279,19 @@ export const ProfileViewNew = () => {
   const missingRequirementsText = validationData?.missingRequirements?.length
     ? validationData.missingRequirements.slice(0, 3).join(' · ')
     : null;
+  const verificationSupportText = pendingChecks === 0
+    ? 'Ya están visibles las 5 comprobaciones disponibles en tu cuenta.'
+    : missingRequirementsText
+      ? `Si querés sumar más información validada, hoy podés revisar: ${missingRequirementsText}.`
+      : 'Podés sumar más información validada desde esta misma pantalla si te sirve.';
+  const verificationVisibilityText = pendingChecks === 0
+    ? 'Tu cuenta ya muestra toda la información validada disponible.'
+    : completedChecks > 0
+      ? `Tu cuenta ya muestra ${completedChecks} ${completedChecks === 1 ? 'comprobación visible' : 'comprobaciones visibles'}.`
+      : 'Tu cuenta todavía no muestra comprobaciones visibles.';
+  const verificationVisibilityHelperText = pendingChecks === 0
+    ? 'No hace falta sumar nada más para mostrar las comprobaciones disponibles.'
+    : 'Si querés, podés revisar este bloque para sumar más información validada.';
 
   const handlePremiumVerificationCheckout = async () => {
     if (!premiumDocumentaryOffer) {
@@ -479,25 +479,14 @@ export const ProfileViewNew = () => {
 
                   <div className="mt-6 grid gap-4 sm:grid-cols-3">
                     <MiniMetric label="Comprobaciones" value={`${completedChecks} de ${totalChecks || 0}`} accent="brand" caption="visibles en tu cuenta" />
-                    <MiniMetric label={pendingChecks === 0 ? 'Estado' : 'Falta completar'} value={pendingChecks === 0 ? 'Al día' : String(pendingChecks)} accent={pendingChecks === 0 ? 'success' : 'warning'} caption={pendingChecks === 0 ? 'ya están visibles las 5 comprobaciones' : `${pendingChecks === 1 ? 'comprobación pendiente' : 'comprobaciones pendientes'}`} />
-                    <MiniMetric label="Calificación" value={ratingValue > 0 ? ratingValue.toFixed(1) : 'Sin dato'} accent="warning" caption="Según tu historial" />
+                    <MiniMetric label={pendingChecks === 0 ? 'Estado' : 'Pendientes'} value={pendingChecks === 0 ? 'Al día' : String(pendingChecks)} accent={pendingChecks === 0 ? 'success' : 'warning'} caption={pendingChecks === 0 ? 'ya están visibles las 5 comprobaciones' : `${pendingChecks === 1 ? 'comprobación pendiente' : 'comprobaciones pendientes'}`} />
+                    <MiniMetric label="Actividad" value={String(activity?.total_bookings || 0)} accent="brand" caption={(activity?.total_bookings || 0) === 1 ? 'reserva registrada' : 'reservas registradas'} />
                   </div>
 
-                  {riskScore > 0 ? (
-                    <NoticeBanner
-                      tone={riskScore > 50 ? 'error' : 'warning'}
-                      className="mt-6"
-                      heading={riskScore > 50 ? 'Tu cuenta necesita revisión.' : 'Detectamos algunos puntos para revisar con calma.'}
-                      description={`Puntaje actual: ${riskScore}. Si hubo algo fuera de lo esperado, conviene revisar tu perfil y tus interacciones recientes.`}
-                    />
-                  ) : (
-                    <NoticeBanner
-                      tone="success"
-                      className="mt-6"
-                      heading="Tu perfil no muestra alertas activas."
-                      description="Mantené tus datos al día y respondé claro para sostener este estado."
-                    />
-                  )}
+                  <div className="mt-6 rounded-[22px] border border-slate-200/80 bg-white/82 p-4 dark:border-slate-800 dark:bg-slate-950/50">
+                    <p className="text-sm font-medium leading-6 text-slate-900 dark:text-slate-100">{verificationVisibilityText}</p>
+                    <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">{verificationVisibilityHelperText}</p>
+                  </div>
                 </Card>
 
                 <Card padding="lg" className="space-y-6 dark:border-slate-800 dark:bg-slate-900">
@@ -521,52 +510,32 @@ export const ProfileViewNew = () => {
 
                   <div className="rounded-[22px] border border-slate-200/80 bg-white/80 p-4 dark:border-slate-800 dark:bg-slate-950/40">
                     <p className="text-sm leading-6 text-slate-700 dark:text-slate-200">{verificationSummary}</p>
-                    <p className="mt-2 text-sm font-medium leading-6 text-slate-900 dark:text-slate-100">Próximo paso: {verificationNextStep}</p>
+                    <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">{verificationSupportText}</p>
                   </div>
 
-                  <VerificationHighlights summary={verificationSummaryData} />
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    <div className="space-y-2.5">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">Qué ya está comprobado</p>
+                      <VerificationSnippetList
+                        summary={verificationSummaryData}
+                        status="complete"
+                        emptyText="Todavía no hay comprobaciones visibles en tu cuenta."
+                      />
+                    </div>
 
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {verificationItems.length > 0 ? verificationItems.map((item) => (
-                      <div
-                        key={item.key}
-                        className={cn(
-                          'flex items-center gap-3 rounded-[var(--app-radius-control)] border p-3',
-                          item.status === 'complete'
-                            ? 'border-emerald-200 bg-emerald-50/80 dark:border-emerald-900/30 dark:bg-emerald-900/10'
-                            : 'border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-800/50',
-                        )}
-                      >
-                        <div className={cn(
-                          'flex h-8 w-8 items-center justify-center rounded-full',
-                          item.status === 'complete'
-                            ? 'bg-emerald-500 text-white'
-                            : 'bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-300',
-                        )}>
-                          {item.status === 'complete' ? <Icons.Check className="h-4 w-4" /> : <Icons.Clock className="h-4 w-4" />}
-                        </div>
-                        <div className="min-w-0">
-                          <p className={cn(
-                            'text-sm font-medium',
-                            item.status === 'complete'
-                              ? 'text-emerald-700 dark:text-emerald-300'
-                              : 'text-slate-700 dark:text-slate-200',
-                          )}>
-                            {item.label}
-                          </p>
-                          <p className="mt-1 text-sm leading-6 text-slate-500 dark:text-slate-400">{item.description}</p>
-                        </div>
-                      </div>
-                    )) : (
-                      <div className={`${profilePanelClass} sm:col-span-2`}>
-                        <p className="text-sm text-slate-600 dark:text-slate-300">Todavía no pudimos cargar el detalle de tu verificación.</p>
-                      </div>
-                    )}
+                    <div className="space-y-2.5">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
+                        {pendingChecks > 0 ? 'Qué podrías sumar si te sirve' : 'Todo lo disponible ya está visible'}
+                      </p>
+                      {pendingChecks > 0 ? (
+                        <VerificationSnippetList summary={verificationSummaryData} status="pending" />
+                      ) : (
+                        <p className="rounded-[18px] border border-slate-200/80 bg-slate-50/85 px-4 py-3 text-sm leading-6 text-slate-500 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-400">
+                          No hay comprobaciones pendientes para mostrar ahora.
+                        </p>
+                      )}
+                    </div>
                   </div>
-
-                  {missingRequirementsText ? (
-                    <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">Falta completar: {missingRequirementsText}</p>
-                  ) : null}
 
                   {premiumDocumentaryOffer ? (
                     <div className="rounded-[var(--app-radius-control)] border border-indigo-200/70 bg-indigo-50/70 p-4 dark:border-indigo-900/40 dark:bg-indigo-950/30">

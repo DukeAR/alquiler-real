@@ -30,6 +30,9 @@ const sampleProperties = [
     price: 120000,
     rating: 4.8,
     reviewsCount: 12,
+    identityValidated: true,
+    locationVerified: true,
+    videoValidated: true,
     verificationScore: 4,
   },
   {
@@ -39,6 +42,8 @@ const sampleProperties = [
     price: 98000,
     rating: 4.6,
     reviewsCount: 8,
+    identityValidated: true,
+    locationVerified: true,
     verificationScore: 3,
   },
   {
@@ -48,6 +53,7 @@ const sampleProperties = [
     price: 143000,
     rating: 4.7,
     reviewsCount: 10,
+    identityValidated: true,
     verificationScore: 2,
   },
 ] as any[];

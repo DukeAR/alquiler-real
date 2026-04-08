@@ -401,6 +401,11 @@ describe('PropertyDetail', () => {
     expect(screen.getByText('Mostramos las 5 comprobaciones del aviso para ver rápido qué ya fue comprobado y qué falta completar.')).toBeDefined();
     expect(screen.getAllByText('4 de 5 comprobaciones').length).toBeGreaterThan(0);
     expect(screen.getAllByText('✔✔✔✔○').length).toBeGreaterThan(0);
+    const verificationPreview = screen.getByTestId('property-verification-preview');
+    expect(within(verificationPreview).getByText('Identidad del anfitrión')).toBeDefined();
+    expect(within(verificationPreview).getByText('Ubicación de la propiedad')).toBeDefined();
+    expect(within(verificationPreview).getByText('Material real del lugar')).toBeDefined();
+    expect(within(verificationPreview).queryByText('Verificación presencial')).toBeNull();
     expect(screen.getByText('Puede alojar hasta 4 huéspedes.')).toBeDefined();
     expect(screen.getByText('Tiene 3 dormitorios.')).toBeDefined();
     expect(screen.getByText('Tiene 2 baños.')).toBeDefined();
@@ -478,6 +483,10 @@ describe('PropertyDetail', () => {
     expect(screen.getAllByText('Comprobaciones del aviso').length).toBeGreaterThan(0);
     expect(screen.getAllByText('2 de 5 comprobaciones').length).toBeGreaterThan(0);
     expect(screen.getAllByText('✔✔○○○').length).toBeGreaterThan(0);
+    const verificationPreview = screen.getByTestId('property-verification-preview');
+    expect(within(verificationPreview).getByText('Ubicación de la propiedad')).toBeDefined();
+    expect(within(verificationPreview).getByText('Historial real del aviso')).toBeDefined();
+    expect(within(verificationPreview).queryByText('Identidad del anfitrión')).toBeNull();
     expect(screen.getByText('Todavía falta verificar la identidad del anfitrión.')).toBeDefined();
     expect(screen.getByText('Nivel de comprobación')).toBeDefined();
   });

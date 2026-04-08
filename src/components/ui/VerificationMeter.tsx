@@ -19,6 +19,7 @@ export type VerificationSummaryLike = {
 type VerificationTone = 'neutral' | 'brand' | 'success';
 type VerificationLayout = 'stacked' | 'inline';
 type VerificationHighlightOrder = 'complete-first' | 'pending-first';
+type VerificationSummaryItemStatusFilter = 'complete' | 'pending' | 'all';
 
 const toneClasses: Record<VerificationTone, { label: string; helper: string; visual: string }> = {
   neutral: {
@@ -70,11 +71,28 @@ export const getVerificationPendingCount = (summary: VerificationSummaryLike) =>
   return Math.max(0, maxScore - score);
 };
 
+export const getVerificationSummaryItems = (
+  summary: VerificationSummaryLike,
+  options?: { status?: VerificationSummaryItemStatusFilter; limit?: number },
+) => {
+  const items = Array.isArray(summary.items) ? [...summary.items] : [];
+  const status = options?.status ?? 'all';
+  const filteredItems = status === 'all'
+    ? items
+    : items.filter((item) => item.status === status);
+
+  if (typeof options?.limit === 'number') {
+    return filteredItems.slice(0, Math.max(0, options.limit));
+  }
+
+  return filteredItems;
+};
+
 export const getVerificationHighlightItems = (
   summary: VerificationSummaryLike,
   options?: { limit?: number; order?: VerificationHighlightOrder },
 ) => {
-  const items = Array.isArray(summary.items) ? [...summary.items] : [];
+  const items = getVerificationSummaryItems(summary);
   const limit = Math.max(0, options?.limit ?? 3);
   const order = options?.order ?? 'complete-first';
 
@@ -210,6 +228,72 @@ export const VerificationHighlights = ({
         );
       })}
     </div>
+  );
+};
+
+type VerificationSnippetListProps = {
+  summary: VerificationSummaryLike;
+  status?: VerificationSummaryItemStatusFilter;
+  limit?: number;
+  showDescriptions?: boolean;
+  className?: string;
+  itemClassName?: string;
+  emptyText?: ReactNode;
+};
+
+export const VerificationSnippetList = ({
+  summary,
+  status = 'all',
+  limit,
+  showDescriptions = true,
+  className,
+  itemClassName,
+  emptyText,
+}: VerificationSnippetListProps) => {
+  const items = getVerificationSummaryItems(summary, { status, limit });
+
+  if (items.length === 0) {
+    return emptyText ? (
+      <p className={cn('rounded-[18px] border border-slate-200/80 bg-slate-50/85 px-4 py-3 text-sm leading-6 text-slate-500 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-400', className)}>
+        {emptyText}
+      </p>
+    ) : null;
+  }
+
+  return (
+    <ul className={cn('grid gap-2.5', className)}>
+      {items.map((item) => {
+        const complete = item.status === 'complete';
+
+        return (
+          <li
+            key={item.key}
+            className={cn(
+              'flex items-start gap-3 rounded-[18px] border border-slate-200/80 bg-slate-50/85 px-4 py-3 dark:border-slate-800 dark:bg-slate-900/70',
+              itemClassName,
+            )}
+          >
+            <span
+              className={cn(
+                'mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-sm font-semibold',
+                complete
+                  ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-900/20 dark:text-emerald-300'
+                  : 'border-slate-200 bg-white text-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300',
+              )}
+              aria-hidden="true"
+            >
+              {complete ? '✔' : '○'}
+            </span>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold leading-5 text-slate-900 dark:text-slate-50">{item.label}</p>
+              {showDescriptions && item.description ? (
+                <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">{item.description}</p>
+              ) : null}
+            </div>
+          </li>
+        );
+      })}
+    </ul>
   );
 };
 

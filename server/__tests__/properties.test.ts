@@ -136,14 +136,24 @@ describe('Properties endpoints', () => {
     const res = await request(app).get('/api/properties?verifiedOnly=true');
 
     expect(res.status).toBe(200);
-    expect(res.body).toHaveLength(1);
+    expect(res.body).toHaveLength(2);
+    expect(res.body.map((property: any) => property.id)).toEqual(['prop-strong', 'prop-low-real']);
     expect(res.body[0]).toMatchObject({
       id: 'prop-strong',
-      verificationScore: 3,
+      verificationScore: 4,
       hostTrustScore: 4,
       hostTrust: {
         score: 4,
         level: 'high',
+      },
+    });
+    expect(res.body[1]).toMatchObject({
+      id: 'prop-low-real',
+      verificationScore: 3,
+      hostTrustScore: 1,
+      hostTrust: {
+        score: 1,
+        level: 'low',
       },
     });
     expect(res.body[0].verificationItems).toEqual(expect.arrayContaining([
