@@ -10,6 +10,7 @@ import { initDB } from './updates';
 import { mapPropertyRecord } from './propertySerializer';
 import { REAL_VERIFICATION_FILTER_MIN_SCORE } from './propertyVerification';
 import { getChatSystemMessages, getRequestAcceptedMessage, type ChatSystemMessageKey } from './chatSystemMessages';
+import { buildGuestProfileCompletion, buildGuestVerificationSummary } from '../src/lib/guestVerification';
 import { buildUserVerificationStatus } from '../src/lib/userVerification';
 import {
   PREMIUM_DOCUMENTARY_OFFER_TYPE,
@@ -1976,6 +1977,9 @@ const getHostProfileData = async (hostId: string) => {
 type HostDashboardGuestProfileRow = {
   id: string;
   identityVerified?: boolean | number | string | null;
+  identityVerificationStatus?: string | null;
+  identityVerificationProvider?: string | null;
+  identityVerifiedAt?: string | Date | null;
   memberSince?: string | Date | null;
   profilePhoto?: string | null;
   bio?: string | null;
@@ -2040,14 +2044,16 @@ const buildGuestRequestProfilePayload = (
     return undefined;
   }
 
-  const photoUploaded = typeof guest.profilePhoto === 'string' && guest.profilePhoto.trim().length > 0;
-  const basicDetailsComplete = [guest.bio, guest.phone, guest.zone].every(
-    (value) => typeof value === 'string' && value.trim().length > 0,
-  );
   const emailVerified = isTruthyFlag(guest.emailVerified);
   const phoneVerified = isTruthyFlag(guest.phoneVerified);
   const identityVerified = isTruthyFlag(guest.identityVerified);
-  const completedProfileSignal = basicDetailsComplete;
+  const profileCompletion = buildGuestProfileCompletion({
+    phone: guest.phone,
+    bio: guest.bio,
+    zone: guest.zone,
+    profilePhoto: guest.profilePhoto,
+  });
+  const completedProfileSignal = profileCompletion.profileComplete;
   const operationSignals = options.bookingSignals
     ? [
         {
@@ -2092,10 +2098,24 @@ const buildGuestRequestProfilePayload = (
       comment: review.comment || 'Sin comentario cargado.',
     })),
     profileCompletion: {
-      profileComplete: photoUploaded && basicDetailsComplete && (emailVerified || phoneVerified || identityVerified),
-      photoUploaded,
-      basicDetailsComplete,
+      profileComplete: profileCompletion.profileComplete,
+      photoUploaded: profileCompletion.photoUploaded,
+      basicDetailsComplete: profileCompletion.basicDetailsComplete,
     },
+    verificationSummary: buildGuestVerificationSummary({
+      emailVerified,
+      phoneVerified,
+      profileComplete: profileCompletion.profileComplete,
+      photoUploaded: profileCompletion.photoUploaded,
+      basicDetailsComplete: profileCompletion.basicDetailsComplete,
+      completedStays: guest.completedStays,
+      hostReviewsCount: (options.hostReviews ?? []).length,
+      activitySignalsCount: operationSignals?.filter((signal) => signal.active && signal.source !== 'derived').length ?? 0,
+      documentaryVerified: identityVerified,
+      identityVerificationStatus: guest.identityVerificationStatus ?? (identityVerified ? 'verified' : null),
+      identityVerificationProvider: guest.identityVerificationProvider,
+      identityVerifiedAt: guest.identityVerifiedAt,
+    }),
     ...(operationSignals ? { operationSignals } : {}),
     memberSince: toDateOnlyString(guest.memberSince),
   };
@@ -2233,6 +2253,13 @@ app.get('/api/host/dashboard', async (req, res) => {
         db.query(
           `SELECT u.id,
                   (COALESCE(u.is_identity_verified, FALSE) OR COALESCE(u.identity_validated, FALSE)) as "identityVerified",
+                  (CASE
+                    WHEN COALESCE(u.is_identity_verified, FALSE) OR COALESCE(u.identity_validated, FALSE) THEN 'verified'
+                    WHEN u.identity_verification_status IN ('verified', 'pending', 'rejected') THEN u.identity_verification_status
+                    ELSE 'unverified'
+                  END) as "identityVerificationStatus",
+                  u.identity_verification_provider as "identityVerificationProvider",
+                  u.identity_verified_at as "identityVerifiedAt",
                   COALESCE(u.member_since, u.created_at) as "memberSince",
                   u.profile_photo as "profilePhoto",
                   u.bio,

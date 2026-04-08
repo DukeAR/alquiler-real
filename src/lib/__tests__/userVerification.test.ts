@@ -22,7 +22,7 @@ describe('buildUserVerificationStatus', () => {
     expect(status.missingRequirements).toEqual(['Confirmá tu email', 'Agregá tu teléfono']);
     expect(status.verificationSummary).toEqual({
       score: 0,
-      maxScore: 3,
+      maxScore: 5,
       items: [
         {
           key: 'email',
@@ -37,8 +37,20 @@ describe('buildUserVerificationStatus', () => {
           description: 'Todavía falta confirmar el teléfono principal de la cuenta.',
         },
         {
-          key: 'identity',
-          label: 'Identidad verificada',
+          key: 'profile',
+          label: 'Perfil completo',
+          status: 'pending',
+          description: 'Todavía faltan foto de perfil, presentación, zona y teléfono para completar el perfil.',
+        },
+        {
+          key: 'history',
+          label: 'Historial real en la plataforma',
+          status: 'pending',
+          description: 'Todavía no hay estadías completadas, reseñas de anfitriones ni actividad real visible dentro de la plataforma.',
+        },
+        {
+          key: 'documentary',
+          label: 'Identidad documental',
           status: 'pending',
           description: 'Todavía no hay una verificación de identidad completa.',
         },
@@ -67,7 +79,7 @@ describe('buildUserVerificationStatus', () => {
     expect(status.level).toBe('NIVEL_3');
     expect(status.highValueBookingEligible).toBe(true);
     expect(status.optionalUpgrade).toContain('comprobación documental opcional');
-    expect(status.verificationSummary.score).toBe(2);
+    expect(status.verificationSummary.score).toBe(4);
     expect(status.identityVerification.status).toBe('unverified');
   });
 
@@ -100,6 +112,6 @@ describe('buildUserVerificationStatus', () => {
       provider: 'documentary',
       verifiedAt: '2026-04-08T00:00:00.000Z',
     });
-    expect(status.verificationSummary.score).toBe(3);
+    expect(status.verificationSummary.score).toBe(5);
   });
 });

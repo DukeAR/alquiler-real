@@ -1,9 +1,13 @@
 import {
-  buildUserIdentityVerification,
-  buildUserVerificationSummary,
+  buildGuestProfileCompletion,
+  buildGuestVerificationSignals,
+  buildGuestVerificationSummary,
+  type GuestVerificationKey,
+  type GuestVerificationSummary,
+} from './guestVerification';
+import {
   type IdentityVerificationStatus,
   type UserIdentityVerification,
-  type UserVerificationSummary,
 } from './verificationModel';
 
 export type UserVerificationLevel = 'INICIAL' | 'NIVEL_1' | 'NIVEL_2' | 'NIVEL_3' | 'NIVEL_4';
@@ -11,9 +15,11 @@ export type UserVerificationLevel = 'INICIAL' | 'NIVEL_1' | 'NIVEL_2' | 'NIVEL_3
 export type {
   IdentityVerificationStatus,
   UserIdentityVerification,
-  UserVerificationKey,
-  UserVerificationSummary,
-} from './verificationModel';
+};
+
+export type UserVerificationKey = GuestVerificationKey;
+
+export type UserVerificationSummary = GuestVerificationSummary;
 
 export type UserVerificationCategoryId = 'basicIdentity' | 'activity' | 'reputation' | 'additional';
 
@@ -252,17 +258,19 @@ const getMissingRequirements = (levelNumber: number, checks: UserVerificationChe
 };
 
 export const buildUserVerificationStatus = (input: UserVerificationInput): UserVerificationStatus => {
-  const emailVerified = Boolean(input.emailVerified);
-  const phoneVerified = Boolean(input.phoneVerified);
-  const identityVerification = buildUserIdentityVerification({
-    documentaryVerified: input.documentaryVerified,
-    identityVerificationStatus: input.identityVerificationStatus,
-    identityVerificationProvider: input.identityVerificationProvider,
-    identityVerifiedAt: input.identityVerifiedAt,
-  });
+  const guestVerificationSignals = buildGuestVerificationSignals(input);
+  const emailVerified = guestVerificationSignals.emailVerified;
+  const phoneVerified = guestVerificationSignals.phoneVerified;
+  const identityVerification = guestVerificationSignals.identityVerification;
   const hasPhone = hasText(input.phone);
-  const profileSignalsCount = [hasPhone, hasText(input.bio), hasText(input.zone), hasText(input.profilePhoto)].filter(Boolean).length;
-  const profileComplete = profileSignalsCount >= 3;
+  const profileCompletion = guestVerificationSignals.profileCompletion ?? buildGuestProfileCompletion({
+    phone: input.phone,
+    bio: input.bio,
+    zone: input.zone,
+    profilePhoto: input.profilePhoto,
+  });
+  const profileSignalsCount = profileCompletion.profileSignalsCount;
+  const profileComplete = profileCompletion.profileComplete;
   const totalBookings = toSafeCount(input.totalBookings);
   const completedBookings = toSafeCount(input.completedBookings);
   const totalReviewsWritten = toSafeCount(input.totalReviewsWritten);
@@ -276,13 +284,19 @@ export const buildUserVerificationStatus = (input: UserVerificationInput): UserV
     totalReviewsWritten > 0,
   ].filter(Boolean).length;
   const platformActivity = activitySignalsCount >= 1;
-  const historyVerified = completedBookings > 0 || totalBookings >= 2 || totalConversations >= 2 || totalMessages >= 6;
+  const historyVerified = guestVerificationSignals.historyVerified;
   const reviewsVerified = totalReviewsReceived > 0 || totalReviewsWritten >= 2;
-  const documentaryVerified = identityVerification.status === 'verified';
+  const documentaryVerified = guestVerificationSignals.documentaryVerified;
   const documentarySubmitted = documentaryVerified || Boolean(input.documentarySubmitted);
-  const verificationSummary = buildUserVerificationSummary({
-    emailVerified,
-    phoneVerified,
+  const verificationSummary = buildGuestVerificationSummary({
+    ...input,
+    profileComplete,
+    photoUploaded: profileCompletion.photoUploaded,
+    basicDetailsComplete: profileCompletion.basicDetailsComplete,
+    completedBookings,
+    hostReviewsCount: totalReviewsReceived,
+    totalConversations,
+    totalMessages,
     documentaryVerified,
     identityVerificationStatus: identityVerification.status,
     identityVerificationProvider: identityVerification.provider,

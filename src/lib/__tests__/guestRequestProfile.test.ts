@@ -75,6 +75,56 @@ describe('guestRequestProfile copy states', () => {
     expect(getGuestRequestProfileEmptyStateMessage(profile, 'platformHistory')).toBe('Todavía falta cargar el historial de estadías y cancelaciones.');
   });
 
+  test('keeps the canonical verification summary when the backend already provides it', () => {
+    const profile = resolveGuestRequestProfile({
+      id: 'guest-3',
+      userName: 'Tomás',
+      guestProfile: {
+        identityVerified: true,
+        verificationSummary: {
+          score: 4,
+          maxScore: 5,
+          items: [
+            {
+              key: 'email',
+              label: 'Email verificado',
+              status: 'complete',
+              description: 'El email principal de la cuenta ya está confirmado.',
+            },
+            {
+              key: 'phone',
+              label: 'Teléfono verificado',
+              status: 'complete',
+              description: 'El teléfono principal de la cuenta ya está confirmado.',
+            },
+            {
+              key: 'profile',
+              label: 'Perfil completo',
+              status: 'pending',
+              description: 'Todavía faltan datos para completar el perfil.',
+            },
+            {
+              key: 'history',
+              label: 'Historial real en la plataforma',
+              status: 'complete',
+              description: 'La cuenta ya muestra 1 estadía completada dentro de la plataforma.',
+            },
+            {
+              key: 'documentary',
+              label: 'Identidad documental',
+              status: 'complete',
+              description: 'La identidad ya fue verificada.',
+            },
+          ],
+        },
+      },
+    });
+
+    expect(profile.verificationSummary.score).toBe(4);
+    expect(profile.verificationSummary.items.find((item) => item.key === 'email')?.status).toBe('complete');
+    expect(profile.verificationSummary.items.find((item) => item.key === 'history')?.status).toBe('complete');
+  });
+
   test('normalizes the decision signals in a fixed order and keeps pending tracking explicit', () => {
     const profile = resolveGuestRequestProfile({
       id: 'guest-4',

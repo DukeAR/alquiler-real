@@ -1,4 +1,5 @@
 import type { PropertyVerificationItem, PropertyVerificationSummary } from './lib/propertyVerification';
+import type { GuestVerificationSummary } from './lib/guestVerification';
 import type { HostTrustSummary } from './lib/hostTrust';
 import type { PremiumVerificationOffer } from './lib/premiumVerification';
 
@@ -117,6 +118,7 @@ export interface GuestRequestProfile {
   platformHistory: GuestPlatformHistory;
   hostReviews: GuestHostReviewSnippet[];
   profileCompletion: GuestProfileCompletion;
+  verificationSummary: GuestVerificationSummary;
   operationSignals: GuestOperationSignal[];
   memberSince: string;
   dataAvailability: GuestRequestProfileDataAvailability;

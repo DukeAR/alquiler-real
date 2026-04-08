@@ -7,6 +7,7 @@ import type {
   GuestRequestProfileDataAvailability,
   GuestRequestProfileDataSource,
 } from '../types';
+import { getGuestVerificationSummary } from './guestVerification';
 
 type GuestRequestProfileSource = {
   id?: string;
@@ -50,12 +51,12 @@ const isCompletedProfileSignalActive = (profileCompletion?: Partial<GuestProfile
     return false;
   }
 
-  if (typeof profileCompletion.basicDetailsComplete === 'boolean') {
-    return profileCompletion.basicDetailsComplete;
-  }
-
   if (typeof profileCompletion.profileComplete === 'boolean') {
     return profileCompletion.profileComplete;
+  }
+
+  if (typeof profileCompletion.basicDetailsComplete === 'boolean') {
+    return profileCompletion.basicDetailsComplete;
   }
 
   return false;
@@ -233,6 +234,7 @@ const createEmptyGuestRequestProfile = (): GuestRequestProfile => {
       photoUploaded: false,
       basicDetailsComplete: false,
     },
+    verificationSummary: getGuestVerificationSummary({}),
     operationSignals: [],
     memberSince: '',
     dataAvailability,
@@ -343,19 +345,35 @@ export const resolveGuestRequestProfile = (source: GuestRequestProfileSource, _i
       ? profileCompletion.basicDetailsComplete
       : emptyProfile.profileCompletion.basicDetailsComplete,
   };
+  const normalizedHostReviews = normalizeHostReviews(providedProfile.hostReviews);
+  const normalizedOperationSignals = normalizeOperationSignals(providedProfile.operationSignals, normalizedProfileCompletion);
+  const normalizedPlatformHistory = {
+    completedStays: getSafeCount(platformHistory?.completedStays, emptyProfile.platformHistory.completedStays),
+    conflictsCount: getSafeCount(platformHistory?.conflictsCount, emptyProfile.platformHistory.conflictsCount),
+    cancellationsCount: getSafeCount(platformHistory?.cancellationsCount, emptyProfile.platformHistory.cancellationsCount),
+  };
+  const identityVerified = dataAvailability.identity && typeof providedProfile.identityVerified === 'boolean'
+    ? providedProfile.identityVerified
+    : emptyProfile.identityVerified;
 
   return {
-    identityVerified: dataAvailability.identity && typeof providedProfile.identityVerified === 'boolean'
-      ? providedProfile.identityVerified
-      : emptyProfile.identityVerified,
-    platformHistory: {
-      completedStays: getSafeCount(platformHistory?.completedStays, emptyProfile.platformHistory.completedStays),
-      conflictsCount: getSafeCount(platformHistory?.conflictsCount, emptyProfile.platformHistory.conflictsCount),
-      cancellationsCount: getSafeCount(platformHistory?.cancellationsCount, emptyProfile.platformHistory.cancellationsCount),
-    },
-    hostReviews: normalizeHostReviews(providedProfile.hostReviews),
+    identityVerified,
+    platformHistory: normalizedPlatformHistory,
+    hostReviews: normalizedHostReviews,
     profileCompletion: normalizedProfileCompletion,
-    operationSignals: normalizeOperationSignals(providedProfile.operationSignals, normalizedProfileCompletion),
+    verificationSummary: getGuestVerificationSummary({
+      verificationSummary: (typeof providedProfile.verificationSummary === 'object' && providedProfile.verificationSummary !== null)
+        ? providedProfile.verificationSummary
+        : null,
+      profileComplete: normalizedProfileCompletion.profileComplete,
+      photoUploaded: normalizedProfileCompletion.photoUploaded,
+      basicDetailsComplete: normalizedProfileCompletion.basicDetailsComplete,
+      completedStays: normalizedPlatformHistory.completedStays,
+      hostReviewsCount: normalizedHostReviews.length,
+      activitySignalsCount: normalizedOperationSignals.filter((signal) => signal.active && signal.source !== 'derived').length,
+      documentaryVerified: identityVerified,
+    }),
+    operationSignals: normalizedOperationSignals,
     memberSince: dataAvailability.memberSince && typeof providedProfile.memberSince === 'string' && providedProfile.memberSince.trim()
       ? providedProfile.memberSince
       : emptyProfile.memberSince,

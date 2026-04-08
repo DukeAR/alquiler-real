@@ -263,7 +263,7 @@ export const buildUserIdentityVerification = (
   verifiedAt: toDateString(input.identityVerifiedAt),
 });
 
-const getIdentityVerificationDescription = (identityVerification: UserIdentityVerification) => {
+export const getIdentityVerificationDescription = (identityVerification: UserIdentityVerification) => {
   if (identityVerification.status === 'verified') {
     const providerLabel = formatProviderLabel(identityVerification.provider);
     const verifiedAtLabel = formatIsoDateLabel(identityVerification.verifiedAt);
