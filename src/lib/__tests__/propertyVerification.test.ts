@@ -97,4 +97,14 @@ describe('propertyVerification', () => {
 
     expect(sorted.map((property) => property.id)).toEqual(['p2', 'p1', 'p3']);
   });
+
+  test('uses the premium visibility boost as a tie breaker when verification scores are equal', () => {
+    const sorted = sortPropertiesByCatalogOrder([
+      { id: 'p1', verificationScore: 4, rating: 4.7, reviewsCount: 6, price: 120_000, hostPremiumDocumentaryVerified: false, hasPresencialVerification: false },
+      { id: 'p2', verificationScore: 4, rating: 4.7, reviewsCount: 6, price: 120_000, hostPremiumDocumentaryVerified: true, hasPresencialVerification: false },
+      { id: 'p3', verificationScore: 4, rating: 4.7, reviewsCount: 6, price: 120_000, hostPremiumDocumentaryVerified: true, hasPresencialVerification: true },
+    ], 'verification');
+
+    expect(sorted.map((property) => property.id)).toEqual(['p3', 'p2', 'p1']);
+  });
 });

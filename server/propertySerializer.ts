@@ -30,6 +30,8 @@ type PropertyQueryRow = Record<string, unknown> & {
   isVerifiedProperty?: unknown;
   is_verified_property?: unknown;
   propertyRelationshipVerified?: unknown;
+  hostPremiumDocumentaryVerified?: unknown;
+  premiumVisibilityBoost?: unknown;
 };
 
 const hasOwn = (value: object, key: string) => Object.prototype.hasOwnProperty.call(value, key);
@@ -79,6 +81,7 @@ export const mapPropertyRecord = (row: PropertyQueryRow) => {
     propertyRelationshipVerified: toBoolean(row.propertyRelationshipVerified),
     hasPresencialVerification: toBoolean(row.hasPresencialVerification),
     hasDigitalVerification: toBoolean(row.hasDigitalVerification),
+    hostPremiumDocumentaryVerified: toBoolean(row.hostPremiumDocumentaryVerified),
     isVerifiedProperty: toBoolean(row.isVerifiedProperty) || toBoolean(row.is_verified_property),
     hostSince: getResolvedHostSince(row),
     hostCompletedReservationsCount: toSafeInteger(row.hostCompletedReservationsCount),
@@ -97,6 +100,7 @@ export const mapPropertyRecord = (row: PropertyQueryRow) => {
       lat: toSafeNumber(row.lat, PROPERTY_COORDINATE_FALLBACK.lat),
       lng: toSafeNumber(row.lng, PROPERTY_COORDINATE_FALLBACK.lng),
     },
+    premiumVisibilityBoost: toSafeNumber(row.premiumVisibilityBoost, 0),
   };
 
   return {

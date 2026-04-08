@@ -623,6 +623,54 @@ export const initDB = async () => {
     );
   `);
 
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS premium_verification_orders (
+      id TEXT PRIMARY KEY,
+      user_id TEXT REFERENCES users(id) ON DELETE CASCADE,
+      property_id TEXT REFERENCES properties(id) ON DELETE CASCADE,
+      offer_type TEXT NOT NULL,
+      target_type TEXT NOT NULL,
+      price_ars INTEGER NOT NULL DEFAULT 0,
+      currency TEXT NOT NULL DEFAULT 'ARS',
+      payment_status TEXT NOT NULL DEFAULT 'pending',
+      verification_status TEXT NOT NULL DEFAULT 'pending',
+      is_promotional BOOLEAN NOT NULL DEFAULT FALSE,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW(),
+      completed_at TIMESTAMP
+    );
+  `);
+
+  await db.query(`
+    DO $$ BEGIN
+      BEGIN ALTER TABLE premium_verification_orders ADD COLUMN property_id TEXT REFERENCES properties(id) ON DELETE CASCADE; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE premium_verification_orders ADD COLUMN offer_type TEXT DEFAULT 'documentary-user'; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE premium_verification_orders ADD COLUMN target_type TEXT DEFAULT 'user'; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE premium_verification_orders ADD COLUMN price_ars INTEGER DEFAULT 0; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE premium_verification_orders ADD COLUMN currency TEXT DEFAULT 'ARS'; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE premium_verification_orders ADD COLUMN payment_status TEXT DEFAULT 'pending'; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE premium_verification_orders ADD COLUMN verification_status TEXT DEFAULT 'pending'; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE premium_verification_orders ADD COLUMN is_promotional BOOLEAN DEFAULT FALSE; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE premium_verification_orders ADD COLUMN updated_at TIMESTAMP DEFAULT NOW(); EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE premium_verification_orders ADD COLUMN completed_at TIMESTAMP; EXCEPTION WHEN duplicate_column THEN NULL; END;
+    END $$;
+  `);
+
+  await db.query(`
+    CREATE INDEX IF NOT EXISTS premium_verification_orders_user_offer_idx
+      ON premium_verification_orders (user_id, offer_type, created_at DESC);
+  `);
+
+  await db.query(`
+    CREATE INDEX IF NOT EXISTS premium_verification_orders_property_offer_idx
+      ON premium_verification_orders (property_id, offer_type, created_at DESC);
+  `);
+
+  await db.query(`
+    CREATE INDEX IF NOT EXISTS premium_verification_orders_promotional_offer_idx
+      ON premium_verification_orders (offer_type, is_promotional, created_at DESC);
+  `);
+
   // ============================================================
   // PROPERTIES TABLE
   // The existing DB uses camelCase column names, so we keep them

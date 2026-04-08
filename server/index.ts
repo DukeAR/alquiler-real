@@ -11,6 +11,16 @@ import { mapPropertyRecord } from './propertySerializer';
 import { REAL_VERIFICATION_FILTER_MIN_SCORE } from './propertyVerification';
 import { getChatSystemMessages, getRequestAcceptedMessage, type ChatSystemMessageKey } from './chatSystemMessages';
 import { buildUserVerificationStatus } from '../src/lib/userVerification';
+import {
+  PREMIUM_DOCUMENTARY_OFFER_TYPE,
+  PREMIUM_ONSITE_OFFER_TYPE,
+  PREMIUM_VERIFICATION_CURRENCY,
+  type PremiumVerificationOffer,
+  type PremiumVerificationOfferType,
+  type PremiumVerificationPaymentStatus,
+  type PremiumVerificationProcessStatus,
+  type PremiumVerificationTargetType,
+} from '../src/lib/premiumVerification';
 
 declare module "express-session" {
   interface SessionData {
@@ -134,11 +144,325 @@ const NOTIFIABLE_ACTIVITY_ACTIONS = [
   'PASSWORD_CHANGED',
   'IDENTITY_VERIFIED',
   'IDENTITY_DOCUMENTS_SUBMITTED',
+  'PREMIUM_VERIFICATION_PURCHASED',
+  'PROPERTY_ONSITE_VERIFIED',
   'PROPERTY_AVAILABILITY_UPDATED',
   'BOOKING_CREATED',
   'BOOKING_REQUEST_ACCEPTED',
   'BOOKING_CANCELLED',
 ] as const;
+
+type PremiumVerificationOrderRow = {
+  id: string;
+  offerType: PremiumVerificationOfferType;
+  targetType: PremiumVerificationTargetType;
+  propertyId?: string | null;
+  priceArs?: number | string | null;
+  paymentStatus: PremiumVerificationPaymentStatus;
+  verificationStatus: PremiumVerificationProcessStatus;
+  isPromotional?: boolean | null;
+  completedAt?: string | Date | null;
+};
+
+type PremiumPromotionalUsageRow = {
+  offerType: PremiumVerificationOfferType;
+  usedCount: number | string;
+};
+
+const PREMIUM_VERIFICATION_ORDER_SELECT = `id,
+  offer_type as "offerType",
+  target_type as "targetType",
+  property_id as "propertyId",
+  price_ars as "priceArs",
+  payment_status as "paymentStatus",
+  verification_status as "verificationStatus",
+  is_promotional as "isPromotional",
+  completed_at as "completedAt"`;
+
+const getPremiumBasePrice = (offerType: PremiumVerificationOfferType) => (
+  offerType === PREMIUM_ONSITE_OFFER_TYPE
+    ? serverEnv.premiumOnsitePriceArs
+    : serverEnv.premiumDocumentaryPriceArs
+);
+
+const getPremiumFreeSlots = (offerType: PremiumVerificationOfferType) => (
+  offerType === PREMIUM_ONSITE_OFFER_TYPE
+    ? serverEnv.premiumOnsiteFreeSlots
+    : serverEnv.premiumDocumentaryFreeSlots
+);
+
+const toSafeInteger = (value: unknown) => {
+  const numericValue = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(numericValue) ? Math.round(numericValue) : 0;
+};
+
+const isPremiumOrderUnlocked = (order?: PremiumVerificationOrderRow | null) => (
+  Boolean(order && (order.paymentStatus === 'confirmed' || order.paymentStatus === 'waived'))
+);
+
+const isPremiumOrderCompleted = (order?: PremiumVerificationOrderRow | null) => (
+  Boolean(order && order.verificationStatus === 'completed')
+);
+
+const getPremiumPromotionalUsageCount = (
+  rows: PremiumPromotionalUsageRow[],
+  offerType: PremiumVerificationOfferType,
+) => {
+  const row = rows.find((entry) => entry.offerType === offerType);
+  return toSafeInteger(row?.usedCount);
+};
+
+const buildPremiumComplimentaryReason = (offerType: PremiumVerificationOfferType, basePrice: number, isComplimentary: boolean) => {
+  if (!isComplimentary) {
+    return null;
+  }
+
+  if (basePrice === 0) {
+    return 'Disponible sin cargo en esta etapa de lanzamiento.';
+  }
+
+  return offerType === PREMIUM_ONSITE_OFFER_TYPE
+    ? 'Disponible sin cargo para algunas propiedades durante el lanzamiento.'
+    : 'Disponible sin cargo para los primeros usuarios durante el lanzamiento.';
+};
+
+const getPremiumOfferPricing = (
+  offerType: PremiumVerificationOfferType,
+  usageRows: PremiumPromotionalUsageRow[],
+  existingOrder?: PremiumVerificationOrderRow | null,
+) => {
+  const basePrice = existingOrder ? toSafeInteger(existingOrder.priceArs) : getPremiumBasePrice(offerType);
+  const complimentarySlots = getPremiumFreeSlots(offerType);
+  const usedComplimentarySlots = getPremiumPromotionalUsageCount(usageRows, offerType);
+  const isComplimentary = existingOrder
+    ? Boolean(existingOrder.isPromotional) || basePrice === 0
+    : basePrice === 0 || usedComplimentarySlots < complimentarySlots;
+
+  return {
+    priceArs: isComplimentary ? 0 : basePrice,
+    isComplimentary,
+    complimentaryReason: buildPremiumComplimentaryReason(offerType, basePrice, isComplimentary),
+  };
+};
+
+const buildPremiumRedirectPath = (input: {
+  offerType: PremiumVerificationOfferType;
+  orderId?: string | null;
+  propertyId?: string | null;
+  propertyTitle?: string | null;
+  returnTo: string;
+}) => {
+  const searchParams = new URLSearchParams({
+    mode: input.offerType === PREMIUM_ONSITE_OFFER_TYPE ? 'onsite' : 'documentary',
+    returnTo: input.returnTo,
+  });
+
+  if (input.orderId) {
+    searchParams.set('orderId', input.orderId);
+  }
+
+  if (input.propertyId) {
+    searchParams.set('propertyId', input.propertyId);
+  }
+
+  if (input.propertyTitle) {
+    searchParams.set('propertyTitle', input.propertyTitle);
+  }
+
+  return `/verification?${searchParams.toString()}`;
+};
+
+const buildDocumentaryPremiumOffer = (input: {
+  order?: PremiumVerificationOrderRow | null;
+  usageRows: PremiumPromotionalUsageRow[];
+  documentaryVerified: boolean;
+  returnTo?: string;
+}): PremiumVerificationOffer => {
+  const pricing = getPremiumOfferPricing(PREMIUM_DOCUMENTARY_OFFER_TYPE, input.usageRows, input.order);
+  const purchased = input.documentaryVerified || isPremiumOrderUnlocked(input.order);
+  const completed = input.documentaryVerified || isPremiumOrderCompleted(input.order);
+
+  return {
+    offerType: PREMIUM_DOCUMENTARY_OFFER_TYPE,
+    targetType: 'user',
+    title: 'Verificación documental premium',
+    summary: 'Podés sumar DNI y selfie como una capa opcional para dar más contexto sobre tu cuenta.',
+    contextHint: 'Podés sumar verificaciones para dar más contexto a otros usuarios. No reemplaza tu historial ni vuelve obligatorio el alta.',
+    visibilityHint: 'Si además publicás propiedades, esta señal puede aportar un impulso suave de contexto en cómo se ordenan tus avisos.',
+    ctaLabel: completed
+      ? 'Refuerzo documental activo'
+      : purchased
+        ? 'Continuar verificación documental'
+        : pricing.isComplimentary
+          ? 'Activar verificación sin cargo'
+          : 'Activar verificación documental',
+    checkoutLabel: pricing.isComplimentary ? 'Activar sin cargo' : 'Confirmar mejora',
+    processLabel: completed ? 'Ver estado documental' : 'Ir a la verificación',
+    priceArs: pricing.priceArs,
+    currency: PREMIUM_VERIFICATION_CURRENCY,
+    isComplimentary: pricing.isComplimentary,
+    complimentaryReason: pricing.complimentaryReason,
+    purchased,
+    completed,
+    redirectTo: buildPremiumRedirectPath({
+      offerType: PREMIUM_DOCUMENTARY_OFFER_TYPE,
+      orderId: input.order?.id ?? null,
+      returnTo: input.returnTo ?? '/profile',
+    }),
+    orderId: input.order?.id ?? null,
+  };
+};
+
+const buildOnsitePremiumOffer = (input: {
+  order?: PremiumVerificationOrderRow | null;
+  usageRows: PremiumPromotionalUsageRow[];
+  propertyId: string;
+  propertyTitle: string;
+  onsiteVerified: boolean;
+  returnTo?: string;
+}): PremiumVerificationOffer => {
+  const pricing = getPremiumOfferPricing(PREMIUM_ONSITE_OFFER_TYPE, input.usageRows, input.order);
+  const purchased = input.onsiteVerified || isPremiumOrderUnlocked(input.order);
+  const completed = input.onsiteVerified || isPremiumOrderCompleted(input.order);
+
+  return {
+    offerType: PREMIUM_ONSITE_OFFER_TYPE,
+    targetType: 'property',
+    title: 'Revisión presencial premium',
+    summary: 'Podés pedir una revisión presencial para esta publicación y sumar un contexto extra sobre el aviso.',
+    contextHint: 'Es opcional. Sirve para que otros vean una capa adicional de respaldo sin frenar tu publicación.',
+    visibilityHint: 'Cuando se completa, puede aportar un leve impulso en score, orden y visibilidad del aviso, sin promesas directas.',
+    ctaLabel: completed
+      ? 'Revisión presencial activa'
+      : purchased
+        ? 'Continuar revisión presencial'
+        : pricing.isComplimentary
+          ? 'Activar revisión presencial sin cargo'
+          : 'Activar revisión presencial',
+    checkoutLabel: pricing.isComplimentary ? 'Activar sin cargo' : 'Confirmar mejora',
+    processLabel: completed ? 'Ver estado de la revisión' : 'Ir a la coordinación',
+    priceArs: pricing.priceArs,
+    currency: PREMIUM_VERIFICATION_CURRENCY,
+    isComplimentary: pricing.isComplimentary,
+    complimentaryReason: pricing.complimentaryReason,
+    purchased,
+    completed,
+    redirectTo: buildPremiumRedirectPath({
+      offerType: PREMIUM_ONSITE_OFFER_TYPE,
+      orderId: input.order?.id ?? null,
+      propertyId: input.propertyId,
+      propertyTitle: input.propertyTitle,
+      returnTo: input.returnTo ?? '/host-dashboard',
+    }),
+    orderId: input.order?.id ?? null,
+    propertyId: input.propertyId,
+    propertyTitle: input.propertyTitle,
+  };
+};
+
+const getPremiumPromotionalUsageRows = async () => {
+  const result = await db.query(
+    `SELECT offer_type as "offerType", COUNT(*)::int as "usedCount"
+     FROM premium_verification_orders
+     WHERE is_promotional = TRUE
+     GROUP BY offer_type`,
+  );
+
+  return result.rows as PremiumPromotionalUsageRow[];
+};
+
+const getLatestPremiumOrder = async (input: {
+  userId: string;
+  offerType: PremiumVerificationOfferType;
+  propertyId?: string | null;
+  orderId?: string | null;
+}) => {
+  const params: Array<string> = [input.userId, input.offerType];
+  let whereClause = 'user_id = $1 AND offer_type = $2';
+
+  if (input.propertyId) {
+    params.push(input.propertyId);
+    whereClause += ` AND property_id = $${params.length}`;
+  }
+
+  if (input.orderId) {
+    params.push(input.orderId);
+    whereClause += ` AND id = $${params.length}`;
+  }
+
+  const result = await db.query(
+    `SELECT ${PREMIUM_VERIFICATION_ORDER_SELECT}
+     FROM premium_verification_orders
+     WHERE ${whereClause}
+     ORDER BY created_at DESC
+     LIMIT 1`,
+    params,
+  );
+
+  return (result.rows[0] as PremiumVerificationOrderRow | undefined) ?? null;
+};
+
+const getLatestPropertyPremiumOrders = async (userId: string) => {
+  const result = await db.query(
+    `SELECT DISTINCT ON (property_id) ${PREMIUM_VERIFICATION_ORDER_SELECT}
+     FROM premium_verification_orders
+     WHERE user_id = $1
+       AND offer_type = $2
+       AND property_id IS NOT NULL
+     ORDER BY property_id, created_at DESC`,
+    [userId, PREMIUM_ONSITE_OFFER_TYPE],
+  );
+
+  return result.rows as PremiumVerificationOrderRow[];
+};
+
+const markPremiumOrderState = async (
+  orderId: string,
+  verificationStatus: PremiumVerificationProcessStatus,
+) => {
+  await db.query(
+    `UPDATE premium_verification_orders
+     SET verification_status = $1,
+         updated_at = NOW(),
+         completed_at = CASE WHEN $1 = 'completed' THEN NOW() ELSE completed_at END
+     WHERE id = $2`,
+    [verificationStatus, orderId],
+  );
+};
+
+const requireDocumentaryPremiumAccess = async (userId: string, orderId?: string | null) => {
+  const userResult = await db.query(
+    `SELECT (COALESCE(identity_validated, FALSE) OR COALESCE(is_identity_verified, FALSE)) as "documentaryVerified"
+     FROM users
+     WHERE id = $1`,
+    [userId],
+  );
+  const user = userResult.rows[0];
+
+  if (!user) {
+    return { allowed: false, error: 'No encontramos esa cuenta.', order: null as PremiumVerificationOrderRow | null };
+  }
+
+  if (Boolean(user.documentaryVerified)) {
+    return { allowed: true, error: null, order: null as PremiumVerificationOrderRow | null };
+  }
+
+  const order = await getLatestPremiumOrder({
+    userId,
+    offerType: PREMIUM_DOCUMENTARY_OFFER_TYPE,
+    orderId,
+  });
+
+  if (!isPremiumOrderUnlocked(order)) {
+    return {
+      allowed: false,
+      error: 'Primero activá la verificación documental premium desde tu perfil.',
+      order: null as PremiumVerificationOrderRow | null,
+    };
+  }
+
+  return { allowed: true, error: null, order };
+};
 
 const normalizeActivityMetadata = (value: unknown): Record<string, unknown> => {
   if (value && typeof value === 'object' && !Array.isArray(value)) {
@@ -191,6 +515,28 @@ const mapActivityLogToNotification = (row: any) => {
           ? 'Recibimos tu documentación opcional y el comprobante adicional.'
           : 'Recibimos tu documentación opcional para sumar respaldo a la cuenta.',
         type: 'info',
+        createdAt,
+        unread,
+      };
+    case 'PREMIUM_VERIFICATION_PURCHASED':
+      return {
+        id: row.id,
+        title: metadata.offerType === PREMIUM_ONSITE_OFFER_TYPE ? 'Mejora presencial activada' : 'Mejora documental activada',
+        message: metadata.isPromotional
+          ? 'La mejora premium quedó activada sin cargo y ya podés seguir con la verificación.'
+          : 'La mejora premium quedó activada y ya podés seguir con la verificación.',
+        type: 'success',
+        createdAt,
+        unread,
+      };
+    case 'PROPERTY_ONSITE_VERIFIED':
+      return {
+        id: row.id,
+        title: 'Revisión presencial confirmada',
+        message: metadata.propertyTitle
+          ? `La revisión presencial de ${metadata.propertyTitle} ya quedó confirmada.`
+          : 'La revisión presencial de tu publicación ya quedó confirmada.',
+        type: 'success',
         createdAt,
         unread,
       };
@@ -395,11 +741,21 @@ const PROPERTY_HOST_TRUST_SELECT = `u.identity_validated as "hostIdentityValidat
         u.is_identity_verified as "hostIdentityVerified",
         u.name as "hostProfileName",
         COALESCE(u.member_since, u.created_at) as "hostMemberSince",
+        COALESCE(host_premium_documentary."hostPremiumDocumentaryVerified", FALSE) as "hostPremiumDocumentaryVerified",
         COALESCE(host_completed_reservations."completedReservationsCount", 0) as "hostCompletedReservationsCount",
         COALESCE(host_guest_reviews."guestReviewsCount", 0) as "hostGuestReviewsCount"`;
 
 const PROPERTY_HOST_TRUST_JOINS = `
       LEFT JOIN users u ON u.id = p."hostId"
+      LEFT JOIN (
+        SELECT user_id,
+               TRUE as "hostPremiumDocumentaryVerified"
+        FROM premium_verification_orders
+        WHERE offer_type = '${PREMIUM_DOCUMENTARY_OFFER_TYPE}'
+          AND verification_status = 'completed'
+          AND payment_status IN ('confirmed', 'waived')
+        GROUP BY user_id
+      ) host_premium_documentary ON host_premium_documentary.user_id = p."hostId"
       LEFT JOIN (
         SELECT hp."hostId" as host_id,
                COUNT(*)::int as "completedReservationsCount"
@@ -689,6 +1045,7 @@ app.post('/api/verification/validate-id', memoryUpload.single('idImage'), async 
     return res.status(401).json({ error: AUTH_REQUIRED_ERROR });
   }
 
+  const orderId = typeof req.body?.orderId === 'string' ? req.body.orderId.trim() : '';
   const dni = typeof req.body?.dni === 'string' ? req.body.dni.trim() : '';
   const idImage = req.file;
 
@@ -697,6 +1054,12 @@ app.post('/api/verification/validate-id', memoryUpload.single('idImage'), async 
   }
 
   try {
+    const premiumAccess = await requireDocumentaryPremiumAccess(req.session.userId, orderId || null);
+
+    if (!premiumAccess.allowed) {
+      return res.status(422).json({ error: premiumAccess.error });
+    }
+
     const encodedImage = `data:${idImage.mimetype};base64,${idImage.buffer.toString('base64')}`;
 
     await db.query(
@@ -706,6 +1069,10 @@ app.post('/api/verification/validate-id', memoryUpload.single('idImage'), async 
        WHERE id = $3`,
       [dni, encodedImage, req.session.userId],
     );
+
+    if (premiumAccess.order?.id) {
+      await markPremiumOrderState(premiumAccess.order.id, 'in_progress');
+    }
 
     res.json({ success: true });
   } catch (err) {
@@ -720,6 +1087,13 @@ app.post('/api/verification/complete', async (req, res) => {
   }
 
   try {
+    const orderId = typeof req.body?.orderId === 'string' ? req.body.orderId.trim() : '';
+    const premiumAccess = await requireDocumentaryPremiumAccess(req.session.userId, orderId || null);
+
+    if (!premiumAccess.allowed) {
+      return res.status(422).json({ error: premiumAccess.error });
+    }
+
     const result = await db.query(`SELECT role, is_host as "isHost", active_mode as "activeMode", dni_number, dni_front FROM users WHERE id = $1`, [req.session.userId]);
     const user = result.rows[0];
 
@@ -742,6 +1116,11 @@ app.post('/api/verification/complete', async (req, res) => {
     );
 
     const nextUser = await getAuthUserById(req.session.userId);
+
+    if (premiumAccess.order?.id) {
+      await markPremiumOrderState(premiumAccess.order.id, 'completed');
+    }
+
     await logActivity(req.session.userId, 'IDENTITY_VERIFIED');
 
     res.json({ user: nextUser });
@@ -756,7 +1135,7 @@ app.post('/api/verification/submit', async (req, res) => {
     return res.status(401).json({ error: AUTH_REQUIRED_ERROR });
   }
 
-  const { dniFront, dniBack, selfie, proofOfAddress } = req.body ?? {};
+  const { dniFront, dniBack, selfie, proofOfAddress, orderId } = req.body ?? {};
 
   const hasFront = typeof dniFront === 'string' && dniFront.trim().length > 0;
   const hasBack = typeof dniBack === 'string' && dniBack.trim().length > 0;
@@ -769,6 +1148,15 @@ app.post('/api/verification/submit', async (req, res) => {
   }
 
   try {
+    const premiumAccess = await requireDocumentaryPremiumAccess(
+      req.session.userId,
+      typeof orderId === 'string' ? orderId.trim() : null,
+    );
+
+    if (!premiumAccess.allowed) {
+      return res.status(422).json({ error: premiumAccess.error });
+    }
+
     await db.query(
       `UPDATE users
        SET dni_front = $1,
@@ -792,6 +1180,11 @@ app.post('/api/verification/submit', async (req, res) => {
     }
 
     const user = await getAuthUserById(req.session.userId);
+
+    if (premiumAccess.order?.id) {
+      await markPremiumOrderState(premiumAccess.order.id, 'completed');
+    }
+
     await logActivity(req.session.userId, 'IDENTITY_DOCUMENTS_SUBMITTED', { hasProofOfAddress });
 
     res.json({ user });
@@ -801,11 +1194,243 @@ app.post('/api/verification/submit', async (req, res) => {
   }
 });
 
+app.post('/api/verification/premium-checkout', async (req, res) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ error: AUTH_REQUIRED_ERROR });
+  }
+
+  const offerType = req.body?.offerType === PREMIUM_ONSITE_OFFER_TYPE
+    ? PREMIUM_ONSITE_OFFER_TYPE
+    : req.body?.offerType === PREMIUM_DOCUMENTARY_OFFER_TYPE
+      ? PREMIUM_DOCUMENTARY_OFFER_TYPE
+      : null;
+  const propertyId = typeof req.body?.propertyId === 'string' ? req.body.propertyId.trim() : '';
+
+  if (!offerType) {
+    return res.status(400).json({ error: 'Elegí una mejora premium válida.' });
+  }
+
+  try {
+    const usageRowsPromise = getPremiumPromotionalUsageRows();
+
+    if (offerType === PREMIUM_DOCUMENTARY_OFFER_TYPE) {
+      const [userResult, usageRows, existingOrder] = await Promise.all([
+        db.query(
+          `SELECT (COALESCE(identity_validated, FALSE) OR COALESCE(is_identity_verified, FALSE)) as "documentaryVerified"
+           FROM users
+           WHERE id = $1`,
+          [req.session.userId],
+        ),
+        usageRowsPromise,
+        getLatestPremiumOrder({ userId: req.session.userId, offerType }),
+      ]);
+
+      const documentaryVerified = Boolean(userResult.rows[0]?.documentaryVerified);
+
+      if (documentaryVerified && !existingOrder) {
+        const offer = buildDocumentaryPremiumOffer({
+          usageRows,
+          documentaryVerified,
+          returnTo: '/profile',
+        });
+
+        return res.json({ offer, redirectTo: offer.redirectTo, orderId: null });
+      }
+
+      let order = existingOrder;
+
+      if (!isPremiumOrderUnlocked(order)) {
+        const pricing = getPremiumOfferPricing(offerType, usageRows);
+        const paymentStatus: PremiumVerificationPaymentStatus = pricing.isComplimentary || pricing.priceArs === 0 ? 'waived' : 'confirmed';
+        const nextOrderId = `pvo_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+        await db.query(
+          `INSERT INTO premium_verification_orders (
+             id, user_id, property_id, offer_type, target_type, price_ars, currency, payment_status, verification_status, is_promotional
+           )
+           VALUES ($1, $2, NULL, $3, 'user', $4, $5, $6, 'pending', $7)`,
+          [nextOrderId, req.session.userId, offerType, pricing.priceArs, PREMIUM_VERIFICATION_CURRENCY, paymentStatus, pricing.isComplimentary],
+        );
+
+        order = {
+          id: nextOrderId,
+          offerType,
+          targetType: 'user',
+          propertyId: null,
+          priceArs: pricing.priceArs,
+          paymentStatus,
+          verificationStatus: 'pending',
+          isPromotional: pricing.isComplimentary,
+        };
+
+        await logActivity(req.session.userId, 'PREMIUM_VERIFICATION_PURCHASED', {
+          offerType,
+          priceArs: pricing.priceArs,
+          isPromotional: pricing.isComplimentary,
+        });
+      }
+
+      const offer = buildDocumentaryPremiumOffer({
+        order,
+        usageRows,
+        documentaryVerified,
+        returnTo: '/profile',
+      });
+
+      return res.json({ offer, redirectTo: offer.redirectTo, orderId: order?.id ?? null });
+    }
+
+    if (!propertyId) {
+      return res.status(400).json({ error: 'Elegí la propiedad que querés verificar.' });
+    }
+
+    const [propertyResult, usageRows, existingOrder] = await Promise.all([
+      db.query(
+        `SELECT id, title, "hasPresencialVerification"
+         FROM properties
+         WHERE id = $1 AND "hostId" = $2`,
+        [propertyId, req.session.userId],
+      ),
+      usageRowsPromise,
+      getLatestPremiumOrder({ userId: req.session.userId, offerType, propertyId }),
+    ]);
+    const property = propertyResult.rows[0];
+
+    if (!property) {
+      return res.status(404).json({ error: 'No encontramos esa propiedad o no te pertenece.' });
+    }
+
+    const onsiteVerified = property.hasPresencialVerification === true || property.hasPresencialVerification === 1 || property.hasPresencialVerification === '1';
+
+    if (onsiteVerified && !existingOrder) {
+      const offer = buildOnsitePremiumOffer({
+        usageRows,
+        propertyId: property.id,
+        propertyTitle: property.title || 'Tu propiedad',
+        onsiteVerified: true,
+        returnTo: '/host-dashboard',
+      });
+
+      return res.json({ offer, redirectTo: offer.redirectTo, orderId: null });
+    }
+
+    let order = existingOrder;
+
+    if (!isPremiumOrderUnlocked(order)) {
+      const pricing = getPremiumOfferPricing(offerType, usageRows);
+      const paymentStatus: PremiumVerificationPaymentStatus = pricing.isComplimentary || pricing.priceArs === 0 ? 'waived' : 'confirmed';
+      const nextOrderId = `pvo_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+      await db.query(
+        `INSERT INTO premium_verification_orders (
+           id, user_id, property_id, offer_type, target_type, price_ars, currency, payment_status, verification_status, is_promotional
+         )
+         VALUES ($1, $2, $3, $4, 'property', $5, $6, $7, 'pending', $8)`,
+        [nextOrderId, req.session.userId, propertyId, offerType, pricing.priceArs, PREMIUM_VERIFICATION_CURRENCY, paymentStatus, pricing.isComplimentary],
+      );
+
+      order = {
+        id: nextOrderId,
+        offerType,
+        targetType: 'property',
+        propertyId,
+        priceArs: pricing.priceArs,
+        paymentStatus,
+        verificationStatus: 'pending',
+        isPromotional: pricing.isComplimentary,
+      };
+
+      await logActivity(req.session.userId, 'PREMIUM_VERIFICATION_PURCHASED', {
+        offerType,
+        propertyId,
+        propertyTitle: property.title,
+        priceArs: pricing.priceArs,
+        isPromotional: pricing.isComplimentary,
+      });
+    }
+
+    const offer = buildOnsitePremiumOffer({
+      order,
+      usageRows,
+      propertyId: property.id,
+      propertyTitle: property.title || 'Tu propiedad',
+      onsiteVerified,
+      returnTo: '/host-dashboard',
+    });
+
+    return res.json({ offer, redirectTo: offer.redirectTo, orderId: order?.id ?? null });
+  } catch (err) {
+    console.error('Error en premium-checkout:', err);
+    return res.status(500).json({ error: 'No pudimos activar esta mejora premium ahora.' });
+  }
+});
+
+app.post('/api/verification/onsite/complete', async (req, res) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ error: AUTH_REQUIRED_ERROR });
+  }
+
+  const propertyId = typeof req.body?.propertyId === 'string' ? req.body.propertyId.trim() : '';
+  const orderId = typeof req.body?.orderId === 'string' ? req.body.orderId.trim() : '';
+  const appointmentDate = typeof req.body?.appointmentDate === 'string' ? req.body.appointmentDate.trim() : '';
+
+  if (!propertyId || !appointmentDate) {
+    return res.status(400).json({ error: 'Elegí una propiedad y un horario para continuar.' });
+  }
+
+  try {
+    const [propertyResult, order] = await Promise.all([
+      db.query(
+        `SELECT id, title
+         FROM properties
+         WHERE id = $1 AND "hostId" = $2`,
+        [propertyId, req.session.userId],
+      ),
+      getLatestPremiumOrder({
+        userId: req.session.userId,
+        offerType: PREMIUM_ONSITE_OFFER_TYPE,
+        propertyId,
+        orderId: orderId || null,
+      }),
+    ]);
+    const property = propertyResult.rows[0];
+
+    if (!property) {
+      return res.status(404).json({ error: 'No encontramos esa propiedad o no te pertenece.' });
+    }
+
+    if (!isPremiumOrderUnlocked(order)) {
+      return res.status(422).json({ error: 'Primero activá la revisión presencial premium desde tu panel.' });
+    }
+
+    const verifiedOrder = order as PremiumVerificationOrderRow;
+
+    await db.query(
+      `UPDATE properties
+       SET "hasPresencialVerification" = 1
+       WHERE id = $1 AND "hostId" = $2`,
+      [propertyId, req.session.userId],
+    );
+
+    await markPremiumOrderState(verifiedOrder.id, 'completed');
+    await logActivity(req.session.userId, 'PROPERTY_ONSITE_VERIFIED', {
+      propertyId,
+      propertyTitle: property.title,
+      appointmentDate,
+    });
+
+    return res.json({ success: true, propertyId, appointmentDate });
+  } catch (err) {
+    console.error('Error en onsite-complete:', err);
+    return res.status(500).json({ error: 'No pudimos confirmar la revisión presencial ahora.' });
+  }
+});
+
 // GET /api/verification/status
 app.get('/api/verification/status', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: AUTH_REQUIRED_ERROR });
   try {
-    const [userResult, bookingsResult, reviewsResult, conversationsResult, documentsResult] = await Promise.all([
+    const [userResult, bookingsResult, reviewsResult, conversationsResult, documentsResult, documentaryOrder, promotionalUsageRows] = await Promise.all([
       db.query(
         `SELECT role,
                 is_host as "isHost",
@@ -853,6 +1478,11 @@ app.get('/api/verification/status', async (req, res) => {
          WHERE user_id = $1`,
         [req.session.userId],
       ),
+      getLatestPremiumOrder({
+        userId: req.session.userId,
+        offerType: PREMIUM_DOCUMENTARY_OFFER_TYPE,
+      }),
+      getPremiumPromotionalUsageRows(),
     ]);
 
     const user = userResult.rows[0];
@@ -875,8 +1505,19 @@ app.get('/api/verification/status', async (req, res) => {
       documentaryVerified: user.documentaryVerified,
     });
 
+    const premiumDocumentaryOffer = buildDocumentaryPremiumOffer({
+      order: documentaryOrder,
+      usageRows: promotionalUsageRows,
+      documentaryVerified: Boolean(user.documentaryVerified),
+      returnTo: '/profile',
+    });
+
     res.json({
       ...verificationStatus,
+      optionalUpgrade: premiumDocumentaryOffer.completed
+        ? verificationStatus.optionalUpgrade
+        : 'Podés sumar verificaciones para dar más contexto a otros usuarios. La capa documental premium sigue siendo opcional.',
+      premiumDocumentaryOffer,
       nextLevel: verificationStatus.levelNumber < 4 ? `NIVEL_${verificationStatus.levelNumber + 1}` : null,
     });
   } catch (err) {
@@ -1429,7 +2070,7 @@ const buildGuestRequestProfilePayload = (
 app.get('/api/host/dashboard', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: AUTH_REQUIRED_ERROR });
   try {
-    const [statsResult, propertiesResult, recentBookingsResult, totalsResult, contactedGuestsResult] = await Promise.all([
+    const [statsResult, propertiesResult, recentBookingsResult, totalsResult, contactedGuestsResult, premiumPropertyOrders, promotionalUsageRows] = await Promise.all([
       db.query(
         `SELECT host_rating, host_verified, trust_score, badge
          FROM users
@@ -1516,13 +2157,28 @@ app.get('/api/host/dashboard', async (req, res) => {
          LIMIT 3`,
         [req.session.userId],
       ),
+      getLatestPropertyPremiumOrders(req.session.userId),
+      getPremiumPromotionalUsageRows(),
     ]);
 
     const stats = statsResult.rows[0] || {};
     const totals = totalsResult.rows[0] || {};
+    const premiumPropertyOrdersById = new Map(
+      premiumPropertyOrders
+        .filter((order) => typeof order.propertyId === 'string' && order.propertyId)
+        .map((order) => [order.propertyId as string, order]),
+    );
     const hostProperties = propertiesResult.rows.map((property) => ({
       ...mapPropertyRecord(property),
       rating: roundToOneDecimal(toSafeNumber(property.rating)),
+      premiumOnsiteOffer: buildOnsitePremiumOffer({
+        order: premiumPropertyOrdersById.get(property.id),
+        usageRows: promotionalUsageRows,
+        propertyId: property.id,
+        propertyTitle: property.title || 'Tu propiedad',
+        onsiteVerified: property.hasPresencialVerification === true || property.hasPresencialVerification === 1 || property.hasPresencialVerification === '1',
+        returnTo: '/host-dashboard',
+      }),
     }));
     const recentBookings = recentBookingsResult.rows;
     const contactedGuests = contactedGuestsResult.rows;

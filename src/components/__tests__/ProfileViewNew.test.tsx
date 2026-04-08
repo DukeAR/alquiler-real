@@ -55,6 +55,24 @@ describe('ProfileViewNew', () => {
             summary: 'La verificación combina contacto, perfil, actividad e historial dentro de la plataforma.',
             nextStep: 'Completá tu perfil y empezá a sumar actividad.',
             optionalUpgrade: 'La documentación queda como refuerzo opcional para más adelante.',
+            premiumDocumentaryOffer: {
+              offerType: 'documentary-user',
+              targetType: 'user',
+              title: 'Verificación documental premium',
+              summary: 'Podés sumar DNI y selfie como una capa opcional para dar más contexto sobre tu cuenta.',
+              contextHint: 'Podés sumar verificaciones para dar más contexto a otros usuarios.',
+              visibilityHint: 'Si además publicás propiedades, esta señal puede aportar un impulso suave de contexto.',
+              ctaLabel: 'Activar verificación sin cargo',
+              checkoutLabel: 'Activar sin cargo',
+              processLabel: 'Ir a la verificación',
+              priceArs: 0,
+              currency: 'ARS',
+              isComplimentary: true,
+              complimentaryReason: 'Disponible sin cargo para los primeros usuarios durante el lanzamiento.',
+              purchased: false,
+              completed: false,
+              redirectTo: '/verification?mode=documentary&returnTo=/profile',
+            },
             checks: {
               emailVerified: false,
               phoneVerified: false,
@@ -137,7 +155,7 @@ describe('ProfileViewNew', () => {
       expect(screen.getByText('Verificación progresiva')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /Confirmar email/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /Agregar teléfono/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /Ver refuerzo documental opcional/i })).toBeInTheDocument();
+      expect(screen.getAllByRole('button', { name: /Activar verificación sin cargo/i }).length).toBeGreaterThan(0);
     expect(screen.getByText('🏖️ Playa y Mar')).toBeInTheDocument();
   });
 

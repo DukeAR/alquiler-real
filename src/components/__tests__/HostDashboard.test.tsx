@@ -102,9 +102,29 @@ describe('HostDashboard', () => {
                 { key: 'identity', label: 'Identidad confirmada', description: 'Sabés con quién estás hablando.', status: 'complete' },
                 { key: 'location', label: 'Ubicación verificada', description: 'El lugar existe y está ubicado.', status: 'complete' },
                 { key: 'visual', label: 'Material real del lugar', description: 'Podés ver mejor el estado real.', status: 'complete' },
-                { key: 'relationship', label: 'Relación con la propiedad', description: 'Falta confirmar vínculo con el lugar.', status: 'pending' },
-                { key: 'onsite', label: 'Verificación presencial', description: 'Ya hubo una revisión en el lugar.', status: 'complete' },
+                { key: 'relationship', label: 'Relación con la propiedad', description: 'Está confirmado el vínculo con el lugar.', status: 'complete' },
+                { key: 'onsite', label: 'Verificación presencial', description: 'Todavía no hay revisión en el lugar.', status: 'pending' },
               ],
+              premiumOnsiteOffer: {
+                offerType: 'onsite-property',
+                targetType: 'property',
+                title: 'Revisión presencial premium',
+                summary: 'Podés pedir una revisión presencial para esta publicación.',
+                contextHint: 'Es opcional y suma contexto extra.',
+                visibilityHint: 'Puede aportar un leve impulso en score, orden y visibilidad.',
+                ctaLabel: 'Activar revisión presencial sin cargo',
+                checkoutLabel: 'Activar sin cargo',
+                processLabel: 'Ir a la coordinación',
+                priceArs: 0,
+                currency: 'ARS',
+                isComplimentary: true,
+                complimentaryReason: 'Disponible sin cargo para algunas propiedades durante el lanzamiento.',
+                purchased: false,
+                completed: false,
+                redirectTo: '/verification?mode=onsite&propertyId=prop-1&returnTo=/host-dashboard',
+                propertyId: 'prop-1',
+                propertyTitle: 'Casa del bosque',
+              },
             },
           ],
           recentBookings: [],
@@ -133,6 +153,7 @@ describe('HostDashboard', () => {
     expect(screen.getByText('Cuanto más completo esté tu aviso, más arriba aparece en los resultados.')).toBeInTheDocument();
     expect(screen.getByText('4 de 5 comprobaciones')).toBeInTheDocument();
     expect(screen.getByText(/Te falta completar 1 verificación/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Activar revisión presencial sin cargo/i })).toBeInTheDocument();
 
     fireEvent.click((await screen.findAllByRole('button', { name: /Disponibilidad/i }))[1]!);
 

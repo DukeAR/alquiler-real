@@ -227,14 +227,25 @@ const FAQPageWrapper = () => {
 };
 
 const DocumentVerificationFlowWrapper = () => {
+  const location = useLocation();
   const navigate = useNavigate();
   const { refresh } = useAuth();
+  const searchParams = new URLSearchParams(location.search);
+  const mode = searchParams.get('mode') === 'onsite' ? 'onsite' : 'documentary';
+  const orderId = searchParams.get('orderId');
+  const propertyId = searchParams.get('propertyId');
+  const propertyTitle = searchParams.get('propertyTitle');
+  const returnTo = searchParams.get('returnTo') || '/profile';
 
   return (
     <LazyDocumentVerificationFlow
+      mode={mode}
+      orderId={orderId}
+      propertyId={propertyId}
+      propertyTitle={propertyTitle}
       onComplete={async () => {
         await refresh();
-        navigate('/profile');
+        navigate(returnTo);
       }}
     />
   );

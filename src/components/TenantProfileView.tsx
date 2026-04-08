@@ -242,13 +242,13 @@ export const TenantProfileView: React.FC<TenantProfileViewProps> = ({ onBack }) 
               {showDocUpload && (
                 <div className="mt-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700">
                   <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
-                    Si querés sumar respaldo extra, podés cargar documentación opcional desde este flujo.
+                    Si querés sumar respaldo extra, activá la verificación documental premium desde tu perfil y seguí desde ahí.
                   </p>
                   <button
-                    onClick={() => window.location.href = '/verification'}
+                    onClick={() => window.location.href = '/profile'}
                     className="w-full py-3 bg-brand text-white font-bold rounded-xl hover:bg-brand/90 transition-colors"
                   >
-                    Abrir refuerzo documental
+                    Ir al perfil
                   </button>
                 </div>
               )}

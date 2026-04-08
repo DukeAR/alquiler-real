@@ -108,8 +108,8 @@ const VERIFICATION_OPTIONS: VerificationOption[] = [
   {
     key: 'onsite',
     title: 'Verificación presencial',
-    description: 'Podés pedir una revisión en el lugar más adelante.',
-    recommended: 'Es la comprobación más fuerte, pero no hace falta para publicar ahora.',
+    description: 'Podés pedir una revisión presencial premium desde el panel una vez publicado el aviso.',
+    recommended: 'Suma contexto extra y puede ayudar con la visibilidad, pero no hace falta para publicar ahora.',
   },
 ];
 
@@ -795,7 +795,7 @@ export const PropertyUploadForm: React.FC<PropertyUploadFormProps> = ({ onComple
                 <NoticeBanner
                   tone="info"
                   heading="Estas mejoras son opcionales por ahora."
-                  description="No te frenan la publicación. Las dejamos claras para que sepas cómo fortalecer el aviso con el tiempo."
+                  description="No te frenan la publicación. Las dejamos claras para que sepas cómo fortalecer el aviso con el tiempo, incluida la revisión presencial premium desde el panel."
                 />
 
                 <div className="grid gap-4 md:grid-cols-2">

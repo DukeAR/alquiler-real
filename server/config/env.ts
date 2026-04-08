@@ -64,6 +64,16 @@ const parsePort = (value: string | undefined, fallback: number) => {
   return fallback;
 };
 
+const parseNonNegativeInt = (value: string | undefined, fallback: number) => {
+  const parsed = Number.parseInt(value || '', 10);
+
+  if (Number.isFinite(parsed) && parsed >= 0) {
+    return parsed;
+  }
+
+  return fallback;
+};
+
 const parseOrigins = (value?: string) => value
   ?.split(',')
   .map((origin) => normalizeUrl(origin))
@@ -106,4 +116,8 @@ export const serverEnv = {
   sessionCookieDomain: process.env.SESSION_COOKIE_DOMAIN?.trim() || undefined,
   sessionCookieSecure,
   sessionCookieSameSite: parseSameSite(process.env.SESSION_COOKIE_SAME_SITE, sessionCookieSecure ? 'none' : 'lax'),
+  premiumDocumentaryPriceArs: parseNonNegativeInt(process.env.PREMIUM_DOCUMENTARY_PRICE_ARS, 18000),
+  premiumOnsitePriceArs: parseNonNegativeInt(process.env.PREMIUM_ONSITE_PRICE_ARS, 42000),
+  premiumDocumentaryFreeSlots: parseNonNegativeInt(process.env.PREMIUM_DOCUMENTARY_FREE_SLOTS, 20),
+  premiumOnsiteFreeSlots: parseNonNegativeInt(process.env.PREMIUM_ONSITE_FREE_SLOTS, 10),
 };

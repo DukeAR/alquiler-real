@@ -1,5 +1,6 @@
 import type { PropertyVerificationItem } from './lib/propertyVerification';
 import type { HostTrustSummary } from './lib/hostTrust';
+import type { PremiumVerificationOffer } from './lib/premiumVerification';
 
 export type TraceabilityLevel = 'low' | 'medium' | 'high';
 
@@ -48,6 +49,9 @@ export interface Property {
   propertyRelationshipVerified?: boolean;
   hasPresencialVerification?: boolean;
   hasDigitalVerification?: boolean;
+  hostPremiumDocumentaryVerified?: boolean;
+  premiumVisibilityBoost?: number;
+  premiumOnsiteOffer?: PremiumVerificationOffer | null;
   isVerifiedProperty?: boolean;
 }
 

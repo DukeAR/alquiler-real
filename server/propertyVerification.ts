@@ -1,5 +1,10 @@
 export type PropertyVerificationStatus = 'complete' | 'pending';
 
+import {
+  PREMIUM_HOST_DOCUMENTARY_VISIBILITY_BOOST,
+  PREMIUM_ONSITE_VISIBILITY_BOOST,
+} from '../src/lib/premiumVerification';
+
 export const REAL_VERIFICATION_FILTER_MIN_SCORE = 3;
 
 export interface PropertyVerificationItem {
@@ -15,6 +20,7 @@ type PropertyVerificationSource = {
   videoValidated?: boolean;
   propertyRelationshipVerified?: boolean;
   hasPresencialVerification?: boolean;
+  hostPremiumDocumentaryVerified?: boolean;
 };
 
 export const buildPropertyVerification = (property: PropertyVerificationSource) => {
@@ -53,6 +59,8 @@ export const buildPropertyVerification = (property: PropertyVerificationSource) 
 
   return {
     verificationScore: verificationItems.filter((item) => item.status === 'complete').length,
+    premiumVisibilityBoost: (property.hostPremiumDocumentaryVerified ? PREMIUM_HOST_DOCUMENTARY_VISIBILITY_BOOST : 0)
+      + (property.hasPresencialVerification ? PREMIUM_ONSITE_VISIBILITY_BOOST : 0),
     verificationItems,
   };
 };

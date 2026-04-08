@@ -40,6 +40,14 @@ describe('Host dashboard endpoint', () => {
         return { rows: [{ host_rating: 4.9, host_verified: true, trust_score: 88, badge: 'Verificado' }] };
       }
 
+      if (text.includes('SELECT DISTINCT ON (property_id)')) {
+        return { rows: [] };
+      }
+
+      if (text.includes('FROM premium_verification_orders') && text.includes('is_promotional = TRUE')) {
+        return { rows: [] };
+      }
+
       if (text.includes('FROM properties p') && text.includes('LEFT JOIN users u ON u.id = p."hostId"')) {
         return {
           rows: [
@@ -99,6 +107,10 @@ describe('Host dashboard endpoint', () => {
       pendingRequestsCount: 2,
       activeReservationsCount: 1,
       nextArrivalDate: '18/10/2026',
+      premiumOnsiteOffer: {
+        offerType: 'onsite-property',
+        completed: true,
+      },
     });
     expect(res.body.properties[0].verificationItems).toEqual(expect.arrayContaining([
       expect.objectContaining({ key: 'identity', status: 'complete' }),
@@ -110,6 +122,14 @@ describe('Host dashboard endpoint', () => {
     queryMock.mockImplementation(async (text: string) => {
       if (text.includes('SELECT host_rating, host_verified, trust_score, badge')) {
         return { rows: [{ host_rating: 4.8, host_verified: true, trust_score: 84, badge: 'Verificado' }] };
+      }
+
+      if (text.includes('SELECT DISTINCT ON (property_id)')) {
+        return { rows: [] };
+      }
+
+      if (text.includes('FROM premium_verification_orders') && text.includes('is_promotional = TRUE')) {
+        return { rows: [] };
       }
 
       if (text.includes('FROM properties p') && text.includes('LEFT JOIN users u ON u.id = p."hostId"')) {

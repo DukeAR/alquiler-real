@@ -5,13 +5,14 @@ import { useUserPreferences, type UserPreferences } from '../hooks/useUserPrefer
 import { useUserProfile, type ValidationChecks } from '../hooks/useUserProfile';
 import { apiJson } from '../lib/apiConfig';
 import { VALID_ZONES } from '../lib/constants';
+import { formatPremiumPriceLabel } from '../lib/premiumVerification';
 import { showToast } from '../lib/toast';
 import { cn } from '../lib/utils';
 import { Icons } from './Icons';
 import { ProfileSkeleton } from './ProfileSkeleton';
 import { ReportModal } from './ReportModal';
 import { ValidationBadge } from './ValidationBadge';
-import { DocumentVerificationModal } from './verification/DocumentVerificationModal';
+import { PremiumVerificationCheckoutModal } from './verification/PremiumVerificationCheckoutModal';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
@@ -146,6 +147,7 @@ export const ProfileViewNew = () => {
   const [reviewTab, setReviewTab] = useState<ReviewTab>('received');
   const [showReportModal, setShowReportModal] = useState(false);
   const [confirmingContactField, setConfirmingContactField] = useState<'email' | 'phone' | null>(null);
+  const [processingPremiumVerification, setProcessingPremiumVerification] = useState(false);
 
   const loadingProfile = profileDataLoading || preferencesLoading;
 
@@ -232,6 +234,7 @@ export const ProfileViewNew = () => {
   const verificationLevelLabel = validationData?.levelLabel ?? 'Camino al nivel 1';
   const verificationBenefitsCurrent = validationData?.benefits?.current ?? [];
   const verificationBenefitsNext = validationData?.benefits?.next ?? [];
+  const premiumDocumentaryOffer = validationData?.premiumDocumentaryOffer ?? null;
   const canConfirmEmail = Boolean(validationData?.checks && !validationData.checks.emailVerified);
   const canConfirmPhone = Boolean(validationData?.checks && !validationData.checks.phoneVerified && user.phone);
   const needsPhone = Boolean(validationData?.checks && !validationData.checks.phoneVerified && !user.phone);
@@ -252,6 +255,35 @@ export const ProfileViewNew = () => {
   const missingRequirementsText = validationData?.missingRequirements?.length
     ? validationData.missingRequirements.slice(0, 3).join(' · ')
     : null;
+
+  const handlePremiumVerificationCheckout = async () => {
+    if (!premiumDocumentaryOffer) {
+      return;
+    }
+
+    setProcessingPremiumVerification(true);
+
+    try {
+      if (premiumDocumentaryOffer.purchased || premiumDocumentaryOffer.completed) {
+        setShowVerification(false);
+        navigate(premiumDocumentaryOffer.redirectTo);
+        return;
+      }
+
+      const response = await apiJson<{ redirectTo?: string }>('/api/verification/premium-checkout', {
+        method: 'POST',
+        includeCredentials: true,
+        body: JSON.stringify({ offerType: premiumDocumentaryOffer.offerType }),
+      });
+
+      setShowVerification(false);
+      navigate(response.redirectTo || premiumDocumentaryOffer.redirectTo);
+    } catch (error) {
+      showToast('Verificación', error instanceof Error ? error.message : 'No pudimos activar la verificación premium ahora.', 'error');
+    } finally {
+      setProcessingPremiumVerification(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-24">
@@ -541,9 +573,29 @@ export const ProfileViewNew = () => {
                   {validationData?.optionalUpgrade ? (
                     <NoticeBanner
                       tone="info"
-                      heading="La comprobación documental quedó como mejora opcional."
+                      heading="La comprobación documental quedó como mejora premium opcional."
                       description={validationData.optionalUpgrade}
                     />
+                  ) : null}
+
+                  {premiumDocumentaryOffer ? (
+                    <div className="rounded-[var(--app-radius-control)] border border-brand/15 bg-brand/5 p-4 dark:border-brand/25 dark:bg-brand/10">
+                      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                        <div className="space-y-2">
+                          <p className="app-form-label">Mejora premium opcional</p>
+                          <p className="text-sm leading-6 text-slate-700 dark:text-slate-200">Podés sumar verificaciones para dar más contexto a otros usuarios con DNI y selfie.</p>
+                          <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">
+                            {premiumDocumentaryOffer.complimentaryReason
+                              ? premiumDocumentaryOffer.complimentaryReason
+                              : `Precio actual ${formatPremiumPriceLabel(premiumDocumentaryOffer.priceArs, premiumDocumentaryOffer.isComplimentary)}.`}
+                          </p>
+                        </div>
+                        <Button type="button" variant={premiumDocumentaryOffer.completed ? 'secondary' : 'primary'} onClick={() => setShowVerification(true)}>
+                          <Icons.ShieldCheck className="h-5 w-5" />
+                          {premiumDocumentaryOffer.ctaLabel}
+                        </Button>
+                      </div>
+                    </div>
                   ) : null}
 
                   {verificationBenefitsCurrent.length > 0 || verificationBenefitsNext.length > 0 ? (
@@ -611,7 +663,7 @@ export const ProfileViewNew = () => {
                     <Button type="button" variant={progressPercent >= 70 ? 'secondary' : 'primary'} onClick={() => setShowVerification(true)}>
                       <>
                         <Icons.ShieldCheck className="h-5 w-5" />
-                        {validationData?.checks?.documentaryVerified ? 'Revisar refuerzo documental' : 'Ver refuerzo documental opcional'}
+                        {premiumDocumentaryOffer?.ctaLabel ?? (validationData?.checks?.documentaryVerified ? 'Revisar refuerzo documental' : 'Ver refuerzo documental premium')}
                       </>
                     </Button>
                   </div>
@@ -797,15 +849,14 @@ export const ProfileViewNew = () => {
       )}
 
       {showVerification ? (
-        <DocumentVerificationModal
-          userType={isHostMode ? 'host' : 'tenant'}
-          verificationStatus={validationData}
-          onSubmitted={async () => {
-            await refresh();
-            await reloadProfileData();
-          }}
-          onClose={() => setShowVerification(false)}
-        />
+        premiumDocumentaryOffer ? (
+          <PremiumVerificationCheckoutModal
+            offer={premiumDocumentaryOffer}
+            onConfirm={handlePremiumVerificationCheckout}
+            onClose={() => setShowVerification(false)}
+            processing={processingPremiumVerification}
+          />
+        ) : null
       ) : null}
 
       {showInterestsModal ? (

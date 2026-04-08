@@ -1,5 +1,7 @@
 export const VERIFICATION_SCORE_MAX = 5;
 
+import { getPremiumVisibilityBoost, type PremiumVerificationOffer } from './premiumVerification';
+
 export const REAL_VERIFICATION_FILTER_MIN_SCORE = 3;
 
 export const HIGH_VERIFICATION_HIGHLIGHT_MIN_SCORE = 4;
@@ -31,6 +33,9 @@ type PropertyVerificationLike = {
   isVerifiedProperty?: boolean;
   hasDigitalVerification?: boolean;
   hasPresencialVerification?: boolean;
+  hostPremiumDocumentaryVerified?: boolean;
+  premiumVisibilityBoost?: number;
+  premiumOnsiteOffer?: PremiumVerificationOffer | null;
 };
 
 type PropertySortLike = PropertyVerificationLike & {
@@ -316,6 +321,7 @@ export const sortPropertiesByCatalogOrder = <T extends PropertySortLike>(
 
   sortedItems.sort((left, right) => {
     const verificationDifference = getPropertyVerificationScore(right) - getPropertyVerificationScore(left);
+    const visibilityBoostDifference = getPremiumVisibilityBoost(right) - getPremiumVisibilityBoost(left);
     const ratingDifference = Number(right.rating || 0) - Number(left.rating || 0);
     const reviewsDifference = Number(right.reviewsCount || 0) - Number(left.reviewsCount || 0);
     const relevanceDifference = getPropertyRelevanceScore(right, context) - getPropertyRelevanceScore(left, context);
@@ -324,6 +330,10 @@ export const sortPropertiesByCatalogOrder = <T extends PropertySortLike>(
     if (sortBy === 'price') {
       if (verificationDifference !== 0) {
         return verificationDifference;
+      }
+
+      if (visibilityBoostDifference !== 0) {
+        return visibilityBoostDifference;
       }
 
       if (ratingDifference !== 0) {
@@ -358,6 +368,10 @@ export const sortPropertiesByCatalogOrder = <T extends PropertySortLike>(
         return verificationDifference;
       }
 
+      if (visibilityBoostDifference !== 0) {
+        return visibilityBoostDifference;
+      }
+
       if (relevanceDifference !== 0) {
         return relevanceDifference;
       }
@@ -371,6 +385,10 @@ export const sortPropertiesByCatalogOrder = <T extends PropertySortLike>(
 
     if (verificationDifference !== 0) {
       return verificationDifference;
+    }
+
+    if (visibilityBoostDifference !== 0) {
+      return visibilityBoostDifference;
     }
 
     if (ratingDifference !== 0) {

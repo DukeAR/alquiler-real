@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { apiJson } from '../lib/apiConfig';
 import { isBookingCheckInReached } from '../lib/bookingDates';
 import { resolveGuestRequestProfile } from '../lib/guestRequestProfile';
+import { formatPremiumPriceLabel } from '../lib/premiumVerification';
 import { getPropertyVerificationBadge, getPropertyVerificationItems } from '../lib/propertyVerification';
 import { getReservationFlowCopy, getReservationNextActorDisplayLabel, getReservationNextStepDisplayLabel } from '../lib/reservationFlow';
 import { acceptConversationRequest, confirmDirectDeposit } from '../services/geminiService';
@@ -19,6 +20,7 @@ import { Icons } from './Icons';
 import { LoadingState } from './LoadingState';
 import { PropertyUploadForm } from './PropertyUploadForm.tsx';
 import { ReviewModal } from './ReviewModal';
+import { PremiumVerificationCheckoutModal } from './verification/PremiumVerificationCheckoutModal';
 
 interface HostDashboardProps {
   onBack: () => void;
@@ -274,6 +276,8 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
   const [availabilityPropertyId, setAvailabilityPropertyId] = useState<string | null>(null);
   const [expandedBookingId, setExpandedBookingId] = useState<string | null>(null);
   const [processingBookingAction, setProcessingBookingAction] = useState<{ bookingId: string; action: 'accept-request' | 'confirm-direct-deposit' | 'cancel-host' | 'report-no-show' } | null>(null);
+  const [activePremiumOffer, setActivePremiumOffer] = useState<any>(null);
+  const [processingPremiumOffer, setProcessingPremiumOffer] = useState(false);
 
   useEffect(() => {
     void fetchData();
@@ -426,6 +430,38 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
     } catch (err) {
       console.error(err);
       showToast('Publicación', err instanceof Error ? err.message : 'No pudimos actualizar el estado de la propiedad.', 'error');
+    }
+  };
+
+  const handlePremiumOfferCheckout = async () => {
+    if (!activePremiumOffer) {
+      return;
+    }
+
+    setProcessingPremiumOffer(true);
+
+    try {
+      if (activePremiumOffer.purchased || activePremiumOffer.completed) {
+        setActivePremiumOffer(null);
+        navigate(activePremiumOffer.redirectTo);
+        return;
+      }
+
+      const response = await apiJson<{ redirectTo?: string }>('/api/verification/premium-checkout', {
+        method: 'POST',
+        includeCredentials: true,
+        body: JSON.stringify({
+          offerType: activePremiumOffer.offerType,
+          propertyId: activePremiumOffer.propertyId,
+        }),
+      });
+
+      setActivePremiumOffer(null);
+      navigate(response.redirectTo || activePremiumOffer.redirectTo);
+    } catch (error) {
+      showToast('Verificación', error instanceof Error ? error.message : 'No pudimos activar la revisión presencial premium.', 'error');
+    } finally {
+      setProcessingPremiumOffer(false);
     }
   };
 
@@ -1138,6 +1174,26 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
                       {pendingLabels.length > 0 ? (
                         <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">Falta: {formatLabelList(pendingLabels, 2)}.</p>
                       ) : null}
+                      {property.premiumOnsiteOffer && !property.premiumOnsiteOffer.completed ? (
+                        <div className="rounded-2xl border border-brand/15 bg-brand/5 p-3 dark:border-brand/25 dark:bg-brand/10">
+                          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-brand">Mejora premium opcional</p>
+                          <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-100">Podés sumar una revisión presencial para dar más contexto a este aviso.</p>
+                          <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                            {property.premiumOnsiteOffer.complimentaryReason
+                              ? property.premiumOnsiteOffer.complimentaryReason
+                              : `Precio actual ${formatPremiumPriceLabel(property.premiumOnsiteOffer.priceArs, property.premiumOnsiteOffer.isComplimentary)}.`}
+                          </p>
+                          <Button
+                            type="button"
+                            size="sm"
+                            className="mt-3 rounded-full"
+                            onClick={() => setActivePremiumOffer(property.premiumOnsiteOffer)}
+                          >
+                            <Icons.ShieldCheck className="h-4 w-4" />
+                            {property.premiumOnsiteOffer.ctaLabel}
+                          </Button>
+                        </div>
+                      ) : null}
                     </div>
 
                     <div className="flex flex-wrap gap-2 xl:justify-end">
@@ -1253,6 +1309,15 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
             }}
           />
         )}
+
+        {activePremiumOffer ? (
+          <PremiumVerificationCheckoutModal
+            offer={activePremiumOffer}
+            onClose={() => setActivePremiumOffer(null)}
+            onConfirm={handlePremiumOfferCheckout}
+            processing={processingPremiumOffer}
+          />
+        ) : null}
       </main>
     </div>
   );

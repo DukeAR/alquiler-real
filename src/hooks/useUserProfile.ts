@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { apiJson } from '../lib/apiConfig';
+import type { PremiumVerificationOffer } from '../lib/premiumVerification';
 
 export type ValidationChecks = {
   emailVerified: boolean;
@@ -43,6 +44,7 @@ export type ValidationData = {
   checks?: ValidationChecks;
   missingRequirements?: string[];
   categories?: ValidationCategory[];
+  premiumDocumentaryOffer?: PremiumVerificationOffer | null;
   benefits?: {
     current: string[];
     next: string[];
