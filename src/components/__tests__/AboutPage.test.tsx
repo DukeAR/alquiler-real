@@ -20,16 +20,16 @@ describe('AboutPage', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Anfitriones' }));
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Publicá para que te entiendan antes del chat' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'No solo publicás mejor. También elegís con más información.' })).toBeInTheDocument();
     });
-    expect(screen.getByText('Publicá cuando el aviso se entienda solo')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Más contexto para decidir con criterio' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Huéspedes' }));
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: 'Qué mirar antes de reservar' })).toBeInTheDocument();
     });
-    expect(screen.getByText('Explorá sabiendo qué ya fue comprobado')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Explorá sabiendo qué ya fue comprobado' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Volver' }));
 
