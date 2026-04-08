@@ -1,4 +1,19 @@
+import {
+  buildUserIdentityVerification,
+  buildUserVerificationSummary,
+  type IdentityVerificationStatus,
+  type UserIdentityVerification,
+  type UserVerificationSummary,
+} from './verificationModel';
+
 export type UserVerificationLevel = 'INICIAL' | 'NIVEL_1' | 'NIVEL_2' | 'NIVEL_3' | 'NIVEL_4';
+
+export type {
+  IdentityVerificationStatus,
+  UserIdentityVerification,
+  UserVerificationKey,
+  UserVerificationSummary,
+} from './verificationModel';
 
 export type UserVerificationCategoryId = 'basicIdentity' | 'activity' | 'reputation' | 'additional';
 
@@ -50,6 +65,9 @@ export type UserVerificationInput = {
   totalMessages?: number | string | null;
   documentarySubmitted?: boolean | null;
   documentaryVerified?: boolean | null;
+  identityVerificationStatus?: IdentityVerificationStatus | string | null;
+  identityVerificationProvider?: string | null;
+  identityVerifiedAt?: string | Date | null;
 };
 
 export type UserVerificationStatus = {
@@ -66,6 +84,8 @@ export type UserVerificationStatus = {
   missingRequirements: string[];
   benefits: UserVerificationBenefits;
   highValueBookingEligible: boolean;
+  identityVerification: UserIdentityVerification;
+  verificationSummary: UserVerificationSummary;
   checks: UserVerificationChecks;
   categories: UserVerificationCategory[];
 };
@@ -234,6 +254,12 @@ const getMissingRequirements = (levelNumber: number, checks: UserVerificationChe
 export const buildUserVerificationStatus = (input: UserVerificationInput): UserVerificationStatus => {
   const emailVerified = Boolean(input.emailVerified);
   const phoneVerified = Boolean(input.phoneVerified);
+  const identityVerification = buildUserIdentityVerification({
+    documentaryVerified: input.documentaryVerified,
+    identityVerificationStatus: input.identityVerificationStatus,
+    identityVerificationProvider: input.identityVerificationProvider,
+    identityVerifiedAt: input.identityVerifiedAt,
+  });
   const hasPhone = hasText(input.phone);
   const profileSignalsCount = [hasPhone, hasText(input.bio), hasText(input.zone), hasText(input.profilePhoto)].filter(Boolean).length;
   const profileComplete = profileSignalsCount >= 3;
@@ -252,8 +278,16 @@ export const buildUserVerificationStatus = (input: UserVerificationInput): UserV
   const platformActivity = activitySignalsCount >= 1;
   const historyVerified = completedBookings > 0 || totalBookings >= 2 || totalConversations >= 2 || totalMessages >= 6;
   const reviewsVerified = totalReviewsReceived > 0 || totalReviewsWritten >= 2;
-  const documentaryVerified = Boolean(input.documentaryVerified);
+  const documentaryVerified = identityVerification.status === 'verified';
   const documentarySubmitted = documentaryVerified || Boolean(input.documentarySubmitted);
+  const verificationSummary = buildUserVerificationSummary({
+    emailVerified,
+    phoneVerified,
+    documentaryVerified,
+    identityVerificationStatus: identityVerification.status,
+    identityVerificationProvider: identityVerification.provider,
+    identityVerifiedAt: identityVerification.verifiedAt,
+  });
 
   const checks: UserVerificationChecks = {
     emailVerified,
@@ -413,6 +447,8 @@ export const buildUserVerificationStatus = (input: UserVerificationInput): UserV
     missingRequirements,
     benefits: buildBenefits(levelNumber),
     highValueBookingEligible: basicLevelReached || documentaryVerified,
+    identityVerification,
+    verificationSummary,
     checks,
     categories,
   };

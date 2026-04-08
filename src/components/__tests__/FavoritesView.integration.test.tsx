@@ -91,7 +91,7 @@ describe('FavoritesView integration', () => {
       'Departamento tranquilo',
     ]);
     expect(screen.getByText('4 de 5 comprobaciones completas')).toBeInTheDocument();
-    expect(screen.getByText('2 de 5 comprobaciones completas')).toBeInTheDocument();
+    expect(screen.getByText('3 de 5 comprobaciones completas')).toBeInTheDocument();
     expect(screen.getByText('✔✔✔✔○')).toBeInTheDocument();
     expect(screen.queryByText('Mejor verificado')).toBeNull();
     expect(screen.queryByText('Alto nivel de verificación')).toBeNull();

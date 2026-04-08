@@ -743,7 +743,9 @@ const PROPERTY_HOST_TRUST_SELECT = `u.identity_validated as "hostIdentityValidat
         COALESCE(u.member_since, u.created_at) as "hostMemberSince",
         COALESCE(host_premium_documentary."hostPremiumDocumentaryVerified", FALSE) as "hostPremiumDocumentaryVerified",
         COALESCE(host_completed_reservations."completedReservationsCount", 0) as "hostCompletedReservationsCount",
-        COALESCE(host_guest_reviews."guestReviewsCount", 0) as "hostGuestReviewsCount"`;
+  COALESCE(host_guest_reviews."guestReviewsCount", 0) as "hostGuestReviewsCount",
+  COALESCE(property_completed_bookings."completedBookingsCount", 0) as "propertyCompletedBookingsCount",
+  COALESCE(property_real_reviews."realReviewsCount", 0) as "propertyRealReviewsCount"`;
 
 const PROPERTY_HOST_TRUST_JOINS = `
       LEFT JOIN users u ON u.id = p."hostId"
@@ -772,6 +774,18 @@ const PROPERTY_HOST_TRUST_JOINS = `
         WHERE hr.type = 'guest_to_host'
         GROUP BY hp."hostId"
       ) host_guest_reviews ON host_guest_reviews.host_id = p."hostId"
+      LEFT JOIN (
+        SELECT "propertyId" as property_id,
+               COUNT(*) FILTER (WHERE status = 'completed')::int as "completedBookingsCount"
+        FROM bookings
+        GROUP BY "propertyId"
+      ) property_completed_bookings ON property_completed_bookings.property_id = p.id
+      LEFT JOIN (
+        SELECT property_id,
+               COUNT(*)::int as "realReviewsCount"
+        FROM reviews
+        GROUP BY property_id
+      ) property_real_reviews ON property_real_reviews.property_id = p.id
 `;
 
 // ==========================================
@@ -1109,6 +1123,9 @@ app.post('/api/verification/complete', async (req, res) => {
       `UPDATE users
        SET identity_validated = TRUE,
            is_identity_verified = TRUE,
+           identity_verification_status = 'verified',
+           identity_verification_provider = COALESCE(identity_verification_provider, 'documentary'),
+           identity_verified_at = COALESCE(identity_verified_at, NOW()),
            validation_level = CASE WHEN validation_level = 'trusted_user' THEN validation_level ELSE 'verified_dni' END,
            host_verified = host_verified
        WHERE id = $1`,
@@ -1164,6 +1181,9 @@ app.post('/api/verification/submit', async (req, res) => {
            selfie_with_dni = $3,
            identity_validated = TRUE,
            is_identity_verified = TRUE,
+           identity_verification_status = 'verified',
+           identity_verification_provider = COALESCE(identity_verification_provider, 'documentary'),
+           identity_verified_at = COALESCE(identity_verified_at, NOW()),
            validation_level = CASE WHEN validation_level = 'trusted_user' THEN validation_level ELSE 'verified_dni' END,
            host_verified = CASE WHEN $4 THEN TRUE ELSE host_verified END
        WHERE id = $5`,
@@ -1378,6 +1398,10 @@ app.post('/api/verification/onsite/complete', async (req, res) => {
     return res.status(400).json({ error: 'Elegí una propiedad y un horario para continuar.' });
   }
 
+  const normalizedOnsiteVerifiedAt = Number.isNaN(Date.parse(appointmentDate))
+    ? null
+    : new Date(appointmentDate).toISOString();
+
   try {
     const [propertyResult, order] = await Promise.all([
       db.query(
@@ -1407,9 +1431,10 @@ app.post('/api/verification/onsite/complete', async (req, res) => {
 
     await db.query(
       `UPDATE properties
-       SET "hasPresencialVerification" = 1
+       SET "hasPresencialVerification" = 1,
+           "onsiteVerifiedAt" = COALESCE($3, "onsiteVerifiedAt")
        WHERE id = $1 AND "hostId" = $2`,
-      [propertyId, req.session.userId],
+      [propertyId, req.session.userId, normalizedOnsiteVerifiedAt],
     );
 
     await markPremiumOrderState(verifiedOrder.id, 'completed');
@@ -1445,7 +1470,13 @@ app.get('/api/verification/status', async (req, res) => {
                 selfie_with_dni,
                 (COALESCE(email_verified, FALSE) OR COALESCE(is_email_verified, FALSE)) as "emailVerified",
                 (COALESCE(phone_verified, FALSE) OR COALESCE(is_phone_verified, FALSE)) as "phoneVerified",
-                (COALESCE(identity_validated, FALSE) OR COALESCE(is_identity_verified, FALSE)) as "documentaryVerified"
+                (COALESCE(identity_validated, FALSE) OR COALESCE(is_identity_verified, FALSE)) as "documentaryVerified",
+                COALESCE(NULLIF(identity_verification_status, ''), CASE
+                  WHEN COALESCE(identity_validated, FALSE) OR COALESCE(is_identity_verified, FALSE) THEN 'verified'
+                  ELSE 'unverified'
+                END) as "identityVerificationStatus",
+                identity_verification_provider as "identityVerificationProvider",
+                identity_verified_at as "identityVerifiedAt"
          FROM users
          WHERE id = $1`,
         [req.session.userId],
@@ -1503,6 +1534,9 @@ app.get('/api/verification/status', async (req, res) => {
       totalMessages: conversationsResult.rows[0]?.totalMessages,
       documentarySubmitted: Boolean(user.dni_front || user.dni_back || user.selfie_with_dni || Number(documentsResult.rows[0]?.documentsCount || 0) > 0),
       documentaryVerified: user.documentaryVerified,
+      identityVerificationStatus: user.identityVerificationStatus,
+      identityVerificationProvider: user.identityVerificationProvider,
+      identityVerifiedAt: user.identityVerifiedAt,
     });
 
     const premiumDocumentaryOffer = buildDocumentaryPremiumOffer({
@@ -1791,7 +1825,7 @@ const getHostProfileData = async (hostId: string) => {
     ),
     db.query(
       `SELECT id, status, created_at as "createdAt",
-              "hasPresencialVerification", "locationVerified", "videoValidated"
+              "hasPresencialVerification", "locationVerified", "materialVerified", "videoValidated"
        FROM properties
        WHERE "hostId" = $1`,
       [hostId],
@@ -1928,7 +1962,7 @@ const getHostProfileData = async (hostId: string) => {
     verificationsSummary: {
       presencialCount: properties.filter((property) => !!property.hasPresencialVerification).length,
       gpsProofCount: properties.filter((property) => !!property.locationVerified).length,
-      videoValidationCount: properties.filter((property) => !!property.videoValidated).length,
+      videoValidationCount: properties.filter((property) => !!property.materialVerified || !!property.videoValidated).length,
     },
     alerts,
     riskScore: toSafeNumber(host.riskScore),
@@ -2079,8 +2113,8 @@ app.get('/api/host/dashboard', async (req, res) => {
       ),
       db.query(
         `SELECT p.id, p.title, p.location, p.price, p.status, p."reviewsCount", p.rating, p."imageUrl",
-                p."hostId", p."hostName", p."identityValidated", p."locationVerified", p."videoValidated",
-                p."hasPresencialVerification", p."hasDigitalVerification", p.property_type as "propertyType",
+          p."hostId", p."hostName", p."identityValidated", p."locationVerified", p."materialVerified", p."videoValidated",
+          p."hasPresencialVerification", p."onsiteVerifiedAt", p."hasDigitalVerification", p.property_type as "propertyType",
                 p.is_verified_property as "isVerifiedProperty",
                 COALESCE(booking_summary.pending_requests_count, 0)::int as "pendingRequestsCount",
                 COALESCE(booking_summary.active_reservations_count, 0)::int as "activeReservationsCount",
@@ -2432,8 +2466,8 @@ app.get('/api/properties', async (req, res) => {
       SELECT
         p.id, p.title, p.location, p.price, p."hostId", p."hostName",
         p.description, p."imageUrl", p.rating, p."reviewsCount",
-        p."identityValidated", p."locationVerified", p."videoValidated",
-        p."traceabilityLevel", p."maxGuests", p."hasPresencialVerification", p."hasDigitalVerification", p.lat, p.lng,
+        p."identityValidated", p."locationVerified", p."materialVerified", p."videoValidated",
+        p."traceabilityLevel", p."maxGuests", p."hasPresencialVerification", p."onsiteVerifiedAt", p."hasDigitalVerification", p.lat, p.lng,
         p.bedrooms, p.bathrooms, p.property_type as "propertyType",
         p.is_verified_property as "isVerifiedProperty",
         ${PROPERTY_HOST_TRUST_SELECT}

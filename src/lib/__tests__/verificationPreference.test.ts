@@ -13,7 +13,7 @@ const buildHighVerificationProperty = (id: string) => ({
   identityValidated: true,
   locationVerified: true,
   videoValidated: true,
-  propertyRelationshipVerified: true,
+  completedBookingsCount: 1,
 });
 
 describe('verificationPreference', () => {
@@ -54,7 +54,8 @@ describe('verificationPreference', () => {
       identityValidated: true,
       locationVerified: true,
       videoValidated: false,
-      propertyRelationshipVerified: false,
+      completedBookingsCount: 0,
+      realReviewsCount: 0,
     });
     trackVerificationPreferenceSave({
       id: 'p3',

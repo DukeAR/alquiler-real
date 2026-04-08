@@ -1,4 +1,4 @@
-import type { PropertyVerificationItem } from './lib/propertyVerification';
+import type { PropertyVerificationItem, PropertyVerificationSummary } from './lib/propertyVerification';
 import type { HostTrustSummary } from './lib/hostTrust';
 import type { PremiumVerificationOffer } from './lib/premiumVerification';
 
@@ -22,6 +22,7 @@ export interface Property {
   location: string;
   propertyType?: string;
   verificationScore?: number;
+  verificationSummary?: PropertyVerificationSummary;
   verificationItems?: PropertyVerificationItem[];
   hostTrustScore?: number;
   hostTrust?: HostTrustSummary;
@@ -34,6 +35,7 @@ export interface Property {
   unresolvedReviewsCount: number;
   identityValidated: boolean;
   locationVerified: boolean;
+  materialVerified?: boolean;
   videoValidated: boolean;
   traceabilityLevel: TraceabilityLevel;
   traceabilityReport?: TraceabilityReport;
@@ -48,6 +50,9 @@ export interface Property {
   bathrooms?: number;
   propertyRelationshipVerified?: boolean;
   hasPresencialVerification?: boolean;
+  onsiteVerifiedAt?: string;
+  completedBookingsCount?: number;
+  realReviewsCount?: number;
   hasDigitalVerification?: boolean;
   hostPremiumDocumentaryVerified?: boolean;
   premiumVisibilityBoost?: number;

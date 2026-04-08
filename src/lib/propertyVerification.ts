@@ -1,6 +1,21 @@
-export const VERIFICATION_SCORE_MAX = 5;
+import type { PremiumVerificationOffer } from './premiumVerification';
+import {
+  PROPERTY_VERIFICATION_KEYS,
+  buildPropertyVerificationItem,
+  buildPropertyVerificationSummary,
+  type LegacyPropertyVerificationKey,
+  type PropertyVerificationItem,
+  type PropertyVerificationKey,
+  type PropertyVerificationSummary,
+} from './verificationModel';
 
-import { getPremiumVisibilityBoost, type PremiumVerificationOffer } from './premiumVerification';
+export type {
+  PropertyVerificationItem,
+  PropertyVerificationKey,
+  PropertyVerificationSummary,
+} from './verificationModel';
+
+export const VERIFICATION_SCORE_MAX = PROPERTY_VERIFICATION_KEYS.length;
 
 export const REAL_VERIFICATION_FILTER_MIN_SCORE = 3;
 
@@ -10,29 +25,30 @@ export const TOP_VERIFIED_RESULTS_COUNT = 3;
 
 export type PropertyVerificationStatus = 'complete' | 'pending';
 
-export type PropertyVerificationKey = 'identity' | 'location' | 'visual' | 'relationship' | 'onsite';
-
-export interface PropertyVerificationItem {
-  key: PropertyVerificationKey | string;
-  label: string;
-  description: string;
-  status: PropertyVerificationStatus;
-}
-
 type PropertyVerificationItemInput = Partial<PropertyVerificationItem> & {
   title?: string;
 };
 
+type PropertyVerificationSummaryInput = Partial<PropertyVerificationSummary> & {
+  items?: PropertyVerificationItemInput[];
+};
+
 type PropertyVerificationLike = {
+  verificationSummary?: PropertyVerificationSummaryInput | null;
   verificationScore?: number;
   verificationItems?: PropertyVerificationItemInput[];
   identityValidated?: boolean;
   locationVerified?: boolean;
+  materialVerified?: boolean;
   videoValidated?: boolean;
   propertyRelationshipVerified?: boolean;
   isVerifiedProperty?: boolean;
   hasDigitalVerification?: boolean;
   hasPresencialVerification?: boolean;
+  onsiteVerifiedAt?: string | Date | null;
+  completedBookingsCount?: number | string | null;
+  realReviewsCount?: number | string | null;
+  reviewsCount?: number | string | null;
   hostPremiumDocumentaryVerified?: boolean;
   premiumVisibilityBoost?: number;
   premiumOnsiteOffer?: PremiumVerificationOffer | null;
@@ -60,40 +76,28 @@ export type PropertyCatalogSortContext = {
   };
 };
 
+const LEGACY_PROPERTY_KEY_ALIASES: Record<LegacyPropertyVerificationKey, PropertyVerificationKey> = {
+  visual: 'material',
+  relationship: 'history',
+};
+
+const PROPERTY_VERIFICATION_KEY_SET = new Set<string>(PROPERTY_VERIFICATION_KEYS);
+
 const normalizeVerificationStatus = (status?: PropertyVerificationStatus) => status === 'complete' ? 'complete' : 'pending';
 
-const derivePropertyVerificationItems = (property: PropertyVerificationLike): PropertyVerificationItem[] => [
-  {
-    key: 'identity',
-    label: 'Identidad confirmada',
-    description: property.identityValidated ? 'Sabés con quién estás hablando.' : 'Falta confirmar quién publica.',
-    status: property.identityValidated ? 'complete' : 'pending',
-  },
-  {
-    key: 'location',
-    label: 'Ubicación verificada',
-    description: property.locationVerified ? 'El lugar existe y está ubicado.' : 'Todavía falta comprobar la ubicación.',
-    status: property.locationVerified ? 'complete' : 'pending',
-  },
-  {
-    key: 'visual',
-    label: 'Material real del lugar',
-    description: property.videoValidated ? 'Podés ver mejor el estado real.' : 'Todavía falta material real del lugar.',
-    status: property.videoValidated ? 'complete' : 'pending',
-  },
-  {
-    key: 'relationship',
-    label: 'Relación con la propiedad',
-    description: property.propertyRelationshipVerified ? 'Está confirmado el vínculo con el lugar.' : 'Falta confirmar vínculo con el lugar.',
-    status: property.propertyRelationshipVerified ? 'complete' : 'pending',
-  },
-  {
-    key: 'onsite',
-    label: 'Verificación presencial',
-    description: property.hasPresencialVerification ? 'Ya hubo una revisión en el lugar.' : 'Todavía no hay revisión en el lugar.',
-    status: property.hasPresencialVerification ? 'complete' : 'pending',
-  },
-];
+const isPropertyVerificationKey = (value: string): value is PropertyVerificationKey => PROPERTY_VERIFICATION_KEY_SET.has(value);
+
+const normalizePropertyVerificationKey = (key?: string) => {
+  if (!key) {
+    return null;
+  }
+
+  if (key in LEGACY_PROPERTY_KEY_ALIASES) {
+    return LEGACY_PROPERTY_KEY_ALIASES[key as LegacyPropertyVerificationKey];
+  }
+
+  return isPropertyVerificationKey(key) ? key : null;
+};
 
 const clampVerificationScore = (score: number) => {
   if (!Number.isFinite(score)) {
@@ -214,30 +218,84 @@ const getPropertyRelevanceScore = (property: PropertySortLike, context?: Propert
     + getTypeRelevanceScore(property, context.filters?.type);
 };
 
-export const getPropertyVerificationItems = (property: PropertyVerificationLike): PropertyVerificationItem[] => {
-  if (Array.isArray(property.verificationItems) && property.verificationItems.length > 0) {
-    return property.verificationItems.slice(0, VERIFICATION_SCORE_MAX).map((item, index) => ({
-      key: item.key || `item-${index + 1}`,
-      label: item.label || item.title || 'Verificación',
-      description: item.description || '',
-      status: normalizeVerificationStatus(item.status),
-    }));
+const normalizePropertyVerificationItem = (item: PropertyVerificationItemInput, index: number): PropertyVerificationItem => {
+  const normalizedStatus = normalizeVerificationStatus(item.status);
+  const normalizedKey = normalizePropertyVerificationKey(typeof item.key === 'string' ? item.key : undefined);
+
+  if (normalizedKey) {
+    return buildPropertyVerificationItem({
+      key: normalizedKey,
+      complete: normalizedStatus === 'complete',
+    });
   }
 
-  return derivePropertyVerificationItems(property);
+  return {
+    key: item.key || `item-${index + 1}`,
+    label: item.label || item.title || 'Verificación',
+    description: item.description || '',
+    status: normalizedStatus,
+  };
 };
 
-export const getPropertyVerificationScore = (property: PropertyVerificationLike) => {
-  if (Array.isArray(property.verificationItems) && property.verificationItems.length > 0) {
-    return clampVerificationScore(getPropertyVerificationItems(property).filter((item) => item.status === 'complete').length);
-  }
+const buildSummaryFromExplicitItems = (items: PropertyVerificationItemInput[]): PropertyVerificationSummary => {
+  const normalizedItems = items.slice(0, VERIFICATION_SCORE_MAX).map(normalizePropertyVerificationItem);
 
-  if (typeof property.verificationScore === 'number') {
-    return clampVerificationScore(property.verificationScore);
-  }
-
-  return clampVerificationScore(derivePropertyVerificationItems(property).filter((item) => item.status === 'complete').length);
+  return {
+    score: clampVerificationScore(normalizedItems.filter((item) => item.status === 'complete').length),
+    maxScore: normalizedItems.length || VERIFICATION_SCORE_MAX,
+    items: normalizedItems,
+  };
 };
+
+const hasDerivedVerificationSignals = (property: PropertyVerificationLike) => (
+  typeof property.identityValidated === 'boolean'
+  || typeof property.locationVerified === 'boolean'
+  || typeof property.materialVerified === 'boolean'
+  || typeof property.videoValidated === 'boolean'
+  || typeof property.hasPresencialVerification === 'boolean'
+  || typeof property.completedBookingsCount === 'number'
+  || typeof property.realReviewsCount === 'number'
+  || typeof property.reviewsCount === 'number'
+  || typeof property.completedBookingsCount === 'string'
+  || typeof property.realReviewsCount === 'string'
+  || typeof property.reviewsCount === 'string'
+);
+
+export const getPropertyVerificationSummary = (property: PropertyVerificationLike): PropertyVerificationSummary => {
+  if (Array.isArray(property.verificationSummary?.items) && property.verificationSummary.items.length > 0) {
+    return buildSummaryFromExplicitItems(property.verificationSummary.items);
+  }
+
+  if (Array.isArray(property.verificationItems) && property.verificationItems.length > 0) {
+    return buildSummaryFromExplicitItems(property.verificationItems);
+  }
+
+  return buildPropertyVerificationSummary({
+    identityValidated: property.identityValidated,
+    locationVerified: property.locationVerified,
+    materialVerified: property.materialVerified,
+    videoValidated: property.videoValidated,
+    hasPresencialVerification: property.hasPresencialVerification,
+    onsiteVerifiedAt: property.onsiteVerifiedAt,
+    completedBookingsCount: property.completedBookingsCount,
+    realReviewsCount: property.realReviewsCount,
+    reviewsCount: property.reviewsCount,
+  });
+};
+
+export const getPropertyVerificationItems = (property: PropertyVerificationLike): PropertyVerificationItem[] => (
+  getPropertyVerificationSummary(property).items
+);
+
+export const getPropertyVerificationScore = (property: PropertyVerificationLike) => (
+  Array.isArray(property.verificationSummary?.items) && property.verificationSummary.items.length > 0
+    ? getPropertyVerificationSummary(property).score
+    : Array.isArray(property.verificationItems) && property.verificationItems.length > 0
+      ? getPropertyVerificationSummary(property).score
+      : typeof property.verificationScore === 'number' && !hasDerivedVerificationSignals(property)
+        ? clampVerificationScore(property.verificationScore)
+        : getPropertyVerificationSummary(property).score
+);
 
 export const meetsRealVerificationFilter = (property: PropertyVerificationLike) => (
   getPropertyVerificationScore(property) >= REAL_VERIFICATION_FILTER_MIN_SCORE
@@ -275,19 +333,26 @@ export const getPropertyVerificationGuidanceMessage = (property: PropertyVerific
 };
 
 export const withPropertyVerificationScore = <T extends PropertyVerificationLike>(property: T) => {
-  const verificationItems = getPropertyVerificationItems(property);
+  const verificationSummary = getPropertyVerificationSummary(property);
 
   return {
     ...property,
-    verificationItems,
-    verificationScore: getPropertyVerificationScore({ ...property, verificationItems }),
+    verificationSummary,
+    verificationItems: verificationSummary.items,
+    verificationScore: verificationSummary.score,
   };
 };
 
 export const getPropertyVerificationBadge = (property: PropertyVerificationLike) => {
-  const verificationItems = getPropertyVerificationItems(property);
-  const max = verificationItems.length || VERIFICATION_SCORE_MAX;
-  const score = Math.min(getPropertyVerificationScore({ ...property, verificationItems }), max);
+  const verificationSummary = getPropertyVerificationSummary(property);
+  const max = verificationSummary.maxScore || VERIFICATION_SCORE_MAX;
+  const score = Array.isArray(property.verificationSummary?.items) && property.verificationSummary.items.length > 0
+    ? Math.min(verificationSummary.score, max)
+    : Array.isArray(property.verificationItems) && property.verificationItems.length > 0
+      ? Math.min(verificationSummary.score, max)
+      : typeof property.verificationScore === 'number' && !hasDerivedVerificationSignals(property)
+        ? Math.min(clampVerificationScore(property.verificationScore), max)
+        : Math.min(verificationSummary.score, max);
   const visual = `${'✔'.repeat(score)}${'○'.repeat(max - score)}`;
   const compactLabel = `${score} de ${max} comprobaciones completas`;
 
@@ -302,12 +367,12 @@ export const getPropertyVerificationBadge = (property: PropertyVerificationLike)
 };
 
 export const getPropertyVerificationDetails = (property: PropertyVerificationLike) => {
-  const items = getPropertyVerificationItems(property);
-  const badge = getPropertyVerificationBadge({ ...property, verificationItems: items });
+  const verificationSummary = getPropertyVerificationSummary(property);
+  const badge = getPropertyVerificationBadge({ ...property, verificationSummary });
 
   return {
     ...badge,
-    items,
+    items: verificationSummary.items,
     helperText: 'Mostramos qué está comprobado para que puedas decidir mejor.',
   };
 };
@@ -321,7 +386,6 @@ export const sortPropertiesByCatalogOrder = <T extends PropertySortLike>(
 
   sortedItems.sort((left, right) => {
     const verificationDifference = getPropertyVerificationScore(right) - getPropertyVerificationScore(left);
-    const visibilityBoostDifference = getPremiumVisibilityBoost(right) - getPremiumVisibilityBoost(left);
     const ratingDifference = Number(right.rating || 0) - Number(left.rating || 0);
     const reviewsDifference = Number(right.reviewsCount || 0) - Number(left.reviewsCount || 0);
     const relevanceDifference = getPropertyRelevanceScore(right, context) - getPropertyRelevanceScore(left, context);
@@ -330,10 +394,6 @@ export const sortPropertiesByCatalogOrder = <T extends PropertySortLike>(
     if (sortBy === 'price') {
       if (verificationDifference !== 0) {
         return verificationDifference;
-      }
-
-      if (visibilityBoostDifference !== 0) {
-        return visibilityBoostDifference;
       }
 
       if (ratingDifference !== 0) {
@@ -368,10 +428,6 @@ export const sortPropertiesByCatalogOrder = <T extends PropertySortLike>(
         return verificationDifference;
       }
 
-      if (visibilityBoostDifference !== 0) {
-        return visibilityBoostDifference;
-      }
-
       if (relevanceDifference !== 0) {
         return relevanceDifference;
       }
@@ -385,10 +441,6 @@ export const sortPropertiesByCatalogOrder = <T extends PropertySortLike>(
 
     if (verificationDifference !== 0) {
       return verificationDifference;
-    }
-
-    if (visibilityBoostDifference !== 0) {
-      return visibilityBoostDifference;
     }
 
     if (ratingDifference !== 0) {

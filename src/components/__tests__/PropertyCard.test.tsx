@@ -99,8 +99,8 @@ describe('PropertyCard', () => {
       />,
     );
 
-    expect(screen.getByText('2 de 5 comprobaciones completas')).toBeInTheDocument();
-    expect(screen.getByText('✔✔○○○')).toBeInTheDocument();
+    expect(screen.getByText('3 de 5 comprobaciones completas')).toBeInTheDocument();
+    expect(screen.getByText('✔✔✔○○')).toBeInTheDocument();
     expect(screen.queryByText('Más comprobado')).toBeNull();
   });
 

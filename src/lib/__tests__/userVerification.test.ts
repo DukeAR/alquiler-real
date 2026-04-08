@@ -20,6 +20,30 @@ describe('buildUserVerificationStatus', () => {
     expect(status.level).toBe('INICIAL');
     expect(status.highValueBookingEligible).toBe(false);
     expect(status.missingRequirements).toEqual(['Confirmá tu email', 'Agregá tu teléfono']);
+    expect(status.verificationSummary).toEqual({
+      score: 0,
+      maxScore: 3,
+      items: [
+        {
+          key: 'email',
+          label: 'Email verificado',
+          status: 'pending',
+          description: 'Todavía falta confirmar el email principal de la cuenta.',
+        },
+        {
+          key: 'phone',
+          label: 'Teléfono verificado',
+          status: 'pending',
+          description: 'Todavía falta confirmar el teléfono principal de la cuenta.',
+        },
+        {
+          key: 'identity',
+          label: 'Identidad verificada',
+          status: 'pending',
+          description: 'Todavía no hay una verificación de identidad completa.',
+        },
+      ],
+    });
   });
 
   test('reaches level 3 with platform signals only, without requiring documents', () => {
@@ -43,6 +67,8 @@ describe('buildUserVerificationStatus', () => {
     expect(status.level).toBe('NIVEL_3');
     expect(status.highValueBookingEligible).toBe(true);
     expect(status.optionalUpgrade).toContain('comprobación documental opcional');
+    expect(status.verificationSummary.score).toBe(2);
+    expect(status.identityVerification.status).toBe('unverified');
   });
 
   test('uses documentary verification only as the optional top layer', () => {
@@ -61,10 +87,19 @@ describe('buildUserVerificationStatus', () => {
       totalMessages: 20,
       documentarySubmitted: true,
       documentaryVerified: true,
+      identityVerificationStatus: 'verified',
+      identityVerificationProvider: 'documentary',
+      identityVerifiedAt: '2026-04-08T00:00:00.000Z',
     });
 
     expect(status.level).toBe('NIVEL_4');
     expect(status.checks.documentaryVerified).toBe(true);
     expect(status.optionalUpgrade).toBeNull();
+    expect(status.identityVerification).toEqual({
+      status: 'verified',
+      provider: 'documentary',
+      verifiedAt: '2026-04-08T00:00:00.000Z',
+    });
+    expect(status.verificationSummary.score).toBe(3);
   });
 });

@@ -197,14 +197,16 @@ const seedDemoCatalog = async () => {
           member_since, created_at, identity_validated, email_verified, phone_verified,
           validation_level, active_mode, profile_photo, rating, total_reviews, is_host, host_verified,
           host_rating, total_properties, total_bookings_hosted, badge, trust_score, risk_score,
-          is_email_verified, is_phone_verified, is_identity_verified
+          is_email_verified, is_phone_verified, is_identity_verified,
+          identity_verification_status, identity_verification_provider, identity_verified_at
         )
         VALUES (
           $1, $2, $3, $4, $5, $6, $7, $8, $9,
           $10, $11, $12, $13, $14,
           $15, $16, $17, 0, 0, $18, $19,
           0, 0, 0, $20, $21, $22,
-          $23, $24, $25
+          $23, $24, $25,
+          $26, $27, $28
         )
         ON CONFLICT (id) DO UPDATE SET
           email = EXCLUDED.email,
@@ -230,7 +232,10 @@ const seedDemoCatalog = async () => {
           risk_score = EXCLUDED.risk_score,
           is_email_verified = EXCLUDED.is_email_verified,
           is_phone_verified = EXCLUDED.is_phone_verified,
-          is_identity_verified = EXCLUDED.is_identity_verified`,
+          is_identity_verified = EXCLUDED.is_identity_verified,
+          identity_verification_status = EXCLUDED.identity_verification_status,
+          identity_verification_provider = EXCLUDED.identity_verification_provider,
+          identity_verified_at = EXCLUDED.identity_verified_at`,
         [
           user.id,
           user.email,
@@ -257,6 +262,9 @@ const seedDemoCatalog = async () => {
           user.emailVerified,
           user.phoneVerified,
           user.identityValidated,
+          user.identityVerificationStatus ?? (user.identityValidated ? 'verified' : 'unverified'),
+          user.identityVerificationProvider ?? null,
+          user.identityVerifiedAt ?? null,
         ],
       );
     }
@@ -299,15 +307,15 @@ const seedDemoCatalog = async () => {
       await client.query(
         `INSERT INTO properties (
           id, title, location, price, "hostId", "hostName", description, "imageUrl",
-          rating, "reviewsCount", "identityValidated", "locationVerified", "videoValidated",
-          "traceabilityLevel", "maxGuests", "hasPresencialVerification", "hasDigitalVerification",
+          rating, "reviewsCount", "identityValidated", "locationVerified", "materialVerified", "videoValidated",
+          "traceabilityLevel", "maxGuests", "hasPresencialVerification", "onsiteVerifiedAt", "hasDigitalVerification",
           lat, lng, status, is_verified_property, bedrooms, bathrooms, property_type, created_at, manual_blocked_dates
         )
         VALUES (
           $1, $2, $3, $4, $5, $6, $7, $8,
-          0, 0, $9, $10, $11,
-          $12, $13, $14, $15,
-          $16, $17, $18, $19, $20, $21, $22, $23, $24
+          0, 0, $9, $10, $11, $12,
+          $13, $14, $15, $16, $17,
+          $18, $19, $20, $21, $22, $23, $24, $25, $26
         )
         ON CONFLICT (id) DO UPDATE SET
           title = EXCLUDED.title,
@@ -319,10 +327,12 @@ const seedDemoCatalog = async () => {
           "imageUrl" = EXCLUDED."imageUrl",
           "identityValidated" = EXCLUDED."identityValidated",
           "locationVerified" = EXCLUDED."locationVerified",
+          "materialVerified" = EXCLUDED."materialVerified",
           "videoValidated" = EXCLUDED."videoValidated",
           "traceabilityLevel" = EXCLUDED."traceabilityLevel",
           "maxGuests" = EXCLUDED."maxGuests",
           "hasPresencialVerification" = EXCLUDED."hasPresencialVerification",
+          "onsiteVerifiedAt" = EXCLUDED."onsiteVerifiedAt",
           "hasDigitalVerification" = EXCLUDED."hasDigitalVerification",
           lat = EXCLUDED.lat,
           lng = EXCLUDED.lng,
@@ -344,10 +354,12 @@ const seedDemoCatalog = async () => {
           property.imageUrl,
           property.identityValidated ? 1 : 0,
           property.locationVerified ? 1 : 0,
+          (property.materialVerified ?? property.videoValidated) ? 1 : 0,
           property.videoValidated ? 1 : 0,
           property.traceabilityLevel,
           property.maxGuests,
           property.hasPresencialVerification ? 1 : 0,
+          property.onsiteVerifiedAt ?? null,
           property.hasDigitalVerification ? 1 : 0,
           property.lat,
           property.lng,
@@ -540,7 +552,10 @@ export const initDB = async () => {
       risk_score INTEGER DEFAULT 0,
       is_email_verified BOOLEAN DEFAULT FALSE,
       is_phone_verified BOOLEAN DEFAULT FALSE,
-      is_identity_verified BOOLEAN DEFAULT FALSE
+      is_identity_verified BOOLEAN DEFAULT FALSE,
+      identity_verification_status TEXT DEFAULT 'unverified',
+      identity_verification_provider TEXT,
+      identity_verified_at TIMESTAMP
     );
   `);
 
@@ -570,7 +585,20 @@ export const initDB = async () => {
       BEGIN ALTER TABLE users ADD COLUMN is_email_verified BOOLEAN DEFAULT FALSE; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE users ADD COLUMN is_phone_verified BOOLEAN DEFAULT FALSE; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE users ADD COLUMN is_identity_verified BOOLEAN DEFAULT FALSE; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE users ADD COLUMN identity_verification_status TEXT DEFAULT 'unverified'; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE users ADD COLUMN identity_verification_provider TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE users ADD COLUMN identity_verified_at TIMESTAMP; EXCEPTION WHEN duplicate_column THEN NULL; END;
     END $$;
+  `);
+
+  await db.query(`
+    UPDATE users
+    SET identity_verification_status = CASE
+      WHEN COALESCE(identity_validated, FALSE) OR COALESCE(is_identity_verified, FALSE) THEN 'verified'
+      ELSE 'unverified'
+    END
+    WHERE identity_verification_status IS NULL
+       OR identity_verification_status NOT IN ('unverified', 'pending', 'verified', 'rejected');
   `);
 
   await db.query(`
@@ -690,10 +718,12 @@ export const initDB = async () => {
       "reviewsCount" INTEGER DEFAULT 0,
       "identityValidated" INTEGER DEFAULT 0,
       "locationVerified" INTEGER DEFAULT 0,
+      "materialVerified" INTEGER DEFAULT 0,
       "videoValidated" INTEGER DEFAULT 0,
       "traceabilityLevel" TEXT DEFAULT 'low',
       "maxGuests" INTEGER DEFAULT 4,
       "hasPresencialVerification" INTEGER DEFAULT 0,
+      "onsiteVerifiedAt" TIMESTAMP,
       "hasDigitalVerification" INTEGER DEFAULT 0,
       lat DOUBLE PRECISION DEFAULT -36.3536,
       lng DOUBLE PRECISION DEFAULT -56.7196,
@@ -716,8 +746,17 @@ export const initDB = async () => {
       BEGIN ALTER TABLE properties ADD COLUMN bedrooms INTEGER DEFAULT 1; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE properties ADD COLUMN bathrooms INTEGER DEFAULT 1; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE properties ADD COLUMN property_type TEXT DEFAULT 'house'; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE properties ADD COLUMN "materialVerified" INTEGER DEFAULT 0; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE properties ADD COLUMN "onsiteVerifiedAt" TIMESTAMP; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE properties ADD COLUMN manual_blocked_dates TEXT DEFAULT '[]'; EXCEPTION WHEN duplicate_column THEN NULL; END;
     END $$;
+  `);
+
+  await db.query(`
+    UPDATE properties
+    SET "materialVerified" = COALESCE("videoValidated", 0)
+    WHERE COALESCE("materialVerified", 0) = 0
+      AND COALESCE("videoValidated", 0) <> 0;
   `);
 
   // ============================================================

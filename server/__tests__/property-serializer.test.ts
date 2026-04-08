@@ -14,8 +14,11 @@ describe('mapPropertyRecord', () => {
       hostIdentityValidated: true,
       hostIdentityVerified: true,
       locationVerified: 1,
+      materialVerified: 1,
       videoValidated: 1,
       hasPresencialVerification: 0,
+      propertyCompletedBookingsCount: '0',
+      propertyRealReviewsCount: '2',
       hasDigitalVerification: 1,
       isVerifiedProperty: true,
       hostCompletedReservationsCount: '6',
@@ -25,7 +28,7 @@ describe('mapPropertyRecord', () => {
       lng: '-56.7',
     });
 
-    expect(property.verificationScore).toBe(3);
+    expect(property.verificationScore).toBe(4);
     expect(property.hostTrustScore).toBe(4);
     expect(property.hostTrust).toMatchObject({
       score: 4,
@@ -40,35 +43,40 @@ describe('mapPropertyRecord', () => {
     expect(property.verificationItems).toEqual([
       {
         key: 'identity',
-        label: 'Identidad confirmada',
-        description: 'Sabés con quién estás hablando.',
+        label: 'Identidad del anfitrión',
+        description: 'La identidad del anfitrión ya está verificada.',
         status: 'complete',
       },
       {
         key: 'location',
-        label: 'Ubicación verificada',
-        description: 'El lugar existe y está ubicado.',
+        label: 'Ubicación de la propiedad',
+        description: 'La ubicación de la propiedad ya está validada.',
         status: 'complete',
       },
       {
-        key: 'visual',
+        key: 'material',
         label: 'Material real del lugar',
-        description: 'Podés ver mejor el estado real.',
+        description: 'Hay material real validado del lugar.',
         status: 'complete',
-      },
-      {
-        key: 'relationship',
-        label: 'Relación con la propiedad',
-        description: 'Falta confirmar vínculo con el lugar.',
-        status: 'pending',
       },
       {
         key: 'onsite',
         label: 'Verificación presencial',
-        description: 'Todavía no hay revisión en el lugar.',
+        description: 'Todavía no hay una verificación presencial registrada.',
         status: 'pending',
       },
+      {
+        key: 'history',
+        label: 'Historial real del aviso',
+        description: 'El aviso ya tiene 2 reseñas reales.',
+        status: 'complete',
+      },
     ]);
+    expect(property.verificationSummary).toEqual({
+      score: 4,
+      maxScore: 5,
+      items: property.verificationItems,
+    });
   });
 
   test('uses the host identity fields before legacy property flags', () => {
@@ -83,8 +91,11 @@ describe('mapPropertyRecord', () => {
       hostIdentityValidated: 0,
       hostIdentityVerified: 0,
       locationVerified: 1,
+      materialVerified: 0,
       videoValidated: 0,
       hasPresencialVerification: 0,
+      propertyCompletedBookingsCount: '0',
+      propertyRealReviewsCount: '0',
       hostCompletedReservationsCount: '1',
       hostGuestReviewsCount: '0',
       hostMemberSince: '2026-01-10T00:00:00.000Z',
@@ -99,8 +110,8 @@ describe('mapPropertyRecord', () => {
     });
     expect(property.verificationItems?.[0]).toEqual({
       key: 'identity',
-      label: 'Identidad confirmada',
-      description: 'Falta confirmar quién publica.',
+      label: 'Identidad del anfitrión',
+      description: 'Todavía falta verificar la identidad del anfitrión.',
       status: 'pending',
     });
   });

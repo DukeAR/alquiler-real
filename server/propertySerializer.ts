@@ -24,13 +24,17 @@ type PropertyQueryRow = Record<string, unknown> & {
   hostIdentityValidated?: unknown;
   hostIdentityVerified?: unknown;
   locationVerified?: unknown;
+  materialVerified?: unknown;
   videoValidated?: unknown;
   hasPresencialVerification?: unknown;
+  onsiteVerifiedAt?: unknown;
   hasDigitalVerification?: unknown;
   isVerifiedProperty?: unknown;
   is_verified_property?: unknown;
   propertyRelationshipVerified?: unknown;
   hostPremiumDocumentaryVerified?: unknown;
+  propertyCompletedBookingsCount?: unknown;
+  propertyRealReviewsCount?: unknown;
   premiumVisibilityBoost?: unknown;
 };
 
@@ -77,11 +81,17 @@ export const mapPropertyRecord = (row: PropertyQueryRow) => {
     reviewsCount: toSafeInteger(row.reviewsCount),
     identityValidated: getResolvedIdentityValidated(row),
     locationVerified: toBoolean(row.locationVerified),
+    materialVerified: toBoolean(row.materialVerified) || toBoolean(row.videoValidated),
     videoValidated: toBoolean(row.videoValidated),
     propertyRelationshipVerified: toBoolean(row.propertyRelationshipVerified),
     hasPresencialVerification: toBoolean(row.hasPresencialVerification),
+    onsiteVerifiedAt: toDateString(row.onsiteVerifiedAt),
     hasDigitalVerification: toBoolean(row.hasDigitalVerification),
     hostPremiumDocumentaryVerified: toBoolean(row.hostPremiumDocumentaryVerified),
+    completedBookingsCount: toSafeInteger(row.propertyCompletedBookingsCount),
+    realReviewsCount: hasOwn(row, 'propertyRealReviewsCount')
+      ? toSafeInteger(row.propertyRealReviewsCount)
+      : toSafeInteger(row.reviewsCount),
     isVerifiedProperty: toBoolean(row.isVerifiedProperty) || toBoolean(row.is_verified_property),
     hostSince: getResolvedHostSince(row),
     hostCompletedReservationsCount: toSafeInteger(row.hostCompletedReservationsCount),

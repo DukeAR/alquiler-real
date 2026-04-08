@@ -32,6 +32,9 @@ export type DemoUser = {
   emailVerified: boolean;
   phoneVerified: boolean;
   identityValidated: boolean;
+  identityVerificationStatus?: 'unverified' | 'pending' | 'verified' | 'rejected';
+  identityVerificationProvider?: string | null;
+  identityVerifiedAt?: string | null;
   validationLevel: string;
   badge: string;
   trustScore: number;
@@ -75,8 +78,10 @@ export type DemoProperty = {
   isVerifiedProperty: boolean;
   identityValidated: boolean;
   locationVerified: boolean;
+  materialVerified?: boolean;
   videoValidated: boolean;
   hasPresencialVerification: boolean;
+  onsiteVerifiedAt?: string | null;
   hasDigitalVerification: boolean;
   createdAt: string;
   manualBlockedDates: Array<{ start: string; end: string }>;

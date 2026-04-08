@@ -16,19 +16,19 @@ describe('propertyVerification', () => {
       id: 'p1',
       identityValidated: true,
       locationVerified: true,
-      videoValidated: false,
-      propertyRelationshipVerified: true,
+      materialVerified: false,
       hasPresencialVerification: true,
+      completedBookingsCount: 2,
     });
 
     expect(property.verificationScore).toBe(4);
     expect(getPropertyVerificationScore(property)).toBe(4);
     expect(getPropertyVerificationItems(property).map((item) => item.label)).toEqual([
-      'Identidad confirmada',
-      'Ubicación verificada',
+      'Identidad del anfitrión',
+      'Ubicación de la propiedad',
       'Material real del lugar',
-      'Relación con la propiedad',
       'Verificación presencial',
+      'Historial real del aviso',
     ]);
     expect(getPropertyVerificationBadge(property)).toEqual({
       score: 4,
@@ -44,15 +44,34 @@ describe('propertyVerification', () => {
     const details = getPropertyVerificationDetails({
       identityValidated: true,
       locationVerified: true,
-      videoValidated: true,
-      propertyRelationshipVerified: false,
+      materialVerified: true,
       hasPresencialVerification: false,
+      completedBookingsCount: 0,
+      realReviewsCount: 0,
     });
 
     expect(details.summaryLabel).toBe('3 de 5 comprobaciones completas');
     expect(details.spacedVisual).toBe('✔ ✔ ✔ ○ ○');
     expect(details.helperText).toBe('Mostramos qué está comprobado para que puedas decidir mejor.');
     expect(details.items.map((item) => item.status)).toEqual(['complete', 'complete', 'complete', 'pending', 'pending']);
+  });
+
+  test('does not infer listing history from legacy relationship flags alone', () => {
+    const details = getPropertyVerificationDetails({
+      identityValidated: true,
+      locationVerified: true,
+      propertyRelationshipVerified: true,
+      completedBookingsCount: 0,
+      realReviewsCount: 0,
+    });
+
+    expect(details.summaryLabel).toBe('2 de 5 comprobaciones completas');
+    expect(details.items[4]).toEqual({
+      key: 'history',
+      label: 'Historial real del aviso',
+      description: 'Todavía no hay reservas completadas ni reseñas reales asociadas al aviso.',
+      status: 'pending',
+    });
   });
 
   test('derives Explore guidance labels from the real verification score and top-result position', () => {
@@ -98,11 +117,11 @@ describe('propertyVerification', () => {
     expect(sorted.map((property) => property.id)).toEqual(['p2', 'p1', 'p3']);
   });
 
-  test('uses the premium visibility boost as a tie breaker when verification scores are equal', () => {
+  test('uses rating and reviews as tie breakers when verification scores are equal', () => {
     const sorted = sortPropertiesByCatalogOrder([
       { id: 'p1', verificationScore: 4, rating: 4.7, reviewsCount: 6, price: 120_000, hostPremiumDocumentaryVerified: false, hasPresencialVerification: false },
-      { id: 'p2', verificationScore: 4, rating: 4.7, reviewsCount: 6, price: 120_000, hostPremiumDocumentaryVerified: true, hasPresencialVerification: false },
-      { id: 'p3', verificationScore: 4, rating: 4.7, reviewsCount: 6, price: 120_000, hostPremiumDocumentaryVerified: true, hasPresencialVerification: true },
+      { id: 'p2', verificationScore: 4, rating: 4.9, reviewsCount: 4, price: 120_000, hostPremiumDocumentaryVerified: true, hasPresencialVerification: false },
+      { id: 'p3', verificationScore: 4, rating: 4.9, reviewsCount: 8, price: 120_000, hostPremiumDocumentaryVerified: true, hasPresencialVerification: true },
     ], 'verification');
 
     expect(sorted.map((property) => property.id)).toEqual(['p3', 'p2', 'p1']);

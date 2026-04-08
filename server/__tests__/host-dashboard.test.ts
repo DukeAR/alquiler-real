@@ -103,7 +103,7 @@ describe('Host dashboard endpoint', () => {
     expect(res.body.properties).toHaveLength(1);
     expect(res.body.properties[0]).toMatchObject({
       id: 'prop-1',
-      verificationScore: 4,
+      verificationScore: 5,
       pendingRequestsCount: 2,
       activeReservationsCount: 1,
       nextArrivalDate: '18/10/2026',
@@ -114,7 +114,7 @@ describe('Host dashboard endpoint', () => {
     });
     expect(res.body.properties[0].verificationItems).toEqual(expect.arrayContaining([
       expect.objectContaining({ key: 'identity', status: 'complete' }),
-      expect.objectContaining({ key: 'relationship', status: 'pending' }),
+      expect.objectContaining({ key: 'history', status: 'complete' }),
     ]));
   });
 
