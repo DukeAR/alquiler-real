@@ -47,6 +47,7 @@ export type ValidationData = {
   highValueBookingEligible?: boolean;
   identityVerification?: UserIdentityVerification;
   verificationSummary?: UserVerificationSummary;
+  verificationItems?: UserVerificationSummary['items'];
   checks?: ValidationChecks;
   missingRequirements?: string[];
   categories?: ValidationCategory[];

@@ -1,6 +1,11 @@
 import { describe, expect, test } from 'vitest';
 
-import { buildGuestVerificationSummary, getGuestVerificationScore } from '../guestVerification';
+import {
+  buildGuestVerificationModel,
+  buildGuestVerificationSummary,
+  getGuestVerificationMissingRequirements,
+  getGuestVerificationScore,
+} from '../guestVerification';
 
 describe('guestVerification', () => {
   test('builds the canonical five guest checks with real platform activity', () => {
@@ -53,6 +58,9 @@ describe('guestVerification', () => {
       ],
     });
     expect(getGuestVerificationScore({ verificationSummary: summary })).toBe(3);
+    expect(getGuestVerificationMissingRequirements({ verificationSummary: summary })).toEqual([
+      'Agregá tu teléfono',
+    ]);
   });
 
   test('preserves explicit summary items when only the canonical payload is available', () => {
@@ -97,5 +105,31 @@ describe('guestVerification', () => {
     });
 
     expect(score).toBe(4);
+  });
+
+  test('builds a canonical guest verification model with score, items and identity metadata', () => {
+    const verification = buildGuestVerificationModel({
+      emailVerified: true,
+      phoneVerified: true,
+      phone: '+54 11 5555 0000',
+      bio: 'Perfil listo.',
+      zone: 'Caballito',
+      profilePhoto: 'https://example.com/avatar.jpg',
+      completedBookings: 2,
+      hostReviewsCount: 1,
+      documentaryVerified: true,
+      identityVerificationStatus: 'verified',
+      identityVerificationProvider: 'documentary',
+      identityVerifiedAt: '2026-04-08T00:00:00.000Z',
+    });
+
+    expect(verification.verificationScore).toBe(5);
+    expect(verification.verificationItems).toHaveLength(5);
+    expect(verification.missingRequirements).toEqual([]);
+    expect(verification.identityVerification).toEqual({
+      status: 'verified',
+      provider: 'documentary',
+      verifiedAt: '2026-04-08T00:00:00.000Z',
+    });
   });
 });

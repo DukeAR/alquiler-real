@@ -250,6 +250,44 @@ describe('Host dashboard endpoint', () => {
         photoUploaded: true,
         basicDetailsComplete: true,
       },
+      verificationScore: 5,
+      verificationItems: [
+        {
+          key: 'email',
+          label: 'Email verificado',
+          status: 'complete',
+          description: 'El email principal de la cuenta ya está confirmado.',
+        },
+        {
+          key: 'phone',
+          label: 'Teléfono verificado',
+          status: 'complete',
+          description: 'El teléfono principal de la cuenta ya está confirmado.',
+        },
+        {
+          key: 'profile',
+          label: 'Perfil completo',
+          status: 'complete',
+          description: 'La cuenta ya tiene foto, presentación, zona y teléfono cargados.',
+        },
+        {
+          key: 'history',
+          label: 'Historial real en la plataforma',
+          status: 'complete',
+          description: 'La cuenta ya muestra 4 estadías completadas y 1 reseña de anfitrión dentro de la plataforma.',
+        },
+        {
+          key: 'documentary',
+          label: 'Identidad documental',
+          status: 'complete',
+          description: 'La identidad ya fue verificada.',
+        },
+      ],
+      identityVerification: {
+        status: 'verified',
+        provider: null,
+        verifiedAt: null,
+      },
       verificationSummary: {
         score: 5,
         maxScore: 5,
@@ -296,6 +334,7 @@ describe('Host dashboard endpoint', () => {
     expect(res.body.contactedGuests[0].guestProfile).toMatchObject({
       identityVerified: true,
       memberSince: '2022-02-10',
+      verificationScore: 5,
       verificationSummary: {
         score: 5,
       },

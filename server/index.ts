@@ -8,9 +8,10 @@ import { serverEnv } from './config/env';
 import { db } from './config/db';
 import { initDB } from './updates';
 import { mapPropertyRecord } from './propertySerializer';
+import { buildGuestVerification } from './guestVerification';
 import { REAL_VERIFICATION_FILTER_MIN_SCORE } from './propertyVerification';
 import { getChatSystemMessages, getRequestAcceptedMessage, type ChatSystemMessageKey } from './chatSystemMessages';
-import { buildGuestProfileCompletion, buildGuestVerificationSummary } from '../src/lib/guestVerification';
+import { buildGuestProfileCompletion } from '../src/lib/guestVerification';
 import { buildUserVerificationStatus } from '../src/lib/userVerification';
 import {
   PREMIUM_DOCUMENTARY_OFFER_TYPE,
@@ -2083,6 +2084,20 @@ const buildGuestRequestProfilePayload = (
         },
       ]
     : undefined;
+  const verification = buildGuestVerification({
+    emailVerified,
+    phoneVerified,
+    profileComplete: profileCompletion.profileComplete,
+    photoUploaded: profileCompletion.photoUploaded,
+    basicDetailsComplete: profileCompletion.basicDetailsComplete,
+    completedStays: guest.completedStays,
+    hostReviewsCount: (options.hostReviews ?? []).length,
+    activitySignalsCount: operationSignals?.filter((signal) => signal.active && signal.source !== 'derived').length ?? 0,
+    documentaryVerified: identityVerified,
+    identityVerificationStatus: guest.identityVerificationStatus ?? (identityVerified ? 'verified' : null),
+    identityVerificationProvider: guest.identityVerificationProvider,
+    identityVerifiedAt: guest.identityVerifiedAt,
+  });
 
   return {
     identityVerified,
@@ -2102,20 +2117,10 @@ const buildGuestRequestProfilePayload = (
       photoUploaded: profileCompletion.photoUploaded,
       basicDetailsComplete: profileCompletion.basicDetailsComplete,
     },
-    verificationSummary: buildGuestVerificationSummary({
-      emailVerified,
-      phoneVerified,
-      profileComplete: profileCompletion.profileComplete,
-      photoUploaded: profileCompletion.photoUploaded,
-      basicDetailsComplete: profileCompletion.basicDetailsComplete,
-      completedStays: guest.completedStays,
-      hostReviewsCount: (options.hostReviews ?? []).length,
-      activitySignalsCount: operationSignals?.filter((signal) => signal.active && signal.source !== 'derived').length ?? 0,
-      documentaryVerified: identityVerified,
-      identityVerificationStatus: guest.identityVerificationStatus ?? (identityVerified ? 'verified' : null),
-      identityVerificationProvider: guest.identityVerificationProvider,
-      identityVerifiedAt: guest.identityVerifiedAt,
-    }),
+    verificationSummary: verification.verificationSummary,
+    verificationScore: verification.verificationScore,
+    verificationItems: verification.verificationItems,
+    identityVerification: verification.identityVerification,
     ...(operationSignals ? { operationSignals } : {}),
     memberSince: toDateOnlyString(guest.memberSince),
   };

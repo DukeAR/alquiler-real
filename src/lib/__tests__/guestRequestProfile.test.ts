@@ -121,6 +121,8 @@ describe('guestRequestProfile copy states', () => {
     });
 
     expect(profile.verificationSummary.score).toBe(4);
+    expect(profile.verificationScore).toBe(4);
+    expect(profile.verificationItems).toHaveLength(5);
     expect(profile.verificationSummary.items.find((item) => item.key === 'email')?.status).toBe('complete');
     expect(profile.verificationSummary.items.find((item) => item.key === 'history')?.status).toBe('complete');
   });

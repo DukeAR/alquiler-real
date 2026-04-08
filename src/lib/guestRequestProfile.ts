@@ -7,7 +7,7 @@ import type {
   GuestRequestProfileDataAvailability,
   GuestRequestProfileDataSource,
 } from '../types';
-import { getGuestVerificationSummary } from './guestVerification';
+import { buildGuestVerificationModel } from './guestVerification';
 
 type GuestRequestProfileSource = {
   id?: string;
@@ -220,6 +220,7 @@ export const getGuestRequestProfileOperationEmptyMessage = (profile: GuestReques
 
 const createEmptyGuestRequestProfile = (): GuestRequestProfile => {
   const dataAvailability = createDataAvailability();
+  const verification = buildGuestVerificationModel({});
 
   return {
     identityVerified: false,
@@ -234,7 +235,10 @@ const createEmptyGuestRequestProfile = (): GuestRequestProfile => {
       photoUploaded: false,
       basicDetailsComplete: false,
     },
-    verificationSummary: getGuestVerificationSummary({}),
+    verificationSummary: verification.verificationSummary,
+    verificationScore: verification.verificationScore,
+    verificationItems: verification.verificationItems,
+    identityVerification: verification.identityVerification,
     operationSignals: [],
     memberSince: '',
     dataAvailability,
@@ -355,24 +359,40 @@ export const resolveGuestRequestProfile = (source: GuestRequestProfileSource, _i
   const identityVerified = dataAvailability.identity && typeof providedProfile.identityVerified === 'boolean'
     ? providedProfile.identityVerified
     : emptyProfile.identityVerified;
+  const providedIdentityVerification = isObject(providedProfile.identityVerification)
+    ? providedProfile.identityVerification
+    : null;
+  const verification = buildGuestVerificationModel({
+    verificationSummary: (typeof providedProfile.verificationSummary === 'object' && providedProfile.verificationSummary !== null)
+      ? providedProfile.verificationSummary
+      : null,
+    profileComplete: normalizedProfileCompletion.profileComplete,
+    photoUploaded: normalizedProfileCompletion.photoUploaded,
+    basicDetailsComplete: normalizedProfileCompletion.basicDetailsComplete,
+    completedStays: normalizedPlatformHistory.completedStays,
+    hostReviewsCount: normalizedHostReviews.length,
+    activitySignalsCount: normalizedOperationSignals.filter((signal) => signal.active && signal.source !== 'derived').length,
+    documentaryVerified: identityVerified,
+    identityVerificationStatus: typeof providedIdentityVerification?.status === 'string'
+      ? providedIdentityVerification.status
+      : null,
+    identityVerificationProvider: typeof providedIdentityVerification?.provider === 'string'
+      ? providedIdentityVerification.provider
+      : null,
+    identityVerifiedAt: typeof providedIdentityVerification?.verifiedAt === 'string'
+      ? providedIdentityVerification.verifiedAt
+      : null,
+  });
 
   return {
     identityVerified,
     platformHistory: normalizedPlatformHistory,
     hostReviews: normalizedHostReviews,
     profileCompletion: normalizedProfileCompletion,
-    verificationSummary: getGuestVerificationSummary({
-      verificationSummary: (typeof providedProfile.verificationSummary === 'object' && providedProfile.verificationSummary !== null)
-        ? providedProfile.verificationSummary
-        : null,
-      profileComplete: normalizedProfileCompletion.profileComplete,
-      photoUploaded: normalizedProfileCompletion.photoUploaded,
-      basicDetailsComplete: normalizedProfileCompletion.basicDetailsComplete,
-      completedStays: normalizedPlatformHistory.completedStays,
-      hostReviewsCount: normalizedHostReviews.length,
-      activitySignalsCount: normalizedOperationSignals.filter((signal) => signal.active && signal.source !== 'derived').length,
-      documentaryVerified: identityVerified,
-    }),
+    verificationSummary: verification.verificationSummary,
+    verificationScore: verification.verificationScore,
+    verificationItems: verification.verificationItems,
+    identityVerification: verification.identityVerification,
     operationSignals: normalizedOperationSignals,
     memberSince: dataAvailability.memberSince && typeof providedProfile.memberSince === 'string' && providedProfile.memberSince.trim()
       ? providedProfile.memberSince

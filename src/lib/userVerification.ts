@@ -1,7 +1,6 @@
 import {
-  buildGuestProfileCompletion,
-  buildGuestVerificationSignals,
-  buildGuestVerificationSummary,
+  buildGuestVerificationModel,
+  type GuestVerificationItem,
   type GuestVerificationKey,
   type GuestVerificationSummary,
 } from './guestVerification';
@@ -92,6 +91,7 @@ export type UserVerificationStatus = {
   highValueBookingEligible: boolean;
   identityVerification: UserIdentityVerification;
   verificationSummary: UserVerificationSummary;
+  verificationItems: GuestVerificationItem[];
   checks: UserVerificationChecks;
   categories: UserVerificationCategory[];
 };
@@ -107,32 +107,32 @@ export const USER_VERIFICATION_LEVEL_META: Record<UserVerificationLevel, LevelMe
   INICIAL: {
     shortLabel: 'Primeras comprobaciones',
     levelLabel: 'Comprobaciones iniciales',
-    headline: 'Todavía faltan comprobaciones básicas para mostrar mejor tu cuenta.',
-    summary: 'Con email y teléfono confirmados ya dejás clara la base mínima de contacto, sin depender de documentos.',
+    headline: 'Todavía faltan las comprobaciones base de tu cuenta.',
+    summary: 'Primero conviene confirmar email y teléfono. Después podés completar perfil, sumar historial real y, si querés, agregar la comprobación documental adicional.',
   },
   NIVEL_1: {
     shortLabel: 'Contacto confirmado',
     levelLabel: 'Base de contacto lista',
-    headline: 'Tu cuenta ya muestra la base mínima para entender quién sos.',
-    summary: 'Email y teléfono confirmados dejan información validada para empezar a decidir con menos dudas.',
+    headline: 'Tu cuenta ya muestra la base mínima de contacto.',
+    summary: 'Email y teléfono ya quedaron confirmados como información validada de la cuenta.',
   },
   NIVEL_2: {
-    shortLabel: 'Perfil activo',
-    levelLabel: 'Perfil y uso visibles',
-    headline: 'Tu perfil ya aporta más contexto para decidir.',
-    summary: 'Tus datos y tu actividad muestran una cuenta real y en uso, sin pedir documentación al inicio.',
+    shortLabel: 'Perfil completo',
+    levelLabel: 'Perfil visible',
+    headline: 'Tu cuenta ya muestra contacto y perfil completo.',
+    summary: 'Además del contacto confirmado, tu perfil ya muestra foto, presentación, zona y teléfono cargados.',
   },
   NIVEL_3: {
-    shortLabel: 'Historial consistente',
-    levelLabel: 'Historial y reseñas visibles',
-    headline: 'Tu cuenta ya combina actividad, historial y reseñas.',
-    summary: 'La información validada de tu cuenta ayuda a decidir mejor porque muestra uso real dentro de la plataforma.',
+    shortLabel: 'Historial visible',
+    levelLabel: 'Historial real visible',
+    headline: 'Tu cuenta ya muestra historial real dentro de la plataforma.',
+    summary: 'La cuenta ya tiene actividad, estadías o reseñas de anfitriones que sostienen una señal real para decidir mejor.',
   },
   NIVEL_4: {
-    shortLabel: 'Documentación adicional',
+    shortLabel: 'Documental adicional',
     levelLabel: 'Comprobación documental adicional',
-    headline: 'Sumaste una comprobación documental extra.',
-    summary: 'Además del historial y la actividad, tu cuenta muestra una comprobación documental opcional para casos puntuales.',
+    headline: 'Sumaste la comprobación documental como respaldo extra.',
+    summary: 'Además del contacto, el perfil y el historial real, tu cuenta ya muestra la comprobación documental adicional.',
   },
 };
 
@@ -141,167 +141,50 @@ const toSafeCount = (value: number | string | null | undefined) => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
-const hasText = (value: string | null | undefined) => Boolean(value && value.trim().length > 0);
+const buildBenefits = (verificationSummary: UserVerificationSummary): UserVerificationBenefits => ({
+  current: verificationSummary.items
+    .filter((item) => item.status === 'complete')
+    .slice(0, 2)
+    .map((item) => `${item.label} ya está comprobado.`),
+  next: verificationSummary.items
+    .filter((item) => item.status === 'pending' && item.key !== 'documentary')
+    .slice(0, 2)
+    .map((item) => `${item.label} todavía está pendiente.`),
+});
 
-const buildBenefits = (levelNumber: number): UserVerificationBenefits => {
-  switch (levelNumber) {
-    case 4:
-      return {
-        current: ['Tu cuenta ya combina actividad real, historial y una comprobación documental adicional.'],
-        next: [],
-      };
-    case 3:
-      return {
-        current: ['Tu cuenta ya muestra historial, interacciones y reseñas dentro de la app.'],
-        next: ['Opcional: sumar una comprobación documental extra.'],
-      };
-    case 2:
-      return {
-        current: ['Tu perfil ya muestra más información validada antes de reservar o publicar.'],
-        next: ['Siguiente foco: sumar historial y reseñas consistentes.'],
-      };
-    case 1:
-      return {
-        current: ['Tus datos de contacto ya están confirmados dentro de la cuenta.'],
-        next: ['Siguiente foco: completar perfil y registrar actividad real.'],
-      };
-    default:
-      return {
-        current: ['Ya podés usar la plataforma y completar tu cuenta a tu ritmo.'],
-        next: ['Primero: confirmar email y teléfono.'],
-      };
-  }
-};
-
-const getNextStep = (levelNumber: number, checks: UserVerificationChecks, hasPhone: boolean) => {
-  if (levelNumber <= 0) {
-    if (!checks.emailVerified) {
-      return 'Confirmá tu email desde la cuenta.';
-    }
-
-    if (!checks.phoneVerified) {
-      return hasPhone ? 'Confirmá tu teléfono.' : 'Agregá tu teléfono y después confirmalo.';
-    }
+const getNextStep = (missingRequirements: string[], documentaryVerified: boolean) => {
+  if (missingRequirements.length > 0) {
+    return `${missingRequirements[0]}.`;
   }
 
-  if (levelNumber === 1) {
-    if (!checks.profileComplete) {
-      return 'Completá tu perfil para mostrar más información validada.';
-    }
-
-    if (!checks.platformActivity) {
-      return 'Sumá actividad en la plataforma para dejar más contexto visible.';
-    }
+  if (!documentaryVerified) {
+    return 'Si querés sumar respaldo extra, podés agregar la comprobación documental adicional.';
   }
 
-  if (levelNumber === 2) {
-    if (!checks.historyVerified) {
-      return 'Necesitás más historial de reservas o conversaciones para sumar contexto confiable.';
-    }
-
-    if (!checks.reviewsVerified) {
-      return 'Necesitás reseñas dentro de la plataforma para completar esta parte.';
-    }
-  }
-
-  if (levelNumber === 3 && !checks.documentaryVerified) {
-    return 'Si querés sumar respaldo extra, podés agregar la comprobación documental opcional.';
-  }
-
-  return 'Seguí usando la plataforma y manteniendo tus datos al día.';
-};
-
-const getMissingRequirements = (levelNumber: number, checks: UserVerificationChecks, hasPhone: boolean) => {
-  if (levelNumber <= 0) {
-    const requirements: string[] = [];
-
-    if (!checks.emailVerified) {
-      requirements.push('Confirmá tu email');
-    }
-
-    if (!checks.phoneVerified) {
-      requirements.push(hasPhone ? 'Confirmá tu teléfono' : 'Agregá tu teléfono');
-    }
-
-    return requirements;
-  }
-
-  if (levelNumber === 1) {
-    const requirements: string[] = [];
-
-    if (!checks.profileComplete) {
-      requirements.push('Completá tu perfil');
-    }
-
-    if (!checks.platformActivity) {
-      requirements.push('Sumá actividad en la plataforma');
-    }
-
-    return requirements;
-  }
-
-  if (levelNumber === 2) {
-    const requirements: string[] = [];
-
-    if (!checks.historyVerified) {
-      requirements.push('Construí historial con reservas o conversaciones');
-    }
-
-    if (!checks.reviewsVerified) {
-      requirements.push('Sumá reseñas dentro de la app');
-    }
-
-    return requirements;
-  }
-
-  return [];
+  return 'Ya están visibles las 5 comprobaciones de tu cuenta.';
 };
 
 export const buildUserVerificationStatus = (input: UserVerificationInput): UserVerificationStatus => {
-  const guestVerificationSignals = buildGuestVerificationSignals(input);
-  const emailVerified = guestVerificationSignals.emailVerified;
-  const phoneVerified = guestVerificationSignals.phoneVerified;
-  const identityVerification = guestVerificationSignals.identityVerification;
-  const hasPhone = hasText(input.phone);
-  const profileCompletion = guestVerificationSignals.profileCompletion ?? buildGuestProfileCompletion({
-    phone: input.phone,
-    bio: input.bio,
-    zone: input.zone,
-    profilePhoto: input.profilePhoto,
-  });
-  const profileSignalsCount = profileCompletion.profileSignalsCount;
-  const profileComplete = profileCompletion.profileComplete;
   const totalBookings = toSafeCount(input.totalBookings);
   const completedBookings = toSafeCount(input.completedBookings);
-  const totalReviewsWritten = toSafeCount(input.totalReviewsWritten);
   const totalReviewsReceived = toSafeCount(input.totalReviewsReceived);
   const totalConversations = toSafeCount(input.totalConversations);
   const totalMessages = toSafeCount(input.totalMessages);
-  const activitySignalsCount = [
-    totalBookings > 0,
-    totalConversations > 0,
-    totalMessages >= 3,
-    totalReviewsWritten > 0,
-  ].filter(Boolean).length;
-  const platformActivity = activitySignalsCount >= 1;
-  const historyVerified = guestVerificationSignals.historyVerified;
-  const reviewsVerified = totalReviewsReceived > 0 || totalReviewsWritten >= 2;
-  const documentaryVerified = guestVerificationSignals.documentaryVerified;
-  const documentarySubmitted = documentaryVerified || Boolean(input.documentarySubmitted);
-  const verificationSummary = buildGuestVerificationSummary({
+  const guestVerification = buildGuestVerificationModel({
     ...input,
-    profileComplete,
-    photoUploaded: profileCompletion.photoUploaded,
-    basicDetailsComplete: profileCompletion.basicDetailsComplete,
     completedBookings,
     hostReviewsCount: totalReviewsReceived,
     totalConversations,
     totalMessages,
-    documentaryVerified,
-    identityVerificationStatus: identityVerification.status,
-    identityVerificationProvider: identityVerification.provider,
-    identityVerifiedAt: identityVerification.verifiedAt,
   });
+  const emailVerified = guestVerification.checks.emailVerified;
+  const phoneVerified = guestVerification.checks.phoneVerified;
+  const profileComplete = guestVerification.checks.profileComplete;
+  const historyVerified = guestVerification.checks.historyVerified;
+  const documentaryVerified = guestVerification.checks.documentaryVerified;
+  const documentarySubmitted = documentaryVerified || Boolean(input.documentarySubmitted);
+  const platformActivity = totalBookings > 0 || totalConversations > 0 || totalMessages > 0;
+  const reviewsVerified = totalReviewsReceived > 0;
 
   const checks: UserVerificationChecks = {
     emailVerified,
@@ -314,34 +197,27 @@ export const buildUserVerificationStatus = (input: UserVerificationInput): UserV
     documentaryVerified,
   };
 
-  const basicIdentityScore = (emailVerified ? 12 : 0) + (phoneVerified ? 13 : 0);
-  const profileScore = profileComplete ? 12 : profileSignalsCount >= 2 ? 6 : profileSignalsCount > 0 ? 3 : 0;
-  const platformActivityScore = activitySignalsCount >= 2 ? 13 : activitySignalsCount === 1 ? 7 : 0;
-  const historyScore = historyVerified ? 18 : totalBookings > 0 || totalConversations > 0 ? 8 : 0;
-  const reviewsScore = reviewsVerified ? 17 : totalReviewsReceived > 0 || totalReviewsWritten > 0 ? 8 : 0;
-  const additionalScore = documentaryVerified ? 15 : documentarySubmitted ? 7 : 0;
-
   const categories: UserVerificationCategory[] = [
     {
       id: 'basicIdentity',
-      label: 'Identidad básica',
-      score: basicIdentityScore,
-      maxScore: 25,
+      label: 'Contacto',
+      score: Number(emailVerified) + Number(phoneVerified),
+      maxScore: 2,
       summary: emailVerified && phoneVerified
-        ? 'Email y teléfono ya están confirmados.'
+        ? 'Email y teléfono ya están confirmados como base de contacto.'
         : emailVerified || phoneVerified
-          ? 'Ya hay una señal básica confirmada, pero falta la otra.'
-          : 'Todavía faltan las confirmaciones básicas de contacto.',
+          ? 'Ya hay una señal de contacto confirmada, pero todavía falta la otra.'
+          : 'Todavía faltan las confirmaciones base de contacto.',
       checks: [
         {
           id: 'emailVerified',
           label: 'Email confirmado',
-          description: 'Ayuda a validar que la cuenta tiene un canal principal activo.',
+          description: 'Confirma el canal principal de la cuenta.',
           done: emailVerified,
         },
         {
           id: 'phoneVerified',
-          label: hasPhone ? 'Teléfono confirmado' : 'Teléfono cargado y confirmado',
+          label: 'Teléfono confirmado',
           description: 'Suma una segunda señal directa de contacto dentro de la cuenta.',
           done: phoneVerified,
         },
@@ -349,14 +225,12 @@ export const buildUserVerificationStatus = (input: UserVerificationInput): UserV
     },
     {
       id: 'activity',
-      label: 'Actividad',
-      score: profileScore + platformActivityScore,
-      maxScore: 25,
-      summary: profileComplete && platformActivity
-        ? 'El perfil y la actividad ya muestran una cuenta en uso.'
-        : profileComplete || platformActivity
-          ? 'Ya hay una parte activa, pero todavía falta completar la otra.'
-          : 'Todavía faltan perfil completo y actividad real en la app.',
+      label: 'Perfil',
+      score: Number(profileComplete),
+      maxScore: 1,
+      summary: profileComplete
+        ? 'El perfil ya muestra foto, presentación, zona y teléfono cargados.'
+        : 'Todavía faltan datos para completar el perfil.',
       checks: [
         {
           id: 'profileComplete',
@@ -364,61 +238,40 @@ export const buildUserVerificationStatus = (input: UserVerificationInput): UserV
           description: 'Foto, presentación, zona y teléfono ayudan a entender mejor con quién hablás.',
           done: profileComplete,
         },
-        {
-          id: 'platformActivity',
-          label: 'Actividad en la plataforma',
-          description: 'Mensajes, reservas y movimiento real reducen fricción y dudas básicas.',
-          done: platformActivity,
-        },
       ],
     },
     {
       id: 'reputation',
-      label: 'Reputación',
-      score: historyScore + reviewsScore,
-      maxScore: 35,
-      summary: historyVerified && reviewsVerified
-        ? 'El historial y las reseñas ya sostienen una señal fuerte.'
-        : historyVerified || reviewsVerified
-          ? 'Ya hay reputación en marcha, pero todavía falta consistencia.'
-          : 'Todavía no hay suficiente historial o reseñas para completar esta parte.',
+      label: 'Historial',
+      score: Number(historyVerified),
+      maxScore: 1,
+      summary: historyVerified
+        ? 'La cuenta ya muestra estadías, reseñas de anfitriones o actividad real dentro de la plataforma.'
+        : 'Todavía no hay historial real visible dentro de la plataforma.',
       checks: [
         {
           id: 'historyVerified',
-          label: 'Historial de reservas o interacciones',
-          description: 'Reservas concretadas o conversaciones consistentes muestran uso real.',
+          label: 'Historial real en la plataforma',
+          description: 'Estadías, reseñas de anfitriones o actividad real muestran uso real de la cuenta.',
           done: historyVerified,
-        },
-        {
-          id: 'reviewsVerified',
-          label: 'Reseñas dentro de la plataforma',
-          description: 'Las reseñas suman experiencias registradas que ayudan a decidir mejor.',
-          done: reviewsVerified,
         },
       ],
     },
     {
       id: 'additional',
-      label: 'Verificaciones adicionales',
-      score: additionalScore,
-      maxScore: 15,
+      label: 'Identidad documental',
+      score: Number(documentaryVerified),
+      maxScore: 1,
       summary: documentaryVerified
         ? 'La cuenta ya tiene una comprobación documental adicional.'
         : documentarySubmitted
           ? 'Hay documentación enviada para sumar respaldo extra.'
-          : 'La capa documental queda como una comprobación opcional, no como requisito inicial.',
+          : 'La capa documental sigue siendo opcional y solo suma como respaldo extra.',
       checks: [
-        {
-          id: 'documentarySubmitted',
-          label: 'Documentación adicional enviada',
-          description: 'Sirve para sumar información validada extra cuando hace falta más respaldo.',
-          done: documentarySubmitted,
-          optional: true,
-        },
         {
           id: 'documentaryVerified',
           label: 'Comprobación documental lista',
-          description: 'Es una capa adicional. No reemplaza el historial, la actividad ni las reseñas.',
+          description: 'Es una capa adicional. No reemplaza el historial, el contacto ni el perfil.',
           done: documentaryVerified,
           optional: true,
         },
@@ -426,12 +279,11 @@ export const buildUserVerificationStatus = (input: UserVerificationInput): UserV
     },
   ];
 
-  const verificationScore = Math.min(100, categories.reduce((total, category) => total + category.score, 0));
   const basicLevelReached = emailVerified && phoneVerified;
-  const activityLevelReached = basicLevelReached && profileComplete && platformActivity;
-  const reputationLevelReached = activityLevelReached && historyVerified && reviewsVerified;
+  const profileLevelReached = basicLevelReached && profileComplete;
+  const reputationLevelReached = profileLevelReached && historyVerified;
   const additionalLevelReached = reputationLevelReached && documentaryVerified;
-  const levelNumber = additionalLevelReached ? 4 : reputationLevelReached ? 3 : activityLevelReached ? 2 : basicLevelReached ? 1 : 0;
+  const levelNumber = additionalLevelReached ? 4 : reputationLevelReached ? 3 : profileLevelReached ? 2 : basicLevelReached ? 1 : 0;
   const level = (levelNumber === 4
     ? 'NIVEL_4'
     : levelNumber === 3
@@ -442,9 +294,14 @@ export const buildUserVerificationStatus = (input: UserVerificationInput): UserV
           ? 'NIVEL_1'
           : 'INICIAL') as UserVerificationLevel;
   const meta = USER_VERIFICATION_LEVEL_META[level];
-  const missingRequirements = getMissingRequirements(levelNumber, checks, hasPhone);
-  const optionalUpgrade = levelNumber >= 3 && !documentaryVerified
-    ? 'Si querés sumar una señal extra para casos puntuales, podés agregar la comprobación documental opcional.'
+  const verificationSummary = guestVerification.verificationSummary;
+  const verificationScore = guestVerification.verificationScore;
+  const progress = verificationSummary.maxScore > 0
+    ? Math.round((verificationScore / verificationSummary.maxScore) * 100)
+    : 0;
+  const missingRequirements = guestVerification.missingRequirements;
+  const optionalUpgrade = !documentaryVerified
+    ? 'Podés sumar la comprobación documental adicional como respaldo extra. No reemplaza historial, contacto ni perfil.'
     : null;
 
   return {
@@ -453,16 +310,17 @@ export const buildUserVerificationStatus = (input: UserVerificationInput): UserV
     levelLabel: meta.levelLabel,
     shortLabel: meta.shortLabel,
     verificationScore,
-    progress: verificationScore,
+    progress,
     headline: meta.headline,
     summary: meta.summary,
-    nextStep: getNextStep(levelNumber, checks, hasPhone),
+    nextStep: getNextStep(missingRequirements, documentaryVerified),
     optionalUpgrade,
     missingRequirements,
-    benefits: buildBenefits(levelNumber),
+    benefits: buildBenefits(verificationSummary),
     highValueBookingEligible: basicLevelReached || documentaryVerified,
-    identityVerification,
+    identityVerification: guestVerification.identityVerification,
     verificationSummary,
+    verificationItems: guestVerification.verificationItems,
     checks,
     categories,
   };

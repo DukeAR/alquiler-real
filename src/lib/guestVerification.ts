@@ -70,6 +70,23 @@ export type GuestVerificationSignals = {
   documentaryVerified: boolean;
 };
 
+export type GuestVerificationChecks = {
+  emailVerified: boolean;
+  phoneVerified: boolean;
+  profileComplete: boolean;
+  historyVerified: boolean;
+  documentaryVerified: boolean;
+};
+
+export type GuestVerificationModel = {
+  verificationSummary: GuestVerificationSummary;
+  verificationScore: number;
+  verificationItems: GuestVerificationItem[];
+  checks: GuestVerificationChecks;
+  missingRequirements: string[];
+  identityVerification: UserIdentityVerification;
+};
+
 type GuestVerificationItemInput = Partial<GuestVerificationItem>;
 
 const GUEST_VERIFICATION_KEY_SET = new Set<string>(GUEST_VERIFICATION_KEYS);
@@ -100,6 +117,26 @@ const joinLabels = (items: string[]) => {
 };
 
 const isGuestVerificationKey = (value: string): value is GuestVerificationKey => GUEST_VERIFICATION_KEY_SET.has(value);
+
+const getGuestVerificationRequirement = (
+  item: GuestVerificationItem,
+  signals: GuestVerificationSignals,
+) => {
+  switch (item.key) {
+    case 'email':
+      return 'Confirmá tu email';
+    case 'phone':
+      return signals.profileCompletion.phoneLoaded ? 'Confirmá tu teléfono' : 'Agregá tu teléfono';
+    case 'profile':
+      return 'Completá tu perfil';
+    case 'history':
+      return 'Sumá historial real en la plataforma';
+    case 'documentary':
+      return 'Sumá la comprobación documental adicional';
+    default:
+      return item.label;
+  }
+};
 
 export const buildGuestProfileCompletion = (input: GuestProfileCompletionInput): GuestProfileCompletion => {
   const phoneLoaded = hasText(input.phone);
@@ -312,6 +349,59 @@ export const getGuestVerificationSummary = (
   }
 
   return buildSummaryFromExplicitItems(input.verificationSummary.items as GuestVerificationItemInput[], fallback);
+};
+
+export const getGuestVerificationChecks = (
+  input: GuestVerificationSummaryInput,
+): GuestVerificationChecks => {
+  const signals = buildGuestVerificationSignals(input);
+
+  return {
+    emailVerified: signals.emailVerified,
+    phoneVerified: signals.phoneVerified,
+    profileComplete: signals.profileCompletion.profileComplete,
+    historyVerified: signals.historyVerified,
+    documentaryVerified: signals.documentaryVerified,
+  };
+};
+
+export const getGuestVerificationMissingRequirements = (
+  input: GuestVerificationSummaryInput,
+  options?: { includeDocumentary?: boolean },
+) => {
+  const signals = buildGuestVerificationSignals(input);
+  const summary = getGuestVerificationSummary(input);
+
+  return summary.items
+    .filter((item) => item.status === 'pending')
+    .filter((item) => options?.includeDocumentary || item.key !== 'documentary')
+    .map((item) => getGuestVerificationRequirement(item, signals));
+};
+
+export const buildGuestVerificationModel = (
+  input: GuestVerificationSummaryInput,
+  options?: { includeDocumentaryInMissing?: boolean },
+): GuestVerificationModel => {
+  const signals = buildGuestVerificationSignals(input);
+  const verificationSummary = getGuestVerificationSummary(input);
+
+  return {
+    verificationSummary,
+    verificationScore: verificationSummary.score,
+    verificationItems: verificationSummary.items,
+    checks: {
+      emailVerified: signals.emailVerified,
+      phoneVerified: signals.phoneVerified,
+      profileComplete: signals.profileCompletion.profileComplete,
+      historyVerified: signals.historyVerified,
+      documentaryVerified: signals.documentaryVerified,
+    },
+    missingRequirements: verificationSummary.items
+      .filter((item) => item.status === 'pending')
+      .filter((item) => options?.includeDocumentaryInMissing || item.key !== 'documentary')
+      .map((item) => getGuestVerificationRequirement(item, signals)),
+    identityVerification: signals.identityVerification,
+  };
 };
 
 export const getGuestVerificationScore = (input: GuestVerificationSummaryInput) => getGuestVerificationSummary(input).score;

@@ -19,7 +19,14 @@ describe('buildUserVerificationStatus', () => {
 
     expect(status.level).toBe('INICIAL');
     expect(status.highValueBookingEligible).toBe(false);
-    expect(status.missingRequirements).toEqual(['Confirmá tu email', 'Agregá tu teléfono']);
+    expect(status.verificationScore).toBe(0);
+    expect(status.progress).toBe(0);
+    expect(status.missingRequirements).toEqual([
+      'Confirmá tu email',
+      'Agregá tu teléfono',
+      'Completá tu perfil',
+      'Sumá historial real en la plataforma',
+    ]);
     expect(status.verificationSummary).toEqual({
       score: 0,
       maxScore: 5,
@@ -78,7 +85,9 @@ describe('buildUserVerificationStatus', () => {
 
     expect(status.level).toBe('NIVEL_3');
     expect(status.highValueBookingEligible).toBe(true);
-    expect(status.optionalUpgrade).toContain('comprobación documental opcional');
+    expect(status.verificationScore).toBe(4);
+    expect(status.progress).toBe(80);
+    expect(status.optionalUpgrade).toContain('comprobación documental adicional');
     expect(status.verificationSummary.score).toBe(4);
     expect(status.identityVerification.status).toBe('unverified');
   });
@@ -112,6 +121,8 @@ describe('buildUserVerificationStatus', () => {
       provider: 'documentary',
       verifiedAt: '2026-04-08T00:00:00.000Z',
     });
+    expect(status.verificationScore).toBe(5);
+    expect(status.progress).toBe(100);
     expect(status.verificationSummary.score).toBe(5);
   });
 });

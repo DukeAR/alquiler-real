@@ -1,7 +1,8 @@
 import type { PropertyVerificationItem, PropertyVerificationSummary } from './lib/propertyVerification';
-import type { GuestVerificationSummary } from './lib/guestVerification';
+import type { GuestVerificationItem, GuestVerificationSummary } from './lib/guestVerification';
 import type { HostTrustSummary } from './lib/hostTrust';
 import type { PremiumVerificationOffer } from './lib/premiumVerification';
+import type { UserIdentityVerification } from './lib/verificationModel';
 
 export type TraceabilityLevel = 'low' | 'medium' | 'high';
 
@@ -119,6 +120,9 @@ export interface GuestRequestProfile {
   hostReviews: GuestHostReviewSnippet[];
   profileCompletion: GuestProfileCompletion;
   verificationSummary: GuestVerificationSummary;
+  verificationScore: number;
+  verificationItems: GuestVerificationItem[];
+  identityVerification: UserIdentityVerification;
   operationSignals: GuestOperationSignal[];
   memberSince: string;
   dataAvailability: GuestRequestProfileDataAvailability;
