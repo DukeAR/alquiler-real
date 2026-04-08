@@ -135,8 +135,20 @@ const isoPlusDays = (days: number) => {
   return formatIso(next);
 };
 
+const openBookingFlow = async () => {
+  if (!screen.queryByRole('heading', { name: /ver disponibilidad y reservar/i })) {
+    fireEvent.click(screen.getAllByRole('button', { name: /ver disponibilidad/i })[0]);
+  }
+
+  await waitFor(() => expect(screen.getByRole('heading', { name: /ver disponibilidad y reservar/i })).toBeDefined());
+};
+
 const selectDateRange = async (checkInIso: string, checkOutIso: string) => {
-  fireEvent.click(screen.getByRole('button', { name: /abrir calendario de fechas/i }));
+  await openBookingFlow();
+
+  if (!screen.queryByRole('dialog', { name: /selector de rango de fechas/i })) {
+    fireEvent.click(screen.getByRole('button', { name: /abrir calendario de fechas/i }));
+  }
 
   await waitFor(() => expect(screen.getByRole('button', { name: new RegExp(checkInIso) })).toBeDefined());
   fireEvent.click(screen.getByRole('button', { name: new RegExp(checkInIso) }));
@@ -271,9 +283,13 @@ describe('PropertyDetail', () => {
 
     await waitForPropertyHeading();
 
-    expect(screen.getByText('Elegí las fechas')).toBeDefined();
+    expect(screen.queryByText('Elegí las fechas')).toBeNull();
     expect(screen.queryByText('Definí quiénes viajan')).toBeNull();
     expect(screen.queryByText('Acuerdo directo')).toBeNull();
+
+    await openBookingFlow();
+
+    expect(screen.getByText('Elegí las fechas')).toBeDefined();
 
     const checkInIso = isoPlusDays(2);
     const checkOutIso = isoPlusDays(5);
@@ -307,10 +323,11 @@ describe('PropertyDetail', () => {
     const desktopContext = getDesktopBookingContext();
 
     expect(within(desktopContext).getByRole('button', { name: /ver disponibilidad/i })).toBeDefined();
-    expect(within(desktopContext).getByText('Elegí fechas para ver el total y avanzar')).toBeDefined();
+    expect(within(desktopContext).getByText('Elegí fechas para ver el total y seguir recién cuando decidas avanzar.')).toBeDefined();
 
     fireEvent.click(within(desktopContext).getByRole('button', { name: /ver disponibilidad/i }));
 
+    await waitFor(() => expect(screen.getByRole('heading', { name: /ver disponibilidad y reservar/i })).toBeDefined());
     await waitFor(() => expect(screen.getByRole('dialog', { name: /selector de rango de fechas/i })).toBeDefined());
   });
 
@@ -322,12 +339,9 @@ describe('PropertyDetail', () => {
     const desktopContext = getDesktopBookingContext();
     const mobileContext = getMobileBookingSummary();
 
-    expect(within(desktopContext).getByText('Casa de prueba')).toBeDefined();
+    expect(within(desktopContext).getByText('Precio por noche')).toBeDefined();
     expect(within(desktopContext).getByRole('button', { name: /ver disponibilidad/i })).toBeDefined();
-    expect(within(desktopContext).getByText('Todavía no elegiste fechas')).toBeDefined();
-    expect(within(desktopContext).getByText('Se definen al elegir fechas')).toBeDefined();
-    expect(within(desktopContext).getByText('1 huésped')).toBeDefined();
-    expect(within(desktopContext).getByText('Elegí fechas para calcularlo')).toBeDefined();
+    expect(within(desktopContext).getByText('Elegí fechas para ver el total y seguir recién cuando decidas avanzar.')).toBeDefined();
     expect(within(mobileContext).getByText('1 huésped · Total al elegir fechas')).toBeDefined();
     expect(within(mobileContext).getByRole('button', { name: /ver disponibilidad/i })).toBeDefined();
     expect(within(mobileContext).getByText(/120/)).toBeDefined();
@@ -337,19 +351,20 @@ describe('PropertyDetail', () => {
 
     await selectDateRange(checkInIso, checkOutIso);
 
-    expect(within(desktopContext).getByRole('button', { name: /cambiar fechas/i })).toBeDefined();
-    expect(within(desktopContext).getByText('3 noches')).toBeDefined();
-    expect(within(desktopContext).getByText(new RegExp('360'))).toBeDefined();
-    expect(within(desktopContext).queryByText('Todavía no elegiste fechas')).toBeNull();
+    const bookingFlow = screen.getByRole('region', { name: /flujo de reserva/i });
+
+    expect(within(bookingFlow).getByText('Ver disponibilidad y reservar')).toBeDefined();
+    expect(within(bookingFlow).getByText(/3 noches · 1 huésped ·/i)).toBeDefined();
+    expect(within(bookingFlow).getAllByText(new RegExp('360')).length).toBeGreaterThan(0);
     expect(within(mobileContext).getByText(/3 noches · 1 huésped ·/i)).toBeDefined();
-    expect(within(mobileContext).getByRole('button', { name: /cambiar fechas/i })).toBeDefined();
+    expect(within(mobileContext).getByRole('button', { name: /ver disponibilidad/i })).toBeDefined();
 
     fireEvent.click(screen.getByRole('button', { name: /^siguiente$/i }));
     await waitFor(() => expect(screen.getByText('Definí quiénes viajan')).toBeDefined());
 
     fireEvent.click(screen.getByRole('button', { name: /sumar adulto/i }));
 
-    expect(within(desktopContext).getByText('2 huéspedes')).toBeDefined();
+    expect(within(bookingFlow).getAllByText('2 huéspedes').length).toBeGreaterThan(0);
     expect(within(mobileContext).getByText(/3 noches · 2 huéspedes ·/i)).toBeDefined();
   });
 
@@ -362,12 +377,13 @@ describe('PropertyDetail', () => {
 
     const mobileContext = getMobileBookingSummary();
 
-    expect(within(mobileContext).getByRole('button', { name: /elegir fechas/i })).toBeDefined();
+  expect(within(mobileContext).getByRole('button', { name: /ver disponibilidad/i })).toBeDefined();
     expect(screen.queryByRole('button', { name: /^siguiente$/i })).toBeNull();
 
     const checkInIso = isoPlusDays(2);
     const checkOutIso = isoPlusDays(5);
 
+  fireEvent.click(within(mobileContext).getByRole('button', { name: /ver disponibilidad/i }));
     await selectDateRange(checkInIso, checkOutIso);
 
     expect(within(mobileContext).getByRole('button', { name: /seguir con huéspedes/i })).toBeDefined();
@@ -390,13 +406,10 @@ describe('PropertyDetail', () => {
     await waitForPropertyHeading();
 
     expect(screen.getByText('Precio por noche')).toBeDefined();
-    expect(screen.getByText('Hasta 4 huéspedes')).toBeDefined();
-    expect(screen.getByText('3 dormitorios')).toBeDefined();
-    expect(screen.getByText('2 baños')).toBeDefined();
     expect(screen.getByText('Lo importante de este aviso')).toBeDefined();
-    expect(screen.getByText('Comodidades clave')).toBeDefined();
+    expect(screen.getByText('Comodidades que ya están detalladas')).toBeDefined();
     expect(screen.getByText('Wifi rápido')).toBeDefined();
-    expect(screen.getAllByText('Comprobaciones del aviso').length).toBeGreaterThan(0);
+    expect(screen.getByText('Información comprobada')).toBeDefined();
     expect(screen.getByText('Nivel de comprobación')).toBeDefined();
     expect(screen.getByText('Mostramos las 5 comprobaciones del aviso para ver rápido qué ya fue comprobado y qué falta completar.')).toBeDefined();
     expect(screen.getAllByText('4 de 5 comprobaciones').length).toBeGreaterThan(0);
@@ -480,7 +493,6 @@ describe('PropertyDetail', () => {
 
     await waitForPropertyHeading();
 
-    expect(screen.getAllByText('Comprobaciones del aviso').length).toBeGreaterThan(0);
     expect(screen.getAllByText('2 de 5 comprobaciones').length).toBeGreaterThan(0);
     expect(screen.getAllByText('✔✔○○○').length).toBeGreaterThan(0);
     const verificationPreview = screen.getByTestId('property-verification-preview');
@@ -712,6 +724,11 @@ describe('PropertyDetail', () => {
     renderPropertyDetail();
 
     await waitForPropertyHeading();
+
+    expect(screen.queryByRole('button', { name: /^siguiente$/i })).toBeNull();
+    expect(screen.queryByText('Elegí las fechas')).toBeNull();
+
+    await openBookingFlow();
 
     const reserveButton = screen.getByRole('button', { name: /^siguiente$/i });
 

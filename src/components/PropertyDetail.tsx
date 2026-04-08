@@ -25,7 +25,7 @@ import { Badge } from './ui/Badge';
 import { Card } from './ui/Card';
 import { NoticeBanner } from './ui/NoticeBanner';
 import { SectionTitle } from './ui/SectionTitle';
-import { VerificationMeter, VerificationSnippetList } from './ui/VerificationMeter';
+import { VerificationMeter } from './ui/VerificationMeter';
 
 const FALLBACK = 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=1200&q=80&auto=format&fit=crop';
 
@@ -58,18 +58,6 @@ type PropertyReviewItem = {
   rating: number;
   comment: string;
   date?: string;
-};
-
-type IconBadge = {
-  label: string;
-  variant: 'neutral' | 'brand' | 'success' | 'warning' | 'danger' | 'info';
-  icon: IconComponent;
-};
-
-type EssentialInfoItem = {
-  icon: IconComponent;
-  label: string;
-  value: string;
 };
 
 type BookingFieldKey = 'dates' | 'guests' | 'mode';
@@ -367,18 +355,6 @@ const getReviewUsefulnessScore = (review: PropertyReviewItem) => {
     + (/\d/.test(comment) ? 10 : 0);
 };
 
-const EssentialInfoCard: React.FC<EssentialInfoItem> = ({ icon: Icon, label, value }) => {
-  return (
-    <div className="rounded-[26px] border border-slate-200/80 bg-slate-50/80 px-4 py-4 shadow-[0_18px_36px_-34px_rgba(15,23,42,0.16)]">
-      <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-slate-900 shadow-[0_18px_36px_-34px_rgba(15,23,42,0.22)]">
-          <Icon className="h-5 w-5" />
-      </span>
-      <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">{label}</p>
-      <p className="mt-1 text-sm font-semibold leading-6 text-slate-900">{value}</p>
-    </div>
-  );
-};
-
 const VerificationChecklistRow: React.FC<{ item: PropertyVerificationItem }> = ({ item }) => {
   return (
     <li className="flex items-start gap-3 py-3.5">
@@ -664,6 +640,7 @@ export const PropertyDetailShell: React.FC<{
   const [checkOut, setCheckOut] = useState<string>('');
   const [adults, setAdults] = useState<number>(1);
   const [childrenCount, setChildrenCount] = useState<number>(0);
+  const [bookingFlowOpen, setBookingFlowOpen] = useState(false);
   const [bookingStep, setBookingStep] = useState<BookingStep>('dates');
   const [selectedRequestMode, setSelectedRequestMode] = useState<ReservationRequestMode | null>(null);
   const [bookingError, setBookingError] = useState<BookingErrorState | null>(null);
@@ -690,20 +667,8 @@ export const PropertyDetailShell: React.FC<{
   const hostTrust = getHostTrust(property);
   const hostTrustLevelLabel = getHostTrustLevelLabel(hostTrust.level);
 
-  const heroBadges = [
-    property.identityValidated ? { label: 'Identidad confirmada', variant: 'brand', icon: Icons.ShieldCheck } : null,
-    property.locationVerified ? { label: 'Ubicación verificada', variant: 'info', icon: Icons.MapPin } : null,
-    property.videoValidated ? { label: 'Material real del lugar', variant: 'success', icon: Icons.Video } : null,
-    property.hasPresencialVerification ? { label: 'Verificación presencial', variant: 'success', icon: Icons.Home } : null,
-  ].filter(Boolean).slice(0, 3) as IconBadge[];
-
   const hasAmenities = (property.amenities?.length ?? 0) > 0;
-  const essentialInfoItems = [
-    guestCapacity ? { label: 'Capacidad', value: guestCapacity, icon: Icons.Users } : null,
-    bedroomsCount ? { label: 'Dormitorios', value: formatCountLabel(bedroomsCount, 'dormitorio', 'dormitorios'), icon: Icons.BedDouble } : null,
-    bathroomsCount ? { label: 'Baños', value: formatCountLabel(bathroomsCount, 'baño', 'baños'), icon: Icons.Bath } : null,
-    !bedroomsCount || !bathroomsCount ? { label: 'Tipo', value: propertyTypeLabel, icon: Icons.Home } : null,
-  ].filter(Boolean) as EssentialInfoItem[];
+  const heroTrustItems = verificationDetails.items.filter((item) => item.status === 'complete').slice(0, 3);
 
   const todayISO = formatLocalIso(new Date());
 
@@ -743,7 +708,7 @@ export const PropertyDetailShell: React.FC<{
   const mobileBookingSummary = hasCompleteDates
     ? `${nightsSummaryLabel} · ${guestCountLabel} · ${formatCurrency(total)}`
     : `${guestCountLabel} · Total al elegir fechas`;
-  const bookingEntryCtaLabel = hasCompleteDates ? 'Cambiar fechas' : 'Ver disponibilidad';
+  const bookingEntryCtaLabel = 'Ver disponibilidad';
   const mobilePrimaryActionLabel = bookingStep === 'dates'
     ? hasCompleteDates
       ? 'Seguir con huéspedes'
@@ -796,6 +761,7 @@ export const PropertyDetailShell: React.FC<{
     setCheckOut('');
     setAdults(1);
     setChildrenCount(0);
+    setBookingFlowOpen(false);
     setBookingStep('dates');
     setSelectedRequestMode(null);
   };
@@ -819,6 +785,10 @@ export const PropertyDetailShell: React.FC<{
   }, []);
 
   useEffect(() => {
+    if (!bookingFlowOpen) {
+      return;
+    }
+
     const panel = bookingStepPanelRef.current;
 
     if (!panel || typeof panel.scrollIntoView !== 'function') {
@@ -826,10 +796,10 @@ export const PropertyDetailShell: React.FC<{
     }
 
     panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, [bookingStep]);
+  }, [bookingFlowOpen, bookingStep]);
 
   useEffect(() => {
-    if (bookingStep !== 'dates' || !pendingDatePickerOpenRef.current) {
+    if (!bookingFlowOpen || bookingStep !== 'dates' || !pendingDatePickerOpenRef.current) {
       return;
     }
 
@@ -850,7 +820,7 @@ export const PropertyDetailShell: React.FC<{
     });
 
     return () => window.cancelAnimationFrame(frame);
-  }, [bookingStep]);
+  }, [bookingFlowOpen, bookingStep]);
 
   const handleAdultsChange = (nextValue: number) => {
     setAdults(Math.max(1, nextValue));
@@ -869,14 +839,18 @@ export const PropertyDetailShell: React.FC<{
   const handleOpenBookingEntry = () => {
     clearBookingFeedback();
     resetBookingSubmitState();
+    pendingDatePickerOpenRef.current = true;
 
-    if (bookingStepPanelRef.current && typeof bookingStepPanelRef.current.scrollIntoView === 'function') {
-      bookingStepPanelRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (!bookingFlowOpen) {
+      setBookingFlowOpen(true);
     }
 
     if (bookingStep !== 'dates') {
-      pendingDatePickerOpenRef.current = true;
       goToBookingStep('dates');
+      return;
+    }
+
+    if (!bookingFlowOpen) {
       return;
     }
 
@@ -886,6 +860,8 @@ export const PropertyDetailShell: React.FC<{
       if (!trigger) {
         return;
       }
+
+      pendingDatePickerOpenRef.current = false;
 
       if (trigger.getAttribute('aria-expanded') !== 'true') {
         trigger.click();
@@ -1251,23 +1227,8 @@ export const PropertyDetailShell: React.FC<{
         <span>Volver</span>
       </button>
 
-      <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_360px] xl:gap-10">
+      <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_320px] xl:gap-10">
         <section className="space-y-6 md:space-y-8">
-          {heroBadges.length > 0 ? (
-            <div className="flex flex-wrap items-center gap-2">
-              {heroBadges.map((badge, index) => {
-                const Icon = badge.icon;
-
-                return (
-                  <Badge key={`${badge.label}-${index}`} variant={badge.variant} size="md" className="gap-2">
-                    <Icon className="h-3.5 w-3.5" />
-                    <span>{badge.label}</span>
-                  </Badge>
-                );
-              })}
-            </div>
-          ) : null}
-
           <Card padding="none" variant="elevated" className="overflow-hidden rounded-[32px] border-slate-200/80 bg-white shadow-[0_34px_80px_-50px_rgba(15,23,42,0.35)]">
             <div className="grid gap-0 lg:grid-cols-[104px_minmax(0,1fr)]">
               <div className="hidden lg:flex flex-col gap-3 border-r border-slate-200/70 bg-slate-50/80 p-4">
@@ -1297,6 +1258,22 @@ export const PropertyDetailShell: React.FC<{
                       {mainIndex + 1} / {images.length} fotos
                     </Badge>
                   </div>
+                  {user ? (
+                    <div className="absolute right-4 top-4 z-10">
+                      <Button
+                        onClick={toggleFav}
+                        aria-pressed={isFav}
+                        aria-label={isFav ? 'Quitar de guardados' : 'Guardar en guardados'}
+                        variant="secondary"
+                        size="icon"
+                        className={cn(
+                          isFav ? 'border-brand bg-brand text-white hover:border-brand hover:bg-brand-dark hover:text-white' : 'border-white/80 bg-white/94 text-slate-700 hover:border-brand/30 hover:text-brand',
+                        )}
+                      >
+                        <Icons.Heart className="h-5 w-5" />
+                      </Button>
+                    </div>
+                  ) : null}
                   <div className="absolute bottom-4 right-4 z-10 hidden sm:block">
                     <Button
                       type="button"
@@ -1365,467 +1342,349 @@ export const PropertyDetailShell: React.FC<{
               </div>
             </div>
           </Card>
-
-          <Card className="rounded-[32px] border-slate-200/80 bg-white p-5 shadow-[0_28px_70px_-50px_rgba(15,23,42,0.25)] sm:p-6">
-            <div className="grid gap-6 xl:grid-cols-[minmax(0,220px)_minmax(0,1fr)] xl:items-start">
-              <div className="space-y-2.5">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Precio por noche</p>
-                <div className="flex items-end gap-2">
-                  <span className="text-[2.6rem] font-black tracking-tight text-slate-950 sm:text-[2.9rem]">{nightly ? formatCurrency(nightly) : '—'}</span>
-                  <span className="pb-1 text-sm font-medium text-slate-500">/ noche</span>
-                </div>
-                <p className="text-sm leading-6 text-slate-500">
-                  {ratingValue > 0
-                    ? `${ratingValue.toFixed(1)} · ${formatReviewCount(reviewCount)}`
-                    : reviewCount > 0
-                      ? formatReviewCount(reviewCount)
-                      : 'Todavía sin reseñas publicadas.'}
-                </p>
-              </div>
-
-              <div className="space-y-4">
-                {essentialInfoItems.length > 0 ? (
-                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                    {essentialInfoItems.map((item) => (
-                      <EssentialInfoCard key={`${item.label}-${item.value}`} {...item} />
-                    ))}
-                  </div>
-                ) : null}
-
-                {decisionAmenityLabel ? (
-                  <div className="rounded-[26px] border border-slate-200/80 bg-slate-50/80 px-4 py-4 shadow-[0_18px_36px_-34px_rgba(15,23,42,0.16)]">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Puntos clave</p>
-                    <p className="mt-2 text-sm font-semibold leading-6 text-slate-900">{decisionAmenityLabel}</p>
-                  </div>
-                ) : null}
-              </div>
-            </div>
-          </Card>
         </section>
 
         <aside className="mx-auto w-full max-w-2xl xl:max-w-none xl:self-start">
-          <Card variant="elevated" className="rounded-[30px] border-slate-200/80 bg-white p-3.5 shadow-[0_30px_80px_-50px_rgba(15,23,42,0.35)] sm:p-5">
-            <div className="flex items-start justify-between gap-4 border-b border-slate-200/70 pb-4">
-              <section role="region" aria-label="Contexto de la reserva" className="min-w-0 flex-1 space-y-3 sm:space-y-4">
-                <div className="space-y-2">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{isMobileBookingLayout ? 'Reserva guiada' : 'Reservá en 4 pasos'}</p>
-                  {!isMobileBookingLayout ? <p className="text-base font-semibold tracking-tight text-slate-950 sm:text-xl">{property.title}</p> : null}
-                  <p className="text-sm font-medium text-slate-500">{nightly ? `${formatCurrency(nightly)} por noche` : 'Precio a confirmar'}</p>
-                  {!isMobileBookingLayout ? (
-                    <div className="pt-1">
-                      <Button
-                        type="button"
-                        variant="primary"
-                        size="lg"
-                        fullWidth
-                        onClick={handleOpenBookingEntry}
-                        className="rounded-2xl shadow-[0_24px_46px_-28px_rgba(67,56,202,0.42)]"
-                      >
-                        <>
-                          <Icons.Calendar className="h-4 w-4" />
-                          {bookingEntryCtaLabel}
-                        </>
-                      </Button>
-                      <p className="mt-2 text-xs font-medium text-slate-500">Elegí fechas para ver el total y avanzar</p>
-                    </div>
-                  ) : null}
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600 sm:text-sm">
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-brand/10 px-3 py-1.5 font-semibold text-brand">
-                      <Icons.Star className="h-4 w-4 fill-current" />
-                      <span>{ratingValue > 0 ? ratingValue.toFixed(1) : 'Sin puntaje'}</span>
-                    </span>
-                    <span>{reviewCount > 0 ? formatReviewCount(reviewCount) : 'Sin reseñas todavía'}</span>
-                  </div>
+          <Card variant="elevated" className="rounded-[30px] border-slate-200/80 bg-white p-5 shadow-[0_30px_80px_-50px_rgba(15,23,42,0.28)] sm:p-6">
+            <section role="region" aria-label="Contexto de la reserva" className="space-y-4">
+              <div className="space-y-2">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Precio por noche</p>
+                <div className="flex items-end gap-2">
+                  <span className="text-[2.8rem] font-black tracking-tight text-slate-950 sm:text-[3rem]">{nightly ? formatCurrency(nightly) : '—'}</span>
+                  <span className="pb-1 text-sm font-medium text-slate-500">/ noche</span>
                 </div>
-
-                <div
-                  data-testid="property-verification-preview"
-                  className="rounded-[26px] border border-slate-200/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(238,242,255,0.78))] p-4 shadow-[0_18px_36px_-34px_rgba(15,23,42,0.18)] dark:border-slate-800 dark:bg-slate-900/80"
-                >
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">Comprobaciones del aviso</p>
-                  <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">Qué ya está comprobado en este aviso.</p>
-                  <VerificationSnippetList
-                    summary={verificationDetails}
-                    status="complete"
-                    limit={3}
-                    showDescriptions={false}
-                    className="mt-3"
-                    itemClassName="bg-white/92 dark:bg-slate-950/70"
-                    emptyText="Todavía no hay comprobaciones visibles en este aviso."
-                  />
-                </div>
-
-                <div className="hidden rounded-[26px] border border-slate-200/80 bg-slate-50/80 p-4 shadow-[0_18px_36px_-34px_rgba(15,23,42,0.18)] sm:block">
-                  <div className="flex items-start gap-3">
-                    <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-brand/10 text-brand">
-                      <Icons.Home className="h-4.5 w-4.5" />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Lo que estás armando</p>
-                      <p className="mt-1 text-sm font-medium leading-6 text-slate-600">{dateSelectionSummary}</p>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 grid gap-2.5 text-sm text-slate-600">
-                    <div className="flex items-center justify-between gap-3 rounded-[18px] bg-white px-3.5 py-3 shadow-[0_18px_36px_-36px_rgba(15,23,42,0.18)]">
-                      <span className="text-slate-500">Noches</span>
-                      <span className="font-semibold text-slate-950">{nightsSummaryLabel}</span>
-                    </div>
-                    <div className="flex items-center justify-between gap-3 rounded-[18px] bg-white px-3.5 py-3 shadow-[0_18px_36px_-36px_rgba(15,23,42,0.18)]">
-                      <span className="text-slate-500">Huéspedes</span>
-                      <span className="font-semibold text-slate-950">{guestCountLabel}</span>
-                    </div>
-                    <div className="flex items-center justify-between gap-3 rounded-[18px] bg-white px-3.5 py-3 shadow-[0_18px_36px_-36px_rgba(15,23,42,0.18)]">
-                      <span className="text-slate-500">Total estimado</span>
-                      <span className="font-semibold text-slate-950">{totalSummaryLabel}</span>
-                    </div>
-                  </div>
-                </div>
-              </section>
-
-              {user ? (
-                <Button
-                  onClick={toggleFav}
-                  aria-pressed={isFav}
-                  aria-label={isFav ? 'Quitar de guardados' : 'Guardar en guardados'}
-                  variant="secondary"
-                  size="icon"
-                  className={cn(
-                    'hidden sm:inline-flex',
-                    isFav ? 'border-brand bg-brand text-white hover:border-brand hover:bg-brand-dark hover:text-white' : 'border-slate-200 bg-white text-slate-700 hover:border-brand/30 hover:text-brand',
-                  )}
-                >
-                  <Icons.Heart className="h-5 w-5" />
-                </Button>
-              ) : null}
-            </div>
-
-            <form className="mt-5 space-y-5" onSubmit={handleReserve}>
-              <div aria-label="Progreso de la reserva" className="space-y-3">
-                {isMobileBookingLayout ? (
-                  <div className="rounded-[22px] border border-slate-200 bg-slate-50/80 px-4 py-3 shadow-[0_18px_36px_-34px_rgba(15,23,42,0.16)]">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Paso {currentBookingStepIndex + 1} de 4</p>
-                        <p className="mt-1 text-sm font-semibold text-slate-950">{currentBookingStep.shortLabel}</p>
-                      </div>
-                      <div className="flex items-center gap-1.5" aria-hidden="true">
-                        {BOOKING_STEP_CONFIG.map((step, index) => (
-                          <span
-                            key={step.key}
-                            className={cn(
-                              'h-2 w-2 rounded-full bg-slate-200 transition-all',
-                              index === currentBookingStepIndex && 'w-6 rounded-full bg-brand',
-                              index < currentBookingStepIndex && 'bg-emerald-500',
-                            )}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                    {BOOKING_STEP_CONFIG.map((step, index) => {
-                      const StepIcon = step.icon;
-                      const isCurrent = index === currentBookingStepIndex;
-                      const isCompleted = index < currentBookingStepIndex;
-
-                      return (
-                        <div
-                          key={step.key}
-                          className={cn(
-                            'rounded-[22px] border px-2.5 py-2.5 text-left transition-colors sm:px-3 sm:py-3',
-                            isCurrent
-                              ? 'border-brand/30 bg-brand/8 shadow-[0_18px_36px_-30px_rgba(67,56,202,0.3)]'
-                              : isCompleted
-                                ? 'border-emerald-200 bg-emerald-50/80'
-                                : 'border-slate-200 bg-slate-50/80',
-                          )}
-                        >
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={cn(
-                                'flex h-8 w-8 items-center justify-center rounded-full',
-                                isCurrent
-                                  ? 'bg-brand text-white'
-                                  : isCompleted
-                                    ? 'bg-emerald-600 text-white'
-                                    : 'bg-white text-slate-500',
-                              )}
-                            >
-                              <StepIcon className="h-4 w-4" />
-                            </span>
-                            <span className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">{index + 1}</span>
-                          </div>
-                          <p className="mt-2 text-xs font-semibold leading-5 text-slate-900">{step.shortLabel}</p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
               </div>
 
-              <div
-                ref={bookingStepPanelRef}
-                key={bookingStep}
-                className="animate-[booking-step-in_220ms_var(--app-interaction-ease)] rounded-[26px] border border-slate-200/80 bg-slate-50/70 p-4 shadow-[0_24px_56px_-42px_rgba(15,23,42,0.22)] sm:rounded-[28px] sm:p-5"
+              <Button
+                type="button"
+                variant="primary"
+                size="lg"
+                fullWidth
+                onClick={handleOpenBookingEntry}
+                className="rounded-2xl shadow-[0_24px_46px_-28px_rgba(67,56,202,0.42)]"
               >
-                <div className="space-y-1.5">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Paso {currentBookingStepIndex + 1} de 4</p>
-                  <h3 className="text-xl font-semibold tracking-tight text-slate-950">{currentBookingStep.title}</h3>
-                  <p className="text-sm leading-6 text-slate-600">{currentBookingStep.description}</p>
-                  {isMobileBookingLayout && mobileStepStatusLabel ? <p className="text-sm font-medium text-slate-600">{mobileStepStatusLabel}</p> : null}
-                </div>
+                <>
+                  <Icons.Calendar className="h-4 w-4" />
+                  {bookingEntryCtaLabel}
+                </>
+              </Button>
 
-                {bookingStep === 'dates' ? (
-                  <div className="mt-5 space-y-4">
-                    <DateRangePicker
-                      checkIn={checkIn}
-                      checkOut={checkOut}
-                      setCheckIn={(value) => {
-                        setCheckIn(value);
-                        clearBookingFeedback();
-                      }}
-                      setCheckOut={(value) => {
-                        setCheckOut(value);
-                        clearBookingFeedback();
-                      }}
-                      propertyId={property.id}
-                      availabilityRefreshToken={availabilityRefreshToken}
-                      minDate={todayISO}
-                      onChange={clearBookingFeedback}
-                      monthsToShow={1}
-                      triggerButtonRef={datePickerTriggerRef}
-                    />
-
-                    {bookingError?.field === 'dates' ? (
-                      <p className="rounded-[20px] border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-                        {bookingError.message}
-                      </p>
-                    ) : hasCompleteDates ? (
-                      <div className="rounded-[18px] border border-brand/10 bg-white px-4 py-3 text-sm font-medium text-slate-700 shadow-[0_18px_36px_-34px_rgba(15,23,42,0.18)]">
-                        {mobileBookingSummary}
-                      </div>
-                    ) : null}
-                  </div>
-                ) : null}
-
-                {bookingStep === 'guests' ? (
-                  <div className="mt-5 space-y-4">
-                    <div className="overflow-hidden rounded-[24px] border border-slate-200/80 bg-white shadow-[0_18px_36px_-30px_rgba(15,23,42,0.14)]">
-                      <div className="space-y-0 px-4 py-3.5">
-                        <GuestCounterCard
-                          label="Adultos"
-                          helper="Mayores de 18"
-                          value={adults}
-                          valueLabel={adults === 1 ? 'adulto' : 'adultos'}
-                          decrementLabel="Restar adulto"
-                          incrementLabel="Sumar adulto"
-                          onDecrement={() => handleAdultsChange(adults - 1)}
-                          onIncrement={() => handleAdultsChange(adults + 1)}
-                          decrementDisabled={!canRemoveAdult}
-                          incrementDisabled={!canAddGuest}
-                        />
-                        <div className="border-t border-slate-200/70" />
-                        <GuestCounterCard
-                          label="Niños"
-                          helper="Hasta 17 años"
-                          value={childrenCount}
-                          valueLabel={childrenCount === 1 ? 'menor' : 'menores'}
-                          decrementLabel="Restar menor"
-                          incrementLabel="Sumar menor"
-                          onDecrement={() => handleChildrenChange(childrenCount - 1)}
-                          onIncrement={() => handleChildrenChange(childrenCount + 1)}
-                          decrementDisabled={!canRemoveChildren}
-                          incrementDisabled={!canAddGuest}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="rounded-[18px] bg-slate-900/[0.03] px-4 py-3 text-sm text-slate-600">
-                      <p className="font-semibold text-slate-950">{formatGuestSelection(adults, childrenCount)}</p>
-                      <p className="mt-1 text-xs leading-5 text-slate-500">
-                        {maxGuestsNumber
-                          ? guestCapacityReached
-                            ? `Máximo: ${maxGuestsNumber} ${maxGuestsNumber === 1 ? 'huésped' : 'huéspedes'}.`
-                            : `Capacidad hasta ${maxGuestsNumber} ${maxGuestsNumber === 1 ? 'huésped' : 'huéspedes'}.`
-                          : 'Podés ajustarlo si hace falta.'}
-                      </p>
-                    </div>
-
-                    {bookingError?.field === 'guests' ? (
-                      <p className="rounded-[20px] border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-                        {bookingError.message}
-                      </p>
-                    ) : null}
-                  </div>
-                ) : null}
-
-                {bookingStep === 'mode' ? (
-                  <div className="mt-5 space-y-4">
-                    <div role="radiogroup" aria-label="Cómo querés avanzar" className="grid gap-3">
-                      <ReservationModeCard
-                        mode="direct"
-                        selected={selectedRequestMode === 'direct'}
-                        disabled={bookingSubmitMode !== null}
-                        title="Acuerdo directo"
-                        description={RESERVATION_MODE_CONTENT.direct.description}
-                        helper={RESERVATION_MODE_CONTENT.direct.helper}
-                        onSelect={(mode) => {
-                          setSelectedRequestMode(mode);
-                          setBookingError(null);
-                          setBookingSubmitNotice(null);
-                        }}
-                      />
-                      <ReservationModeCard
-                        mode="protected"
-                        selected={selectedRequestMode === 'protected'}
-                        disabled={bookingSubmitMode !== null}
-                        title="Reserva protegida"
-                        description={RESERVATION_MODE_CONTENT.protected.description}
-                        helper={RESERVATION_MODE_CONTENT.protected.helper}
-                        onSelect={(mode) => {
-                          setSelectedRequestMode(mode);
-                          setBookingError(null);
-                          setBookingSubmitNotice(null);
-                        }}
-                      />
-                    </div>
-
-                    <div className="rounded-[18px] bg-slate-900/[0.03] px-4 py-3 text-sm text-slate-600">
-                      {selectedModeContent ? (
-                        <>
-                          <p className="font-semibold text-slate-950">{selectedModeContent.title}</p>
-                          <p className="mt-1 text-xs leading-5 text-slate-500">{selectedModeContent.helper}</p>
-                        </>
-                      ) : (
-                        <p className="text-xs leading-5 text-slate-500">Elegí una opción para habilitar el siguiente paso.</p>
-                      )}
-                    </div>
-
-                    {bookingError?.field === 'mode' ? (
-                      <p className="rounded-[20px] border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-                        {bookingError.message}
-                      </p>
-                    ) : null}
-                  </div>
-                ) : null}
-
-                {bookingStep === 'confirm' && selectedModeContent ? (
-                  <div className="mt-5 space-y-4">
-                    <div className="space-y-3 rounded-[24px] border border-slate-200/80 bg-white p-4 shadow-[0_18px_36px_-30px_rgba(15,23,42,0.14)]">
-                      <div className="flex items-end justify-between gap-4 border-b border-slate-200/70 pb-3">
-                        <div>
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Listo para enviar</p>
-                          <p className="mt-1 text-base font-semibold text-slate-950">{selectedModeContent.title}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Total</p>
-                          <p className="mt-1 text-2xl font-black tracking-tight text-slate-950">{formatCurrency(total)}</p>
-                        </div>
-                      </div>
-
-                      <div className="space-y-3 text-sm text-slate-600">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Fechas</p>
-                            <p className="mt-1 font-semibold text-slate-950">{formatRequestDate(checkIn)} al {formatRequestDate(checkOut)}</p>
-                            <p className="mt-1">{nights} {nights === 1 ? 'noche' : 'noches'}</p>
-                          </div>
-                          <button type="button" onClick={() => goToBookingStep('dates')} className="text-xs font-semibold text-brand transition-colors hover:text-brand-dark">
-                            Editar
-                          </button>
-                        </div>
-
-                        <div className="flex items-start justify-between gap-3 border-t border-slate-200/70 pt-3">
-                          <div>
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Huéspedes</p>
-                            <p className="mt-1 font-semibold text-slate-950">{formatGuestSelection(adults, childrenCount)}</p>
-                          </div>
-                          <button type="button" onClick={() => goToBookingStep('guests')} className="text-xs font-semibold text-brand transition-colors hover:text-brand-dark">
-                            Editar
-                          </button>
-                        </div>
-
-                        <div className="flex items-start justify-between gap-3 border-t border-slate-200/70 pt-3">
-                          <div>
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Cómo seguís</p>
-                            <p className="mt-1 font-semibold text-slate-950">{selectedModeContent.title}</p>
-                            <p className="mt-1">{selectedModeContent.description}</p>
-                          </div>
-                          <button type="button" onClick={() => goToBookingStep('mode')} className="text-xs font-semibold text-brand transition-colors hover:text-brand-dark">
-                            Editar
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-
-                    {confirmationNotice ? (
-                      <NoticeBanner
-                        tone={confirmationNotice.tone}
-                        heading={confirmationNotice.heading}
-                        description={confirmationNotice.description}
-                        className="shadow-none"
-                      />
-                    ) : null}
-                  </div>
-                ) : null}
-              </div>
-
-              {!isMobileBookingLayout ? (
-                <div className="space-y-3">
-                  <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="sm:min-w-[120px]">
-                      {bookingStep !== 'dates' ? (
-                        <Button type="button" variant="secondary" onClick={handleRetreatBookingStep} className="w-full rounded-2xl border-slate-200 bg-white sm:w-auto">
-                          Volver
-                        </Button>
-                      ) : null}
-                    </div>
-
-                    {bookingStep !== 'confirm' ? (
-                      <Button
-                        type="button"
-                        variant="primary"
-                        size="lg"
-                        onClick={handleAdvanceBookingStep}
-                        disabled={isAdvanceDisabled}
-                        className="w-full rounded-2xl shadow-[0_24px_46px_-28px_rgba(67,56,202,0.42)] sm:w-auto sm:min-w-[160px]"
-                      >
-                        <>
-                          <span>Siguiente</span>
-                          <Icons.ArrowRight className="h-4 w-4" />
-                        </>
-                      </Button>
-                    ) : (
-                      <Button
-                        type="submit"
-                        variant="primary"
-                        size="lg"
-                        disabled={!canReserve || bookingSubmitMode !== null}
-                        aria-disabled={!canReserve || bookingSubmitMode !== null}
-                        className="w-full rounded-2xl shadow-[0_24px_46px_-28px_rgba(67,56,202,0.42)] sm:w-auto sm:min-w-[220px]"
-                        loading={bookingSubmitMode !== null}
-                        loadingLabel={bookingSubmitMode === 'protected' ? 'Enviando solicitud...' : 'Abriendo chat...'}
-                      >
-                        <>
-                          <Icons.ArrowRight className="h-4 w-4" />
-                          Solicitar reserva
-                        </>
-                      </Button>
-                    )}
-                  </div>
-
-                  <p className="text-center text-xs leading-5 text-slate-500">
-                    Podés volver un paso atrás sin perder lo que ya elegiste.
-                  </p>
-                </div>
-              ) : null}
-            </form>
+              <p className="text-sm leading-6 text-slate-500">Elegí fechas para ver el total y seguir recién cuando decidas avanzar.</p>
+            </section>
           </Card>
         </aside>
 
-        <main className="space-y-8 xl:col-start-1 xl:row-start-2">
+        <section
+          data-testid="property-verification-preview"
+          className="xl:col-span-2 rounded-[30px] border border-slate-200/80 bg-white/94 px-5 py-4 shadow-[0_24px_60px_-46px_rgba(15,23,42,0.22)] sm:px-6"
+        >
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Información comprobada</p>
+          {heroTrustItems.length > 0 ? (
+            <ul className="mt-3 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-6 sm:gap-y-3">
+              {heroTrustItems.map((item) => (
+                <li key={item.key} className="flex items-center gap-2.5 text-sm font-semibold text-slate-900">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-700">
+                    <Icons.Check className="h-4 w-4" />
+                  </span>
+                  <span>{item.label}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-2 text-sm leading-6 text-slate-500">Todavía no hay información comprobada visible en este aviso.</p>
+          )}
+        </section>
+
+        {bookingFlowOpen ? (
+          <section ref={bookingStepPanelRef} role="region" aria-label="Flujo de reserva" className="xl:col-span-2">
+            <Card variant="elevated" className="rounded-[30px] border-slate-200/80 bg-white p-5 shadow-[0_30px_80px_-50px_rgba(15,23,42,0.28)] sm:p-6">
+              <form className="space-y-6" onSubmit={handleReserve}>
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                  <div className="space-y-1.5">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Reserva</p>
+                    <h2 className="text-2xl font-semibold tracking-tight text-slate-950">Ver disponibilidad y reservar</h2>
+                    <p className="text-sm leading-6 text-slate-600">Elegí fechas, huéspedes y cómo querés avanzar recién cuando decidís seguir con este lugar.</p>
+                  </div>
+                  <span className="inline-flex w-fit items-center rounded-full border border-slate-200 bg-slate-50 px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">
+                    Paso {currentBookingStepIndex + 1} de 4
+                  </span>
+                </div>
+
+                <div className="rounded-[24px] border border-slate-200/80 bg-slate-50/80 px-4 py-4">
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Fechas</p>
+                      <p className="mt-1 text-sm font-semibold leading-6 text-slate-900">{dateSelectionSummary}</p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Huéspedes</p>
+                      <p className="mt-1 text-sm font-semibold leading-6 text-slate-900">{guestCountLabel}</p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Total estimado</p>
+                      <p className="mt-1 text-sm font-semibold leading-6 text-slate-900">{totalSummaryLabel}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="animate-[booking-step-in_220ms_var(--app-interaction-ease)] rounded-[26px] border border-slate-200/80 bg-slate-50/70 p-4 shadow-[0_24px_56px_-42px_rgba(15,23,42,0.16)] sm:p-5">
+                  <div className="space-y-1.5">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Paso {currentBookingStepIndex + 1} de 4</p>
+                    <h3 className="text-xl font-semibold tracking-tight text-slate-950">{currentBookingStep.title}</h3>
+                    <p className="text-sm leading-6 text-slate-600">{currentBookingStep.description}</p>
+                    {isMobileBookingLayout && mobileStepStatusLabel ? <p className="text-sm font-medium text-slate-600">{mobileStepStatusLabel}</p> : null}
+                  </div>
+
+                  {bookingStep === 'dates' ? (
+                    <div className="mt-5 space-y-4">
+                      <DateRangePicker
+                        checkIn={checkIn}
+                        checkOut={checkOut}
+                        setCheckIn={(value) => {
+                          setCheckIn(value);
+                          clearBookingFeedback();
+                        }}
+                        setCheckOut={(value) => {
+                          setCheckOut(value);
+                          clearBookingFeedback();
+                        }}
+                        propertyId={property.id}
+                        availabilityRefreshToken={availabilityRefreshToken}
+                        minDate={todayISO}
+                        onChange={clearBookingFeedback}
+                        monthsToShow={1}
+                        triggerButtonRef={datePickerTriggerRef}
+                      />
+
+                      {bookingError?.field === 'dates' ? (
+                        <p className="rounded-[20px] border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                          {bookingError.message}
+                        </p>
+                      ) : hasCompleteDates ? (
+                        <div className="rounded-[18px] border border-brand/10 bg-white px-4 py-3 text-sm font-medium text-slate-700 shadow-[0_18px_36px_-34px_rgba(15,23,42,0.18)]">
+                          {mobileBookingSummary}
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+
+                  {bookingStep === 'guests' ? (
+                    <div className="mt-5 space-y-4">
+                      <div className="overflow-hidden rounded-[24px] border border-slate-200/80 bg-white shadow-[0_18px_36px_-30px_rgba(15,23,42,0.14)]">
+                        <div className="space-y-0 px-4 py-3.5">
+                          <GuestCounterCard
+                            label="Adultos"
+                            helper="Mayores de 18"
+                            value={adults}
+                            valueLabel={adults === 1 ? 'adulto' : 'adultos'}
+                            decrementLabel="Restar adulto"
+                            incrementLabel="Sumar adulto"
+                            onDecrement={() => handleAdultsChange(adults - 1)}
+                            onIncrement={() => handleAdultsChange(adults + 1)}
+                            decrementDisabled={!canRemoveAdult}
+                            incrementDisabled={!canAddGuest}
+                          />
+                          <div className="border-t border-slate-200/70" />
+                          <GuestCounterCard
+                            label="Niños"
+                            helper="Hasta 17 años"
+                            value={childrenCount}
+                            valueLabel={childrenCount === 1 ? 'menor' : 'menores'}
+                            decrementLabel="Restar menor"
+                            incrementLabel="Sumar menor"
+                            onDecrement={() => handleChildrenChange(childrenCount - 1)}
+                            onIncrement={() => handleChildrenChange(childrenCount + 1)}
+                            decrementDisabled={!canRemoveChildren}
+                            incrementDisabled={!canAddGuest}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="rounded-[18px] bg-slate-900/[0.03] px-4 py-3 text-sm text-slate-600">
+                        <p className="font-semibold text-slate-950">{formatGuestSelection(adults, childrenCount)}</p>
+                        <p className="mt-1 text-xs leading-5 text-slate-500">
+                          {maxGuestsNumber
+                            ? guestCapacityReached
+                              ? `Máximo: ${maxGuestsNumber} ${maxGuestsNumber === 1 ? 'huésped' : 'huéspedes'}.`
+                              : `Capacidad hasta ${maxGuestsNumber} ${maxGuestsNumber === 1 ? 'huésped' : 'huéspedes'}.`
+                            : 'Podés ajustarlo si hace falta.'}
+                        </p>
+                      </div>
+
+                      {bookingError?.field === 'guests' ? (
+                        <p className="rounded-[20px] border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                          {bookingError.message}
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : null}
+
+                  {bookingStep === 'mode' ? (
+                    <div className="mt-5 space-y-4">
+                      <div role="radiogroup" aria-label="Cómo querés avanzar" className="grid gap-3">
+                        <ReservationModeCard
+                          mode="direct"
+                          selected={selectedRequestMode === 'direct'}
+                          disabled={bookingSubmitMode !== null}
+                          title="Acuerdo directo"
+                          description={RESERVATION_MODE_CONTENT.direct.description}
+                          helper={RESERVATION_MODE_CONTENT.direct.helper}
+                          onSelect={(mode) => {
+                            setSelectedRequestMode(mode);
+                            setBookingError(null);
+                            setBookingSubmitNotice(null);
+                          }}
+                        />
+                        <ReservationModeCard
+                          mode="protected"
+                          selected={selectedRequestMode === 'protected'}
+                          disabled={bookingSubmitMode !== null}
+                          title="Reserva protegida"
+                          description={RESERVATION_MODE_CONTENT.protected.description}
+                          helper={RESERVATION_MODE_CONTENT.protected.helper}
+                          onSelect={(mode) => {
+                            setSelectedRequestMode(mode);
+                            setBookingError(null);
+                            setBookingSubmitNotice(null);
+                          }}
+                        />
+                      </div>
+
+                      <div className="rounded-[18px] bg-slate-900/[0.03] px-4 py-3 text-sm text-slate-600">
+                        {selectedModeContent ? (
+                          <>
+                            <p className="font-semibold text-slate-950">{selectedModeContent.title}</p>
+                            <p className="mt-1 text-xs leading-5 text-slate-500">{selectedModeContent.helper}</p>
+                          </>
+                        ) : (
+                          <p className="text-xs leading-5 text-slate-500">Elegí una opción para habilitar el siguiente paso.</p>
+                        )}
+                      </div>
+
+                      {bookingError?.field === 'mode' ? (
+                        <p className="rounded-[20px] border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                          {bookingError.message}
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : null}
+
+                  {bookingStep === 'confirm' && selectedModeContent ? (
+                    <div className="mt-5 space-y-4">
+                      <div className="space-y-3 rounded-[24px] border border-slate-200/80 bg-white p-4 shadow-[0_18px_36px_-30px_rgba(15,23,42,0.14)]">
+                        <div className="flex items-end justify-between gap-4 border-b border-slate-200/70 pb-3">
+                          <div>
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Listo para enviar</p>
+                            <p className="mt-1 text-base font-semibold text-slate-950">{selectedModeContent.title}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Total</p>
+                            <p className="mt-1 text-2xl font-black tracking-tight text-slate-950">{formatCurrency(total)}</p>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3 text-sm text-slate-600">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Fechas</p>
+                              <p className="mt-1 font-semibold text-slate-950">{formatRequestDate(checkIn)} al {formatRequestDate(checkOut)}</p>
+                              <p className="mt-1">{nights} {nights === 1 ? 'noche' : 'noches'}</p>
+                            </div>
+                            <button type="button" onClick={() => goToBookingStep('dates')} className="text-xs font-semibold text-brand transition-colors hover:text-brand-dark">
+                              Editar
+                            </button>
+                          </div>
+
+                          <div className="flex items-start justify-between gap-3 border-t border-slate-200/70 pt-3">
+                            <div>
+                              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Huéspedes</p>
+                              <p className="mt-1 font-semibold text-slate-950">{formatGuestSelection(adults, childrenCount)}</p>
+                            </div>
+                            <button type="button" onClick={() => goToBookingStep('guests')} className="text-xs font-semibold text-brand transition-colors hover:text-brand-dark">
+                              Editar
+                            </button>
+                          </div>
+
+                          <div className="flex items-start justify-between gap-3 border-t border-slate-200/70 pt-3">
+                            <div>
+                              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Cómo seguís</p>
+                              <p className="mt-1 font-semibold text-slate-950">{selectedModeContent.title}</p>
+                              <p className="mt-1">{selectedModeContent.description}</p>
+                            </div>
+                            <button type="button" onClick={() => goToBookingStep('mode')} className="text-xs font-semibold text-brand transition-colors hover:text-brand-dark">
+                              Editar
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {confirmationNotice ? (
+                        <NoticeBanner
+                          tone={confirmationNotice.tone}
+                          heading={confirmationNotice.heading}
+                          description={confirmationNotice.description}
+                          className="shadow-none"
+                        />
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+
+                {!isMobileBookingLayout ? (
+                  <div className="space-y-3">
+                    <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="sm:min-w-[120px]">
+                        {bookingStep !== 'dates' ? (
+                          <Button type="button" variant="secondary" onClick={handleRetreatBookingStep} className="w-full rounded-2xl border-slate-200 bg-white sm:w-auto">
+                            Volver
+                          </Button>
+                        ) : null}
+                      </div>
+
+                      {bookingStep !== 'confirm' ? (
+                        <Button
+                          type="button"
+                          variant="primary"
+                          size="lg"
+                          onClick={handleAdvanceBookingStep}
+                          disabled={isAdvanceDisabled}
+                          className="w-full rounded-2xl shadow-[0_24px_46px_-28px_rgba(67,56,202,0.42)] sm:w-auto sm:min-w-[160px]"
+                        >
+                          <>
+                            <span>Siguiente</span>
+                            <Icons.ArrowRight className="h-4 w-4" />
+                          </>
+                        </Button>
+                      ) : (
+                        <Button
+                          type="submit"
+                          variant="primary"
+                          size="lg"
+                          disabled={!canReserve || bookingSubmitMode !== null}
+                          aria-disabled={!canReserve || bookingSubmitMode !== null}
+                          className="w-full rounded-2xl shadow-[0_24px_46px_-28px_rgba(67,56,202,0.42)] sm:w-auto sm:min-w-[220px]"
+                          loading={bookingSubmitMode !== null}
+                          loadingLabel={bookingSubmitMode === 'protected' ? 'Enviando solicitud...' : 'Abriendo chat...'}
+                        >
+                          <>
+                            <Icons.ArrowRight className="h-4 w-4" />
+                            Solicitar reserva
+                          </>
+                        </Button>
+                      )}
+                    </div>
+
+                    <p className="text-center text-xs leading-5 text-slate-500">
+                      Podés volver un paso atrás sin perder lo que ya elegiste.
+                    </p>
+                  </div>
+                ) : null}
+              </form>
+            </Card>
+          </section>
+        ) : null}
+
+        <main className="space-y-8 xl:col-span-2">
           <Card className="rounded-[32px] border-slate-200/80 bg-white p-6 shadow-[0_28px_70px_-50px_rgba(15,23,42,0.25)] sm:p-7">
             <div className="space-y-4">
               <SectionTitle
@@ -1847,32 +1706,21 @@ export const PropertyDetailShell: React.FC<{
                   </li>
                 ))}
               </ul>
+
+              {hasAmenities ? (
+                <div className="border-t border-slate-200/70 pt-5">
+                  <p className="text-sm font-semibold text-slate-900">Comodidades que ya están detalladas</p>
+                  <ul className="mt-3 flex flex-wrap gap-2.5">
+                    {property.amenities?.map((amenity) => (
+                      <li key={amenity} className="rounded-full border border-slate-200/80 bg-slate-50 px-3.5 py-2 text-sm font-medium text-slate-700">
+                        {amenity}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
             </div>
           </Card>
-
-          {hasAmenities ? (
-            <Card className="rounded-[32px] border-slate-200/80 bg-white p-6 shadow-[0_28px_70px_-50px_rgba(15,23,42,0.25)] sm:p-7">
-              <SectionTitle
-                eyebrow="Comodidades"
-                heading="Comodidades clave"
-                description="Lo más útil para comparar esta propiedad."
-              />
-              <ul className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                {property.amenities?.map((amenity) => (
-                  <li key={amenity}>
-                    <Card padding="sm" variant="muted" className="h-full rounded-[24px] border-slate-200/80 bg-slate-50/80">
-                      <div className="flex items-center gap-3">
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-brand/10 text-brand">
-                          <Icons.Check className="h-4 w-4" />
-                        </span>
-                        <p className="text-sm font-semibold text-slate-900">{amenity}</p>
-                      </div>
-                    </Card>
-                  </li>
-                ))}
-              </ul>
-            </Card>
-          ) : null}
 
           <PropertyVerificationPanel details={verificationDetails} />
 
@@ -1928,7 +1776,7 @@ export const PropertyDetailShell: React.FC<{
           aria-label="Resumen móvil de la reserva"
           className="pointer-events-auto mx-auto max-w-xl rounded-[24px] border border-slate-200/90 bg-white/96 px-4 py-3 shadow-[0_-18px_40px_-30px_rgba(15,23,42,0.28)] backdrop-blur"
         >
-          {isMobileBookingLayout ? (
+          {bookingFlowOpen && isMobileBookingLayout ? (
             <div className="space-y-2.5">
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
