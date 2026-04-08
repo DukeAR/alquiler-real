@@ -5,7 +5,6 @@ import { LoadingState } from './LoadingState';
 import { Icons } from './Icons';
 import DateRangePicker from './DateRangePicker';
 import {
-  getPropertyVerificationGuidanceMessage,
   getPropertyVerificationDetails,
   type PropertyVerificationItem,
 } from '../lib/propertyVerification';
@@ -26,6 +25,7 @@ import { Badge } from './ui/Badge';
 import { Card } from './ui/Card';
 import { NoticeBanner } from './ui/NoticeBanner';
 import { SectionTitle } from './ui/SectionTitle';
+import { VerificationHighlights, VerificationMeter } from './ui/VerificationMeter';
 
 const FALLBACK = 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=1200&q=80&auto=format&fit=crop';
 
@@ -464,7 +464,7 @@ const HostTrustPanel: React.FC<{
 const PropertyVerificationPanel: React.FC<{
   details: ReturnType<typeof getPropertyVerificationDetails>;
 }> = ({ details }) => {
-  const { items, summaryLabel, spacedVisual } = details;
+  const { items } = details;
 
   return (
     <Card className="rounded-[30px] border-slate-200/80 bg-white p-5 shadow-[0_24px_60px_-46px_rgba(15,23,42,0.25)] sm:p-6">
@@ -472,16 +472,18 @@ const PropertyVerificationPanel: React.FC<{
         <div className="max-w-2xl">
           <SectionTitle
             eyebrow="Comprobaciones"
-            heading="Comprobaciones del aviso"
-            description="Mostramos qué está comprobado para que puedas decidir mejor. Lo demás conviene revisarlo antes de reservar."
+            heading="Nivel de comprobación"
+            description="Mostramos las 5 comprobaciones del aviso para ver rápido qué ya fue comprobado y qué falta completar."
           />
         </div>
 
-        <div className="rounded-[22px] border border-slate-200/80 bg-slate-50/80 px-4 py-3.5 lg:min-w-[240px]">
-          <p className="text-[0.98rem] font-semibold text-slate-900">{summaryLabel}</p>
-          <p className="mt-2 font-mono text-[0.98rem] font-semibold tracking-[0.16em] text-slate-900" aria-label={summaryLabel}>
-            {spacedVisual}
-          </p>
+        <div className="rounded-[22px] border border-slate-200/80 bg-slate-50/90 px-4 py-3.5 lg:min-w-[260px]">
+          <VerificationMeter
+            summary={details}
+            tone={details.score >= 4 ? 'brand' : 'neutral'}
+            helper={details.helperText}
+            visualClassName="tracking-[0.18em] text-slate-900 dark:text-slate-50"
+          />
         </div>
       </div>
 
@@ -684,7 +686,6 @@ export const PropertyDetailShell: React.FC<{
   const hostTenureLabel = getHostTenureLabel(property);
   const propertyTypeLabel = getPropertyTypeLabel(property);
   const decisionAmenityLabel = getDecisionAmenityLabel(property.amenities);
-  const verificationGuidanceMessage = getPropertyVerificationGuidanceMessage(property);
   const verificationDetails = getPropertyVerificationDetails(property);
   const hostTrust = getHostTrust(property);
   const hostTrustLevelLabel = getHostTrustLevelLabel(hostTrust.level);
@@ -1437,6 +1438,15 @@ export const PropertyDetailShell: React.FC<{
                   </div>
                 </div>
 
+                <div className="rounded-[26px] border border-slate-200/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(238,242,255,0.78))] p-4 shadow-[0_18px_36px_-34px_rgba(15,23,42,0.18)] dark:border-slate-800 dark:bg-slate-900/80">
+                  <VerificationMeter
+                    summary={verificationDetails}
+                    eyebrow="Comprobaciones del aviso"
+                    tone={verificationDetails.score >= 4 ? 'brand' : 'neutral'}
+                  />
+                  <VerificationHighlights summary={verificationDetails} className="mt-3" />
+                </div>
+
                 <div className="hidden rounded-[26px] border border-slate-200/80 bg-slate-50/80 p-4 shadow-[0_18px_36px_-34px_rgba(15,23,42,0.18)] sm:block">
                   <div className="flex items-start gap-3">
                     <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-brand/10 text-brand">
@@ -1856,14 +1866,7 @@ export const PropertyDetailShell: React.FC<{
             </Card>
           ) : null}
 
-          <div className="space-y-3">
-            {verificationGuidanceMessage ? (
-              <p className="text-sm font-medium leading-6 text-slate-600">
-                {verificationGuidanceMessage}
-              </p>
-            ) : null}
-            <PropertyVerificationPanel details={verificationDetails} />
-          </div>
+          <PropertyVerificationPanel details={verificationDetails} />
 
           <HostTrustPanel
             hostName={hostName}

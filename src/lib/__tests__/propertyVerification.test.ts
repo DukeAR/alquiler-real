@@ -33,8 +33,8 @@ describe('propertyVerification', () => {
     expect(getPropertyVerificationBadge(property)).toEqual({
       score: 4,
       max: 5,
-      label: '4 de 5 comprobaciones completas',
-      summaryLabel: '4 de 5 comprobaciones completas',
+      label: '4 de 5 comprobaciones',
+      summaryLabel: '4 de 5 comprobaciones',
       visual: '✔✔✔✔○',
       spacedVisual: '✔ ✔ ✔ ✔ ○',
     });
@@ -50,9 +50,9 @@ describe('propertyVerification', () => {
       realReviewsCount: 0,
     });
 
-    expect(details.summaryLabel).toBe('3 de 5 comprobaciones completas');
+    expect(details.summaryLabel).toBe('3 de 5 comprobaciones');
     expect(details.spacedVisual).toBe('✔ ✔ ✔ ○ ○');
-    expect(details.helperText).toBe('Mostramos qué está comprobado para que puedas decidir mejor.');
+    expect(details.helperText).toBe('Ves rápido qué ya fue comprobado y qué falta completar.');
     expect(details.items.map((item) => item.status)).toEqual(['complete', 'complete', 'complete', 'pending', 'pending']);
   });
 
@@ -65,7 +65,7 @@ describe('propertyVerification', () => {
       realReviewsCount: 0,
     });
 
-    expect(details.summaryLabel).toBe('2 de 5 comprobaciones completas');
+    expect(details.summaryLabel).toBe('2 de 5 comprobaciones');
     expect(details.items[4]).toEqual({
       key: 'history',
       label: 'Historial real del aviso',

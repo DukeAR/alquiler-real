@@ -7,6 +7,7 @@ import { Property } from '../services/geminiService';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
+import { VerificationMeter } from './ui/VerificationMeter';
 
 const normalizePropertyText = (value?: string) => (value ?? '')
   .normalize('NFD')
@@ -66,6 +67,11 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   const reviewsCount = Number(property.reviewsCount || 0);
   const isFavoritesVariant = variant === 'favorites';
   const verificationBadge = getPropertyVerificationBadge(property);
+  const verificationSummary = {
+    score: verificationBadge.score,
+    maxScore: verificationBadge.max,
+    items: Array.isArray(property.verificationItems) ? property.verificationItems : [],
+  };
   const shouldEmphasizeVerification = emphasizeVerification && !isFavoritesVariant;
   const propertyTypeLabel = getPropertyTypeLabel(property);
   const verificationTagLabel = !isFavoritesVariant && verificationBadge.score >= HIGH_VERIFICATION_HIGHLIGHT_MIN_SCORE
@@ -181,28 +187,20 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         </div>
 
         <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
-          <div className="min-w-0">
-            <p className={cn(
-              'text-[11px] font-medium leading-5 text-slate-500',
-              shouldEmphasizeVerification && 'text-emerald-700',
-            )}>Comprobaciones</p>
-            <p className={cn(
-              'mt-0.5 text-[13px] font-semibold leading-5 text-slate-900',
+          <VerificationMeter
+            summary={verificationSummary}
+            eyebrow="Comprobaciones"
+            layout="inline"
+            tone={shouldEmphasizeVerification ? 'success' : 'neutral'}
+            className="flex-1"
+            labelClassName={cn(
+              'text-[13px] font-semibold leading-5 text-slate-900',
               shouldEmphasizeVerification && 'text-emerald-900',
-            )}>
-              {verificationBadge.label}
-            </p>
-          </div>
-
-          <span
-            aria-label={verificationBadge.summaryLabel}
-            className={cn(
-              'shrink-0 font-mono text-[11px] font-semibold tracking-[0.14em]',
+            )}
+            visualClassName={cn(
               shouldEmphasizeVerification ? 'text-emerald-700' : 'text-slate-500',
             )}
-          >
-            {verificationBadge.visual}
-          </span>
+          />
         </div>
 
         <div className="mt-auto flex items-end justify-end gap-4 border-t border-slate-100/90 pt-4">

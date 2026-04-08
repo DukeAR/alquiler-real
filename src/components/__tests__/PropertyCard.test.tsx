@@ -79,7 +79,7 @@ describe('PropertyCard', () => {
     expect(screen.getByText('12 reseñas')).toBeInTheDocument();
     expect(screen.getByText('Comprobaciones')).toBeInTheDocument();
     expect(screen.getByText('Más comprobado')).toBeInTheDocument();
-    expect(screen.getByText('4 de 5 comprobaciones completas')).toBeInTheDocument();
+    expect(screen.getByText('4 de 5 comprobaciones')).toBeInTheDocument();
     expect(screen.getByText('✔✔✔✔○')).toBeInTheDocument();
     expect(screen.queryByText('Anfitrión con buen historial')).toBeNull();
     expect(screen.queryByText('12 reseñas reales')).toBeNull();
@@ -99,7 +99,7 @@ describe('PropertyCard', () => {
       />,
     );
 
-    expect(screen.getByText('3 de 5 comprobaciones completas')).toBeInTheDocument();
+    expect(screen.getByText('3 de 5 comprobaciones')).toBeInTheDocument();
     expect(screen.getByText('✔✔✔○○')).toBeInTheDocument();
     expect(screen.queryByText('Más comprobado')).toBeNull();
   });
@@ -135,7 +135,7 @@ describe('PropertyCard', () => {
     );
 
     expect(screen.getByText('Más comprobado')).toBeInTheDocument();
-    expect(screen.getByText('4 de 5 comprobaciones completas')).toBeInTheDocument();
+    expect(screen.getByText('4 de 5 comprobaciones')).toBeInTheDocument();
   });
 
   test('makes the verification line slightly more visible without turning it into a heavy green block', () => {
@@ -146,16 +146,16 @@ describe('PropertyCard', () => {
       />,
     );
 
-    const verificationBlock = screen.getByLabelText('4 de 5 comprobaciones completas').parentElement;
+    const verificationBlock = screen.getByLabelText('4 de 5 comprobaciones').parentElement;
 
     expect(verificationBlock).not.toHaveClass('bg-emerald-50/70');
-    expect(screen.getByText('Comprobaciones')).toHaveClass('text-emerald-700');
+    expect(screen.getByLabelText('4 de 5 comprobaciones')).toHaveClass('text-emerald-700');
   });
 
   test('keeps the favorites variant free of Explore guidance labels', () => {
     render(<PropertyCard property={sampleProperty} variant="favorites" onClick={vi.fn()} />);
 
-    expect(screen.getByText('4 de 5 comprobaciones completas')).toBeInTheDocument();
+    expect(screen.getByText('4 de 5 comprobaciones')).toBeInTheDocument();
     expect(screen.getByText('✔✔✔✔○')).toBeInTheDocument();
     expect(screen.queryByText('Más comprobado')).toBeNull();
     expect(screen.queryByText('Anfitrión con buen historial')).toBeNull();

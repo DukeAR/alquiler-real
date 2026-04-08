@@ -8,6 +8,7 @@ import {
   getGuestRequestProfileScenario,
 } from '../lib/guestRequestProfile';
 import type { GuestHostReviewSnippet, GuestRequestProfile } from '../types';
+import { getVerificationPendingCount, VerificationHighlights, VerificationMeter } from './ui/VerificationMeter';
 
 type GuestRequestProfileCardProps = {
   guestName: string;
@@ -95,6 +96,7 @@ export const GuestRequestProfileCard: React.FC<GuestRequestProfileCardProps> = (
   const visibleReviews = profile.hostReviews.slice(0, 2);
   const pendingSignals = profile.operationSignals.filter((signal) => signal.source === 'pending');
   const hasAnyActiveSignals = profile.operationSignals.some((signal) => signal.active);
+  const pendingVerificationCount = getVerificationPendingCount(profile.verificationSummary);
   const guestDataItems = [
     {
       label: 'Identidad',
@@ -153,6 +155,20 @@ export const GuestRequestProfileCard: React.FC<GuestRequestProfileCardProps> = (
             <p className="mt-1">{bannerCopy.description}</p>
           </div>
         ) : null}
+
+        <section className="space-y-3 border-t border-slate-200/80 pt-4 dark:border-slate-800">
+          <VerificationMeter
+            summary={profile.verificationSummary}
+            eyebrow="Comprobaciones del huésped"
+            helper={pendingVerificationCount === 0
+              ? 'La ficha ya muestra las 5 comprobaciones visibles de esta cuenta.'
+              : pendingVerificationCount === 1
+                ? 'Todavía falta 1 comprobación visible en esta ficha.'
+                : `Todavía faltan ${pendingVerificationCount} comprobaciones visibles en esta ficha.`}
+            tone={pendingVerificationCount === 0 ? 'success' : 'neutral'}
+          />
+          <VerificationHighlights summary={profile.verificationSummary} />
+        </section>
 
         <section className="space-y-3 border-t border-slate-200/80 pt-4 dark:border-slate-800">
           <p className={sectionLabelClass}>Datos del huésped</p>

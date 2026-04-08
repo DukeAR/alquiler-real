@@ -150,10 +150,10 @@ describe('HostDashboard', () => {
 
     expect(await screen.findByText('Qué conviene hacer ahora')).toBeInTheDocument();
     expect(screen.getByText('Tus publicaciones')).toBeInTheDocument();
-  expect(screen.getByText('Mostramos qué está comprobado para que otros puedan decidir mejor sobre tu aviso.')).toBeInTheDocument();
-  expect(screen.getByText('4 de 5 comprobaciones completas')).toBeInTheDocument();
-  expect(screen.getByText(/Te falta completar 1 comprobación visible/i)).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: /Activar comprobación presencial sin cargo/i })).toBeInTheDocument();
+    expect(screen.getByText('Mostramos qué está comprobado para que otros puedan decidir mejor sobre tu aviso.')).toBeInTheDocument();
+    expect(screen.getByText('4 de 5 comprobaciones')).toBeInTheDocument();
+    expect(screen.getByText('Te falta 1 comprobación para completar este aviso.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Activar comprobación presencial sin cargo/i })).toBeInTheDocument();
 
     fireEvent.click((await screen.findAllByRole('button', { name: /Disponibilidad/i }))[1]!);
 
@@ -267,6 +267,9 @@ describe('HostDashboard', () => {
     const profileCard = await screen.findByTestId('guest-request-profile-card');
 
     expect(within(profileCard).getByText('Antes de aceptar, podés revisar esto')).toBeInTheDocument();
+    expect(within(profileCard).getByText('Comprobaciones del huésped')).toBeInTheDocument();
+    expect(within(profileCard).getByText('5 de 5 comprobaciones')).toBeInTheDocument();
+    expect(within(profileCard).getByText('La ficha ya muestra las 5 comprobaciones visibles de esta cuenta.')).toBeInTheDocument();
     expect(within(profileCard).getByText('Datos del huésped')).toBeInTheDocument();
     expect(within(profileCard).getByText('Señales de esta operación')).toBeInTheDocument();
     expect(within(profileCard).getByText('Reseñas de anfitriones')).toBeInTheDocument();
@@ -526,9 +529,12 @@ describe('HostDashboard', () => {
     const profileCard = await screen.findByTestId('guest-request-profile-card');
 
     expect(within(profileCard).getByText('Cuenta sin historial todavía')).toBeInTheDocument();
+    expect(within(profileCard).getByText('Comprobaciones del huésped')).toBeInTheDocument();
     expect(within(profileCard).getByText('Todavía no hay estadías ni reseñas de anfitriones para revisar.')).toBeInTheDocument();
     expect(within(profileCard).getByText('Todavía no hay reseñas de anfitriones porque esta cuenta todavía no tiene estadías visibles.')).toBeInTheDocument();
     expect(within(profileCard).getByText('Completó sus datos')).toBeInTheDocument();
+    expect(within(profileCard).getByText('2 de 5 comprobaciones')).toBeInTheDocument();
+    expect(within(profileCard).getByText('Todavía faltan 3 comprobaciones visibles en esta ficha.')).toBeInTheDocument();
   });
 
   test('lets the host mark a protected no show and keeps the deposit pending confirmation', async () => {

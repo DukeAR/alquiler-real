@@ -12,6 +12,7 @@ import { showToast } from '../lib/toast';
 import { cn } from '../lib/utils';
 import { AccountModeSwitch } from './ui/AccountModeSwitch';
 import { Button } from './ui/Button';
+import { VerificationHighlights, VerificationMeter } from './ui/VerificationMeter';
 import { EmptyState } from './EmptyState';
 import { ErrorState } from './ErrorState';
 import GuestRequestProfileCard from './GuestRequestProfileCard';
@@ -81,17 +82,6 @@ const isFutureOrToday = (date: Date | null) => {
 const formatCountLabel = (count: number, singular: string, plural: string) => (
   `${count} ${count === 1 ? singular : plural}`
 );
-
-const formatLabelList = (labels: string[], limit: number) => {
-  const visibleLabels = labels.slice(0, limit);
-  const remaining = labels.length - visibleLabels.length;
-
-  if (remaining > 0) {
-    return `${visibleLabels.join(', ')} y ${remaining} más`;
-  }
-
-  return visibleLabels.join(', ');
-};
 
 const toSafeCount = (value: unknown) => {
   const numericValue = Number(value);
@@ -692,8 +682,8 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
         title: `Completar verificaciones de ${propertyNeedingVerification.title}`,
         description: propertyNeedingVerification.pendingVerificationItems.length === 1
           ? `Le falta ${propertyNeedingVerification.pendingVerificationItems[0]?.label?.toLowerCase() || 'una comprobación'} para quedar más claro.`
-          : `Le faltan ${propertyNeedingVerification.pendingVerificationItems.length} verificaciones. Completar verificaciones ayuda a que otros elijan con más claridad.`,
-        actionLabel: 'Ver publicaciones',
+          : `Le faltan ${propertyNeedingVerification.pendingVerificationItems.length} comprobaciones. Completar lo pendiente hace que el aviso quede más claro en segundos.`,
+        actionLabel: 'Revisar aviso',
         icon: <Icons.Shield className="h-5 w-5" />,
         kind: 'property',
         propertyId: propertyNeedingVerification.id,
@@ -709,7 +699,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
         eyebrow: 'Estado del aviso',
         title: `Revisar ${pausedProperty.title}`,
         description: 'Hoy está pausado. Si querés volver a moverlo, repasá el aviso y activalo cuando lo veas listo.',
-        actionLabel: 'Ver publicaciones',
+        actionLabel: 'Revisar aviso',
         icon: <Icons.Home className="h-5 w-5" />,
         kind: 'property',
         propertyId: pausedProperty.id,
@@ -1109,8 +1099,12 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
 
           <div className="overflow-hidden rounded-[var(--app-radius-card)] border border-slate-200/80 bg-white/94 dark:border-slate-800 dark:bg-slate-900/94">
             {hostProperties.map((property: any, index: number) => {
-              const completedLabels = property.completedVerificationItems.map((item: any) => item.label);
               const pendingLabels = property.pendingVerificationItems.map((item: any) => item.label);
+              const propertyVerificationSummary = {
+                score: property.verificationBadge.score,
+                maxScore: property.verificationBadge.max,
+                items: property.verificationItems,
+              };
 
               return (
                 <div key={property.id}>
@@ -1161,23 +1155,34 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
                     </div>
 
                     <div className="space-y-2.5">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Comprobaciones</p>
-                      <p className="text-sm font-semibold text-slate-950 dark:text-slate-50">{property.verificationBadge.summaryLabel}</p>
-                      <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">
-                        {pendingLabels.length === 0
-                          ? 'Las comprobaciones visibles de este aviso ya están completas.'
-                          : `Te falta completar ${formatCountLabel(pendingLabels.length, 'comprobación', 'comprobaciones')} visible${pendingLabels.length === 1 ? '' : 's'}.`}
-                      </p>
-                      {completedLabels.length > 0 ? (
-                        <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">Completas: {formatLabelList(completedLabels, 3)}.</p>
-                      ) : null}
-                      {pendingLabels.length > 0 ? (
-                        <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">Falta: {formatLabelList(pendingLabels, 2)}.</p>
-                      ) : null}
+                      <div className="rounded-[22px] border border-slate-200/80 bg-slate-50/90 p-4 dark:border-slate-800 dark:bg-slate-900/70">
+                        <VerificationMeter
+                          summary={propertyVerificationSummary}
+                          eyebrow="Comprobaciones del aviso"
+                          helper={pendingLabels.length === 0
+                            ? 'Este aviso ya muestra sus 5 comprobaciones visibles.'
+                            : pendingLabels.length === 1
+                              ? 'Te falta 1 comprobación para completar este aviso.'
+                              : `Te faltan ${pendingLabels.length} comprobaciones para completar este aviso.`}
+                          tone={pendingLabels.length === 0 ? 'success' : 'brand'}
+                        />
+
+                        <div className="mt-3 space-y-2.5">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
+                            {pendingLabels.length === 0 ? 'Ya comprobado' : 'Falta completar'}
+                          </p>
+                          <VerificationHighlights
+                            summary={propertyVerificationSummary}
+                            order={pendingLabels.length === 0 ? 'complete-first' : 'pending-first'}
+                            limit={2}
+                          />
+                        </div>
+                      </div>
+
                       {property.premiumOnsiteOffer && !property.premiumOnsiteOffer.completed ? (
-                        <div className="rounded-2xl border border-brand/15 bg-brand/5 p-3 dark:border-brand/25 dark:bg-brand/10">
-                          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-brand">Comprobación adicional opcional</p>
-                          <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-100">Podés sumar una revisión presencial para dejar otra comprobación visible en este aviso.</p>
+                        <div className="rounded-[20px] border border-indigo-200/70 bg-indigo-50/70 p-3 dark:border-indigo-900/40 dark:bg-indigo-950/30">
+                          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-indigo-700 dark:text-indigo-300">Comprobación adicional</p>
+                          <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-100">Podés sumar una revisión presencial para agregar otra comprobación visible en este aviso.</p>
                           <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
                             {property.premiumOnsiteOffer.complimentaryReason
                               ? property.premiumOnsiteOffer.complimentaryReason
@@ -1206,7 +1211,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
                       >
                         <>
                           <Icons.ExternalLink className="h-4 w-4" />
-                          Ver aviso
+                          {pendingLabels.length > 0 ? 'Ver aviso y completar' : 'Ver aviso'}
                         </>
                       </Button>
                       <Button

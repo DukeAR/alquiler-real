@@ -354,7 +354,7 @@ export const getPropertyVerificationBadge = (property: PropertyVerificationLike)
         ? Math.min(clampVerificationScore(property.verificationScore), max)
         : Math.min(verificationSummary.score, max);
   const visual = `${'✔'.repeat(score)}${'○'.repeat(max - score)}`;
-  const compactLabel = `${score} de ${max} comprobaciones completas`;
+  const compactLabel = `${score} de ${max} comprobaciones`;
 
   return {
     score,
@@ -373,7 +373,7 @@ export const getPropertyVerificationDetails = (property: PropertyVerificationLik
   return {
     ...badge,
     items: verificationSummary.items,
-    helperText: 'Mostramos qué está comprobado para que puedas decidir mejor.',
+    helperText: 'Ves rápido qué ya fue comprobado y qué falta completar.',
   };
 };
 
