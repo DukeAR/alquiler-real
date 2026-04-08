@@ -285,19 +285,19 @@ const buildDocumentaryPremiumOffer = (input: {
   return {
     offerType: PREMIUM_DOCUMENTARY_OFFER_TYPE,
     targetType: 'user',
-    title: 'Verificación documental premium',
-    summary: 'Podés sumar DNI y selfie como una capa opcional para dar más contexto sobre tu cuenta.',
-    contextHint: 'Podés sumar verificaciones para dar más contexto a otros usuarios. No reemplaza tu historial ni vuelve obligatorio el alta.',
-    visibilityHint: 'Si además publicás propiedades, esta señal puede aportar un impulso suave de contexto en cómo se ordenan tus avisos.',
+    title: 'Comprobación documental adicional',
+    summary: 'Podés sumar DNI y selfie como información validada extra sobre tu cuenta.',
+    contextHint: 'Mostramos qué está comprobado para que otros puedan decidir mejor. Esta comprobación se suma a tu perfil, no reemplaza tu historial ni vuelve obligatorio el alta.',
+    visibilityHint: 'Suma una comprobación documental visible junto al resto de la información validada de tu cuenta.',
     ctaLabel: completed
-      ? 'Refuerzo documental activo'
+      ? 'Comprobación documental lista'
       : purchased
-        ? 'Continuar verificación documental'
+        ? 'Continuar comprobación documental'
         : pricing.isComplimentary
-          ? 'Activar verificación sin cargo'
-          : 'Activar verificación documental',
-    checkoutLabel: pricing.isComplimentary ? 'Activar sin cargo' : 'Confirmar mejora',
-    processLabel: completed ? 'Ver estado documental' : 'Ir a la verificación',
+          ? 'Activar comprobación sin cargo'
+          : 'Activar comprobación documental',
+    checkoutLabel: pricing.isComplimentary ? 'Activar sin cargo' : 'Confirmar comprobación',
+    processLabel: completed ? 'Ver comprobación documental' : 'Ir a la comprobación',
     priceArs: pricing.priceArs,
     currency: PREMIUM_VERIFICATION_CURRENCY,
     isComplimentary: pricing.isComplimentary,
@@ -328,19 +328,19 @@ const buildOnsitePremiumOffer = (input: {
   return {
     offerType: PREMIUM_ONSITE_OFFER_TYPE,
     targetType: 'property',
-    title: 'Revisión presencial premium',
-    summary: 'Podés pedir una revisión presencial para esta publicación y sumar un contexto extra sobre el aviso.',
-    contextHint: 'Es opcional. Sirve para que otros vean una capa adicional de respaldo sin frenar tu publicación.',
-    visibilityHint: 'Cuando se completa, puede aportar un leve impulso en score, orden y visibilidad del aviso, sin promesas directas.',
+    title: 'Comprobación presencial adicional',
+    summary: 'Podés pedir una revisión presencial para sumar información validada extra en este aviso.',
+    contextHint: 'Mostramos qué está comprobado para que se entienda mejor el aviso. Esta revisión es opcional y no reemplaza las otras comprobaciones.',
+    visibilityHint: 'Cuando se completa, deja una comprobación presencial visible dentro de la ficha del aviso.',
     ctaLabel: completed
-      ? 'Revisión presencial activa'
+      ? 'Comprobación presencial lista'
       : purchased
         ? 'Continuar revisión presencial'
         : pricing.isComplimentary
-          ? 'Activar revisión presencial sin cargo'
-          : 'Activar revisión presencial',
-    checkoutLabel: pricing.isComplimentary ? 'Activar sin cargo' : 'Confirmar mejora',
-    processLabel: completed ? 'Ver estado de la revisión' : 'Ir a la coordinación',
+          ? 'Activar comprobación presencial sin cargo'
+          : 'Activar comprobación presencial',
+    checkoutLabel: pricing.isComplimentary ? 'Activar sin cargo' : 'Confirmar comprobación',
+    processLabel: completed ? 'Ver estado de la comprobación' : 'Ir a la coordinación',
     priceArs: pricing.priceArs,
     currency: PREMIUM_VERIFICATION_CURRENCY,
     isComplimentary: pricing.isComplimentary,
@@ -456,7 +456,7 @@ const requireDocumentaryPremiumAccess = async (userId: string, orderId?: string 
   if (!isPremiumOrderUnlocked(order)) {
     return {
       allowed: false,
-      error: 'Primero activá la verificación documental premium desde tu perfil.',
+      error: 'Primero activá la comprobación documental adicional desde tu perfil.',
       order: null as PremiumVerificationOrderRow | null,
     };
   }
@@ -501,8 +501,8 @@ const mapActivityLogToNotification = (row: any) => {
     case 'IDENTITY_VERIFIED':
       return {
         id: row.id,
-        title: 'Refuerzo documental listo',
-        message: 'Tu cuenta sumó una comprobación documental opcional.',
+        title: 'Comprobación documental lista',
+        message: 'Tu cuenta sumó una comprobación documental adicional.',
         type: 'success',
         createdAt,
         unread,
@@ -521,10 +521,10 @@ const mapActivityLogToNotification = (row: any) => {
     case 'PREMIUM_VERIFICATION_PURCHASED':
       return {
         id: row.id,
-        title: metadata.offerType === PREMIUM_ONSITE_OFFER_TYPE ? 'Mejora presencial activada' : 'Mejora documental activada',
+        title: metadata.offerType === PREMIUM_ONSITE_OFFER_TYPE ? 'Comprobación presencial activada' : 'Comprobación documental activada',
         message: metadata.isPromotional
-          ? 'La mejora premium quedó activada sin cargo y ya podés seguir con la verificación.'
-          : 'La mejora premium quedó activada y ya podés seguir con la verificación.',
+          ? 'La comprobación adicional quedó activada sin cargo y ya podés seguir con el proceso.'
+          : 'La comprobación adicional quedó activada y ya podés seguir con el proceso.',
         type: 'success',
         createdAt,
         unread,
@@ -1207,7 +1207,7 @@ app.post('/api/verification/premium-checkout', async (req, res) => {
   const propertyId = typeof req.body?.propertyId === 'string' ? req.body.propertyId.trim() : '';
 
   if (!offerType) {
-    return res.status(400).json({ error: 'Elegí una mejora premium válida.' });
+    return res.status(400).json({ error: 'Elegí una comprobación adicional válida.' });
   }
 
   try {
@@ -1361,7 +1361,7 @@ app.post('/api/verification/premium-checkout', async (req, res) => {
     return res.json({ offer, redirectTo: offer.redirectTo, orderId: order?.id ?? null });
   } catch (err) {
     console.error('Error en premium-checkout:', err);
-    return res.status(500).json({ error: 'No pudimos activar esta mejora premium ahora.' });
+    return res.status(500).json({ error: 'No pudimos activar esta comprobación adicional ahora.' });
   }
 });
 
@@ -1400,7 +1400,7 @@ app.post('/api/verification/onsite/complete', async (req, res) => {
     }
 
     if (!isPremiumOrderUnlocked(order)) {
-      return res.status(422).json({ error: 'Primero activá la revisión presencial premium desde tu panel.' });
+      return res.status(422).json({ error: 'Primero activá la comprobación presencial adicional desde tu panel.' });
     }
 
     const verifiedOrder = order as PremiumVerificationOrderRow;
@@ -1516,7 +1516,7 @@ app.get('/api/verification/status', async (req, res) => {
       ...verificationStatus,
       optionalUpgrade: premiumDocumentaryOffer.completed
         ? verificationStatus.optionalUpgrade
-        : 'Podés sumar verificaciones para dar más contexto a otros usuarios. La capa documental premium sigue siendo opcional.',
+        : 'Podés sumar una comprobación documental adicional para dar más contexto. Sigue siendo opcional.',
       premiumDocumentaryOffer,
       nextLevel: verificationStatus.levelNumber < 4 ? `NIVEL_${verificationStatus.levelNumber + 1}` : null,
     });
@@ -3108,7 +3108,7 @@ app.post('/api/bookings', async (req, res) => {
         res,
         403,
         'IDENTITY_VERIFICATION_REQUIRED',
-        'Para reservas mayores a $200.000 necesitás al menos el nivel 1 de verificación: email y teléfono confirmados.'
+        'Para reservas mayores a $200.000 necesitás tener email y teléfono confirmados.'
       );
     }
 

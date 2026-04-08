@@ -449,7 +449,7 @@ const HostTrustPanel: React.FC<{
             heading={hostName}
             description={hostTenureLabel ?? 'Perfil activo en la plataforma'}
           />
-          <p className="mt-3 text-sm font-semibold text-slate-900">Nivel de confianza: {hostTrustLevelLabel}</p>
+          <p className="mt-3 text-sm font-semibold text-slate-900">Información validada del anfitrión: {hostTrustLevelLabel}</p>
           <ul className="mt-4 divide-y divide-slate-200/80 border-t border-slate-200/80">
             {visibleItems.map((item) => (
               <HostTrustChecklistRow key={item.key} item={item} />
@@ -471,9 +471,9 @@ const PropertyVerificationPanel: React.FC<{
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
         <div className="max-w-2xl">
           <SectionTitle
-            eyebrow="Verificación"
-            heading="Nivel de verificación"
-            description="Qué parte del aviso ya fue comprobada. Lo demás conviene revisarlo antes de reservar."
+            eyebrow="Comprobaciones"
+            heading="Comprobaciones del aviso"
+            description="Mostramos qué está comprobado para que puedas decidir mejor. Lo demás conviene revisarlo antes de reservar."
           />
         </div>
 

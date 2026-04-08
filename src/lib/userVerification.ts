@@ -79,34 +79,34 @@ type LevelMeta = {
 
 export const USER_VERIFICATION_LEVEL_META: Record<UserVerificationLevel, LevelMeta> = {
   INICIAL: {
-    shortLabel: 'En progreso',
-    levelLabel: 'Camino al nivel 1',
-    headline: 'Tu cuenta todavía está armando sus señales básicas.',
-    summary: 'Con email y teléfono confirmados ya alcanzás el primer nivel sin depender de documentos.',
+    shortLabel: 'Primeras comprobaciones',
+    levelLabel: 'Comprobaciones iniciales',
+    headline: 'Todavía faltan comprobaciones básicas para mostrar mejor tu cuenta.',
+    summary: 'Con email y teléfono confirmados ya dejás clara la base mínima de contacto, sin depender de documentos.',
   },
   NIVEL_1: {
-    shortLabel: 'Nivel 1',
-    levelLabel: 'Contacto confirmado',
-    headline: 'Tu cuenta ya valida lo básico para empezar.',
-    summary: 'Email y teléfono ya suman una base clara de confianza dentro de la plataforma.',
+    shortLabel: 'Contacto confirmado',
+    levelLabel: 'Base de contacto lista',
+    headline: 'Tu cuenta ya muestra la base mínima para entender quién sos.',
+    summary: 'Email y teléfono confirmados dejan información validada para empezar a decidir con menos dudas.',
   },
   NIVEL_2: {
-    shortLabel: 'Nivel 2',
-    levelLabel: 'Perfil activo',
-    headline: 'Perfil con buen nivel de verificación.',
-    summary: 'Tus datos y tu actividad ya muestran una cuenta real y en uso, sin pedir documentación al inicio.',
+    shortLabel: 'Perfil activo',
+    levelLabel: 'Perfil y uso visibles',
+    headline: 'Tu perfil ya aporta más contexto para decidir.',
+    summary: 'Tus datos y tu actividad muestran una cuenta real y en uso, sin pedir documentación al inicio.',
   },
   NIVEL_3: {
-    shortLabel: 'Nivel 3',
-    levelLabel: 'Buen historial',
-    headline: 'Actividad verificada en la plataforma.',
-    summary: 'Tu historial y tus reseñas ya sostienen una verificación fuerte con señales reales de uso.',
+    shortLabel: 'Historial consistente',
+    levelLabel: 'Historial y reseñas visibles',
+    headline: 'Tu cuenta ya combina actividad, historial y reseñas.',
+    summary: 'La información validada de tu cuenta ayuda a decidir mejor porque muestra uso real dentro de la plataforma.',
   },
   NIVEL_4: {
-    shortLabel: 'Nivel 4 opcional',
-    levelLabel: 'Refuerzo documental',
-    headline: 'Sumaste una capa documental opcional.',
-    summary: 'Además del historial, tu cuenta tiene una comprobación documental para los casos donde haga falta más respaldo.',
+    shortLabel: 'Documentación adicional',
+    levelLabel: 'Comprobación documental adicional',
+    headline: 'Sumaste una comprobación documental extra.',
+    summary: 'Además del historial y la actividad, tu cuenta muestra una comprobación documental opcional para casos puntuales.',
   },
 };
 
@@ -121,28 +121,28 @@ const buildBenefits = (levelNumber: number): UserVerificationBenefits => {
   switch (levelNumber) {
     case 4:
       return {
-        current: ['Tu cuenta ya combina actividad real, historial y un refuerzo documental opcional.'],
+        current: ['Tu cuenta ya combina actividad real, historial y una comprobación documental adicional.'],
         next: [],
       };
     case 3:
       return {
-        current: ['Tu cuenta ya se apoya en historial, interacciones y reseñas dentro de la app.'],
+        current: ['Tu cuenta ya muestra historial, interacciones y reseñas dentro de la app.'],
         next: ['Opcional: sumar una comprobación documental extra.'],
       };
     case 2:
       return {
-        current: ['Tu perfil ya da más contexto y reduce fricción antes de reservar o publicar.'],
-        next: ['Nivel 3: sumar historial y reseñas consistentes.'],
+        current: ['Tu perfil ya muestra más información validada antes de reservar o publicar.'],
+        next: ['Siguiente foco: sumar historial y reseñas consistentes.'],
       };
     case 1:
       return {
         current: ['Tus datos de contacto ya están confirmados dentro de la cuenta.'],
-        next: ['Nivel 2: completar perfil y registrar actividad real.'],
+        next: ['Siguiente foco: completar perfil y registrar actividad real.'],
       };
     default:
       return {
         current: ['Ya podés usar la plataforma y completar tu cuenta a tu ritmo.'],
-        next: ['Nivel 1: confirmar email y teléfono.'],
+        next: ['Primero: confirmar email y teléfono.'],
       };
   }
 };
@@ -160,21 +160,21 @@ const getNextStep = (levelNumber: number, checks: UserVerificationChecks, hasPho
 
   if (levelNumber === 1) {
     if (!checks.profileComplete) {
-      return 'Completá tu perfil para pasar al nivel 2.';
+      return 'Completá tu perfil para mostrar más información validada.';
     }
 
     if (!checks.platformActivity) {
-      return 'Sumá actividad en la plataforma para pasar al nivel 2.';
+      return 'Sumá actividad en la plataforma para dejar más contexto visible.';
     }
   }
 
   if (levelNumber === 2) {
     if (!checks.historyVerified) {
-      return 'Necesitás más historial de reservas o conversaciones para llegar al nivel 3.';
+      return 'Necesitás más historial de reservas o conversaciones para sumar contexto confiable.';
     }
 
     if (!checks.reviewsVerified) {
-      return 'Necesitás reseñas dentro de la plataforma para llegar al nivel 3.';
+      return 'Necesitás reseñas dentro de la plataforma para completar esta parte.';
     }
   }
 
@@ -182,7 +182,7 @@ const getNextStep = (levelNumber: number, checks: UserVerificationChecks, hasPho
     return 'Si querés sumar respaldo extra, podés agregar la comprobación documental opcional.';
   }
 
-  return 'Seguí usando la plataforma con normalidad para sostener este nivel.';
+  return 'Seguí usando la plataforma y manteniendo tus datos al día.';
 };
 
 const getMissingRequirements = (levelNumber: number, checks: UserVerificationChecks, hasPhone: boolean) => {
@@ -333,7 +333,7 @@ export const buildUserVerificationStatus = (input: UserVerificationInput): UserV
         ? 'El historial y las reseñas ya sostienen una señal fuerte.'
         : historyVerified || reviewsVerified
           ? 'Ya hay reputación en marcha, pero todavía falta consistencia.'
-          : 'Todavía no hay suficiente historial o reseñas para este nivel.',
+          : 'Todavía no hay suficiente historial o reseñas para completar esta parte.',
       checks: [
         {
           id: 'historyVerified',
@@ -344,7 +344,7 @@ export const buildUserVerificationStatus = (input: UserVerificationInput): UserV
         {
           id: 'reviewsVerified',
           label: 'Reseñas dentro de la plataforma',
-          description: 'Las reseñas completan la confianza progresiva con experiencias registradas.',
+          description: 'Las reseñas suman experiencias registradas que ayudan a decidir mejor.',
           done: reviewsVerified,
         },
       ],
@@ -358,12 +358,12 @@ export const buildUserVerificationStatus = (input: UserVerificationInput): UserV
         ? 'La cuenta ya tiene una comprobación documental adicional.'
         : documentarySubmitted
           ? 'Hay documentación enviada para sumar respaldo extra.'
-          : 'La capa documental queda como mejora opcional, no como requisito inicial.',
+          : 'La capa documental queda como una comprobación opcional, no como requisito inicial.',
       checks: [
         {
           id: 'documentarySubmitted',
-          label: 'Documentación opcional enviada',
-          description: 'Sirve como refuerzo extra para cuentas que quieren sumar más respaldo.',
+          label: 'Documentación adicional enviada',
+          description: 'Sirve para sumar información validada extra cuando hace falta más respaldo.',
           done: documentarySubmitted,
           optional: true,
         },

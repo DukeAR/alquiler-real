@@ -254,7 +254,7 @@ export const getPropertyVerificationGuidanceLabel = (
   const score = getPropertyVerificationScore(property);
 
   if (score >= HIGH_VERIFICATION_HIGHLIGHT_MIN_SCORE && options?.isTopResult) {
-    return 'Más verificado';
+    return 'Más comprobado';
   }
 
   return null;
@@ -264,11 +264,11 @@ export const getPropertyVerificationGuidanceMessage = (property: PropertyVerific
   const score = getPropertyVerificationScore(property);
 
   if (score >= HIGH_VERIFICATION_HIGHLIGHT_MIN_SCORE) {
-    return 'Este aviso muestra más cosas comprobadas que la mayoría.';
+    return 'Este aviso muestra más información validada que la mayoría.';
   }
 
   if (score >= REAL_VERIFICATION_FILTER_MIN_SCORE) {
-    return 'Este aviso ya tiene varias comprobaciones hechas.';
+    return 'Este aviso ya tiene varias comprobaciones visibles.';
   }
 
   return null;
@@ -289,7 +289,7 @@ export const getPropertyVerificationBadge = (property: PropertyVerificationLike)
   const max = verificationItems.length || VERIFICATION_SCORE_MAX;
   const score = Math.min(getPropertyVerificationScore({ ...property, verificationItems }), max);
   const visual = `${'✔'.repeat(score)}${'○'.repeat(max - score)}`;
-  const compactLabel = `${score} de ${max} comprobaciones`;
+  const compactLabel = `${score} de ${max} comprobaciones completas`;
 
   return {
     score,
@@ -308,7 +308,7 @@ export const getPropertyVerificationDetails = (property: PropertyVerificationLik
   return {
     ...badge,
     items,
-    helperText: 'Cuanto más completo esté este nivel, más claro es lo que podés evaluar antes de reservar.',
+    helperText: 'Mostramos qué está comprobado para que puedas decidir mejor.',
   };
 };
 

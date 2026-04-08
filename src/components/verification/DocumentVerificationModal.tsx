@@ -47,7 +47,7 @@ export const DocumentVerificationModal: React.FC<DocumentVerificationModalProps>
   const documentarySubmitted = verificationStatus?.checks?.documentarySubmitted ?? false;
   const documentaryVerified = verificationStatus?.checks?.documentaryVerified ?? false;
   const currentLevelLabel = verificationStatus?.levelLabel ?? 'En progreso';
-  const summary = verificationStatus?.summary ?? 'Tu nivel principal depende de contacto, perfil, actividad e historial dentro de la plataforma.';
+  const summary = verificationStatus?.summary ?? 'La base visible de tu cuenta depende de contacto, perfil, actividad e historial dentro de la plataforma.';
   const optionalUpgrade = verificationStatus?.optionalUpgrade
     ?? (userType === 'host'
       ? 'Como anfitrión, podés sumar un comprobante de domicilio para reforzar todavía más tu perfil.'
@@ -56,7 +56,7 @@ export const DocumentVerificationModal: React.FC<DocumentVerificationModalProps>
   const statusCards = [
     {
       id: 'progressive',
-      title: 'Señales principales',
+      title: 'Comprobaciones base',
       status: currentLevelLabel,
       icon: Icons.ShieldCheck,
       color: 'bg-brand/10 text-brand',
@@ -155,7 +155,7 @@ export const DocumentVerificationModal: React.FC<DocumentVerificationModalProps>
           <div className="space-y-2">
             <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Refuerzo documental opcional</h2>
             <p className="max-w-2xl text-sm leading-6 text-slate-500">
-              {userType === 'tenant' ? 'Huésped' : 'Anfitrión'}: esta capa sirve para sumar respaldo extra. Tu nivel principal sigue dependiendo de señales reales dentro de la cuenta, no solo de documentos.
+              {userType === 'tenant' ? 'Huésped' : 'Anfitrión'}: esta capa sirve para sumar respaldo extra. La base visible sigue dependiendo de información real dentro de la cuenta, no solo de documentos.
             </p>
           </div>
           <button type="button" onClick={onClose} className="rounded-full p-2 transition hover:bg-slate-100 dark:hover:bg-slate-800">
@@ -165,7 +165,7 @@ export const DocumentVerificationModal: React.FC<DocumentVerificationModalProps>
 
         <div className="grid gap-3 sm:grid-cols-3">
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/50">
-            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Nivel actual</p>
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Resumen actual</p>
             <p className="mt-2 text-lg font-semibold text-slate-900 dark:text-slate-100">{currentLevelLabel}</p>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/50">
@@ -188,7 +188,7 @@ export const DocumentVerificationModal: React.FC<DocumentVerificationModalProps>
         </div>
 
         <div className="space-y-4">
-          <h3 className="font-bold text-slate-900 dark:text-white">Cómo encaja esta capa dentro del sistema</h3>
+          <h3 className="font-bold text-slate-900 dark:text-white">Cómo se suma esta comprobación</h3>
 
           <div className="grid gap-4 lg:grid-cols-3">
             {statusCards.map((card) => {

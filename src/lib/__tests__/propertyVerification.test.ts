@@ -33,8 +33,8 @@ describe('propertyVerification', () => {
     expect(getPropertyVerificationBadge(property)).toEqual({
       score: 4,
       max: 5,
-      label: '4 de 5 comprobaciones',
-      summaryLabel: '4 de 5 comprobaciones',
+      label: '4 de 5 comprobaciones completas',
+      summaryLabel: '4 de 5 comprobaciones completas',
       visual: '✔✔✔✔○',
       spacedVisual: '✔ ✔ ✔ ✔ ○',
     });
@@ -49,22 +49,22 @@ describe('propertyVerification', () => {
       hasPresencialVerification: false,
     });
 
-    expect(details.summaryLabel).toBe('3 de 5 comprobaciones');
+    expect(details.summaryLabel).toBe('3 de 5 comprobaciones completas');
     expect(details.spacedVisual).toBe('✔ ✔ ✔ ○ ○');
-    expect(details.helperText).toBe('Cuanto más completo esté este nivel, más claro es lo que podés evaluar antes de reservar.');
+    expect(details.helperText).toBe('Mostramos qué está comprobado para que puedas decidir mejor.');
     expect(details.items.map((item) => item.status)).toEqual(['complete', 'complete', 'complete', 'pending', 'pending']);
   });
 
   test('derives Explore guidance labels from the real verification score and top-result position', () => {
-    expect(getPropertyVerificationGuidanceLabel({ verificationScore: 4 }, { isTopResult: true })).toBe('Más verificado');
+    expect(getPropertyVerificationGuidanceLabel({ verificationScore: 4 }, { isTopResult: true })).toBe('Más comprobado');
     expect(getPropertyVerificationGuidanceLabel({ verificationScore: 4 }, { isTopResult: false })).toBeNull();
     expect(getPropertyVerificationGuidanceLabel({ verificationScore: 3 }, { isTopResult: false })).toBeNull();
     expect(getPropertyVerificationGuidanceLabel({ verificationScore: 2 }, { isTopResult: true })).toBeNull();
   });
 
   test('derives the detail guidance message from the real verification score', () => {
-    expect(getPropertyVerificationGuidanceMessage({ verificationScore: 4 })).toBe('Este aviso muestra más cosas comprobadas que la mayoría.');
-    expect(getPropertyVerificationGuidanceMessage({ verificationScore: 3 })).toBe('Este aviso ya tiene varias comprobaciones hechas.');
+    expect(getPropertyVerificationGuidanceMessage({ verificationScore: 4 })).toBe('Este aviso muestra más información validada que la mayoría.');
+    expect(getPropertyVerificationGuidanceMessage({ verificationScore: 3 })).toBe('Este aviso ya tiene varias comprobaciones visibles.');
     expect(getPropertyVerificationGuidanceMessage({ verificationScore: 2 })).toBeNull();
   });
 

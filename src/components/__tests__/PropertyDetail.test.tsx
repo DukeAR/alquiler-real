@@ -396,10 +396,10 @@ describe('PropertyDetail', () => {
     expect(screen.getByText('Lo importante de este aviso')).toBeDefined();
     expect(screen.getByText('Comodidades clave')).toBeDefined();
     expect(screen.getByText('Wifi rápido')).toBeDefined();
-    expect(screen.getByText('Nivel de verificación')).toBeDefined();
-    expect(screen.getByText('Qué parte del aviso ya fue comprobada. Lo demás conviene revisarlo antes de reservar.')).toBeDefined();
-    expect(screen.getByText('Este aviso ya tiene varias comprobaciones hechas.')).toBeDefined();
-    expect(screen.getByText('3 de 5 comprobaciones')).toBeDefined();
+    expect(screen.getByText('Comprobaciones del aviso')).toBeDefined();
+    expect(screen.getByText('Mostramos qué está comprobado para que puedas decidir mejor. Lo demás conviene revisarlo antes de reservar.')).toBeDefined();
+    expect(screen.getByText('Este aviso ya tiene varias comprobaciones visibles.')).toBeDefined();
+    expect(screen.getByText('3 de 5 comprobaciones completas')).toBeDefined();
     expect(screen.getByText('✔ ✔ ✔ ○ ○')).toBeDefined();
     expect(screen.getByText('Puede alojar hasta 4 huéspedes.')).toBeDefined();
     expect(screen.getByText('Tiene 3 dormitorios.')).toBeDefined();
@@ -410,9 +410,9 @@ describe('PropertyDetail', () => {
     expect(screen.getByText('Podés ver mejor el estado real.')).toBeDefined();
     expect(screen.getByText('Falta confirmar vínculo con el lugar.')).toBeDefined();
     expect(screen.getByText('Todavía no hay revisión en el lugar.')).toBeDefined();
-    expect(screen.queryByText('Este aviso muestra más cosas comprobadas que la mayoría.')).toBeNull();
+    expect(screen.queryByText('Este aviso muestra más información validada que la mayoría.')).toBeNull();
     expect(screen.getByText('Mariana')).toBeDefined();
-    expect(screen.getByText('Nivel de confianza: Alto')).toBeDefined();
+    expect(screen.getByText('Información validada del anfitrión: Alto')).toBeDefined();
     expect(screen.getByText('Historial de reservas')).toBeDefined();
     expect(screen.getByText('Reseñas de huéspedes')).toBeDefined();
     expect(screen.queryByText('Antigüedad en la plataforma')).toBeNull();
@@ -433,9 +433,9 @@ describe('PropertyDetail', () => {
 
     await waitForPropertyHeading();
 
-    expect(screen.getByText('4 de 5 comprobaciones')).toBeDefined();
-    expect(screen.getByText('Este aviso muestra más cosas comprobadas que la mayoría.')).toBeDefined();
-    expect(screen.queryByText('Este aviso ya tiene varias comprobaciones hechas.')).toBeNull();
+    expect(screen.getByText('4 de 5 comprobaciones completas')).toBeDefined();
+    expect(screen.getByText('Este aviso muestra más información validada que la mayoría.')).toBeDefined();
+    expect(screen.queryByText('Este aviso ya tiene varias comprobaciones visibles.')).toBeNull();
   });
 
   test('records the detail visit when the property reaches a high verification level', async () => {
@@ -476,12 +476,12 @@ describe('PropertyDetail', () => {
 
     await waitForPropertyHeading();
 
-    expect(screen.getByText('Nivel de verificación')).toBeDefined();
-    expect(screen.getByText('1 de 5 comprobaciones')).toBeDefined();
+    expect(screen.getByText('Comprobaciones del aviso')).toBeDefined();
+    expect(screen.getByText('1 de 5 comprobaciones completas')).toBeDefined();
     expect(screen.getByText('✔ ○ ○ ○ ○')).toBeDefined();
     expect(screen.getByText('Falta confirmar quién publica.')).toBeDefined();
-    expect(screen.queryByText('Este aviso muestra más cosas comprobadas que la mayoría.')).toBeNull();
-    expect(screen.queryByText('Este aviso ya tiene varias comprobaciones hechas.')).toBeNull();
+    expect(screen.queryByText('Este aviso muestra más información validada que la mayoría.')).toBeNull();
+    expect(screen.queryByText('Este aviso ya tiene varias comprobaciones visibles.')).toBeNull();
   });
 
   test('guides the booking flow and stops guest selection at capacity', async () => {

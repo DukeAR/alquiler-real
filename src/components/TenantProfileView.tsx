@@ -177,7 +177,7 @@ export const TenantProfileView: React.FC<TenantProfileViewProps> = ({ onBack }) 
           </div>
         </div>
 
-        {/* NIVEL DE VALIDACIÓN */}
+        {/* ESTADO DE COMPROBACIONES */}
         {validationStatus && (
           <section className="space-y-4">
             <ValidationBadgeLarge
@@ -186,11 +186,11 @@ export const TenantProfileView: React.FC<TenantProfileViewProps> = ({ onBack }) 
               progress={validationStatus.progress}
             />
 
-            {/* Explicación del nivel según el usuario */}
+            {/* Explicación del estado según el usuario */}
             {validationStatus.level === 'NIVEL_3' && (
               <div className="p-4 bg-brand/5 dark:bg-brand/10 rounded-2xl border border-brand/10 dark:border-brand/20">
                 <p className="text-sm text-slate-700 dark:text-slate-200">
-                  <strong>⭐ Buen historial:</strong> Llegaste a este nivel por tu actividad, tu historial y las reseñas que fuiste sumando dentro de la plataforma.
+                  <strong>Historial consistente:</strong> Llegaste a esta etapa por tu actividad, tu historial y las reseñas que fuiste sumando dentro de la plataforma.
                 </p>
               </div>
             )}
@@ -198,7 +198,7 @@ export const TenantProfileView: React.FC<TenantProfileViewProps> = ({ onBack }) 
             {validationStatus.level === 'NIVEL_1' && (
               <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl border border-emerald-200 dark:border-emerald-800">
                 <p className="text-sm text-emerald-800 dark:text-emerald-300">
-                  <strong>✅ Base resuelta:</strong> Ya confirmaste los datos de contacto que hacen de base para el nivel 1.
+                  <strong>Contacto confirmado:</strong> Ya confirmaste los datos de contacto que forman la base visible de tu cuenta.
                 </p>
               </div>
             )}
@@ -206,7 +206,7 @@ export const TenantProfileView: React.FC<TenantProfileViewProps> = ({ onBack }) 
             {validationStatus.level === 'INICIAL' && (
               <div className="p-4 bg-slate-100 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700">
                 <p className="text-sm text-slate-600 dark:text-slate-400">
-                  <strong>📋 Perfil inicial:</strong> Empezá por confirmar email y teléfono. La documentación queda para después y es opcional.
+                  <strong>Primeras comprobaciones:</strong> Empezá por confirmar email y teléfono. La documentación queda para después y es opcional.
                 </p>
               </div>
             )}
@@ -222,13 +222,13 @@ export const TenantProfileView: React.FC<TenantProfileViewProps> = ({ onBack }) 
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
                   <Icons.Shield className="w-4 h-4" />
-                  Estado de verificación
+                  Estado de comprobaciones
                 </h3>
                 <button
                   onClick={() => setShowDocUpload(!showDocUpload)}
                   className="text-xs font-bold text-brand hover:text-brand/80 transition-colors"
                 >
-                  {showDocUpload ? 'Ocultar' : 'Ver capa documental'}
+                  {showDocUpload ? 'Ocultar' : 'Ver comprobación documental'}
                 </button>
               </div>
 
@@ -242,7 +242,7 @@ export const TenantProfileView: React.FC<TenantProfileViewProps> = ({ onBack }) 
               {showDocUpload && (
                 <div className="mt-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700">
                   <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
-                    Si querés sumar respaldo extra, activá la verificación documental premium desde tu perfil y seguí desde ahí.
+                    Si querés sumar respaldo extra, activá la comprobación documental adicional desde tu perfil y seguí desde ahí.
                   </p>
                   <button
                     onClick={() => window.location.href = '/profile'}

@@ -85,12 +85,12 @@ export const ExploreResultsSection = ({
       .slice(0, TOP_VERIFIED_RESULTS_COUNT)
       .map((property) => property.id),
   );
-  const rankingLead = 'Mostramos primero los avisos con mayor nivel de verificación y mejor respaldo.';
+  const rankingLead = 'Mostramos qué está comprobado para que puedas decidir mejor.';
   const rankingDetail = sortBy === 'rating'
-    ? 'Cuando el respaldo se parece, suben los mejor calificados.'
+    ? 'Cuando dos avisos muestran comprobaciones parecidas, suben los mejor calificados.'
     : sortBy === 'price'
-      ? 'El precio se usa solo para desempatar entre avisos parecidos.'
-      : 'Después siguen las opciones con mejor combinación de reseñas y señales concretas.';
+      ? 'El precio se usa solo para desempatar entre avisos con información parecida.'
+      : 'Después siguen las opciones con mejor combinación de información validada, reseñas y señales concretas.';
 
   const summaryEyebrow = viewMode === 'map'
     ? 'Mapa'
@@ -164,7 +164,7 @@ export const ExploreResultsSection = ({
   const verificationPreferenceHint = showVerificationPreferenceHint ? (
     <p className="mt-3 inline-flex items-center gap-2 rounded-full border border-emerald-200/80 bg-emerald-50/80 px-3 py-1.5 text-[12.5px] font-medium leading-5 text-emerald-800">
       <Icons.ShieldCheck className="h-4 w-4" />
-      <span>Estás viendo avisos con mayor nivel de verificación</span>
+      <span>Estás viendo avisos con más comprobaciones visibles</span>
     </p>
   ) : null;
 
@@ -277,7 +277,7 @@ export const ExploreResultsSection = ({
           <div className="max-w-2xl space-y-2">
             <SectionTitle
               heading="Avisos para mirar primero"
-              description="Acá ves tipo de propiedad, ubicación, precio, rating y nivel de verificación en una sola lectura."
+              description="Acá ves tipo de propiedad, ubicación, precio, rating y qué parte del aviso ya fue comprobada en una sola lectura."
               className="max-w-2xl"
             />
             {!loading ? (

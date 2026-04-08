@@ -726,7 +726,7 @@ export const MyBookings = () => {
     id: `saved-${usefulSavedProperties[0].id}`,
     eyebrow: 'Guardados útiles',
     title: `Volvé a ${usefulSavedProperties[0].title}`,
-    description: 'Lo dejamos arriba porque ya tiene mejor nivel de verificación y te sirve para comparar rápido con lo que ya reservaste.',
+    description: 'Lo dejamos arriba porque ya muestra más información validada y te sirve para comparar rápido con lo que ya reservaste.',
     actionLabel: 'Ver guardado',
     icon: <Icons.Heart className="h-5 w-5" />,
     onAction: () => navigate(`/detail/${usefulSavedProperties[0].id}`),
@@ -1251,7 +1251,7 @@ export const MyBookings = () => {
             <SectionTitle
               eyebrow="Guardados útiles"
               heading="Lo que te conviene volver a mirar antes de decidir."
-              description="Mostramos primero los guardados con mejor nivel de verificación para que retomes comparaciones reales, no una lista plana de favoritos."
+              description="Mostramos primero los guardados con más comprobaciones visibles para que retomes comparaciones reales, no una lista plana de favoritos."
               as="h2"
               visualLevel="h3"
               className="max-w-3xl"

@@ -459,7 +459,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
       setActivePremiumOffer(null);
       navigate(response.redirectTo || activePremiumOffer.redirectTo);
     } catch (error) {
-      showToast('Verificación', error instanceof Error ? error.message : 'No pudimos activar la revisión presencial premium.', 'error');
+      showToast('Verificación', error instanceof Error ? error.message : 'No pudimos activar esta comprobación presencial ahora.', 'error');
     } finally {
       setProcessingPremiumOffer(false);
     }
@@ -1103,7 +1103,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
               <Icons.Home className="h-5 w-5 text-brand" />
               <h2 className="app-title-4 dark:text-white">Tus publicaciones</h2>
             </div>
-            <p className="app-body-sm app-text-muted">Cuanto más completo esté tu aviso, más arriba aparece en los resultados.</p>
+            <p className="app-body-sm app-text-muted">Mostramos qué está comprobado para que otros puedan decidir mejor sobre tu aviso.</p>
             <p className="app-body-sm app-text-muted">Completar verificaciones ayuda a que otros elijan con más claridad.</p>
           </div>
 
@@ -1161,12 +1161,12 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
                     </div>
 
                     <div className="space-y-2.5">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Verificación</p>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Comprobaciones</p>
                       <p className="text-sm font-semibold text-slate-950 dark:text-slate-50">{property.verificationBadge.summaryLabel}</p>
                       <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">
                         {pendingLabels.length === 0
                           ? 'Las comprobaciones visibles de este aviso ya están completas.'
-                          : `Te falta completar ${formatCountLabel(pendingLabels.length, 'verificación', 'verificaciones')}.`}
+                          : `Te falta completar ${formatCountLabel(pendingLabels.length, 'comprobación', 'comprobaciones')} visible${pendingLabels.length === 1 ? '' : 's'}.`}
                       </p>
                       {completedLabels.length > 0 ? (
                         <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">Completas: {formatLabelList(completedLabels, 3)}.</p>
@@ -1176,12 +1176,12 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
                       ) : null}
                       {property.premiumOnsiteOffer && !property.premiumOnsiteOffer.completed ? (
                         <div className="rounded-2xl border border-brand/15 bg-brand/5 p-3 dark:border-brand/25 dark:bg-brand/10">
-                          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-brand">Mejora premium opcional</p>
-                          <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-100">Podés sumar una revisión presencial para dar más contexto a este aviso.</p>
+                          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-brand">Comprobación adicional opcional</p>
+                          <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-100">Podés sumar una revisión presencial para dejar otra comprobación visible en este aviso.</p>
                           <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
                             {property.premiumOnsiteOffer.complimentaryReason
                               ? property.premiumOnsiteOffer.complimentaryReason
-                              : `Precio actual ${formatPremiumPriceLabel(property.premiumOnsiteOffer.priceArs, property.premiumOnsiteOffer.isComplimentary)}.`}
+                              : `Costo actual ${formatPremiumPriceLabel(property.premiumOnsiteOffer.priceArs, property.premiumOnsiteOffer.isComplimentary)}.`}
                           </p>
                           <Button
                             type="button"

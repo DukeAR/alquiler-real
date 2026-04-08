@@ -69,7 +69,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   const shouldEmphasizeVerification = emphasizeVerification && !isFavoritesVariant;
   const propertyTypeLabel = getPropertyTypeLabel(property);
   const verificationTagLabel = !isFavoritesVariant && verificationBadge.score >= HIGH_VERIFICATION_HIGHLIGHT_MIN_SCORE
-    ? verificationGuidanceLabel || 'Más verificado'
+    ? verificationGuidanceLabel || 'Más comprobado'
     : null;
 
   const ratingLabel = rating > 0 ? rating.toFixed(1) : 'Sin puntaje';
@@ -185,7 +185,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
             <p className={cn(
               'text-[11px] font-medium leading-5 text-slate-500',
               shouldEmphasizeVerification && 'text-emerald-700',
-            )}>Nivel de verificación</p>
+            )}>Comprobaciones</p>
             <p className={cn(
               'mt-0.5 text-[13px] font-semibold leading-5 text-slate-900',
               shouldEmphasizeVerification && 'text-emerald-900',

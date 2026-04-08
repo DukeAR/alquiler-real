@@ -120,7 +120,7 @@ const buildVerificationChecks = (checks?: ValidationChecks) => {
     { label: 'Actividad en la plataforma', done: checks.platformActivity },
     { label: 'Historial de uso', done: checks.historyVerified },
     { label: 'Reseñas en la plataforma', done: checks.reviewsVerified },
-    { label: 'Refuerzo documental opcional', done: checks.documentaryVerified, optional: true },
+    { label: 'Comprobación documental opcional', done: checks.documentaryVerified, optional: true },
   ];
 
   return items;
@@ -227,11 +227,10 @@ export const ProfileViewNew = () => {
   const ratingValue = normalizeRating(isHostMode ? user.hostRating : user.rating);
   const riskScore = normalizeRating(user.riskScore);
   const validationLevel = validationData?.level ?? 'INICIAL';
-  const verificationScore = validationData?.verificationScore ?? progressPercent;
-  const verificationHeading = validationData?.headline ?? 'Tu cuenta sigue sumando señales de confianza.';
-  const verificationSummary = validationData?.summary ?? 'La verificación ahora combina contacto, perfil, actividad y reputación dentro de la plataforma.';
-  const verificationNextStep = validationData?.nextStep ?? 'Completá lo que te falte para seguir subiendo de nivel.';
-  const verificationLevelLabel = validationData?.levelLabel ?? 'Camino al nivel 1';
+  const verificationHeading = validationData?.headline ?? 'Todavía faltan comprobaciones básicas para mostrar mejor tu cuenta.';
+  const verificationSummary = validationData?.summary ?? 'Mostramos qué está comprobado para que otros puedan decidir mejor con tu cuenta.';
+  const verificationNextStep = validationData?.nextStep ?? 'Completá lo que te falte para sumar más comprobaciones visibles.';
+  const verificationLevelLabel = validationData?.levelLabel ?? 'Comprobaciones iniciales';
   const verificationBenefitsCurrent = validationData?.benefits?.current ?? [];
   const verificationBenefitsNext = validationData?.benefits?.next ?? [];
   const premiumDocumentaryOffer = validationData?.premiumDocumentaryOffer ?? null;
@@ -279,7 +278,7 @@ export const ProfileViewNew = () => {
       setShowVerification(false);
       navigate(response.redirectTo || premiumDocumentaryOffer.redirectTo);
     } catch (error) {
-      showToast('Verificación', error instanceof Error ? error.message : 'No pudimos activar la verificación premium ahora.', 'error');
+      showToast('Verificación', error instanceof Error ? error.message : 'No pudimos activar esta comprobación adicional ahora.', 'error');
     } finally {
       setProcessingPremiumVerification(false);
     }
@@ -441,8 +440,8 @@ export const ProfileViewNew = () => {
                   />
 
                   <div className="mt-6 grid gap-4 sm:grid-cols-3">
-                    <MiniMetric label="Score de verificación" value={String(verificationScore)} accent="brand" caption="Sobre 100" />
-                    <MiniMetric label="Nivel actual" value={verificationLevelLabel} accent="success" caption="Sube con señales reales" />
+                    <MiniMetric label="Comprobaciones" value={`${completedChecks} de ${verificationChecks.length || 0}`} accent="brand" caption="completas en tu cuenta" />
+                    <MiniMetric label="Resumen actual" value={verificationLevelLabel} accent="success" caption="según la información validada" />
                     <MiniMetric label="Calificación" value={ratingValue > 0 ? ratingValue.toFixed(1) : 'Sin dato'} accent="warning" caption="Según tu historial" />
                   </div>
 
@@ -466,9 +465,9 @@ export const ProfileViewNew = () => {
                 <Card padding="lg" className="space-y-6 dark:border-slate-800 dark:bg-slate-900">
                   <div className="flex flex-wrap items-start justify-between gap-4">
                     <SectionTitle
-                      eyebrow="Verificación"
-                      heading="Verificación progresiva"
-                      description="La cuenta sube de nivel con señales reales de contacto, perfil, actividad e historial."
+                      eyebrow="Comprobaciones"
+                      heading="Qué está comprobado en tu cuenta"
+                      description="Mostramos qué está comprobado para que otros puedan decidir mejor. La cuenta suma contexto con contacto, perfil, actividad e historial."
                       as="h2"
                       visualLevel="h4"
                       className="max-w-md"
@@ -480,8 +479,8 @@ export const ProfileViewNew = () => {
 
                   <div className="space-y-3">
                     <div className="flex items-center justify-between text-sm">
-                      <span className="font-medium text-slate-600 dark:text-slate-300">Score actual</span>
-                      <span className="font-semibold text-brand">{progressPercent}%</span>
+                      <span className="font-medium text-slate-600 dark:text-slate-300">Comprobaciones completas</span>
+                      <span className="font-semibold text-brand">{completedChecks} de {verificationChecks.length || 0}</span>
                     </div>
                     <div className="h-3 rounded-full bg-slate-100 p-0.5 dark:bg-slate-800">
                       <div
@@ -500,24 +499,27 @@ export const ProfileViewNew = () => {
                   {typeof validationData?.highValueBookingEligible === 'boolean' ? (
                     <NoticeBanner
                       tone={validationData.highValueBookingEligible ? 'success' : 'info'}
-                      heading={validationData.highValueBookingEligible ? 'Ya tenés la base mínima para reservas altas.' : 'Las reservas altas piden al menos nivel 1.'}
+                      heading={validationData.highValueBookingEligible ? 'Ya tenés la base mínima para reservas altas.' : 'Las reservas altas piden contacto confirmado.'}
                       description={validationData.highValueBookingEligible
                         ? 'Con tu estado actual ya cumplís la base mínima para reservas mayores a $200.000.'
-                        : 'Confirmá email y teléfono para habilitar el mínimo de verificación pedido en reservas mayores a $200.000.'}
+                        : 'Confirmá email y teléfono para habilitar la base mínima pedida en reservas mayores a $200.000.'}
                     />
                   ) : null}
 
                   {validationData?.categories?.length ? (
                     <div className="grid gap-3 sm:grid-cols-2">
-                      {validationData.categories.map((category) => (
+                      {validationData.categories.map((category) => {
+                        const completedCategoryChecks = category.checks.filter((check) => check.done).length;
+
+                        return (
                         <div key={category.id} className="rounded-[var(--app-radius-control)] border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/50">
                           <div className="flex items-center justify-between gap-3">
                             <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{category.label}</p>
-                            <span className="text-xs font-bold uppercase tracking-[0.14em] text-brand">{category.score}/{category.maxScore}</span>
+                            <span className="text-xs font-bold uppercase tracking-[0.14em] text-brand">{completedCategoryChecks}/{category.checks.length} comprobadas</span>
                           </div>
                           <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">{category.summary}</p>
                         </div>
-                      ))}
+                      )})}
                     </div>
                   ) : null}
 
@@ -565,7 +567,7 @@ export const ProfileViewNew = () => {
                   {missingRequirementsText ? (
                     <NoticeBanner
                       tone="info"
-                      heading="Todavía faltan señales para seguir subiendo de nivel."
+                      heading="Todavía faltan comprobaciones por completar."
                       description={missingRequirementsText}
                     />
                   ) : null}
@@ -573,7 +575,7 @@ export const ProfileViewNew = () => {
                   {validationData?.optionalUpgrade ? (
                     <NoticeBanner
                       tone="info"
-                      heading="La comprobación documental quedó como mejora premium opcional."
+                      heading="Podés sumar una comprobación documental adicional."
                       description={validationData.optionalUpgrade}
                     />
                   ) : null}
@@ -582,12 +584,12 @@ export const ProfileViewNew = () => {
                     <div className="rounded-[var(--app-radius-control)] border border-brand/15 bg-brand/5 p-4 dark:border-brand/25 dark:bg-brand/10">
                       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                         <div className="space-y-2">
-                          <p className="app-form-label">Mejora premium opcional</p>
-                          <p className="text-sm leading-6 text-slate-700 dark:text-slate-200">Podés sumar verificaciones para dar más contexto a otros usuarios con DNI y selfie.</p>
+                          <p className="app-form-label">Comprobación adicional opcional</p>
+                          <p className="text-sm leading-6 text-slate-700 dark:text-slate-200">Podés sumar DNI y selfie como información validada extra para tu cuenta.</p>
                           <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">
                             {premiumDocumentaryOffer.complimentaryReason
                               ? premiumDocumentaryOffer.complimentaryReason
-                              : `Precio actual ${formatPremiumPriceLabel(premiumDocumentaryOffer.priceArs, premiumDocumentaryOffer.isComplimentary)}.`}
+                              : `Costo actual ${formatPremiumPriceLabel(premiumDocumentaryOffer.priceArs, premiumDocumentaryOffer.isComplimentary)}.`}
                           </p>
                         </div>
                         <Button type="button" variant={premiumDocumentaryOffer.completed ? 'secondary' : 'primary'} onClick={() => setShowVerification(true)}>
@@ -601,7 +603,7 @@ export const ProfileViewNew = () => {
                   {verificationBenefitsCurrent.length > 0 || verificationBenefitsNext.length > 0 ? (
                     <div className="grid gap-3 sm:grid-cols-2">
                       <div className="rounded-[var(--app-radius-control)] border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/50">
-                        <p className="app-form-label">Lo que ya suma tu cuenta</p>
+                        <p className="app-form-label">Lo que ya aporta tu cuenta</p>
                         <div className="mt-3 space-y-2">
                           {verificationBenefitsCurrent.map((item) => (
                             <p key={item} className="text-sm leading-6 text-slate-600 dark:text-slate-300">{item}</p>
@@ -609,12 +611,12 @@ export const ProfileViewNew = () => {
                         </div>
                       </div>
                       <div className="rounded-[var(--app-radius-control)] border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/50">
-                        <p className="app-form-label">Qué te conviene sumar después</p>
+                        <p className="app-form-label">Qué comprobaciones te conviene sumar</p>
                         <div className="mt-3 space-y-2">
                           {verificationBenefitsNext.length > 0 ? verificationBenefitsNext.map((item) => (
                             <p key={item} className="text-sm leading-6 text-slate-600 dark:text-slate-300">{item}</p>
                           )) : (
-                            <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">Ya alcanzaste todas las capas principales del sistema progresivo.</p>
+                            <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">Ya completaste las comprobaciones principales del sistema.</p>
                           )}
                         </div>
                       </div>
@@ -663,7 +665,7 @@ export const ProfileViewNew = () => {
                     <Button type="button" variant={progressPercent >= 70 ? 'secondary' : 'primary'} onClick={() => setShowVerification(true)}>
                       <>
                         <Icons.ShieldCheck className="h-5 w-5" />
-                        {premiumDocumentaryOffer?.ctaLabel ?? (validationData?.checks?.documentaryVerified ? 'Revisar refuerzo documental' : 'Ver refuerzo documental premium')}
+                        {premiumDocumentaryOffer?.ctaLabel ?? (validationData?.checks?.documentaryVerified ? 'Revisar comprobación documental' : 'Ver comprobación documental adicional')}
                       </>
                     </Button>
                   </div>

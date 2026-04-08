@@ -108,11 +108,11 @@ describe('HostDashboard', () => {
               premiumOnsiteOffer: {
                 offerType: 'onsite-property',
                 targetType: 'property',
-                title: 'Revisión presencial premium',
-                summary: 'Podés pedir una revisión presencial para esta publicación.',
-                contextHint: 'Es opcional y suma contexto extra.',
-                visibilityHint: 'Puede aportar un leve impulso en score, orden y visibilidad.',
-                ctaLabel: 'Activar revisión presencial sin cargo',
+                title: 'Comprobación presencial adicional',
+                summary: 'Podés pedir una revisión presencial para sumar información validada extra en este aviso.',
+                contextHint: 'Mostramos qué está comprobado para que se entienda mejor el aviso.',
+                visibilityHint: 'Cuando se completa, deja una comprobación presencial visible dentro de la ficha del aviso.',
+                ctaLabel: 'Activar comprobación presencial sin cargo',
                 checkoutLabel: 'Activar sin cargo',
                 processLabel: 'Ir a la coordinación',
                 priceArs: 0,
@@ -150,10 +150,10 @@ describe('HostDashboard', () => {
 
     expect(await screen.findByText('Qué conviene hacer ahora')).toBeInTheDocument();
     expect(screen.getByText('Tus publicaciones')).toBeInTheDocument();
-    expect(screen.getByText('Cuanto más completo esté tu aviso, más arriba aparece en los resultados.')).toBeInTheDocument();
-    expect(screen.getByText('4 de 5 comprobaciones')).toBeInTheDocument();
-    expect(screen.getByText(/Te falta completar 1 verificación/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Activar revisión presencial sin cargo/i })).toBeInTheDocument();
+  expect(screen.getByText('Mostramos qué está comprobado para que otros puedan decidir mejor sobre tu aviso.')).toBeInTheDocument();
+  expect(screen.getByText('4 de 5 comprobaciones completas')).toBeInTheDocument();
+  expect(screen.getByText(/Te falta completar 1 comprobación visible/i)).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /Activar comprobación presencial sin cargo/i })).toBeInTheDocument();
 
     fireEvent.click((await screen.findAllByRole('button', { name: /Disponibilidad/i }))[1]!);
 

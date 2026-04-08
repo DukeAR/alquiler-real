@@ -48,23 +48,23 @@ describe('ProfileViewNew', () => {
           ok: true,
           json: async () => ({
             level: 'NIVEL_1',
-            levelLabel: 'Nivel 1',
+            levelLabel: 'Base de contacto lista',
             verificationScore: 34,
             progress: 40,
             headline: 'Ya resolviste la base mínima de contacto.',
-            summary: 'La verificación combina contacto, perfil, actividad e historial dentro de la plataforma.',
+            summary: 'Mostramos qué está comprobado para que otros puedan decidir mejor con tu cuenta.',
             nextStep: 'Completá tu perfil y empezá a sumar actividad.',
             optionalUpgrade: 'La documentación queda como refuerzo opcional para más adelante.',
             premiumDocumentaryOffer: {
               offerType: 'documentary-user',
               targetType: 'user',
-              title: 'Verificación documental premium',
-              summary: 'Podés sumar DNI y selfie como una capa opcional para dar más contexto sobre tu cuenta.',
-              contextHint: 'Podés sumar verificaciones para dar más contexto a otros usuarios.',
-              visibilityHint: 'Si además publicás propiedades, esta señal puede aportar un impulso suave de contexto.',
-              ctaLabel: 'Activar verificación sin cargo',
+              title: 'Comprobación documental adicional',
+              summary: 'Podés sumar DNI y selfie como información validada extra sobre tu cuenta.',
+              contextHint: 'Mostramos qué está comprobado para que otros puedan decidir mejor.',
+              visibilityHint: 'Suma una comprobación documental visible junto al resto de la información validada de tu cuenta.',
+              ctaLabel: 'Activar comprobación sin cargo',
               checkoutLabel: 'Activar sin cargo',
-              processLabel: 'Ir a la verificación',
+              processLabel: 'Ir a la comprobación',
               priceArs: 0,
               currency: 'ARS',
               isComplimentary: true,
@@ -90,7 +90,7 @@ describe('ProfileViewNew', () => {
                 label: 'Contacto',
                 score: 15,
                 maxScore: 25,
-                summary: 'Confirmar email y teléfono te lleva al nivel 1.',
+                summary: 'Confirmar email y teléfono deja lista la base mínima de contacto.',
                 checks: [],
               },
             ],
@@ -152,10 +152,10 @@ describe('ProfileViewNew', () => {
 
     expect(screen.getByText('Resolvé lo básico')).toBeInTheDocument();
     expect(screen.getByText('Lo que ajusta lo que ves')).toBeInTheDocument();
-      expect(screen.getByText('Verificación progresiva')).toBeInTheDocument();
+      expect(screen.getByText('Qué está comprobado en tu cuenta')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /Confirmar email/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /Agregar teléfono/i })).toBeInTheDocument();
-      expect(screen.getAllByRole('button', { name: /Activar verificación sin cargo/i }).length).toBeGreaterThan(0);
+      expect(screen.getAllByRole('button', { name: /Activar comprobación sin cargo/i }).length).toBeGreaterThan(0);
     expect(screen.getByText('🏖️ Playa y Mar')).toBeInTheDocument();
   });
 
