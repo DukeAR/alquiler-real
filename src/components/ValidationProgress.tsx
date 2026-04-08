@@ -4,12 +4,14 @@ import { Icons } from './Icons';
 import { cn } from '../lib/utils';
 
 interface ValidationChecks {
-  dniFrontUploaded: boolean;
-  dniBackUploaded: boolean;
-  selfieUploaded: boolean;
-  dniVerified: boolean;
-  utilityBillUploaded?: boolean;
-  utilityBillVerified?: boolean;
+  emailVerified: boolean;
+  phoneVerified: boolean;
+  profileComplete: boolean;
+  platformActivity: boolean;
+  historyVerified: boolean;
+  reviewsVerified: boolean;
+  documentarySubmitted: boolean;
+  documentaryVerified: boolean;
 }
 
 interface ValidationProgressProps {
@@ -46,33 +48,37 @@ function ChecklistItem({ label, isCompleted, icon, isPending }: { label: string;
 }
 
 export function ValidationProgress({ checks, progress, missingRequirements, userRole = 'TENANT' }: ValidationProgressProps) {
-  const documentItems = [
-    { label: 'DNI frente cargado', isCompleted: checks.dniFrontUploaded, icon: <Icons.FileText className="w-4 h-4" /> },
-    { label: 'DNI dorso cargado', isCompleted: checks.dniBackUploaded, icon: <Icons.FileText className="w-4 h-4" /> },
-    { label: 'Selfie con DNI cargada', isCompleted: checks.selfieUploaded, icon: <Icons.Camera className="w-4 h-4" /> },
+  const primaryItems = [
+    { label: 'Email confirmado', isCompleted: checks.emailVerified, icon: <Icons.MessageSquare className="w-4 h-4" /> },
+    { label: 'Teléfono confirmado', isCompleted: checks.phoneVerified, icon: <Icons.Phone className="w-4 h-4" /> },
+    { label: 'Perfil completo', isCompleted: checks.profileComplete, icon: <Icons.User className="w-4 h-4" /> },
+    { label: 'Actividad en la plataforma', isCompleted: checks.platformActivity, icon: <Icons.Sparkles className="w-4 h-4" /> },
     {
-      label: 'Identidad verificada',
-      isCompleted: checks.dniVerified,
-      isPending: checks.dniFrontUploaded && checks.dniBackUploaded && checks.selfieUploaded && !checks.dniVerified,
+      label: 'Historial de uso',
+      isCompleted: checks.historyVerified,
       icon: <Icons.UserCheck className="w-4 h-4" />
+    },
+    {
+      label: 'Reseñas en la plataforma',
+      isCompleted: checks.reviewsVerified,
+      icon: <Icons.Star className="w-4 h-4" />
     },
   ];
 
-  const hostItems = userRole === 'HOST' ? [
-    { label: 'Comprobante de servicios cargado', isCompleted: checks.utilityBillUploaded || false, icon: <Icons.FileSpreadsheet className="w-4 h-4" /> },
+  const optionalItems = [
     {
-      label: 'Domicilio verificado',
-      isCompleted: checks.utilityBillVerified || false,
-      isPending: checks.utilityBillUploaded && !checks.utilityBillVerified,
-      icon: <Icons.UserCheck className="w-4 h-4" />
+      label: userRole === 'HOST' ? 'Respaldo documental del perfil' : 'Refuerzo documental opcional',
+      isCompleted: checks.documentaryVerified,
+      isPending: checks.documentarySubmitted && !checks.documentaryVerified,
+      icon: userRole === 'HOST' ? <Icons.FileSpreadsheet className="w-4 h-4" /> : <Icons.FileText className="w-4 h-4" />
     },
-  ] : [];
+  ];
 
   return (
     <div className="space-y-6">
       <div className="space-y-2">
         <div className="flex justify-between items-center">
-          <span className="text-sm font-medium text-gray-700">Qué falta para completar tu verificación</span>
+          <span className="text-sm font-medium text-gray-700">Qué está sumando tu nivel de confianza</span>
           <span className="text-sm font-bold text-blue-600">{progress}%</span>
         </div>
         <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
@@ -84,21 +90,21 @@ export function ValidationProgress({ checks, progress, missingRequirements, user
         <div>
           <h4 className="text-xs uppercase tracking-wider text-gray-500 font-medium mb-2 flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-blue-400" />
-            Documentos e identidad
+            Señales principales
           </h4>
           <div className="space-y-2">
-            {documentItems.map((item) => (<ChecklistItem key={item.label} {...item} />))}
+            {primaryItems.map((item) => (<ChecklistItem key={item.label} {...item} />))}
           </div>
         </div>
 
-        {hostItems.length > 0 && (
+        {optionalItems.length > 0 && (
           <div>
             <h4 className="text-xs uppercase tracking-wider text-gray-500 font-medium mb-2 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-purple-400" />
-              Revisión extra del anfitrión
+              <span className="w-2 h-2 rounded-full bg-amber-400" />
+              Capa documental opcional
             </h4>
             <div className="space-y-2">
-              {hostItems.map((item) => (<ChecklistItem key={item.label} {...item} />))}
+              {optionalItems.map((item) => (<ChecklistItem key={item.label} {...item} />))}
             </div>
           </div>
         )}
@@ -106,7 +112,7 @@ export function ValidationProgress({ checks, progress, missingRequirements, user
 
       {missingRequirements.length > 0 && (
         <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-          <h4 className="text-sm font-medium text-amber-800 mb-2">Todavía falta completar esto:</h4>
+          <h4 className="text-sm font-medium text-amber-800 mb-2">Todavía podés sumar estas señales:</h4>
           <ul className="space-y-1">
             {missingRequirements.map((req, index) => (
               <li key={index} className="text-sm text-amber-700 flex items-center gap-2">

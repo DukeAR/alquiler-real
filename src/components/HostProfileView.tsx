@@ -100,7 +100,7 @@ export const HostProfileView: React.FC<HostProfileViewProps> = ({ profile, onBac
             <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-3">
                 <Icons.BadgeCheck className="w-5 h-5 text-slate-400" />
-                <span className="text-sm font-bold text-slate-700 dark:text-slate-300">Identidad validada (Renaper)</span>
+                <span className="text-sm font-bold text-slate-700 dark:text-slate-300">Refuerzo documental validado</span>
               </div>
               {profile.identityValidated ? <Icons.CheckCircle2 className="w-5 h-5 text-emerald-500" /> : <Icons.X className="w-5 h-5 text-slate-300" />}
             </div>
@@ -118,7 +118,7 @@ export const HostProfileView: React.FC<HostProfileViewProps> = ({ profile, onBac
           </div>
           <div className="p-4 bg-brand/5 dark:bg-brand/10 rounded-2xl border border-brand/10 dark:border-brand/20">
             <p className="text-[10px] text-slate-600 dark:text-slate-300 leading-relaxed font-medium italic">
-              “La identidad del anfitrión se validó digitalmente. Alquiler Real no certifica la titularidad, el estado físico ni los servicios del inmueble.”
+              “El perfil del anfitrión suma señales de contacto, actividad e historial. Esta revisión adicional solo agrega respaldo documental y no certifica titularidad, estado físico ni servicios del inmueble.”
             </p>
           </div>
         </section>

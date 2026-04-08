@@ -164,8 +164,21 @@ describe('Properties endpoints', () => {
 
   test('POST /api/properties publishes the first property without forcing prior identity verification', async () => {
     queryMock.mockImplementation(async (text: string) => {
-      if (text.includes('SELECT risk_score, role, is_identity_verified FROM users')) {
-        return { rows: [{ risk_score: 0, role: 'tenant', is_identity_verified: false }] };
+      if (text.includes('SELECT risk_score,') && text.includes('profile_photo as "profilePhoto"')) {
+        return {
+          rows: [{
+            risk_score: 0,
+            role: 'tenant',
+            phone: null,
+            bio: null,
+            zone: null,
+            profilePhoto: null,
+            totalReviews: 0,
+            emailVerified: false,
+            phoneVerified: false,
+            documentaryVerified: false,
+          }],
+        };
       }
 
       if (text.includes('INSERT INTO properties')) {

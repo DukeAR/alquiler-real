@@ -2,20 +2,51 @@ import { useCallback, useEffect, useState } from 'react';
 import { apiJson } from '../lib/apiConfig';
 
 export type ValidationChecks = {
-  dniFrontUploaded: boolean;
-  dniBackUploaded: boolean;
-  selfieUploaded: boolean;
-  dniVerified: boolean;
-  utilityBillUploaded?: boolean;
+  emailVerified: boolean;
+  phoneVerified: boolean;
+  profileComplete: boolean;
+  platformActivity: boolean;
+  historyVerified: boolean;
+  reviewsVerified: boolean;
+  documentarySubmitted: boolean;
+  documentaryVerified: boolean;
+};
+
+export type ValidationCategory = {
+  id: string;
+  label: string;
+  score: number;
+  maxScore: number;
+  summary: string;
+  checks: Array<{
+    id: string;
+    label: string;
+    description: string;
+    done: boolean;
+    optional?: boolean;
+  }>;
 };
 
 export type ValidationData = {
   level?: string;
   progress?: number;
   levelNumber?: number;
+  levelLabel?: string;
+  shortLabel?: string;
   nextLevel?: string | null;
+  verificationScore?: number;
+  headline?: string;
+  summary?: string;
+  nextStep?: string;
+  optionalUpgrade?: string | null;
+  highValueBookingEligible?: boolean;
   checks?: ValidationChecks;
   missingRequirements?: string[];
+  categories?: ValidationCategory[];
+  benefits?: {
+    current: string[];
+    next: string[];
+  };
 };
 
 export type ActivityData = {

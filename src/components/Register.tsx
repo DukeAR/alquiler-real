@@ -232,7 +232,7 @@ export const Register = ({ mode = 'login' }: RegisterProps) => {
 
                     <div className="rounded-2xl border border-amber-200 bg-amber-50/90 p-4 text-sm text-amber-900 dark:border-amber-800/30 dark:bg-amber-900/20 dark:text-amber-200">
                         <p className="font-bold mb-1">Si después querés publicar, lo activás desde tu cuenta.</p>
-                        <p className="text-xs leading-5">Para publicar con datos verificables más adelante vas a necesitar DNI, selfie con DNI y comprobante de servicios.</p>
+                        <p className="text-xs leading-5">Más adelante podés reforzar tu perfil confirmando contacto, completando tu cuenta y, si querés, sumando documentación opcional.</p>
                     </div>
 
                     <div className="space-y-4">

@@ -8,7 +8,7 @@ import { Icons } from '../Icons';
 const StepIndicator: React.FC<{ currentStep: number; totalSteps: number }> = ({ currentStep, totalSteps }) => (
   <div className="space-y-3 p-8">
     <div className="flex items-center justify-between text-xs font-bold uppercase tracking-widest">
-      <span className="text-slate-400">{currentStep === 4 ? 'Cita presencial' : `Paso ${currentStep} de ${totalSteps}`}</span>
+      <span className="text-slate-400">{currentStep === 4 ? 'Cita opcional' : `Paso ${currentStep} de ${totalSteps}`}</span>
       {currentStep !== 4 && <span className="text-brand">{Math.round((currentStep / totalSteps) * 100)}%</span>}
     </div>
     {currentStep !== 4 && (
@@ -41,8 +41,8 @@ const IdentityStep: React.FC<{
       <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-[24px] bg-brand/10">
         <Icons.Smartphone className="h-8 w-8 text-brand" />
       </div>
-      <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Validá tu identidad</h1>
-      <p className="font-medium text-slate-500">Usamos Renaper para validar que sos vos.</p>
+      <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Sumá respaldo documental</h1>
+      <p className="font-medium text-slate-500">Esta capa es opcional y agrega una comprobación extra sobre tu cuenta.</p>
     </div>
 
     <div className="space-y-8 rounded-[32px] border border-slate-200 bg-slate-50 p-8 dark:border-slate-800 dark:bg-slate-900/50">
@@ -50,12 +50,12 @@ const IdentityStep: React.FC<{
         <div className="rounded-2xl bg-brand/10 p-3">
           <Icons.ShieldCheck className="h-6 w-6 text-brand" />
         </div>
-        <h3 className="text-lg font-bold">DNI argentino</h3>
+        <h3 className="text-lg font-bold">Documento de identidad</h3>
       </div>
 
       <div className="space-y-4">
         <div className="space-y-2">
-          <label className="ml-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">Número de DNI</label>
+          <label className="ml-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">Número de documento</label>
           <input
             type="text"
             value={dni}
@@ -94,7 +94,7 @@ const IdentityStep: React.FC<{
       <div className="flex gap-3">
         <Icons.Info className="h-5 w-5 shrink-0 text-blue-600" />
         <p className="text-xs font-medium leading-relaxed text-blue-800 dark:text-blue-200">
-          ¿Preferís hacerlo en persona? Si estás en <span className="font-bold">San Clemente del Tuyú</span>, podés pedir una validación presencial para sumar la comprobación más fuerte de tu perfil.
+          ¿Preferís hacerlo en persona? Si estás en <span className="font-bold">San Clemente del Tuyú</span>, podés pedir una cita presencial para sumar una comprobación adicional sin depender solo del flujo digital.
         </p>
       </div>
       <button
@@ -106,8 +106,17 @@ const IdentityStep: React.FC<{
             : 'border border-blue-200 bg-white text-blue-600 dark:border-blue-800 dark:bg-slate-800',
         )}
       >
-        {isPresencial ? '✓ Elegiste validación presencial' : 'Quiero validación presencial'}
+        {isPresencial ? '✓ Elegiste cita presencial' : 'Quiero cita presencial'}
       </button>
+    </div>
+
+    <div className="rounded-[24px] border border-amber-100 bg-amber-50 p-5 dark:border-amber-900/30 dark:bg-amber-900/20">
+      <div className="flex gap-3">
+        <Icons.Sparkles className="h-5 w-5 shrink-0 text-amber-600" />
+        <p className="text-xs font-medium leading-relaxed text-amber-900 dark:text-amber-200">
+          Este refuerzo no reemplaza el nivel principal de tu cuenta. Los primeros niveles se construyen con email, teléfono, perfil, actividad e historial dentro de Alquiler Real.
+        </p>
+      </div>
     </div>
   </motion.div>
 );
@@ -122,8 +131,8 @@ const BiometryStep: React.FC = () => (
       <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-[24px] bg-brand/10">
         <Icons.Zap className="h-8 w-8 fill-brand text-brand" />
       </div>
-      <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Validación facial</h1>
-      <p className="font-medium text-slate-500">Estamos validando que sos vos</p>
+      <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Comprobación de presencia</h1>
+      <p className="font-medium text-slate-500">Sirve para respaldar que la documentación enviada corresponde con vos</p>
     </div>
 
     <div className="flex flex-col items-center gap-10">
@@ -155,8 +164,8 @@ const SuccessStep: React.FC = () => (
       <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-[24px] bg-accent/10">
         <Icons.CheckCircle2 className="h-8 w-8 text-accent" />
       </div>
-      <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Ya recibimos tus datos</h1>
-      <p className="font-medium text-slate-500">Ahora los estamos revisando</p>
+      <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Ya recibimos tu refuerzo documental</h1>
+      <p className="font-medium text-slate-500">Ahora lo estamos revisando como una capa extra de respaldo</p>
     </div>
 
     <div className="space-y-4">
@@ -165,7 +174,7 @@ const SuccessStep: React.FC = () => (
           <Icons.CheckCircle2 className="h-6 w-6 text-emerald-500" />
         </div>
         <div>
-          <p className="text-sm font-bold text-emerald-900 dark:text-emerald-300">DNI cargado</p>
+          <p className="text-sm font-bold text-emerald-900 dark:text-emerald-300">Documento cargado</p>
           <p className="text-xs font-medium text-emerald-600/70">Se subió correctamente</p>
         </div>
       </div>
@@ -174,8 +183,8 @@ const SuccessStep: React.FC = () => (
           <Icons.CheckCircle2 className="h-6 w-6 text-emerald-500" />
         </div>
         <div>
-          <p className="text-sm font-bold text-emerald-900 dark:text-emerald-300">Validación facial</p>
-          <p className="text-xs font-medium text-emerald-600/70">Prueba de vida aprobada</p>
+          <p className="text-sm font-bold text-emerald-900 dark:text-emerald-300">Comprobación de presencia</p>
+          <p className="text-xs font-medium text-emerald-600/70">Chequeo visual completado</p>
         </div>
       </div>
     </div>
@@ -198,7 +207,7 @@ export const DocumentVerificationFlow: React.FC<{ onComplete: () => Promise<void
 
     if (step === 1) {
       if (!dni || !idFile) {
-        showToast('Verificación', 'Ingresá tu DNI y subí la foto del frente para continuar.', 'warning');
+        showToast('Verificación', 'Ingresá tu documento y subí la foto del frente para continuar.', 'warning');
         return;
       }
 
@@ -215,12 +224,12 @@ export const DocumentVerificationFlow: React.FC<{ onComplete: () => Promise<void
         });
 
         if (!response.ok) {
-          throw new Error('DNI no válido');
+          throw new Error('Documento no válido');
         }
 
         setStep(2);
       } catch (_error) {
-        showToast('Verificación', 'No pudimos validar el DNI. Revisá la foto y probá de nuevo.', 'error');
+        showToast('Verificación', 'No pudimos validar ese documento. Revisá la foto y probá de nuevo.', 'error');
       } finally {
         setIsVerifying(false);
       }
@@ -238,7 +247,7 @@ export const DocumentVerificationFlow: React.FC<{ onComplete: () => Promise<void
       await onComplete();
     } catch (error) {
       console.error('Verification failed', error);
-      showToast('Verificación', 'No pudimos completar la verificación. Intentá de nuevo.', 'error');
+      showToast('Verificación', 'No pudimos completar este refuerzo documental. Intentá de nuevo.', 'error');
     } finally {
       setIsVerifying(false);
     }
@@ -291,7 +300,7 @@ export const DocumentVerificationFlow: React.FC<{ onComplete: () => Promise<void
                 <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-[24px] bg-blue-100 dark:bg-blue-900/30">
                   <Icons.Calendar className="h-8 w-8 text-blue-600" />
                 </div>
-                <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Elegí tu cita</h1>
+                <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Elegí tu cita de respaldo</h1>
                 <p className="font-medium text-slate-500">Presencial en San Clemente del Tuyú</p>
               </div>
 
@@ -341,7 +350,7 @@ export const DocumentVerificationFlow: React.FC<{ onComplete: () => Promise<void
               </>
             ) : (
               <>
-                <span className="text-lg">{step === 3 ? 'Finalizar verificación' : 'Continuar'}</span>
+                <span className="text-lg">{step === 3 ? 'Finalizar refuerzo' : 'Continuar'}</span>
                 <Icons.ChevronRight className="h-5 w-5" />
               </>
             )}

@@ -29,6 +29,7 @@ vi.mock('connect-pg-simple', () => ({
 }));
 
 import app from '../index';
+import { getRequestAcceptedMessage } from '../chatSystemMessages';
 
 const BOOKING_LOOKUP_QUERY_SNIPPET = 'FROM bookings b';
 const LOG_ACTIVITY_QUERY_SNIPPET = 'INSERT INTO user_activity_logs';
@@ -65,8 +66,21 @@ describe('Bookings and availability endpoints', () => {
     });
 
     queryMock.mockImplementation(async (text: string) => {
-      if (text.includes('SELECT risk_score, role, is_identity_verified FROM users')) {
-        return { rows: [{ risk_score: 10, role: 'tenant', is_identity_verified: true }] };
+      if (text.includes('SELECT risk_score,') && text.includes('profile_photo as "profilePhoto"')) {
+        return {
+          rows: [{
+            risk_score: 10,
+            role: 'tenant',
+            phone: '+5491122334455',
+            bio: 'Perfil activo para reservar.',
+            zone: 'Pinamar',
+            profilePhoto: 'https://example.com/avatar.jpg',
+            totalReviews: 1,
+            emailVerified: true,
+            phoneVerified: true,
+            documentaryVerified: false,
+          }],
+        };
       }
 
       if (text.includes(LOG_ACTIVITY_QUERY_SNIPPET)) {
@@ -338,7 +352,7 @@ describe('Bookings and availability endpoints', () => {
   });
 
   test('POST /api/conversations/:id/accept-request accepts the request and confirms a protected booking', async () => {
-    const acceptanceMessage = 'El anfitrión aceptó tu solicitud. Ya podés avanzar con la reserva protegida.';
+    const acceptanceMessage = getRequestAcceptedMessage('protected');
 
     queryMock.mockImplementation(async (text: string, params?: unknown[]) => {
       if (text.includes('FROM conversations c') && text.includes('LEFT JOIN bookings b ON b.id = c.booking_id') && text.includes('WHERE c.id = $1') && text.includes('LIMIT 1') && !text.includes('JOIN users u_tenant')) {

@@ -1,13 +1,11 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { motion } from 'framer-motion';
+import { type ValidationData } from '../../hooks/useUserProfile';
 import { apiJson } from '../../lib/apiConfig';
 import { showToast } from '../../lib/toast';
 import { Icons } from '../Icons';
 
-type VerificationLevel = 'basic' | 'verified' | 'premium';
-
 export interface DocumentaryVerificationData {
-  level: VerificationLevel;
   dniFront: string | null;
   dniBack: string | null;
   selfie: string | null;
@@ -17,30 +15,26 @@ export interface DocumentaryVerificationData {
 
 interface DocumentVerificationModalProps {
   userType: 'tenant' | 'host';
-  currentVerification: DocumentaryVerificationData;
+  verificationStatus?: ValidationData | null;
   onSubmitted: (data: DocumentaryVerificationData) => Promise<void> | void;
   onClose: () => void;
 }
 
-const getVerificationLevel = (userType: 'tenant' | 'host', verification: DocumentaryVerificationData): VerificationLevel => {
-  if (verification.dniFront && verification.dniBack && verification.selfie) {
-    if (userType === 'host' && verification.proofOfAddress) {
-      return 'premium';
-    }
-
-    return 'verified';
-  }
-
-  return 'basic';
+const EMPTY_DOCUMENTARY_DATA: DocumentaryVerificationData = {
+  dniFront: null,
+  dniBack: null,
+  selfie: null,
+  proofOfAddress: null,
+  submittedAt: null,
 };
 
 export const DocumentVerificationModal: React.FC<DocumentVerificationModalProps> = ({
   userType,
-  currentVerification,
+  verificationStatus,
   onSubmitted,
   onClose,
 }) => {
-  const [verification, setVerification] = useState<DocumentaryVerificationData>(currentVerification);
+  const [verification, setVerification] = useState<DocumentaryVerificationData>(EMPTY_DOCUMENTARY_DATA);
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -49,44 +43,47 @@ export const DocumentVerificationModal: React.FC<DocumentVerificationModalProps>
   const selfieRef = useRef<HTMLInputElement>(null);
   const proofRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    setVerification(currentVerification);
-  }, [currentVerification]);
-
-  const derivedLevel = getVerificationLevel(userType, verification);
-  const levels = [
-    {
-      id: 'basic',
-      name: 'Documentos pendientes',
-      color: 'bg-slate-100 text-slate-700',
-      icon: Icons.User,
-      requirements: ['DNI frente y dorso', 'Selfie con DNI'],
-      benefits: ['Podés reunir la documentación antes de enviarla'],
-    },
-    {
-      id: 'verified',
-      name: 'Documentación cargada',
-      color: 'bg-blue-100 text-blue-700',
-      icon: Icons.ShieldCheck,
-      requirements: ['DNI frente y dorso', 'Selfie con DNI'],
-      benefits: ['La identidad queda lista para revisión', 'Se ve que ya enviaste la documentación', 'Tu perfil queda más completo'],
-    },
-    {
-      id: 'premium',
-      name: 'Revisión adicional',
-      color: 'bg-emerald-100 text-emerald-700',
-      icon: Icons.ShieldCheck,
-      requirements: userType === 'host'
-        ? ['Documentacion enviada', 'Comprobante de servicios']
-        : ['Documentacion enviada'],
-      benefits: userType === 'host'
-        ? ['Podés publicar con más datos comprobados', 'Se ve mejor qué ya revisamos', 'Tu perfil suma respaldo documental']
-        : ['Se ve mejor qué ya revisamos', 'Tu perfil suma más respaldo documental', 'La identidad queda más completa'],
-    },
-  ] as const;
-
-  const currentLevelIndex = levels.findIndex((level) => level.id === derivedLevel);
   const hasRequiredDocuments = Boolean(verification.dniFront && verification.dniBack && verification.selfie);
+  const documentarySubmitted = verificationStatus?.checks?.documentarySubmitted ?? false;
+  const documentaryVerified = verificationStatus?.checks?.documentaryVerified ?? false;
+  const currentLevelLabel = verificationStatus?.levelLabel ?? 'En progreso';
+  const summary = verificationStatus?.summary ?? 'Tu nivel principal depende de contacto, perfil, actividad e historial dentro de la plataforma.';
+  const optionalUpgrade = verificationStatus?.optionalUpgrade
+    ?? (userType === 'host'
+      ? 'Como anfitrión, podés sumar un comprobante de domicilio para reforzar todavía más tu perfil.'
+      : 'La documentación queda como una capa extra de respaldo, no como requisito base para usar tu cuenta.');
+
+  const statusCards = [
+    {
+      id: 'progressive',
+      title: 'Señales principales',
+      status: currentLevelLabel,
+      icon: Icons.ShieldCheck,
+      color: 'bg-brand/10 text-brand',
+      requirements: ['Email y teléfono confirmados', 'Perfil completo y actividad', 'Historial y reseñas dentro de la plataforma'],
+      benefits: verificationStatus?.benefits?.current?.length
+        ? verificationStatus.benefits.current
+        : ['Tu cuenta ya acumula confianza con señales reales, aunque todavía no subas documentos.'],
+    },
+    {
+      id: 'documents',
+      title: 'Refuerzo documental opcional',
+      status: documentaryVerified ? 'Reforzado' : documentarySubmitted ? 'En revisión' : hasRequiredDocuments ? 'Listo para enviar' : 'Opcional',
+      icon: Icons.FileText,
+      color: documentaryVerified ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700',
+      requirements: ['Frente y dorso del documento', 'Selfie con el documento visible'],
+      benefits: ['Suma una capa extra de respaldo', 'Deja registro de la documentación enviada', 'No reemplaza reputación ni actividad: las complementa'],
+    },
+    ...(userType === 'host' ? [{
+      id: 'proof',
+      title: 'Respaldo extra para anfitriones',
+      status: verification.proofOfAddress ? 'Cargado' : 'Opcional',
+      icon: Icons.Home,
+      color: 'bg-sky-100 text-sky-700',
+      requirements: ['Comprobante de servicios o domicilio a tu nombre'],
+      benefits: ['Ayuda a respaldar tu perfil de anfitrión', 'Puede dar más contexto cuando revisamos la cuenta'],
+    }] : []),
+  ] as const;
 
   const handleFileUpload = async (
     file: File,
@@ -111,7 +108,7 @@ export const DocumentVerificationModal: React.FC<DocumentVerificationModalProps>
 
   const handleSubmit = async () => {
     if (!hasRequiredDocuments) {
-      showToast('Verificación', 'Subí el frente y dorso del DNI, más la selfie con DNI.', 'warning');
+      showToast('Verificación', 'Subí frente y dorso del documento, más la selfie, para enviar el refuerzo documental.', 'warning');
       return;
     }
 
@@ -119,7 +116,6 @@ export const DocumentVerificationModal: React.FC<DocumentVerificationModalProps>
 
     const finalVerification: DocumentaryVerificationData = {
       ...verification,
-      level: getVerificationLevel(userType, verification),
       submittedAt: new Date().toISOString(),
     };
 
@@ -131,7 +127,7 @@ export const DocumentVerificationModal: React.FC<DocumentVerificationModalProps>
       });
 
       await onSubmitted(finalVerification);
-      showToast('Verificación', 'Recibimos tu documentación. Ahora la revisamos.', 'success');
+      showToast('Verificación', 'Recibimos tu documentación opcional. La vamos a revisar como refuerzo extra.', 'success');
       onClose();
     } catch (error) {
       showToast('Verificación', error instanceof Error ? error.message : 'No pudimos guardar la documentación.', 'error');
@@ -149,17 +145,17 @@ export const DocumentVerificationModal: React.FC<DocumentVerificationModalProps>
       onClick={onClose}
     >
       <motion.div
-        initial={{ scale: 0.9, opacity: 0 }}
+        initial={{ scale: 0.96, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.9, opacity: 0 }}
-        className="max-h-[90vh] w-full max-w-3xl space-y-6 overflow-y-auto rounded-[32px] bg-white p-8 shadow-2xl dark:bg-slate-900"
+        exit={{ scale: 0.96, opacity: 0 }}
+        className="max-h-[90vh] w-full max-w-4xl space-y-6 overflow-y-auto rounded-[32px] bg-white p-8 shadow-2xl dark:bg-slate-900"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Verificación documental</h2>
-            <p className="text-sm text-slate-500">
-              {userType === 'tenant' ? 'Huésped' : 'Anfitrión'} - subí la documentación necesaria para que quede claro qué ya pudimos validar.
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Refuerzo documental opcional</h2>
+            <p className="max-w-2xl text-sm leading-6 text-slate-500">
+              {userType === 'tenant' ? 'Huésped' : 'Anfitrión'}: esta capa sirve para sumar respaldo extra. Tu nivel principal sigue dependiendo de señales reales dentro de la cuenta, no solo de documentos.
             </p>
           </div>
           <button type="button" onClick={onClose} className="rounded-full p-2 transition hover:bg-slate-100 dark:hover:bg-slate-800">
@@ -167,60 +163,72 @@ export const DocumentVerificationModal: React.FC<DocumentVerificationModalProps>
           </button>
         </div>
 
-        <div className="space-y-4">
-          <h3 className="font-bold text-slate-900 dark:text-white">Qué falta y qué ya cargaste</h3>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/50">
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Nivel actual</p>
+            <p className="mt-2 text-lg font-semibold text-slate-900 dark:text-slate-100">{currentLevelLabel}</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/50">
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Estado documental</p>
+            <p className="mt-2 text-lg font-semibold text-slate-900 dark:text-slate-100">
+              {documentaryVerified ? 'Reforzado' : documentarySubmitted ? 'En revisión' : 'Sin enviar'}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/50">
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Qué cambia</p>
+            <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">{optionalUpgrade}</p>
+          </div>
+        </div>
 
-          <div className="grid gap-4">
-            {levels.map((level, index) => {
-              const LevelIcon = level.icon;
-              const isReached = index <= currentLevelIndex;
-              const isCurrent = level.id === derivedLevel;
+        <div className="rounded-2xl border border-brand/20 bg-brand/5 p-4 text-sm leading-6 text-slate-700 dark:border-brand/25 dark:bg-brand/10 dark:text-slate-200">
+          <div className="flex items-start gap-3">
+            <Icons.Info className="mt-0.5 h-5 w-5 flex-shrink-0 text-brand" />
+            <p>{summary}</p>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <h3 className="font-bold text-slate-900 dark:text-white">Cómo encaja esta capa dentro del sistema</h3>
+
+          <div className="grid gap-4 lg:grid-cols-3">
+            {statusCards.map((card) => {
+              const CardIcon = card.icon;
 
               return (
-                <div
-                  key={level.id}
-                  className={`rounded-2xl border-2 p-4 transition-all ${isCurrent
-                    ? 'border-brand bg-brand/5'
-                    : isReached
-                      ? 'border-emerald-200 bg-emerald-50 dark:bg-emerald-900/20'
-                      : 'border-slate-200 dark:border-slate-700'
-                    }`}
-                >
-                  <div className="mb-3 flex items-center gap-3">
-                    <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${level.color}`}>
-                      <LevelIcon className="h-5 w-5" />
+                <div key={card.id} className="rounded-2xl border border-slate-200 p-5 dark:border-slate-800">
+                  <div className="mb-4 flex items-center gap-3">
+                    <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${card.color}`}>
+                      <CardIcon className="h-5 w-5" />
                     </div>
-                    <div className="flex-1">
-                      <h4 className="font-bold text-slate-900 dark:text-white">{level.name}</h4>
-                      <p className="text-xs text-slate-500">{isReached ? 'Listo' : 'Pendiente'}</p>
+                    <div>
+                      <h4 className="font-semibold text-slate-900 dark:text-slate-100">{card.title}</h4>
+                      <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">{card.status}</p>
                     </div>
-                    {isCurrent ? (
-                      <span className="rounded-full bg-brand px-3 py-1 text-xs font-bold text-white">Actual</span>
-                    ) : null}
                   </div>
 
-                  <div className="grid gap-4 text-xs sm:grid-cols-2">
+                  <div className="space-y-4 text-sm">
                     <div>
-                      <p className="mb-1 font-bold uppercase text-slate-500">Requisitos</p>
-                      <ul className="space-y-1">
-                        {level.requirements.map((requirement) => (
-                          <li key={requirement} className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
-                            <Icons.Check className="h-3 w-3 text-emerald-500" />
-                            {requirement}
-                          </li>
+                      <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Qué mira</p>
+                      <div className="space-y-2">
+                        {card.requirements.map((requirement) => (
+                          <div key={requirement} className="flex items-start gap-2 text-slate-600 dark:text-slate-300">
+                            <Icons.Check className="mt-1 h-3.5 w-3.5 flex-shrink-0 text-emerald-500" />
+                            <span>{requirement}</span>
+                          </div>
                         ))}
-                      </ul>
+                      </div>
                     </div>
+
                     <div>
-                      <p className="mb-1 font-bold uppercase text-slate-500">Beneficios</p>
-                      <ul className="space-y-1">
-                        {level.benefits.map((benefit) => (
-                          <li key={benefit} className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
-                            <Icons.Star className="h-3 w-3 text-brand" />
-                            {benefit}
-                          </li>
+                      <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Para qué sirve</p>
+                      <div className="space-y-2">
+                        {card.benefits.map((benefit) => (
+                          <div key={benefit} className="flex items-start gap-2 text-slate-600 dark:text-slate-300">
+                            <Icons.Star className="mt-1 h-3.5 w-3.5 flex-shrink-0 text-brand" />
+                            <span>{benefit}</span>
+                          </div>
                         ))}
-                      </ul>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -230,47 +238,52 @@ export const DocumentVerificationModal: React.FC<DocumentVerificationModalProps>
         </div>
 
         <div className="space-y-4">
-          <h3 className="font-bold text-slate-900 dark:text-white">Subí tu documentación</h3>
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="font-bold text-slate-900 dark:text-white">Subí documentación si querés sumar respaldo extra</h3>
+            <span className="rounded-full bg-amber-100 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+              Opcional
+            </span>
+          </div>
 
           <UploadCard
-            label="DNI frente"
+            label="Documento frente"
             value={verification.dniFront}
             inputRef={dniFrontRef}
             onSelect={(file) => void handleFileUpload(file, 'dniFront')}
-            placeholder="Subí la foto del frente del DNI"
-            alt="DNI frente"
+            placeholder="Subí la foto del frente del documento"
+            alt="Documento frente"
             icon={<Icons.ImagePlus className="h-6 w-6 text-slate-400" />}
           />
 
           <UploadCard
-            label="DNI dorso"
+            label="Documento dorso"
             value={verification.dniBack}
             inputRef={dniBackRef}
             onSelect={(file) => void handleFileUpload(file, 'dniBack')}
-            placeholder="Subí la foto del dorso del DNI"
-            alt="DNI dorso"
+            placeholder="Subí la foto del dorso del documento"
+            alt="Documento dorso"
             icon={<Icons.ImagePlus className="h-6 w-6 text-slate-400" />}
           />
 
           <UploadCard
-            label="Selfie con DNI"
+            label="Selfie con documento"
             value={verification.selfie}
             inputRef={selfieRef}
             onSelect={(file) => void handleFileUpload(file, 'selfie')}
-            placeholder="Subí una selfie sosteniendo tu DNI"
-            alt="Selfie con DNI"
+            placeholder="Subí una selfie sosteniendo el documento"
+            alt="Selfie con documento"
             icon={<Icons.User className="h-6 w-6 text-slate-400" />}
           />
 
           {userType === 'host' ? (
             <UploadCard
-              label="Comprobante de servicios"
-              description="Factura de luz, agua, gas o teléfono a tu nombre."
+              label="Comprobante de domicilio"
+              description="Opcional. Puede ser una factura de luz, agua, gas o teléfono a tu nombre."
               value={verification.proofOfAddress}
               inputRef={proofRef}
               onSelect={(file) => void handleFileUpload(file, 'proofOfAddress')}
-              placeholder="Subí un comprobante de servicios"
-              alt="Comprobante de servicios"
+              placeholder="Subí un comprobante si querés sumar ese respaldo"
+              alt="Comprobante de domicilio"
               icon={<Icons.Home className="h-6 w-6 text-slate-400" />}
             />
           ) : null}
@@ -280,7 +293,7 @@ export const DocumentVerificationModal: React.FC<DocumentVerificationModalProps>
           <div className="flex items-start gap-3">
             <Icons.Info className="mt-0.5 h-5 w-5 flex-shrink-0 text-brand" />
             <p>
-              Este flujo solo valida identidad y documentación: frente y dorso del DNI, selfie con el documento y, para anfitriones, comprobante adicional.
+              Este envío no es requisito para registrarte ni para avanzar en los primeros niveles. Solo suma una comprobación adicional cuando querés reforzar tu perfil.
             </p>
           </div>
         </div>
@@ -291,7 +304,7 @@ export const DocumentVerificationModal: React.FC<DocumentVerificationModalProps>
             onClick={onClose}
             className="flex-1 rounded-xl border border-slate-200 py-3 font-bold text-slate-700 dark:border-slate-700 dark:text-slate-300"
           >
-            Cancelar
+            Cerrar
           </button>
           <button
             type="button"
@@ -302,7 +315,7 @@ export const DocumentVerificationModal: React.FC<DocumentVerificationModalProps>
               : 'bg-brand text-white hover:bg-brand/90'
               }`}
           >
-            {uploading || submitting ? <Icons.Loader2 className="mx-auto h-5 w-5 animate-spin" /> : 'Enviar verificación'}
+            {uploading || submitting ? <Icons.Loader2 className="mx-auto h-5 w-5 animate-spin" /> : 'Enviar respaldo documental'}
           </button>
         </div>
       </motion.div>
@@ -350,7 +363,7 @@ const UploadCard = ({ label, description, value, inputRef, onSelect, placeholder
           <>
             <img src={value} className="h-16 w-16 rounded-lg object-cover" alt={alt} />
             <div className="flex-1">
-              <p className="font-bold text-emerald-700">Documento cargado</p>
+              <p className="font-bold text-emerald-700">Archivo cargado</p>
               <p className="text-xs text-slate-500">Tocá para cambiar</p>
             </div>
             <Icons.Check className="h-6 w-6 text-emerald-500" />

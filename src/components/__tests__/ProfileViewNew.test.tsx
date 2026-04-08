@@ -47,15 +47,39 @@ describe('ProfileViewNew', () => {
         return {
           ok: true,
           json: async () => ({
-            level: 'VERIFICADO',
-            progress: 60,
+            level: 'NIVEL_1',
+            levelLabel: 'Nivel 1',
+            verificationScore: 34,
+            progress: 40,
+            headline: 'Ya resolviste la base mínima de contacto.',
+            summary: 'La verificación combina contacto, perfil, actividad e historial dentro de la plataforma.',
+            nextStep: 'Completá tu perfil y empezá a sumar actividad.',
+            optionalUpgrade: 'La documentación queda como refuerzo opcional para más adelante.',
             checks: {
-              dniFrontUploaded: true,
-              dniBackUploaded: true,
-              selfieUploaded: false,
-              dniVerified: false,
+              emailVerified: false,
+              phoneVerified: false,
+              profileComplete: true,
+              platformActivity: false,
+              historyVerified: false,
+              reviewsVerified: false,
+              documentarySubmitted: false,
+              documentaryVerified: false,
             },
-            missingRequirements: ['Selfie con DNI'],
+            missingRequirements: ['Confirmar email', 'Agregar teléfono', 'Empezar a sumar actividad'],
+            categories: [
+              {
+                id: 'contact',
+                label: 'Contacto',
+                score: 15,
+                maxScore: 25,
+                summary: 'Confirmar email y teléfono te lleva al nivel 1.',
+                checks: [],
+              },
+            ],
+            benefits: {
+              current: ['Ya completaste una parte del perfil base.'],
+              next: ['Confirmá contacto para habilitar la base de reservas más exigentes.'],
+            },
           }),
         } as Response;
       }
@@ -110,7 +134,10 @@ describe('ProfileViewNew', () => {
 
     expect(screen.getByText('Resolvé lo básico')).toBeInTheDocument();
     expect(screen.getByText('Lo que ajusta lo que ves')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Completá tu verificación/i })).toBeInTheDocument();
+      expect(screen.getByText('Verificación progresiva')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Confirmar email/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Agregar teléfono/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Ver refuerzo documental opcional/i })).toBeInTheDocument();
     expect(screen.getByText('🏖️ Playa y Mar')).toBeInTheDocument();
   });
 

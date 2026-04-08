@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useUserPreferences, type UserPreferences } from '../hooks/useUserPreferences';
 import { useUserProfile, type ValidationChecks } from '../hooks/useUserProfile';
+import { apiJson } from '../lib/apiConfig';
 import { VALID_ZONES } from '../lib/constants';
 import { showToast } from '../lib/toast';
 import { cn } from '../lib/utils';
@@ -22,8 +23,6 @@ import { AccountModeSwitch } from './ui/AccountModeSwitch';
 import { SectionTitle } from './ui/SectionTitle';
 
 type ReviewTab = 'received' | 'written';
-
-type VerificationLevel = 'basic' | 'verified' | 'premium';
 
 const profilePanelClass = 'rounded-[var(--app-radius-control)] border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/50';
 const actionRowBaseClass = 'flex w-full items-center justify-between gap-4 rounded-[var(--app-radius-control)] border p-4 text-left shadow-[var(--app-shadow-subtle)] transition-[transform,box-shadow,border-color,background-color] hover:-translate-y-px hover:shadow-[var(--app-shadow-soft)]';
@@ -108,35 +107,20 @@ const normalizeRating = (value: unknown) => {
   return numeric;
 };
 
-const toVerificationLevel = (value?: string): VerificationLevel => {
-  const normalized = value?.toUpperCase();
-
-  if (normalized === 'PREMIUM') {
-    return 'premium';
-  }
-
-  if (normalized === 'VERIFICADO' || normalized === 'VERIFIED_DNI') {
-    return 'verified';
-  }
-
-  return 'basic';
-};
-
-const buildVerificationChecks = (checks?: ValidationChecks, isHost?: boolean) => {
+const buildVerificationChecks = (checks?: ValidationChecks) => {
   if (!checks) {
-    return [] as Array<{ label: string; done: boolean }>;
+    return [] as Array<{ label: string; done: boolean; optional?: boolean }>;
   }
 
   const items = [
-    { label: 'DNI frente cargado', done: checks.dniFrontUploaded },
-    { label: 'DNI dorso cargado', done: checks.dniBackUploaded },
-    { label: 'Selfie con DNI', done: checks.selfieUploaded },
-    { label: 'Identidad validada', done: checks.dniVerified },
+    { label: 'Email confirmado', done: checks.emailVerified },
+    { label: 'Teléfono confirmado', done: checks.phoneVerified },
+    { label: 'Perfil completo', done: checks.profileComplete },
+    { label: 'Actividad en la plataforma', done: checks.platformActivity },
+    { label: 'Historial de uso', done: checks.historyVerified },
+    { label: 'Reseñas en la plataforma', done: checks.reviewsVerified },
+    { label: 'Refuerzo documental opcional', done: checks.documentaryVerified, optional: true },
   ];
-
-  if (isHost && typeof checks.utilityBillUploaded === 'boolean') {
-    items.push({ label: 'Comprobante de domicilio', done: checks.utilityBillUploaded });
-  }
 
   return items;
 };
@@ -161,6 +145,7 @@ export const ProfileViewNew = () => {
   const [showPreferencesModal, setShowPreferencesModal] = useState(false);
   const [reviewTab, setReviewTab] = useState<ReviewTab>('received');
   const [showReportModal, setShowReportModal] = useState(false);
+  const [confirmingContactField, setConfirmingContactField] = useState<'email' | 'phone' | null>(null);
 
   const loadingProfile = profileDataLoading || preferencesLoading;
 
@@ -198,6 +183,27 @@ export const ProfileViewNew = () => {
     }
   };
 
+  const handleConfirmContact = async (field: 'email' | 'phone') => {
+    setConfirmingContactField(field);
+
+    try {
+      await apiJson('/api/verification/confirm-contact', {
+        method: 'POST',
+        includeCredentials: true,
+        body: JSON.stringify({ field }),
+      });
+
+      await refresh();
+      await reloadProfileData();
+      showToast('Verificación', field === 'email' ? 'Tu email ya quedó confirmado.' : 'Tu teléfono ya quedó confirmado.', 'success');
+    } catch (error) {
+      console.error('Error confirming contact:', error);
+      showToast('Verificación', error instanceof Error ? error.message : 'No pudimos confirmar ese dato ahora.', 'error');
+    } finally {
+      setConfirmingContactField(null);
+    }
+  };
+
   if (!user) {
     return null;
   }
@@ -205,7 +211,7 @@ export const ProfileViewNew = () => {
   const isHostMode = user.activeMode === 'host';
   const userInterests = parseInterests(user.interests);
   const memberSinceLabel = formatMonthYear(user.memberSince ?? user.createdAt);
-  const verificationChecks = buildVerificationChecks(validationData?.checks, isHostMode);
+  const verificationChecks = buildVerificationChecks(validationData?.checks);
   const completedChecks = verificationChecks.filter((item) => item.done).length;
   const progressPercent = Math.round(
     typeof validationData?.progress === 'number'
@@ -218,7 +224,17 @@ export const ProfileViewNew = () => {
   const reviewCountLabel = currentReviews.length === 1 ? '1 reseña' : `${currentReviews.length} reseñas`;
   const ratingValue = normalizeRating(isHostMode ? user.hostRating : user.rating);
   const riskScore = normalizeRating(user.riskScore);
-  const validationLevel = validationData?.level ?? 'BASICO';
+  const validationLevel = validationData?.level ?? 'INICIAL';
+  const verificationScore = validationData?.verificationScore ?? progressPercent;
+  const verificationHeading = validationData?.headline ?? 'Tu cuenta sigue sumando señales de confianza.';
+  const verificationSummary = validationData?.summary ?? 'La verificación ahora combina contacto, perfil, actividad y reputación dentro de la plataforma.';
+  const verificationNextStep = validationData?.nextStep ?? 'Completá lo que te falte para seguir subiendo de nivel.';
+  const verificationLevelLabel = validationData?.levelLabel ?? 'Camino al nivel 1';
+  const verificationBenefitsCurrent = validationData?.benefits?.current ?? [];
+  const verificationBenefitsNext = validationData?.benefits?.next ?? [];
+  const canConfirmEmail = Boolean(validationData?.checks && !validationData.checks.emailVerified);
+  const canConfirmPhone = Boolean(validationData?.checks && !validationData.checks.phoneVerified && user.phone);
+  const needsPhone = Boolean(validationData?.checks && !validationData.checks.phoneVerified && !user.phone);
   const preferencesSummary = [
     {
       label: 'Zona preferida',
@@ -236,15 +252,6 @@ export const ProfileViewNew = () => {
   const missingRequirementsText = validationData?.missingRequirements?.length
     ? validationData.missingRequirements.slice(0, 3).join(' · ')
     : null;
-
-  const verificationPayload = {
-    level: toVerificationLevel(validationData?.level),
-    dniFront: null,
-    dniBack: null,
-    selfie: null,
-    proofOfAddress: null,
-    submittedAt: null,
-  };
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-24">
@@ -402,8 +409,8 @@ export const ProfileViewNew = () => {
                   />
 
                   <div className="mt-6 grid gap-4 sm:grid-cols-3">
-                    <MiniMetric label="Puntaje del perfil" value={String(user.trustScore || 0)} accent="brand" caption="Sobre 100" />
-                    <MiniMetric label="Nivel actual" value={user.badge || 'Bronce'} accent="success" caption="Se actualiza con tu actividad" />
+                    <MiniMetric label="Score de verificación" value={String(verificationScore)} accent="brand" caption="Sobre 100" />
+                    <MiniMetric label="Nivel actual" value={verificationLevelLabel} accent="success" caption="Sube con señales reales" />
                     <MiniMetric label="Calificación" value={ratingValue > 0 ? ratingValue.toFixed(1) : 'Sin dato'} accent="warning" caption="Según tu historial" />
                   </div>
 
@@ -428,8 +435,8 @@ export const ProfileViewNew = () => {
                   <div className="flex flex-wrap items-start justify-between gap-4">
                     <SectionTitle
                       eyebrow="Verificación"
-                      heading="Estado de verificación"
-                      description="Cuanto más completo esté tu perfil, más fácil es entender quién sos y avanzar sin dudas básicas."
+                      heading="Verificación progresiva"
+                      description="La cuenta sube de nivel con señales reales de contacto, perfil, actividad e historial."
                       as="h2"
                       visualLevel="h4"
                       className="max-w-md"
@@ -441,7 +448,7 @@ export const ProfileViewNew = () => {
 
                   <div className="space-y-3">
                     <div className="flex items-center justify-between text-sm">
-                      <span className="font-medium text-slate-600 dark:text-slate-300">Avance actual</span>
+                      <span className="font-medium text-slate-600 dark:text-slate-300">Score actual</span>
                       <span className="font-semibold text-brand">{progressPercent}%</span>
                     </div>
                     <div className="h-3 rounded-full bg-slate-100 p-0.5 dark:bg-slate-800">
@@ -452,6 +459,36 @@ export const ProfileViewNew = () => {
                     </div>
                   </div>
 
+                  <NoticeBanner
+                    tone={progressPercent >= 70 ? 'success' : progressPercent >= 35 ? 'info' : 'warning'}
+                    heading={verificationHeading}
+                    description={`${verificationSummary} Próximo paso: ${verificationNextStep}`}
+                  />
+
+                  {typeof validationData?.highValueBookingEligible === 'boolean' ? (
+                    <NoticeBanner
+                      tone={validationData.highValueBookingEligible ? 'success' : 'info'}
+                      heading={validationData.highValueBookingEligible ? 'Ya tenés la base mínima para reservas altas.' : 'Las reservas altas piden al menos nivel 1.'}
+                      description={validationData.highValueBookingEligible
+                        ? 'Con tu estado actual ya cumplís la base mínima para reservas mayores a $200.000.'
+                        : 'Confirmá email y teléfono para habilitar el mínimo de verificación pedido en reservas mayores a $200.000.'}
+                    />
+                  ) : null}
+
+                  {validationData?.categories?.length ? (
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {validationData.categories.map((category) => (
+                        <div key={category.id} className="rounded-[var(--app-radius-control)] border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/50">
+                          <div className="flex items-center justify-between gap-3">
+                            <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{category.label}</p>
+                            <span className="text-xs font-bold uppercase tracking-[0.14em] text-brand">{category.score}/{category.maxScore}</span>
+                          </div>
+                          <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">{category.summary}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+
                   <div className="grid gap-3 sm:grid-cols-2">
                     {verificationChecks.length > 0 ? verificationChecks.map((item) => (
                       <div
@@ -460,16 +497,29 @@ export const ProfileViewNew = () => {
                           'flex items-center gap-3 rounded-[var(--app-radius-control)] border p-3',
                           item.done
                             ? 'border-emerald-200 bg-emerald-50/80 dark:border-emerald-900/30 dark:bg-emerald-900/10'
+                            : item.optional
+                              ? 'border-amber-200 bg-amber-50/70 dark:border-amber-900/30 dark:bg-amber-900/10'
                             : 'border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-800/50',
                         )}
                       >
                         <div className={cn(
                           'flex h-8 w-8 items-center justify-center rounded-full',
-                          item.done ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-300',
+                          item.done
+                            ? 'bg-emerald-500 text-white'
+                            : item.optional
+                              ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
+                              : 'bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-300',
                         )}>
                           {item.done ? <Icons.Check className="h-4 w-4" /> : <Icons.Clock className="h-4 w-4" />}
                         </div>
-                        <span className={cn('text-sm font-medium', item.done ? 'text-emerald-700 dark:text-emerald-300' : 'text-slate-600 dark:text-slate-300')}>
+                        <span className={cn(
+                          'text-sm font-medium',
+                          item.done
+                            ? 'text-emerald-700 dark:text-emerald-300'
+                            : item.optional
+                              ? 'text-amber-700 dark:text-amber-300'
+                              : 'text-slate-600 dark:text-slate-300',
+                        )}>
                           {item.label}
                         </span>
                       </div>
@@ -483,15 +533,88 @@ export const ProfileViewNew = () => {
                   {missingRequirementsText ? (
                     <NoticeBanner
                       tone="info"
-                      heading="Todavía faltan pasos para completar tu verificación."
+                      heading="Todavía faltan señales para seguir subiendo de nivel."
                       description={missingRequirementsText}
                     />
                   ) : null}
 
-                  <Button type="button" fullWidth onClick={() => setShowVerification(true)}>
-                    <Icons.Verified className="h-5 w-5" />
-                    {progressPercent >= 100 ? 'Revisar verificación' : 'Completá tu verificación'}
-                  </Button>
+                  {validationData?.optionalUpgrade ? (
+                    <NoticeBanner
+                      tone="info"
+                      heading="La comprobación documental quedó como mejora opcional."
+                      description={validationData.optionalUpgrade}
+                    />
+                  ) : null}
+
+                  {verificationBenefitsCurrent.length > 0 || verificationBenefitsNext.length > 0 ? (
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="rounded-[var(--app-radius-control)] border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/50">
+                        <p className="app-form-label">Lo que ya suma tu cuenta</p>
+                        <div className="mt-3 space-y-2">
+                          {verificationBenefitsCurrent.map((item) => (
+                            <p key={item} className="text-sm leading-6 text-slate-600 dark:text-slate-300">{item}</p>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="rounded-[var(--app-radius-control)] border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/50">
+                        <p className="app-form-label">Qué te conviene sumar después</p>
+                        <div className="mt-3 space-y-2">
+                          {verificationBenefitsNext.length > 0 ? verificationBenefitsNext.map((item) => (
+                            <p key={item} className="text-sm leading-6 text-slate-600 dark:text-slate-300">{item}</p>
+                          )) : (
+                            <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">Ya alcanzaste todas las capas principales del sistema progresivo.</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                    {canConfirmEmail ? (
+                      <Button
+                        type="button"
+                        onClick={() => void handleConfirmContact('email')}
+                        loading={confirmingContactField === 'email'}
+                        loadingLabel="Confirmando..."
+                      >
+                        <>
+                          <Icons.MessageSquare className="h-4 w-4" />
+                          Confirmar email
+                        </>
+                      </Button>
+                    ) : null}
+
+                    {canConfirmPhone ? (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => void handleConfirmContact('phone')}
+                        loading={confirmingContactField === 'phone'}
+                        loadingLabel="Confirmando..."
+                      >
+                        <>
+                          <Icons.Phone className="h-4 w-4" />
+                          Confirmar teléfono
+                        </>
+                      </Button>
+                    ) : null}
+
+                    {needsPhone ? (
+                      <Button type="button" variant="secondary" onClick={() => navigate('/edit-profile')}>
+                        <>
+                          <Icons.Phone className="h-4 w-4" />
+                          Agregar teléfono
+                        </>
+                      </Button>
+                    ) : null}
+
+                    <Button type="button" variant={progressPercent >= 70 ? 'secondary' : 'primary'} onClick={() => setShowVerification(true)}>
+                      <>
+                        <Icons.ShieldCheck className="h-5 w-5" />
+                        {validationData?.checks?.documentaryVerified ? 'Revisar refuerzo documental' : 'Ver refuerzo documental opcional'}
+                      </>
+                    </Button>
+                  </div>
                 </Card>
               </div>
 
@@ -676,7 +799,7 @@ export const ProfileViewNew = () => {
       {showVerification ? (
         <DocumentVerificationModal
           userType={isHostMode ? 'host' : 'tenant'}
-          currentVerification={verificationPayload}
+          verificationStatus={validationData}
           onSubmitted={async () => {
             await refresh();
             await reloadProfileData();

@@ -15,11 +15,17 @@ interface ValidationStatus {
   levelNumber: number;
   nextLevel: string | null;
   progress: number;
+  levelLabel?: string;
+  summary?: string;
   checks: {
-    dniFrontUploaded: boolean;
-    dniBackUploaded: boolean;
-    selfieUploaded: boolean;
-    dniVerified: boolean;
+    emailVerified: boolean;
+    phoneVerified: boolean;
+    profileComplete: boolean;
+    platformActivity: boolean;
+    historyVerified: boolean;
+    reviewsVerified: boolean;
+    documentarySubmitted: boolean;
+    documentaryVerified: boolean;
   };
   missingRequirements: string[];
   benefits: {
@@ -181,29 +187,35 @@ export const TenantProfileView: React.FC<TenantProfileViewProps> = ({ onBack }) 
             />
 
             {/* Explicación del nivel según el usuario */}
-            {validationStatus.level === 'DESTACADO' && (
+            {validationStatus.level === 'NIVEL_3' && (
               <div className="p-4 bg-brand/5 dark:bg-brand/10 rounded-2xl border border-brand/10 dark:border-brand/20">
                 <p className="text-sm text-slate-700 dark:text-slate-200">
-                  <strong>⭐ Buen historial:</strong> Llegaste a este nivel por las reseñas positivas que recibiste. Seguí sosteniendo ese recorrido.
+                  <strong>⭐ Buen historial:</strong> Llegaste a este nivel por tu actividad, tu historial y las reseñas que fuiste sumando dentro de la plataforma.
                 </p>
               </div>
             )}
 
-            {validationStatus.level === 'VERIFICADO' && (
+            {validationStatus.level === 'NIVEL_1' && (
               <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl border border-emerald-200 dark:border-emerald-800">
                 <p className="text-sm text-emerald-800 dark:text-emerald-300">
-                  <strong>✅ Identidad validada:</strong> Validamos tu identidad con tu DNI. Los anfitriones pueden ver que sos quien decís ser.
+                  <strong>✅ Base resuelta:</strong> Ya confirmaste los datos de contacto que hacen de base para el nivel 1.
                 </p>
               </div>
             )}
 
-            {validationStatus.level === 'BASICO' && (
+            {validationStatus.level === 'INICIAL' && (
               <div className="p-4 bg-slate-100 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700">
                 <p className="text-sm text-slate-600 dark:text-slate-400">
-                  <strong>📋 Perfil inicial:</strong> Subí tu DNI para validar tu identidad y completar mejor tu perfil.
+                  <strong>📋 Perfil inicial:</strong> Empezá por confirmar email y teléfono. La documentación queda para después y es opcional.
                 </p>
               </div>
             )}
+
+            {validationStatus.summary ? (
+              <div className="p-4 bg-slate-100 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700">
+                <p className="text-sm text-slate-600 dark:text-slate-300">{validationStatus.summary}</p>
+              </div>
+            ) : null}
 
             {/* Checklist de validación */}
             <div className="bg-white dark:bg-slate-900 rounded-[32px] p-6 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
@@ -216,7 +228,7 @@ export const TenantProfileView: React.FC<TenantProfileViewProps> = ({ onBack }) 
                   onClick={() => setShowDocUpload(!showDocUpload)}
                   className="text-xs font-bold text-brand hover:text-brand/80 transition-colors"
                 >
-                  {showDocUpload ? 'Ocultar' : 'Cargar documentos'}
+                  {showDocUpload ? 'Ocultar' : 'Ver capa documental'}
                 </button>
               </div>
 
@@ -230,13 +242,13 @@ export const TenantProfileView: React.FC<TenantProfileViewProps> = ({ onBack }) 
               {showDocUpload && (
                 <div className="mt-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700">
                   <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
-                    Para validar tu identidad, subí tu DNI y una selfie.
+                    Si querés sumar respaldo extra, podés cargar documentación opcional desde este flujo.
                   </p>
                   <button
                     onClick={() => window.location.href = '/verification'}
                     className="w-full py-3 bg-brand text-white font-bold rounded-xl hover:bg-brand/90 transition-colors"
                   >
-                    Empezar la verificación
+                    Abrir refuerzo documental
                   </button>
                 </div>
               )}

@@ -10,6 +10,7 @@ import { initDB } from './updates';
 import { mapPropertyRecord } from './propertySerializer';
 import { REAL_VERIFICATION_FILTER_MIN_SCORE } from './propertyVerification';
 import { getChatSystemMessages, getRequestAcceptedMessage, type ChatSystemMessageKey } from './chatSystemMessages';
+import { buildUserVerificationStatus } from '../src/lib/userVerification';
 
 declare module "express-session" {
   interface SessionData {
@@ -176,8 +177,8 @@ const mapActivityLogToNotification = (row: any) => {
     case 'IDENTITY_VERIFIED':
       return {
         id: row.id,
-        title: 'Verificación completada',
-        message: 'Tu identidad ya quedó validada.',
+        title: 'Refuerzo documental listo',
+        message: 'Tu cuenta sumó una comprobación documental opcional.',
         type: 'success',
         createdAt,
         unread,
@@ -187,8 +188,8 @@ const mapActivityLogToNotification = (row: any) => {
         id: row.id,
         title: 'Documentación enviada',
         message: metadata.hasProofOfAddress
-          ? 'Recibimos tu documentación y el comprobante de domicilio.'
-          : 'Recibimos tu documentación para revisar la verificación.',
+          ? 'Recibimos tu documentación opcional y el comprobante adicional.'
+          : 'Recibimos tu documentación opcional para sumar respaldo a la cuenta.',
         type: 'info',
         createdAt,
         unread,
@@ -319,12 +320,43 @@ app.post('/api/chat/analyze', filterChatMiddleware, async (req, res) => {
 
 // Helper for Risk Check
 const checkUserRisk = async (userId: string) => {
-  const res = await db.query('SELECT risk_score, role, is_identity_verified FROM users WHERE id = $1', [userId]);
+  const res = await db.query(
+    `SELECT risk_score,
+            role,
+            phone,
+            bio,
+            zone,
+            profile_photo as "profilePhoto",
+            total_reviews as "totalReviews",
+            (COALESCE(email_verified, FALSE) OR COALESCE(is_email_verified, FALSE)) as "emailVerified",
+            (COALESCE(phone_verified, FALSE) OR COALESCE(is_phone_verified, FALSE)) as "phoneVerified",
+            (COALESCE(identity_validated, FALSE) OR COALESCE(is_identity_verified, FALSE)) as "documentaryVerified"
+     FROM users
+     WHERE id = $1`,
+    [userId],
+  );
   const user = res.rows[0];
   if (!user) return { blocked: true, reason: 'No encontramos esa cuenta.' };
   if (user.role === 'blocked') return { blocked: true, reason: 'Bloqueamos tu cuenta por seguridad. Si creés que es un error, contactanos.' };
   if (user.risk_score >= 80) return { blocked: true, reason: 'Detectamos actividad inusual y estamos revisando tu cuenta.' };
-  return { blocked: false, riskScore: user.risk_score, isVerified: !!user.is_identity_verified };
+
+  const verificationStatus = buildUserVerificationStatus({
+    emailVerified: user.emailVerified,
+    phoneVerified: user.phoneVerified,
+    phone: user.phone,
+    bio: user.bio,
+    zone: user.zone,
+    profilePhoto: user.profilePhoto,
+    totalReviewsReceived: user.totalReviews,
+    documentaryVerified: user.documentaryVerified,
+  });
+
+  return {
+    blocked: false,
+    riskScore: user.risk_score,
+    isVerified: verificationStatus.highValueBookingEligible,
+    verificationLevel: verificationStatus.levelNumber,
+  };
 };
 
 const AUTH_USER_SELECT = `id, email, role, is_host as "isHost", active_mode as "activeMode", name, zone, phone, bio, interests,
@@ -661,7 +693,7 @@ app.post('/api/verification/validate-id', memoryUpload.single('idImage'), async 
   const idImage = req.file;
 
   if (!dni || !idImage) {
-    return res.status(400).json({ error: 'Ingresá el DNI y cargá la imagen para continuar.' });
+    return res.status(400).json({ error: 'Ingresá el número de documento y cargá la imagen para continuar.' });
   }
 
   try {
@@ -678,7 +710,7 @@ app.post('/api/verification/validate-id', memoryUpload.single('idImage'), async 
     res.json({ success: true });
   } catch (err) {
     console.error('Error en validate-id:', err);
-    res.status(500).json({ error: 'No pudimos validar el DNI. Intentá de nuevo.' });
+    res.status(500).json({ error: 'No pudimos validar ese documento. Intentá de nuevo.' });
   }
 });
 
@@ -696,7 +728,7 @@ app.post('/api/verification/complete', async (req, res) => {
     }
 
     if (!user.dni_number || !user.dni_front) {
-      return res.status(422).json({ error: 'Primero necesitás validar tu DNI para completar la verificación.' });
+      return res.status(422).json({ error: 'Primero necesitás cargar la documentación base para completar este refuerzo.' });
     }
 
     await db.query(
@@ -773,71 +805,125 @@ app.post('/api/verification/submit', async (req, res) => {
 app.get('/api/verification/status', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: AUTH_REQUIRED_ERROR });
   try {
-    const result = await db.query(
-            `SELECT identity_validated, validation_level, role, is_host as "isHost", active_mode as "activeMode", rating, total_reviews,
-              dni_front, dni_back, selfie_with_dni
-       FROM users WHERE id = $1`,
-      [req.session.userId]
-    );
-    const user = result.rows[0];
+    const [userResult, bookingsResult, reviewsResult, conversationsResult, documentsResult] = await Promise.all([
+      db.query(
+        `SELECT role,
+                is_host as "isHost",
+                active_mode as "activeMode",
+                phone,
+                bio,
+                zone,
+                profile_photo as "profilePhoto",
+                total_reviews as "totalReviews",
+                dni_front,
+                dni_back,
+                selfie_with_dni,
+                (COALESCE(email_verified, FALSE) OR COALESCE(is_email_verified, FALSE)) as "emailVerified",
+                (COALESCE(phone_verified, FALSE) OR COALESCE(is_phone_verified, FALSE)) as "phoneVerified",
+                (COALESCE(identity_validated, FALSE) OR COALESCE(is_identity_verified, FALSE)) as "documentaryVerified"
+         FROM users
+         WHERE id = $1`,
+        [req.session.userId],
+      ),
+      db.query(
+        `SELECT COUNT(*)::int as "totalBookings",
+                COUNT(*) FILTER (WHERE status IN ('confirmed', 'completed'))::int as "completedBookings"
+         FROM bookings
+         WHERE "userId" = $1`,
+        [req.session.userId],
+      ),
+      db.query(
+        `SELECT COUNT(*) FILTER (WHERE reviewer_id = $1)::int as "writtenReviewsCount",
+                COUNT(*) FILTER (WHERE reviewed_user_id = $1)::int as "receivedReviewsCount"
+         FROM reviews
+         WHERE reviewer_id = $1 OR reviewed_user_id = $1`,
+        [req.session.userId],
+      ),
+      db.query(
+        `SELECT COUNT(DISTINCT c.id)::int as "totalConversations",
+                COUNT(m.id)::int as "totalMessages"
+         FROM conversations c
+         LEFT JOIN messages m ON m.conversation_id = c.id
+         WHERE c.tenant_id = $1 OR c.host_id = $1`,
+        [req.session.userId],
+      ),
+      db.query(
+        `SELECT COUNT(*)::int as "documentsCount"
+         FROM user_verification_documents
+         WHERE user_id = $1`,
+        [req.session.userId],
+      ),
+    ]);
+
+    const user = userResult.rows[0];
     if (!user) return res.status(404).json({ error: 'No encontramos esa cuenta.' });
 
-    const isHostContext = Boolean(user.isHost || user.role === 'host' || user.activeMode === 'host');
-
-    const utilityBillResult = isHostContext
-      ? await db.query(
-          `SELECT id FROM user_verification_documents
-           WHERE user_id = $1 AND document_type = 'utility_bill'
-           ORDER BY created_at DESC
-           LIMIT 1`,
-          [req.session.userId],
-        )
-      : { rows: [] };
-
-    const hasUtilityBill = utilityBillResult.rows.length > 0;
-
-    const checks = {
-      dniFrontUploaded: !!user.dni_front,
-      dniBackUploaded: !!user.dni_back,
-      selfieUploaded: !!user.selfie_with_dni,
-      dniVerified: !!user.identity_validated,
-      utilityBillUploaded: hasUtilityBill,
-    };
-
-    let level = user.validation_level || 'basic';
-    let levelNumber = 1;
-    let progress = 33;
-
-    if (level === 'verified_dni' || user.identity_validated) {
-      level = 'verified_dni';
-      levelNumber = 2;
-      progress = 66;
-    }
-    
-    if (user.rating >= 4.5 && user.total_reviews >= 5) {
-      level = 'trusted_user';
-      levelNumber = 3;
-      progress = 100;
-    }
+    const verificationStatus = buildUserVerificationStatus({
+      emailVerified: user.emailVerified,
+      phoneVerified: user.phoneVerified,
+      phone: user.phone,
+      bio: user.bio,
+      zone: user.zone,
+      profilePhoto: user.profilePhoto,
+      totalBookings: bookingsResult.rows[0]?.totalBookings,
+      completedBookings: bookingsResult.rows[0]?.completedBookings,
+      totalReviewsWritten: reviewsResult.rows[0]?.writtenReviewsCount,
+      totalReviewsReceived: reviewsResult.rows[0]?.receivedReviewsCount ?? user.totalReviews,
+      totalConversations: conversationsResult.rows[0]?.totalConversations,
+      totalMessages: conversationsResult.rows[0]?.totalMessages,
+      documentarySubmitted: Boolean(user.dni_front || user.dni_back || user.selfie_with_dni || Number(documentsResult.rows[0]?.documentsCount || 0) > 0),
+      documentaryVerified: user.documentaryVerified,
+    });
 
     res.json({
-      level,
-      levelNumber,
-      nextLevel: level === 'basic' ? 'verified_dni' : (level === 'verified_dni' ? 'trusted_user' : 'trusted_user'),
-      progress,
-      checks,
-      missingRequirements: level === 'basic'
-        ? isHostContext
-          ? ['Validar DNI', 'Selfie', ...(hasUtilityBill ? [] : ['Comprobante de servicios'])]
-          : ['Validar DNI', 'Selfie']
-        : (level === 'verified_dni' ? ['Historial de reservas positivas'] : []),
-      benefits: {
-        current: level === 'basic' ? ['Navegar propiedades'] : (level === 'verified_dni' ? ['Insignia de verificado', 'Prioridad en consultas'] : ['Nivel destacado', 'Garantía de confianza']),
-        next: level === 'basic' ? ['Insignia de verificado'] : (level === 'verified_dni' ? ['Nivel destacado'] : [])
-      }
+      ...verificationStatus,
+      nextLevel: verificationStatus.levelNumber < 4 ? `NIVEL_${verificationStatus.levelNumber + 1}` : null,
     });
   } catch (err) {
-    res.status(500).json({ error: 'No pudimos cargar tu estado de validación.' });
+    res.status(500).json({ error: 'No pudimos cargar tu estado de verificación.' });
+  }
+});
+
+app.post('/api/verification/confirm-contact', async (req, res) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ error: AUTH_REQUIRED_ERROR });
+  }
+
+  const field = req.body?.field === 'phone' ? 'phone' : req.body?.field === 'email' ? 'email' : null;
+
+  if (!field) {
+    return res.status(400).json({ error: 'Indicá si querés confirmar email o teléfono.' });
+  }
+
+  try {
+    const result = await db.query('SELECT email, phone FROM users WHERE id = $1', [req.session.userId]);
+    const user = result.rows[0];
+
+    if (!user) {
+      return res.status(404).json({ error: 'No encontramos esa cuenta.' });
+    }
+
+    if (field === 'phone' && !(typeof user.phone === 'string' && user.phone.trim().length > 0)) {
+      return res.status(422).json({ error: 'Primero agregá tu teléfono en el perfil para poder confirmarlo.' });
+    }
+
+    await db.query(
+      `UPDATE users
+       SET email_verified = CASE WHEN $1 = 'email' THEN TRUE ELSE email_verified END,
+           is_email_verified = CASE WHEN $1 = 'email' THEN TRUE ELSE is_email_verified END,
+           phone_verified = CASE WHEN $1 = 'phone' THEN TRUE ELSE phone_verified END,
+           is_phone_verified = CASE WHEN $1 = 'phone' THEN TRUE ELSE is_phone_verified END
+       WHERE id = $2`,
+      [field, req.session.userId],
+    );
+
+    await logActivity(req.session.userId, field === 'email' ? 'EMAIL_CONFIRMED' : 'PHONE_CONFIRMED');
+
+    const nextUser = await getAuthUserById(req.session.userId);
+    res.json({ user: nextUser });
+  } catch (err) {
+    console.error('Error confirming contact verification:', err);
+    res.status(500).json({ error: 'No pudimos confirmar ese dato ahora. Intentá de nuevo.' });
   }
 });
 
@@ -2366,7 +2452,7 @@ app.post('/api/bookings', async (req, res) => {
         res,
         403,
         'IDENTITY_VERIFICATION_REQUIRED',
-        'Para reservas mayores a $200.000 necesitás tener la identidad verificada.'
+        'Para reservas mayores a $200.000 necesitás al menos el nivel 1 de verificación: email y teléfono confirmados.'
       );
     }
 
