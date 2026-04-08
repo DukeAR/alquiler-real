@@ -85,12 +85,25 @@ export const ExploreResultsSection = ({
       .slice(0, TOP_VERIFIED_RESULTS_COUNT)
       .map((property) => property.id),
   );
-  const rankingLead = 'Mostramos qué está comprobado para que puedas decidir mejor.';
-  const rankingDetail = sortBy === 'rating'
-    ? 'Cuando dos avisos muestran comprobaciones parecidas, suben los mejor calificados.'
-    : sortBy === 'price'
-      ? 'El precio se usa solo para desempatar entre avisos con información parecida.'
-      : 'Después siguen las opciones con mejor combinación de información validada, reseñas y señales concretas.';
+  const rankingLead = sortBy === 'price'
+    ? 'Mostramos primero el precio más bajo y usamos la información comprobada para ordenar mejor cuando hace falta.'
+    : sortBy === 'rating'
+      ? 'Mostramos primero los avisos mejor calificados y usamos la información comprobada para desempatar.'
+      : 'Mostramos primero los avisos con más información comprobada.';
+  const listingHeading = hasActiveFilters
+    ? 'Resultados para revisar'
+    : showFeaturedSection
+      ? 'Más avisos'
+      : 'Avisos para revisar';
+  const listingDescription = loading
+    ? 'Estamos actualizando los avisos disponibles.'
+    : hasActiveFilters
+      ? `${formatPropertyCount(listingProperties.length)} para revisar en esta búsqueda.`
+      : listingProperties.length > 0
+        ? showFeaturedSection
+          ? `${formatPropertyCount(listingProperties.length)} para seguir revisando con el mismo criterio.`
+          : `${formatPropertyCount(listingProperties.length)} para revisar con este criterio.`
+        : 'No hay más propiedades para revisar por ahora.';
 
   const summaryEyebrow = viewMode === 'map'
     ? 'Mapa'
@@ -164,7 +177,7 @@ export const ExploreResultsSection = ({
   const verificationPreferenceHint = showVerificationPreferenceHint ? (
     <p className="mt-3 inline-flex items-center gap-2 rounded-full border border-emerald-200/80 bg-emerald-50/80 px-3 py-1.5 text-[12.5px] font-medium leading-5 text-emerald-800">
       <Icons.ShieldCheck className="h-4 w-4" />
-      <span>Estás viendo avisos con más comprobaciones visibles</span>
+      <span>Estás viendo avisos con más información comprobada</span>
     </p>
   ) : null;
 
@@ -256,9 +269,8 @@ export const ExploreResultsSection = ({
   return (
     <section className="space-y-8 md:space-y-10">
       {!loading && hasAnyResults ? (
-        <div className="space-y-1 rounded-[24px] border border-slate-200/80 bg-white/90 px-4 py-3.5 shadow-[0_18px_36px_-34px_rgba(15,23,42,0.16)]">
+        <div className="rounded-[24px] border border-slate-200/80 bg-white/90 px-4 py-3.5 shadow-[0_18px_36px_-34px_rgba(15,23,42,0.16)]">
           <p className="text-sm font-medium leading-6 text-slate-700">{rankingLead}</p>
-          <p className="text-[12.5px] leading-5 text-slate-500">{rankingDetail}</p>
         </div>
       ) : null}
 
@@ -276,8 +288,8 @@ export const ExploreResultsSection = ({
         <section className="space-y-5 md:space-y-6">
           <div className="max-w-2xl space-y-2">
             <SectionTitle
-              heading="Avisos para mirar primero"
-              description="Acá ves tipo de propiedad, ubicación, precio, rating y qué parte del aviso ya fue comprobada en una sola lectura."
+              heading="Con más información comprobada"
+              description="Acá aparecen primero los avisos con más comprobaciones visibles y, si empatan, miramos calificación y reseñas."
               className="max-w-2xl"
             />
             {!loading ? (
@@ -312,14 +324,8 @@ export const ExploreResultsSection = ({
           <div className="flex flex-col gap-4 border-b border-slate-200/70 pb-5 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-2xl">
               <SectionTitle
-                heading={hasActiveFilters ? 'Resultados para revisar' : 'Más opciones'}
-                description={loading
-                  ? 'Estamos actualizando los avisos disponibles.'
-                  : hasActiveFilters
-                    ? `${formatPropertyCount(listingProperties.length)} para revisar en esta búsqueda.`
-                    : listingProperties.length > 0
-                      ? `${formatPropertyCount(listingProperties.length)} para seguir revisando antes de reservar.`
-                      : 'No hay más propiedades para revisar por ahora.'}
+                heading={listingHeading}
+                description={listingDescription}
                 className="max-w-2xl"
               />
               {!loading && !showFeaturedSection ? (

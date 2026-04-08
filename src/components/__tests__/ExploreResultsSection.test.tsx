@@ -91,12 +91,11 @@ describe('ExploreResultsSection', () => {
   test('renders the decision-oriented hierarchy on the home results view', () => {
     renderSection();
 
-    expect(screen.getByText('Mostramos qué está comprobado para que puedas decidir mejor.')).toBeInTheDocument();
-    expect(screen.getByText('Después siguen las opciones con mejor combinación de información validada, reseñas y señales concretas.')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Avisos para mirar primero' })).toBeInTheDocument();
-    expect(screen.getByText('Acá ves tipo de propiedad, ubicación, precio, rating y qué parte del aviso ya fue comprobada en una sola lectura.')).toBeInTheDocument();
+    expect(screen.getByText('Mostramos primero los avisos con más información comprobada.')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Con más información comprobada' })).toBeInTheDocument();
+    expect(screen.getByText('Acá aparecen primero los avisos con más comprobaciones visibles y, si empatan, miramos calificación y reseñas.')).toBeInTheDocument();
     expect(screen.getByText('Más comprobado')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Más opciones' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Más avisos' })).toBeInTheDocument();
     expect(screen.getByText('Casa frente al mar')).toBeInTheDocument();
     expect(screen.getByText('Departamento luminoso')).toBeInTheDocument();
     expect(screen.queryByText('Cabaña entre pinos')).toBeInTheDocument();
@@ -105,7 +104,7 @@ describe('ExploreResultsSection', () => {
   test('shows the subtle verification hint and emphasizes cards when the preference is active', () => {
     renderSection({ caresAboutVerification: true });
 
-    expect(screen.getByText('Estás viendo avisos con más comprobaciones visibles')).toBeInTheDocument();
+    expect(screen.getByText('Estás viendo avisos con más información comprobada')).toBeInTheDocument();
     expect(screen.getAllByText('Verificación más visible')).toHaveLength(3);
   });
 

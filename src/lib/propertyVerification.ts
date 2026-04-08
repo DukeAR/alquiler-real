@@ -392,6 +392,10 @@ export const sortPropertiesByCatalogOrder = <T extends PropertySortLike>(
     const priceDifference = Number(left.price || 0) - Number(right.price || 0);
 
     if (sortBy === 'price') {
+      if (priceDifference !== 0) {
+        return priceDifference;
+      }
+
       if (verificationDifference !== 0) {
         return verificationDifference;
       }
@@ -406,10 +410,6 @@ export const sortPropertiesByCatalogOrder = <T extends PropertySortLike>(
 
       if (relevanceDifference !== 0) {
         return relevanceDifference;
-      }
-
-      if (priceDifference !== 0) {
-        return priceDifference;
       }
 
       return String(left.title || '').localeCompare(String(right.title || ''), 'es');

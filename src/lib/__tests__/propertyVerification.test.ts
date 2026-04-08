@@ -97,14 +97,14 @@ describe('propertyVerification', () => {
     expect(sorted.map((property) => property.id)).toEqual(['p3', 'p2', 'p1']);
   });
 
-  test('sorts by price while keeping verification as a tie breaker', () => {
+  test('sorts by price when selected and keeps verification as a tie breaker only for ties', () => {
     const sorted = sortPropertiesByCatalogOrder([
       { id: 'p1', verificationScore: 2, rating: 4.7, price: 100_000 },
       { id: 'p2', verificationScore: 4, rating: 4.1, price: 100_000 },
       { id: 'p3', verificationScore: 5, rating: 4.9, price: 120_000 },
     ], 'price');
 
-    expect(sorted.map((property) => property.id)).toEqual(['p3', 'p2', 'p1']);
+    expect(sorted.map((property) => property.id)).toEqual(['p2', 'p1', 'p3']);
   });
 
   test('uses search relevance after respaldo and reseñas when comparing similar results', () => {

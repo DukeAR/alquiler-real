@@ -68,9 +68,9 @@ export const ExploreFiltersBar = ({
                 onChange={(event) => onSortChange(event.target.value as ExploreSort)}
                 className="app-control h-11 min-w-0 w-full rounded-[14px] bg-white px-4 text-[0.94rem] font-semibold tracking-[-0.01em] text-slate-700 outline-none shadow-none sm:min-w-[170px]"
               >
-                <option value="verification">Más respaldo</option>
-                <option value="rating">Mejor calificados</option>
-                <option value="price">Precio dentro del respaldo</option>
+                <option value="verification">Más información comprobada</option>
+                <option value="rating">Mejor calificación</option>
+                <option value="price">Precio más bajo</option>
               </select>
             </label>
 
@@ -78,6 +78,7 @@ export const ExploreFiltersBar = ({
               <span className="relative inline-flex h-6 w-11 shrink-0 items-center">
                 <input
                   type="checkbox"
+                  aria-label="Solo con más información comprobada"
                   checked={filters.verifiedOnly}
                   onChange={(event) => onFiltersChange({ ...filters, verifiedOnly: event.target.checked })}
                   className="peer sr-only"
@@ -88,12 +89,12 @@ export const ExploreFiltersBar = ({
 
               <span className="min-w-0">
                 <span className="block text-[13px] font-semibold leading-5 text-slate-800">
-                  <span className="sm:hidden">Solo avisos verificados</span>
-                  <span className="hidden sm:inline">Solo con verificaciones reales</span>
+                  <span className="sm:hidden">Más info comprobada</span>
+                  <span className="hidden sm:inline">Solo con más información comprobada</span>
                 </span>
                 <span className="block text-[11.5px] leading-4 text-slate-500">
                   <span className="sm:hidden">3+ comprobaciones</span>
-                  <span className="hidden sm:inline">3 o más comprobaciones concretas</span>
+                  <span className="hidden sm:inline">3 o más comprobaciones visibles</span>
                 </span>
               </span>
             </label>
