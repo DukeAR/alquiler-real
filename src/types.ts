@@ -211,6 +211,8 @@ export interface Conversation {
   requestTotalPrice?: number;
   hostTrustScore?: number;
   hostTrust?: HostTrustSummary;
+  guestProfile?: GuestRequestProfile;
+  guestPositiveReviewsCount?: number;
   updated_at: string;
   created_at: string;
 }

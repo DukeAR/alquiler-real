@@ -270,6 +270,77 @@ describe('Bookings and availability endpoints', () => {
     expect(res.body.deposit_status).toBeNull();
   });
 
+  test('GET /api/conversations includes guest context for the host chat view', async () => {
+    queryMock.mockImplementation(async (text: string) => {
+      if (text.includes('FROM conversations c') && text.includes('ORDER BY c.updated_at DESC')) {
+        return {
+          rows: [
+            {
+              id: 'conv-1',
+              property_id: 'prop-1',
+              booking_id: null,
+              tenant_id: 'tenant-1',
+              host_id: 'host-1',
+              tenantName: 'Lucía',
+              hostName: 'Mariana',
+              propertyTitle: 'Casa del bosque',
+              propertyImage: 'https://example.com/property.jpg',
+              bookingStatus: null,
+              startDate: null,
+              endDate: null,
+              guests: null,
+              totalPrice: null,
+              requestMode: 'direct',
+              requestStatus: 'pending',
+              requestStartDate: '2099-09-20',
+              requestEndDate: '2099-09-23',
+              requestGuests: 2,
+              requestTotalPrice: 360000,
+              depositStatus: null,
+              tenantProfilePhoto: null,
+              tenantBio: 'Viajo por trabajo y llego con tiempo.',
+              tenantPhone: '+5491122334455',
+              tenantZone: 'Pinamar',
+              tenantEmailVerified: true,
+              tenantPhoneVerified: true,
+              tenantIdentityVerified: false,
+              tenantIdentityVerificationStatus: 'unverified',
+              tenantIdentityVerificationProvider: null,
+              tenantIdentityVerifiedAt: null,
+              tenantMemberSince: '2024-01-10',
+              tenantCompletedStays: 4,
+              tenantCancellationsCount: 0,
+              tenantConflictsCount: 0,
+              tenantPositiveReviewsCount: 2,
+              hostIdentityValidated: true,
+              hostIdentityVerified: true,
+              hostMemberSince: '2023-02-01',
+              hostCompletedReservationsCount: 6,
+              hostGuestReviewsCount: 4,
+              created_at: '2099-09-01T10:00:00.000Z',
+              updated_at: '2099-09-01T10:15:00.000Z',
+            },
+          ],
+        };
+      }
+
+      throw new Error(`Unexpected query: ${text}`);
+    });
+
+    const res = await request(app)
+      .get('/api/conversations')
+      .set('x-test-user-id', 'host-1');
+
+    expect(res.status).toBe(200);
+    expect(res.body[0].guestPositiveReviewsCount).toBe(2);
+    expect(res.body[0].guestProfile.verificationScore).toBe(3);
+    expect(res.body[0].guestProfile.verificationSummary.items).toEqual(expect.arrayContaining([
+      expect.objectContaining({ key: 'email', status: 'complete' }),
+      expect.objectContaining({ key: 'phone', status: 'complete' }),
+      expect.objectContaining({ key: 'history', status: 'complete' }),
+    ]));
+  });
+
   test('GET /api/conversations/:id/messages injects the first reservation guidance messages into the chat', async () => {
     const insertedSystemKeys: string[] = [];
 

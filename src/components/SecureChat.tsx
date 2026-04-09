@@ -11,8 +11,10 @@ import { ReportModal } from './ReportModal';
 import { useAuth } from '../hooks/useAuth';
 import { type ReservationRequestContext } from '../types';
 import { formatBookingDateShort, getBookingDateOnlyValue, isBookingCheckInReached } from '../lib/bookingDates';
+import { formatGuestMemberSinceYear, resolveGuestRequestProfile } from '../lib/guestRequestProfile';
 import { getHostTrust } from '../lib/hostTrust';
 import { getReservationFlowCopy } from '../lib/reservationFlow';
+import { getVerificationSummaryItems, getVerificationSummaryLabel } from './ui/VerificationMeter';
 
 type InlineThreadNoticeTone = 'neutral' | 'warning' | 'brand';
 
@@ -114,16 +116,46 @@ const getHostTrustItemShortLabel = (label: string) => {
   return label;
 };
 
-const getHostVerificationLine = (completedLabels: string[], totalItems: number) => {
+const getHostVerificationLine = (completedLabels: string[]) => {
   if (completedLabels.length === 0) {
     return null;
   }
 
-  if (completedLabels.length >= 4 || completedLabels.length > 3) {
-    return `✔ ${completedLabels.length} de ${totalItems} comprobaciones`;
+  const visibleLabels = completedLabels.slice(0, 3);
+  const remainingCount = Math.max(0, completedLabels.length - visibleLabels.length);
+
+  return `${visibleLabels.map((label) => `✔ ${label}`).join(' · ')}${remainingCount > 0 ? ` · +${remainingCount}` : ''}`;
+};
+
+const getGuestVerificationItemShortLabel = (label: string) => {
+  if (/historial/i.test(label)) {
+    return 'Historial en la plataforma';
   }
 
-  return completedLabels.map((label) => `✔ ${label}`).join(' · ');
+  if (/identidad/i.test(label)) {
+    return 'Identidad verificada';
+  }
+
+  return label;
+};
+
+const formatCountLabel = (count: number, singular: string, plural: string) => (
+  `${count} ${count === 1 ? singular : plural}`
+);
+
+const buildHostGuestQuestionSuggestions = (requestContext: ReservationRequestContext | null) => {
+  if (!requestContext) {
+    return [] as string[];
+  }
+
+  const multipleGuests = requestContext.guests !== 1;
+
+  return [
+    multipleGuests ? '¿Vienen por descanso o trabajo?' : '¿Venís por descanso o trabajo?',
+    multipleGuests ? '¿En qué horario estiman llegar?' : '¿En qué horario estimás llegar?',
+    multipleGuests ? '¿Ya conocen la zona?' : '¿Ya conocés la zona?',
+    multipleGuests ? '¿Necesitan algo puntual?' : '¿Necesitás algo puntual?',
+  ];
 };
 
 const getCompactReservationStatus = (
@@ -763,8 +795,54 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
         .map((item) => getHostTrustItemShortLabel(item.label))
     : [];
   const hostVerificationLine = hostTrustSummary
-    ? getHostVerificationLine(completedHostTrustLabels, hostTrustSummary.items.length || completedHostTrustLabels.length)
+    ? getHostVerificationLine(completedHostTrustLabels)
     : null;
+  const shouldShowGuestContext = Boolean(
+    isHostConversation
+    && activeConv
+    && (activeConv.guestProfile || typeof activeConv.guestPositiveReviewsCount === 'number'),
+  );
+  const guestContextProfile = shouldShowGuestContext && activeConv
+    ? resolveGuestRequestProfile({
+        id: activeConv.tenant_id,
+        userName: activeConv.tenantName,
+        guestProfile: activeConv.guestProfile ?? null,
+      })
+    : null;
+  const guestVerificationLabel = guestContextProfile
+    ? getVerificationSummaryLabel(guestContextProfile.verificationSummary)
+    : null;
+  const guestCompletedChecks = guestContextProfile
+    ? getVerificationSummaryItems(guestContextProfile.verificationSummary, { status: 'complete', limit: 3 })
+        .map((item) => getGuestVerificationItemShortLabel(item.label))
+    : [];
+  const guestContextStats = guestContextProfile
+    ? [
+        guestContextProfile.dataAvailability.platformHistory && guestContextProfile.platformHistory.completedStays > 0
+          ? formatCountLabel(guestContextProfile.platformHistory.completedStays, 'estadía completada', 'estadías completadas')
+          : null,
+        typeof activeConv?.guestPositiveReviewsCount === 'number' && activeConv.guestPositiveReviewsCount > 0
+          ? formatCountLabel(activeConv.guestPositiveReviewsCount, 'reseña positiva', 'reseñas positivas')
+          : null,
+        guestContextProfile.dataAvailability.memberSince && guestContextProfile.memberSince.trim()
+          ? `Usuario desde ${formatGuestMemberSinceYear(guestContextProfile.memberSince)}`
+          : null,
+      ].filter((value): value is string => Boolean(value))
+    : [];
+  const hostGuestQuestionSuggestions = isHostConversation
+    && activeRequestContext
+    && (flowCopy?.stage === 'request-pending' || flowCopy?.stage === 'request-accepted')
+    ? buildHostGuestQuestionSuggestions(activeRequestContext)
+    : [];
+  const hasAuthoredConversationMessage = Boolean(
+    user && messages.some((message) => !message.is_system && message.sender_id === user.id),
+  );
+  const guestIntroPrompt = isTenantConversation && !hasAuthoredConversationMessage && flowCopy?.stage === 'request-pending'
+    ? 'Podés contar brevemente el motivo de tu estadía para coordinar mejor.'
+    : null;
+  const visibleSuggestionTexts = isHostConversation && hostGuestQuestionSuggestions.length > 0
+    ? []
+    : suggestionTexts;
   const contextSummaryLine = activeRequestContext
     ? [
         activeRequestContext.propertyTitle,
@@ -1270,6 +1348,55 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
               </div>
             ) : null}
 
+            {guestContextProfile ? (
+              <div className="border-b border-slate-100 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-950 sm:px-6">
+                <div className="mx-auto max-w-4xl rounded-[24px] border border-slate-200/80 bg-slate-50/80 px-4 py-4 dark:border-slate-800 dark:bg-slate-900/50">
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
+                        Perfil del huésped
+                      </p>
+                      <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">
+                        Lo que ya figura en la cuenta para coordinar mejor.
+                      </p>
+                    </div>
+                    {guestVerificationLabel ? (
+                      <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">
+                        {guestVerificationLabel}
+                      </p>
+                    ) : null}
+                  </div>
+
+                  {guestCompletedChecks.length > 0 ? (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {guestCompletedChecks.map((label) => (
+                        <span
+                          key={label}
+                          className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-medium leading-none text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
+                        >
+                          <span aria-hidden="true" className="text-emerald-600 dark:text-emerald-300">✔</span>
+                          <span>{label}</span>
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
+
+                  {guestContextStats.length > 0 ? (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {guestContextStats.map((stat) => (
+                        <span
+                          key={stat}
+                          className="inline-flex items-center rounded-full bg-white px-3 py-1.5 text-[12px] font-medium leading-none text-slate-600 dark:bg-slate-950 dark:text-slate-300"
+                        >
+                          {stat}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+
             {/* Messages */}
             <div ref={scrollRef} className="flex-1 overflow-y-auto bg-[linear-gradient(180deg,rgba(248,250,252,0.72),rgba(255,255,255,1))] px-4 py-5 no-scrollbar dark:bg-slate-950 sm:px-6 sm:py-6">
               <div className="mx-auto flex w-full max-w-4xl flex-col gap-5">
@@ -1476,9 +1603,35 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                   </div>
                 ) : null}
 
-                {suggestionTexts.length > 0 ? (
+                {guestIntroPrompt ? (
+                  <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">
+                    {guestIntroPrompt}
+                  </p>
+                ) : null}
+
+                {hostGuestQuestionSuggestions.length > 0 ? (
+                  <div className="space-y-2">
+                    <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
+                      Preguntas opcionales
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {hostGuestQuestionSuggestions.map((suggestion) => (
+                        <button
+                          key={suggestion}
+                          type="button"
+                          onClick={() => setInputText(suggestion)}
+                          className="rounded-full border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-semibold text-slate-600 transition-colors hover:border-brand/30 hover:bg-white hover:text-brand dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+                        >
+                          {suggestion}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                {visibleSuggestionTexts.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
-                    {suggestionTexts.map((suggestion) => (
+                    {visibleSuggestionTexts.map((suggestion) => (
                       <button
                         key={suggestion}
                         type="button"

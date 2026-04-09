@@ -816,6 +816,49 @@ const CONVERSATION_HOST_TRUST_JOINS = `
      ) host_guest_reviews ON host_guest_reviews.host_id = c.host_id
 `;
 
+const CONVERSATION_GUEST_PROFILE_SELECT = `u_tenant.profile_photo as "tenantProfilePhoto",
+            u_tenant.bio as "tenantBio",
+            u_tenant.phone as "tenantPhone",
+            u_tenant.zone as "tenantZone",
+            (COALESCE(u_tenant.email_verified, FALSE) OR COALESCE(u_tenant.is_email_verified, FALSE)) as "tenantEmailVerified",
+            (COALESCE(u_tenant.phone_verified, FALSE) OR COALESCE(u_tenant.is_phone_verified, FALSE)) as "tenantPhoneVerified",
+            (COALESCE(u_tenant.is_identity_verified, FALSE) OR COALESCE(u_tenant.identity_validated, FALSE)) as "tenantIdentityVerified",
+            (CASE
+              WHEN COALESCE(u_tenant.is_identity_verified, FALSE) OR COALESCE(u_tenant.identity_validated, FALSE) THEN 'verified'
+              WHEN u_tenant.identity_verification_status IN ('verified', 'pending', 'rejected') THEN u_tenant.identity_verification_status
+              ELSE 'unverified'
+            END) as "tenantIdentityVerificationStatus",
+            u_tenant.identity_verification_provider as "tenantIdentityVerificationProvider",
+            u_tenant.identity_verified_at as "tenantIdentityVerifiedAt",
+            COALESCE(u_tenant.member_since, u_tenant.created_at) as "tenantMemberSince",
+            COALESCE(tenant_booking_stats.completed_stays, 0)::int as "tenantCompletedStays",
+            COALESCE(tenant_booking_stats.cancellations_count, 0)::int as "tenantCancellationsCount",
+            COALESCE(tenant_report_stats.conflicts_count, 0)::int as "tenantConflictsCount",
+            COALESCE(tenant_positive_reviews.positive_reviews_count, 0)::int as "tenantPositiveReviewsCount"`;
+
+const CONVERSATION_GUEST_PROFILE_JOINS = `
+     LEFT JOIN (
+       SELECT "userId" as user_id,
+              COUNT(*) FILTER (WHERE status = 'completed')::int as completed_stays,
+              COUNT(*) FILTER (WHERE status = 'cancelled')::int as cancellations_count
+       FROM bookings
+       GROUP BY "userId"
+     ) tenant_booking_stats ON tenant_booking_stats.user_id = c.tenant_id
+     LEFT JOIN (
+       SELECT reported_user_id as user_id,
+              COUNT(*)::int as conflicts_count
+       FROM reports
+       GROUP BY reported_user_id
+     ) tenant_report_stats ON tenant_report_stats.user_id = c.tenant_id
+     LEFT JOIN (
+       SELECT reviewed_user_id as user_id,
+              COUNT(*) FILTER (WHERE rating >= 4)::int as positive_reviews_count
+       FROM reviews
+       WHERE type = 'host_to_guest'
+       GROUP BY reviewed_user_id
+     ) tenant_positive_reviews ON tenant_positive_reviews.user_id = c.tenant_id
+`;
+
 // ==========================================
 // AUTH ROUTES
 // ==========================================
@@ -2064,6 +2107,7 @@ const buildGuestRequestProfilePayload = (
   guest: HostDashboardGuestProfileRow | undefined,
   options: {
     hostReviews?: HostDashboardGuestReviewRow[];
+    hostReviewsCount?: number;
     bookingSignals?: HostDashboardBookingSignalRow;
   } = {},
 ) => {
@@ -2117,7 +2161,7 @@ const buildGuestRequestProfilePayload = (
     photoUploaded: profileCompletion.photoUploaded,
     basicDetailsComplete: profileCompletion.basicDetailsComplete,
     completedStays: guest.completedStays,
-    hostReviewsCount: (options.hostReviews ?? []).length,
+    hostReviewsCount: options.hostReviewsCount ?? (options.hostReviews ?? []).length,
     activitySignalsCount: operationSignals?.filter((signal) => signal.active && signal.source !== 'derived').length ?? 0,
     documentaryVerified: identityVerified,
     identityVerificationStatus: guest.identityVerificationStatus ?? (identityVerified ? 'verified' : null),
@@ -2710,6 +2754,7 @@ const getEnrichedConversationById = async (conversationId: string) => {
             u_tenant.name as "tenantName", u_host.name as "hostName",
             p.title as "propertyTitle", p."imageUrl" as "propertyImage",
             ${CONVERSATION_HOST_TRUST_SELECT},
+          ${CONVERSATION_GUEST_PROFILE_SELECT},
             b.status as "bookingStatus", b.start_date as "startDate", b.end_date as "endDate",
             b.guests, b.total_price as "totalPrice",
           b.cancellation_actor as "cancellationActor",
@@ -2726,6 +2771,7 @@ const getEnrichedConversationById = async (conversationId: string) => {
      JOIN users u_host ON c.host_id = u_host.id
      JOIN properties p ON c.property_id = p.id
     ${CONVERSATION_HOST_TRUST_JOINS}
+    ${CONVERSATION_GUEST_PROFILE_JOINS}
      LEFT JOIN bookings b ON c.booking_id = b.id
      WHERE c.id = $1
      LIMIT 1`,
@@ -2784,6 +2830,7 @@ const normalizeBookingRecord = <T extends { startDate?: unknown; endDate?: unkno
 };
 
 const normalizeConversationRecord = <T extends {
+  tenant_id?: unknown;
   startDate?: unknown;
   endDate?: unknown;
   requestStartDate?: unknown;
@@ -2793,6 +2840,21 @@ const normalizeConversationRecord = <T extends {
   hostMemberSince?: unknown;
   hostCompletedReservationsCount?: unknown;
   hostGuestReviewsCount?: unknown;
+  tenantProfilePhoto?: unknown;
+  tenantBio?: unknown;
+  tenantPhone?: unknown;
+  tenantZone?: unknown;
+  tenantEmailVerified?: unknown;
+  tenantPhoneVerified?: unknown;
+  tenantIdentityVerified?: unknown;
+  tenantIdentityVerificationStatus?: unknown;
+  tenantIdentityVerificationProvider?: unknown;
+  tenantIdentityVerifiedAt?: unknown;
+  tenantMemberSince?: unknown;
+  tenantCompletedStays?: unknown;
+  tenantCancellationsCount?: unknown;
+  tenantConflictsCount?: unknown;
+  tenantPositiveReviewsCount?: unknown;
 }>(conversation: T) => {
   const {
     hostIdentityValidated,
@@ -2800,12 +2862,30 @@ const normalizeConversationRecord = <T extends {
     hostMemberSince,
     hostCompletedReservationsCount,
     hostGuestReviewsCount,
+    tenantProfilePhoto,
+    tenantBio,
+    tenantPhone,
+    tenantZone,
+    tenantEmailVerified,
+    tenantPhoneVerified,
+    tenantIdentityVerified,
+    tenantIdentityVerificationStatus,
+    tenantIdentityVerificationProvider,
+    tenantIdentityVerifiedAt,
+    tenantMemberSince,
+    tenantCompletedStays,
+    tenantCancellationsCount,
+    tenantConflictsCount,
+    tenantPositiveReviewsCount,
     ...conversationRest
   } = conversation;
   const normalizedStartDate = normalizeDateOnlyValue(conversation.startDate);
   const normalizedEndDate = normalizeDateOnlyValue(conversation.endDate);
   const normalizedRequestStartDate = normalizeDateOnlyValue(conversation.requestStartDate);
   const normalizedRequestEndDate = normalizeDateOnlyValue(conversation.requestEndDate);
+  const normalizedPositiveReviewsCount = Number.isFinite(Number(tenantPositiveReviewsCount))
+    ? Math.max(0, Math.round(Number(tenantPositiveReviewsCount)))
+    : 0;
 
   const hasHostTrustData = [
     hostIdentityValidated,
@@ -2814,6 +2894,62 @@ const normalizeConversationRecord = <T extends {
     hostCompletedReservationsCount,
     hostGuestReviewsCount,
   ].some((value) => value !== undefined && value !== null);
+  const hasGuestProfileData = [
+    tenantProfilePhoto,
+    tenantBio,
+    tenantPhone,
+    tenantZone,
+    tenantEmailVerified,
+    tenantPhoneVerified,
+    tenantIdentityVerified,
+    tenantIdentityVerificationStatus,
+    tenantIdentityVerificationProvider,
+    tenantIdentityVerifiedAt,
+    tenantMemberSince,
+    tenantCompletedStays,
+    tenantCancellationsCount,
+    tenantConflictsCount,
+    tenantPositiveReviewsCount,
+  ].some((value) => value !== undefined && value !== null);
+  const normalizedTenantIdentityVerified = typeof tenantIdentityVerified === 'boolean' || typeof tenantIdentityVerified === 'number' || typeof tenantIdentityVerified === 'string'
+    ? tenantIdentityVerified
+    : undefined;
+  const normalizedTenantEmailVerified = typeof tenantEmailVerified === 'boolean' || typeof tenantEmailVerified === 'number' || typeof tenantEmailVerified === 'string'
+    ? tenantEmailVerified
+    : undefined;
+  const normalizedTenantPhoneVerified = typeof tenantPhoneVerified === 'boolean' || typeof tenantPhoneVerified === 'number' || typeof tenantPhoneVerified === 'string'
+    ? tenantPhoneVerified
+    : undefined;
+  const normalizedTenantCompletedStays = typeof tenantCompletedStays === 'number' || typeof tenantCompletedStays === 'string'
+    ? tenantCompletedStays
+    : undefined;
+  const normalizedTenantCancellationsCount = typeof tenantCancellationsCount === 'number' || typeof tenantCancellationsCount === 'string'
+    ? tenantCancellationsCount
+    : undefined;
+  const normalizedTenantConflictsCount = typeof tenantConflictsCount === 'number' || typeof tenantConflictsCount === 'string'
+    ? tenantConflictsCount
+    : undefined;
+  const guestProfile = hasGuestProfileData
+    ? buildGuestRequestProfilePayload({
+        id: typeof conversation.tenant_id === 'string' ? conversation.tenant_id : 'guest',
+        identityVerified: normalizedTenantIdentityVerified,
+        identityVerificationStatus: typeof tenantIdentityVerificationStatus === 'string' ? tenantIdentityVerificationStatus : undefined,
+        identityVerificationProvider: typeof tenantIdentityVerificationProvider === 'string' ? tenantIdentityVerificationProvider : undefined,
+        identityVerifiedAt: tenantIdentityVerifiedAt instanceof Date || typeof tenantIdentityVerifiedAt === 'string' ? tenantIdentityVerifiedAt : undefined,
+        memberSince: tenantMemberSince instanceof Date || typeof tenantMemberSince === 'string' ? tenantMemberSince : undefined,
+        profilePhoto: typeof tenantProfilePhoto === 'string' ? tenantProfilePhoto : undefined,
+        bio: typeof tenantBio === 'string' ? tenantBio : undefined,
+        phone: typeof tenantPhone === 'string' ? tenantPhone : undefined,
+        zone: typeof tenantZone === 'string' ? tenantZone : undefined,
+        emailVerified: normalizedTenantEmailVerified,
+        phoneVerified: normalizedTenantPhoneVerified,
+        completedStays: normalizedTenantCompletedStays,
+        cancellationsCount: normalizedTenantCancellationsCount,
+        conflictsCount: normalizedTenantConflictsCount,
+      }, {
+        hostReviewsCount: normalizedPositiveReviewsCount,
+      })
+    : undefined;
 
   return {
     ...conversationRest,
@@ -2829,6 +2965,8 @@ const normalizeConversationRecord = <T extends {
           hostGuestReviewsCount: typeof hostGuestReviewsCount === 'number' ? hostGuestReviewsCount : Number(hostGuestReviewsCount ?? 0),
         })
       : {}),
+    ...(guestProfile ? { guestProfile } : {}),
+    ...(hasGuestProfileData ? { guestPositiveReviewsCount: normalizedPositiveReviewsCount } : {}),
   };
 };
 
@@ -3561,6 +3699,7 @@ app.get('/api/conversations', async (req, res) => {
               u_tenant.name as "tenantName", u_host.name as "hostName",
               p.title as "propertyTitle", p."imageUrl" as "propertyImage",
               ${CONVERSATION_HOST_TRUST_SELECT},
+              ${CONVERSATION_GUEST_PROFILE_SELECT},
               b.status as "bookingStatus", b.start_date as "startDate", b.end_date as "endDate",
               b.guests, b.total_price as "totalPrice",
               b.cancellation_actor as "cancellationActor",
@@ -3577,6 +3716,7 @@ app.get('/api/conversations', async (req, res) => {
        JOIN users u_host ON c.host_id = u_host.id
        JOIN properties p ON c.property_id = p.id
       ${CONVERSATION_HOST_TRUST_JOINS}
+      ${CONVERSATION_GUEST_PROFILE_JOINS}
        LEFT JOIN bookings b ON c.booking_id = b.id
        WHERE c.tenant_id = $1 OR c.host_id = $1
        ORDER BY c.updated_at DESC`,

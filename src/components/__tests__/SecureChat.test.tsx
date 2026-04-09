@@ -82,6 +82,32 @@ const baseConversation = {
   created_at: '2026-04-06T11:00:00.000Z',
 };
 
+const baseGuestProfile = {
+  identityVerified: false,
+  platformHistory: {
+    completedStays: 4,
+    conflictsCount: 0,
+    cancellationsCount: 0,
+  },
+  profileCompletion: {
+    profileComplete: false,
+    photoUploaded: false,
+    basicDetailsComplete: true,
+  },
+  verificationSummary: {
+    score: 3,
+    maxScore: 5,
+    items: [
+      { key: 'email', label: 'Email verificado', status: 'complete' },
+      { key: 'phone', label: 'Teléfono verificado', status: 'complete' },
+      { key: 'profile', label: 'Perfil completo', status: 'pending' },
+      { key: 'history', label: 'Historial real en la plataforma', status: 'complete' },
+      { key: 'documentary', label: 'Identidad documental', status: 'pending' },
+    ],
+  },
+  memberSince: '2024-01-10',
+};
+
 const renderChat = () => {
   render(
     <MemoryRouter initialEntries={['/chat/conv-1']}>
@@ -248,12 +274,48 @@ describe('SecureChat', () => {
     expect(screen.getByText((content) => content.includes('Casa de prueba') && content.includes('2 huéspedes') && content.includes('320'))).toBeInTheDocument();
     expect(screen.getByText('Estado: Esperando respuesta')).toBeInTheDocument();
     expect(screen.getByText('Podés coordinar todo por acá. Evitá compartir datos sensibles o pagos por fuera hasta tener claro el acuerdo.')).toBeInTheDocument();
+    expect(screen.getByText('Podés contar brevemente el motivo de tu estadía para coordinar mejor.')).toBeInTheDocument();
     expect(screen.getByText('Propuesta enviada. Falta la respuesta del anfitrión.')).toBeInTheDocument();
     expect(screen.queryByText('Estado actual')).not.toBeInTheDocument();
     expect(screen.queryByText('Actúa ahora')).not.toBeInTheDocument();
     expect(screen.queryByText('Próximo paso')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: '¿Te sirven estas fechas?' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '¿Qué incluye el precio?' })).toBeInTheDocument();
+  });
+
+  test('shows lightweight guest context and natural host questions inside the chat', async () => {
+    useAuthMock.mockReturnValue({ user: { id: 'host-1' } });
+    fetchConversationsMock.mockResolvedValue([
+      {
+        ...baseConversation,
+        requestMode: 'direct',
+        requestStatus: 'pending',
+        requestStartDate: '2026-05-10',
+        requestEndDate: '2026-05-13',
+        requestGuests: 2,
+        requestTotalPrice: 320000,
+        guestProfile: baseGuestProfile,
+        guestPositiveReviewsCount: 2,
+      },
+    ]);
+    fetchMessagesMock.mockResolvedValue([]);
+
+    renderChat();
+
+    expect(await screen.findByText('Perfil del huésped')).toBeInTheDocument();
+    expect(screen.getByText('3 de 5 comprobaciones')).toBeInTheDocument();
+    expect(screen.getByText('Email verificado')).toBeInTheDocument();
+    expect(screen.getByText('Teléfono verificado')).toBeInTheDocument();
+    expect(screen.getByText('Historial en la plataforma')).toBeInTheDocument();
+    expect(screen.getByText('4 estadías completadas')).toBeInTheDocument();
+    expect(screen.getByText('2 reseñas positivas')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: '¿Vienen por descanso o trabajo?' }));
+
+    expect(screen.getByRole('textbox')).toHaveValue('¿Vienen por descanso o trabajo?');
+    expect(screen.getByRole('button', { name: '¿En qué horario estiman llegar?' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '¿Ya conocen la zona?' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '¿Necesitan algo puntual?' })).toBeInTheDocument();
   });
 
   test('falls back to the only available conversation when the initial id no longer matches', async () => {
