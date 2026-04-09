@@ -209,6 +209,8 @@ export interface Conversation {
   requestEndDate?: string;
   requestGuests?: number;
   requestTotalPrice?: number;
+  hostTrustScore?: number;
+  hostTrust?: HostTrustSummary;
   updated_at: string;
   created_at: string;
 }

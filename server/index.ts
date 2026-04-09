@@ -9,6 +9,7 @@ import { db } from './config/db';
 import { initDB } from './updates';
 import { mapPropertyRecord } from './propertySerializer';
 import { buildGuestVerification } from './guestVerification';
+import { buildHostTrust } from './hostTrust';
 import { REAL_VERIFICATION_FILTER_MIN_SCORE } from './propertyVerification';
 import { getChatSystemMessages, getRequestAcceptedMessage, type ChatSystemMessageKey } from './chatSystemMessages';
 import { buildGuestProfileCompletion } from '../src/lib/guestVerification';
@@ -788,6 +789,31 @@ const PROPERTY_HOST_TRUST_JOINS = `
         FROM reviews
         GROUP BY property_id
       ) property_real_reviews ON property_real_reviews.property_id = p.id
+`;
+
+const CONVERSATION_HOST_TRUST_SELECT = `u_host.identity_validated as "hostIdentityValidated",
+            u_host.is_identity_verified as "hostIdentityVerified",
+            COALESCE(u_host.member_since, u_host.created_at) as "hostMemberSince",
+            COALESCE(host_completed_reservations."completedReservationsCount", 0) as "hostCompletedReservationsCount",
+            COALESCE(host_guest_reviews."guestReviewsCount", 0) as "hostGuestReviewsCount"`;
+
+const CONVERSATION_HOST_TRUST_JOINS = `
+     LEFT JOIN (
+       SELECT hp."hostId" as host_id,
+              COUNT(*)::int as "completedReservationsCount"
+       FROM bookings hb
+       JOIN properties hp ON hp.id = hb."propertyId"
+       WHERE hb.status = 'completed'
+       GROUP BY hp."hostId"
+     ) host_completed_reservations ON host_completed_reservations.host_id = c.host_id
+     LEFT JOIN (
+       SELECT hp."hostId" as host_id,
+              COUNT(*)::int as "guestReviewsCount"
+       FROM reviews hr
+       JOIN properties hp ON hp.id = hr.property_id
+       WHERE hr.type = 'guest_to_host'
+       GROUP BY hp."hostId"
+     ) host_guest_reviews ON host_guest_reviews.host_id = c.host_id
 `;
 
 // ==========================================
@@ -2683,6 +2709,7 @@ const getEnrichedConversationById = async (conversationId: string) => {
     `SELECT c.*, 
             u_tenant.name as "tenantName", u_host.name as "hostName",
             p.title as "propertyTitle", p."imageUrl" as "propertyImage",
+            ${CONVERSATION_HOST_TRUST_SELECT},
             b.status as "bookingStatus", b.start_date as "startDate", b.end_date as "endDate",
             b.guests, b.total_price as "totalPrice",
           b.cancellation_actor as "cancellationActor",
@@ -2698,6 +2725,7 @@ const getEnrichedConversationById = async (conversationId: string) => {
      JOIN users u_tenant ON c.tenant_id = u_tenant.id
      JOIN users u_host ON c.host_id = u_host.id
      JOIN properties p ON c.property_id = p.id
+    ${CONVERSATION_HOST_TRUST_JOINS}
      LEFT JOIN bookings b ON c.booking_id = b.id
      WHERE c.id = $1
      LIMIT 1`,
@@ -2760,18 +2788,47 @@ const normalizeConversationRecord = <T extends {
   endDate?: unknown;
   requestStartDate?: unknown;
   requestEndDate?: unknown;
+  hostIdentityValidated?: unknown;
+  hostIdentityVerified?: unknown;
+  hostMemberSince?: unknown;
+  hostCompletedReservationsCount?: unknown;
+  hostGuestReviewsCount?: unknown;
 }>(conversation: T) => {
+  const {
+    hostIdentityValidated,
+    hostIdentityVerified,
+    hostMemberSince,
+    hostCompletedReservationsCount,
+    hostGuestReviewsCount,
+    ...conversationRest
+  } = conversation;
   const normalizedStartDate = normalizeDateOnlyValue(conversation.startDate);
   const normalizedEndDate = normalizeDateOnlyValue(conversation.endDate);
   const normalizedRequestStartDate = normalizeDateOnlyValue(conversation.requestStartDate);
   const normalizedRequestEndDate = normalizeDateOnlyValue(conversation.requestEndDate);
 
+  const hasHostTrustData = [
+    hostIdentityValidated,
+    hostIdentityVerified,
+    hostMemberSince,
+    hostCompletedReservationsCount,
+    hostGuestReviewsCount,
+  ].some((value) => value !== undefined && value !== null);
+
   return {
-    ...conversation,
+    ...conversationRest,
     ...(conversation.startDate !== undefined ? { startDate: normalizedStartDate ?? conversation.startDate } : {}),
     ...(conversation.endDate !== undefined ? { endDate: normalizedEndDate ?? conversation.endDate } : {}),
     ...(conversation.requestStartDate !== undefined ? { requestStartDate: normalizedRequestStartDate ?? conversation.requestStartDate } : {}),
     ...(conversation.requestEndDate !== undefined ? { requestEndDate: normalizedRequestEndDate ?? conversation.requestEndDate } : {}),
+    ...(hasHostTrustData
+      ? buildHostTrust({
+          identityValidated: Boolean(hostIdentityValidated) || Boolean(hostIdentityVerified),
+          hostMemberSince: typeof hostMemberSince === 'string' ? hostMemberSince : undefined,
+          hostCompletedReservationsCount: typeof hostCompletedReservationsCount === 'number' ? hostCompletedReservationsCount : Number(hostCompletedReservationsCount ?? 0),
+          hostGuestReviewsCount: typeof hostGuestReviewsCount === 'number' ? hostGuestReviewsCount : Number(hostGuestReviewsCount ?? 0),
+        })
+      : {}),
   };
 };
 
@@ -3502,6 +3559,7 @@ app.get('/api/conversations', async (req, res) => {
       `SELECT c.*, 
               u_tenant.name as "tenantName", u_host.name as "hostName",
               p.title as "propertyTitle", p."imageUrl" as "propertyImage",
+              ${CONVERSATION_HOST_TRUST_SELECT},
               b.status as "bookingStatus", b.start_date as "startDate", b.end_date as "endDate",
               b.guests, b.total_price as "totalPrice",
               b.cancellation_actor as "cancellationActor",
@@ -3517,6 +3575,7 @@ app.get('/api/conversations', async (req, res) => {
        JOIN users u_tenant ON c.tenant_id = u_tenant.id
        JOIN users u_host ON c.host_id = u_host.id
        JOIN properties p ON c.property_id = p.id
+      ${CONVERSATION_HOST_TRUST_JOINS}
        LEFT JOIN bookings b ON c.booking_id = b.id
        WHERE c.tenant_id = $1 OR c.host_id = $1
        ORDER BY c.updated_at DESC`,

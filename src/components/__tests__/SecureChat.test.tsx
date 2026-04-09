@@ -67,6 +67,17 @@ const baseConversation = {
   hostName: 'Mariana',
   propertyTitle: 'Casa de prueba',
   propertyImage: 'https://example.com/property.jpg',
+  hostTrustScore: 3,
+  hostTrust: {
+    score: 3,
+    level: 'medium',
+    items: [
+      { key: 'identity', label: 'Identidad confirmada', description: 'Identidad ya confirmada.', status: 'complete' },
+      { key: 'reservations', label: 'Historial de reservas', description: '6 reservas completadas.', status: 'complete' },
+      { key: 'reviews', label: 'Reseñas de huéspedes', description: '4 reseñas de huéspedes.', status: 'complete' },
+      { key: 'tenure', label: 'Antigüedad en la plataforma', description: 'Todavía no hay antigüedad suficiente para evaluarlo.', status: 'pending' },
+    ],
+  },
   updated_at: '2026-04-06T12:00:00.000Z',
   created_at: '2026-04-06T11:00:00.000Z',
 };
@@ -136,7 +147,8 @@ describe('SecureChat', () => {
     });
 
     expect(await screen.findAllByText('Seña informada')).not.toHaveLength(0);
-    expect(screen.getAllByText('Confirmar recepción')).not.toHaveLength(0);
+    expect(screen.queryByRole('button', { name: /Informar seña/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Coordinar llegada/i })).toBeInTheDocument();
     expect(showToastMock).toHaveBeenCalledWith(
       'Seña informada',
       'El anfitrión ya ve que informaste la seña y puede confirmar la recepción.',
@@ -182,6 +194,33 @@ describe('SecureChat', () => {
 
     expect(await screen.findByText('Podés hacer todas las preguntas necesarias antes de avanzar.')).toBeInTheDocument();
     expect(screen.getByText('Tu propuesta fue enviada por chat. El anfitrión puede responder por acá.')).toBeInTheDocument();
+  });
+
+  test('renders a compact header with host verification and a single-line booking context', async () => {
+    useAuthMock.mockReturnValue({ user: { id: 'tenant-1' } });
+    fetchConversationsMock.mockResolvedValue([
+      {
+        ...baseConversation,
+        requestMode: 'direct',
+        requestStatus: 'pending',
+        requestStartDate: '2026-05-10',
+        requestEndDate: '2026-05-13',
+        requestGuests: 2,
+        requestTotalPrice: 320000,
+      },
+    ]);
+    fetchMessagesMock.mockResolvedValue([]);
+
+    renderChat();
+
+    expect(await screen.findByRole('heading', { name: 'Mariana' })).toBeInTheDocument();
+    expect(screen.getByText('✔ Identidad verificada · ✔ Historial · ✔ Reseñas')).toBeInTheDocument();
+    expect(screen.getByText((content) => content.includes('Casa de prueba') && content.includes('2 huéspedes') && content.includes('320'))).toBeInTheDocument();
+    expect(screen.queryByText('Estado actual')).not.toBeInTheDocument();
+    expect(screen.queryByText('Actúa ahora')).not.toBeInTheDocument();
+    expect(screen.queryByText('Próximo paso')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '¿Te sirven estas fechas?' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '¿Qué incluye el precio?' })).toBeInTheDocument();
   });
 
   test('falls back to the only available conversation when the initial id no longer matches', async () => {
@@ -310,7 +349,6 @@ describe('SecureChat', () => {
     expect(screen.getByText('La seña ya fue recibida')).toBeInTheDocument();
     expect(screen.getByText('El huésped confirmó la seña a través de la plataforma. El monto queda en custodia y se libera cuando el huésped confirma su llegada al lugar.')).toBeInTheDocument();
     expect(screen.getByText('Vas a poder ver el estado y el momento de liberación desde esta reserva.')).toBeInTheDocument();
-    expect(screen.getByText('Sin acción pendiente')).toBeInTheDocument();
     expect(screen.getAllByText('Coordinar llegada').length).toBeGreaterThan(0);
   });
 
@@ -337,7 +375,6 @@ describe('SecureChat', () => {
     expect(screen.getByText('Si todavía querés avanzar, mandá otro mensaje o abrí una nueva solicitud.')).toBeInTheDocument();
     expect(screen.getByText(/El plazo de respuesta terminó/i)).toBeInTheDocument();
     expect(screen.getByText('Todavía no hubo respuesta. Podés enviar otro mensaje o ver otras opciones.')).toBeInTheDocument();
-    expect(screen.getByText('Enviar nueva solicitud')).toBeInTheDocument();
   });
 
   test('shows an expired protected request as closed for the host and removes the accept CTA', async () => {
@@ -362,7 +399,6 @@ describe('SecureChat', () => {
     expect(screen.getByText('La solicitud venció porque no se respondió dentro del plazo.')).toBeInTheDocument();
     expect(screen.getByText('Si todavía quieren avanzar, el huésped tiene que abrir una nueva solicitud.')).toBeInTheDocument();
     expect(screen.getByText(/Esta solicitud venció/i)).toBeInTheDocument();
-    expect(screen.getByText('Esperar nueva solicitud')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Aceptar solicitud/i })).not.toBeInTheDocument();
   });
 
@@ -481,9 +517,8 @@ describe('SecureChat', () => {
       expect(acceptConversationRequestMock).toHaveBeenCalledWith('conv-1');
     });
 
-    expect(await screen.findAllByText('Propuesta aceptada')).not.toHaveLength(0);
-    expect(screen.getByText('Ya la aceptaste. Esperá que el huésped confirme la seña por acá.')).toBeInTheDocument();
-    expect(screen.getByText('Huésped')).toBeInTheDocument();
+    expect(await screen.findByText('Ya la aceptaste. Esperá que el huésped confirme la seña por acá.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Aceptar propuesta/i })).not.toBeInTheDocument();
     expect(showToastMock).toHaveBeenCalledWith(
       'Propuesta aceptada',
       'La propuesta ya quedó aceptada. El siguiente paso es que el huésped informe la seña por chat.',

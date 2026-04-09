@@ -11,7 +11,23 @@ import { ReportModal } from './ReportModal';
 import { useAuth } from '../hooks/useAuth';
 import { type ReservationRequestContext } from '../types';
 import { formatBookingDateShort, getBookingDateOnlyValue, isBookingCheckInReached } from '../lib/bookingDates';
-import { getReservationFlowCopy, getReservationFlowMilestones, getReservationNextActorDisplayLabel, getReservationNextStepDisplayLabel, type ReservationFlowMilestone, type ReservationFlowMilestoneKey, type ReservationFlowMilestoneState } from '../lib/reservationFlow';
+import { getHostTrust } from '../lib/hostTrust';
+import { getReservationFlowCopy } from '../lib/reservationFlow';
+
+type InlineThreadNoticeTone = 'neutral' | 'warning' | 'brand';
+
+type InlineThreadNotice = {
+  key: string;
+  body: string;
+  title?: string;
+  tone?: InlineThreadNoticeTone;
+};
+
+const currencyFormatter = new Intl.NumberFormat('es-AR', {
+  style: 'currency',
+  currency: 'ARS',
+  maximumFractionDigits: 0,
+});
 
 const formatRequestDate = (value?: string) => {
   if (!value) {
@@ -20,6 +36,49 @@ const formatRequestDate = (value?: string) => {
 
   const normalizedDate = getBookingDateOnlyValue(value);
   return normalizedDate ? formatBookingDateShort(normalizedDate) : value;
+};
+
+const formatCompactDateRange = (startDate?: string, endDate?: string) => {
+  const startLabel = formatRequestDate(startDate);
+  const endLabel = formatRequestDate(endDate);
+
+  if (!startLabel || !endLabel) {
+    return startLabel || endLabel || null;
+  }
+
+  return `${startLabel}–${endLabel}`;
+};
+
+const getHostTrustItemShortLabel = (label: string) => {
+  if (/identidad/i.test(label)) {
+    return 'Identidad verificada';
+  }
+
+  if (/reservas/i.test(label)) {
+    return 'Historial';
+  }
+
+  if (/reseñas/i.test(label)) {
+    return 'Reseñas';
+  }
+
+  if (/antigüedad/i.test(label)) {
+    return 'Antigüedad';
+  }
+
+  return label;
+};
+
+const getHostVerificationLine = (completedLabels: string[], totalItems: number) => {
+  if (completedLabels.length === 0) {
+    return null;
+  }
+
+  if (completedLabels.length >= 4 || completedLabels.length > 3) {
+    return `✔ ${completedLabels.length} de ${totalItems} comprobaciones`;
+  }
+
+  return completedLabels.map((label) => `✔ ${label}`).join(' · ');
 };
 
 const getNightCount = (startDate?: string, endDate?: string) => {
@@ -84,46 +143,6 @@ const getRequestDeadline = (requestCreatedAt?: string) => {
   }
 
   return new Date(requestCreatedAtDate.getTime() + REQUEST_RESPONSE_WINDOW_MS);
-};
-
-const getFlowMilestoneIcon = (key: ReservationFlowMilestoneKey, mode: ReservationRequestContext['mode']) => {
-  if (key === 'request') {
-    return Icons.MessageSquare;
-  }
-
-  if (key === 'accepted') {
-    return Icons.Check;
-  }
-
-  if (key === 'deposit') {
-    return mode === 'protected' ? Icons.ShieldCheck : Icons.Clock;
-  }
-
-  return Icons.CheckCircle2;
-};
-
-const getFlowMilestoneClasses = (state: ReservationFlowMilestoneState) => {
-  if (state === 'completed') {
-    return 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-900/20 dark:text-emerald-300';
-  }
-
-  if (state === 'current') {
-    return 'border-brand/20 bg-brand/10 text-brand dark:border-brand/25 dark:bg-brand/15 dark:text-brand-light';
-  }
-
-  return 'border-slate-200 bg-slate-50 text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400';
-};
-
-const getFlowMilestoneStateLabel = (state: ReservationFlowMilestoneState) => {
-  if (state === 'completed') {
-    return 'Hecho';
-  }
-
-  if (state === 'current') {
-    return 'Ahora';
-  }
-
-  return 'Sigue';
 };
 
 const getConversationRequestStatus = (conversation: Conversation | null) => {
@@ -628,21 +647,29 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
         viewerRole: isTenantConversation ? 'guest' : 'host',
       })
     : null;
-  const requestAccepted = Boolean(flowCopy && flowCopy.stage && flowCopy.stage !== 'request-pending');
   const suggestionTexts = getSuggestionTexts(activeRequestContext, isTenantConversation);
-  const requestDateLabel = activeRequestContext
-    ? `${formatRequestDate(activeRequestContext.startDate)} al ${formatRequestDate(activeRequestContext.endDate)}`
-    : null;
-  const flowMilestonesBase = activeRequestContext
-    ? getReservationFlowMilestones({
-        mode: activeRequestContext.mode,
-        requestStatus: activeRequestContext.requestStatus,
-        bookingStatus: activeRequestContext.bookingStatus,
-        depositStatus: activeRequestContext.depositStatus,
-        cancellationActor: activeRequestContext.cancellationActor,
-        viewerRole: isTenantConversation ? 'guest' : 'host',
-      })
+  const counterpartyName = user && activeConv
+    ? user.id === activeConv.tenant_id
+      ? activeConv.hostName || 'Anfitrión'
+      : activeConv.tenantName || 'Huésped'
+    : 'Conversación';
+  const hostTrustSummary = activeConv ? getHostTrust(activeConv) : null;
+  const completedHostTrustLabels = hostTrustSummary
+    ? hostTrustSummary.items
+        .filter((item) => item.status === 'complete')
+        .map((item) => getHostTrustItemShortLabel(item.label))
     : [];
+  const hostVerificationLine = hostTrustSummary
+    ? getHostVerificationLine(completedHostTrustLabels, hostTrustSummary.items.length || completedHostTrustLabels.length)
+    : null;
+  const contextSummaryLine = activeRequestContext
+    ? [
+        activeRequestContext.propertyTitle,
+        formatCompactDateRange(activeRequestContext.startDate, activeRequestContext.endDate),
+        `${activeRequestContext.guests} ${activeRequestContext.guests === 1 ? 'huésped' : 'huéspedes'}`,
+        currencyFormatter.format(activeRequestContext.totalPrice || 0),
+      ].filter(Boolean).join(' · ')
+    : activeConv?.propertyTitle || null;
   const requestDeadline = flowCopy?.stage === 'request-pending'
     ? getRequestDeadline(activeRequestContext?.requestCreatedAt ?? activeConv?.requestCreatedAt)
     : null;
@@ -659,13 +686,6 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
       ? 'Si todavía querés avanzar, mandá otro mensaje o abrí una nueva solicitud.'
       : 'Si todavía quieren avanzar, el huésped tiene que abrir una nueva solicitud.'
     : flowCopy?.supportText ?? null;
-  const flowMilestones: ReservationFlowMilestone[] = isExpiredPendingRequest
-    ? flowMilestonesBase.map((milestone, index) => ({
-        ...milestone,
-        label: index === 0 ? 'Solicitud vencida' : milestone.label,
-        state: index === 0 ? 'current' : 'upcoming',
-      }))
-    : flowMilestonesBase;
   const requestCreatedAtDate = parseTimestampValue(activeRequestContext?.requestCreatedAt ?? activeConv?.requestCreatedAt);
   const counterpartyId = user && activeConv
     ? user.id === activeConv.tenant_id
@@ -716,43 +736,70 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
   const arrivalCoordinationDraft = isTenantConversation
     ? '¿Qué horario de llegada te queda mejor?'
     : 'Si querés, definimos ahora el horario de llegada.';
-  const requestStatusTone = isRequestExpired
-    ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300'
-    : flowCopy?.stage === 'reservation-confirmed' || flowCopy?.stage === 'protected-deposit-released'
-    ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
-    : flowCopy?.stage === 'host-cancelled'
-      ? 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300'
-      : flowCopy?.stage === 'guest-cancelled'
-        ? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200'
-        : flowCopy?.stage === 'protected-deposit-review' || flowCopy?.stage === 'protected-no-show-pending' || flowCopy?.stage === 'direct-deposit-reported'
-          ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300'
-    : flowCopy?.stage === 'request-accepted' || flowCopy?.stage === 'protected-deposit-held'
-      ? 'bg-brand/10 text-brand'
-      : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300';
-  const requestStatusIcon = isRequestExpired
-    ? <Icons.Clock className="h-3.5 w-3.5" />
-    : flowCopy?.stage === 'reservation-confirmed' || flowCopy?.stage === 'protected-deposit-released'
-    ? <Icons.CheckCircle2 className="h-3.5 w-3.5" />
-    : flowCopy?.stage === 'host-cancelled' || flowCopy?.stage === 'guest-cancelled'
-      ? <Icons.AlertTriangle className="h-3.5 w-3.5" />
-      : flowCopy?.stage === 'protected-deposit-review' || flowCopy?.stage === 'protected-no-show-pending'
-        ? <Icons.ShieldAlert className="h-3.5 w-3.5" />
-    : activeRequestContext?.mode === 'protected'
-      ? <Icons.ShieldCheck className="h-3.5 w-3.5" />
-      : flowCopy?.stage === 'direct-deposit-reported'
-        ? <Icons.Clock className="h-3.5 w-3.5" />
-        : <Icons.MessageSquare className="h-3.5 w-3.5" />;
-  const chatContextMessage = flowCopy?.stage === 'host-cancelled' || flowCopy?.stage === 'guest-cancelled'
-    ? 'El chat sigue disponible por si necesitás dejar asentado cómo cierran esta cancelación.'
-    : flowCopy?.stage === 'protected-deposit-review' || flowCopy?.stage === 'protected-no-show-pending'
-      ? 'El chat sigue activo para dejar contexto mientras la plataforma revisa este punto.'
-      : flowCopy?.stage === 'protected-deposit-held' || flowCopy?.stage === 'reservation-confirmed'
-        ? isTenantConversation
-          ? 'Próximo paso: coordiná horario de llegada con el anfitrión.'
-          : 'Próximo paso: coordiná horario de llegada con el huésped.'
-      : requestAccepted
-        ? 'Usá este chat para cerrar horarios, ingreso y cualquier ajuste final sin perder el contexto de la solicitud.'
-        : 'Dejá por acá fechas, montos y cambios importantes. Si después necesitás revisar algo, queda todo mucho más claro.';
+  const hasSystemMessages = messages.some((message) => message.is_system);
+  const requestSupportMessage = isExpiredPendingRequest ? requestGuidance : flowCopy?.supportText ?? null;
+  const inlineThreadNotices: InlineThreadNotice[] = (() => {
+    const notices: InlineThreadNotice[] = [];
+
+    if (!hasSystemMessages && requestHeading && requestDescription) {
+      notices.push({
+        key: 'flow-status',
+        title: requestHeading,
+        body: requestDescription,
+        tone: isRequestExpired ? 'warning' : 'brand',
+      });
+    }
+
+    if (!hasSystemMessages && requestSupportMessage) {
+      notices.push({
+        key: 'flow-support',
+        body: requestSupportMessage,
+        tone: 'neutral',
+      });
+    }
+
+    if (!hasSystemMessages && flowCopy?.trackingHint) {
+      notices.push({
+        key: 'flow-tracking',
+        body: flowCopy.trackingHint,
+        tone: 'neutral',
+      });
+    }
+
+    if (flowCopy?.directDepositHint) {
+      notices.push({
+        key: 'direct-deposit-hint',
+        body: flowCopy.directDepositHint,
+        tone: 'neutral',
+      });
+    }
+
+    if (requestDeadlineMessage) {
+      notices.push({
+        key: 'request-deadline',
+        body: requestDeadlineMessage,
+        tone: isRequestExpired ? 'warning' : 'neutral',
+      });
+    }
+
+    if (noResponseMessage) {
+      notices.push({
+        key: 'request-no-response',
+        body: noResponseMessage,
+        tone: 'warning',
+      });
+    }
+
+    if (arrivalActionsHint) {
+      notices.push({
+        key: 'arrival-actions',
+        body: arrivalActionsHint,
+        tone: 'neutral',
+      });
+    }
+
+    return notices;
+  })();
 
   return (
     <div className="flex h-screen overflow-hidden bg-white pt-2 dark:bg-slate-950 sm:pt-4 md:pt-0">
@@ -781,9 +828,9 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                 key={c.id}
                 onClick={() => setActiveConv(c)}
                 className={cn(
-                  "flex w-full items-center gap-4 rounded-[24px] p-3 text-left transition-all sm:rounded-3xl sm:p-4",
+                  "flex w-full items-center gap-4 rounded-[24px] border border-transparent p-3 text-left transition-all sm:rounded-3xl sm:p-4",
                   activeConv?.id === c.id 
-                    ? "bg-brand text-white shadow-xl shadow-brand/20" 
+                    ? "border-brand/15 bg-brand/8 text-slate-900 shadow-[0_18px_36px_-32px_rgba(67,56,202,0.35)] dark:border-brand/20 dark:bg-brand/10 dark:text-white"
                     : "hover:bg-slate-50 dark:hover:bg-slate-900"
                 )}
               >
@@ -796,7 +843,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                   </p>
                   <p className={cn(
                     "text-[10px] truncate uppercase font-black tracking-widest leading-tight",
-                    activeConv?.id === c.id ? "text-white/70" : "text-slate-400"
+                    activeConv?.id === c.id ? "text-brand dark:text-brand-light" : "text-slate-400"
                   )}>
                     {c.propertyTitle}
                   </p>
@@ -820,16 +867,20 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
         ) : (
           <>
             {/* Header */}
-            <div className="glass flex items-center justify-between border-b border-slate-100 p-3.5 dark:border-slate-800 sm:p-4">
+            <div className="flex items-center justify-between border-b border-slate-100 bg-white/92 p-3.5 backdrop-blur dark:border-slate-800 dark:bg-slate-950/92 sm:p-4">
               <div className="flex items-center gap-3 sm:gap-4">
                 <button onClick={() => setActiveConv(null)} className="rounded-full p-2 md:hidden">
                   <Icons.ChevronLeft className="w-6 h-6" />
                 </button>
                 <div>
-                   <h3 className="font-black text-sm uppercase tracking-tight">
-                     {user?.id === activeConv.tenant_id ? activeConv.hostName : activeConv.tenantName}
-                   </h3>
-                   <p className="text-[10px] font-bold text-brand uppercase tracking-widest">{activeConv.propertyTitle || 'Disponible en la app'}</p>
+                  <h3 className="text-base font-semibold tracking-tight text-slate-950 dark:text-white sm:text-lg">
+                    {counterpartyName}
+                  </h3>
+                  {hostVerificationLine ? (
+                    <p className="mt-1 text-[11px] font-medium leading-5 text-slate-500 dark:text-slate-300">
+                      {isTenantConversation ? hostVerificationLine : `Perfil anfitrión · ${hostVerificationLine}`}
+                    </p>
+                  ) : null}
                 </div>
               </div>
               <button onClick={() => setShowReportModal(true)} className="rounded-full p-2.5 text-slate-400 transition-colors hover:text-red-500">
@@ -837,314 +888,229 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
               </button>
             </div>
 
-            <div className="border-b border-slate-100 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-900/30">
-              <div className="mx-auto max-w-3xl space-y-3">
-                {activeRequestContext ? (
-                  <div className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950">
-                    <div className="flex flex-col gap-4">
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                        <div className="space-y-2">
-                          <div className="flex flex-wrap gap-2">
-                            <span className={cn(
-                              'inline-flex items-center gap-2 rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em]',
-                              requestStatusTone,
-                            )}>
-                              {requestStatusIcon}
-                              <span>{requestHeading}</span>
-                            </span>
-                            <span className={cn(
-                              'inline-flex items-center gap-2 rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em]',
-                              activeRequestContext.mode === 'protected'
-                                ? 'bg-brand/10 text-brand'
-                                : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
-                            )}>
-                              {activeRequestContext.mode === 'protected' ? <Icons.ShieldCheck className="h-3.5 w-3.5" /> : <Icons.MessageSquare className="h-3.5 w-3.5" />}
-                              <span>{activeRequestContext.mode === 'protected' ? 'Reserva protegida' : 'Acuerdo directo'}</span>
-                            </span>
-                          </div>
-                          <div>
-                            <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">{requestDescription}</p>
-                            {requestGuidance ? <p className="mt-2 text-sm font-medium text-slate-900 dark:text-slate-100">{requestGuidance}</p> : null}
-                            {flowCopy?.trackingHint ? <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">{flowCopy.trackingHint}</p> : null}
-                          </div>
-                        </div>
+            {contextSummaryLine ? (
+              <div className="border-b border-slate-100 bg-slate-50/75 px-4 py-2.5 dark:border-slate-800 dark:bg-slate-900/40 sm:px-6">
+                <div className="mx-auto max-w-4xl overflow-x-auto no-scrollbar">
+                  <p className="whitespace-nowrap text-xs font-medium text-slate-600 dark:text-slate-300">
+                    {contextSummaryLine}
+                  </p>
+                </div>
+              </div>
+            ) : null}
 
-                        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3">
-                          {canAcceptRequest ? (
-                            <button
-                              type="button"
-                              onClick={handleAcceptRequest}
-                              disabled={acceptingRequest || processingFlowAction !== null}
-                              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-brand px-4 py-3 text-sm font-semibold text-white shadow-[0_18px_38px_-28px_rgba(67,56,202,0.5)] transition-transform hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-70"
-                            >
-                              {acceptingRequest ? <Icons.Loader2 className="h-4 w-4 animate-spin" /> : <Icons.CheckCircle2 className="h-4 w-4" />}
-                              <span>{acceptingRequest ? 'Aceptando...' : activeRequestContext.mode === 'protected' ? 'Aceptar solicitud' : 'Aceptar propuesta'}</span>
-                            </button>
-                          ) : null}
-                          {canReportDirectDeposit ? (
-                            <button
-                              type="button"
-                              onClick={handleReportDirectDeposit}
-                              disabled={processingFlowAction !== null}
-                              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-brand px-4 py-3 text-sm font-semibold text-white shadow-[0_18px_38px_-28px_rgba(67,56,202,0.5)] transition-transform hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-70"
-                            >
-                              {processingFlowAction === 'report-direct-deposit' ? <Icons.Loader2 className="h-4 w-4 animate-spin" /> : <Icons.MessageSquare className="h-4 w-4" />}
-                              <span>{processingFlowAction === 'report-direct-deposit' ? 'Informando...' : flowCopy?.primaryActionLabel}</span>
-                            </button>
-                          ) : null}
-                          {canConfirmDirectDeposit ? (
-                            <button
-                              type="button"
-                              onClick={handleConfirmDirectDeposit}
-                              disabled={processingFlowAction !== null}
-                              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-brand px-4 py-3 text-sm font-semibold text-white shadow-[0_18px_38px_-28px_rgba(67,56,202,0.5)] transition-transform hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-70"
-                            >
-                              {processingFlowAction === 'confirm-direct-deposit' ? <Icons.Loader2 className="h-4 w-4 animate-spin" /> : <Icons.CheckCircle2 className="h-4 w-4" />}
-                              <span>{processingFlowAction === 'confirm-direct-deposit' ? 'Confirmando...' : flowCopy?.primaryActionLabel}</span>
-                            </button>
-                          ) : null}
-                          {canPayProtectedDeposit ? (
-                            <button
-                              type="button"
-                              onClick={() => activeRequestContext.bookingId && void handlePayProtectedDeposit(activeRequestContext.bookingId)}
-                              disabled={processingFlowAction !== null}
-                              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-brand px-4 py-3 text-sm font-semibold text-white shadow-[0_18px_38px_-28px_rgba(67,56,202,0.5)] transition-transform hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-70"
-                            >
-                              {processingFlowAction === 'pay-protected-deposit' ? <Icons.Loader2 className="h-4 w-4 animate-spin" /> : <Icons.ShieldCheck className="h-4 w-4" />}
-                              <span>{processingFlowAction === 'pay-protected-deposit' ? 'Registrando...' : flowCopy?.primaryActionLabel}</span>
-                            </button>
-                          ) : null}
-                          {canConfirmArrival ? (
-                            <button
-                              type="button"
-                              onClick={() => activeRequestContext.bookingId && void handleConfirmArrival(activeRequestContext.bookingId)}
-                              disabled={processingFlowAction !== null}
-                              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-brand px-4 py-3 text-sm font-semibold text-white shadow-[0_18px_38px_-28px_rgba(67,56,202,0.5)] transition-transform hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-70"
-                            >
-                              {processingFlowAction === 'confirm-arrival' ? <Icons.Loader2 className="h-4 w-4 animate-spin" /> : <Icons.CheckCircle2 className="h-4 w-4" />}
-                              <span>{processingFlowAction === 'confirm-arrival' ? 'Confirmando...' : flowCopy?.primaryActionLabel}</span>
-                            </button>
-                          ) : null}
-                          {canReportArrivalProblem ? (
-                            <button
-                              type="button"
-                              onClick={() => activeRequestContext.bookingId && void handleReportArrivalProblem(activeRequestContext.bookingId)}
-                              disabled={processingFlowAction !== null}
-                              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition-transform hover:-translate-y-px hover:border-brand/30 hover:text-brand dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 disabled:cursor-not-allowed disabled:opacity-70"
-                            >
-                              {processingFlowAction === 'report-arrival-problem' ? <Icons.Loader2 className="h-4 w-4 animate-spin" /> : <Icons.AlertTriangle className="h-4 w-4" />}
-                              <span>{processingFlowAction === 'report-arrival-problem' ? 'Informando...' : flowCopy?.secondaryActionLabel}</span>
-                            </button>
-                          ) : null}
-                          {canCoordinateArrival ? (
-                            <button
-                              type="button"
-                              onClick={() => setInputText(arrivalCoordinationDraft)}
-                              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition-transform hover:-translate-y-px hover:border-brand/30 hover:text-brand dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
-                            >
-                              <Icons.Calendar className="h-4 w-4" />
-                              <span>Coordinar llegada</span>
-                            </button>
-                          ) : null}
-                        </div>
-
-                        {arrivalActionsHint ? (
-                          <p className="rounded-2xl bg-white/70 px-4 py-3 text-xs font-medium text-slate-500 dark:bg-slate-900/70 dark:text-slate-300">
-                            {arrivalActionsHint}
-                          </p>
-                        ) : null}
-                      </div>
-
-                      {flowMilestones.length > 0 ? (
-                        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-                          {flowMilestones.map((milestone) => {
-                            const MilestoneIcon = getFlowMilestoneIcon(milestone.key, activeRequestContext.mode);
-
-                            return (
-                              <div key={milestone.key} className={cn('rounded-2xl border px-3 py-3 text-sm', getFlowMilestoneClasses(milestone.state))}>
-                                <div className="flex items-center gap-2">
-                                  <MilestoneIcon className="h-4 w-4" />
-                                  <p className="text-[10px] font-black uppercase tracking-[0.14em]">{getFlowMilestoneStateLabel(milestone.state)}</p>
-                                </div>
-                                <p className="mt-2 font-semibold">{milestone.label}</p>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ) : null}
-
-                      <div className="grid gap-2 md:grid-cols-3">
-                        <div className="rounded-2xl bg-slate-50 px-3 py-3 text-sm dark:bg-slate-900">
-                          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Estado actual</p>
-                          <p className="mt-1 font-semibold text-slate-900 dark:text-white">{requestHeading ?? 'Sin estado'}</p>
-                        </div>
-                        <div className="rounded-2xl bg-slate-50 px-3 py-3 text-sm dark:bg-slate-900">
-                          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Actúa ahora</p>
-                          <p className="mt-1 font-semibold text-slate-900 dark:text-white">{isExpiredPendingRequest ? 'Huésped' : (flowCopy ? getReservationNextActorDisplayLabel(flowCopy) : 'Sin acción pendiente')}</p>
-                        </div>
-                        <div className="rounded-2xl bg-slate-50 px-3 py-3 text-sm dark:bg-slate-900">
-                          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Próximo paso</p>
-                          <p className="mt-1 font-semibold text-slate-900 dark:text-white">{isExpiredPendingRequest ? (isTenantConversation ? 'Enviar nueva solicitud' : 'Esperar nueva solicitud') : (flowCopy ? getReservationNextStepDisplayLabel(flowCopy) : 'Seguir por chat si hace falta')}</p>
-                        </div>
-                      </div>
-
-                      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                        <div className="rounded-2xl bg-slate-50 px-3 py-3 text-sm dark:bg-slate-900">
-                          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Propiedad</p>
-                          <p className="mt-1 font-semibold text-slate-900 dark:text-white">{activeRequestContext.propertyTitle}</p>
-                        </div>
-                        <div className="rounded-2xl bg-slate-50 px-3 py-3 text-sm dark:bg-slate-900">
-                          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Fechas</p>
-                          <p className="mt-1 font-semibold text-slate-900 dark:text-white">{requestDateLabel}</p>
-                        </div>
-                        <div className="rounded-2xl bg-slate-50 px-3 py-3 text-sm dark:bg-slate-900">
-                          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Huéspedes</p>
-                          <p className="mt-1 font-semibold text-slate-900 dark:text-white">{activeRequestContext.guests} {activeRequestContext.guests === 1 ? 'huésped' : 'huéspedes'}</p>
-                        </div>
-                        <div className="rounded-2xl bg-slate-50 px-3 py-3 text-sm dark:bg-slate-900">
-                          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Total estimado</p>
-                          <p className="mt-1 font-semibold text-slate-900 dark:text-white">
-                            {new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(activeRequestContext.totalPrice || 0)}
-                          </p>
-                        </div>
-                      </div>
-
-                      {flowCopy?.directDepositHint ? (
-                        <div className="flex gap-3 rounded-[24px] border border-slate-200/80 bg-slate-50 px-4 py-3 text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
-                          <Icons.Info className="h-4 w-4 shrink-0 text-brand" />
-                          <p className="leading-5">{flowCopy.directDepositHint}</p>
-                        </div>
-                      ) : null}
-
-                      {requestDeadlineMessage ? (
-                        <div className="flex gap-3 rounded-[24px] border border-slate-200/80 bg-slate-50 px-4 py-3 text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
-                          <Icons.Clock className="h-4 w-4 shrink-0 text-brand" />
-                          <p className="leading-5">{requestDeadlineMessage}</p>
-                        </div>
-                      ) : null}
-
-                      {noResponseMessage ? (
-                        <div className="flex gap-3 rounded-[24px] border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-700 dark:border-amber-900/30 dark:bg-amber-900/20 dark:text-amber-300">
-                          <Icons.AlertTriangle className="h-4 w-4 shrink-0" />
-                          <p className="leading-5">{noResponseMessage}</p>
-                        </div>
-                      ) : null}
-
-                      {suggestionTexts.length > 0 ? (
-                        <div className="flex flex-wrap gap-2">
-                          {suggestionTexts.map((suggestion) => (
-                            <button
-                              key={suggestion}
-                              type="button"
-                              onClick={() => setInputText(suggestion)}
-                              className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition-colors hover:border-brand/30 hover:text-brand dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
-                            >
-                              {suggestion}
-                            </button>
-                          ))}
-                        </div>
-                      ) : null}
+            {/* Messages */}
+            <div ref={scrollRef} className="flex-1 overflow-y-auto bg-[linear-gradient(180deg,rgba(248,250,252,0.72),rgba(255,255,255,1))] px-4 py-5 no-scrollbar dark:bg-slate-950 sm:px-6 sm:py-6">
+              <div className="mx-auto flex w-full max-w-4xl flex-col gap-5">
+                {error && activeConv && (
+                  <div className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 dark:border-red-900/30 dark:bg-red-900/20">
+                    <Icons.AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-red-700 dark:text-red-400">{error}</p>
+                      <button
+                        onClick={() => activeConv && loadMessages(activeConv.id)}
+                        className="mt-2 text-xs font-bold text-red-600 dark:text-red-400 hover:underline"
+                      >
+                        Reintentar
+                      </button>
                     </div>
+                    <button
+                      onClick={() => setError(null)}
+                      className="text-red-400 hover:text-red-600 transition-colors"
+                    >
+                      <Icons.X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+
+                {inlineThreadNotices.map((notice) => (
+                  <div
+                    key={notice.key}
+                    className={cn(
+                      'mx-auto w-full max-w-xl rounded-[22px] border px-4 py-3 text-center shadow-[0_18px_40px_-36px_rgba(15,23,42,0.22)]',
+                      notice.tone === 'warning'
+                        ? 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900/30 dark:bg-amber-900/20 dark:text-amber-200'
+                        : notice.tone === 'brand'
+                          ? 'border-brand/15 bg-brand/6 text-slate-700 dark:border-brand/20 dark:bg-brand/12 dark:text-slate-100'
+                          : 'border-slate-200/80 bg-white text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300',
+                    )}
+                  >
+                    {notice.title ? (
+                      <p className="text-[10px] font-black uppercase tracking-[0.14em] text-brand dark:text-brand-light">
+                        {notice.title}
+                      </p>
+                    ) : null}
+                    <p className={cn('leading-6', notice.title ? 'mt-1 text-sm font-medium' : 'text-sm font-medium')}>
+                      {notice.body}
+                    </p>
+                  </div>
+                ))}
+
+                {messages.length === 0 && !error && inlineThreadNotices.length === 0 ? (
+                  <div className="py-12 text-center text-slate-400">
+                    <Icons.MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                    <p className="text-sm font-medium">Todavía no hay mensajes</p>
+                    <p className="text-xs opacity-70">Escribí el primero</p>
                   </div>
                 ) : null}
 
-                <div className="flex gap-3 rounded-[24px] border border-slate-200/80 bg-white px-4 py-3 text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300">
-                  <Icons.ShieldCheck className="h-4 w-4 shrink-0 text-brand" />
-                  <p className="leading-5">{chatContextMessage}</p>
-                </div>
+                {messages.map((msg) => (
+                  msg.is_system ? (
+                    <div key={msg.id} className="flex items-center gap-3 py-1">
+                      <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
+                      <div className="max-w-md rounded-full border border-slate-200/80 bg-white px-4 py-2 text-center text-[11px] font-medium leading-5 text-slate-500 dark:border-slate-800 dark:bg-slate-900/90 dark:text-slate-300">
+                        {msg.content}
+                      </div>
+                      <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
+                    </div>
+                  ) : (
+                    <div key={msg.id} className={cn(
+                      'flex max-w-[82%] flex-col gap-1',
+                      msg.sender_id === user?.id ? 'self-end' : 'self-start'
+                    )}>
+                      <div className={cn(
+                        'relative rounded-[26px] px-4 py-3.5 text-sm font-medium leading-7 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.22)]',
+                        msg.sender_id === user?.id
+                          ? 'rounded-br-md bg-brand text-white'
+                          : 'rounded-bl-md border border-slate-200/80 bg-white text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-white'
+                      )}>
+                        {msg.content}
+                        {sendingMessageId === msg.id ? (
+                          <Icons.Loader2 className="absolute -right-6 top-1/2 w-3 h-3 -translate-y-1/2 animate-spin" />
+                        ) : null}
+                      </div>
+                      <span className={cn(
+                        'px-2 text-[8px] font-black uppercase tracking-widest text-slate-400',
+                        msg.sender_id === user?.id ? 'text-right' : 'text-left',
+                        sendingMessageId === msg.id && 'opacity-50'
+                      )}>
+                        {(msg as any).is_optimistic ? 'Enviando...' : new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                  )
+                ))}
               </div>
             </div>
 
-            {/* Messages */}
-            <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-6 no-scrollbar bg-slate-50/30 dark:bg-transparent">
-              {error && activeConv && (
-                <div className="flex items-start gap-3 max-w-2xl mx-auto p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/30 rounded-xl">
-                  <Icons.AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-red-700 dark:text-red-400">{error}</p>
-                    <button
-                      onClick={() => activeConv && loadMessages(activeConv.id)}
-                      className="mt-2 text-xs font-bold text-red-600 dark:text-red-400 hover:underline"
-                    >
-                      Reintentar
-                    </button>
-                  </div>
+            {/* Input */}
+            <div className="border-t border-slate-100 bg-white/96 px-4 py-4 dark:border-slate-800 dark:bg-slate-950/96 sm:px-6">
+              <div className="mx-auto max-w-4xl space-y-3">
+                <div className="flex items-end gap-3">
+                  <input
+                    type="text"
+                    value={inputText}
+                    onChange={(e) => setInputText(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                    placeholder="Escribí un mensaje..."
+                    className="flex-1 rounded-[22px] border border-slate-200 bg-white px-5 py-3.5 text-sm font-medium text-slate-900 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.18)] outline-none transition-all placeholder:text-slate-400 focus:border-brand/30 focus:ring-2 focus:ring-brand/12 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
+                  />
                   <button
-                    onClick={() => setError(null)}
-                    className="text-red-400 hover:text-red-600 transition-colors"
+                    onClick={handleSend}
+                    disabled={!inputText.trim() || sendingMessageId !== null}
+                    className="rounded-[20px] bg-brand p-3.5 text-white shadow-[0_18px_38px_-24px_rgba(67,56,202,0.42)] transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    <Icons.X className="w-4 h-4" />
+                    {sendingMessageId !== null ? (
+                      <Icons.Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <Icons.Send className="w-5 h-5" />
+                    )}
                   </button>
                 </div>
-              )}
 
-              {messages.length === 0 && !error && (
-                <div className="text-center py-12 text-slate-400">
-                  <Icons.MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                  <p className="text-sm font-medium">Todavía no hay mensajes</p>
-                  <p className="text-xs opacity-70">Escribí el primero</p>
-                </div>
-              )}
-
-              {messages.map((msg) => (
-                msg.is_system ? (
-                  <div key={msg.id} className="flex items-center gap-3 py-2">
-                    <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
-                    <div className="max-w-md rounded-[20px] border border-slate-200/80 bg-slate-50 px-4 py-2 text-center text-[11px] font-medium leading-5 text-slate-500 dark:border-slate-800 dark:bg-slate-900/80 dark:text-slate-300">
-                      {msg.content}
-                    </div>
-                    <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
+                {canAcceptRequest || canReportDirectDeposit || canConfirmDirectDeposit || canPayProtectedDeposit || canConfirmArrival || canReportArrivalProblem || canCoordinateArrival ? (
+                  <div className="flex flex-wrap gap-2">
+                    {canAcceptRequest ? (
+                      <button
+                        type="button"
+                        onClick={handleAcceptRequest}
+                        disabled={acceptingRequest || processingFlowAction !== null}
+                        className="inline-flex items-center gap-2 rounded-full bg-brand px-3.5 py-2 text-xs font-semibold text-white shadow-[0_18px_34px_-28px_rgba(67,56,202,0.4)] transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-70"
+                      >
+                        {acceptingRequest ? <Icons.Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Icons.CheckCircle2 className="h-3.5 w-3.5" />}
+                        <span>{activeRequestContext?.mode === 'protected' ? 'Aceptar solicitud' : 'Aceptar propuesta'}</span>
+                      </button>
+                    ) : null}
+                    {canReportDirectDeposit ? (
+                      <button
+                        type="button"
+                        onClick={handleReportDirectDeposit}
+                        disabled={processingFlowAction !== null}
+                        className="inline-flex items-center gap-2 rounded-full bg-brand px-3.5 py-2 text-xs font-semibold text-white shadow-[0_18px_34px_-28px_rgba(67,56,202,0.4)] transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-70"
+                      >
+                        {processingFlowAction === 'report-direct-deposit' ? <Icons.Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Icons.MessageSquare className="h-3.5 w-3.5" />}
+                        <span>{processingFlowAction === 'report-direct-deposit' ? 'Informando...' : flowCopy?.primaryActionLabel}</span>
+                      </button>
+                    ) : null}
+                    {canConfirmDirectDeposit ? (
+                      <button
+                        type="button"
+                        onClick={handleConfirmDirectDeposit}
+                        disabled={processingFlowAction !== null}
+                        className="inline-flex items-center gap-2 rounded-full bg-brand px-3.5 py-2 text-xs font-semibold text-white shadow-[0_18px_34px_-28px_rgba(67,56,202,0.4)] transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-70"
+                      >
+                        {processingFlowAction === 'confirm-direct-deposit' ? <Icons.Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Icons.CheckCircle2 className="h-3.5 w-3.5" />}
+                        <span>{processingFlowAction === 'confirm-direct-deposit' ? 'Confirmando...' : flowCopy?.primaryActionLabel}</span>
+                      </button>
+                    ) : null}
+                    {canPayProtectedDeposit ? (
+                      <button
+                        type="button"
+                        onClick={() => activeRequestContext?.bookingId && void handlePayProtectedDeposit(activeRequestContext.bookingId)}
+                        disabled={processingFlowAction !== null}
+                        className="inline-flex items-center gap-2 rounded-full bg-brand px-3.5 py-2 text-xs font-semibold text-white shadow-[0_18px_34px_-28px_rgba(67,56,202,0.4)] transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-70"
+                      >
+                        {processingFlowAction === 'pay-protected-deposit' ? <Icons.Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Icons.ShieldCheck className="h-3.5 w-3.5" />}
+                        <span>{processingFlowAction === 'pay-protected-deposit' ? 'Registrando...' : flowCopy?.primaryActionLabel}</span>
+                      </button>
+                    ) : null}
+                    {canConfirmArrival ? (
+                      <button
+                        type="button"
+                        onClick={() => activeRequestContext?.bookingId && void handleConfirmArrival(activeRequestContext.bookingId)}
+                        disabled={processingFlowAction !== null}
+                        className="inline-flex items-center gap-2 rounded-full bg-brand px-3.5 py-2 text-xs font-semibold text-white shadow-[0_18px_34px_-28px_rgba(67,56,202,0.4)] transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-70"
+                      >
+                        {processingFlowAction === 'confirm-arrival' ? <Icons.Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Icons.CheckCircle2 className="h-3.5 w-3.5" />}
+                        <span>{processingFlowAction === 'confirm-arrival' ? 'Confirmando...' : flowCopy?.primaryActionLabel}</span>
+                      </button>
+                    ) : null}
+                    {canReportArrivalProblem ? (
+                      <button
+                        type="button"
+                        onClick={() => activeRequestContext?.bookingId && void handleReportArrivalProblem(activeRequestContext.bookingId)}
+                        disabled={processingFlowAction !== null}
+                        className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 transition-colors hover:border-brand/30 hover:text-brand dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 disabled:cursor-not-allowed disabled:opacity-70"
+                      >
+                        {processingFlowAction === 'report-arrival-problem' ? <Icons.Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Icons.AlertTriangle className="h-3.5 w-3.5" />}
+                        <span>{processingFlowAction === 'report-arrival-problem' ? 'Informando...' : flowCopy?.secondaryActionLabel}</span>
+                      </button>
+                    ) : null}
+                    {canCoordinateArrival ? (
+                      <button
+                        type="button"
+                        onClick={() => setInputText(arrivalCoordinationDraft)}
+                        className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 transition-colors hover:border-brand/30 hover:text-brand dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                      >
+                        <Icons.Calendar className="h-3.5 w-3.5" />
+                        <span>Coordinar llegada</span>
+                      </button>
+                    ) : null}
                   </div>
-                ) : (
-                  <div key={msg.id} className={cn(
-                    "flex flex-col gap-1 max-w-[80%]",
-                    msg.sender_id === user?.id ? "self-end" : "self-start"
-                  )}>
-                    <div className={cn(
-                      "p-4 rounded-[28px] text-sm font-medium leading-relaxed shadow-sm relative",
-                      msg.sender_id === user?.id
-                        ? "bg-brand text-white rounded-tr-none shadow-brand/10"
-                        : "bg-white dark:bg-slate-900 text-slate-900 dark:text-white rounded-tl-none border border-slate-100 dark:border-slate-800"
-                    )}>
-                      {msg.content}
-                      {sendingMessageId === msg.id && (
-                        <Icons.Loader2 className="w-3 h-3 animate-spin absolute -right-6 top-1/2 -translate-y-1/2" />
-                      )}
-                    </div>
-                    <span className={cn(
-                      "text-[8px] font-black uppercase tracking-widest text-slate-400 px-2",
-                      msg.sender_id === user?.id ? "text-right" : "text-left",
-                      sendingMessageId === msg.id && "opacity-50"
-                    )}>
-                      {(msg as any).is_optimistic ? 'Enviando...' : new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </div>
-                )
-              ))}
-            </div>
+                ) : null}
 
-            {/* Input */}
-            <div className="p-6 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-950">
-              <div className="max-w-4xl mx-auto flex items-center gap-4">
-                <input
-                  type="text"
-                  value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                  placeholder="Escribí un mensaje..."
-                  className="flex-1 bg-slate-50 dark:bg-slate-900 border-none rounded-2xl px-6 py-4 text-sm font-medium focus:ring-2 ring-brand/20 transition-all shadow-inner"
-                />
-                <button
-                  onClick={handleSend}
-                  disabled={!inputText.trim() || sendingMessageId !== null}
-                  className="bg-brand text-white p-4 rounded-2xl shadow-xl shadow-brand/20 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {sendingMessageId !== null ? (
-                    <Icons.Loader2 className="w-6 h-6 animate-spin" />
-                  ) : (
-                    <Icons.Send className="w-6 h-6" />
-                  )}
-                </button>
+                {suggestionTexts.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {suggestionTexts.map((suggestion) => (
+                      <button
+                        key={suggestion}
+                        type="button"
+                        onClick={() => setInputText(suggestion)}
+                        className="rounded-full border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-semibold text-slate-600 transition-colors hover:border-brand/30 hover:bg-white hover:text-brand dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+                      >
+                        {suggestion}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
               </div>
             </div>
           </>
