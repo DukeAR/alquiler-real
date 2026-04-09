@@ -38,6 +38,14 @@ type ThreadSystemMessagePresentation = {
   };
 };
 
+type CompactReservationStatusTone = 'neutral' | 'brand' | 'success' | 'warning';
+
+type CompactReservationStatus = {
+  key: string;
+  label: string;
+  tone: CompactReservationStatusTone;
+};
+
 const currencyFormatter = new Intl.NumberFormat('es-AR', {
   style: 'currency',
   currency: 'ARS',
@@ -94,6 +102,64 @@ const getHostVerificationLine = (completedLabels: string[], totalItems: number) 
   }
 
   return completedLabels.map((label) => `✔ ${label}`).join(' · ');
+};
+
+const getCompactReservationStatus = (
+  stage: ReturnType<typeof getReservationFlowCopy>['stage'],
+  isExpiredPendingRequest: boolean,
+) : CompactReservationStatus | null => {
+  if (isExpiredPendingRequest) {
+    return {
+      key: 'vencida',
+      label: 'Vencida',
+      tone: 'warning',
+    };
+  }
+
+  switch (stage) {
+    case 'request-pending':
+      return {
+        key: 'esperando_respuesta',
+        label: 'Esperando respuesta',
+        tone: 'warning',
+      };
+    case 'request-accepted':
+    case 'direct-deposit-reported':
+      return {
+        key: 'pendiente_seña',
+        label: 'Pendiente seña',
+        tone: 'brand',
+      };
+    case 'protected-deposit-held':
+      return {
+        key: 'seña_en_custodia',
+        label: 'Seña en custodia',
+        tone: 'brand',
+      };
+    case 'reservation-confirmed':
+    case 'protected-deposit-released':
+      return {
+        key: 'confirmada',
+        label: 'Confirmada',
+        tone: 'success',
+      };
+    case 'protected-deposit-review':
+    case 'protected-no-show-pending':
+      return {
+        key: 'en_revision',
+        label: 'En revisión',
+        tone: 'warning',
+      };
+    case 'guest-cancelled':
+    case 'host-cancelled':
+      return {
+        key: 'cancelada',
+        label: 'Cancelada',
+        tone: 'neutral',
+      };
+    default:
+      return null;
+  }
 };
 
 const getNightCount = (startDate?: string, endDate?: string) => {
@@ -690,6 +756,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
     : null;
   const isRequestExpired = Boolean(requestDeadline && Date.now() > requestDeadline.getTime());
   const isExpiredPendingRequest = Boolean(flowCopy?.stage === 'request-pending' && isRequestExpired);
+  const compactReservationStatus = getCompactReservationStatus(flowCopy?.stage ?? null, isExpiredPendingRequest);
   const requestHeading = isExpiredPendingRequest ? 'Solicitud vencida' : flowCopy?.statusLabel ?? null;
   const requestDescription = isExpiredPendingRequest
     ? isTenantConversation
@@ -750,39 +817,46 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
   const arrivalCoordinationDraft = isTenantConversation
     ? '¿Qué horario de llegada te queda mejor?'
     : 'Si querés, definimos ahora el horario de llegada.';
-  const activeDepositSystemKey = flowCopy?.stage === 'request-accepted'
-    ? 'request-accepted'
-    : flowCopy?.stage === 'direct-deposit-reported'
-      ? 'direct-after-payment'
-      : flowCopy?.stage === 'protected-deposit-held'
-        ? 'protected-after-payment'
-        : null;
-  const hasActiveDepositSystemMessage = Boolean(
-    activeDepositSystemKey
-    && messages.some((message) => message.is_system && message.system_key === activeDepositSystemKey),
+  const activeReservationSystemKey = isExpiredPendingRequest
+    ? null
+    : flowCopy?.stage === 'request-pending'
+      ? 'request-sent'
+      : flowCopy?.stage === 'request-accepted'
+        ? 'request-accepted'
+        : flowCopy?.stage === 'direct-deposit-reported' || flowCopy?.stage === 'reservation-confirmed'
+          ? 'direct-after-payment'
+          : flowCopy?.stage === 'protected-deposit-held'
+            || flowCopy?.stage === 'protected-deposit-review'
+            || flowCopy?.stage === 'protected-no-show-pending'
+            || flowCopy?.stage === 'protected-deposit-released'
+            ? 'protected-after-payment'
+            : null;
+  const hasActiveReservationSystemMessage = Boolean(
+    activeReservationSystemKey
+    && messages.some((message) => message.is_system && message.system_key === activeReservationSystemKey),
   );
-  const fallbackSystemMessages: Message[] = activeConv && activeDepositSystemKey && !hasActiveDepositSystemMessage
+  const fallbackSystemMessages: Message[] = activeConv && activeReservationSystemKey && !hasActiveReservationSystemMessage
     ? [
         {
-          id: `fallback-${activeDepositSystemKey}`,
+          id: `fallback-${activeReservationSystemKey}`,
           conversation_id: activeConv.id,
           sender_id: activeConv.host_id,
           receiver_id: activeConv.tenant_id,
           content: '',
           is_system: true,
-          system_key: activeDepositSystemKey,
+          system_key: activeReservationSystemKey,
           created_at: new Date().toISOString(),
         },
       ]
     : [];
   const threadMessages = [...messages, ...fallbackSystemMessages];
-  const hasDepositSystemStep = Boolean(activeDepositSystemKey);
+  const hasStatusSystemStep = Boolean(activeReservationSystemKey);
   const hasSystemMessages = messages.some((message) => message.is_system);
   const requestSupportMessage = isExpiredPendingRequest ? requestGuidance : flowCopy?.supportText ?? null;
   const inlineThreadNotices: InlineThreadNotice[] = (() => {
     const notices: InlineThreadNotice[] = [];
 
-    if (!hasSystemMessages && !hasDepositSystemStep && requestHeading && requestDescription) {
+    if (!hasSystemMessages && !hasStatusSystemStep && requestHeading && requestDescription) {
       notices.push({
         key: 'flow-status',
         title: requestHeading,
@@ -791,7 +865,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
       });
     }
 
-    if (!hasSystemMessages && !hasDepositSystemStep && requestSupportMessage) {
+    if (!hasSystemMessages && !hasStatusSystemStep && requestSupportMessage) {
       notices.push({
         key: 'flow-support',
         body: requestSupportMessage,
@@ -850,23 +924,35 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
       };
     }
 
+    if (message.system_key === 'request-sent' && activeRequestContext?.mode) {
+      return {
+        content: activeRequestContext.mode === 'protected'
+          ? 'Solicitud enviada. Falta la respuesta del anfitrión.'
+          : 'Propuesta enviada. Falta la respuesta del anfitrión.',
+        emphasis: 'pill',
+      };
+    }
+
     if (message.system_key === 'request-accepted' && flowCopy?.stage === 'request-accepted') {
       const content = activeRequestContext?.mode === 'protected'
+        ? isHostConversation
+          ? 'Aceptaste la solicitud.'
+          : 'El anfitrión aceptó la solicitud.'
+        : isHostConversation
+          ? 'Aceptaste la propuesta.'
+          : 'El anfitrión aceptó la propuesta.';
+      const supplementaryContent = activeRequestContext?.mode === 'protected'
         ? canPayProtectedDeposit
-          ? 'Ya podés avanzar con una reserva protegida.\nLa seña queda en custodia y se libera cuando confirmás tu llegada.'
-          : isHostConversation
-            ? 'Ya aceptaste la solicitud. Ahora falta que el huésped pague la seña.'
-            : 'Ya pueden avanzar con una reserva protegida. La seña queda en custodia y se libera cuando se confirme la llegada.'
+          ? 'Ya podés avanzar con la seña.'
+          : 'Ahora falta que el huésped pague la seña.'
         : canReportDirectDeposit
-          ? 'Ya pueden avanzar con la seña de esta reserva.'
-          : isHostConversation
-            ? 'Ya aceptaste la propuesta. Ahora falta que el huésped informe la seña.'
-            : 'Ya pueden avanzar con la seña de esta reserva.';
+          ? 'Ya podés avanzar con la seña.'
+          : 'Ahora falta que el huésped informe la seña.';
 
       return {
         content,
         emphasis: 'card',
-        supplementaryContent: 'La reserva sigue pendiente hasta que se confirme la seña.',
+        supplementaryContent,
         action: canPayProtectedDeposit
           ? {
               kind: 'pay-protected-deposit',
@@ -899,8 +985,9 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
 
     if (message.system_key === 'direct-after-payment' && flowCopy?.stage === 'direct-deposit-reported') {
       return {
-        content: 'El huésped informó la seña. Falta confirmar la recepción.',
+        content: 'La seña fue informada.',
         emphasis: 'card',
+        supplementaryContent: 'Falta confirmar la recepción.',
         action: canConfirmDirectDeposit
           ? {
               kind: 'confirm-direct-deposit',
@@ -912,10 +999,43 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
       };
     }
 
+    if (message.system_key === 'direct-after-payment' && flowCopy?.stage === 'reservation-confirmed') {
+      return {
+        content: 'Reserva confirmada',
+        emphasis: 'pill',
+        supplementaryContent: 'Ya pueden seguir por chat con los detalles finales.',
+      };
+    }
+
     if (message.system_key === 'protected-after-payment' && flowCopy?.stage === 'protected-deposit-held') {
       return {
-        content: 'La seña quedó en custodia. Se libera cuando se confirme la llegada.',
+        content: 'La seña quedó en custodia.',
         emphasis: 'card',
+        supplementaryContent: 'Se libera cuando se confirme la llegada.',
+      };
+    }
+
+    if (message.system_key === 'protected-after-payment' && flowCopy?.stage === 'protected-deposit-review') {
+      return {
+        content: 'La seña quedó en revisión.',
+        emphasis: 'pill',
+        supplementaryContent: 'La plataforma está revisando qué pasó.',
+      };
+    }
+
+    if (message.system_key === 'protected-after-payment' && flowCopy?.stage === 'protected-no-show-pending') {
+      return {
+        content: 'La llegada quedó en revisión.',
+        emphasis: 'pill',
+        supplementaryContent: 'La seña sigue en pausa hasta cerrar la revisión.',
+      };
+    }
+
+    if (message.system_key === 'protected-after-payment' && flowCopy?.stage === 'protected-deposit-released') {
+      return {
+        content: 'Reserva confirmada',
+        emphasis: 'pill',
+        supplementaryContent: 'La llegada ya quedó confirmada y la seña salió de custodia.',
       };
     }
 
@@ -1014,10 +1134,25 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
 
             {contextSummaryLine ? (
               <div className="border-b border-slate-100 bg-slate-50/75 px-4 py-2.5 dark:border-slate-800 dark:bg-slate-900/40 sm:px-6">
-                <div className="mx-auto max-w-4xl overflow-x-auto no-scrollbar">
+                <div className="mx-auto max-w-4xl space-y-1 overflow-x-auto no-scrollbar">
                   <p className="whitespace-nowrap text-xs font-medium text-slate-600 dark:text-slate-300">
                     {contextSummaryLine}
                   </p>
+                  {compactReservationStatus ? (
+                    <p className="inline-flex items-center gap-2 whitespace-nowrap text-[11px] font-medium text-slate-500 dark:text-slate-300">
+                      <span className={cn(
+                        'h-1.5 w-1.5 rounded-full',
+                        compactReservationStatus.tone === 'success'
+                          ? 'bg-emerald-500'
+                          : compactReservationStatus.tone === 'brand'
+                            ? 'bg-brand'
+                            : compactReservationStatus.tone === 'warning'
+                              ? 'bg-amber-500'
+                              : 'bg-slate-400'
+                      )} />
+                      <span>Estado: {compactReservationStatus.label}</span>
+                    </p>
+                  ) : null}
                 </div>
               </div>
             ) : null}
@@ -1050,7 +1185,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                   <div
                     key={notice.key}
                     className={cn(
-                      'mx-auto w-full max-w-xl rounded-[22px] border px-4 py-3 text-center shadow-[0_18px_40px_-36px_rgba(15,23,42,0.22)]',
+                      'mx-auto w-full max-w-lg rounded-2xl border px-4 py-2.5 text-center',
                       notice.tone === 'warning'
                         ? 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900/30 dark:bg-amber-900/20 dark:text-amber-200'
                         : notice.tone === 'brand'
@@ -1063,7 +1198,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                         {notice.title}
                       </p>
                     ) : null}
-                    <p className={cn('leading-6', notice.title ? 'mt-1 text-sm font-medium' : 'text-sm font-medium')}>
+                    <p className={cn('leading-5', notice.title ? 'mt-1 text-xs font-medium' : 'text-xs font-medium')}>
                       {notice.body}
                     </p>
                   </div>
@@ -1092,17 +1227,17 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                         : Icons.MessageSquare;
 
                     return systemMessage.emphasis === 'card' ? (
-                      <div key={msg.id} className="mx-auto w-full max-w-xl rounded-[22px] border border-slate-200/80 bg-white px-4 py-4 text-center shadow-[0_18px_40px_-36px_rgba(15,23,42,0.22)] dark:border-slate-800 dark:bg-slate-900">
-                        <p className="whitespace-pre-line text-sm font-medium leading-6 text-slate-700 dark:text-slate-100">
+                      <div key={msg.id} className="mx-auto w-full max-w-lg rounded-2xl border border-slate-200/80 bg-white px-4 py-3.5 text-center dark:border-slate-800 dark:bg-slate-900">
+                        <p className="whitespace-pre-line text-sm font-semibold leading-6 text-slate-700 dark:text-slate-100">
                           {systemMessage.content}
                         </p>
                         {systemMessage.supplementaryContent ? (
-                          <p className="mt-2 text-xs font-medium leading-5 text-slate-500 dark:text-slate-300">
+                          <p className="mt-1.5 text-xs font-medium leading-5 text-slate-500 dark:text-slate-300">
                             {systemMessage.supplementaryContent}
                           </p>
                         ) : null}
                         {systemMessage.action ? (
-                          <div className="mt-3 flex justify-center">
+                          <div className="mt-2.5 flex justify-center">
                             <button
                               type="button"
                               onClick={systemMessage.action.onClick}
@@ -1119,7 +1254,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                       <div key={msg.id} className="flex items-center gap-3 py-1">
                         <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
                         <div className="max-w-md rounded-full border border-slate-200/80 bg-white px-4 py-2 text-center text-[11px] font-medium leading-5 text-slate-500 dark:border-slate-800 dark:bg-slate-900/90 dark:text-slate-300">
-                          {systemMessage.content}
+                          {systemMessage.supplementaryContent ? `${systemMessage.content} · ${systemMessage.supplementaryContent}` : systemMessage.content}
                         </div>
                         <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
                       </div>
