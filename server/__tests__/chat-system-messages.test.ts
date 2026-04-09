@@ -12,6 +12,7 @@ describe('chatSystemMessages', () => {
         content: CHAT_SYSTEM_MESSAGE_COPY['conversation-start'],
       },
     ]);
+    expect(messages[0]?.content).toBe('Podés coordinar todo por acá. Evitá compartir datos sensibles o pagos por fuera hasta tener claro el acuerdo.');
   });
 
   test('adds request sent guidance for a pending reservation request', () => {
@@ -47,9 +48,11 @@ describe('chatSystemMessages', () => {
       'request-sent',
       'request-accepted',
       'before-payment',
+      'protected-payment',
     ]);
     expect(messages[2]?.content).toBe('Ya pueden avanzar con una reserva protegida. La seña queda en custodia y se libera cuando se confirme la llegada.');
-    expect(messages[3]?.content).toBe('La reserva sigue pendiente hasta que se confirme la seña.');
+    expect(messages[3]?.content).toBe('Antes de avanzar con la seña, confirmá que los datos coincidan con el anfitrión del aviso.');
+    expect(messages[4]?.content).toBe('Estás usando la reserva protegida para mayor claridad.');
   });
 
   test('adds post-payment and arrival coordination messages for a direct booking', () => {

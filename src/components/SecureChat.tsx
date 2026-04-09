@@ -46,6 +46,28 @@ type CompactReservationStatus = {
   tone: CompactReservationStatusTone;
 };
 
+const normalizeSafetyText = (value: string) => value
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase();
+
+const containsTransferKeywords = (value?: string) => {
+  if (!value) {
+    return false;
+  }
+
+  return /\b(transferencia|transferir|cbu|alias)\b/.test(normalizeSafetyText(value));
+};
+
+const sortThreadTimeline = (items: Message[]) => items
+  .map((message, index) => ({
+    message,
+    index,
+    timestamp: parseTimestampValue(message.created_at)?.getTime() ?? Number.MAX_SAFE_INTEGER,
+  }))
+  .sort((left, right) => left.timestamp - right.timestamp || left.index - right.index)
+  .map(({ message }) => message);
+
 const currencyFormatter = new Intl.NumberFormat('es-AR', {
   style: 'currency',
   currency: 'ARS',
@@ -849,7 +871,6 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
         },
       ]
     : [];
-  const threadMessages = [...messages, ...fallbackSystemMessages];
   const hasStatusSystemStep = Boolean(activeReservationSystemKey);
   const hasSystemMessages = messages.some((message) => message.is_system);
   const requestSupportMessage = isExpiredPendingRequest ? requestGuidance : flowCopy?.supportText ?? null;
@@ -881,14 +902,6 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
       });
     }
 
-    if (flowCopy?.directDepositHint) {
-      notices.push({
-        key: 'direct-deposit-hint',
-        body: flowCopy.directDepositHint,
-        tone: 'neutral',
-      });
-    }
-
     if (requestDeadlineMessage) {
       notices.push({
         key: 'request-deadline',
@@ -915,12 +928,99 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
 
     return notices;
   })();
+  const derivedSafetyMessages: Message[] = (() => {
+    const reminders: Message[] = [];
+    const saferChatStartText = 'Podés coordinar todo por acá. Evitá compartir datos sensibles o pagos por fuera hasta tener claro el acuerdo.';
+    const beforeDepositReminderText = 'Antes de avanzar con la seña, confirmá que los datos coincidan con el anfitrión del aviso.';
+    const protectedClarityText = 'Estás usando la reserva protegida para mayor claridad.';
+    const keywordReminderText = 'Verificá que la cuenta esté a nombre del anfitrión antes de transferir.';
+    const directProofReminderText = 'Guardá el comprobante de la seña por si necesitás revisarlo.';
+    const currentMessages = [...messages, ...fallbackSystemMessages];
+    const existingSystemTexts = new Set(
+      currentMessages
+        .filter((message) => message.is_system)
+        .map((message) => message.content.trim()),
+    );
+
+    if (messages.length === 0 && !existingSystemTexts.has(saferChatStartText) && activeConv) {
+      reminders.push({
+        id: `assist-safer-chat-${activeConv.id}`,
+        conversation_id: activeConv.id,
+        sender_id: activeConv.host_id,
+        receiver_id: activeConv.tenant_id,
+        content: saferChatStartText,
+        is_system: true,
+        system_key: 'assist-safer-chat',
+        created_at: new Date(Date.now() - 3).toISOString(),
+      });
+    }
+
+    if (flowCopy?.stage === 'request-accepted' && !existingSystemTexts.has(beforeDepositReminderText) && activeConv) {
+      const baseDate = parseTimestampValue(currentMessages.at(-1)?.created_at) ?? new Date();
+      reminders.push({
+        id: `assist-before-payment-${activeConv.id}`,
+        conversation_id: activeConv.id,
+        sender_id: activeConv.host_id,
+        receiver_id: activeConv.tenant_id,
+        content: beforeDepositReminderText,
+        is_system: true,
+        system_key: 'assist-before-payment',
+        created_at: new Date(baseDate.getTime() + 1).toISOString(),
+      });
+    }
+
+    if (flowCopy?.stage === 'request-accepted' && activeRequestContext?.mode === 'protected' && !existingSystemTexts.has(protectedClarityText) && activeConv) {
+      const baseDate = parseTimestampValue(currentMessages.at(-1)?.created_at) ?? new Date();
+      reminders.push({
+        id: `assist-protected-clarity-${activeConv.id}`,
+        conversation_id: activeConv.id,
+        sender_id: activeConv.host_id,
+        receiver_id: activeConv.tenant_id,
+        content: protectedClarityText,
+        is_system: true,
+        system_key: 'assist-protected-clarity',
+        created_at: new Date(baseDate.getTime() + 2).toISOString(),
+      });
+    }
+
+    const lastKeywordMessage = [...messages].reverse().find((message) => !message.is_system && (message.is_suspicious || containsTransferKeywords(message.content)));
+
+    if (lastKeywordMessage && !existingSystemTexts.has(keywordReminderText)) {
+      const reminderDate = parseTimestampValue(lastKeywordMessage.created_at) ?? new Date();
+      reminders.push({
+        id: `assist-account-check-${lastKeywordMessage.id}`,
+        conversation_id: lastKeywordMessage.conversation_id,
+        sender_id: lastKeywordMessage.sender_id,
+        receiver_id: lastKeywordMessage.receiver_id,
+        content: keywordReminderText,
+        is_system: true,
+        system_key: 'assist-account-check',
+        created_at: new Date(reminderDate.getTime() + 3).toISOString(),
+      });
+    }
+
+    if (isTenantConversation && flowCopy?.stage === 'direct-deposit-reported' && !existingSystemTexts.has(directProofReminderText)) {
+      const baseDate = parseTimestampValue(currentMessages.at(-1)?.created_at) ?? new Date();
+      reminders.push({
+        id: `assist-direct-proof-${activeConv?.id ?? 'chat'}`,
+        conversation_id: activeConv?.id ?? 'chat',
+        sender_id: activeConv?.host_id ?? 'system',
+        receiver_id: activeConv?.tenant_id ?? 'system',
+        content: directProofReminderText,
+        is_system: true,
+        system_key: 'assist-direct-proof',
+        created_at: new Date(baseDate.getTime() + 4).toISOString(),
+      });
+    }
+
+    return reminders;
+  })();
+  const threadMessages = sortThreadTimeline([...messages, ...fallbackSystemMessages, ...derivedSafetyMessages]);
   const getSystemMessagePresentation = (message: Message): ThreadSystemMessagePresentation => {
     if (message.system_key === 'protected-payment') {
       return {
         content: message.content,
         emphasis: 'pill',
-        hidden: true,
       };
     }
 
@@ -979,7 +1079,6 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
       return {
         content: message.content,
         emphasis: 'pill',
-        hidden: true,
       };
     }
 
@@ -1009,9 +1108,10 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
 
     if (message.system_key === 'protected-after-payment' && flowCopy?.stage === 'protected-deposit-held') {
       return {
-        content: 'La seña quedó en custodia.',
+        content: isTenantConversation
+          ? 'La seña quedó registrada y se libera cuando confirmás la llegada.'
+          : 'La seña quedó registrada y se libera cuando el huésped confirma la llegada.',
         emphasis: 'card',
-        supplementaryContent: 'Se libera cuando se confirme la llegada.',
       };
     }
 
@@ -1036,6 +1136,19 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
         content: 'Reserva confirmada',
         emphasis: 'pill',
         supplementaryContent: 'La llegada ya quedó confirmada y la seña salió de custodia.',
+      };
+    }
+
+    if (
+      message.system_key === 'assist-safer-chat'
+      || message.system_key === 'assist-before-payment'
+      || message.system_key === 'assist-protected-clarity'
+      || message.system_key === 'assist-account-check'
+      || message.system_key === 'assist-direct-proof'
+    ) {
+      return {
+        content: message.content,
+        emphasis: 'pill',
       };
     }
 

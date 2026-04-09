@@ -37,11 +37,11 @@ export type ChatSystemMessageContext = {
 };
 
 export const CHAT_SYSTEM_MESSAGE_COPY: Record<ChatSystemMessageKey, string> = {
-  'conversation-start': 'Podés hacer todas las preguntas necesarias antes de avanzar.',
+  'conversation-start': 'Podés coordinar todo por acá. Evitá compartir datos sensibles o pagos por fuera hasta tener claro el acuerdo.',
   'request-sent': 'La solicitud o la propuesta ya quedó enviada en el chat.',
   'request-accepted': 'La otra parte aceptó avanzar.',
-  'before-payment': 'La reserva sigue pendiente hasta que se confirme la seña.',
-  'protected-payment': 'La reserva sigue pendiente hasta que se confirme la seña.',
+  'before-payment': 'Antes de avanzar con la seña, confirmá que los datos coincidan con el anfitrión del aviso.',
+  'protected-payment': 'Estás usando la reserva protegida para mayor claridad.',
   'direct-after-payment': 'La seña ya quedó informada y el siguiente paso depende de la otra parte.',
   'protected-after-payment': 'La reserva protegida sigue avanzando y la seña cambia de estado según la llegada.',
   'before-arrival': 'Coordiná horario y detalles con el anfitrión antes de llegar.',
@@ -186,6 +186,13 @@ export const getChatSystemMessages = (context: ChatSystemMessageContext): ChatSy
       key: 'before-payment',
       content: CHAT_SYSTEM_MESSAGE_COPY['before-payment'],
     });
+
+    if (mode === 'protected') {
+      messages.push({
+        key: 'protected-payment',
+        content: CHAT_SYSTEM_MESSAGE_COPY['protected-payment'],
+      });
+    }
   }
 
   if (directAfterPayment) {
