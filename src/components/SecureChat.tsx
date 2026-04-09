@@ -23,6 +23,21 @@ type InlineThreadNotice = {
   tone?: InlineThreadNoticeTone;
 };
 
+type SystemMessageActionKind = 'report-direct-deposit' | 'pay-protected-deposit' | 'confirm-direct-deposit';
+
+type ThreadSystemMessagePresentation = {
+  content: string;
+  emphasis: 'pill' | 'card';
+  hidden?: boolean;
+  supplementaryContent?: string;
+  action?: {
+    kind: SystemMessageActionKind;
+    label: string;
+    loading: boolean;
+    onClick: () => void;
+  };
+};
+
 const currencyFormatter = new Intl.NumberFormat('es-AR', {
   style: 'currency',
   currency: 'ARS',
@@ -725,9 +740,8 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
   const canReportArrivalProblem = Boolean(isTenantConversation && activeRequestContext?.mode === 'protected' && flowCopy?.stage === 'protected-deposit-held' && activeRequestContext.bookingId && arrivalActionsAvailable);
   const canCoordinateArrival = Boolean(
     activeRequestContext
-    && (flowCopy?.stage === 'request-accepted'
-      || flowCopy?.stage === 'direct-deposit-reported'
-      || flowCopy?.stage === 'protected-deposit-held'
+    && (flowCopy?.stage === 'protected-deposit-held'
+      || flowCopy?.stage === 'protected-deposit-released'
       || flowCopy?.stage === 'reservation-confirmed'),
   );
   const arrivalActionsHint = flowCopy?.stage === 'protected-deposit-held' && !arrivalActionsAvailable
@@ -736,12 +750,39 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
   const arrivalCoordinationDraft = isTenantConversation
     ? '¿Qué horario de llegada te queda mejor?'
     : 'Si querés, definimos ahora el horario de llegada.';
+  const activeDepositSystemKey = flowCopy?.stage === 'request-accepted'
+    ? 'request-accepted'
+    : flowCopy?.stage === 'direct-deposit-reported'
+      ? 'direct-after-payment'
+      : flowCopy?.stage === 'protected-deposit-held'
+        ? 'protected-after-payment'
+        : null;
+  const hasActiveDepositSystemMessage = Boolean(
+    activeDepositSystemKey
+    && messages.some((message) => message.is_system && message.system_key === activeDepositSystemKey),
+  );
+  const fallbackSystemMessages: Message[] = activeConv && activeDepositSystemKey && !hasActiveDepositSystemMessage
+    ? [
+        {
+          id: `fallback-${activeDepositSystemKey}`,
+          conversation_id: activeConv.id,
+          sender_id: activeConv.host_id,
+          receiver_id: activeConv.tenant_id,
+          content: '',
+          is_system: true,
+          system_key: activeDepositSystemKey,
+          created_at: new Date().toISOString(),
+        },
+      ]
+    : [];
+  const threadMessages = [...messages, ...fallbackSystemMessages];
+  const hasDepositSystemStep = Boolean(activeDepositSystemKey);
   const hasSystemMessages = messages.some((message) => message.is_system);
   const requestSupportMessage = isExpiredPendingRequest ? requestGuidance : flowCopy?.supportText ?? null;
   const inlineThreadNotices: InlineThreadNotice[] = (() => {
     const notices: InlineThreadNotice[] = [];
 
-    if (!hasSystemMessages && requestHeading && requestDescription) {
+    if (!hasSystemMessages && !hasDepositSystemStep && requestHeading && requestDescription) {
       notices.push({
         key: 'flow-status',
         title: requestHeading,
@@ -750,7 +791,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
       });
     }
 
-    if (!hasSystemMessages && requestSupportMessage) {
+    if (!hasSystemMessages && !hasDepositSystemStep && requestSupportMessage) {
       notices.push({
         key: 'flow-support',
         body: requestSupportMessage,
@@ -800,6 +841,89 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
 
     return notices;
   })();
+  const getSystemMessagePresentation = (message: Message): ThreadSystemMessagePresentation => {
+    if (message.system_key === 'protected-payment') {
+      return {
+        content: message.content,
+        emphasis: 'pill',
+        hidden: true,
+      };
+    }
+
+    if (message.system_key === 'request-accepted' && flowCopy?.stage === 'request-accepted') {
+      const content = activeRequestContext?.mode === 'protected'
+        ? canPayProtectedDeposit
+          ? 'Ya podés avanzar con una reserva protegida.\nLa seña queda en custodia y se libera cuando confirmás tu llegada.'
+          : isHostConversation
+            ? 'Ya aceptaste la solicitud. Ahora falta que el huésped pague la seña.'
+            : 'Ya pueden avanzar con una reserva protegida. La seña queda en custodia y se libera cuando se confirme la llegada.'
+        : canReportDirectDeposit
+          ? 'Ya pueden avanzar con la seña de esta reserva.'
+          : isHostConversation
+            ? 'Ya aceptaste la propuesta. Ahora falta que el huésped informe la seña.'
+            : 'Ya pueden avanzar con la seña de esta reserva.';
+
+      return {
+        content,
+        emphasis: 'card',
+        supplementaryContent: 'La reserva sigue pendiente hasta que se confirme la seña.',
+        action: canPayProtectedDeposit
+          ? {
+              kind: 'pay-protected-deposit',
+              label: 'Pagar seña',
+              loading: processingFlowAction === 'pay-protected-deposit',
+              onClick: () => {
+                if (activeRequestContext?.bookingId) {
+                  void handlePayProtectedDeposit(activeRequestContext.bookingId);
+                }
+              },
+            }
+          : canReportDirectDeposit
+            ? {
+                kind: 'report-direct-deposit',
+                label: 'Informar seña',
+                loading: processingFlowAction === 'report-direct-deposit',
+                onClick: handleReportDirectDeposit,
+              }
+            : undefined,
+      };
+    }
+
+    if (message.system_key === 'before-payment' && flowCopy?.stage === 'request-accepted') {
+      return {
+        content: message.content,
+        emphasis: 'pill',
+        hidden: true,
+      };
+    }
+
+    if (message.system_key === 'direct-after-payment' && flowCopy?.stage === 'direct-deposit-reported') {
+      return {
+        content: 'El huésped informó la seña. Falta confirmar la recepción.',
+        emphasis: 'card',
+        action: canConfirmDirectDeposit
+          ? {
+              kind: 'confirm-direct-deposit',
+              label: 'Confirmar recepción',
+              loading: processingFlowAction === 'confirm-direct-deposit',
+              onClick: handleConfirmDirectDeposit,
+            }
+          : undefined,
+      };
+    }
+
+    if (message.system_key === 'protected-after-payment' && flowCopy?.stage === 'protected-deposit-held') {
+      return {
+        content: 'La seña quedó en custodia. Se libera cuando se confirme la llegada.',
+        emphasis: 'card',
+      };
+    }
+
+    return {
+      content: message.content,
+      emphasis: 'pill',
+    };
+  };
 
   return (
     <div className="flex h-screen overflow-hidden bg-white pt-2 dark:bg-slate-950 sm:pt-4 md:pt-0">
@@ -945,7 +1069,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                   </div>
                 ))}
 
-                {messages.length === 0 && !error && inlineThreadNotices.length === 0 ? (
+                {threadMessages.length === 0 && !error && inlineThreadNotices.length === 0 ? (
                   <div className="py-12 text-center text-slate-400">
                     <Icons.MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-30" />
                     <p className="text-sm font-medium">Todavía no hay mensajes</p>
@@ -953,16 +1077,56 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                   </div>
                 ) : null}
 
-                {messages.map((msg) => (
-                  msg.is_system ? (
-                    <div key={msg.id} className="flex items-center gap-3 py-1">
-                      <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
-                      <div className="max-w-md rounded-full border border-slate-200/80 bg-white px-4 py-2 text-center text-[11px] font-medium leading-5 text-slate-500 dark:border-slate-800 dark:bg-slate-900/90 dark:text-slate-300">
-                        {msg.content}
+                {threadMessages.map((msg) => {
+                  if (msg.is_system) {
+                    const systemMessage = getSystemMessagePresentation(msg);
+
+                    if (systemMessage.hidden) {
+                      return null;
+                    }
+
+                    const ActionIcon = systemMessage.action?.kind === 'pay-protected-deposit'
+                      ? Icons.ShieldCheck
+                      : systemMessage.action?.kind === 'confirm-direct-deposit'
+                        ? Icons.CheckCircle2
+                        : Icons.MessageSquare;
+
+                    return systemMessage.emphasis === 'card' ? (
+                      <div key={msg.id} className="mx-auto w-full max-w-xl rounded-[22px] border border-slate-200/80 bg-white px-4 py-4 text-center shadow-[0_18px_40px_-36px_rgba(15,23,42,0.22)] dark:border-slate-800 dark:bg-slate-900">
+                        <p className="whitespace-pre-line text-sm font-medium leading-6 text-slate-700 dark:text-slate-100">
+                          {systemMessage.content}
+                        </p>
+                        {systemMessage.supplementaryContent ? (
+                          <p className="mt-2 text-xs font-medium leading-5 text-slate-500 dark:text-slate-300">
+                            {systemMessage.supplementaryContent}
+                          </p>
+                        ) : null}
+                        {systemMessage.action ? (
+                          <div className="mt-3 flex justify-center">
+                            <button
+                              type="button"
+                              onClick={systemMessage.action.onClick}
+                              disabled={systemMessage.action.loading}
+                              className="inline-flex items-center gap-2 rounded-full bg-brand px-3.5 py-2 text-xs font-semibold text-white shadow-[0_18px_34px_-28px_rgba(67,56,202,0.4)] transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-70"
+                            >
+                              {systemMessage.action.loading ? <Icons.Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ActionIcon className="h-3.5 w-3.5" />}
+                              <span>{systemMessage.action.loading ? 'Procesando...' : systemMessage.action.label}</span>
+                            </button>
+                          </div>
+                        ) : null}
                       </div>
-                      <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
-                    </div>
-                  ) : (
+                    ) : (
+                      <div key={msg.id} className="flex items-center gap-3 py-1">
+                        <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
+                        <div className="max-w-md rounded-full border border-slate-200/80 bg-white px-4 py-2 text-center text-[11px] font-medium leading-5 text-slate-500 dark:border-slate-800 dark:bg-slate-900/90 dark:text-slate-300">
+                          {systemMessage.content}
+                        </div>
+                        <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
+                      </div>
+                    );
+                  }
+
+                  return (
                     <div key={msg.id} className={cn(
                       'flex max-w-[82%] flex-col gap-1',
                       msg.sender_id === user?.id ? 'self-end' : 'self-start'
@@ -986,8 +1150,8 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                         {(msg as any).is_optimistic ? 'Enviando...' : new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
-                  )
-                ))}
+                  );
+                })}
               </div>
             </div>
 
@@ -1016,7 +1180,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                   </button>
                 </div>
 
-                {canAcceptRequest || canReportDirectDeposit || canConfirmDirectDeposit || canPayProtectedDeposit || canConfirmArrival || canReportArrivalProblem || canCoordinateArrival ? (
+                {canAcceptRequest || canConfirmArrival || canReportArrivalProblem || canCoordinateArrival ? (
                   <div className="flex flex-wrap gap-2">
                     {canAcceptRequest ? (
                       <button
@@ -1027,39 +1191,6 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                       >
                         {acceptingRequest ? <Icons.Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Icons.CheckCircle2 className="h-3.5 w-3.5" />}
                         <span>{activeRequestContext?.mode === 'protected' ? 'Aceptar solicitud' : 'Aceptar propuesta'}</span>
-                      </button>
-                    ) : null}
-                    {canReportDirectDeposit ? (
-                      <button
-                        type="button"
-                        onClick={handleReportDirectDeposit}
-                        disabled={processingFlowAction !== null}
-                        className="inline-flex items-center gap-2 rounded-full bg-brand px-3.5 py-2 text-xs font-semibold text-white shadow-[0_18px_34px_-28px_rgba(67,56,202,0.4)] transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-70"
-                      >
-                        {processingFlowAction === 'report-direct-deposit' ? <Icons.Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Icons.MessageSquare className="h-3.5 w-3.5" />}
-                        <span>{processingFlowAction === 'report-direct-deposit' ? 'Informando...' : flowCopy?.primaryActionLabel}</span>
-                      </button>
-                    ) : null}
-                    {canConfirmDirectDeposit ? (
-                      <button
-                        type="button"
-                        onClick={handleConfirmDirectDeposit}
-                        disabled={processingFlowAction !== null}
-                        className="inline-flex items-center gap-2 rounded-full bg-brand px-3.5 py-2 text-xs font-semibold text-white shadow-[0_18px_34px_-28px_rgba(67,56,202,0.4)] transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-70"
-                      >
-                        {processingFlowAction === 'confirm-direct-deposit' ? <Icons.Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Icons.CheckCircle2 className="h-3.5 w-3.5" />}
-                        <span>{processingFlowAction === 'confirm-direct-deposit' ? 'Confirmando...' : flowCopy?.primaryActionLabel}</span>
-                      </button>
-                    ) : null}
-                    {canPayProtectedDeposit ? (
-                      <button
-                        type="button"
-                        onClick={() => activeRequestContext?.bookingId && void handlePayProtectedDeposit(activeRequestContext.bookingId)}
-                        disabled={processingFlowAction !== null}
-                        className="inline-flex items-center gap-2 rounded-full bg-brand px-3.5 py-2 text-xs font-semibold text-white shadow-[0_18px_34px_-28px_rgba(67,56,202,0.4)] transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-70"
-                      >
-                        {processingFlowAction === 'pay-protected-deposit' ? <Icons.Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Icons.ShieldCheck className="h-3.5 w-3.5" />}
-                        <span>{processingFlowAction === 'pay-protected-deposit' ? 'Registrando...' : flowCopy?.primaryActionLabel}</span>
                       </button>
                     ) : null}
                     {canConfirmArrival ? (

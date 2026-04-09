@@ -108,7 +108,7 @@ describe('SecureChat', () => {
     showToastMock.mockReset();
   });
 
-  test('lets the guest report a direct deposit from the chat summary', async () => {
+  test('lets the guest report a direct deposit from an inline system message in the thread', async () => {
     useAuthMock.mockReturnValue({ user: { id: 'tenant-1' } });
     fetchConversationsMock.mockResolvedValue([
       {
@@ -135,9 +135,8 @@ describe('SecureChat', () => {
 
     renderChat();
 
-    expect(await screen.findAllByText('Propuesta aceptada')).not.toHaveLength(0);
-    expect(screen.getByText('La propuesta ya fue aceptada. Confirmá por acá cuando hayas enviado la seña.')).toBeInTheDocument();
-    expect(screen.getByText('Cuando ambos confirman, la reserva queda registrada.')).toBeInTheDocument();
+    expect(await screen.findByText('Ya pueden avanzar con la seña de esta reserva.')).toBeInTheDocument();
+    expect(screen.getByText('La reserva sigue pendiente hasta que se confirme la seña.')).toBeInTheDocument();
     expect(screen.getByText('Revisá que el titular coincida con quien publica antes de transferir.')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Informar seña/i }));
@@ -146,9 +145,9 @@ describe('SecureChat', () => {
       expect(reportDirectDepositMock).toHaveBeenCalledWith('conv-1');
     });
 
-    expect(await screen.findAllByText('Seña informada')).not.toHaveLength(0);
+    expect(await screen.findByText('El huésped informó la seña. Falta confirmar la recepción.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Informar seña/i })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Coordinar llegada/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Coordinar llegada/i })).not.toBeInTheDocument();
     expect(showToastMock).toHaveBeenCalledWith(
       'Seña informada',
       'El anfitrión ya ve que informaste la seña y puede confirmar la recepción.',
@@ -283,7 +282,7 @@ describe('SecureChat', () => {
     expect(screen.queryByText('Elegí una conversación para ver el historial')).not.toBeInTheDocument();
   });
 
-  test('advances a protected reservation from payment to custody inside the chat summary', async () => {
+  test('advances a protected reservation from an inline payment step in the thread', async () => {
     const arrivalDate = getRelativeArgentinaDate(0);
     const departureDate = getRelativeArgentinaDate(4);
 
@@ -311,7 +310,8 @@ describe('SecureChat', () => {
 
     renderChat();
 
-    expect(await screen.findByText('El anfitrión ya aceptó. Para seguir, pagá la seña desde la app.')).toBeInTheDocument();
+    expect(await screen.findByText((content) => content.includes('Ya podés avanzar con una reserva protegida.') && content.includes('La seña queda en custodia y se libera cuando confirmás tu llegada.'))).toBeInTheDocument();
+    expect(screen.getByText('La reserva sigue pendiente hasta que se confirme la seña.')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Pagar seña/i }));
 
@@ -319,8 +319,7 @@ describe('SecureChat', () => {
       expect(payProtectedDepositMock).toHaveBeenCalledWith('booking-1');
     });
 
-    expect(await screen.findAllByText('Seña en custodia')).not.toHaveLength(0);
-    expect(screen.getByText('La seña se mantiene protegida hasta tu llegada.')).toBeInTheDocument();
+    expect(await screen.findByText('La seña quedó en custodia. Se libera cuando se confirme la llegada.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Confirmar llegada/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Coordinar llegada/i })).toBeInTheDocument();
   });
@@ -345,9 +344,7 @@ describe('SecureChat', () => {
 
     renderChat();
 
-    expect(await screen.findAllByText('Seña en custodia')).not.toHaveLength(0);
-    expect(screen.getByText('La seña ya fue recibida')).toBeInTheDocument();
-    expect(screen.getByText('El huésped confirmó la seña a través de la plataforma. El monto queda en custodia y se libera cuando el huésped confirma su llegada al lugar.')).toBeInTheDocument();
+    expect(await screen.findByText('La seña quedó en custodia. Se libera cuando se confirme la llegada.')).toBeInTheDocument();
     expect(screen.getByText('Vas a poder ver el estado y el momento de liberación desde esta reserva.')).toBeInTheDocument();
     expect(screen.getAllByText('Coordinar llegada').length).toBeGreaterThan(0);
   });
@@ -467,7 +464,7 @@ describe('SecureChat', () => {
 
     renderChat();
 
-    expect(await screen.findAllByText('Seña en custodia')).not.toHaveLength(0);
+    expect(await screen.findByText('La seña quedó en custodia. Se libera cuando se confirme la llegada.')).toBeInTheDocument();
     expect(screen.getByText('Confirmar llegada o reportar un problema se habilitan el día del ingreso.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Confirmar llegada/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Reportar problema/i })).not.toBeInTheDocument();
@@ -494,8 +491,9 @@ describe('SecureChat', () => {
           conversation_id: 'conv-1',
           sender_id: 'host-1',
           receiver_id: 'tenant-1',
-          content: 'El anfitrión aceptó tu propuesta. Si ya enviaste la seña, informala por acá.',
+          content: 'Ya pueden avanzar con la seña de esta reserva.',
           is_system: true,
+          system_key: 'request-accepted',
           created_at: '2026-04-06T12:10:00.000Z',
         },
       ]);
@@ -517,7 +515,6 @@ describe('SecureChat', () => {
       expect(acceptConversationRequestMock).toHaveBeenCalledWith('conv-1');
     });
 
-    expect(await screen.findByText('Ya la aceptaste. Esperá que el huésped confirme la seña por acá.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Aceptar propuesta/i })).not.toBeInTheDocument();
     expect(showToastMock).toHaveBeenCalledWith(
       'Propuesta aceptada',
@@ -526,7 +523,7 @@ describe('SecureChat', () => {
     );
   });
 
-  test('lets the host confirm a reported direct deposit from the chat summary', async () => {
+  test('lets the host confirm a reported direct deposit from an inline system message in the thread', async () => {
     useAuthMock.mockReturnValue({ user: { id: 'host-1' } });
     fetchConversationsMock.mockResolvedValue([
       {
@@ -563,6 +560,7 @@ describe('SecureChat', () => {
     });
 
     expect(await screen.findAllByText('Reserva confirmada')).not.toHaveLength(0);
+    expect(screen.getByRole('button', { name: /Coordinar llegada/i })).toBeInTheDocument();
     expect(showToastMock).toHaveBeenCalledWith(
       'Reserva confirmada',
       'La seña ya quedó confirmada y la reserva sigue por chat con los últimos detalles.',

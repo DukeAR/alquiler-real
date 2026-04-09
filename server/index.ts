@@ -2863,7 +2863,8 @@ const insertSystemConversationMessage = async (
   await db.query(
     `INSERT INTO messages (id, conversation_id, sender_id, receiver_id, content, is_system, system_key)
      VALUES ($1, $2, $3, $4, $5, TRUE, $6)
-     ON CONFLICT DO NOTHING`,
+     ON CONFLICT (conversation_id, system_key) WHERE system_key IS NOT NULL
+     DO UPDATE SET content = EXCLUDED.content`,
     [
       `msg_sys_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       conversation.id,

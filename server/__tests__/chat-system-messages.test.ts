@@ -47,8 +47,9 @@ describe('chatSystemMessages', () => {
       'request-sent',
       'request-accepted',
       'before-payment',
-      'protected-payment',
     ]);
+    expect(messages[2]?.content).toBe('Ya pueden avanzar con una reserva protegida. La seña queda en custodia y se libera cuando se confirme la llegada.');
+    expect(messages[3]?.content).toBe('La reserva sigue pendiente hasta que se confirme la seña.');
   });
 
   test('adds post-payment and arrival coordination messages for a direct booking', () => {
@@ -71,7 +72,8 @@ describe('chatSystemMessages', () => {
       'direct-after-payment',
       'before-arrival',
     ]);
-    expect(messages[2]?.content).toBe('El anfitrión aceptó tu propuesta. Si ya enviaste la seña, informala por acá.');
+    expect(messages[2]?.content).toBe('Ya pueden avanzar con la seña de esta reserva.');
+    expect(messages[3]?.content).toBe('La seña ya quedó confirmada. La reserva está registrada y pueden seguir por chat con los detalles finales.');
   });
 
   test('adds protected arrival and problem guidance when check-in day arrives', () => {
@@ -96,6 +98,7 @@ describe('chatSystemMessages', () => {
       'protected-arrival',
       'problem',
     ]);
+    expect(messages[3]?.content).toBe('La seña quedó en custodia. Se libera cuando se confirme la llegada.');
   });
 
   test('adds the review prompt after the stay is completed', () => {

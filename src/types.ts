@@ -222,6 +222,7 @@ export interface Message {
   receiver_id: string;
   content: string;
   is_system?: boolean;
+  system_key?: string;
   is_suspicious?: boolean;
   is_optimistic?: boolean;
   created_at: string;

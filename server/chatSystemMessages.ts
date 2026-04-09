@@ -40,8 +40,8 @@ export const CHAT_SYSTEM_MESSAGE_COPY: Record<ChatSystemMessageKey, string> = {
   'conversation-start': 'Podés hacer todas las preguntas necesarias antes de avanzar.',
   'request-sent': 'La solicitud o la propuesta ya quedó enviada en el chat.',
   'request-accepted': 'La otra parte aceptó avanzar.',
-  'before-payment': 'Antes de avanzar, revisá la información del aviso y con quién estás hablando.',
-  'protected-payment': 'En la reserva protegida, la seña se mantiene en custodia hasta tu llegada.',
+  'before-payment': 'La reserva sigue pendiente hasta que se confirme la seña.',
+  'protected-payment': 'La reserva sigue pendiente hasta que se confirme la seña.',
   'direct-after-payment': 'La seña ya quedó informada y el siguiente paso depende de la otra parte.',
   'protected-after-payment': 'La reserva protegida sigue avanzando y la seña cambia de estado según la llegada.',
   'before-arrival': 'Coordiná horario y detalles con el anfitrión antes de llegar.',
@@ -108,13 +108,13 @@ export const getRequestSentMessage = (mode: ReservationRequestMode) => (
 
 export const getRequestAcceptedMessage = (mode: ReservationRequestMode) => (
   mode === 'protected'
-    ? 'El anfitrión aceptó tu solicitud. El siguiente paso es pagar la seña desde la app.'
-    : 'El anfitrión aceptó tu propuesta. Si ya enviaste la seña, informala por acá.'
+    ? 'Ya pueden avanzar con una reserva protegida. La seña queda en custodia y se libera cuando se confirme la llegada.'
+    : 'Ya pueden avanzar con la seña de esta reserva.'
 );
 
 const getDirectAfterPaymentMessage = (depositStatus: ReservationDepositStatus | null) => {
   if (depositStatus === 'reported') {
-    return 'La seña ya quedó informada. Falta que el anfitrión confirme la recepción para registrar la reserva.';
+    return 'El huésped informó la seña. Falta confirmar la recepción.';
   }
 
   return 'La seña ya quedó confirmada. La reserva está registrada y pueden seguir por chat con los detalles finales.';
@@ -123,7 +123,7 @@ const getDirectAfterPaymentMessage = (depositStatus: ReservationDepositStatus | 
 const getProtectedAfterPaymentMessage = (depositStatus: ReservationDepositStatus | null) => {
   switch (depositStatus) {
     case 'held':
-      return 'La seña ya quedó en custodia. Se libera cuando confirmás tu llegada.';
+      return 'La seña quedó en custodia. Se libera cuando se confirme la llegada.';
     case 'review':
       return 'La llegada quedó en revisión y la seña sigue en pausa mientras la plataforma analiza qué pasó.';
     case 'pending_confirmation':
@@ -186,13 +186,6 @@ export const getChatSystemMessages = (context: ChatSystemMessageContext): ChatSy
       key: 'before-payment',
       content: CHAT_SYSTEM_MESSAGE_COPY['before-payment'],
     });
-
-    if (mode === 'protected') {
-      messages.push({
-        key: 'protected-payment',
-        content: CHAT_SYSTEM_MESSAGE_COPY['protected-payment'],
-      });
-    }
   }
 
   if (directAfterPayment) {
