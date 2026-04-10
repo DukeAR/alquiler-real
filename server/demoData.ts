@@ -1,3 +1,5 @@
+import { BOOKING_CONTRACT_PLATFORM_TERMS } from '../src/lib/platformTerms';
+
 export const DEMO_PASSWORD = '123456';
 
 export const DEMO_CREDENTIALS = {
@@ -202,6 +204,7 @@ const buildContractJson = (guestName: string, hostName: string, propertyTitle: s
     'No fumar dentro de la propiedad.',
     'Avisar con tiempo si la llegada se demora para coordinar el check-in.',
   ],
+  platformTerms: BOOKING_CONTRACT_PLATFORM_TERMS,
 });
 
 export const buildDemoData = (referenceDate = new Date()): DemoSeedCatalog => {

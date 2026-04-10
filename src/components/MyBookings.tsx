@@ -10,6 +10,7 @@ import {
   isBookingCheckInReached,
   parseBookingDateOnly,
 } from '../lib/bookingDates';
+import { BOOKING_CONTRACT_PLATFORM_TERMS, type BookingContractPlatformTerm } from '../lib/platformTerms';
 import { getPropertyVerificationBadge, sortPropertiesByCatalogOrder } from '../lib/propertyVerification';
 import { getProtectedDepositPricingFromBooking } from '../lib/protectedDeposit';
 import { getReservationFlowCopy, getReservationNextActorDisplayLabel, getReservationNextStepDisplayLabel } from '../lib/reservationFlow';
@@ -56,6 +57,7 @@ type ContractState = {
   propertyTitle?: string;
   location?: string;
   rules?: string[];
+  platformTerms?: BookingContractPlatformTerm[];
 };
 
 type PriorityAction = {
@@ -84,6 +86,12 @@ type BookingGroupProps = {
   emptyText: string;
   children: React.ReactNode;
 };
+
+const getContractPlatformTerms = (contract: ContractState) => (
+  Array.isArray(contract.platformTerms) && contract.platformTerms.length > 0
+    ? contract.platformTerms
+    : BOOKING_CONTRACT_PLATFORM_TERMS
+);
 
 const SummaryMetric = ({ label, value, helper, icon }: SummaryMetricProps) => (
   <div className="rounded-[28px] border border-slate-200/80 bg-white/96 p-5 shadow-[0_18px_42px_-36px_rgba(15,23,42,0.26)] dark:border-slate-800 dark:bg-slate-900/92">
@@ -1636,38 +1644,58 @@ export const MyBookings = () => {
             </div>
 
             <div className="max-h-[60vh] space-y-6 overflow-y-auto px-6 py-6">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-1">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Huésped</p>
-                  <p className="text-sm font-semibold text-slate-950 dark:text-slate-50">{selectedContract.guestName}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Anfitrión</p>
-                  <p className="text-sm font-semibold text-slate-950 dark:text-slate-50">{selectedContract.hostName}</p>
-                </div>
-              </div>
+              {(() => {
+                const contractPlatformTerms = getContractPlatformTerms(selectedContract);
 
-              <div className="space-y-1">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Propiedad</p>
-                <p className="text-base font-semibold text-slate-950 dark:text-slate-50">{selectedContract.propertyTitle}</p>
-                <p className="text-sm text-slate-500 dark:text-slate-400">{selectedContract.location}</p>
-              </div>
+                return (
+                  <>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="space-y-1">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Huésped</p>
+                        <p className="text-sm font-semibold text-slate-950 dark:text-slate-50">{selectedContract.guestName}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Anfitrión</p>
+                        <p className="text-sm font-semibold text-slate-950 dark:text-slate-50">{selectedContract.hostName}</p>
+                      </div>
+                    </div>
 
-              <div className="rounded-[28px] border border-slate-200/80 bg-slate-50/80 p-5 dark:border-slate-800 dark:bg-slate-800/50">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Condiciones de la estadía</p>
-                <ul className="mt-4 space-y-3">
-                  {(selectedContract.rules || []).map((rule, index) => (
-                    <li key={`${selectedContract.id}-${index}`} className="flex gap-3 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                      <Icons.Check className="mt-1 h-4 w-4 shrink-0 text-brand" />
-                      <span>{rule}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+                    <div className="space-y-1">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Propiedad</p>
+                      <p className="text-base font-semibold text-slate-950 dark:text-slate-50">{selectedContract.propertyTitle}</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">{selectedContract.location}</p>
+                    </div>
 
-              <p className="text-center text-sm leading-6 text-slate-500 dark:text-slate-400">
-                Al aceptar, confirmás que leíste las condiciones. Antes de transferir dinero, revisá la identidad y los datos de la reserva.
-              </p>
+                    <div className="rounded-[28px] border border-slate-200/80 bg-slate-50/80 p-5 dark:border-slate-800 dark:bg-slate-800/50">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Condiciones de la estadía</p>
+                      <ul className="mt-4 space-y-3">
+                        {(selectedContract.rules || []).map((rule, index) => (
+                          <li key={`${selectedContract.id}-${index}`} className="flex gap-3 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                            <Icons.Check className="mt-1 h-4 w-4 shrink-0 text-brand" />
+                            <span>{rule}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <div className="rounded-[28px] border border-brand/12 bg-brand/5 p-5 dark:border-brand/20 dark:bg-brand/10">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-brand">Responsabilidad y alcance de la plataforma</p>
+                      <div className="mt-4 space-y-4">
+                        {contractPlatformTerms.map((term) => (
+                          <div key={term.id} className="rounded-[20px] border border-white/80 bg-white/90 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/60">
+                            <p className="text-sm font-semibold text-slate-950 dark:text-slate-50">{term.title}</p>
+                            <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">{term.body}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <p className="text-center text-sm leading-6 text-slate-500 dark:text-slate-400">
+                      Al aceptar, confirmás que leíste las condiciones de la estadía y el alcance de Alquiler Real. Antes de pagar, revisá la identidad, los datos de la reserva y cómo se va a gestionar la seña.
+                    </p>
+                  </>
+                );
+              })()}
             </div>
 
             <div className="border-t border-slate-100 bg-slate-50/80 px-6 py-5 dark:border-slate-800 dark:bg-slate-800/30">

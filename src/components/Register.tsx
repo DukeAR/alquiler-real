@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { getPostAuthRedirect, preserveAuthRedirectState } from '../lib/authRedirect';
 import { Icons } from './Icons';
@@ -336,7 +336,7 @@ export const Register = ({ mode = 'login' }: RegisterProps) => {
                             className="mt-1 w-4 h-4 rounded border-slate-300 text-brand focus:ring-brand"
                         />
                         <span>
-                            Acepto los <strong className="text-brand">términos y condiciones</strong> y la{' '}
+                            Acepto los <Link to="/terms" className="font-semibold text-brand underline-offset-4 hover:underline">términos y condiciones</Link> y la{' '}
                             <strong className="text-brand">política de privacidad</strong>.
                         </span>
                     </label>

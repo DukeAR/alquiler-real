@@ -59,7 +59,8 @@ const hiddenHeaderPrefixes = [
   '/tenant-profile',
   '/host',
   '/about',
-  '/faq'
+  '/faq',
+  '/terms'
 ];
 
 const hiddenMobileNavPrefixes = [
@@ -70,6 +71,7 @@ const hiddenMobileNavPrefixes = [
   '/chat',
   '/about',
   '/faq',
+  '/terms',
   '/edit-profile',
   '/change-password',
   '/host-dashboard',

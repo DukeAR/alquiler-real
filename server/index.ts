@@ -20,6 +20,7 @@ import {
   getGuestPositiveBookingProfile,
   getHostVisibilityBoost,
 } from '../src/lib/positiveIncentives';
+import { BOOKING_CONTRACT_PLATFORM_TERMS } from '../src/lib/platformTerms';
 import { getProtectedDepositPricingFromBooking } from '../src/lib/protectedDeposit';
 import { buildUserVerificationStatus } from '../src/lib/userVerification';
 import {
@@ -3208,6 +3209,7 @@ const buildBookingContract = (params: {
     'No fumar dentro de la propiedad',
     'Cuidar el mobiliario y electrodomésticos',
   ],
+  platformTerms: BOOKING_CONTRACT_PLATFORM_TERMS,
 });
 
 const getEnrichedConversationById = async (conversationId: string) => {

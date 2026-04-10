@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
+import { Link } from 'react-router-dom';
 import { Icons } from './Icons';
 import { Card } from './ui/Card';
 import { PageHeader } from './ui/PageHeader';
@@ -303,6 +304,15 @@ export const FAQPage: React.FC<FAQPageProps> = ({ onBack }) => {
         eyebrow="Ayuda"
         heading="Preguntas frecuentes"
         description="Qué cambia entre acuerdo directo y reserva protegida, cómo se calcula la seña y cuándo puede revisarse o devolverse."
+        action={(
+          <Link
+            to="/terms"
+            className="inline-flex items-center gap-2 rounded-full border border-slate-200/90 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-[0_18px_35px_-28px_rgba(15,23,42,0.18)] transition-colors hover:border-slate-300 hover:text-slate-950 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-slate-600 dark:hover:bg-slate-800"
+          >
+            <Icons.FileText className="h-4 w-4" />
+            Ver términos
+          </Link>
+        )}
         contentClassName="mx-auto w-full max-w-5xl"
       />
 

@@ -466,8 +466,9 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                   </p>
 
                   <p className="app-body leading-8 text-slate-700 dark:text-slate-300">
-                    No intervenimos en el acuerdo ni en el pago.<br />
-                    Pero sí en algo clave: que tengas contexto real antes de avanzar.
+                    No reemplazamos el acuerdo entre huésped y anfitrión.<br />
+                    Si la operación va por fuera, no intervenimos en pagos ni devoluciones.<br />
+                    Si la seña se gestiona acá, sí podemos revisar lo reportado.
                   </p>
 
                   <p className="app-body leading-8 text-slate-700 dark:text-slate-300">

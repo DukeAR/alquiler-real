@@ -21,6 +21,7 @@
     "src/lib/guestVerification.ts",
     "src/lib/hostTrust.ts",
     "src/lib/protectedDeposit.ts",
+    "src/lib/platformTerms.ts",
     "src/lib/premiumVerification.ts",
     "src/lib/positiveIncentives.ts",
     "src/lib/propertyVerification.ts",

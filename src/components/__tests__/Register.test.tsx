@@ -61,6 +61,7 @@ describe('Register screen', () => {
 
     expect(screen.getByText('Nombre completo')).toBeInTheDocument();
     expect(screen.getByText('¿Ya tenés cuenta? Ingresá')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /términos y condiciones/i })).toHaveAttribute('href', '/terms');
     expect(screen.getByRole('button', { name: /^Creá tu cuenta$/i })).toBeInTheDocument();
   });
 });

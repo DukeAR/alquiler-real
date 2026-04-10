@@ -25,6 +25,7 @@ const LazyProfileViewNew = lazy(() => import('./components/ProfileViewNew.tsx'))
 const LazyPropertyDetail = lazy(() => import('./components/PropertyDetail'));
 const LazyRegister = lazy(() => import('./components/Register').then((module) => ({ default: module.Register })));
 const LazySecureChat = lazy(() => import('./components/SecureChat').then((module) => ({ default: module.SecureChat })));
+const LazyTermsPage = lazy(() => import('./components/TermsPage').then((module) => ({ default: module.TermsPage })));
 const LazyDocumentVerificationFlow = lazy(() => import('./components/verification/DocumentVerificationFlow').then((module) => ({ default: module.DocumentVerificationFlow })));
 
 const HOST_PROFILE_NOT_FOUND_MESSAGE = 'No encontramos lo que buscás.';
@@ -73,6 +74,7 @@ export default function App() {
               <Route path="/detail/:id" element={<LazyPropertyDetail />} />
               <Route path="/about" element={<AboutPageWrapper />} />
               <Route path="/faq" element={<FAQPageWrapper />} />
+              <Route path="/terms" element={<TermsPageWrapper />} />
               <Route path="/host/:id" element={<HostProfileWrapper />} />
               <Route path="/login" element={<GuestOnly><LazyRegister key="login" mode="login" /></GuestOnly>} />
               <Route path="/register" element={<GuestOnly><LazyRegister key="register" mode="register" /></GuestOnly>} />
@@ -224,6 +226,11 @@ const HostProfileWrapper = () => {
 const FAQPageWrapper = () => {
   const navigate = useNavigate();
   return <LazyFAQPage onBack={() => navigate(-1)} />;
+};
+
+const TermsPageWrapper = () => {
+  const navigate = useNavigate();
+  return <LazyTermsPage onBack={() => navigate(-1)} />;
 };
 
 const DocumentVerificationFlowWrapper = () => {

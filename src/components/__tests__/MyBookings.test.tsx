@@ -249,6 +249,11 @@ describe('MyBookings', () => {
     );
 
     fireEvent.click(await screen.findByRole('button', { name: /Ver condiciones/i }));
+
+    expect(screen.getByText('Responsabilidad y alcance de la plataforma')).toBeInTheDocument();
+    expect(screen.getByText('Lo que muestra cada aviso')).toBeInTheDocument();
+    expect(screen.getByText('Cada anfitrión es responsable por la veracidad de lo que publica y por las condiciones reales del alojamiento al momento de la estadía, incluyendo acceso, limpieza, funcionamiento y servicios ofrecidos.')).toBeInTheDocument();
+
     fireEvent.click(screen.getByRole('button', { name: /Aceptar condiciones/i }));
 
     expect(screen.getByText('Próximo paso: coordiná horario de llegada con el anfitrión.')).toBeInTheDocument();
