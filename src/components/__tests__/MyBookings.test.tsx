@@ -6,6 +6,8 @@ import { formatBookingDateTime, getCancellationDeadlineFromStartDate } from '../
 const apiJsonMock = vi.fn();
 const acceptContractMock = vi.fn();
 const cancelBookingMock = vi.fn();
+const selectExternalDepositMock = vi.fn();
+const selectProtectedDepositMock = vi.fn();
 const payProtectedDepositMock = vi.fn();
 const confirmArrivalMock = vi.fn();
 const reportArrivalProblemMock = vi.fn();
@@ -63,6 +65,8 @@ vi.mock('../../lib/apiConfig', () => ({
 vi.mock('../../services/geminiService', () => ({
   acceptContract: (...args: unknown[]) => acceptContractMock(...args),
   cancelBooking: (...args: unknown[]) => cancelBookingMock(...args),
+  selectExternalDeposit: (...args: unknown[]) => selectExternalDepositMock(...args),
+  selectProtectedDeposit: (...args: unknown[]) => selectProtectedDepositMock(...args),
   payProtectedDeposit: (...args: unknown[]) => payProtectedDepositMock(...args),
   confirmArrival: (...args: unknown[]) => confirmArrivalMock(...args),
   reportArrivalProblem: (...args: unknown[]) => reportArrivalProblemMock(...args),
@@ -95,6 +99,8 @@ describe('MyBookings', () => {
     apiJsonMock.mockReset();
     acceptContractMock.mockReset();
     cancelBookingMock.mockReset();
+    selectExternalDepositMock.mockReset();
+    selectProtectedDepositMock.mockReset();
     payProtectedDepositMock.mockReset();
     confirmArrivalMock.mockReset();
     reportArrivalProblemMock.mockReset();
@@ -260,7 +266,7 @@ describe('MyBookings', () => {
     );
   });
 
-  test('shows the protected payment step and moves the reservation to custody', async () => {
+  test('shows the deposit choice step and lets the guest complete the protected path', async () => {
     apiJsonMock.mockResolvedValue([
       {
         id: 'booking-protected-1',
@@ -285,12 +291,28 @@ describe('MyBookings', () => {
         }),
       },
     ]);
+    selectProtectedDepositMock.mockResolvedValue({
+      id: 'booking-protected-1',
+      propertyId: 'property-1',
+      userId: 'user-1',
+      status: 'confirmed',
+      requestMode: 'protected',
+      depositType: 'protected',
+      propertyTitle: 'Casa frente al bosque',
+      location: 'Cariló',
+      startDate: '2026-05-10',
+      endDate: '2026-05-14',
+      guests: 3,
+      totalPrice: 520000,
+      contractAccepted: false,
+    });
     payProtectedDepositMock.mockResolvedValue({
       id: 'booking-protected-1',
       propertyId: 'property-1',
       userId: 'user-1',
       status: 'confirmed',
       requestMode: 'protected',
+      depositType: 'protected',
       depositStatus: 'held',
       propertyTitle: 'Casa frente al bosque',
       location: 'Cariló',
@@ -307,12 +329,23 @@ describe('MyBookings', () => {
       </MemoryRouter>,
     );
 
-  expect(await screen.findAllByText('Solicitud aceptada')).not.toHaveLength(0);
-  expect(screen.getByText('El anfitrión ya aceptó. Para seguir, pagá la seña desde la app.')).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: /Abrir chat/i })).toBeInTheDocument();
-    expect(screen.getAllByText('Pagar seña')).not.toHaveLength(0);
+    expect(await screen.findAllByText('Elegir seña')).not.toHaveLength(0);
+    expect(screen.getByText('El anfitrión ya aceptó. Ahora podés coordinar la seña por fuera sin costo o resolverla dentro de la plataforma.')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /Abrir chat/i }).length).toBeGreaterThan(0);
+    expect(screen.getByRole('button', { name: /Coordinar la seña por fuera/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Resolver la seña dentro de la plataforma/i })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /Pagar seña/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Resolver la seña dentro de la plataforma/i }));
+
+    await waitFor(() => {
+      expect(selectProtectedDepositMock).toHaveBeenCalledWith('booking-protected-1');
+    });
+
+    expect(await screen.findAllByText('Solicitud aceptada')).not.toHaveLength(0);
+    expect(screen.getByText('El anfitrión ya aceptó. Para seguir, registrá la seña protegida desde la app.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Registrar seña protegida/i })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Registrar seña protegida/i }));
 
     await waitFor(() => {
       expect(payProtectedDepositMock).toHaveBeenCalledWith('booking-protected-1');
@@ -320,6 +353,11 @@ describe('MyBookings', () => {
 
     expect(await screen.findAllByText('Seña en custodia')).not.toHaveLength(0);
     expect(screen.getAllByText('La seña se mantiene protegida hasta tu llegada.')).not.toHaveLength(0);
+    expect(showToastMock).toHaveBeenCalledWith(
+      'Seña protegida',
+      'La seña queda registrada y se libera cuando confirmás la llegada. El fee ya quedó visible antes de pagar.',
+      'success',
+    );
     expect(showToastMock).toHaveBeenCalledWith(
       'Seña en custodia',
       'La seña ya quedó resguardada en la plataforma hasta que confirmes la llegada.',

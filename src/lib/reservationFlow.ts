@@ -2,6 +2,7 @@ import {
   type BookingStatus,
   type ReservationCancellationActor,
   type ReservationDepositStatus,
+  type ReservationDepositType,
   type ReservationRequestMode,
   type ReservationRequestStatus,
 } from '../types';
@@ -9,7 +10,9 @@ import {
 export type ReservationFlowStage =
   | 'request-pending'
   | 'request-not-advanced'
+  | 'deposit-choice'
   | 'request-accepted'
+  | 'external-deposit-pending'
   | 'direct-deposit-reported'
   | 'reservation-confirmed'
   | 'protected-deposit-held'
@@ -29,6 +32,7 @@ export type ReservationFlowMilestoneState = 'completed' | 'current' | 'upcoming'
 
 type ReservationFlowInput = {
   mode?: ReservationRequestMode | null;
+  depositType?: ReservationDepositType | null;
   requestStatus?: ReservationRequestStatus | null;
   bookingStatus?: BookingStatus | null;
   depositStatus?: ReservationDepositStatus | null;
@@ -66,27 +70,48 @@ const getRequestStatusLabel = (mode: ReservationRequestMode, viewerRole: Reserva
   return viewerRole === 'host' ? 'Propuesta recibida' : 'Propuesta enviada';
 };
 
+const getModelLabel = (mode: ReservationRequestMode, depositType?: ReservationDepositType | null) => {
+  if (depositType === 'protected') {
+    return 'Seña protegida';
+  }
+
+  if (depositType === 'external' || mode === 'direct') {
+    return 'Seña externa';
+  }
+
+  return 'Solicitud registrada';
+};
+
 const getDepositMilestoneLabel = (
   mode: ReservationRequestMode,
+  depositType: ReservationDepositType | null | undefined,
   stage: ReservationFlowStageWithIssues | null,
 ) => {
-  if (mode === 'protected') {
-    if (stage === 'protected-deposit-review') {
-      return 'Seña en revisión';
-    }
-
-    if (stage === 'protected-no-show-pending') {
-      return 'Llegada en revisión';
-    }
-
-    return 'Seña en custodia';
+  if (stage === 'deposit-choice') {
+    return 'Elegir seña';
   }
 
-  if (stage === 'direct-deposit-reported') {
-    return 'Seña informada';
+  if (depositType === 'external' || mode === 'direct') {
+    if (stage === 'direct-deposit-reported') {
+      return 'Seña informada';
+    }
+
+    if (stage === 'external-deposit-pending') {
+      return 'Seña por coordinar';
+    }
+
+    return 'Seña confirmada';
   }
 
-  return 'Seña confirmada';
+  if (stage === 'protected-deposit-review') {
+    return 'Seña en revisión';
+  }
+
+  if (stage === 'protected-no-show-pending') {
+    return 'Llegada en revisión';
+  }
+
+  return 'Seña en custodia';
 };
 
 const getMilestoneIndex = (stage: ReservationFlowStageWithIssues | null) => {
@@ -94,9 +119,10 @@ const getMilestoneIndex = (stage: ReservationFlowStageWithIssues | null) => {
     case 'request-pending':
       return 0;
     case 'request-not-advanced':
-      return 1;
     case 'request-accepted':
       return 1;
+    case 'deposit-choice':
+    case 'external-deposit-pending':
     case 'direct-deposit-reported':
     case 'protected-deposit-held':
     case 'protected-deposit-review':
@@ -123,7 +149,7 @@ export const getReservationFlowMilestones = (input: ReservationFlowInput): Reser
   const milestones = [
     getRequestStatusLabel(input.mode, viewerRole),
     stage === 'request-not-advanced' ? 'No avanzó' : 'Aceptada',
-    getDepositMilestoneLabel(input.mode, stage),
+    getDepositMilestoneLabel(input.mode, input.depositType, stage),
     stage === 'guest-cancelled' || stage === 'host-cancelled' ? 'Cancelada' : 'Confirmada',
   ] as const;
 
@@ -136,6 +162,7 @@ export const getReservationFlowMilestones = (input: ReservationFlowInput): Reser
 
 export const getReservationFlowStage = ({
   mode,
+  depositType,
   requestStatus,
   bookingStatus,
   depositStatus,
@@ -163,8 +190,12 @@ export const getReservationFlowStage = ({
       return 'direct-deposit-reported';
     }
 
-    if (depositStatus === 'confirmed' || (bookingStatus === 'confirmed' && requestStatus !== 'accepted')) {
+    if (depositStatus === 'confirmed' || (bookingStatus === 'confirmed' && requestStatus !== 'accepted' && depositStatus !== 'external_pending')) {
       return 'reservation-confirmed';
+    }
+
+    if (depositStatus === 'external_pending') {
+      return 'external-deposit-pending';
     }
 
     if (requestAccepted) {
@@ -190,6 +221,14 @@ export const getReservationFlowStage = ({
     return 'protected-deposit-held';
   }
 
+  if (requestAccepted && depositType === 'external') {
+    return 'external-deposit-pending';
+  }
+
+  if (requestAccepted && !depositType) {
+    return 'deposit-choice';
+  }
+
   if (requestAccepted) {
     return 'request-accepted';
   }
@@ -209,7 +248,7 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
     };
   }
 
-  const modelLabel = input.mode === 'protected' ? 'Reserva protegida' : 'Acuerdo directo';
+  const modelLabel = getModelLabel(input.mode, input.depositType);
   const viewerRole = input.viewerRole ?? 'guest';
 
   switch (stage) {
@@ -221,7 +260,7 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
         description: input.mode === 'protected'
           ? viewerRole === 'host'
             ? 'Respondé esta solicitud dentro de las próximas 24 horas para que no se venza.'
-            : 'Tu solicitud ya quedó enviada. Esperá a que el anfitrión la acepte antes de pagar la seña.'
+            : 'Tu solicitud ya quedó enviada. Esperá a que el anfitrión la acepte antes de definir la seña.'
           : viewerRole === 'host'
             ? 'Revisá la propuesta y respondé por acá antes de que venza.'
             : 'Tu propuesta ya quedó enviada. Esperá a que el anfitrión la acepte antes de seguir con la seña.',
@@ -249,6 +288,21 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
         nextActorLabel: 'Sin acción pendiente',
         nextStepLabel: 'Seguir por chat si hace falta',
       };
+    case 'deposit-choice':
+      return {
+        stage,
+        modelLabel,
+        statusLabel: viewerRole === 'host' ? 'Seña por definir' : 'Elegir seña',
+        description: viewerRole === 'host'
+          ? 'Ya la aceptaste. Ahora el huésped puede coordinar la seña por fuera o resolverla dentro de la plataforma.'
+          : 'El anfitrión ya aceptó. Ahora podés coordinar la seña por fuera sin costo o resolverla dentro de la plataforma.',
+        supportText: viewerRole === 'host'
+          ? 'Si elige la opción protegida, la seña queda registrada en la plataforma y el fee aparece antes de confirmar.'
+          : 'Si elegís la opción protegida, la seña queda registrada y se libera cuando confirmás la llegada. El fee se muestra antes de confirmar.',
+        nextActor: 'guest',
+        nextActorLabel: 'Huésped',
+        nextStepLabel: viewerRole === 'host' ? 'Esperar elección de seña' : 'Elegir cómo resolver la seña',
+      };
     case 'request-accepted':
       return {
         stage,
@@ -256,8 +310,8 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
         statusLabel: input.mode === 'protected' ? 'Solicitud aceptada' : 'Propuesta aceptada',
         description: input.mode === 'protected'
           ? viewerRole === 'host'
-            ? 'Ya la aceptaste. Ahora el huésped tiene que pagar la seña desde la app.'
-            : 'El anfitrión ya aceptó. Para seguir, pagá la seña desde la app.'
+            ? 'Ya la aceptaste. Ahora el huésped puede registrar la seña protegida desde la app.'
+            : 'El anfitrión ya aceptó. Para seguir, registrá la seña protegida desde la app.'
           : viewerRole === 'host'
             ? 'Ya la aceptaste. Esperá que el huésped confirme la seña por acá.'
             : 'La propuesta ya fue aceptada. Confirmá por acá cuando hayas enviado la seña.',
@@ -267,12 +321,29 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
         nextActor: 'guest',
         nextActorLabel: 'Huésped',
         nextStepLabel: input.mode === 'protected'
-          ? viewerRole === 'host' ? 'Esperar pago de seña' : 'Pagar seña'
+          ? viewerRole === 'host' ? 'Esperar registro de seña' : 'Registrar seña protegida'
           : viewerRole === 'host' ? 'Esperar que el huésped informe la seña' : 'Informar seña',
         primaryActionLabel: viewerRole === 'guest'
-          ? input.mode === 'protected' ? 'Pagar seña' : 'Informar seña'
+          ? input.mode === 'protected' ? 'Registrar seña protegida' : 'Informar seña'
           : undefined,
         directDepositHint: input.mode === 'direct' ? 'Revisá que el titular coincida con quien publica antes de transferir.' : undefined,
+      };
+    case 'external-deposit-pending':
+      return {
+        stage,
+        modelLabel,
+        statusLabel: 'Seña externa',
+        description: viewerRole === 'host'
+          ? 'El huésped eligió coordinar la seña por fuera.'
+          : 'Elegiste coordinar la seña por fuera sin costo.',
+        supportText: viewerRole === 'host'
+          ? 'La plataforma no cobra este paso. Si la reciben, después la pueden dejar asentada por chat.'
+          : 'Podés seguir por chat sin pagar dentro de la plataforma. Si querés dejarlo asentado después, informá la seña por acá.',
+        nextActor: viewerRole === 'guest' ? 'guest' : 'none',
+        nextActorLabel: viewerRole === 'guest' ? 'Huésped' : 'Sin acción pendiente',
+        nextStepLabel: viewerRole === 'guest' ? 'Seguir por chat' : 'Seguir por chat si hace falta',
+        primaryActionLabel: viewerRole === 'guest' ? 'Informar seña' : undefined,
+        directDepositHint: 'Revisá que el titular coincida con quien publica antes de transferir.',
       };
     case 'direct-deposit-reported':
       return {
@@ -367,20 +438,20 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
       return {
         stage,
         modelLabel,
-        statusLabel: input.mode === 'protected' ? 'Cancelaste la reserva' : 'Cancelaste la reserva',
+        statusLabel: 'Cancelaste la reserva',
         description: 'La cancelación ya quedó registrada.',
-        supportText: input.mode === 'protected'
+        supportText: input.mode === 'protected' || input.depositType === 'protected'
           ? input.depositStatus === 'review'
             ? 'La devolución depende del momento de la cancelación y de cómo quedó la reserva. La seña está en revisión hasta cerrar qué corresponde.'
             : 'La devolución depende del momento de la cancelación y del estado de la reserva. Si la seña ya estaba en custodia, la plataforma revisa cómo cerrarla.'
           : 'La plataforma solo informa el estado. Si hubo una seña, la resolución queda entre ustedes.',
-        nextActor: input.mode === 'protected' && (input.depositStatus === 'review' || input.depositStatus === 'held' || input.depositStatus === 'pending_confirmation')
+        nextActor: (input.mode === 'protected' || input.depositType === 'protected') && (input.depositStatus === 'review' || input.depositStatus === 'held' || input.depositStatus === 'pending_confirmation')
           ? 'platform'
           : 'none',
-        nextActorLabel: input.mode === 'protected' && (input.depositStatus === 'review' || input.depositStatus === 'held' || input.depositStatus === 'pending_confirmation')
+        nextActorLabel: (input.mode === 'protected' || input.depositType === 'protected') && (input.depositStatus === 'review' || input.depositStatus === 'held' || input.depositStatus === 'pending_confirmation')
           ? 'Plataforma'
           : 'Sin acción pendiente',
-        nextStepLabel: input.mode === 'protected' && (input.depositStatus === 'review' || input.depositStatus === 'held' || input.depositStatus === 'pending_confirmation')
+        nextStepLabel: (input.mode === 'protected' || input.depositType === 'protected') && (input.depositStatus === 'review' || input.depositStatus === 'held' || input.depositStatus === 'pending_confirmation')
           ? 'Esperar revisión'
           : 'Seguir por chat si hace falta',
       };
@@ -390,12 +461,12 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
         modelLabel,
         statusLabel: 'Canceló el anfitrión',
         description: 'La reserva ya no sigue activa.',
-        supportText: input.mode === 'protected'
+        supportText: input.mode === 'protected' || input.depositType === 'protected'
           ? 'Si la seña ya estaba en custodia, se devuelve.'
           : 'La plataforma solo informa el estado. Si hubo una seña, la resolución queda entre ustedes.',
-        nextActor: input.mode === 'protected' ? 'platform' : 'none',
-        nextActorLabel: input.mode === 'protected' ? 'Plataforma' : 'Sin acción pendiente',
-        nextStepLabel: input.mode === 'protected' ? 'Esperar devolución' : 'Seguir por chat si hace falta',
+        nextActor: input.mode === 'protected' || input.depositType === 'protected' ? 'platform' : 'none',
+        nextActorLabel: input.mode === 'protected' || input.depositType === 'protected' ? 'Plataforma' : 'Sin acción pendiente',
+        nextStepLabel: input.mode === 'protected' || input.depositType === 'protected' ? 'Esperar devolución' : 'Seguir por chat si hace falta',
       };
     default:
       return {

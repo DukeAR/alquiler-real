@@ -67,6 +67,33 @@ const matchesGuestPositiveBookingStatsQuery = (text: string) => (
   text.includes('FROM users u') && text.includes('agreements_kept_count') && text.includes('would_interact_again_count')
 );
 
+const matchesConversationDepositStateSyncQuery = (text: string) => (
+  text.includes('UPDATE conversations')
+  && text.includes('deposit_status = CASE')
+  && text.includes('WHERE booking_id = $13')
+);
+
+const expectConversationDepositStatusSyncParams = (
+  params: unknown[] | undefined,
+  depositStatus: string | null,
+  bookingId: string,
+) => {
+  expect(params).toHaveLength(13);
+  expect(params?.[0]).toBe(depositStatus);
+  expect(params?.[1]).toBe(true);
+  expect(params?.[2]).toBeNull();
+  expect(params?.[3]).toBe(false);
+  expect(params?.[4]).toBeNull();
+  expect(params?.[5]).toBe(false);
+  expect(params?.[6]).toBeNull();
+  expect(params?.[7]).toBe(false);
+  expect(params?.[8]).toBeNull();
+  expect(params?.[9]).toBe(false);
+  expect(params?.[10]).toBeNull();
+  expect(params?.[11]).toBe(false);
+  expect(params?.[12]).toBe(bookingId);
+};
+
 const buildInternalRiskRow = (overrides: Record<string, unknown> = {}) => ({
   role: 'tenant',
   phone: null,
@@ -1048,12 +1075,13 @@ describe('Bookings and availability endpoints', () => {
         return { rows: [] };
       }
 
-      if (text.includes('UPDATE bookings') && text.includes("request_mode = 'direct'")) {
+      if (text.includes('UPDATE bookings') && text.includes("deposit_type = 'external'") && text.includes("deposit_status = 'confirmed'")) {
         expect(params?.[0]).toBe('booking-1');
+        expect(typeof params?.[1]).toBe('string');
         return { rows: [] };
       }
 
-      if (text.includes('UPDATE conversations') && text.includes("deposit_status = 'confirmed'")) {
+      if (text.includes('UPDATE conversations') && text.includes("deposit_type = 'external'") && text.includes("deposit_status = 'confirmed'")) {
         expect(params).toEqual(['booking-1', 'conv-1']);
         return { rows: [] };
       }
@@ -1102,12 +1130,31 @@ describe('Bookings and availability endpoints', () => {
       }
 
       if (text.includes('UPDATE bookings') && text.includes("deposit_status = 'held'")) {
-        expect(params).toEqual(['booking-1', 'user-1']);
+        expect(params).toHaveLength(6);
+        expect(params?.[0]).toBe('booking-1');
+        expect(params?.[1]).toBe('user-1');
+        expect(Number(params?.[2])).toBeGreaterThan(0);
+        expect(Number(params?.[3])).toBeGreaterThanOrEqual(0);
+        expect(Number(params?.[4])).toBeGreaterThan(Number(params?.[2]));
+        expect(String(params?.[5])).toMatch(/^dep_booking-1_/);
         return { rows: [] };
       }
 
-      if (text.includes('UPDATE conversations') && text.includes("deposit_status = 'held'")) {
-        expect(params).toEqual(['booking-1']);
+      if (matchesConversationDepositStateSyncQuery(text)) {
+        expect(params).toHaveLength(13);
+        expect(params?.[0]).toBe('held');
+        expect(params?.[1]).toBe(true);
+        expect(params?.[2]).toBe('protected');
+        expect(params?.[3]).toBe(true);
+        expect(Number(params?.[4])).toBeGreaterThan(0);
+        expect(params?.[5]).toBe(true);
+        expect(Number(params?.[6])).toBeGreaterThanOrEqual(0);
+        expect(params?.[7]).toBe(true);
+        expect(Number(params?.[8])).toBeGreaterThan(Number(params?.[4]));
+        expect(params?.[9]).toBe(true);
+        expect(String(params?.[10])).toMatch(/^dep_booking-1_/);
+        expect(params?.[11]).toBe(true);
+        expect(params?.[12]).toBe('booking-1');
         return { rows: [] };
       }
 
@@ -1369,8 +1416,8 @@ describe('Bookings and availability endpoints', () => {
         return { rows: [] };
       }
 
-      if (text.includes('UPDATE conversations') && text.includes('deposit_status = $1')) {
-        expect(params).toEqual([null, 'booking-2']);
+      if (matchesConversationDepositStateSyncQuery(text)) {
+        expectConversationDepositStatusSyncParams(params, null, 'booking-2');
         return { rows: [] };
       }
 
@@ -1440,8 +1487,8 @@ describe('Bookings and availability endpoints', () => {
         return { rows: [] };
       }
 
-      if (text.includes('UPDATE conversations') && text.includes('deposit_status = $1')) {
-        expect(params).toEqual(['review', 'booking-protected-cancel']);
+      if (matchesConversationDepositStateSyncQuery(text)) {
+        expectConversationDepositStatusSyncParams(params, 'review', 'booking-protected-cancel');
         return { rows: [] };
       }
 
@@ -1510,8 +1557,8 @@ describe('Bookings and availability endpoints', () => {
         return { rows: [] };
       }
 
-      if (text.includes('UPDATE conversations') && text.includes('deposit_status = $1')) {
-        expect(params).toEqual(['refunded', 'booking-host-cancel']);
+      if (matchesConversationDepositStateSyncQuery(text)) {
+        expectConversationDepositStatusSyncParams(params, 'refunded', 'booking-host-cancel');
         return { rows: [] };
       }
 
@@ -1582,8 +1629,8 @@ describe('Bookings and availability endpoints', () => {
         return { rows: [] };
       }
 
-      if (text.includes('UPDATE conversations') && text.includes('deposit_status = $1')) {
-        expect(params).toEqual(['review', 'booking-arrival-problem']);
+      if (matchesConversationDepositStateSyncQuery(text)) {
+        expectConversationDepositStatusSyncParams(params, 'review', 'booking-arrival-problem');
         return { rows: [] };
       }
 
@@ -1687,8 +1734,8 @@ describe('Bookings and availability endpoints', () => {
         return { rows: [] };
       }
 
-      if (text.includes('UPDATE conversations') && text.includes('deposit_status = $1')) {
-        expect(params).toEqual(['pending_confirmation', 'booking-no-show']);
+      if (matchesConversationDepositStateSyncQuery(text)) {
+        expectConversationDepositStatusSyncParams(params, 'pending_confirmation', 'booking-no-show');
         return { rows: [] };
       }
 

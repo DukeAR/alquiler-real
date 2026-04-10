@@ -174,7 +174,7 @@ const selectDateRange = async (checkInIso: string, checkOutIso: string) => {
   fireEvent.click(screen.getByRole('button', { name: new RegExp(checkOutIso) }));
 };
 
-const advanceToConfirmationStep = async (mode: 'direct' | 'protected' = 'direct') => {
+const advanceToConfirmationStep = async () => {
   const checkInIso = isoPlusDays(2);
   const checkOutIso = isoPlusDays(5);
 
@@ -182,17 +182,6 @@ const advanceToConfirmationStep = async (mode: 'direct' | 'protected' = 'direct'
 
   fireEvent.click(screen.getByRole('button', { name: /^siguiente$/i }));
   await waitFor(() => expect(screen.getByText('Definí quiénes viajan')).toBeDefined());
-
-  fireEvent.click(screen.getByRole('button', { name: /^siguiente$/i }));
-  await waitFor(() => expect(screen.getByText('Elegí cómo querés avanzar')).toBeDefined());
-
-  if (mode === 'protected') {
-    fireEvent.click(screen.getByLabelText(/reserva protegida/i));
-    expect(screen.getByLabelText(/reserva protegida/i)).toBeChecked();
-  } else {
-    fireEvent.click(screen.getByLabelText(/acuerdo directo/i));
-    expect(screen.getByLabelText(/acuerdo directo/i)).toBeChecked();
-  }
 
   fireEvent.click(screen.getByRole('button', { name: /^siguiente$/i }));
   await waitFor(() => expect(screen.getByText('Revisá el resumen final')).toBeDefined());
@@ -297,14 +286,14 @@ describe('PropertyDetail', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
 
-  test('shows one booking step at a time and asks to choose how to continue before advancing', async () => {
+  test('shows one booking step at a time and goes from guests straight to confirmation', async () => {
     renderPropertyDetail();
 
     await waitForPropertyHeading();
 
     expect(screen.queryByText('Elegí las fechas')).toBeNull();
     expect(screen.queryByText('Definí quiénes viajan')).toBeNull();
-    expect(screen.queryByText('Acuerdo directo')).toBeNull();
+    expect(screen.queryByText('La elegís después de la aceptación')).toBeNull();
 
     await openBookingFlow();
 
@@ -318,20 +307,8 @@ describe('PropertyDetail', () => {
     await waitFor(() => expect(screen.getByText('Definí quiénes viajan')).toBeDefined());
 
     fireEvent.click(screen.getByRole('button', { name: /^siguiente$/i }));
-    await waitFor(() => expect(screen.getByText('Elegí cómo querés avanzar')).toBeDefined());
-
-    const nextButton = screen.getByRole('button', { name: /^siguiente$/i });
-
-    expect(screen.getByLabelText(/acuerdo directo/i)).not.toBeChecked();
-    expect(screen.getByLabelText(/reserva protegida/i)).not.toBeChecked();
-    expect(nextButton).toBeDisabled();
-    expect(screen.getByText('Elegí una opción para habilitar el siguiente paso.')).toBeDefined();
-
-    fireEvent.click(screen.getByLabelText(/acuerdo directo/i));
-
-    expect(screen.getByLabelText(/acuerdo directo/i)).toBeChecked();
-    expect(nextButton).not.toBeDisabled();
-    expect(screen.queryByText('Elegí una opción para habilitar el siguiente paso.')).toBeNull();
+    await waitFor(() => expect(screen.getByText('Revisá el resumen final')).toBeDefined());
+    expect(screen.getByText('La elegís después de la aceptación')).toBeDefined();
   });
 
   test('uses a dominant availability CTA to open the calendar directly', async () => {
@@ -410,13 +387,11 @@ describe('PropertyDetail', () => {
     fireEvent.click(within(mobileContext).getByRole('button', { name: /seguir con huéspedes/i }));
     await waitFor(() => expect(screen.getByText('Definí quiénes viajan')).toBeDefined());
 
-    expect(within(mobileContext).getByRole('button', { name: /seguir al modo/i })).toBeDefined();
-
-    fireEvent.click(within(mobileContext).getByRole('button', { name: /seguir al modo/i }));
-    await waitFor(() => expect(screen.getByText('Elegí cómo querés avanzar')).toBeDefined());
-
-    fireEvent.click(screen.getByLabelText(/acuerdo directo/i));
     expect(within(mobileContext).getByRole('button', { name: /seguir al resumen/i })).toBeDefined();
+
+    fireEvent.click(within(mobileContext).getByRole('button', { name: /seguir al resumen/i }));
+    await waitFor(() => expect(screen.getByText('Revisá el resumen final')).toBeDefined());
+    expect(within(mobileContext).getByRole('button', { name: /enviar solicitud/i })).toBeDefined();
   });
 
   test('renders clearer amenities and interaction history sections', async () => {
@@ -473,12 +448,7 @@ describe('PropertyDetail', () => {
     await waitFor(() => expect(screen.getByText('Ajustá cuántas personas viajan. Completar esto mejora la coordinación.')).toBeDefined());
 
     fireEvent.click(screen.getByRole('button', { name: /^siguiente$/i }));
-    await waitFor(() => expect(screen.getByText('Elegí si seguís por chat o con reserva protegida. Usar reserva protegida suele facilitar la confirmación.')).toBeDefined());
-
-    fireEvent.click(screen.getByLabelText(/reserva protegida/i));
-    fireEvent.click(screen.getByRole('button', { name: /^siguiente$/i }));
-
-    await waitFor(() => expect(screen.getByText('Revisá y mandá la solicitud. Confirmar datos evita confusiones.')).toBeDefined());
+    await waitFor(() => expect(screen.getByText('Revisá y mandá la solicitud. La elección de seña aparece recién cuando el anfitrión acepta.')).toBeDefined());
   });
 
   test('shows the stronger guided verification message when the score reaches 4', async () => {
@@ -578,21 +548,21 @@ describe('PropertyDetail', () => {
 
     await waitForPropertyHeading();
 
-    await advanceToConfirmationStep('direct');
+    await advanceToConfirmationStep();
 
     expect(screen.getByText('Revisá el resumen final')).toBeDefined();
-    expect(screen.getAllByText('Acuerdo directo').length).toBeGreaterThan(0);
+    expect(screen.getByText('La elegís después de la aceptación')).toBeDefined();
     expect(screen.getAllByRole('status').length).toBeGreaterThan(0);
-    expect(screen.getAllByRole('button', { name: /editar/i })).toHaveLength(3);
+    expect(screen.getAllByRole('button', { name: /editar/i })).toHaveLength(2);
     expect(screen.getByRole('button', { name: /^solicitar reserva$/i })).toBeDefined();
   });
 
-  test('smoke: sends a direct request by default and opens the contextual chat', async () => {
+  test('smoke: sends a neutral request and opens the contextual chat', async () => {
     renderPropertyDetail();
 
     await waitForPropertyHeading();
 
-    await advanceToConfirmationStep('direct');
+    const { checkInIso, checkOutIso } = await advanceToConfirmationStep();
 
     const bookingCalls: Array<{ url: string; options: RequestInit }> = [];
     const apiJsonCalls: Array<{ url: string; options?: RequestInit }> = [];
@@ -606,6 +576,7 @@ describe('PropertyDetail', () => {
         return {
           id: 'conv-1',
           property_id: 'p1',
+          booking_id: 'booking-1',
           tenant_id: 'u1',
           host_id: 'h1',
           hostName: 'Mariana',
@@ -639,6 +610,27 @@ describe('PropertyDetail', () => {
 
       if (url === '/api/bookings' && options.method === 'POST') {
         bookingCalls.push({ url, options });
+
+        return {
+          ok: true,
+          status: 201,
+          json: async () => ({
+            booking: {
+              id: 'booking-1',
+              propertyId: 'p1',
+              userId: 'u1',
+              status: 'pending',
+              requestMode: 'protected',
+              startDate: checkInIso,
+              endDate: checkOutIso,
+              guests: 1,
+              totalPrice: 360,
+              stay_code: 'AR1234',
+            },
+            contract: { propertyTitle: 'Casa de prueba' },
+            pricing: { nights: 3, nightly: 120, total: 360 },
+          }),
+        };
       }
 
       return { ok: true, status: 200, json: async () => ({}) };
@@ -646,7 +638,7 @@ describe('PropertyDetail', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /^solicitar reserva$/i }));
 
-    expect(bookingCalls).toHaveLength(0);
+    await waitFor(() => expect(bookingCalls).toHaveLength(1));
 
     await waitFor(() => {
       expect(apiJsonCalls).toEqual(
@@ -658,15 +650,15 @@ describe('PropertyDetail', () => {
     });
 
     await waitFor(() => expect(screen.getByText('Chat abierto conv-1')).toBeDefined());
-    expect(screen.getByText('Modo: direct')).toBeDefined();
+    expect(screen.getByText('Modo: protected')).toBeDefined();
   });
 
-  test('smoke: selects date range and sends a protected request from the sidebar', async () => {
+  test('smoke: sends the booking request without forcing a mode in the payload', async () => {
     renderPropertyDetail();
 
     await waitForPropertyHeading();
 
-    const { checkInIso, checkOutIso } = await advanceToConfirmationStep('protected');
+    const { checkInIso, checkOutIso } = await advanceToConfirmationStep();
 
     const bookingCalls: Array<{ url: string; options: RequestInit }> = [];
     const apiJsonCalls: Array<{ url: string; options?: RequestInit }> = [];
@@ -744,14 +736,15 @@ describe('PropertyDetail', () => {
 
     await waitFor(() => expect(dispatchSpy).toHaveBeenCalled());
     expect(bookingCalls).toHaveLength(1);
-    expect(JSON.parse(String(bookingCalls[0].options.body))).toMatchObject({
+    const bookingPayload = JSON.parse(String(bookingCalls[0].options.body));
+    expect(bookingPayload).toMatchObject({
       propertyId: 'p1',
       startDate: checkInIso,
       endDate: checkOutIso,
       guests: 1,
       totalPrice: 360,
-      requestMode: 'protected',
     });
+    expect(bookingPayload).not.toHaveProperty('requestMode');
     expect(apiJsonCalls).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ url: '/api/conversations' }),
@@ -801,7 +794,7 @@ describe('PropertyDetail', () => {
     await waitForPropertyHeading();
     expect(screen.queryByRole('button', { name: /guardar en guardados/i })).toBeNull();
 
-    await advanceToConfirmationStep('protected');
+    await advanceToConfirmationStep();
     fireEvent.click(screen.getByRole('button', { name: /^solicitar reserva$/i }));
 
     await waitFor(() => expect(showLoginModal).toHaveBeenCalledTimes(1));

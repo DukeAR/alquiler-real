@@ -10,6 +10,8 @@ const acceptConversationRequestMock = vi.fn();
 const notAdvanceConversationRequestMock = vi.fn();
 const reportDirectDepositMock = vi.fn();
 const confirmDirectDepositMock = vi.fn();
+const selectExternalDepositMock = vi.fn();
+const selectProtectedDepositMock = vi.fn();
 const payProtectedDepositMock = vi.fn();
 const confirmArrivalMock = vi.fn();
 const reportArrivalProblemMock = vi.fn();
@@ -45,6 +47,8 @@ vi.mock('../../services/geminiService', () => ({
   notAdvanceConversationRequest: (...args: unknown[]) => notAdvanceConversationRequestMock(...args),
   reportDirectDeposit: (...args: unknown[]) => reportDirectDepositMock(...args),
   confirmDirectDeposit: (...args: unknown[]) => confirmDirectDepositMock(...args),
+  selectExternalDeposit: (...args: unknown[]) => selectExternalDepositMock(...args),
+  selectProtectedDeposit: (...args: unknown[]) => selectProtectedDepositMock(...args),
   payProtectedDeposit: (...args: unknown[]) => payProtectedDepositMock(...args),
   confirmArrival: (...args: unknown[]) => confirmArrivalMock(...args),
   reportArrivalProblem: (...args: unknown[]) => reportArrivalProblemMock(...args),
@@ -158,6 +162,8 @@ describe('SecureChat', () => {
     notAdvanceConversationRequestMock.mockReset();
     reportDirectDepositMock.mockReset();
     confirmDirectDepositMock.mockReset();
+    selectExternalDepositMock.mockReset();
+    selectProtectedDepositMock.mockReset();
     payProtectedDepositMock.mockReset();
     confirmArrivalMock.mockReset();
     reportArrivalProblemMock.mockReset();
@@ -443,20 +449,34 @@ describe('SecureChat', () => {
       },
     ]);
     fetchMessagesMock.mockResolvedValue([]);
+    selectProtectedDepositMock.mockResolvedValue({
+      id: 'booking-1',
+      status: 'confirmed',
+      requestMode: 'protected',
+      depositType: 'protected',
+      depositStatus: null,
+    });
     payProtectedDepositMock.mockResolvedValue({
       id: 'booking-1',
       status: 'confirmed',
       requestMode: 'protected',
+      depositType: 'protected',
       depositStatus: 'held',
     });
 
     renderChat();
 
+    expect(await screen.findByText('Ahora podés elegir cómo resolver la seña.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Resolver la seña dentro de la plataforma/i })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Resolver la seña dentro de la plataforma/i }));
+
+    await waitFor(() => {
+      expect(selectProtectedDepositMock).toHaveBeenCalledWith('booking-1');
+    });
+
     expect(await screen.findByText('El anfitrión aceptó la solicitud.')).toBeInTheDocument();
-    expect(screen.getByText('Ya podés avanzar con la seña.')).toBeInTheDocument();
-    expect(screen.getByText('Estado: Pendiente seña')).toBeInTheDocument();
-    expect(screen.getByText('Antes de avanzar con la seña, confirmá que los datos coincidan con el anfitrión del aviso.')).toBeInTheDocument();
-    expect(screen.getByText('Estás usando la reserva protegida para mayor claridad.')).toBeInTheDocument();
+    expect(screen.getByText('Ya podés avanzar con la seña protegida.')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Pagar seña/i }));
 
@@ -646,7 +666,7 @@ describe('SecureChat', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: /No avanzar con esta reserva/i }));
 
-    expect(screen.getByText('Podés dejar un motivo opcional para tu registro. El chat sigue abierto.')).toBeInTheDocument();
+    expect(screen.getByText((content) => content.includes('Podés dejar un motivo opcional para tu registro. El chat sigue abierto.'))).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'no disponible en esas fechas' }));
     fireEvent.click(screen.getByRole('button', { name: /Confirmar estado/i }));

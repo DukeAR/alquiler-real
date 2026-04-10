@@ -1,6 +1,7 @@
 import type { PropertyVerificationItem, PropertyVerificationSummary } from './lib/propertyVerification';
 import type { GuestVerificationItem, GuestVerificationSummary } from './lib/guestVerification';
 import type { HostTrustSummary } from './lib/hostTrust';
+import type { ProtectedDepositPricing } from './lib/protectedDeposit';
 import type { PremiumVerificationOffer } from './lib/premiumVerification';
 import type { UserIdentityVerification } from './lib/verificationModel';
 
@@ -174,9 +175,11 @@ export type BookingStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled';
 
 export type ReservationRequestMode = 'direct' | 'protected';
 
+export type ReservationDepositType = 'external' | 'protected';
+
 export type ReservationRequestStatus = 'pending' | 'accepted' | 'not_advanced';
 
-export type ReservationDepositStatus = 'reported' | 'confirmed' | 'held' | 'review' | 'pending_confirmation' | 'released' | 'refunded';
+export type ReservationDepositStatus = 'external_pending' | 'reported' | 'confirmed' | 'held' | 'review' | 'pending_confirmation' | 'released' | 'refunded';
 
 export type ReservationCancellationActor = 'guest' | 'host';
 
@@ -191,9 +194,12 @@ export interface ReservationRequestContext {
   nights: number;
   totalPrice: number;
   mode: ReservationRequestMode;
+  depositType?: ReservationDepositType;
   requestCreatedAt?: string;
   requestStatus?: ReservationRequestStatus;
   depositStatus?: ReservationDepositStatus;
+  protectedDepositPricing?: ProtectedDepositPricing | null;
+  depositPaymentReference?: string | null;
   cancellationActor?: ReservationCancellationActor;
   bookingId?: string;
   bookingStatus?: BookingStatus;
@@ -216,7 +222,10 @@ export interface Booking {
   guests?: number;
   totalPrice?: number;
   requestMode?: ReservationRequestMode;
+  depositType?: ReservationDepositType;
   depositStatus?: ReservationDepositStatus;
+  protectedDepositPricing?: ProtectedDepositPricing | null;
+  depositPaymentReference?: string | null;
   cancellationActor?: ReservationCancellationActor;
   cancellationDeadline?: string | null;
   date?: string;
@@ -246,9 +255,12 @@ export interface Conversation {
   guests?: number;
   totalPrice?: number;
   requestMode?: ReservationRequestMode;
+  depositType?: ReservationDepositType;
   requestStatus?: ReservationRequestStatus;
   requestCreatedAt?: string;
   depositStatus?: ReservationDepositStatus;
+  protectedDepositPricing?: ProtectedDepositPricing | null;
+  depositPaymentReference?: string | null;
   cancellationActor?: ReservationCancellationActor;
   requestStartDate?: string;
   requestEndDate?: string;

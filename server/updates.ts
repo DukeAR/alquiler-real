@@ -826,7 +826,12 @@ export const initDB = async () => {
       BEGIN ALTER TABLE bookings ADD COLUMN contract_accepted BOOLEAN DEFAULT FALSE; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE bookings ADD COLUMN contract_json TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE bookings ADD COLUMN request_mode TEXT DEFAULT 'direct'; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE bookings ADD COLUMN deposit_type TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE bookings ADD COLUMN deposit_status TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE bookings ADD COLUMN deposit_amount_ars INTEGER; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE bookings ADD COLUMN service_fee_ars INTEGER; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE bookings ADD COLUMN deposit_total_charge_ars INTEGER; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE bookings ADD COLUMN deposit_payment_reference TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE bookings ADD COLUMN cancellation_actor TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
     END $$;
   `);
@@ -870,7 +875,12 @@ export const initDB = async () => {
       BEGIN ALTER TABLE conversations ADD COLUMN request_mode TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE conversations ADD COLUMN request_status TEXT DEFAULT 'pending'; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE conversations ADD COLUMN request_created_at TIMESTAMP; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE conversations ADD COLUMN deposit_type TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE conversations ADD COLUMN deposit_status TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE conversations ADD COLUMN deposit_amount_ars INTEGER; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE conversations ADD COLUMN service_fee_ars INTEGER; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE conversations ADD COLUMN deposit_total_charge_ars INTEGER; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE conversations ADD COLUMN deposit_payment_reference TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE conversations ADD COLUMN request_start_date DATE; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE conversations ADD COLUMN request_end_date DATE; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE conversations ADD COLUMN request_guests INTEGER; EXCEPTION WHEN duplicate_column THEN NULL; END;

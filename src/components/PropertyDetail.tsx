@@ -66,14 +66,14 @@ type PropertyReviewItem = {
   date?: string;
 };
 
-type BookingFieldKey = 'dates' | 'guests' | 'mode';
+type BookingFieldKey = 'dates' | 'guests';
 
 type BookingErrorState = {
   field: BookingFieldKey;
   message: string;
 };
 
-type BookingStep = 'dates' | 'guests' | 'mode' | 'confirm';
+type BookingStep = 'dates' | 'guests' | 'confirm';
 
 type BookingStepConfig = {
   key: BookingStep;
@@ -100,16 +100,6 @@ type BookingConfirmationNotice = {
   tone: NonNullable<React.ComponentProps<typeof NoticeBanner>['tone']>;
   heading: string;
   description: string;
-};
-
-type ReservationModeCardProps = {
-  mode: ReservationRequestMode;
-  selected: boolean;
-  disabled?: boolean;
-  title: string;
-  description: string;
-  helper?: string;
-  onSelect: (mode: ReservationRequestMode) => void;
 };
 
 const formatMonthYear = (value?: string) => {
@@ -220,11 +210,7 @@ const buildInitialRequestMessage = (requestContext: ReservationRequestContext) =
   const dateRangeLabel = `${formatRequestDate(requestContext.startDate)} al ${formatRequestDate(requestContext.endDate)}`;
   const guestLabel = `${requestContext.guests} ${requestContext.guests === 1 ? 'huésped' : 'huéspedes'}`;
 
-  if (requestContext.mode === 'protected') {
-    return `Hola ${requestContext.hostName}, te mandé una solicitud de reserva protegida para ${requestContext.propertyTitle} del ${dateRangeLabel} para ${guestLabel}. El total estimado es ${formatCurrency(requestContext.totalPrice)}. Quedo atento a tu respuesta por acá.`;
-  }
-
-  return `Hola ${requestContext.hostName}, me interesa ${requestContext.propertyTitle} del ${dateRangeLabel} para ${guestLabel}. El total estimado me da ${formatCurrency(requestContext.totalPrice)}. Si te sirve, lo coordinamos por acá.`;
+  return `Hola ${requestContext.hostName}, te mandé una solicitud para ${requestContext.propertyTitle} del ${dateRangeLabel} para ${guestLabel}. El total estimado es ${formatCurrency(requestContext.totalPrice)}. Si te sirve, seguimos por acá y después definimos la seña.`;
 };
 
 const BOOKING_STEP_CONFIG: BookingStepConfig[] = [
@@ -243,42 +229,18 @@ const BOOKING_STEP_CONFIG: BookingStepConfig[] = [
     icon: Icons.Users,
   },
   {
-    key: 'mode',
-    title: 'Elegí cómo querés avanzar',
-    description: 'Elegí si seguís por chat o con reserva protegida. Usar reserva protegida suele facilitar la confirmación.',
-    shortLabel: 'Cómo avanzar',
-    icon: Icons.MessageSquare,
-  },
-  {
     key: 'confirm',
     title: 'Revisá el resumen final',
-    description: 'Revisá y mandá la solicitud. Confirmar datos evita confusiones.',
+    description: 'Revisá y mandá la solicitud. La elección de seña aparece recién cuando el anfitrión acepta.',
     shortLabel: 'Confirmación',
     icon: Icons.CheckCircle2,
   },
 ] as const;
 
-const RESERVATION_MODE_CONTENT: Record<ReservationRequestMode, {
-  title: string;
-  description: string;
-  helper: string;
-  confirmationHeading: string;
-  confirmationDescription: string;
-}> = {
-  direct: {
-    title: 'Acuerdo directo',
-    description: 'Mandás una propuesta por chat con fechas, huéspedes y total ya cargados.',
-    helper: 'La seña se coordina por fuera de la app.',
-    confirmationHeading: 'La propuesta se manda por chat',
-    confirmationDescription: 'Al enviarla, el anfitrión recibe fechas, huéspedes y total dentro de la conversación.',
-  },
-  protected: {
-    title: 'Reserva protegida',
-    description: 'La solicitud queda registrada en la app.',
-    helper: 'Usar reserva protegida suele facilitar la confirmación.',
-    confirmationHeading: 'La solicitud queda registrada',
-    confirmationDescription: 'También la vas a ver en Mis reservas.',
-  },
+const REQUEST_CONFIRMATION_NOTICE: BookingConfirmationNotice = {
+  tone: 'info',
+  heading: 'La solicitud queda registrada primero',
+  description: 'Si el anfitrión la acepta, vas a poder elegir entre coordinar la seña por fuera sin costo o resolverla dentro de la plataforma con fee visible.',
 };
 
 const getHostName = (property: PropertyDetailData) => property.host?.name || property.hostName || 'Anfitrión';
@@ -567,58 +529,6 @@ const GuestCounterCard: React.FC<GuestCounterCardProps> = ({
   );
 };
 
-const ReservationModeCard: React.FC<ReservationModeCardProps> = ({
-  mode,
-  selected,
-  disabled = false,
-  title,
-  description,
-  helper,
-  onSelect,
-}) => {
-  return (
-    <label
-      className={cn(
-        'block rounded-[24px] border p-4 transition-[border-color,box-shadow,background-color] duration-150',
-        disabled && 'cursor-not-allowed opacity-70',
-        selected
-          ? 'border-brand/40 bg-white shadow-[0_18px_40px_-32px_rgba(14,116,144,0.45)] ring-1 ring-brand/15'
-          : mode === 'protected'
-            ? 'border-slate-200 bg-brand/[0.04] hover:border-brand/25'
-            : 'border-slate-200 bg-white hover:border-slate-300',
-      )}
-    >
-      <input
-        type="radio"
-        name="reservation-mode"
-        value={mode}
-        checked={selected}
-        disabled={disabled}
-        onChange={() => onSelect(mode)}
-        className="sr-only"
-      />
-
-      <div className="flex items-start gap-3">
-        <span
-          aria-hidden="true"
-          className={cn(
-            'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors',
-            selected ? 'border-brand bg-brand text-white' : 'border-slate-300 bg-white text-transparent',
-          )}
-        >
-          <span className={cn('h-2 w-2 rounded-full bg-current', !selected && 'opacity-0')} />
-        </span>
-
-        <div className="min-w-0">
-          <p className="text-sm font-semibold text-slate-950">{title}</p>
-          <p className="mt-1 text-sm leading-6 text-slate-600">{description}</p>
-          {helper ? <p className="mt-2 text-xs font-medium text-slate-500">{helper}</p> : null}
-        </div>
-      </div>
-    </label>
-  );
-};
-
 export const PropertyDetailShell: React.FC<{
   property: PropertyDetailData;
   images: string[];
@@ -658,7 +568,6 @@ export const PropertyDetailShell: React.FC<{
   const [childrenCount, setChildrenCount] = useState<number>(0);
   const [bookingFlowOpen, setBookingFlowOpen] = useState(false);
   const [bookingStep, setBookingStep] = useState<BookingStep>('dates');
-  const [selectedRequestMode, setSelectedRequestMode] = useState<ReservationRequestMode | null>(null);
   const [bookingError, setBookingError] = useState<BookingErrorState | null>(null);
   const [bookingSubmitMode, setBookingSubmitMode] = useState<ReservationRequestMode | null>(null);
   const [bookingSubmitNotice, setBookingSubmitNotice] = useState<BookingConfirmationNotice | null>(null);
@@ -730,40 +639,25 @@ export const PropertyDetailShell: React.FC<{
         ? 'Completar fechas'
         : 'Elegir fechas'
     : bookingStep === 'guests'
-      ? 'Seguir al modo'
-      : bookingStep === 'mode'
-        ? 'Seguir al resumen'
-        : selectedRequestMode === 'protected'
-          ? 'Enviar solicitud'
-          : 'Abrir chat';
-  const mobilePrimaryActionDisabled = bookingStep === 'mode'
-    ? !selectedRequestMode
-    : bookingStep === 'confirm'
-      ? !canReserve || bookingSubmitMode !== null || !selectedRequestMode
+      ? 'Seguir al resumen'
+      : bookingStep === 'confirm'
+        ? 'Enviar solicitud'
+        : 'Continuar';
+  const mobilePrimaryActionDisabled = bookingStep === 'confirm'
+    ? !canReserve || bookingSubmitMode !== null
       : false;
   const mobileStepStatusLabel = bookingStep === 'dates'
     ? (hasCompleteDates ? mobileBookingSummary : null)
     : bookingStep === 'guests'
       ? dateSelectionSummary
-      : bookingStep === 'mode'
-        ? `${nightsSummaryLabel} · ${guestCountLabel}`
-        : mobileBookingSummary;
+      : mobileBookingSummary;
   const currentBookingStepIndex = BOOKING_STEP_CONFIG.findIndex((step) => step.key === bookingStep);
   const currentBookingStep = BOOKING_STEP_CONFIG[currentBookingStepIndex] ?? BOOKING_STEP_CONFIG[0];
-  const selectedModeContent = selectedRequestMode ? RESERVATION_MODE_CONTENT[selectedRequestMode] : null;
   const confirmationNotice: BookingConfirmationNotice | null = bookingSubmitNotice
-    ?? (selectedModeContent
-      ? {
-          tone: selectedRequestMode === 'protected' ? 'info' : 'success',
-          heading: selectedModeContent.confirmationHeading,
-          description: selectedModeContent.confirmationDescription,
-        }
-      : null);
+    ?? REQUEST_CONFIRMATION_NOTICE;
   const isAdvanceDisabled = bookingStep === 'dates'
     ? !canReserve
-    : bookingStep === 'mode'
-      ? !selectedRequestMode
-      : false;
+    : false;
 
   const resetBookingSubmitState = () => {
     setBookingSubmitMode(null);
@@ -777,7 +671,6 @@ export const PropertyDetailShell: React.FC<{
     setChildrenCount(0);
     setBookingFlowOpen(false);
     setBookingStep('dates');
-    setSelectedRequestMode(null);
   };
 
   const clearBookingFeedback = () => {
@@ -929,28 +822,12 @@ export const PropertyDetailShell: React.FC<{
       }
 
       setBookingError(null);
-      goToBookingStep('mode');
-      return;
-    }
-
-    if (bookingStep === 'mode') {
-      if (!selectedRequestMode) {
-        setBookingError({ field: 'mode', message: 'Elegí cómo querés avanzar para seguir.' });
-        return;
-      }
-
-      setBookingError(null);
       goToBookingStep('confirm');
     }
   };
 
   const handleRetreatBookingStep = () => {
     if (bookingStep === 'confirm') {
-      goToBookingStep('mode');
-      return;
-    }
-
-    if (bookingStep === 'mode') {
       goToBookingStep('guests');
       return;
     }
@@ -991,20 +868,10 @@ export const PropertyDetailShell: React.FC<{
       });
       return;
     }
-    if (!selectedRequestMode) {
-      setBookingStep('mode');
-      setBookingError({ field: 'mode', message: 'Elegí cómo querés avanzar antes de enviar.' });
-      return;
-    }
+
     setBookingError(null);
     resetBookingSubmitState();
-
-    if (selectedRequestMode === 'protected') {
-      await handleStartProtectedRequest();
-      return;
-    }
-
-    await handleStartDirectRequest();
+    await handleStartProtectedRequest();
   };
 
   const handleMobilePrimaryAction = async () => {
@@ -1092,49 +959,6 @@ export const PropertyDetailShell: React.FC<{
     import('../lib/modal').then((m) => m.showLoginModal());
   };
 
-  const handleStartDirectRequest = async () => {
-    if (!property.id) {
-      setBookingSubmitNotice({
-        tone: 'error',
-        heading: 'No pudimos abrir el chat',
-        description: 'Falta identificar la propiedad antes de seguir. Probá recargando la página.',
-      });
-      return;
-    }
-
-    if (!user) {
-      openLoginForRequest('Necesitás iniciar sesión', 'Iniciá sesión para abrir el chat o mandar una propuesta.');
-      return;
-    }
-
-    setBookingSubmitMode('direct');
-    setBookingSubmitNotice(null);
-
-    const requestContext = buildReservationRequestContext('direct');
-
-    try {
-      const { conversationId, initialMessageSent, requestCreatedAt } = await prepareConversationForRequest(requestContext);
-
-      resetBookingSubmitState();
-      navigateToConversation(conversationId, { ...requestContext, requestCreatedAt });
-      showToast(
-        'Propuesta enviada',
-        initialMessageSent
-          ? 'Ya le mandaste tu propuesta al anfitrión. Los próximos pasos siguen por chat y la seña se coordina por fuera de la app.'
-          : 'La propuesta quedó abierta en chat, pero el mensaje automático no salió. Podés seguir desde ahí.',
-        initialMessageSent ? 'success' : 'warning',
-      );
-    } catch (error) {
-      console.error('Direct request error', error);
-      setBookingSubmitMode(null);
-      setBookingSubmitNotice({
-        tone: 'error',
-        heading: 'No pudimos abrir el chat',
-        description: error instanceof Error ? error.message : 'Intentá de nuevo en unos segundos.',
-      });
-    }
-  };
-
   const handleStartProtectedRequest = async () => {
     if (!property.id) {
       setBookingSubmitNotice({
@@ -1146,7 +970,7 @@ export const PropertyDetailShell: React.FC<{
     }
 
     if (!user) {
-      openLoginForRequest('Necesitás iniciar sesión', 'Iniciá sesión para mandar una solicitud protegida.');
+      openLoginForRequest('Necesitás iniciar sesión', 'Iniciá sesión para mandar la solicitud y seguir con la reserva.');
       return;
     }
 
@@ -1159,14 +983,13 @@ export const PropertyDetailShell: React.FC<{
       endDate: checkOut,
       guests: guestCount,
       totalPrice: total,
-      requestMode: 'protected',
     });
 
     if (!result.ok) {
       setBookingSubmitMode(null);
 
       if (result.error.status === 401) {
-        openLoginForRequest('Necesitás iniciar sesión', 'Iniciá sesión para mandar una solicitud protegida.');
+        openLoginForRequest('Necesitás iniciar sesión', 'Iniciá sesión para mandar la solicitud y seguir con la reserva.');
         return;
       }
 
@@ -1204,7 +1027,7 @@ export const PropertyDetailShell: React.FC<{
       showToast(
         'Solicitud enviada',
         initialMessageSent
-          ? `La reserva protegida quedó pendiente por ${formatCurrency(bookedTotal)} y ya abrimos el chat para seguir con ${hostName}.`
+          ? `La solicitud quedó enviada por ${formatCurrency(bookedTotal)}. Si el anfitrión acepta, después vas a poder elegir si coordinás la seña por fuera o dentro de la plataforma.`
           : 'La solicitud quedó pendiente. Abrimos el chat, pero la propuesta automática no salió; seguí desde ahí.',
         initialMessageSent ? 'success' : 'warning',
       );
@@ -1212,7 +1035,7 @@ export const PropertyDetailShell: React.FC<{
       console.error('Protected request conversation error', error);
       showToast(
         'Solicitud enviada',
-        'La reserva protegida quedó pendiente. No pudimos abrir el chat ahora, pero la vas a ver en Mis reservas.',
+        'La solicitud quedó pendiente. No pudimos abrir el chat ahora, pero la vas a ver en Mis reservas.',
         'success',
       );
       navigate('/my-bookings');
@@ -1533,63 +1356,13 @@ export const PropertyDetailShell: React.FC<{
                     </div>
                   ) : null}
 
-                  {bookingStep === 'mode' ? (
-                    <div className="mt-5 space-y-4">
-                      <div role="radiogroup" aria-label="Cómo querés avanzar" className="grid gap-3">
-                        <ReservationModeCard
-                          mode="direct"
-                          selected={selectedRequestMode === 'direct'}
-                          disabled={bookingSubmitMode !== null}
-                          title="Acuerdo directo"
-                          description={RESERVATION_MODE_CONTENT.direct.description}
-                          helper={RESERVATION_MODE_CONTENT.direct.helper}
-                          onSelect={(mode) => {
-                            setSelectedRequestMode(mode);
-                            setBookingError(null);
-                            setBookingSubmitNotice(null);
-                          }}
-                        />
-                        <ReservationModeCard
-                          mode="protected"
-                          selected={selectedRequestMode === 'protected'}
-                          disabled={bookingSubmitMode !== null}
-                          title="Reserva protegida"
-                          description={RESERVATION_MODE_CONTENT.protected.description}
-                          helper={RESERVATION_MODE_CONTENT.protected.helper}
-                          onSelect={(mode) => {
-                            setSelectedRequestMode(mode);
-                            setBookingError(null);
-                            setBookingSubmitNotice(null);
-                          }}
-                        />
-                      </div>
-
-                      <div className="rounded-[18px] bg-slate-900/[0.03] px-4 py-3 text-sm text-slate-600">
-                        {selectedModeContent ? (
-                          <>
-                            <p className="font-semibold text-slate-950">{selectedModeContent.title}</p>
-                            <p className="mt-1 text-xs leading-5 text-slate-500">{selectedModeContent.helper}</p>
-                          </>
-                        ) : (
-                          <p className="text-xs leading-5 text-slate-500">Elegí una opción para habilitar el siguiente paso.</p>
-                        )}
-                      </div>
-
-                      {bookingError?.field === 'mode' ? (
-                        <p className="rounded-[20px] border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-                          {bookingError.message}
-                        </p>
-                      ) : null}
-                    </div>
-                  ) : null}
-
-                  {bookingStep === 'confirm' && selectedModeContent ? (
+                  {bookingStep === 'confirm' ? (
                     <div className="mt-5 space-y-4">
                       <div className="space-y-3 rounded-[24px] border border-slate-200/80 bg-white p-4 shadow-[0_18px_36px_-30px_rgba(15,23,42,0.14)]">
                         <div className="flex items-end justify-between gap-4 border-b border-slate-200/70 pb-3">
                           <div>
                             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Listo para enviar</p>
-                            <p className="mt-1 text-base font-semibold text-slate-950">{selectedModeContent.title}</p>
+                            <p className="mt-1 text-base font-semibold text-slate-950">Solicitud registrada</p>
                           </div>
                           <div className="text-right">
                             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Total</p>
@@ -1621,13 +1394,13 @@ export const PropertyDetailShell: React.FC<{
 
                           <div className="flex items-start justify-between gap-3 border-t border-slate-200/70 pt-3">
                             <div>
-                              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Cómo seguís</p>
-                              <p className="mt-1 font-semibold text-slate-950">{selectedModeContent.title}</p>
-                              <p className="mt-1">{selectedModeContent.description}</p>
+                              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Seña</p>
+                              <p className="mt-1 font-semibold text-slate-950">La elegís después de la aceptación</p>
+                              <p className="mt-1">Cuando el anfitrión acepte, vas a poder coordinar la seña por fuera sin costo o resolverla dentro de la plataforma con fee visible.</p>
                             </div>
-                            <button type="button" onClick={() => goToBookingStep('mode')} className="text-xs font-semibold text-brand transition-colors hover:text-brand-dark">
-                              Editar
-                            </button>
+                            <span className="rounded-full bg-brand/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-brand">
+                              Paso posterior
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -1678,7 +1451,7 @@ export const PropertyDetailShell: React.FC<{
                           aria-disabled={!canReserve || bookingSubmitMode !== null}
                           className="w-full rounded-2xl shadow-[0_24px_46px_-28px_rgba(67,56,202,0.42)] sm:w-auto sm:min-w-[220px]"
                           loading={bookingSubmitMode !== null}
-                          loadingLabel={bookingSubmitMode === 'protected' ? 'Enviando solicitud...' : 'Abriendo chat...'}
+                          loadingLabel="Enviando solicitud..."
                         >
                           <>
                             <Icons.ArrowRight className="h-4 w-4" />
@@ -1794,7 +1567,7 @@ export const PropertyDetailShell: React.FC<{
             <div className="space-y-2.5">
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">Paso {currentBookingStepIndex + 1} de 4</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">Paso {currentBookingStepIndex + 1} de 3</p>
                   <p className="mt-1 truncate text-xs font-medium leading-5 text-slate-600">{mobileBookingSummary}</p>
                 </div>
                 <p className="shrink-0 text-sm font-bold text-slate-950">{nightly ? `${formatCurrency(nightly)} / noche` : '—'}</p>

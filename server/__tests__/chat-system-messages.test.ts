@@ -31,7 +31,7 @@ describe('chatSystemMessages', () => {
     expect(messages[1]?.content).toBe('Tu propuesta fue enviada por chat. El anfitrión puede responder por acá.');
   });
 
-  test('adds acceptance and payment guidance before the deposit step', () => {
+  test('adds acceptance and deposit-choice guidance before any deposit is selected', () => {
     const messages = getChatSystemMessages({
       requestMode: 'protected',
       requestStatus: 'accepted',
@@ -48,11 +48,11 @@ describe('chatSystemMessages', () => {
       'request-sent',
       'request-accepted',
       'before-payment',
-      'protected-payment',
+      'deposit-choice',
     ]);
-    expect(messages[2]?.content).toBe('Ya pueden avanzar con una reserva protegida. La seña queda en custodia y se libera cuando se confirme la llegada.');
+    expect(messages[2]?.content).toBe('Ya pueden avanzar con la seña. Podés coordinarla por fuera sin costo o resolverla dentro de la plataforma con fee.');
     expect(messages[3]?.content).toBe('Antes de avanzar con la seña, confirmá que los datos coincidan con el anfitrión del aviso.');
-    expect(messages[4]?.content).toBe('Estás usando la reserva protegida para mayor claridad.');
+    expect(messages[4]?.content).toBe('Podés coordinar la seña por fuera sin costo o resolverla dentro de la plataforma con fee de servicio.');
   });
 
   test('adds a neutral no-advance system step before any deposit is reported', () => {

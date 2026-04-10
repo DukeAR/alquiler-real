@@ -20,6 +20,7 @@ import {
   getGuestPositiveBookingProfile,
   getHostVisibilityBoost,
 } from '../src/lib/positiveIncentives';
+import { getProtectedDepositPricingFromBooking } from '../src/lib/protectedDeposit';
 import { buildUserVerificationStatus } from '../src/lib/userVerification';
 import {
   PREMIUM_DOCUMENTARY_OFFER_TYPE,
@@ -2621,6 +2622,11 @@ app.get('/api/host/dashboard', async (req, res) => {
               b.cancellation_actor as "cancellationActor",
           c.id as "conversationId",
           COALESCE(c.deposit_status, b.deposit_status) as "depositStatus",
+          COALESCE(c.deposit_type, b.deposit_type) as "depositType",
+          COALESCE(c.deposit_amount_ars, b.deposit_amount_ars) as "depositAmountArs",
+          COALESCE(c.service_fee_ars, b.service_fee_ars) as "serviceFeeArs",
+          COALESCE(c.deposit_total_charge_ars, b.deposit_total_charge_ars) as "depositTotalChargeArs",
+          COALESCE(c.deposit_payment_reference, b.deposit_payment_reference) as "depositPaymentReference",
           COALESCE(b.request_mode, CASE WHEN c.booking_id IS NOT NULL THEN 'protected' ELSE 'direct' END) as "requestMode",
           b."userId",
           EXISTS(
@@ -3146,6 +3152,11 @@ const BOOKING_SELECT_QUERY = `SELECT b.id, b."propertyId", b."userId", b.status,
   p."hostId" as "hostId",
   c.id as "conversationId",
   COALESCE(c.deposit_status, b.deposit_status) as "depositStatus",
+  COALESCE(c.deposit_type, b.deposit_type) as "depositType",
+  COALESCE(c.deposit_amount_ars, b.deposit_amount_ars) as "depositAmountArs",
+  COALESCE(c.service_fee_ars, b.service_fee_ars) as "serviceFeeArs",
+  COALESCE(c.deposit_total_charge_ars, b.deposit_total_charge_ars) as "depositTotalChargeArs",
+  COALESCE(c.deposit_payment_reference, b.deposit_payment_reference) as "depositPaymentReference",
   COALESCE(b.request_mode, CASE WHEN c.booking_id IS NOT NULL THEN 'protected' ELSE 'direct' END) as "requestMode",
   EXISTS(
     SELECT 1
@@ -3213,6 +3224,11 @@ const getEnrichedConversationById = async (conversationId: string) => {
             c.request_status as "requestStatus",
             c.request_created_at as "requestCreatedAt",
             COALESCE(c.deposit_status, b.deposit_status) as "depositStatus",
+            COALESCE(c.deposit_type, b.deposit_type) as "depositType",
+            COALESCE(c.deposit_amount_ars, b.deposit_amount_ars) as "depositAmountArs",
+            COALESCE(c.service_fee_ars, b.service_fee_ars) as "serviceFeeArs",
+            COALESCE(c.deposit_total_charge_ars, b.deposit_total_charge_ars) as "depositTotalChargeArs",
+            COALESCE(c.deposit_payment_reference, b.deposit_payment_reference) as "depositPaymentReference",
             c.request_start_date as "requestStartDate",
             c.request_end_date as "requestEndDate",
             c.request_guests as "requestGuests",
@@ -3276,6 +3292,48 @@ const normalizeDateOnlyValue = (value: unknown) => {
   return null;
 };
 
+const normalizeReservationDepositType = (value: unknown) => (
+  value === 'external' || value === 'protected' ? value : null
+);
+
+const buildProtectedDepositPricingPayload = (record: {
+  depositType?: unknown;
+  depositAmountArs?: unknown;
+  serviceFeeArs?: unknown;
+  depositTotalChargeArs?: unknown;
+  startDate?: unknown;
+  endDate?: unknown;
+  totalPrice?: unknown;
+}) => {
+  const depositType = normalizeReservationDepositType(record.depositType);
+
+  if (depositType !== 'protected') {
+    return null;
+  }
+
+  const fallbackPricing = getProtectedDepositPricingFromBooking({
+    startDate: normalizeDateOnlyValue(record.startDate),
+    endDate: normalizeDateOnlyValue(record.endDate),
+    totalPrice: Number(record.totalPrice ?? 0),
+  });
+  const depositAmount = Number(record.depositAmountArs ?? fallbackPricing?.depositAmount ?? 0);
+  const serviceFee = Number(record.serviceFeeArs ?? fallbackPricing?.serviceFee ?? 0);
+  const totalCharge = Number(record.depositTotalChargeArs ?? fallbackPricing?.totalCharge ?? 0);
+
+  if (!Number.isFinite(depositAmount) || depositAmount <= 0) {
+    return fallbackPricing;
+  }
+
+  return {
+    depositAmount: Math.max(0, Math.round(depositAmount)),
+    serviceFee: Number.isFinite(serviceFee) ? Math.max(0, Math.round(serviceFee)) : 0,
+    totalCharge: Number.isFinite(totalCharge) ? Math.max(0, Math.round(totalCharge)) : Math.max(0, Math.round(depositAmount + serviceFee)),
+    currency: 'ARS' as const,
+    depositNights: fallbackPricing?.depositNights ?? 1,
+    feeRate: fallbackPricing?.feeRate ?? 0.08,
+  };
+};
+
 const hasBookingReachedStartDate = (value: unknown, now = new Date()) => {
   const normalizedStartDate = normalizeDateOnlyValue(value);
   const today = formatDateOnlyInBookingTimeZone(now);
@@ -3284,13 +3342,40 @@ const hasBookingReachedStartDate = (value: unknown, now = new Date()) => {
 };
 
 const normalizeBookingRecord = <T extends { startDate?: unknown; endDate?: unknown }>(booking: T) => {
+  const bookingRecord = booking as T & {
+    depositType?: unknown;
+    depositAmountArs?: unknown;
+    serviceFeeArs?: unknown;
+    depositTotalChargeArs?: unknown;
+    depositPaymentReference?: unknown;
+    totalPrice?: unknown;
+  };
   const normalizedStartDate = normalizeDateOnlyValue(booking.startDate);
   const normalizedEndDate = normalizeDateOnlyValue(booking.endDate);
+  const normalizedDepositType = normalizeReservationDepositType(bookingRecord.depositType);
+  const hasProtectedDepositFields = bookingRecord.depositType !== undefined
+    || bookingRecord.depositAmountArs !== undefined
+    || bookingRecord.serviceFeeArs !== undefined
+    || bookingRecord.depositTotalChargeArs !== undefined;
+  const protectedDepositPricing = buildProtectedDepositPricingPayload({
+    depositType: normalizedDepositType,
+    depositAmountArs: bookingRecord.depositAmountArs,
+    serviceFeeArs: bookingRecord.serviceFeeArs,
+    depositTotalChargeArs: bookingRecord.depositTotalChargeArs,
+    startDate: normalizedStartDate ?? booking.startDate,
+    endDate: normalizedEndDate ?? booking.endDate,
+    totalPrice: bookingRecord.totalPrice,
+  });
 
   return {
     ...booking,
     ...(booking.startDate !== undefined ? { startDate: normalizedStartDate ?? booking.startDate } : {}),
     ...(booking.endDate !== undefined ? { endDate: normalizedEndDate ?? booking.endDate } : {}),
+    ...(bookingRecord.depositType !== undefined ? { depositType: normalizedDepositType } : {}),
+    ...(hasProtectedDepositFields ? { protectedDepositPricing } : {}),
+    ...(bookingRecord.depositPaymentReference !== undefined
+      ? { depositPaymentReference: typeof bookingRecord.depositPaymentReference === 'string' ? bookingRecord.depositPaymentReference : null }
+      : {}),
   };
 };
 
@@ -3300,6 +3385,7 @@ const normalizeConversationRecord = <T extends {
   endDate?: unknown;
   requestStartDate?: unknown;
   requestEndDate?: unknown;
+  requestTotalPrice?: unknown;
   hostIdentityValidated?: unknown;
   hostIdentityVerified?: unknown;
   hostMemberSince?: unknown;
@@ -3330,6 +3416,12 @@ const normalizeConversationRecord = <T extends {
   tenantWouldInteractAgainCount?: unknown;
   tenantIncidentsCount?: unknown;
   tenantPositiveReviewsCount?: unknown;
+  depositType?: unknown;
+  depositAmountArs?: unknown;
+  serviceFeeArs?: unknown;
+  depositTotalChargeArs?: unknown;
+  depositPaymentReference?: unknown;
+  totalPrice?: unknown;
 }>(conversation: T) => {
   const {
     hostIdentityValidated,
@@ -3368,6 +3460,20 @@ const normalizeConversationRecord = <T extends {
   const normalizedEndDate = normalizeDateOnlyValue(conversation.endDate);
   const normalizedRequestStartDate = normalizeDateOnlyValue(conversation.requestStartDate);
   const normalizedRequestEndDate = normalizeDateOnlyValue(conversation.requestEndDate);
+  const normalizedDepositType = normalizeReservationDepositType(conversation.depositType);
+  const hasProtectedDepositFields = conversation.depositType !== undefined
+    || conversation.depositAmountArs !== undefined
+    || conversation.serviceFeeArs !== undefined
+    || conversation.depositTotalChargeArs !== undefined;
+  const protectedDepositPricing = buildProtectedDepositPricingPayload({
+    depositType: normalizedDepositType,
+    depositAmountArs: conversation.depositAmountArs,
+    serviceFeeArs: conversation.serviceFeeArs,
+    depositTotalChargeArs: conversation.depositTotalChargeArs,
+    startDate: normalizedRequestStartDate ?? normalizedStartDate ?? conversation.requestStartDate ?? conversation.startDate,
+    endDate: normalizedRequestEndDate ?? normalizedEndDate ?? conversation.requestEndDate ?? conversation.endDate,
+    totalPrice: conversation.requestTotalPrice ?? conversation.totalPrice,
+  });
   const normalizedPositiveReviewsCount = Number.isFinite(Number(tenantPositiveReviewsCount))
     ? Math.max(0, Math.round(Number(tenantPositiveReviewsCount)))
     : 0;
@@ -3479,6 +3585,11 @@ const normalizeConversationRecord = <T extends {
     ...(conversation.endDate !== undefined ? { endDate: normalizedEndDate ?? conversation.endDate } : {}),
     ...(conversation.requestStartDate !== undefined ? { requestStartDate: normalizedRequestStartDate ?? conversation.requestStartDate } : {}),
     ...(conversation.requestEndDate !== undefined ? { requestEndDate: normalizedRequestEndDate ?? conversation.requestEndDate } : {}),
+    ...(conversation.depositType !== undefined ? { depositType: normalizedDepositType } : {}),
+    ...(hasProtectedDepositFields ? { protectedDepositPricing } : {}),
+    ...(conversation.depositPaymentReference !== undefined
+      ? { depositPaymentReference: typeof conversation.depositPaymentReference === 'string' ? conversation.depositPaymentReference : null }
+      : {}),
     ...(hasHostTrustData
       ? buildHostTrust({
           identityValidated: Boolean(hostIdentityValidated) || Boolean(hostIdentityVerified),
@@ -3558,6 +3669,7 @@ const syncConversationSystemMessages = async (conversationId: string) => {
 
   const systemMessages = getChatSystemMessages({
     requestMode: conversation.requestMode,
+    depositType: normalizeReservationDepositType(conversation.depositType),
     requestStatus: conversation.requestStatus,
     bookingStatus: conversation.bookingStatus,
     depositStatus: conversation.depositStatus,
@@ -3726,6 +3838,11 @@ const getUserBookingById = async (userId: string, bookingId: string) => {
             p."hostId" as "hostId",
             c.id as "conversationId",
             COALESCE(c.deposit_status, b.deposit_status) as "depositStatus",
+            COALESCE(c.deposit_type, b.deposit_type) as "depositType",
+            COALESCE(c.deposit_amount_ars, b.deposit_amount_ars) as "depositAmountArs",
+            COALESCE(c.service_fee_ars, b.service_fee_ars) as "serviceFeeArs",
+            COALESCE(c.deposit_total_charge_ars, b.deposit_total_charge_ars) as "depositTotalChargeArs",
+            COALESCE(c.deposit_payment_reference, b.deposit_payment_reference) as "depositPaymentReference",
             COALESCE(b.request_mode, CASE WHEN c.booking_id IS NOT NULL THEN 'protected' ELSE 'direct' END) as "requestMode",
             EXISTS(
               SELECT 1
@@ -3763,6 +3880,11 @@ const getHostBookingById = async (hostId: string, bookingId: string) => {
           p."hostId" as "hostId",
             c.id as "conversationId",
             COALESCE(c.deposit_status, b.deposit_status) as "depositStatus",
+            COALESCE(c.deposit_type, b.deposit_type) as "depositType",
+            COALESCE(c.deposit_amount_ars, b.deposit_amount_ars) as "depositAmountArs",
+            COALESCE(c.service_fee_ars, b.service_fee_ars) as "serviceFeeArs",
+            COALESCE(c.deposit_total_charge_ars, b.deposit_total_charge_ars) as "depositTotalChargeArs",
+            COALESCE(c.deposit_payment_reference, b.deposit_payment_reference) as "depositPaymentReference",
             COALESCE(b.request_mode, CASE WHEN c.booking_id IS NOT NULL THEN 'protected' ELSE 'direct' END) as "requestMode",
             EXISTS(
               SELECT 1
@@ -3795,14 +3917,134 @@ const isProtectedDepositInPlatform = (depositStatus?: string | null) => (
   depositStatus === 'held' || depositStatus === 'review' || depositStatus === 'pending_confirmation'
 );
 
-const syncConversationDepositStatus = async (bookingId: string, depositStatus: string | null) => {
+const EXTERNAL_DEPOSIT_STATUSES = new Set(['external_pending', 'reported', 'confirmed']);
+
+const PROTECTED_DEPOSIT_FLOW_STATUSES = new Set(['held', 'review', 'pending_confirmation', 'released', 'refunded']);
+
+const getEffectiveDepositTypeForRecord = (record: {
+  depositType?: unknown;
+  depositStatus?: unknown;
+  requestMode?: unknown;
+}) => {
+  const depositType = normalizeReservationDepositType(record.depositType);
+
+  if (depositType) {
+    return depositType;
+  }
+
+  const depositStatus = typeof record.depositStatus === 'string' ? record.depositStatus : null;
+
+  if (depositStatus && PROTECTED_DEPOSIT_FLOW_STATUSES.has(depositStatus)) {
+    return 'protected' as const;
+  }
+
+  if (depositStatus && EXTERNAL_DEPOSIT_STATUSES.has(depositStatus)) {
+    return 'external' as const;
+  }
+
+  if (record.requestMode === 'direct') {
+    return 'external' as const;
+  }
+
+  return null;
+};
+
+const isProtectedDepositBooking = (record: {
+  depositType?: unknown;
+  depositStatus?: unknown;
+  requestMode?: unknown;
+}) => getEffectiveDepositTypeForRecord(record) === 'protected';
+
+const buildProtectedDepositPersistence = (record: {
+  startDate?: unknown;
+  endDate?: unknown;
+  totalPrice?: unknown;
+}) => {
+  const pricing = getProtectedDepositPricingFromBooking({
+    startDate: normalizeDateOnlyValue(record.startDate),
+    endDate: normalizeDateOnlyValue(record.endDate),
+    totalPrice: Number(record.totalPrice ?? 0),
+  });
+
+  if (!pricing) {
+    return null;
+  }
+
+  return {
+    pricing,
+    depositAmountArs: pricing.depositAmount,
+    serviceFeeArs: pricing.serviceFee,
+    depositTotalChargeArs: pricing.totalCharge,
+  };
+};
+
+const buildDepositPaymentReference = (bookingId: string) => (
+  `dep_${bookingId}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`
+);
+
+const syncConversationDepositState = async (
+  bookingId: string,
+  state: {
+    depositStatus?: string | null;
+    depositType?: 'external' | 'protected' | null;
+    protectedDepositPricing?: ReturnType<typeof getProtectedDepositPricingFromBooking> | null;
+    depositPaymentReference?: string | null;
+  },
+) => {
+  const hasDepositStatus = Object.prototype.hasOwnProperty.call(state, 'depositStatus');
+  const hasDepositType = Object.prototype.hasOwnProperty.call(state, 'depositType');
+  const hasProtectedDepositPricing = Object.prototype.hasOwnProperty.call(state, 'protectedDepositPricing');
+  const hasDepositPaymentReference = Object.prototype.hasOwnProperty.call(state, 'depositPaymentReference');
+  const protectedDepositPricing = state.protectedDepositPricing ?? null;
+
   await db.query(
     `UPDATE conversations
-     SET deposit_status = $1,
+     SET deposit_status = CASE
+           WHEN $2 THEN $1
+           ELSE deposit_status
+         END,
+         deposit_type = CASE
+           WHEN $4 THEN $3
+           ELSE deposit_type
+         END,
+         deposit_amount_ars = CASE
+           WHEN $6 THEN $5
+           ELSE deposit_amount_ars
+         END,
+         service_fee_ars = CASE
+           WHEN $8 THEN $7
+           ELSE service_fee_ars
+         END,
+         deposit_total_charge_ars = CASE
+           WHEN $10 THEN $9
+           ELSE deposit_total_charge_ars
+         END,
+         deposit_payment_reference = CASE
+           WHEN $12 THEN $11
+           ELSE deposit_payment_reference
+         END,
          updated_at = NOW()
-     WHERE booking_id = $2`,
-    [depositStatus, bookingId],
+     WHERE booking_id = $13`,
+    [
+      hasDepositStatus ? state.depositStatus ?? null : null,
+      hasDepositStatus,
+      hasDepositType ? state.depositType ?? null : null,
+      hasDepositType,
+      hasProtectedDepositPricing ? protectedDepositPricing?.depositAmount ?? null : null,
+      hasProtectedDepositPricing,
+      hasProtectedDepositPricing ? protectedDepositPricing?.serviceFee ?? null : null,
+      hasProtectedDepositPricing,
+      hasProtectedDepositPricing ? protectedDepositPricing?.totalCharge ?? null : null,
+      hasProtectedDepositPricing,
+      hasDepositPaymentReference ? state.depositPaymentReference ?? null : null,
+      hasDepositPaymentReference,
+      bookingId,
+    ],
   );
+};
+
+const syncConversationDepositStatus = async (bookingId: string, depositStatus: string | null) => {
+  await syncConversationDepositState(bookingId, { depositStatus });
 };
 
 app.get('/api/bookings', async (req, res) => {
@@ -3837,7 +4079,7 @@ app.post('/api/bookings', async (req, res) => {
     return sendBookingError(res, 401, 'AUTH_REQUIRED', AUTH_REQUIRED_ERROR);
   }
 
-  const requestMode = req.body?.requestMode === 'protected' ? 'protected' : 'direct';
+  const requestMode = req.body?.requestMode === 'direct' ? 'direct' : 'protected';
   const bookingStatus = requestMode === 'protected' ? 'pending' : 'confirmed';
 
   const risk = await checkUserRisk(userId, 'create_booking');
@@ -4040,7 +4282,7 @@ app.post('/api/bookings', async (req, res) => {
       500,
       'BOOKING_CREATE_FAILED',
       requestMode === 'protected'
-        ? 'No pudimos enviar la solicitud protegida. Intentá de nuevo.'
+        ? 'No pudimos registrar la solicitud. Intentá de nuevo.'
         : 'No pudimos confirmar la reserva. Intentá de nuevo.',
     );
   } finally {
@@ -4186,7 +4428,7 @@ app.post('/api/bookings/:id/report-arrival-problem', async (req, res) => {
       return sendBookingError(res, 404, 'BOOKING_NOT_FOUND', 'No encontramos esa reserva.');
     }
 
-    if (booking.requestMode !== 'protected') {
+    if (!isProtectedDepositBooking(booking)) {
       return sendBookingError(res, 422, 'INVALID_REPORT_FLOW', 'Esta acción solo aplica a reservas protegidas.');
     }
 
@@ -4236,7 +4478,7 @@ app.post('/api/bookings/:id/report-no-show', async (req, res) => {
       return sendBookingError(res, 404, 'BOOKING_NOT_FOUND', 'No encontramos esa reserva.');
     }
 
-    if (booking.requestMode !== 'protected') {
+    if (!isProtectedDepositBooking(booking)) {
       return sendBookingError(res, 422, 'INVALID_NO_SHOW_FLOW', 'Esta acción solo aplica a reservas protegidas.');
     }
 
@@ -4297,6 +4539,11 @@ app.get('/api/conversations', async (req, res) => {
                 c.request_status as "requestStatus",
                 c.request_created_at as "requestCreatedAt",
                 COALESCE(c.deposit_status, b.deposit_status) as "depositStatus",
+                COALESCE(c.deposit_type, b.deposit_type) as "depositType",
+                COALESCE(c.deposit_amount_ars, b.deposit_amount_ars) as "depositAmountArs",
+                COALESCE(c.service_fee_ars, b.service_fee_ars) as "serviceFeeArs",
+                COALESCE(c.deposit_total_charge_ars, b.deposit_total_charge_ars) as "depositTotalChargeArs",
+                COALESCE(c.deposit_payment_reference, b.deposit_payment_reference) as "depositPaymentReference",
                 c.request_start_date as "requestStartDate",
                 c.request_end_date as "requestEndDate",
                 c.request_guests as "requestGuests",
@@ -4381,7 +4628,7 @@ app.post('/api/conversations', async (req, res) => {
 
   const propertyId = typeof req.body?.propertyId === 'string' ? req.body.propertyId.trim() : '';
   const requestedBookingId = typeof req.body?.bookingId === 'string' ? req.body.bookingId.trim() : '';
-  const requestMode = req.body?.requestMode === 'protected' ? 'protected' : req.body?.requestMode === 'direct' ? 'direct' : null;
+  const rawRequestMode = req.body?.requestMode === 'protected' ? 'protected' : req.body?.requestMode === 'direct' ? 'direct' : null;
   const requestStatus = req.body?.requestStatus === 'accepted' ? 'accepted' : 'pending';
   const requestStartDate = typeof req.body?.startDate === 'string' && DATE_ONLY_PATTERN.test(req.body.startDate) ? req.body.startDate : null;
   const requestEndDate = typeof req.body?.endDate === 'string' && DATE_ONLY_PATTERN.test(req.body.endDate) ? req.body.endDate : null;
@@ -4389,7 +4636,8 @@ app.post('/api/conversations', async (req, res) => {
   const requestGuests = Number.isInteger(parsedRequestGuests) && parsedRequestGuests > 0 ? parsedRequestGuests : null;
   const parsedRequestTotal = Number(req.body?.totalPrice);
   const requestTotalPrice = Number.isFinite(parsedRequestTotal) ? parsedRequestTotal : null;
-  const hasRequestContext = requestMode !== null || requestStartDate !== null || requestEndDate !== null || requestGuests !== null || requestTotalPrice !== null;
+  const hasRequestContext = rawRequestMode !== null || requestStartDate !== null || requestEndDate !== null || requestGuests !== null || requestTotalPrice !== null;
+  const requestMode = rawRequestMode ?? (hasRequestContext ? 'protected' : null);
   const requestCreatedAt = hasRequestContext ? new Date().toISOString() : null;
 
   if (!propertyId) {
@@ -4498,6 +4746,26 @@ app.post('/api/conversations', async (req, res) => {
                  WHEN $10 THEN NULL
                  ELSE deposit_status
                END,
+               deposit_type = CASE
+                 WHEN $10 THEN NULL
+                 ELSE deposit_type
+               END,
+               deposit_amount_ars = CASE
+                 WHEN $10 THEN NULL
+                 ELSE deposit_amount_ars
+               END,
+               service_fee_ars = CASE
+                 WHEN $10 THEN NULL
+                 ELSE service_fee_ars
+               END,
+               deposit_total_charge_ars = CASE
+                 WHEN $10 THEN NULL
+                 ELSE deposit_total_charge_ars
+               END,
+               deposit_payment_reference = CASE
+                 WHEN $10 THEN NULL
+                 ELSE deposit_payment_reference
+               END,
                updated_at = NOW()
            WHERE id = $9
            RETURNING *`,
@@ -4569,7 +4837,15 @@ app.post('/api/conversations/:id/accept-request', async (req, res) => {
       );
     }
 
-    const acceptanceMessage = getRequestAcceptedMessage(conversation.request_mode === 'direct' ? 'direct' : 'protected');
+    const acceptedRequestMode = effectiveRequestMode === 'direct' ? 'direct' : 'protected';
+    const acceptanceMessage = getRequestAcceptedMessage(
+      acceptedRequestMode,
+      getEffectiveDepositTypeForRecord({
+        requestMode: acceptedRequestMode,
+        depositType: conversation.deposit_type,
+        depositStatus: conversation.deposit_status,
+      }),
+    );
     const messageId = `msg_${Date.now()}`;
 
     await db.query(
@@ -4663,7 +4939,12 @@ app.post('/api/conversations/:id/not-advance-request', async (req, res) => {
         `UPDATE bookings
          SET status = 'cancelled',
              cancellation_actor = NULL,
-             deposit_status = NULL
+             deposit_status = NULL,
+             deposit_type = NULL,
+             deposit_amount_ars = NULL,
+             service_fee_ars = NULL,
+             deposit_total_charge_ars = NULL,
+             deposit_payment_reference = NULL
          WHERE id = $1`,
         [conversation.booking_id],
       );
@@ -4673,13 +4954,18 @@ app.post('/api/conversations/:id/not-advance-request', async (req, res) => {
       `UPDATE conversations
        SET request_status = 'not_advanced',
            deposit_status = NULL,
+           deposit_type = NULL,
+           deposit_amount_ars = NULL,
+           service_fee_ars = NULL,
+           deposit_total_charge_ars = NULL,
+           deposit_payment_reference = NULL,
            last_message = $1,
            updated_at = NOW()
        WHERE id = $2`,
       [notAdvancedMessage, req.params.id],
     );
 
-    await clearSystemConversationMessages(req.params.id, ['request-accepted', 'before-payment', 'protected-payment']);
+    await clearSystemConversationMessages(req.params.id, ['request-accepted', 'before-payment', 'deposit-choice', 'protected-payment', 'external-deposit']);
 
     await db.query(
       `INSERT INTO messages (id, conversation_id, sender_id, receiver_id, content, is_system, system_key)
@@ -4726,8 +5012,12 @@ app.post('/api/conversations/:id/report-direct-deposit', async (req, res) => {
       return res.status(403).json({ error: 'Solo el huésped puede informar esta seña.' });
     }
 
-    if (conversation.request_mode !== 'direct') {
-      return res.status(422).json({ error: 'Esta acción solo aplica a acuerdos directos.' });
+    if (getEffectiveDepositTypeForRecord({
+      requestMode: conversation.request_mode,
+      depositType: conversation.deposit_type,
+      depositStatus: conversation.deposit_status,
+    }) !== 'external') {
+      return res.status(422).json({ error: 'Esta acción solo aplica a señas coordinadas por fuera.' });
     }
 
     if (conversation.request_status !== 'accepted') {
@@ -4740,10 +5030,25 @@ app.post('/api/conversations/:id/report-direct-deposit', async (req, res) => {
 
     await db.query(
       `UPDATE conversations
-       SET deposit_status = 'reported', updated_at = NOW()
+       SET deposit_type = 'external',
+           deposit_status = 'reported', updated_at = NOW()
        WHERE id = $1`,
       [req.params.id],
     );
+
+    if (conversation.booking_id) {
+      await db.query(
+        `UPDATE bookings
+         SET deposit_type = 'external',
+             deposit_status = 'reported',
+             deposit_amount_ars = NULL,
+             service_fee_ars = NULL,
+             deposit_total_charge_ars = NULL,
+             deposit_payment_reference = NULL
+         WHERE id = $1 AND "userId" = $2`,
+        [conversation.booking_id, userId],
+      );
+    }
 
     return res.json(await getEnrichedConversationById(req.params.id));
   } catch (err) {
@@ -4784,9 +5089,15 @@ app.post('/api/conversations/:id/confirm-direct-deposit', async (req, res) => {
       return res.status(403).json({ error: 'Solo el anfitrión puede confirmar la recepción de la seña.' });
     }
 
-    if (conversation.request_mode !== 'direct') {
+    const effectiveDepositType = getEffectiveDepositTypeForRecord({
+      requestMode: conversation.request_mode,
+      depositType: conversation.deposit_type,
+      depositStatus: conversation.deposit_status,
+    });
+
+    if (effectiveDepositType !== 'external') {
       await client.query('ROLLBACK');
-      return res.status(422).json({ error: 'Esta acción solo aplica a acuerdos directos.' });
+      return res.status(422).json({ error: 'Esta acción solo aplica a señas coordinadas por fuera.' });
     }
 
     if (conversation.request_status !== 'accepted') {
@@ -4849,24 +5160,44 @@ app.post('/api/conversations/:id/confirm-direct-deposit', async (req, res) => {
       await client.query(
         `UPDATE bookings
          SET status = 'confirmed',
-             request_mode = 'direct',
+             deposit_type = 'external',
              deposit_status = 'confirmed',
+             deposit_amount_ars = NULL,
+             service_fee_ars = NULL,
+             deposit_total_charge_ars = NULL,
+             deposit_payment_reference = NULL,
              contract_json = COALESCE(contract_json, $2)
          WHERE id = $1`,
         [conversation.booking_id, JSON.stringify(contract)],
       );
     } else {
       await client.query(
-        `INSERT INTO bookings (id, "propertyId", "userId", status, start_date, end_date, total_price, guests, stay_code, contract_json, request_mode, deposit_status)
-         VALUES ($1, $2, $3, 'confirmed', $4, $5, $6, $7, $8, $9, 'direct', 'confirmed')`,
-        [bookingId, conversation.property_id, conversation.tenant_id, startDate, endDate, totalPrice, guests, stayCode, JSON.stringify(contract)],
+        `INSERT INTO bookings (id, "propertyId", "userId", status, start_date, end_date, total_price, guests, stay_code, contract_json, request_mode, deposit_type, deposit_status)
+         VALUES ($1, $2, $3, 'confirmed', $4, $5, $6, $7, $8, $9, $10, 'external', 'confirmed')`,
+        [
+          bookingId,
+          conversation.property_id,
+          conversation.tenant_id,
+          startDate,
+          endDate,
+          totalPrice,
+          guests,
+          stayCode,
+          JSON.stringify(contract),
+          conversation.request_mode === 'protected' ? 'protected' : 'direct',
+        ],
       );
     }
 
     await client.query(
       `UPDATE conversations
        SET booking_id = $1,
+           deposit_type = 'external',
            deposit_status = 'confirmed',
+           deposit_amount_ars = NULL,
+           service_fee_ars = NULL,
+           deposit_total_charge_ars = NULL,
+           deposit_payment_reference = NULL,
            updated_at = NOW()
        WHERE id = $2`,
       [bookingId, req.params.id],
@@ -4880,7 +5211,8 @@ app.post('/api/conversations/:id/confirm-direct-deposit', async (req, res) => {
       endDate,
       guests,
       totalPrice,
-      requestMode: 'direct',
+      requestMode: conversation.request_mode === 'protected' ? 'protected' : 'direct',
+      depositType: 'external',
     });
 
     return res.json(await getEnrichedConversationById(req.params.id));
@@ -4893,6 +5225,124 @@ app.post('/api/conversations/:id/confirm-direct-deposit', async (req, res) => {
     return res.status(500).json({ error: 'No pudimos confirmar la recepción de la seña. Intentá de nuevo.' });
   } finally {
     client?.release();
+  }
+});
+
+app.post('/api/bookings/:id/select-external-deposit', async (req, res) => {
+  const userId = req.session.userId;
+  if (!userId) {
+    return sendBookingError(res, 401, 'AUTH_REQUIRED', AUTH_REQUIRED_ERROR);
+  }
+
+  try {
+    const booking = await getUserBookingById(userId, req.params.id);
+
+    if (!booking) {
+      return sendBookingError(res, 404, 'BOOKING_NOT_FOUND', 'No encontramos esa reserva.');
+    }
+
+    if (booking.requestMode !== 'protected') {
+      return sendBookingError(res, 422, 'INVALID_EXTERNAL_DEPOSIT_FLOW', 'Esta elección solo aplica a solicitudes registradas en la plataforma.');
+    }
+
+    if (booking.status !== 'confirmed') {
+      return sendBookingError(res, 422, 'BOOKING_NOT_ACCEPTED', 'Esperá a que el anfitrión acepte la solicitud antes de elegir cómo resolver la seña.');
+    }
+
+    if (isProtectedDepositBooking(booking) && booking.depositStatus && !EXTERNAL_DEPOSIT_STATUSES.has(booking.depositStatus)) {
+      return sendBookingError(res, 422, 'PROTECTED_DEPOSIT_ALREADY_STARTED', 'La seña ya quedó gestionada dentro de la plataforma y no se puede cambiar desde acá.');
+    }
+
+    if (booking.depositType === 'external' && booking.depositStatus && EXTERNAL_DEPOSIT_STATUSES.has(booking.depositStatus)) {
+      return res.json({ booking });
+    }
+
+    await db.query(
+      `UPDATE bookings
+       SET deposit_type = 'external',
+           deposit_status = 'external_pending',
+           deposit_amount_ars = NULL,
+           service_fee_ars = NULL,
+           deposit_total_charge_ars = NULL,
+           deposit_payment_reference = NULL
+       WHERE id = $1 AND "userId" = $2`,
+      [req.params.id, userId],
+    );
+
+    await syncConversationDepositState(req.params.id, {
+      depositType: 'external',
+      depositStatus: 'external_pending',
+      protectedDepositPricing: null,
+      depositPaymentReference: null,
+    });
+
+    const updatedBooking = await getUserBookingById(userId, req.params.id);
+    return res.json({ booking: updatedBooking });
+  } catch (err) {
+    console.error('Error al elegir seña externa:', err);
+    return sendBookingError(res, 500, 'EXTERNAL_DEPOSIT_SELECTION_FAILED', 'No pudimos registrar esta elección. Intentá de nuevo.');
+  }
+});
+
+app.post('/api/bookings/:id/select-protected-deposit', async (req, res) => {
+  const userId = req.session.userId;
+  if (!userId) {
+    return sendBookingError(res, 401, 'AUTH_REQUIRED', AUTH_REQUIRED_ERROR);
+  }
+
+  try {
+    const booking = await getUserBookingById(userId, req.params.id);
+
+    if (!booking) {
+      return sendBookingError(res, 404, 'BOOKING_NOT_FOUND', 'No encontramos esa reserva.');
+    }
+
+    if (booking.requestMode !== 'protected') {
+      return sendBookingError(res, 422, 'INVALID_PROTECTED_DEPOSIT_FLOW', 'Esta elección solo aplica a solicitudes registradas en la plataforma.');
+    }
+
+    if (booking.status !== 'confirmed') {
+      return sendBookingError(res, 422, 'BOOKING_NOT_ACCEPTED', 'Esperá a que el anfitrión acepte la solicitud antes de resolver la seña dentro de la plataforma.');
+    }
+
+    if (booking.depositStatus === 'reported' || booking.depositStatus === 'confirmed') {
+      return sendBookingError(res, 422, 'EXTERNAL_DEPOSIT_ALREADY_REPORTED', 'La seña ya se empezó a coordinar por fuera y no se puede cambiar desde acá.');
+    }
+
+    if (isProtectedDepositBooking(booking) && booking.depositStatus && !EXTERNAL_DEPOSIT_STATUSES.has(booking.depositStatus)) {
+      return res.json({ booking });
+    }
+
+    const protectedDeposit = buildProtectedDepositPersistence(booking);
+
+    if (!protectedDeposit) {
+      return sendBookingError(res, 422, 'INVALID_PROTECTED_DEPOSIT_PRICING', 'No pudimos calcular la seña protegida para esta reserva.');
+    }
+
+    await db.query(
+      `UPDATE bookings
+       SET deposit_type = 'protected',
+           deposit_status = NULL,
+           deposit_amount_ars = $3,
+           service_fee_ars = $4,
+           deposit_total_charge_ars = $5,
+           deposit_payment_reference = NULL
+       WHERE id = $1 AND "userId" = $2`,
+      [req.params.id, userId, protectedDeposit.depositAmountArs, protectedDeposit.serviceFeeArs, protectedDeposit.depositTotalChargeArs],
+    );
+
+    await syncConversationDepositState(req.params.id, {
+      depositType: 'protected',
+      depositStatus: null,
+      protectedDepositPricing: protectedDeposit.pricing,
+      depositPaymentReference: null,
+    });
+
+    const updatedBooking = await getUserBookingById(userId, req.params.id);
+    return res.json({ booking: updatedBooking });
+  } catch (err) {
+    console.error('Error al elegir seña protegida:', err);
+    return sendBookingError(res, 500, 'PROTECTED_DEPOSIT_SELECTION_FAILED', 'No pudimos registrar esta elección. Intentá de nuevo.');
   }
 });
 
@@ -4909,31 +5359,44 @@ app.post('/api/bookings/:id/pay-deposit', async (req, res) => {
       return sendBookingError(res, 404, 'BOOKING_NOT_FOUND', 'No encontramos esa reserva.');
     }
 
-    if (booking.requestMode !== 'protected') {
-      return sendBookingError(res, 422, 'INVALID_PAYMENT_FLOW', 'Esta acción solo aplica a reservas protegidas.');
+    if (booking.requestMode !== 'protected' || getEffectiveDepositTypeForRecord(booking) === 'external') {
+      return sendBookingError(res, 422, 'INVALID_PAYMENT_FLOW', 'Primero elegí resolver la seña dentro de la plataforma.');
     }
 
     if (booking.status !== 'confirmed') {
       return sendBookingError(res, 422, 'BOOKING_NOT_ACCEPTED', 'Esperá a que el anfitrión acepte la solicitud antes de pagar la seña.');
     }
 
-    if (booking.depositStatus === 'held' || booking.depositStatus === 'released') {
+    if (isProtectedDepositBooking(booking) && booking.depositStatus && !EXTERNAL_DEPOSIT_STATUSES.has(booking.depositStatus)) {
       return res.json({ booking });
     }
 
-    await db.query(
-      `UPDATE bookings
-       SET deposit_status = 'held'
-       WHERE id = $1 AND "userId" = $2`,
-      [req.params.id, userId],
-    );
+    const protectedDeposit = buildProtectedDepositPersistence(booking);
+
+    if (!protectedDeposit) {
+      return sendBookingError(res, 422, 'INVALID_PAYMENT_PRICING', 'No pudimos calcular la seña protegida para esta reserva.');
+    }
+
+    const depositPaymentReference = booking.depositPaymentReference || buildDepositPaymentReference(req.params.id);
 
     await db.query(
-      `UPDATE conversations
-       SET deposit_status = 'held', updated_at = NOW()
-       WHERE booking_id = $1`,
-      [req.params.id],
+      `UPDATE bookings
+       SET deposit_type = 'protected',
+           deposit_status = 'held',
+           deposit_amount_ars = $3,
+           service_fee_ars = $4,
+           deposit_total_charge_ars = $5,
+           deposit_payment_reference = $6
+       WHERE id = $1 AND "userId" = $2`,
+      [req.params.id, userId, protectedDeposit.depositAmountArs, protectedDeposit.serviceFeeArs, protectedDeposit.depositTotalChargeArs, depositPaymentReference],
     );
+
+    await syncConversationDepositState(req.params.id, {
+      depositType: 'protected',
+      depositStatus: 'held',
+      protectedDepositPricing: protectedDeposit.pricing,
+      depositPaymentReference,
+    });
 
     const updatedBooking = await getUserBookingById(userId, req.params.id);
     return res.json({ booking: updatedBooking });
@@ -4956,7 +5419,7 @@ app.post('/api/bookings/:id/confirm-arrival', async (req, res) => {
       return sendBookingError(res, 404, 'BOOKING_NOT_FOUND', 'No encontramos esa reserva.');
     }
 
-    if (booking.requestMode !== 'protected') {
+    if (!isProtectedDepositBooking(booking)) {
       return sendBookingError(res, 422, 'INVALID_ARRIVAL_FLOW', 'Esta acción solo aplica a reservas protegidas.');
     }
 

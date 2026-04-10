@@ -381,12 +381,12 @@ describe('HostDashboard', () => {
       );
     });
 
-    expect(await screen.findAllByText('Solicitud aceptada')).not.toHaveLength(0);
-    expect(screen.getByText('Ya la aceptaste. Ahora el huésped tiene que pagar la seña desde la app.')).toBeInTheDocument();
-    expect(screen.getByText('La reserva queda confirmada cuando la seña entra en custodia.')).toBeInTheDocument();
+    expect(await screen.findAllByText('Seña por definir')).not.toHaveLength(0);
+    expect(screen.getByText('Ya la aceptaste. Ahora el huésped puede coordinar la seña por fuera o resolverla dentro de la plataforma.')).toBeInTheDocument();
+    expect(screen.getByText('Si elige la opción protegida, la seña queda registrada en la plataforma y el fee aparece antes de confirmar.')).toBeInTheDocument();
     expect(showToastMock).toHaveBeenCalledWith(
       'Solicitud aceptada',
-      'La solicitud quedó aceptada. Ahora el huésped tiene que pagar la seña desde la app.',
+      'La solicitud quedó aceptada. Ahora el huésped puede coordinar la seña por fuera o resolverla dentro de la plataforma.',
       'success',
     );
   });

@@ -11,6 +11,7 @@ import {
   parseBookingDateOnly,
 } from '../lib/bookingDates';
 import { getPropertyVerificationBadge, sortPropertiesByCatalogOrder } from '../lib/propertyVerification';
+import { getProtectedDepositPricingFromBooking } from '../lib/protectedDeposit';
 import { getReservationFlowCopy, getReservationNextActorDisplayLabel, getReservationNextStepDisplayLabel } from '../lib/reservationFlow';
 import { showToast } from '../lib/toast';
 import { cn } from '../lib/utils';
@@ -22,6 +23,8 @@ import {
   confirmArrival,
   payProtectedDeposit,
   reportArrivalProblem,
+  selectExternalDeposit,
+  selectProtectedDeposit,
 } from '../services/geminiService';
 import type { Booking, Conversation, Property } from '../types';
 import { EmptyState } from './EmptyState';
@@ -266,6 +269,7 @@ const getBookingRequestStatus = (booking: Booking) => {
 const getBookingFlow = (booking: Booking) => getReservationFlowCopy({
   mode: booking.requestMode,
   requestStatus: getBookingRequestStatus(booking),
+  depositType: booking.depositType,
   bookingStatus: booking.status,
   depositStatus: booking.depositStatus,
   cancellationActor: booking.cancellationActor,
@@ -274,6 +278,7 @@ const getBookingFlow = (booking: Booking) => getReservationFlowCopy({
 
 const getConversationFlow = (conversation: Conversation, relatedBooking?: Booking) => getReservationFlowCopy({
   mode: relatedBooking?.requestMode ?? conversation.requestMode,
+  depositType: relatedBooking?.depositType ?? conversation.depositType,
   requestStatus: relatedBooking ? getBookingRequestStatus(relatedBooking) : conversation.requestStatus,
   bookingStatus: relatedBooking?.status ?? conversation.bookingStatus,
   depositStatus: relatedBooking?.depositStatus ?? conversation.depositStatus,
@@ -392,7 +397,7 @@ export const MyBookings = () => {
   const [cancelingBookingId, setCancelingBookingId] = useState<string | null>(null);
   const [processingBookingAction, setProcessingBookingAction] = useState<{
     bookingId: string;
-    action: 'pay-deposit' | 'confirm-arrival' | 'report-arrival-problem';
+    action: 'select-external-deposit' | 'select-protected-deposit' | 'pay-deposit' | 'confirm-arrival' | 'report-arrival-problem';
   } | null>(null);
   const [reviewingBooking, setReviewingBooking] = useState<Booking | null>(null);
 
@@ -529,7 +534,8 @@ export const MyBookings = () => {
 
   const handleCancelBooking = async (booking: Booking) => {
     const cancellationDeadlineLabel = getCancellationDeadlineLabel(booking);
-    const confirmMessage = booking.requestMode === 'protected'
+    const usesProtectedDeposit = booking.depositType === 'protected' || (booking.requestMode === 'protected' && booking.depositStatus === 'held');
+    const confirmMessage = usesProtectedDeposit
       ? cancellationDeadlineLabel
         ? `¿Querés cancelar esta reserva? Podés hacerlo hasta el ${cancellationDeadlineLabel}. La devolución depende del momento de la cancelación y del estado de la reserva. Si la seña ya estaba en custodia, puede quedar en revisión.`
         : '¿Querés cancelar esta reserva? La devolución depende del momento de la cancelación y del estado de la reserva. Si la seña ya estaba en custodia, puede quedar en revisión.'
@@ -565,6 +571,34 @@ export const MyBookings = () => {
       showToast('Seña en custodia', 'La seña ya quedó resguardada en la plataforma hasta que confirmes la llegada.', 'success');
     } catch (error) {
       showToast('Seña', error instanceof Error ? error.message : 'No pudimos registrar el pago de la seña.', 'error');
+    } finally {
+      setProcessingBookingAction(null);
+    }
+  };
+
+  const handleSelectExternalDeposit = async (bookingId: string) => {
+    setProcessingBookingAction({ bookingId, action: 'select-external-deposit' });
+
+    try {
+      const nextBooking = await selectExternalDeposit(bookingId);
+      updateBookingState(nextBooking);
+      showToast('Seña externa', 'Podés seguir por chat sin pagar dentro de la plataforma. Si querés dejarla asentada después, informala desde la conversación.', 'success');
+    } catch (error) {
+      showToast('Seña', error instanceof Error ? error.message : 'No pudimos registrar esta elección.', 'error');
+    } finally {
+      setProcessingBookingAction(null);
+    }
+  };
+
+  const handleSelectProtectedDeposit = async (bookingId: string) => {
+    setProcessingBookingAction({ bookingId, action: 'select-protected-deposit' });
+
+    try {
+      const nextBooking = await selectProtectedDeposit(bookingId);
+      updateBookingState(nextBooking);
+      showToast('Seña protegida', 'La seña queda registrada y se libera cuando confirmás la llegada. El fee ya quedó visible antes de pagar.', 'success');
+    } catch (error) {
+      showToast('Seña', error instanceof Error ? error.message : 'No pudimos registrar esta elección.', 'error');
     } finally {
       setProcessingBookingAction(null);
     }
@@ -665,7 +699,10 @@ export const MyBookings = () => {
   }) ?? null;
 
   const contractActionBooking = bookings.find((booking) => Boolean(booking.contractJson) && !booking.contractAccepted) ?? null;
-  const depositActionBooking = bookings.find((booking) => getBookingFlow(booking).stage === 'request-accepted') ?? null;
+  const depositActionBooking = bookings.find((booking) => {
+    const stage = getBookingFlow(booking).stage;
+    return stage === 'deposit-choice' || stage === 'request-accepted';
+  }) ?? null;
   const pendingResponseBooking = bookings.find((booking) => getBookingFlow(booking).stage === 'request-pending') ?? null;
 
   addPriorityAction(priorityActions, arrivalActionBooking ? {
@@ -691,8 +728,12 @@ export const MyBookings = () => {
   addPriorityAction(priorityActions, depositActionBooking ? {
     id: `deposit-${depositActionBooking.id}`,
     eyebrow: 'Tu paso pendiente',
-    title: `Pagá la seña de ${depositActionBooking.propertyTitle || 'esta reserva'}`,
-    description: 'El anfitrión ya aceptó la solicitud. Falta tu pago dentro de la app para dejar la reserva protegida y confirmada.',
+    title: getBookingFlow(depositActionBooking).stage === 'deposit-choice'
+      ? `Elegí cómo resolver la seña de ${depositActionBooking.propertyTitle || 'esta reserva'}`
+      : `Pagá la seña de ${depositActionBooking.propertyTitle || 'esta reserva'}`,
+    description: getBookingFlow(depositActionBooking).stage === 'deposit-choice'
+      ? 'El anfitrión ya aceptó la solicitud. Ahora podés coordinar la seña por fuera sin costo o resolverla dentro de la plataforma.'
+      : 'El anfitrión ya aceptó la solicitud y elegiste la seña protegida. Falta el pago dentro de la app para dejarla en custodia.',
     actionLabel: 'Ver solicitud',
     icon: <Icons.ShieldCheck className="h-5 w-5" />,
     onAction: () => scrollToBooking(depositActionBooking.id),
@@ -772,7 +813,10 @@ export const MyBookings = () => {
     const cancellationDeadlineLabel = getCancellationDeadlineLabel(booking);
     const isCancelable = canCancelBooking(booking);
     const bookingFlow = getBookingFlow(booking);
+    const protectedDepositPricing = booking.protectedDepositPricing ?? getProtectedDepositPricingFromBooking(booking);
     const showReservationFlowPanel = Boolean(booking.requestMode && bookingFlow.stage && bookingFlow.stage !== 'reservation-confirmed');
+    const isSelectingExternalDeposit = processingBookingAction?.bookingId === booking.id && processingBookingAction.action === 'select-external-deposit';
+    const isSelectingProtectedDeposit = processingBookingAction?.bookingId === booking.id && processingBookingAction.action === 'select-protected-deposit';
     const isPayingDeposit = processingBookingAction?.bookingId === booking.id && processingBookingAction.action === 'pay-deposit';
     const isConfirmingArrival = processingBookingAction?.bookingId === booking.id && processingBookingAction.action === 'confirm-arrival';
     const isReportingArrivalProblem = processingBookingAction?.bookingId === booking.id && processingBookingAction.action === 'report-arrival-problem';
@@ -796,7 +840,17 @@ export const MyBookings = () => {
               <div className="space-y-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge variant={getBookingStatusVariant(booking)} size="md">{getBookingStatusText(booking)}</Badge>
-                  {booking.requestMode ? <Badge variant="neutral" size="md">{booking.requestMode === 'protected' ? 'Reserva protegida' : 'Acuerdo directo'}</Badge> : null}
+                  {booking.requestMode ? (
+                    <Badge variant="neutral" size="md">
+                      {booking.requestMode === 'direct'
+                        ? 'Acuerdo directo'
+                        : booking.depositType === 'external'
+                          ? 'Seña externa'
+                          : booking.depositType === 'protected'
+                            ? 'Seña protegida'
+                            : 'Solicitud registrada'}
+                    </Badge>
+                  ) : null}
                   {booking.contractAccepted ? <Badge variant="success" size="md">Condiciones firmadas</Badge> : null}
                 </div>
 
@@ -939,6 +993,38 @@ export const MyBookings = () => {
                 </div>
 
                 <div className="flex flex-wrap gap-2 lg:justify-end">
+                  {bookingFlow.stage === 'deposit-choice' ? (
+                    <>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => void handleSelectExternalDeposit(booking.id)}
+                        loading={isSelectingExternalDeposit}
+                        loadingLabel="Guardando..."
+                        className="rounded-full"
+                      >
+                        <>
+                          <Icons.MessageSquare className="h-4 w-4" />
+                          Coordinar la seña por fuera
+                        </>
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => void handleSelectProtectedDeposit(booking.id)}
+                        loading={isSelectingProtectedDeposit}
+                        loadingLabel="Guardando..."
+                        className="rounded-full"
+                      >
+                        <>
+                          <Icons.ShieldCheck className="h-4 w-4" />
+                          Resolver la seña dentro de la plataforma
+                        </>
+                      </Button>
+                    </>
+                  ) : null}
+
                   {bookingFlow.stage === 'request-accepted' ? (
                     <Button
                       type="button"
@@ -989,6 +1075,22 @@ export const MyBookings = () => {
                   ) : null}
                 </div>
               </div>
+
+              {(bookingFlow.stage === 'deposit-choice' || bookingFlow.stage === 'request-accepted') && protectedDepositPricing ? (
+                <div className="mt-4 rounded-[20px] border border-white/80 bg-white/90 px-4 py-4 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-300">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-brand">Seña protegida</p>
+                      <p className="mt-1 font-semibold text-slate-950 dark:text-slate-50">La seña queda registrada y se libera cuando confirmás la llegada.</p>
+                    </div>
+                    <div className="text-right text-xs leading-5">
+                      <p>Seña: {formatCurrency(protectedDepositPricing.depositAmount)}</p>
+                      <p>Fee de servicio: {formatCurrency(protectedDepositPricing.serviceFee)}</p>
+                      <p className="font-semibold text-slate-950 dark:text-slate-50">Total: {formatCurrency(protectedDepositPricing.totalCharge)}</p>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
 
               {bookingFlow.stage === 'protected-deposit-held' && !arrivalActionsAvailable ? (
                 <div className="mt-4 rounded-[20px] border border-white/80 bg-white/80 px-4 py-3 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-300">

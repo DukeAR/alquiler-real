@@ -98,6 +98,7 @@ const scrollToSection = (sectionId: string) => {
 
 const getBookingFlow = (booking: any) => getReservationFlowCopy({
   mode: booking.requestMode,
+  depositType: booking.depositType,
   requestStatus: booking.requestMode === 'protected'
     ? booking.depositStatus === 'held' || booking.depositStatus === 'released' || booking.status === 'confirmed'
       ? 'accepted'
@@ -108,6 +109,25 @@ const getBookingFlow = (booking: any) => getReservationFlowCopy({
   cancellationActor: booking.cancellationActor,
   viewerRole: 'host',
 });
+
+const hasProtectedPlatformDeposit = (booking: {
+  depositType?: unknown;
+  requestMode?: unknown;
+  depositStatus?: unknown;
+}) => {
+  if (booking.depositType === 'protected') {
+    return true;
+  }
+
+  return booking.requestMode === 'protected'
+    && (
+      booking.depositStatus === 'held'
+      || booking.depositStatus === 'review'
+      || booking.depositStatus === 'pending_confirmation'
+      || booking.depositStatus === 'released'
+      || booking.depositStatus === 'refunded'
+    );
+};
 
 const getBookingStatusLabel = (booking: any) => {
   const status = booking.status;
@@ -331,7 +351,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
         acceptedMode === 'direct' ? 'Propuesta aceptada' : 'Solicitud aceptada',
         acceptedMode === 'direct'
           ? 'La propuesta quedó aceptada. Seguí por el chat para cerrar la seña.'
-          : 'La solicitud quedó aceptada. Ahora el huésped tiene que pagar la seña desde la app.',
+          : 'La solicitud quedó aceptada. Ahora el huésped puede coordinar la seña por fuera o resolverla dentro de la plataforma.',
         'success',
       );
     } catch (err) {
@@ -355,7 +375,8 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
       });
 
       updateRecentBooking(response.booking);
-      showToast('Reserva cancelada', booking.requestMode === 'protected' ? 'La reserva quedó cancelada y la seña se devuelve automáticamente.' : 'La reserva quedó cancelada y el estado ya se actualizó.', 'success');
+      const usesProtectedPlatformDeposit = hasProtectedPlatformDeposit(response.booking ?? {}) || hasProtectedPlatformDeposit(booking);
+      showToast('Reserva cancelada', usesProtectedPlatformDeposit ? 'La reserva quedó cancelada y la seña se devuelve automáticamente.' : 'La reserva quedó cancelada y el estado ya se actualizó.', 'success');
     } catch (err) {
       showToast('Reserva', err instanceof Error ? err.message : 'No pudimos cancelar la reserva desde el panel.', 'error');
     } finally {
@@ -759,7 +780,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
       && bookingFlow.stage !== 'guest-cancelled'
       && bookingFlow.stage !== 'protected-deposit-review'
       && bookingFlow.stage !== 'protected-no-show-pending';
-    const canReportProtectedNoShow = booking.requestMode === 'protected' && bookingFlow.stage === 'protected-deposit-held' && arrivalActionsAvailable;
+    const canReportProtectedNoShow = bookingFlow.stage === 'protected-deposit-held' && arrivalActionsAvailable;
     const isAcceptingRequest = processingBookingAction?.bookingId === booking.id && processingBookingAction?.action === 'accept-request';
     const isConfirmingDirectDeposit = processingBookingAction?.bookingId === booking.id && processingBookingAction?.action === 'confirm-direct-deposit';
     const isCancelingAsHost = processingBookingAction?.bookingId === booking.id && processingBookingAction?.action === 'cancel-host';
@@ -902,7 +923,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
                 </>
               </Button>
             ) : null}
-            {booking.requestMode === 'protected' && bookingFlow.stage === 'protected-deposit-held' && !arrivalActionsAvailable ? (
+            {bookingFlow.stage === 'protected-deposit-held' && !arrivalActionsAvailable ? (
               <div className="rounded-full bg-slate-100 px-4 py-2 text-xs font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-300">
                 {bookingFlow.pendingActionHint}
               </div>

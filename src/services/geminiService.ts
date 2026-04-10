@@ -181,6 +181,22 @@ export async function acceptContract(bookingId: string) {
   });
 }
 
+export async function selectExternalDeposit(bookingId: string): Promise<Booking> {
+  const response = await apiJson<{ booking: Booking }>(`/api/bookings/${bookingId}/select-external-deposit`, {
+    method: 'POST'
+  });
+
+  return response.booking;
+}
+
+export async function selectProtectedDeposit(bookingId: string): Promise<Booking> {
+  const response = await apiJson<{ booking: Booking }>(`/api/bookings/${bookingId}/select-protected-deposit`, {
+    method: 'POST'
+  });
+
+  return response.booking;
+}
+
 export async function payProtectedDeposit(bookingId: string): Promise<Booking> {
   const response = await apiJson<{ booking: Booking }>(`/api/bookings/${bookingId}/pay-deposit`, {
     method: 'POST'
