@@ -467,8 +467,8 @@ describe('SecureChat', () => {
     renderChat();
 
     expect(await screen.findByText('Podés resolver la seña acá para dejar todo claro entre ambos.')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Antes de resolver la seña' })).toBeInTheDocument();
-    expect(screen.getByText('Cuándo no interviene')).toBeInTheDocument();
+    expect(screen.getByText('Elegí cómo resolver la seña')).toBeInTheDocument();
+    expect(screen.getByText('La opción protegida la deja registrada y muestra el fee antes de pagar. Si preferís coordinarla por fuera, seguís directo por chat.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Resolver la seña acá con claridad/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Coordinarla por fuera/i })).toBeInTheDocument();
 
@@ -491,6 +491,47 @@ describe('SecureChat', () => {
     expect(screen.getByText('Estado: Seña en custodia')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Confirmar llegada/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Coordinar llegada/i })).toBeInTheDocument();
+  });
+
+  test('lets the guest choose external coordination in one step from the deposit chooser', async () => {
+    useAuthMock.mockReturnValue({ user: { id: 'tenant-1' } });
+    fetchConversationsMock.mockResolvedValue([
+      {
+        ...baseConversation,
+        booking_id: 'booking-direct-choice-1',
+        bookingStatus: 'confirmed',
+        requestMode: 'protected',
+        requestStatus: 'accepted',
+        requestStartDate: '2026-05-10',
+        requestEndDate: '2026-05-14',
+        requestGuests: 2,
+        requestTotalPrice: 410000,
+      },
+    ]);
+    fetchMessagesMock.mockResolvedValue([]);
+    selectExternalDepositMock.mockResolvedValue({
+      id: 'booking-direct-choice-1',
+      status: 'confirmed',
+      requestMode: 'protected',
+      depositType: 'external',
+      depositStatus: 'external_pending',
+    });
+
+    renderChat();
+
+    expect(await screen.findByText('Elegí cómo resolver la seña')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Coordinarla por fuera/i }));
+
+    await waitFor(() => {
+      expect(selectExternalDepositMock).toHaveBeenCalledWith('booking-direct-choice-1');
+    });
+
+    expect(showToastMock).toHaveBeenCalledWith(
+      'Seña externa',
+      'Quedó como coordinación por fuera. Si cambiás de idea antes de informarla, podés volver a la seña protegida desde esta conversación.',
+      'success',
+    );
   });
 
   test('keeps a protected return action visible after the guest chooses external coordination', async () => {

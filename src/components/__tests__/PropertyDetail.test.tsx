@@ -129,6 +129,8 @@ const getDesktopBookingContext = () => screen.getByRole('region', { name: /conte
 
 const getMobileBookingSummary = () => screen.getByRole('region', { name: /resumen móvil de la reserva/i });
 
+const getBookingFlowDialog = () => screen.getByRole('dialog', { name: /ver disponibilidad y reservar/i });
+
 const DEFAULT_WINDOW_WIDTH = window.innerWidth;
 
 const setWindowWidth = (width: number) => {
@@ -159,7 +161,7 @@ const openBookingFlow = async () => {
     fireEvent.click(screen.getAllByRole('button', { name: /ver disponibilidad/i })[0]);
   }
 
-  await waitFor(() => expect(screen.getByRole('heading', { name: /ver disponibilidad y reservar/i })).toBeDefined());
+  await waitFor(() => expect(getBookingFlowDialog()).toBeDefined());
 };
 
 const selectDateRange = async (checkInIso: string, checkOutIso: string) => {
@@ -323,7 +325,7 @@ describe('PropertyDetail', () => {
 
     fireEvent.click(within(desktopContext).getByRole('button', { name: /ver disponibilidad/i }));
 
-    await waitFor(() => expect(screen.getByRole('heading', { name: /ver disponibilidad y reservar/i })).toBeDefined());
+    await waitFor(() => expect(getBookingFlowDialog()).toBeDefined());
     await waitFor(() => expect(screen.getByRole('dialog', { name: /selector de rango de fechas/i })).toBeDefined());
   });
 
@@ -347,13 +349,13 @@ describe('PropertyDetail', () => {
 
     await selectDateRange(checkInIso, checkOutIso);
 
-    const bookingFlow = screen.getByRole('region', { name: /flujo de reserva/i });
+    const bookingFlow = getBookingFlowDialog();
 
     expect(within(bookingFlow).getByText('Ver disponibilidad y reservar')).toBeDefined();
     expect(within(bookingFlow).getByText(/3 noches · 1 huésped ·/i)).toBeDefined();
     expect(within(bookingFlow).getAllByText(new RegExp('360')).length).toBeGreaterThan(0);
-    expect(within(mobileContext).getByText(/3 noches · 1 huésped ·/i)).toBeDefined();
-    expect(within(mobileContext).getByRole('button', { name: /ver disponibilidad/i })).toBeDefined();
+    expect(within(desktopContext).getByText('Tu selección')).toBeDefined();
+    expect(within(desktopContext).getAllByText('1 huésped').length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByRole('button', { name: /^siguiente$/i }));
     await waitFor(() => expect(screen.getByText('Definí quiénes viajan')).toBeDefined());
@@ -361,7 +363,7 @@ describe('PropertyDetail', () => {
     fireEvent.click(screen.getByRole('button', { name: /sumar adulto/i }));
 
     expect(within(bookingFlow).getAllByText('2 huéspedes').length).toBeGreaterThan(0);
-    expect(within(mobileContext).getByText(/3 noches · 2 huéspedes ·/i)).toBeDefined();
+    expect(within(desktopContext).getAllByText('2 huéspedes').length).toBeGreaterThan(0);
   });
 
   test('uses one sticky mobile CTA through the guided booking flow', async () => {
@@ -373,25 +375,48 @@ describe('PropertyDetail', () => {
 
     const mobileContext = getMobileBookingSummary();
 
-  expect(within(mobileContext).getByRole('button', { name: /ver disponibilidad/i })).toBeDefined();
+    expect(within(mobileContext).getByRole('button', { name: /ver disponibilidad/i })).toBeDefined();
     expect(screen.queryByRole('button', { name: /^siguiente$/i })).toBeNull();
 
     const checkInIso = isoPlusDays(2);
     const checkOutIso = isoPlusDays(5);
 
-  fireEvent.click(within(mobileContext).getByRole('button', { name: /ver disponibilidad/i }));
+    fireEvent.click(within(mobileContext).getByRole('button', { name: /ver disponibilidad/i }));
     await selectDateRange(checkInIso, checkOutIso);
 
-    expect(within(mobileContext).getByRole('button', { name: /seguir con huéspedes/i })).toBeDefined();
+    const bookingFlow = getBookingFlowDialog();
 
-    fireEvent.click(within(mobileContext).getByRole('button', { name: /seguir con huéspedes/i }));
+    expect(within(bookingFlow).getByRole('button', { name: /seguir con huéspedes/i })).toBeDefined();
+
+    fireEvent.click(within(bookingFlow).getByRole('button', { name: /seguir con huéspedes/i }));
     await waitFor(() => expect(screen.getByText('Definí quiénes viajan')).toBeDefined());
 
-    expect(within(mobileContext).getByRole('button', { name: /seguir al resumen/i })).toBeDefined();
+    expect(within(bookingFlow).getByRole('button', { name: /seguir al resumen/i })).toBeDefined();
 
-    fireEvent.click(within(mobileContext).getByRole('button', { name: /seguir al resumen/i }));
+    fireEvent.click(within(bookingFlow).getByRole('button', { name: /seguir al resumen/i }));
     await waitFor(() => expect(screen.getByText('Revisá el resumen final')).toBeDefined());
-    expect(within(mobileContext).getByRole('button', { name: /enviar solicitud/i })).toBeDefined();
+    expect(within(bookingFlow).getByRole('button', { name: /enviar solicitud/i })).toBeDefined();
+  });
+
+  test('preserves the current booking selection when the modal closes and reopens', async () => {
+    renderPropertyDetail();
+
+    await waitForPropertyHeading();
+
+    const checkInIso = isoPlusDays(2);
+    const checkOutIso = isoPlusDays(5);
+
+    await selectDateRange(checkInIso, checkOutIso);
+
+    fireEvent.click(screen.getByRole('button', { name: /cerrar flujo de reserva/i }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: /ver disponibilidad y reservar/i })).toBeNull());
+    expect(getDesktopBookingContext()).toHaveTextContent(/tu selección/i);
+
+    fireEvent.click(screen.getAllByRole('button', { name: /ver disponibilidad/i })[0]);
+
+    const bookingFlow = await screen.findByRole('dialog', { name: /ver disponibilidad y reservar/i });
+    expect(within(bookingFlow).getAllByText(/3 noches · 1 huésped ·/i).length).toBeGreaterThan(0);
   });
 
   test('renders clearer amenities and interaction history sections', async () => {
@@ -554,7 +579,7 @@ describe('PropertyDetail', () => {
     expect(screen.getByText('La elegís después de la aceptación')).toBeDefined();
     expect(screen.getAllByRole('status').length).toBeGreaterThan(0);
     expect(screen.getAllByRole('button', { name: /editar/i })).toHaveLength(2);
-    expect(screen.getByRole('button', { name: /^solicitar reserva$/i })).toBeDefined();
+    expect(screen.getByRole('button', { name: /^enviar solicitud$/i })).toBeDefined();
   });
 
   test('smoke: sends a neutral request and opens the contextual chat', async () => {
@@ -636,7 +661,7 @@ describe('PropertyDetail', () => {
       return { ok: true, status: 200, json: async () => ({}) };
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /^solicitar reserva$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^enviar solicitud$/i }));
 
     await waitFor(() => expect(bookingCalls).toHaveLength(1));
 
@@ -732,7 +757,7 @@ describe('PropertyDetail', () => {
     });
 
     const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
-    fireEvent.click(screen.getByRole('button', { name: /^solicitar reserva$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^enviar solicitud$/i }));
 
     await waitFor(() => expect(dispatchSpy).toHaveBeenCalled());
     expect(bookingCalls).toHaveLength(1);
@@ -795,7 +820,7 @@ describe('PropertyDetail', () => {
     expect(screen.queryByRole('button', { name: /guardar en guardados/i })).toBeNull();
 
     await advanceToConfirmationStep();
-    fireEvent.click(screen.getByRole('button', { name: /^solicitar reserva$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^enviar solicitud$/i }));
 
     await waitFor(() => expect(showLoginModal).toHaveBeenCalledTimes(1));
   });
