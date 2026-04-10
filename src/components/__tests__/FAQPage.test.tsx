@@ -15,6 +15,7 @@ describe('FAQPage', () => {
 
     expect(screen.getByRole('heading', { name: 'Preguntas frecuentes' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Qué mostramos y qué no damos por hecho' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Qué hace Alquiler Real, cuándo te protege y cuándo no' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Preguntas que conviene resolver antes de reservar o publicar' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Ver términos/i })).toBeInTheDocument();
     expect(screen.getByText('Elegí bien el modelo antes de aceptar')).toBeInTheDocument();

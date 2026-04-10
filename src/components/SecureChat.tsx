@@ -16,6 +16,7 @@ import { formatGuestMemberSinceYear, resolveGuestRequestProfile } from '../lib/g
 import { getGuestPositiveCoordinationSignals, getHostResponseSignal } from '../lib/positiveIncentives';
 import { getProtectedDepositPricingFromBooking } from '../lib/protectedDeposit';
 import { getReservationFlowCopy } from '../lib/reservationFlow';
+import { PlatformTermsQuickGuide } from './ui/PlatformTermsQuickGuide';
 import { getVerificationSummaryItems, getVerificationSummaryLabel } from './ui/VerificationMeter';
 
 type InlineThreadNoticeTone = 'neutral' | 'warning' | 'brand';
@@ -1121,6 +1122,10 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
   const canChooseExternalDeposit = Boolean(isTenantConversation && flowCopy?.stage === 'deposit-choice' && activeRequestContext?.bookingId);
   const canChooseProtectedDeposit = Boolean(isTenantConversation && flowCopy?.stage === 'deposit-choice' && activeRequestContext?.bookingId);
   const showDepositChoiceComposer = Boolean(canChooseExternalDeposit || canChooseProtectedDeposit);
+  const showConversationQuickGuide = Boolean(
+    activeRequestContext
+    && (flowCopy?.stage === 'deposit-choice' || flowCopy?.stage === 'external-deposit-pending' || flowCopy?.stage === 'request-accepted'),
+  );
   const canReturnToProtectedDeposit = Boolean(
     isTenantConversation
     && activeRequestContext?.bookingId
@@ -2064,6 +2069,16 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                       </div>
                     ) : null}
                   </div>
+                ) : null}
+
+                {showConversationQuickGuide ? (
+                  <PlatformTermsQuickGuide
+                    eyebrow="Guía corta"
+                    title="Antes de resolver la seña"
+                    description="Usalo como referencia rápida para saber qué queda registrado en la app, cuándo interviene Alquiler Real y cuándo no."
+                    density="compact"
+                    showLink
+                  />
                 ) : null}
 
                 {flowCopy?.stage === 'request-accepted' && protectedDepositPreview ? (

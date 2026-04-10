@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { Icons } from './Icons';
 import { Card } from './ui/Card';
 import { PageHeader } from './ui/PageHeader';
+import { PlatformTermsQuickGuide } from './ui/PlatformTermsQuickGuide';
 import { SectionTitle } from './ui/SectionTitle';
 
 interface FAQPageProps {
@@ -416,6 +417,12 @@ export const FAQPage: React.FC<FAQPageProps> = ({ onBack }) => {
             })}
           </div>
         </section>
+
+        <PlatformTermsQuickGuide
+          eyebrow="En 1 minuto"
+          title="Qué hace Alquiler Real, cuándo te protege y cuándo no"
+          description="Cinco bloques cortos para entender qué depende del anfitrión, qué queda registrado y en qué casos la app puede intervenir."
+        />
 
         <section className="space-y-6">
           <SectionTitle

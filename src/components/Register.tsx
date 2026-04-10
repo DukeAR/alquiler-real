@@ -8,6 +8,7 @@ import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 import { FormField } from './ui/FormField';
 import { Input } from './ui/Input';
+import { PlatformTermsQuickGuide } from './ui/PlatformTermsQuickGuide';
 import { SectionTitle } from './ui/SectionTitle';
 
 type RegisterProps = {
@@ -201,6 +202,15 @@ export const Register = ({ mode = 'login' }: RegisterProps) => {
                     <p className="font-semibold tracking-tight text-slate-900 dark:text-white">Tu cuenta no se separa entre huésped y anfitrión.</p>
                     <p className="mt-1 leading-6">Entrás una vez, explorás como huésped y cuando quieras podés activar el modo anfitrión para publicar desde la misma cuenta.</p>
                 </div>
+
+                <PlatformTermsQuickGuide
+                    eyebrow="Antes de crear la cuenta"
+                    title="Qué tenés que saber antes de usar la app"
+                    description="Resumen simple para entender cómo funcionan los avisos, el contacto, la seña y el alcance de la plataforma."
+                    density="compact"
+                    showLink
+                    className="mb-6"
+                />
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <FormField label="Email" htmlFor="auth-email">

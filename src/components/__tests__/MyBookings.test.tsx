@@ -336,6 +336,8 @@ describe('MyBookings', () => {
 
     expect(await screen.findAllByText('Elegir seña')).not.toHaveLength(0);
     expect(screen.getByText('El anfitrión ya aceptó. Ahora podés resolver la seña acá con claridad o coordinarla por fuera.')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Antes de elegir la seña' })).toBeInTheDocument();
+    expect(screen.getByText('Cuándo no interviene')).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /Abrir chat/i }).length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: /Coordinarla por fuera/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Resolver la seña acá con claridad/i })).toBeInTheDocument();

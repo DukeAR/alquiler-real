@@ -9,8 +9,10 @@ describe('TermsPage', () => {
     render(<TermsPage onBack={onBack} />);
 
     expect(screen.getByRole('heading', { name: 'Términos y condiciones' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Lo esencial en 1 minuto' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Responsabilidades, acuerdos y uso de la plataforma' })).toBeInTheDocument();
     expect(screen.getByText('Lo que muestra cada aviso')).toBeInTheDocument();
+    expect(screen.getByText('Cuándo no interviene')).toBeInTheDocument();
     expect(screen.getByText('Qué responde cada anfitrión')).toBeInTheDocument();
     expect(screen.getByText('Cuándo puede intervenir la plataforma')).toBeInTheDocument();
     expect(screen.getByText('Qué queda fuera de Alquiler Real')).toBeInTheDocument();

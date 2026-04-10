@@ -35,6 +35,7 @@ import { LoadingState } from './LoadingState';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
+import { PlatformTermsQuickGuide } from './ui/PlatformTermsQuickGuide';
 import { ReviewModal } from './ReviewModal';
 import { SectionTitle } from './ui/SectionTitle';
 import { AccountModeSwitch } from './ui/AccountModeSwitch';
@@ -826,6 +827,7 @@ export const MyBookings = () => {
     const bookingFlow = getBookingFlow(booking);
     const protectedDepositPricing = booking.protectedDepositPricing ?? getProtectedDepositPricingFromBooking(booking);
     const showReservationFlowPanel = Boolean(booking.requestMode && bookingFlow.stage && bookingFlow.stage !== 'reservation-confirmed');
+    const showBookingQuickGuide = bookingFlow.stage === 'deposit-choice' || bookingFlow.stage === 'external-deposit-pending' || bookingFlow.stage === 'request-accepted';
     const isSelectingExternalDeposit = processingBookingAction?.bookingId === booking.id && processingBookingAction.action === 'select-external-deposit';
     const isSelectingProtectedDeposit = processingBookingAction?.bookingId === booking.id && processingBookingAction.action === 'select-protected-deposit';
     const isPayingDeposit = processingBookingAction?.bookingId === booking.id && processingBookingAction.action === 'pay-deposit';
@@ -1213,6 +1215,17 @@ export const MyBookings = () => {
                 <div className="mt-4 rounded-[20px] border border-white/80 bg-white/80 px-4 py-3 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-300">
                   {bookingFlow.pendingActionHint}
                 </div>
+              ) : null}
+
+              {showBookingQuickGuide ? (
+                <PlatformTermsQuickGuide
+                  eyebrow="Guía corta"
+                  title="Antes de elegir la seña"
+                  description="Lo esencial para saber qué queda dentro de la app, qué se coordina por fuera y en qué casos la plataforma puede revisar un problema."
+                  density="compact"
+                  showLink
+                  className="mt-4"
+                />
               ) : null}
             </div>
           ) : null}

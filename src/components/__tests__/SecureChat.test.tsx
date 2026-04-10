@@ -467,6 +467,8 @@ describe('SecureChat', () => {
     renderChat();
 
     expect(await screen.findByText('Podés resolver la seña acá para dejar todo claro entre ambos.')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Antes de resolver la seña' })).toBeInTheDocument();
+    expect(screen.getByText('Cuándo no interviene')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Resolver la seña acá con claridad/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Coordinarla por fuera/i })).toBeInTheDocument();
 
