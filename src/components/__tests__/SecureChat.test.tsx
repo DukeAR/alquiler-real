@@ -80,6 +80,20 @@ const baseConversation = {
       { key: 'tenure', label: 'Antigüedad en la plataforma', description: 'Todavía no hay antigüedad suficiente para evaluarlo.', status: 'pending' },
     ],
   },
+  hostInteractionHistory: {
+    completedReservationsCount: 6,
+    feedbackCount: 4,
+    agreementsKeptCount: 4,
+    listingConsistentCount: 4,
+    wouldInteractAgainCount: 4,
+    incidentsCount: 0,
+    avgResponseTimeMinutes: 18,
+    publicSignals: [
+      { key: 'completed-reservations', label: '6 reservas completadas', tone: 'positive' },
+      { key: 'listing-consistency', label: 'El aviso suele coincidir con lo publicado', tone: 'positive' },
+      { key: 'response-time', label: 'Responde en alrededor de 18 min', tone: 'positive' },
+    ],
+  },
   updated_at: '2026-04-06T12:00:00.000Z',
   created_at: '2026-04-06T11:00:00.000Z',
 };
@@ -95,6 +109,17 @@ const baseGuestProfile = {
     profileComplete: false,
     photoUploaded: false,
     basicDetailsComplete: true,
+  },
+  interactionHistory: {
+    completedStays: 4,
+    feedbackCount: 2,
+    agreementsKeptCount: 2,
+    wouldInteractAgainCount: 2,
+    incidentsCount: 0,
+    publicSignals: [
+      { key: 'agreements', label: 'Se cumplió lo acordado', tone: 'positive' },
+      { key: 'return', label: 'Volverían a interactuar', tone: 'positive' },
+    ],
   },
   verificationSummary: {
     score: 3,
@@ -275,7 +300,7 @@ describe('SecureChat', () => {
     renderChat();
 
     expect(await screen.findByRole('heading', { name: 'Mariana' })).toBeInTheDocument();
-    expect(screen.getByText('✔ Identidad verificada · ✔ Historial · ✔ Reseñas')).toBeInTheDocument();
+    expect(screen.getByText('✔ 6 reservas completadas · ✔ El aviso suele coincidir con lo publicado · ✔ Responde en alrededor de 18 min')).toBeInTheDocument();
     expect(screen.getByText((content) => content.includes('Casa de prueba') && content.includes('2 huéspedes') && content.includes('320'))).toBeInTheDocument();
     expect(screen.getByText('Estado: Esperando respuesta')).toBeInTheDocument();
     expect(screen.getByText('Podés coordinar todo por acá. Evitá compartir datos sensibles o pagos por fuera hasta tener claro el acuerdo.')).toBeInTheDocument();
@@ -300,7 +325,6 @@ describe('SecureChat', () => {
         requestGuests: 2,
         requestTotalPrice: 320000,
         guestProfile: baseGuestProfile,
-        guestPositiveReviewsCount: 2,
       },
     ]);
     fetchMessagesMock.mockResolvedValue([]);
@@ -313,7 +337,8 @@ describe('SecureChat', () => {
     expect(screen.getByText('Teléfono verificado')).toBeInTheDocument();
     expect(screen.getByText('Historial en la plataforma')).toBeInTheDocument();
     expect(screen.getByText('4 estadías completadas')).toBeInTheDocument();
-    expect(screen.getByText('2 reseñas positivas')).toBeInTheDocument();
+    expect(screen.getByText('✔ Se cumplió lo acordado')).toBeInTheDocument();
+    expect(screen.getByText('✔ Volverían a interactuar')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: '¿Vienen por descanso o trabajo?' }));
 

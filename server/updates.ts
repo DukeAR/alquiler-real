@@ -419,9 +419,10 @@ const seedDemoCatalog = async () => {
       await client.query(
         `INSERT INTO reviews (
           id, booking_id, reviewer_id, reviewed_user_id, property_id,
-          rating, comment, type, photos_match_reality, pressure_to_book_fast, created_at
+            rating, comment, type, agreement_kept, would_interact_again, had_incident,
+            photos_match_reality, pressure_to_book_fast, created_at
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
         ON CONFLICT (id) DO UPDATE SET
           booking_id = EXCLUDED.booking_id,
           reviewer_id = EXCLUDED.reviewer_id,
@@ -430,6 +431,9 @@ const seedDemoCatalog = async () => {
           rating = EXCLUDED.rating,
           comment = EXCLUDED.comment,
           type = EXCLUDED.type,
+            agreement_kept = EXCLUDED.agreement_kept,
+            would_interact_again = EXCLUDED.would_interact_again,
+            had_incident = EXCLUDED.had_incident,
           photos_match_reality = EXCLUDED.photos_match_reality,
           pressure_to_book_fast = EXCLUDED.pressure_to_book_fast,
           created_at = EXCLUDED.created_at`,
@@ -442,6 +446,9 @@ const seedDemoCatalog = async () => {
           review.rating,
           review.comment,
           review.type,
+          review.agreementKept,
+          review.wouldInteractAgain,
+          review.hadIncident,
           review.photosMatchReality,
           review.pressureToBookFast,
           review.createdAt,
@@ -897,10 +904,57 @@ export const initDB = async () => {
       rating INTEGER CHECK (rating >= 1 AND rating <= 5),
       comment TEXT,
       type TEXT CHECK (type IN ('host_to_guest', 'guest_to_host')),
+      agreement_kept BOOLEAN,
+      would_interact_again BOOLEAN,
+      had_incident BOOLEAN,
       photos_match_reality BOOLEAN DEFAULT TRUE,
       pressure_to_book_fast BOOLEAN DEFAULT FALSE,
       created_at TIMESTAMP DEFAULT NOW()
     );
+  `);
+
+  await db.query(`
+    DO $$ BEGIN
+      BEGIN ALTER TABLE reviews ADD COLUMN agreement_kept BOOLEAN; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE reviews ADD COLUMN would_interact_again BOOLEAN; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE reviews ADD COLUMN had_incident BOOLEAN; EXCEPTION WHEN duplicate_column THEN NULL; END;
+    END $$;
+  `);
+
+  await db.query(`
+    UPDATE reviews
+    SET agreement_kept = COALESCE(
+          agreement_kept,
+          CASE
+            WHEN photos_match_reality = FALSE OR pressure_to_book_fast = TRUE THEN FALSE
+            WHEN rating IS NOT NULL THEN rating >= 4
+            ELSE TRUE
+          END
+        ),
+        would_interact_again = COALESCE(
+          would_interact_again,
+          CASE
+            WHEN pressure_to_book_fast = TRUE OR photos_match_reality = FALSE THEN FALSE
+            WHEN rating IS NOT NULL THEN rating >= 4
+            ELSE TRUE
+          END
+        ),
+        had_incident = COALESCE(
+          had_incident,
+          CASE
+            WHEN pressure_to_book_fast = TRUE OR photos_match_reality = FALSE THEN TRUE
+            WHEN rating IS NOT NULL THEN rating <= 3
+            ELSE FALSE
+          END
+        )
+    WHERE agreement_kept IS NULL
+       OR would_interact_again IS NULL
+       OR had_incident IS NULL;
+  `);
+
+  await db.query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS reviews_booking_reviewer_type_idx
+    ON reviews (booking_id, reviewer_id, type);
   `);
 
   // ============================================================

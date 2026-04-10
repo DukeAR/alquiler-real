@@ -8,7 +8,7 @@ import {
   getPropertyVerificationDetails,
   type PropertyVerificationItem,
 } from '../lib/propertyVerification';
-import { getHostTrust, getHostTrustLevelLabel, type HostTrustItem } from '../lib/hostTrust';
+import { getReviewInteractionSignals } from '../lib/interactionHistory';
 import { showToast } from '../lib/toast';
 import { cn, formatCurrency } from '../lib/utils';
 import {
@@ -23,6 +23,7 @@ import { sendMessage, startConversation } from '../services/geminiService';
 import { Button } from './ui/Button';
 import { Badge } from './ui/Badge';
 import { Card } from './ui/Card';
+import { InteractionHistorySignals } from './ui/InteractionHistorySignals';
 import { NoticeBanner } from './ui/NoticeBanner';
 import { SectionTitle } from './ui/SectionTitle';
 import { VerificationMeter } from './ui/VerificationMeter';
@@ -57,6 +58,10 @@ type PropertyReviewItem = {
   userName?: string;
   rating: number;
   comment: string;
+  agreementKept?: boolean;
+  wouldInteractAgain?: boolean;
+  hadIncident?: boolean;
+  photosMatchReality?: boolean;
   date?: string;
 };
 
@@ -377,36 +382,12 @@ const VerificationChecklistRow: React.FC<{ item: PropertyVerificationItem }> = (
   );
 };
 
-const HostTrustChecklistRow: React.FC<{ item: HostTrustItem }> = ({ item }) => {
-  return (
-    <li className="flex items-start gap-3 py-2.5">
-      <span
-        className={cn(
-          'mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs font-semibold',
-          item.status === 'complete'
-            ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-            : 'border-slate-200 bg-slate-50 text-slate-500',
-        )}
-        aria-hidden="true"
-      >
-        {item.status === 'complete' ? '✔' : '○'}
-      </span>
-      <div className="min-w-0">
-        <p className="text-sm font-semibold leading-5 text-slate-900">{item.label}</p>
-        <p className="mt-0.5 text-xs leading-5 text-slate-500">{item.description}</p>
-      </div>
-    </li>
-  );
-};
-
-const HostTrustPanel: React.FC<{
+const HostHistoryPanel: React.FC<{
   hostName: string;
   hostTenureLabel: string | null;
   hostAvatarUrl?: string;
-  hostTrustLevelLabel: string;
-  items: HostTrustItem[];
-}> = ({ hostName, hostTenureLabel, hostAvatarUrl, hostTrustLevelLabel, items }) => {
-  const visibleItems = items.slice(0, 3);
+  interactionHistory?: AppProperty['hostInteractionHistory'];
+}> = ({ hostName, hostTenureLabel, hostAvatarUrl, interactionHistory }) => {
 
   return (
     <Card className="rounded-[30px] border-slate-200/80 bg-white p-5 shadow-[0_24px_60px_-46px_rgba(15,23,42,0.25)] sm:p-6">
@@ -425,12 +406,20 @@ const HostTrustPanel: React.FC<{
             heading={hostName}
             description={hostTenureLabel ?? 'Perfil activo en la plataforma'}
           />
-          <p className="mt-3 text-sm font-semibold text-slate-900">Información validada del anfitrión: {hostTrustLevelLabel}</p>
-          <ul className="mt-4 divide-y divide-slate-200/80 border-t border-slate-200/80">
-            {visibleItems.map((item) => (
-              <HostTrustChecklistRow key={item.key} item={item} />
-            ))}
-          </ul>
+          <p className="mt-3 text-sm leading-6 text-slate-500">
+            Mostramos reservas completadas, consistencia del aviso y tiempos de respuesta en lugar de puntajes públicos.
+          </p>
+          <div className="mt-4 space-y-3">
+            <InteractionHistorySignals
+              signals={interactionHistory?.publicSignals ?? []}
+              emptyText="Todavía no hay suficientes cierres compartidos para resumir este historial del anfitrión."
+            />
+            {interactionHistory && interactionHistory.feedbackCount > 0 ? (
+              <p className="text-sm leading-6 text-slate-500">
+                Sobre {interactionHistory.feedbackCount} {interactionHistory.feedbackCount === 1 ? 'cierre compartido' : 'cierres compartidos'}.
+              </p>
+            ) : null}
+          </div>
         </div>
       </div>
     </Card>
@@ -474,6 +463,7 @@ const PropertyVerificationPanel: React.FC<{
 
 const ReviewPreviewCard: React.FC<{ review: PropertyReviewItem }> = ({ review }) => {
   const reviewerLabel = getReviewerLabel(review);
+  const reviewSignals = getReviewInteractionSignals(review);
 
   return (
     <Card padding="md" className="rounded-[28px] border-slate-200/80 bg-white shadow-[0_22px_60px_-44px_rgba(15,23,42,0.24)]">
@@ -487,11 +477,15 @@ const ReviewPreviewCard: React.FC<{ review: PropertyReviewItem }> = ({ review })
             <p className="text-xs text-slate-500">{formatReviewDate(review.date)}</p>
           </div>
         </div>
-        <div className="inline-flex items-center gap-1.5 rounded-full bg-brand/10 px-3 py-1.5 text-sm font-semibold text-brand">
-          <Icons.Star className="h-4 w-4 fill-current" />
-          <span>{review.rating.toFixed(1)}</span>
+        <div className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+          Historial
         </div>
       </div>
+      {reviewSignals.length > 0 ? (
+        <div className="mt-4">
+          <InteractionHistorySignals signals={reviewSignals} compact />
+        </div>
+      ) : null}
       <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Fragmento útil</p>
       <p className="mt-2 text-sm leading-7 text-slate-700">{review.comment}</p>
     </Card>
@@ -653,7 +647,6 @@ export const PropertyDetailShell: React.FC<{
   const pendingDatePickerOpenRef = useRef(false);
 
   const reviewCount = Math.max(Number(property.reviewsCount) || 0, reviews.length);
-  const ratingValue = Number(property.rating) || 0;
   const nightly = getPositiveNumber(property?.price) ?? 0;
   const maxGuestsNumber = getPositiveNumber(property.maxGuests);
   const bedroomsCount = getPositiveNumber(property.bedrooms);
@@ -664,8 +657,7 @@ export const PropertyDetailShell: React.FC<{
   const propertyTypeLabel = getPropertyTypeLabel(property);
   const decisionAmenityLabel = getDecisionAmenityLabel(property.amenities);
   const verificationDetails = getPropertyVerificationDetails(property);
-  const hostTrust = getHostTrust(property);
-  const hostTrustLevelLabel = getHostTrustLevelLabel(hostTrust.level);
+  const hostInteractionHistory = property.hostInteractionHistory;
 
   const hasAmenities = (property.amenities?.length ?? 0) > 0;
   const heroTrustItems = verificationDetails.items.filter((item) => item.status === 'complete').slice(0, 3);
@@ -1724,12 +1716,11 @@ export const PropertyDetailShell: React.FC<{
 
           <PropertyVerificationPanel details={verificationDetails} />
 
-          <HostTrustPanel
+          <HostHistoryPanel
             hostName={hostName}
             hostTenureLabel={hostTenureLabel}
             hostAvatarUrl={property.host?.avatarUrl}
-            hostTrustLevelLabel={hostTrustLevelLabel}
-            items={hostTrust.items}
+            interactionHistory={hostInteractionHistory}
           />
 
           <section className="space-y-5">
@@ -1743,11 +1734,11 @@ export const PropertyDetailShell: React.FC<{
               <Card padding="sm" variant="muted" className="w-full rounded-[28px] border-slate-200/80 bg-white lg:max-w-xs">
                 <div className="flex items-center gap-3">
                   <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand/10 text-brand">
-                    <Icons.Star className="h-5 w-5 fill-current" />
+                    <Icons.MessageSquare className="h-5 w-5" />
                   </span>
                   <div>
-                    <div className="text-xl font-bold tracking-tight text-slate-950">{ratingValue > 0 ? ratingValue.toFixed(1) : 'Sin puntaje'}</div>
-                    <div className="text-sm text-slate-500">{reviewCount > 0 ? formatReviewCount(reviewCount) : 'Sin reseñas todavía'}</div>
+                    <div className="text-xl font-bold tracking-tight text-slate-950">{reviewCount > 0 ? String(reviewCount) : '0'}</div>
+                    <div className="text-sm text-slate-500">{reviewCount > 0 ? formatReviewCount(reviewCount) : 'Todavía no hay experiencias compartidas'}</div>
                   </div>
                 </div>
               </Card>

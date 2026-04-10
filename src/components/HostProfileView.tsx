@@ -1,263 +1,218 @@
 import React from 'react';
 import { Icons } from './Icons';
 import { HostProfile } from '../services/geminiService';
-import { motion } from 'motion/react';
-import { cn } from '../lib/utils';
+import { InteractionHistorySignals } from './ui/InteractionHistorySignals';
 
 interface HostProfileViewProps {
   profile: HostProfile;
   onBack: () => void;
 }
 
-export const HostProfileView: React.FC<HostProfileViewProps> = ({ profile, onBack }) => {
-  const getStatusLabel = (status: HostProfile['status']) => {
-    switch (status) {
-      case 'new': return 'Perfil nuevo';
-      case 'active': return 'Perfil activo';
-      case 'with_history': return 'Perfil con historial';
-      case 'highly_traceable': return 'Validación avanzada';
-      case 'with_warnings': return 'Perfil con advertencias';
-      default: return 'Perfil activo';
-    }
-  };
+const formatMonthYear = (value: string) => {
+  const parsedDate = new Date(value);
 
-  const getStatusColor = (status: HostProfile['status']) => {
-    switch (status) {
-      case 'highly_traceable': return 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20';
-      case 'with_warnings': return 'bg-slate-200/80 text-slate-700 border-slate-300/80 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700';
-      case 'new': return 'bg-brand/10 text-brand border-brand/15 dark:bg-brand/15 dark:text-brand-light dark:border-brand/20';
-      default: return 'bg-slate-500/10 text-slate-600 border-slate-500/20';
-    }
-  };
+  if (Number.isNaN(parsedDate.getTime())) {
+    return value;
+  }
+
+  return parsedDate.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
+};
+
+const formatCountLabel = (count: number, singular: string, plural: string) => `${count} ${count === 1 ? singular : plural}`;
+
+const MetricCard = ({
+  label,
+  value,
+  helper,
+  icon,
+}: {
+  label: string;
+  value: string;
+  helper: string;
+  icon: React.ReactNode;
+}) => (
+  <div className="rounded-[26px] border border-slate-200/80 bg-slate-50/90 p-5 dark:border-slate-800 dark:bg-slate-900/70">
+    <div className="flex items-center justify-between gap-3">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">{label}</p>
+      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-brand/10 text-brand dark:bg-brand/15 dark:text-brand-light">
+        {icon}
+      </div>
+    </div>
+    <p className="mt-4 text-3xl font-semibold tracking-tight text-slate-950 dark:text-slate-50">{value}</p>
+    <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">{helper}</p>
+  </div>
+);
+
+export const HostProfileView: React.FC<HostProfileViewProps> = ({ profile, onBack }) => {
+  const memberSinceLabel = formatMonthYear(profile.memberSince);
+  const responseTimeLabel = profile.avgResponseTimeMinutes > 0
+    ? profile.avgResponseTimeMinutes < 60
+      ? `~${profile.avgResponseTimeMinutes} min`
+      : 'Dentro del día'
+    : 'Sin dato';
 
   return (
-    <div className="pb-24 bg-slate-50 dark:bg-slate-950 min-h-screen">
-      <header className="p-4 flex items-center gap-4 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
-        <button onClick={onBack} className="p-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors">
-          <Icons.ArrowLeft className="w-6 h-6" />
-        </button>
-        <h1 className="font-bold text-lg">Perfil del anfitrión</h1>
-      </header>
-
-      <main className="max-w-2xl mx-auto p-6 space-y-8">
-        {/* Header Block */}
-        <div className="flex flex-col items-center text-center space-y-4">
-          <div className="relative">
-            <div className="w-24 h-24 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center border-4 border-white dark:border-slate-900 shadow-lg">
-              <Icons.User className="w-12 h-12 text-slate-400" />
-            </div>
-            {profile.identityValidated && (
-              <div className="absolute -bottom-1 -right-1 bg-emerald-500 text-white p-1.5 rounded-full border-4 border-white dark:border-slate-900">
-                <Icons.ShieldCheck className="w-4 h-4" />
-              </div>
-            )}
-          </div>
+    <div className="min-h-screen bg-slate-50 pb-24 dark:bg-slate-950">
+      <header className="border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+        <div className="mx-auto flex max-w-3xl items-center gap-4 px-4 py-4 sm:px-6">
+          <button onClick={onBack} className="rounded-2xl p-2 text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100">
+            <Icons.ArrowLeft className="h-6 w-6" />
+          </button>
           <div>
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{profile.name}</h2>
-            <div className={cn(
-              "mt-2 inline-flex items-center gap-2 px-3 py-1 text-[10px] font-black rounded-full uppercase tracking-widest border",
-              getStatusColor(profile.status)
-            )}>
-              {getStatusLabel(profile.status)}
-            </div>
-            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-3">
-              Miembro desde {new Date(profile.memberSince).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })}
-            </p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Perfil del anfitrión</p>
+            <h1 className="mt-1 text-lg font-semibold tracking-tight text-slate-950 dark:text-slate-50">Historial de interacción</h1>
           </div>
         </div>
+      </header>
 
-        {profile.alerts.length > 0 && (
-          <div className="p-5 bg-slate-100/90 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-[24px] space-y-3">
-            <div className="flex items-center gap-3 text-slate-700 dark:text-slate-300">
-              <Icons.AlertTriangle className="w-5 h-5 shrink-0" />
-              <p className="text-sm font-bold uppercase tracking-tight">Puntos para revisar</p>
+      <main className="mx-auto max-w-3xl space-y-6 px-4 py-6 sm:px-6">
+        <section className="rounded-[32px] border border-slate-200/80 bg-white p-6 shadow-[0_24px_60px_-46px_rgba(15,23,42,0.24)] dark:border-slate-800 dark:bg-slate-900">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-4">
+              <div className="relative flex h-20 w-20 items-center justify-center rounded-full bg-slate-200 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+                <Icons.User className="h-10 w-10" />
+                {profile.identityValidated ? (
+                  <span className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full border-4 border-white bg-emerald-500 text-white dark:border-slate-900">
+                    <Icons.ShieldCheck className="h-4 w-4" />
+                  </span>
+                ) : null}
+              </div>
+
+              <div>
+                <h2 className="text-2xl font-semibold tracking-tight text-slate-950 dark:text-slate-50">{profile.name}</h2>
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Miembro desde {memberSinceLabel}</p>
+              </div>
             </div>
-            <ul className="space-y-2">
-              {profile.alerts.map((alert, i) => (
-                <li key={i} className="text-xs text-slate-600/80 dark:text-slate-400/80 flex items-start gap-2">
-                  <span className="mt-1.5 w-1 h-1 bg-slate-400 rounded-full shrink-0" />
-                  {alert}
-                </li>
-              ))}
-            </ul>
-            <p className="text-[10px] text-slate-500 italic font-medium pt-1">
-              Este perfil tiene algunos puntos que conviene mirar con más atención.
+
+            <div className="rounded-[24px] border border-brand/15 bg-brand/5 px-4 py-3 text-sm leading-6 text-slate-600 dark:border-brand/20 dark:bg-brand/10 dark:text-slate-300">
+              Mostramos actividad real, tiempos de respuesta y cierres compartidos. No usamos estrellas ni etiquetas públicas.
+            </div>
+          </div>
+        </section>
+
+        <section className="rounded-[32px] border border-slate-200/80 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <div className="space-y-2">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Identidad y validación</p>
+            <h3 className="text-xl font-semibold tracking-tight text-slate-950 dark:text-slate-50">Lo que ya está validado en este perfil</h3>
+          </div>
+
+          <div className="mt-5 grid gap-3 md:grid-cols-3">
+            <MetricCard
+              label="Email"
+              value={profile.emailVerified ? 'Confirmado' : 'Pendiente'}
+              helper="La cuenta ya tiene un email validado dentro de la app."
+              icon={<Icons.MessageSquare className="h-5 w-5" />}
+            />
+            <MetricCard
+              label="Respaldo"
+              value={profile.identityValidated ? 'Validado' : 'Pendiente'}
+              helper="Suma respaldo documental, sin prometer condiciones del inmueble."
+              icon={<Icons.BadgeCheck className="h-5 w-5" />}
+            />
+            <MetricCard
+              label="Método"
+              value={profile.verificationMethod === 'presencial' ? 'Presencial' : 'Digital'}
+              helper="Indica cómo se hizo la validación más fuerte disponible hoy."
+              icon={<Icons.Shield className="h-5 w-5" />}
+            />
+          </div>
+        </section>
+
+        <section className="rounded-[32px] border border-slate-200/80 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <div className="space-y-2">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Actividad real</p>
+            <h3 className="text-xl font-semibold tracking-tight text-slate-950 dark:text-slate-50">Cómo se mueve este perfil en la plataforma</h3>
+          </div>
+
+          <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <MetricCard
+              label="Avisos activos"
+              value={String(profile.activePropertiesCount)}
+              helper={formatCountLabel(profile.publishedPropertiesCount, 'publicación visible', 'publicaciones visibles')}
+              icon={<Icons.Home className="h-5 w-5" />}
+            />
+            <MetricCard
+              label="Reservas cerradas"
+              value={String(profile.completedStaysCount)}
+              helper="Son estadías que ya terminaron dentro de la app."
+              icon={<Icons.Calendar className="h-5 w-5" />}
+            />
+            <MetricCard
+              label="Tiempo de respuesta"
+              value={responseTimeLabel}
+              helper="Tomamos la primera respuesta visible del anfitrión en cada conversación."
+              icon={<Icons.Clock className="h-5 w-5" />}
+            />
+            <MetricCard
+              label="Consultas"
+              value={String(profile.queriesReceivedCount)}
+              helper={formatCountLabel(profile.chatsStartedCount, 'chat iniciado', 'chats iniciados')}
+              icon={<Icons.MessageCircle className="h-5 w-5" />}
+            />
+          </div>
+
+          <div className="mt-5 grid gap-3 md:grid-cols-3">
+            <div className="rounded-[24px] border border-slate-200/80 bg-slate-50/90 px-4 py-4 dark:border-slate-800 dark:bg-slate-900/70">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Acuerdos finalizados</p>
+              <p className="mt-2 text-sm font-semibold text-slate-950 dark:text-slate-50">{formatCountLabel(profile.agreementsFinalizedCount, 'acuerdo cerrado', 'acuerdos cerrados')}</p>
+            </div>
+            <div className="rounded-[24px] border border-slate-200/80 bg-slate-50/90 px-4 py-4 dark:border-slate-800 dark:bg-slate-900/70">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Reservas no completadas</p>
+              <p className="mt-2 text-sm font-semibold text-slate-950 dark:text-slate-50">{formatCountLabel(profile.hostCancellationsCount, 'reserva', 'reservas')}</p>
+            </div>
+            <div className="rounded-[24px] border border-slate-200/80 bg-slate-50/90 px-4 py-4 dark:border-slate-800 dark:bg-slate-900/70">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Antigüedad promedio</p>
+              <p className="mt-2 text-sm font-semibold text-slate-950 dark:text-slate-50">{profile.avgPublicationAgeMonths} {profile.avgPublicationAgeMonths === 1 ? 'mes' : 'meses'}</p>
+            </div>
+          </div>
+        </section>
+
+        <section className="rounded-[32px] border border-slate-200/80 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <div className="space-y-2">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Historial compartido</p>
+            <h3 className="text-xl font-semibold tracking-tight text-slate-950 dark:text-slate-50">Señales que dejan huéspedes al cerrar la estadía</h3>
+            <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">
+              {profile.interactionHistory.feedbackCount > 0
+                ? `Este resumen sale de ${formatCountLabel(profile.interactionHistory.feedbackCount, 'cierre compartido', 'cierres compartidos')} y se muestra sin detalles sensibles.`
+                : 'Todavía no hay suficientes cierres compartidos para resumir este historial.'}
             </p>
           </div>
-        )}
 
-        {/* Block 1: Identidad y verificación */}
-        <section className="bg-white dark:bg-slate-900 rounded-[32px] p-6 border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
-          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Identidad y verificación</h3>
-          <div className="grid grid-cols-1 gap-4">
-            <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-3">
-                <Icons.MessageSquare className="w-5 h-5 text-slate-400" />
-                <span className="text-sm font-bold text-slate-700 dark:text-slate-300">Email verificado</span>
-              </div>
-              {profile.emailVerified ? <Icons.CheckCircle2 className="w-5 h-5 text-emerald-500" /> : <Icons.X className="w-5 h-5 text-slate-300" />}
-            </div>
-            <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-3">
-                <Icons.BadgeCheck className="w-5 h-5 text-slate-400" />
-                <span className="text-sm font-bold text-slate-700 dark:text-slate-300">Refuerzo documental validado</span>
-              </div>
-              {profile.identityValidated ? <Icons.CheckCircle2 className="w-5 h-5 text-emerald-500" /> : <Icons.X className="w-5 h-5 text-slate-300" />}
-            </div>
-            {profile.verificationMethod && (
-              <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
-                <div className="flex items-center gap-3">
-                  <Icons.Shield className="w-5 h-5 text-slate-400" />
-                  <span className="text-sm font-bold text-slate-700 dark:text-slate-300">Método de verificación</span>
-                </div>
-                <span className="text-[10px] font-black uppercase tracking-widest text-brand">
-                  {profile.verificationMethod === 'presencial' ? 'Presencial' : 'Digital'}
-                </span>
-              </div>
-            )}
-          </div>
-          <div className="p-4 bg-brand/5 dark:bg-brand/10 rounded-2xl border border-brand/10 dark:border-brand/20">
-            <p className="text-[10px] text-slate-600 dark:text-slate-300 leading-relaxed font-medium italic">
-              “El perfil del anfitrión suma señales de contacto, actividad e historial. Esta revisión adicional solo agrega respaldo documental y no certifica titularidad, estado físico ni servicios del inmueble.”
-            </p>
+          <div className="mt-5 space-y-4">
+            <InteractionHistorySignals signals={profile.interactionHistory.publicSignals} />
           </div>
         </section>
 
-        {/* Block 2: Historial de Actividad */}
-        <section className="bg-white dark:bg-slate-900 rounded-[32px] p-6 border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
-          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Historial de actividad</h3>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-1">
-              <p className="text-2xl font-black text-slate-900 dark:text-white">{profile.publishedPropertiesCount}</p>
-              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Propiedades publicadas</p>
-            </div>
-            <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-1">
-              <p className="text-2xl font-black text-slate-900 dark:text-white">{profile.completedStaysCount}</p>
-              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Estadías concretadas</p>
-            </div>
-            <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-1">
-              <p className="text-lg font-black text-slate-900 dark:text-white">{profile.stayCompletionRate}%</p>
-              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Tasa de finalización</p>
-            </div>
-            <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-1">
-              <p className="text-lg font-black text-slate-900 dark:text-white">{profile.avgPublicationAgeMonths} meses</p>
-              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Antigüedad promedio</p>
-            </div>
+        <section className="rounded-[32px] border border-slate-200/80 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <div className="space-y-2">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Comprobaciones del aviso</p>
+            <h3 className="text-xl font-semibold tracking-tight text-slate-950 dark:text-slate-50">Qué propiedades ya tienen validaciones visibles</h3>
           </div>
-          
-          <div className="space-y-4 pt-2">
-            <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Interacción en la plataforma</h4>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-slate-500 font-medium">Consultas recibidas</span>
-                <span className="font-bold text-slate-900 dark:text-white">{profile.queriesReceivedCount}</span>
-              </div>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-slate-500 font-medium">Tiempo de respuesta</span>
-                <span className="font-bold text-slate-900 dark:text-white">~{profile.avgResponseTimeMinutes} min</span>
-              </div>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-slate-500 font-medium">Cancelaciones del anfitrión</span>
-                <span className={cn("font-bold", profile.hostCancellationsCount > 0 ? "text-slate-900 dark:text-slate-100" : "text-brand dark:text-brand-light")}>
-                  {profile.hostCancellationsCount}
-                </span>
-              </div>
-            </div>
-            <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800 flex items-center gap-3">
-              <Icons.Info className="w-4 h-4 text-slate-400" />
-              <p className="text-[10px] text-slate-500 font-medium">
-                “Este anfitrión respondió el {Math.round((profile.chatsStartedCount / (profile.queriesReceivedCount || 1)) * 100)}% de las consultas en menos de 24 horas.”
-              </p>
-            </div>
+
+          <div className="mt-5 grid gap-3 md:grid-cols-3">
+            <MetricCard
+              label="Presencial"
+              value={String(profile.verificationsSummary.presencialCount)}
+              helper="Propiedades con verificación presencial registrada."
+              icon={<Icons.Home className="h-5 w-5" />}
+            />
+            <MetricCard
+              label="Ubicación"
+              value={String(profile.verificationsSummary.gpsProofCount)}
+              helper="Avisos donde la ubicación ya quedó confirmada."
+              icon={<Icons.Navigation className="h-5 w-5" />}
+            />
+            <MetricCard
+              label="Foto o video"
+              value={String(profile.verificationsSummary.videoValidationCount)}
+              helper="Avisos con material validado para ver mejor el lugar."
+              icon={<Icons.Video className="h-5 w-5" />}
+            />
           </div>
         </section>
 
-        {/* Block 3: Reputación Quirúrgica */}
-        <section className="bg-white dark:bg-slate-900 rounded-[32px] p-6 border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Reputación según huéspedes</h3>
-            <div className="group relative">
-              <Icons.Info className="w-4 h-4 text-slate-300 cursor-help" />
-              <div className="absolute bottom-full right-0 mb-2 w-48 p-2 bg-slate-900 text-white text-[10px] rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20">
-                Datos basados exclusivamente en encuestas post-estadía obligatorias.
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            {[
-              { label: 'Fotos vs. realidad', value: profile.reputation.photosMatchRealityRate, icon: <Icons.Camera className="w-4 h-4" /> },
-              { label: 'Claridad de la información', value: profile.reputation.infoClarityRate, icon: <Icons.Info className="w-4 h-4" /> },
-              { label: 'Cumplimiento de lo acordado', value: profile.reputation.agreementComplianceRate, icon: <Icons.CheckCircle2 className="w-4 h-4" /> },
-              { label: 'Comunicación durante la estadía', value: profile.reputation.communicationRate, icon: <Icons.MessageCircle className="w-4 h-4" /> },
-            ].map((item, i) => (
-              <div key={i} className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300">
-                    {item.icon}
-                    {item.label}
-                  </div>
-                  <span className="text-xs font-black text-brand">{item.value}%</span>
-                </div>
-                <div className="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                  <motion.div 
-                    initial={{ width: 0 }}
-                    animate={{ width: `${item.value}%` }}
-                    className="h-full bg-brand"
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Cambios de condiciones fuera de plataforma</span>
-              {profile.reputation.attemptsToChangeConditionsOutside ? (
-                <span className="px-2 py-1 bg-slate-200/80 text-slate-700 text-[10px] font-black rounded-lg border border-slate-300/80 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700">REPORTADO</span>
-              ) : (
-                <span className="px-2 py-1 bg-brand/10 text-brand text-[10px] font-black rounded-lg border border-brand/15 dark:bg-brand/15 dark:text-brand-light dark:border-brand/20">SIN REPORTES</span>
-              )}
-            </div>
-          </div>
-        </section>
-
-        {/* Block 4: Verificación de Propiedades */}
-        <section className="bg-white dark:bg-slate-900 rounded-[32px] p-6 border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
-          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Verificación de propiedades</h3>
-          <div className="grid grid-cols-1 gap-3">
-            <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-3">
-                <Icons.Home className="w-5 h-5 text-slate-400" />
-                <span className="text-sm font-bold text-slate-700 dark:text-slate-300">Verificación presencial</span>
-              </div>
-              <span className="text-sm font-black text-slate-900 dark:text-white">{profile.verificationsSummary.presencialCount}</span>
-            </div>
-            <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-3">
-                <Icons.Navigation className="w-5 h-5 text-slate-400" />
-                <span className="text-sm font-bold text-slate-700 dark:text-slate-300">Ubicación confirmada</span>
-              </div>
-              <span className="text-sm font-black text-slate-900 dark:text-white">{profile.verificationsSummary.gpsProofCount}</span>
-            </div>
-            <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-3">
-                <Icons.Video className="w-5 h-5 text-slate-400" />
-                <span className="text-sm font-bold text-slate-700 dark:text-slate-300">Validación con foto o video</span>
-              </div>
-              <span className="text-sm font-black text-slate-900 dark:text-white">{profile.verificationsSummary.videoValidationCount}</span>
-            </div>
-          </div>
-          <p className="text-[10px] text-slate-400 italic text-center">
-            Cada propiedad hereda la reputación del anfitrión y suma sus propias verificaciones.
-          </p>
-        </section>
-
-        {/* Block 5: Transparencia */}
-        <div className="p-6 bg-slate-100 dark:bg-slate-900/50 rounded-[32px] border border-slate-200 dark:border-slate-800">
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed text-center font-medium">
-            Alquiler Real valida información declarada por el anfitrión y registra historial de uso. No actúa como intermediario financiero ni certifica condiciones del inmueble.
-          </p>
+        <div className="rounded-[32px] border border-slate-200/80 bg-slate-100/90 px-6 py-5 text-center text-sm leading-6 text-slate-500 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-400">
+          Alquiler Real valida información declarada por el anfitrión y registra historial de uso. No certifica titularidad, condiciones del inmueble ni servicios por fuera de la plataforma.
         </div>
       </main>
     </div>

@@ -311,6 +311,10 @@ describe('Bookings and availability endpoints', () => {
               tenantCompletedStays: 4,
               tenantCancellationsCount: 0,
               tenantConflictsCount: 0,
+              tenantFeedbackCount: 2,
+              tenantAgreementsKeptCount: 2,
+              tenantWouldInteractAgainCount: 2,
+              tenantIncidentsCount: 0,
               tenantPositiveReviewsCount: 2,
               hostIdentityValidated: true,
               hostIdentityVerified: true,
@@ -332,8 +336,29 @@ describe('Bookings and availability endpoints', () => {
       .set('x-test-user-id', 'host-1');
 
     expect(res.status).toBe(200);
-    expect(res.body[0].guestPositiveReviewsCount).toBe(2);
+    expect(res.body[0]).not.toHaveProperty('guestPositiveReviewsCount');
     expect(res.body[0].guestProfile.verificationScore).toBe(3);
+    expect(res.body[0].guestProfile.interactionHistory).toEqual({
+      completedStays: 4,
+      feedbackCount: 2,
+      agreementsKeptCount: 2,
+      wouldInteractAgainCount: 2,
+      incidentsCount: 0,
+      publicSignals: [
+        {
+          key: 'agreements',
+          label: 'Se cumplió lo acordado',
+          tone: 'positive',
+          detail: '2 cierres compartidos hablaron de acuerdos respetados.',
+        },
+        {
+          key: 'return',
+          label: 'Volverían a interactuar',
+          tone: 'positive',
+          detail: '2 anfitriones dejaron esta señal al cerrar la estadía.',
+        },
+      ],
+    });
     expect(res.body[0].guestProfile.verificationSummary.items).toEqual(expect.arrayContaining([
       expect.objectContaining({ key: 'email', status: 'complete' }),
       expect.objectContaining({ key: 'phone', status: 'complete' }),

@@ -66,10 +66,15 @@ export type ActivityData = {
 };
 
 export type ProfileReview = {
+  type?: 'host_to_guest' | 'guest_to_host';
   propertyTitle?: string;
   userName?: string;
   rating?: number;
   comment?: string;
+  agreementKept?: boolean;
+  wouldInteractAgain?: boolean;
+  hadIncident?: boolean;
+  photosMatchReality?: boolean;
   created_at?: string;
 };
 

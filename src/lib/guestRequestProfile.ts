@@ -1,4 +1,5 @@
 import type {
+  GuestInteractionHistory,
   GuestHostReviewSnippet,
   GuestOperationSignal,
   GuestOperationSignalSource,
@@ -229,6 +230,14 @@ const createEmptyGuestRequestProfile = (): GuestRequestProfile => {
       conflictsCount: 0,
       cancellationsCount: 0,
     },
+    interactionHistory: {
+      completedStays: 0,
+      feedbackCount: 0,
+      agreementsKeptCount: 0,
+      wouldInteractAgainCount: 0,
+      incidentsCount: 0,
+      publicSignals: [],
+    },
     hostReviews: [],
     profileCompletion: {
       profileComplete: false,
@@ -307,11 +316,61 @@ const normalizeOperationSignals = (value: unknown, profileCompletion?: Partial<G
 };
 
 const getSafeCount = (value: unknown, fallback = 0) => {
-  if (typeof value !== 'number' || Number.isNaN(value)) {
+  const numericValue = Number(value);
+
+  if (!Number.isFinite(numericValue)) {
     return fallback;
   }
 
-  return Math.max(0, Math.round(value));
+  return Math.max(0, Math.round(numericValue));
+};
+
+const normalizeInteractionSignals = (value: unknown) => {
+  if (!Array.isArray(value)) {
+    return [] as GuestInteractionHistory['publicSignals'];
+  }
+
+  const signals: GuestInteractionHistory['publicSignals'] = [];
+
+  value.forEach((signal, index) => {
+    const candidate = (signal && typeof signal === 'object' ? signal : {}) as Partial<GuestInteractionHistory['publicSignals'][number]>;
+    const label = typeof candidate.label === 'string' ? candidate.label.trim() : '';
+
+    if (!label) {
+      return;
+    }
+
+    signals.push({
+      key: typeof candidate.key === 'string' && candidate.key.trim() ? candidate.key : `interaction-signal-${index}`,
+      label,
+      tone: candidate.tone === 'positive' ? 'positive' : 'neutral',
+      ...(typeof candidate.detail === 'string' && candidate.detail.trim() ? { detail: candidate.detail } : {}),
+    });
+  });
+
+  return signals;
+};
+
+const normalizeInteractionHistory = (value: unknown, completedStays: number): GuestInteractionHistory => {
+  if (!isObject(value)) {
+    return {
+      completedStays,
+      feedbackCount: 0,
+      agreementsKeptCount: 0,
+      wouldInteractAgainCount: 0,
+      incidentsCount: 0,
+      publicSignals: [],
+    };
+  }
+
+  return {
+    completedStays: getSafeCount(value.completedStays, completedStays),
+    feedbackCount: getSafeCount(value.feedbackCount),
+    agreementsKeptCount: getSafeCount(value.agreementsKeptCount),
+    wouldInteractAgainCount: getSafeCount(value.wouldInteractAgainCount),
+    incidentsCount: getSafeCount(value.incidentsCount),
+    publicSignals: normalizeInteractionSignals(value.publicSignals),
+  };
 };
 
 export const resolveGuestRequestProfile = (source: GuestRequestProfileSource, _index = 0): GuestRequestProfile => {
@@ -356,6 +415,7 @@ export const resolveGuestRequestProfile = (source: GuestRequestProfileSource, _i
     conflictsCount: getSafeCount(platformHistory?.conflictsCount, emptyProfile.platformHistory.conflictsCount),
     cancellationsCount: getSafeCount(platformHistory?.cancellationsCount, emptyProfile.platformHistory.cancellationsCount),
   };
+  const normalizedInteractionHistory = normalizeInteractionHistory(providedProfile.interactionHistory, normalizedPlatformHistory.completedStays);
   const identityVerified = dataAvailability.identity && typeof providedProfile.identityVerified === 'boolean'
     ? providedProfile.identityVerified
     : emptyProfile.identityVerified;
@@ -387,6 +447,7 @@ export const resolveGuestRequestProfile = (source: GuestRequestProfileSource, _i
   return {
     identityVerified,
     platformHistory: normalizedPlatformHistory,
+    interactionHistory: normalizedInteractionHistory,
     hostReviews: normalizedHostReviews,
     profileCompletion: normalizedProfileCompletion,
     verificationSummary: verification.verificationSummary,

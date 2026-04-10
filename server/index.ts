@@ -10,6 +10,7 @@ import { initDB } from './updates';
 import { mapPropertyRecord } from './propertySerializer';
 import { buildGuestVerification } from './guestVerification';
 import { buildHostTrust } from './hostTrust';
+import { buildGuestInteractionHistory, buildHostInteractionHistory } from './interactionHistory';
 import { REAL_VERIFICATION_FILTER_MIN_SCORE } from './propertyVerification';
 import { getChatSystemMessages, getRequestAcceptedMessage, getRequestNotAdvancedMessage, type ChatSystemMessageKey } from './chatSystemMessages';
 import { buildGuestProfileCompletion } from '../src/lib/guestVerification';
@@ -740,6 +741,14 @@ const getAuthUserById = async (userId: string) => {
   return user ? normalizeAuthUser(user) : null;
 };
 
+const buildReviewAgreementSql = (alias: string) => `COALESCE(${alias}.agreement_kept, CASE WHEN ${alias}.photos_match_reality = FALSE OR ${alias}.pressure_to_book_fast = TRUE THEN FALSE WHEN ${alias}.rating IS NOT NULL THEN ${alias}.rating >= 4 ELSE TRUE END)`;
+
+const buildReviewWouldInteractAgainSql = (alias: string) => `COALESCE(${alias}.would_interact_again, CASE WHEN ${alias}.pressure_to_book_fast = TRUE OR ${alias}.photos_match_reality = FALSE THEN FALSE WHEN ${alias}.rating IS NOT NULL THEN ${alias}.rating >= 4 ELSE TRUE END)`;
+
+const buildReviewHadIncidentSql = (alias: string) => `COALESCE(${alias}.had_incident, CASE WHEN ${alias}.pressure_to_book_fast = TRUE OR ${alias}.photos_match_reality = FALSE THEN TRUE WHEN ${alias}.rating IS NOT NULL THEN ${alias}.rating <= 3 ELSE FALSE END)`;
+
+const buildReviewListingConsistencySql = (alias: string) => `COALESCE(${alias}.photos_match_reality, CASE WHEN ${alias}.rating IS NOT NULL THEN ${alias}.rating >= 4 ELSE TRUE END)`;
+
 const PROPERTY_HOST_TRUST_SELECT = `u.identity_validated as "hostIdentityValidated",
         u.is_identity_verified as "hostIdentityVerified",
         u.name as "hostProfileName",
@@ -747,6 +756,12 @@ const PROPERTY_HOST_TRUST_SELECT = `u.identity_validated as "hostIdentityValidat
         COALESCE(host_premium_documentary."hostPremiumDocumentaryVerified", FALSE) as "hostPremiumDocumentaryVerified",
         COALESCE(host_completed_reservations."completedReservationsCount", 0) as "hostCompletedReservationsCount",
   COALESCE(host_guest_reviews."guestReviewsCount", 0) as "hostGuestReviewsCount",
+  COALESCE(host_feedback_stats."feedbackCount", 0) as "hostGuestFeedbackCount",
+  COALESCE(host_feedback_stats."agreementsKeptCount", 0) as "hostGuestAgreementsKeptCount",
+  COALESCE(host_feedback_stats."listingConsistentCount", 0) as "hostListingConsistentCount",
+  COALESCE(host_feedback_stats."wouldInteractAgainCount", 0) as "hostGuestWouldInteractAgainCount",
+  COALESCE(host_feedback_stats."incidentsCount", 0) as "hostGuestIncidentsCount",
+  COALESCE(host_response_stats."avgResponseTimeMinutes", 0) as "hostAverageResponseTimeMinutes",
   COALESCE(property_completed_bookings."completedBookingsCount", 0) as "propertyCompletedBookingsCount",
   COALESCE(property_real_reviews."realReviewsCount", 0) as "propertyRealReviewsCount"`;
 
@@ -778,6 +793,40 @@ const PROPERTY_HOST_TRUST_JOINS = `
         GROUP BY hp."hostId"
       ) host_guest_reviews ON host_guest_reviews.host_id = p."hostId"
       LEFT JOIN (
+        SELECT hp."hostId" as host_id,
+               COUNT(*)::int as "feedbackCount",
+               COUNT(*) FILTER (WHERE ${buildReviewAgreementSql('hr')})::int as "agreementsKeptCount",
+               COUNT(*) FILTER (WHERE ${buildReviewListingConsistencySql('hr')})::int as "listingConsistentCount",
+               COUNT(*) FILTER (WHERE ${buildReviewWouldInteractAgainSql('hr')})::int as "wouldInteractAgainCount",
+               COUNT(*) FILTER (WHERE ${buildReviewHadIncidentSql('hr')})::int as "incidentsCount"
+        FROM reviews hr
+        JOIN properties hp ON hp.id = hr.property_id
+        WHERE hr.type = 'guest_to_host'
+        GROUP BY hp."hostId"
+      ) host_feedback_stats ON host_feedback_stats.host_id = p."hostId"
+      LEFT JOIN (
+        SELECT response_times.host_id,
+               ROUND(AVG(response_times.minutes))::int as "avgResponseTimeMinutes"
+        FROM (
+          SELECT c.host_id,
+                 EXTRACT(EPOCH FROM first_host_message.created_at - tenant_message.created_at) / 60.0 as minutes
+          FROM conversations c
+          JOIN messages tenant_message
+            ON tenant_message.conversation_id = c.id
+           AND tenant_message.sender_id = c.tenant_id
+          JOIN LATERAL (
+            SELECT m.created_at
+            FROM messages m
+            WHERE m.conversation_id = c.id
+              AND m.sender_id = c.host_id
+              AND m.created_at > tenant_message.created_at
+            ORDER BY m.created_at ASC
+            LIMIT 1
+          ) first_host_message ON TRUE
+        ) response_times
+        GROUP BY response_times.host_id
+      ) host_response_stats ON host_response_stats.host_id = p."hostId"
+      LEFT JOIN (
         SELECT "propertyId" as property_id,
                COUNT(*) FILTER (WHERE status = 'completed')::int as "completedBookingsCount"
         FROM bookings
@@ -795,7 +844,13 @@ const CONVERSATION_HOST_TRUST_SELECT = `u_host.identity_validated as "hostIdenti
             u_host.is_identity_verified as "hostIdentityVerified",
             COALESCE(u_host.member_since, u_host.created_at) as "hostMemberSince",
             COALESCE(host_completed_reservations."completedReservationsCount", 0) as "hostCompletedReservationsCount",
-            COALESCE(host_guest_reviews."guestReviewsCount", 0) as "hostGuestReviewsCount"`;
+            COALESCE(host_guest_reviews."guestReviewsCount", 0) as "hostGuestReviewsCount",
+            COALESCE(host_feedback_stats."feedbackCount", 0) as "hostGuestFeedbackCount",
+            COALESCE(host_feedback_stats."agreementsKeptCount", 0) as "hostGuestAgreementsKeptCount",
+            COALESCE(host_feedback_stats."listingConsistentCount", 0) as "hostListingConsistentCount",
+            COALESCE(host_feedback_stats."wouldInteractAgainCount", 0) as "hostGuestWouldInteractAgainCount",
+            COALESCE(host_feedback_stats."incidentsCount", 0) as "hostGuestIncidentsCount",
+            COALESCE(host_response_stats."avgResponseTimeMinutes", 0) as "hostAverageResponseTimeMinutes"`;
 
 const CONVERSATION_HOST_TRUST_JOINS = `
      LEFT JOIN (
@@ -814,6 +869,40 @@ const CONVERSATION_HOST_TRUST_JOINS = `
        WHERE hr.type = 'guest_to_host'
        GROUP BY hp."hostId"
      ) host_guest_reviews ON host_guest_reviews.host_id = c.host_id
+     LEFT JOIN (
+       SELECT hp."hostId" as host_id,
+              COUNT(*)::int as "feedbackCount",
+              COUNT(*) FILTER (WHERE ${buildReviewAgreementSql('hr')})::int as "agreementsKeptCount",
+              COUNT(*) FILTER (WHERE ${buildReviewListingConsistencySql('hr')})::int as "listingConsistentCount",
+              COUNT(*) FILTER (WHERE ${buildReviewWouldInteractAgainSql('hr')})::int as "wouldInteractAgainCount",
+              COUNT(*) FILTER (WHERE ${buildReviewHadIncidentSql('hr')})::int as "incidentsCount"
+       FROM reviews hr
+       JOIN properties hp ON hp.id = hr.property_id
+       WHERE hr.type = 'guest_to_host'
+       GROUP BY hp."hostId"
+     ) host_feedback_stats ON host_feedback_stats.host_id = c.host_id
+     LEFT JOIN (
+       SELECT response_times.host_id,
+              ROUND(AVG(response_times.minutes))::int as "avgResponseTimeMinutes"
+       FROM (
+         SELECT c.host_id,
+                EXTRACT(EPOCH FROM first_host_message.created_at - tenant_message.created_at) / 60.0 as minutes
+         FROM conversations c
+         JOIN messages tenant_message
+           ON tenant_message.conversation_id = c.id
+          AND tenant_message.sender_id = c.tenant_id
+         JOIN LATERAL (
+           SELECT m.created_at
+           FROM messages m
+           WHERE m.conversation_id = c.id
+             AND m.sender_id = c.host_id
+             AND m.created_at > tenant_message.created_at
+           ORDER BY m.created_at ASC
+           LIMIT 1
+         ) first_host_message ON TRUE
+       ) response_times
+       GROUP BY response_times.host_id
+     ) host_response_stats ON host_response_stats.host_id = c.host_id
 `;
 
 const CONVERSATION_GUEST_PROFILE_SELECT = `u_tenant.profile_photo as "tenantProfilePhoto",
@@ -834,6 +923,10 @@ const CONVERSATION_GUEST_PROFILE_SELECT = `u_tenant.profile_photo as "tenantProf
             COALESCE(tenant_booking_stats.completed_stays, 0)::int as "tenantCompletedStays",
             COALESCE(tenant_booking_stats.cancellations_count, 0)::int as "tenantCancellationsCount",
             COALESCE(tenant_report_stats.conflicts_count, 0)::int as "tenantConflictsCount",
+            COALESCE(tenant_feedback_stats.feedback_count, 0)::int as "tenantFeedbackCount",
+            COALESCE(tenant_feedback_stats.agreements_kept_count, 0)::int as "tenantAgreementsKeptCount",
+            COALESCE(tenant_feedback_stats.would_interact_again_count, 0)::int as "tenantWouldInteractAgainCount",
+            COALESCE(tenant_feedback_stats.incidents_count, 0)::int as "tenantIncidentsCount",
             COALESCE(tenant_positive_reviews.positive_reviews_count, 0)::int as "tenantPositiveReviewsCount"`;
 
 const CONVERSATION_GUEST_PROFILE_JOINS = `
@@ -850,6 +943,16 @@ const CONVERSATION_GUEST_PROFILE_JOINS = `
        FROM reports
        GROUP BY reported_user_id
      ) tenant_report_stats ON tenant_report_stats.user_id = c.tenant_id
+         LEFT JOIN (
+      SELECT reviewed_user_id as user_id,
+        COUNT(*)::int as feedback_count,
+        COUNT(*) FILTER (WHERE ${buildReviewAgreementSql('r')})::int as agreements_kept_count,
+        COUNT(*) FILTER (WHERE ${buildReviewWouldInteractAgainSql('r')})::int as would_interact_again_count,
+        COUNT(*) FILTER (WHERE ${buildReviewHadIncidentSql('r')})::int as incidents_count
+      FROM reviews r
+      WHERE type = 'host_to_guest'
+      GROUP BY reviewed_user_id
+         ) tenant_feedback_stats ON tenant_feedback_stats.user_id = c.tenant_id
      LEFT JOIN (
        SELECT reviewed_user_id as user_id,
               COUNT(*) FILTER (WHERE rating >= 4)::int as positive_reviews_count
@@ -1792,7 +1895,20 @@ app.get('/api/users/reviews', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: AUTH_REQUIRED_ERROR });
   try {
     const written = await db.query(
-      `SELECT r.*, p.title as "propertyTitle", u.name as "userName"
+      `SELECT r.id,
+              r.booking_id as "bookingId",
+              r.reviewer_id as "reviewerId",
+              r.reviewed_user_id as "reviewedUserId",
+              r.property_id as "propertyId",
+              r.type,
+              r.rating,
+              r.comment,
+              r.agreement_kept as "agreementKept",
+              r.would_interact_again as "wouldInteractAgain",
+              r.had_incident as "hadIncident",
+              r.photos_match_reality as "photosMatchReality",
+              r.created_at,
+              p.title as "propertyTitle", u.name as "userName"
        FROM reviews r
        LEFT JOIN properties p ON r.property_id = p.id
        LEFT JOIN users u ON r.reviewed_user_id = u.id
@@ -1801,7 +1917,20 @@ app.get('/api/users/reviews', async (req, res) => {
       [req.session.userId]
     );
     const received = await db.query(
-      `SELECT r.*, u.name as "userName", p.title as "propertyTitle"
+      `SELECT r.id,
+              r.booking_id as "bookingId",
+              r.reviewer_id as "reviewerId",
+              r.reviewed_user_id as "reviewedUserId",
+              r.property_id as "propertyId",
+              r.type,
+              r.rating,
+              r.comment,
+              r.agreement_kept as "agreementKept",
+              r.would_interact_again as "wouldInteractAgain",
+              r.had_incident as "hadIncident",
+              r.photos_match_reality as "photosMatchReality",
+              r.created_at,
+              u.name as "userName", p.title as "propertyTitle"
        FROM reviews r
        LEFT JOIN users u ON r.reviewer_id = u.id
        LEFT JOIN properties p ON r.property_id = p.id
@@ -1835,6 +1964,33 @@ app.post('/api/users/documents', async (req, res) => {
 const toSafeNumber = (value: unknown) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const deriveReviewRating = (params: {
+  agreementKept: boolean;
+  wouldInteractAgain: boolean;
+  hadIncident: boolean;
+  photosMatchReality?: boolean;
+}) => {
+  let rating = 5;
+
+  if (!params.agreementKept) {
+    rating -= 2;
+  }
+
+  if (!params.wouldInteractAgain) {
+    rating -= 1;
+  }
+
+  if (params.hadIncident) {
+    rating -= 1;
+  }
+
+  if (params.photosMatchReality === false) {
+    rating -= 1;
+  }
+
+  return Math.max(1, Math.min(5, rating));
 };
 
 const roundToWhole = (value: number) => Math.round(value);
@@ -1910,7 +2066,10 @@ const getHostProfileData = async (hostId: string) => {
       [hostId],
     ),
     db.query(
-      `SELECT r.rating,
+          `SELECT r.rating,
+            r.agreement_kept as "agreementKept",
+            r.would_interact_again as "wouldInteractAgain",
+            r.had_incident as "hadIncident",
               r.photos_match_reality as "photosMatchReality",
               r.pressure_to_book_fast as "pressureToBookFast",
               r.created_at as "createdAt"
@@ -1961,16 +2120,21 @@ const getHostProfileData = async (hostId: string) => {
   const queryCount = conversations.length;
   const chatsStartedCount = conversations.filter((conversation) => toSafeNumber(conversation.messageCount) > 0).length;
   const agreementsFinalizedCount = bookings.filter((booking) => booking.status === 'completed' || booking.contractAccepted).length;
-  const photosMatchRealityRate = guestReviews.length > 0
-    ? roundToWhole((guestReviews.filter((review) => !!review.photosMatchReality).length / guestReviews.length) * 100)
+  const interactionHistory = buildHostInteractionHistory({
+    completedReservationsCount: completedStaysCount,
+    avgResponseTimeMinutes,
+    feedbacks: guestReviews,
+  });
+  const photosMatchRealityRate = interactionHistory.feedbackCount > 0
+    ? roundToWhole((interactionHistory.listingConsistentCount / interactionHistory.feedbackCount) * 100)
     : 0;
-  const noPressureRate = guestReviews.length > 0
-    ? roundToWhole((guestReviews.filter((review) => !review.pressureToBookFast).length / guestReviews.length) * 100)
+  const agreementComplianceRate = interactionHistory.feedbackCount > 0
+    ? roundToWhole((interactionHistory.agreementsKeptCount / interactionHistory.feedbackCount) * 100)
     : 0;
-  const avgRatingPercent = guestReviews.length > 0
-    ? roundToWhole((guestReviews.reduce((total, review) => total + toSafeNumber(review.rating), 0) / guestReviews.length / 5) * 100)
+  const communicationRate = interactionHistory.feedbackCount > 0
+    ? roundToWhole((interactionHistory.wouldInteractAgainCount / interactionHistory.feedbackCount) * 100)
     : 0;
-  const attemptsToChangeConditionsOutside = guestReviews.some((review) => !!review.pressureToBookFast);
+  const attemptsToChangeConditionsOutside = interactionHistory.incidentsCount > 0;
   const latestActivityDate = [
     ...properties.map((property) => property.createdAt),
     ...bookings.map((booking) => booking.createdAt),
@@ -1983,19 +2147,19 @@ const getHostProfileData = async (hostId: string) => {
 
   const alerts: string[] = [];
   if (attemptsToChangeConditionsOutside) {
-    alerts.push('Algunas reseñas marcaron intentos de cambiar condiciones por fuera de la plataforma.');
+    alerts.push('Algunos cierres dejaron una situación a considerar.');
   }
   if (hostCancellationsCount > 0) {
-    alerts.push('El historial registra reservas canceladas asociadas a este perfil.');
+    alerts.push('El historial incluye reservas que no llegaron a completarse.');
   }
-  if (guestReviews.length > 0 && avgRatingPercent < 84) {
-    alerts.push('Las ultimas reseñas muestran una experiencia menos consistente que la de otros anfitriones destacados.');
+  if (interactionHistory.feedbackCount > 0 && agreementComplianceRate < 60) {
+    alerts.push('Los cierres recientes muestran una experiencia menos consistente.');
   }
 
   let status: 'new' | 'active' | 'with_history' | 'highly_traceable' | 'with_warnings' = 'active';
   if (alerts.length > 0) {
     status = 'with_warnings';
-  } else if (host.identityValidated && activePropertiesCount >= 3 && avgRatingPercent >= 90) {
+  } else if (host.identityValidated && activePropertiesCount >= 3 && interactionHistory.feedbackCount >= 3 && agreementComplianceRate >= 80) {
     status = 'highly_traceable';
   } else if (completedStaysCount >= 3) {
     status = 'with_history';
@@ -2023,11 +2187,12 @@ const getHostProfileData = async (hostId: string) => {
     agreementsFinalizedCount,
     avgResponseTimeMinutes,
     hostCancellationsCount,
+    interactionHistory,
     reputation: {
       photosMatchRealityRate,
-      infoClarityRate: guestReviews.length > 0 ? roundToWhole((avgRatingPercent + photosMatchRealityRate) / 2) : 0,
-      agreementComplianceRate: noPressureRate,
-      communicationRate: guestReviews.length > 0 ? roundToWhole((avgRatingPercent + noPressureRate) / 2) : 0,
+      infoClarityRate: photosMatchRealityRate,
+      agreementComplianceRate,
+      communicationRate,
       attemptsToChangeConditionsOutside,
     },
     verificationsSummary: {
@@ -2060,6 +2225,10 @@ type HostDashboardGuestProfileRow = {
   completedStays?: number | string | null;
   cancellationsCount?: number | string | null;
   conflictsCount?: number | string | null;
+  feedbackCount?: number | string | null;
+  agreementsKeptCount?: number | string | null;
+  wouldInteractAgainCount?: number | string | null;
+  incidentsCount?: number | string | null;
 };
 
 type HostDashboardGuestReviewRow = {
@@ -2068,6 +2237,9 @@ type HostDashboardGuestReviewRow = {
   authorName?: string | null;
   date?: string | Date | null;
   comment?: string | null;
+  agreementKept?: boolean | null;
+  wouldInteractAgain?: boolean | null;
+  hadIncident?: boolean | null;
 };
 
 type HostDashboardBookingSignalRow = {
@@ -2168,6 +2340,14 @@ const buildGuestRequestProfilePayload = (
     identityVerificationProvider: guest.identityVerificationProvider,
     identityVerifiedAt: guest.identityVerifiedAt,
   });
+  const interactionHistory = buildGuestInteractionHistory({
+    completedStays: guest.completedStays,
+    feedbacks: options.hostReviews,
+    feedbackCount: guest.feedbackCount ?? options.hostReviewsCount,
+    agreementsKeptCount: guest.agreementsKeptCount,
+    wouldInteractAgainCount: guest.wouldInteractAgainCount,
+    incidentsCount: guest.incidentsCount,
+  });
 
   return {
     identityVerified,
@@ -2176,6 +2356,7 @@ const buildGuestRequestProfilePayload = (
       conflictsCount: toSafeNumber(guest.conflictsCount),
       cancellationsCount: toSafeNumber(guest.cancellationsCount),
     },
+    interactionHistory,
     hostReviews: (options.hostReviews ?? []).slice(0, 3).map((review) => ({
       id: review.id,
       authorName: review.authorName || 'Anfitrión',
@@ -2248,6 +2429,20 @@ app.get('/api/host/dashboard', async (req, res) => {
           COALESCE(c.deposit_status, b.deposit_status) as "depositStatus",
           COALESCE(b.request_mode, CASE WHEN c.booking_id IS NOT NULL THEN 'protected' ELSE 'direct' END) as "requestMode",
           b."userId",
+          EXISTS(
+            SELECT 1
+            FROM reviews r
+            WHERE r.booking_id = b.id
+              AND r.reviewer_id = b."userId"
+              AND r.type = 'guest_to_host'
+          ) as "guestReviewSubmitted",
+          EXISTS(
+            SELECT 1
+            FROM reviews r
+            WHERE r.booking_id = b.id
+              AND r.reviewer_id = p."hostId"
+              AND r.type = 'host_to_guest'
+          ) as "hostReviewSubmitted",
                 guest.name as "userName", p.title as "propertyTitle"
          FROM bookings b
          JOIN properties p ON b."propertyId" = p.id
@@ -2344,7 +2539,11 @@ app.get('/api/host/dashboard', async (req, res) => {
                   (COALESCE(u.phone_verified, FALSE) OR COALESCE(u.is_phone_verified, FALSE)) as "phoneVerified",
                   COALESCE(booking_stats.completed_stays, 0)::int as "completedStays",
                   COALESCE(booking_stats.cancellations_count, 0)::int as "cancellationsCount",
-                  COALESCE(report_stats.conflicts_count, 0)::int as "conflictsCount"
+                  COALESCE(report_stats.conflicts_count, 0)::int as "conflictsCount",
+                  COALESCE(feedback_stats.feedback_count, 0)::int as "feedbackCount",
+                  COALESCE(feedback_stats.agreements_kept_count, 0)::int as "agreementsKeptCount",
+                  COALESCE(feedback_stats.would_interact_again_count, 0)::int as "wouldInteractAgainCount",
+                  COALESCE(feedback_stats.incidents_count, 0)::int as "incidentsCount"
            FROM users u
            LEFT JOIN (
              SELECT "userId" as user_id,
@@ -2361,6 +2560,17 @@ app.get('/api/host/dashboard', async (req, res) => {
              WHERE reported_user_id = ANY($1::text[])
              GROUP BY reported_user_id
            ) report_stats ON report_stats.user_id = u.id
+           LEFT JOIN (
+             SELECT reviewed_user_id as user_id,
+                    COUNT(*)::int as feedback_count,
+                    COUNT(*) FILTER (WHERE ${buildReviewAgreementSql('r')})::int as agreements_kept_count,
+                    COUNT(*) FILTER (WHERE ${buildReviewWouldInteractAgainSql('r')})::int as would_interact_again_count,
+                    COUNT(*) FILTER (WHERE ${buildReviewHadIncidentSql('r')})::int as incidents_count
+             FROM reviews r
+             WHERE r.type = 'host_to_guest'
+               AND reviewed_user_id = ANY($1::text[])
+             GROUP BY reviewed_user_id
+           ) feedback_stats ON feedback_stats.user_id = u.id
            WHERE u.id = ANY($1::text[])`,
           [guestIds],
         ),
@@ -2369,7 +2579,10 @@ app.get('/api/host/dashboard', async (req, res) => {
                   r.id,
                   reviewer.name as "authorName",
                   r.created_at as date,
-                  r.comment
+                  r.comment,
+                  r.agreement_kept as "agreementKept",
+                  r.would_interact_again as "wouldInteractAgain",
+                  r.had_incident as "hadIncident"
            FROM reviews r
            LEFT JOIN users reviewer ON reviewer.id = r.reviewer_id
            WHERE r.type = 'host_to_guest'
@@ -2708,12 +2921,28 @@ const BOOKING_SELECT_QUERY = `SELECT b.id, b."propertyId", b."userId", b.status,
   b.start_date as "startDate", b.end_date as "endDate", b.total_price as "totalPrice",
   b.guests, b.contract_accepted as "contractAccepted", b.contract_json as "contractJson",
   b.cancellation_actor as "cancellationActor",
+  p."hostId" as "hostId",
   c.id as "conversationId",
   COALESCE(c.deposit_status, b.deposit_status) as "depositStatus",
   COALESCE(b.request_mode, CASE WHEN c.booking_id IS NOT NULL THEN 'protected' ELSE 'direct' END) as "requestMode",
-  p.title as "propertyTitle", p."imageUrl", p.location
+  EXISTS(
+    SELECT 1
+    FROM reviews r
+    WHERE r.booking_id = b.id
+      AND r.reviewer_id = b."userId"
+      AND r.type = 'guest_to_host'
+  ) as "guestReviewSubmitted",
+  EXISTS(
+    SELECT 1
+    FROM reviews r
+    WHERE r.booking_id = b.id
+      AND r.reviewer_id = p."hostId"
+      AND r.type = 'host_to_guest'
+  ) as "hostReviewSubmitted",
+  p.title as "propertyTitle", p."imageUrl", p.location, host.name as "hostName"
  FROM bookings b
  LEFT JOIN properties p ON b."propertyId" = p.id
+ LEFT JOIN users host ON host.id = p."hostId"
  LEFT JOIN conversations c ON c.booking_id = b.id
  WHERE b."userId" = $1
  ORDER BY b.created_at DESC`;
@@ -2840,6 +3069,12 @@ const normalizeConversationRecord = <T extends {
   hostMemberSince?: unknown;
   hostCompletedReservationsCount?: unknown;
   hostGuestReviewsCount?: unknown;
+  hostGuestFeedbackCount?: unknown;
+  hostGuestAgreementsKeptCount?: unknown;
+  hostListingConsistentCount?: unknown;
+  hostGuestWouldInteractAgainCount?: unknown;
+  hostGuestIncidentsCount?: unknown;
+  hostAverageResponseTimeMinutes?: unknown;
   tenantProfilePhoto?: unknown;
   tenantBio?: unknown;
   tenantPhone?: unknown;
@@ -2854,6 +3089,10 @@ const normalizeConversationRecord = <T extends {
   tenantCompletedStays?: unknown;
   tenantCancellationsCount?: unknown;
   tenantConflictsCount?: unknown;
+  tenantFeedbackCount?: unknown;
+  tenantAgreementsKeptCount?: unknown;
+  tenantWouldInteractAgainCount?: unknown;
+  tenantIncidentsCount?: unknown;
   tenantPositiveReviewsCount?: unknown;
 }>(conversation: T) => {
   const {
@@ -2862,6 +3101,12 @@ const normalizeConversationRecord = <T extends {
     hostMemberSince,
     hostCompletedReservationsCount,
     hostGuestReviewsCount,
+    hostGuestFeedbackCount,
+    hostGuestAgreementsKeptCount,
+    hostListingConsistentCount,
+    hostGuestWouldInteractAgainCount,
+    hostGuestIncidentsCount,
+    hostAverageResponseTimeMinutes,
     tenantProfilePhoto,
     tenantBio,
     tenantPhone,
@@ -2876,6 +3121,10 @@ const normalizeConversationRecord = <T extends {
     tenantCompletedStays,
     tenantCancellationsCount,
     tenantConflictsCount,
+    tenantFeedbackCount,
+    tenantAgreementsKeptCount,
+    tenantWouldInteractAgainCount,
+    tenantIncidentsCount,
     tenantPositiveReviewsCount,
     ...conversationRest
   } = conversation;
@@ -2893,6 +3142,12 @@ const normalizeConversationRecord = <T extends {
     hostMemberSince,
     hostCompletedReservationsCount,
     hostGuestReviewsCount,
+    hostGuestFeedbackCount,
+    hostGuestAgreementsKeptCount,
+    hostListingConsistentCount,
+    hostGuestWouldInteractAgainCount,
+    hostGuestIncidentsCount,
+    hostAverageResponseTimeMinutes,
   ].some((value) => value !== undefined && value !== null);
   const hasGuestProfileData = [
     tenantProfilePhoto,
@@ -2909,6 +3164,10 @@ const normalizeConversationRecord = <T extends {
     tenantCompletedStays,
     tenantCancellationsCount,
     tenantConflictsCount,
+    tenantFeedbackCount,
+    tenantAgreementsKeptCount,
+    tenantWouldInteractAgainCount,
+    tenantIncidentsCount,
     tenantPositiveReviewsCount,
   ].some((value) => value !== undefined && value !== null);
   const normalizedTenantIdentityVerified = typeof tenantIdentityVerified === 'boolean' || typeof tenantIdentityVerified === 'number' || typeof tenantIdentityVerified === 'string'
@@ -2929,6 +3188,18 @@ const normalizeConversationRecord = <T extends {
   const normalizedTenantConflictsCount = typeof tenantConflictsCount === 'number' || typeof tenantConflictsCount === 'string'
     ? tenantConflictsCount
     : undefined;
+  const normalizedTenantFeedbackCount = typeof tenantFeedbackCount === 'number' || typeof tenantFeedbackCount === 'string'
+    ? tenantFeedbackCount
+    : undefined;
+  const normalizedTenantAgreementsKeptCount = typeof tenantAgreementsKeptCount === 'number' || typeof tenantAgreementsKeptCount === 'string'
+    ? tenantAgreementsKeptCount
+    : undefined;
+  const normalizedTenantWouldInteractAgainCount = typeof tenantWouldInteractAgainCount === 'number' || typeof tenantWouldInteractAgainCount === 'string'
+    ? tenantWouldInteractAgainCount
+    : undefined;
+  const normalizedTenantIncidentsCount = typeof tenantIncidentsCount === 'number' || typeof tenantIncidentsCount === 'string'
+    ? tenantIncidentsCount
+    : undefined;
   const guestProfile = hasGuestProfileData
     ? buildGuestRequestProfilePayload({
         id: typeof conversation.tenant_id === 'string' ? conversation.tenant_id : 'guest',
@@ -2946,8 +3217,23 @@ const normalizeConversationRecord = <T extends {
         completedStays: normalizedTenantCompletedStays,
         cancellationsCount: normalizedTenantCancellationsCount,
         conflictsCount: normalizedTenantConflictsCount,
+        feedbackCount: normalizedTenantFeedbackCount,
+        agreementsKeptCount: normalizedTenantAgreementsKeptCount,
+        wouldInteractAgainCount: normalizedTenantWouldInteractAgainCount,
+        incidentsCount: normalizedTenantIncidentsCount,
       }, {
         hostReviewsCount: normalizedPositiveReviewsCount,
+      })
+    : undefined;
+  const hostInteractionHistory = hasHostTrustData
+    ? buildHostInteractionHistory({
+        completedReservationsCount: typeof hostCompletedReservationsCount === 'number' ? hostCompletedReservationsCount : Number(hostCompletedReservationsCount ?? 0),
+        feedbackCount: typeof hostGuestFeedbackCount === 'number' ? hostGuestFeedbackCount : Number(hostGuestFeedbackCount ?? 0),
+        agreementsKeptCount: typeof hostGuestAgreementsKeptCount === 'number' ? hostGuestAgreementsKeptCount : Number(hostGuestAgreementsKeptCount ?? 0),
+        listingConsistentCount: typeof hostListingConsistentCount === 'number' ? hostListingConsistentCount : Number(hostListingConsistentCount ?? 0),
+        wouldInteractAgainCount: typeof hostGuestWouldInteractAgainCount === 'number' ? hostGuestWouldInteractAgainCount : Number(hostGuestWouldInteractAgainCount ?? 0),
+        incidentsCount: typeof hostGuestIncidentsCount === 'number' ? hostGuestIncidentsCount : Number(hostGuestIncidentsCount ?? 0),
+        avgResponseTimeMinutes: typeof hostAverageResponseTimeMinutes === 'number' ? hostAverageResponseTimeMinutes : Number(hostAverageResponseTimeMinutes ?? 0),
       })
     : undefined;
 
@@ -2965,8 +3251,8 @@ const normalizeConversationRecord = <T extends {
           hostGuestReviewsCount: typeof hostGuestReviewsCount === 'number' ? hostGuestReviewsCount : Number(hostGuestReviewsCount ?? 0),
         })
       : {}),
+    ...(hostInteractionHistory ? { hostInteractionHistory } : {}),
     ...(guestProfile ? { guestProfile } : {}),
-    ...(hasGuestProfileData ? { guestPositiveReviewsCount: normalizedPositiveReviewsCount } : {}),
   };
 };
 
@@ -3201,12 +3487,28 @@ const getUserBookingById = async (userId: string, bookingId: string) => {
             b.start_date as "startDate", b.end_date as "endDate", b.total_price as "totalPrice",
             b.guests, b.contract_accepted as "contractAccepted", b.contract_json as "contractJson",
           b.cancellation_actor as "cancellationActor",
+            p."hostId" as "hostId",
             c.id as "conversationId",
             COALESCE(c.deposit_status, b.deposit_status) as "depositStatus",
             COALESCE(b.request_mode, CASE WHEN c.booking_id IS NOT NULL THEN 'protected' ELSE 'direct' END) as "requestMode",
-            p.title as "propertyTitle", p."imageUrl", p.location
+            EXISTS(
+              SELECT 1
+              FROM reviews r
+              WHERE r.booking_id = b.id
+                AND r.reviewer_id = b."userId"
+                AND r.type = 'guest_to_host'
+            ) as "guestReviewSubmitted",
+            EXISTS(
+              SELECT 1
+              FROM reviews r
+              WHERE r.booking_id = b.id
+                AND r.reviewer_id = p."hostId"
+                AND r.type = 'host_to_guest'
+            ) as "hostReviewSubmitted",
+                 p.title as "propertyTitle", p."imageUrl", p.location, host.name as "hostName"
      FROM bookings b
      LEFT JOIN properties p ON b."propertyId" = p.id
+               LEFT JOIN users host ON host.id = p."hostId"
      LEFT JOIN conversations c ON c.booking_id = b.id
      WHERE b."userId" = $1 AND b.id = $2
      LIMIT 1`,
@@ -3222,12 +3524,28 @@ const getHostBookingById = async (hostId: string, bookingId: string) => {
             b.start_date as "startDate", b.end_date as "endDate", b.total_price as "totalPrice",
             b.guests, b.contract_accepted as "contractAccepted", b.contract_json as "contractJson",
             b.cancellation_actor as "cancellationActor",
+          p."hostId" as "hostId",
             c.id as "conversationId",
             COALESCE(c.deposit_status, b.deposit_status) as "depositStatus",
             COALESCE(b.request_mode, CASE WHEN c.booking_id IS NOT NULL THEN 'protected' ELSE 'direct' END) as "requestMode",
-            p.title as "propertyTitle", p."imageUrl", p.location
+            EXISTS(
+              SELECT 1
+              FROM reviews r
+              WHERE r.booking_id = b.id
+                AND r.reviewer_id = b."userId"
+                AND r.type = 'guest_to_host'
+            ) as "guestReviewSubmitted",
+            EXISTS(
+              SELECT 1
+              FROM reviews r
+              WHERE r.booking_id = b.id
+                AND r.reviewer_id = p."hostId"
+                AND r.type = 'host_to_guest'
+            ) as "hostReviewSubmitted",
+                 p.title as "propertyTitle", p."imageUrl", p.location, host.name as "hostName"
      FROM bookings b
      JOIN properties p ON b."propertyId" = p.id
+               LEFT JOIN users host ON host.id = p."hostId"
      LEFT JOIN conversations c ON c.booking_id = b.id
      WHERE p."hostId" = $1 AND b.id = $2
      LIMIT 1`,
@@ -4407,7 +4725,20 @@ app.post('/api/bookings/:id/confirm-arrival', async (req, res) => {
 app.get('/api/reviews/:propertyId', async (req, res) => {
   try {
     const result = await db.query(
-      `SELECT r.*, u.name as "userName"
+      `SELECT r.id,
+              r.reviewer_id,
+              r.reviewer_id as "userId",
+              r.reviewed_user_id as "reviewedUserId",
+              r.property_id as "propertyId",
+              r.type,
+              r.rating,
+              r.comment,
+              r.agreement_kept as "agreementKept",
+              r.would_interact_again as "wouldInteractAgain",
+              r.had_incident as "hadIncident",
+              r.photos_match_reality as "photosMatchReality",
+              r.created_at as date,
+              u.name as "userName"
        FROM reviews r
        LEFT JOIN users u ON r.reviewer_id = u.id
        WHERE r.property_id = $1
@@ -4425,20 +4756,45 @@ app.post('/api/reviews', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: AUTH_REQUIRED_ERROR });
   const bookingId = typeof req.body?.bookingId === 'string' ? req.body.bookingId : req.body?.booking_id;
   const reviewedUserId = typeof req.body?.reviewedUserId === 'string' ? req.body.reviewedUserId : req.body?.reviewed_user_id;
-  const rating = Number(req.body?.rating);
   const comment = typeof req.body?.comment === 'string' ? req.body.comment.trim() : '';
   const type = req.body?.type;
-  const photosMatchReality = typeof req.body?.photos_match_reality === 'boolean' ? req.body.photos_match_reality : true;
-  const pressureToBookFast = typeof req.body?.pressure_to_book_fast === 'boolean' ? req.body.pressure_to_book_fast : false;
+  const agreementKept = typeof req.body?.agreementKept === 'boolean'
+    ? req.body.agreementKept
+    : typeof req.body?.agreement_kept === 'boolean'
+      ? req.body.agreement_kept
+      : null;
+  const wouldInteractAgain = typeof req.body?.wouldInteractAgain === 'boolean'
+    ? req.body.wouldInteractAgain
+    : typeof req.body?.would_interact_again === 'boolean'
+      ? req.body.would_interact_again
+      : null;
+  const hadIncident = typeof req.body?.hadIncident === 'boolean'
+    ? req.body.hadIncident
+    : typeof req.body?.had_incident === 'boolean'
+      ? req.body.had_incident
+      : null;
+  const photosMatchReality = typeof req.body?.photosMatchReality === 'boolean'
+    ? req.body.photosMatchReality
+    : typeof req.body?.photos_match_reality === 'boolean'
+      ? req.body.photos_match_reality
+      : null;
 
-  if (!bookingId || !reviewedUserId || (type !== 'host_to_guest' && type !== 'guest_to_host') || !Number.isInteger(rating) || rating < 1 || rating > 5) {
+  if (
+    !bookingId
+    || !reviewedUserId
+    || (type !== 'host_to_guest' && type !== 'guest_to_host')
+    || agreementKept === null
+    || wouldInteractAgain === null
+    || hadIncident === null
+    || (type === 'guest_to_host' && photosMatchReality === null)
+  ) {
     return res.status(422).json({ error: 'Revisá los datos de la reseña antes de enviarla.' });
   }
   
   try {
     // Verificar que exista la reserva y el usuario sea parte
     const booking = await db.query(
-      `SELECT b.id, b."propertyId", b."userId", p."hostId"
+      `SELECT b.id, b.status, b."propertyId", b."userId", p."hostId"
        FROM bookings b
        JOIN properties p ON p.id = b."propertyId"
        WHERE b.id = $1`,
@@ -4457,14 +4813,40 @@ app.post('/api/reviews', async (req, res) => {
     if (normalizedReviewedUserId !== reviewedUserId) {
       return res.status(422).json({ error: 'La reseña no coincide con las personas involucradas en la reserva.' });
     }
+
+    if (bookingRow.status !== 'completed') {
+      return res.status(409).json({ error: 'El cierre de la estadía se comparte cuando la reserva ya figura como finalizada.' });
+    }
+
+    const existingReview = await db.query(
+      `SELECT id
+       FROM reviews
+       WHERE booking_id = $1
+         AND reviewer_id = $2
+         AND type = $3
+       LIMIT 1`,
+      [bookingId, req.session.userId, type],
+    );
+
+    if (existingReview.rows.length > 0) {
+      return res.status(409).json({ error: 'Ya dejaste tu cierre para esta estadía.' });
+    }
+
+    const rating = deriveReviewRating({
+      agreementKept,
+      wouldInteractAgain,
+      hadIncident,
+      photosMatchReality: type === 'guest_to_host' ? photosMatchReality ?? undefined : undefined,
+    });
     
     const id = `rev_${Date.now()}`;
     const result = await db.query(
       `INSERT INTO reviews (
          id, booking_id, reviewer_id, reviewed_user_id, property_id,
-         rating, comment, type, photos_match_reality, pressure_to_book_fast
+         rating, comment, type, agreement_kept, would_interact_again, had_incident,
+         photos_match_reality, pressure_to_book_fast
        )
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
        RETURNING *`,
       [
         id,
@@ -4475,17 +4857,19 @@ app.post('/api/reviews', async (req, res) => {
         rating,
         comment,
         type,
-        photosMatchReality,
-        pressureToBookFast,
+        agreementKept,
+        wouldInteractAgain,
+        hadIncident,
+        type === 'guest_to_host' ? photosMatchReality : true,
+        false,
       ]
     );
     
-    // Actualizar rating del usuario reseñado
+    // Mantenemos el promedio interno para compatibilidad, pero la app ya no lo usa como reputación pública.
     const updateField = type === 'host_to_guest' ? 'rating' : 'host_rating';
     await db.query(
       `UPDATE users SET ${updateField} = COALESCE((SELECT ROUND(AVG(rating)::numeric, 1) FROM reviews WHERE reviewed_user_id = $1 AND type = $2), 0),
-       total_reviews = COALESCE((SELECT COUNT(*) FROM reviews WHERE reviewed_user_id = $1), 0),
-       trust_score = LEAST(100, COALESCE(trust_score, 0) + 10)
+       total_reviews = COALESCE((SELECT COUNT(*) FROM reviews WHERE reviewed_user_id = $1), 0)
        WHERE id = $1`,
       [normalizedReviewedUserId, type]
     );
@@ -4496,17 +4880,6 @@ app.post('/api/reviews', async (req, res) => {
            "reviewsCount" = COALESCE((SELECT COUNT(*) FROM reviews WHERE property_id = $1 AND type = 'guest_to_host'), 0)
        WHERE id = $1`,
       [bookingRow.propertyId],
-    );
-    
-    // Lógica Simple de Insignias
-    await db.query(
-      `UPDATE users SET badge = CASE 
-        WHEN (COALESCE(is_host, FALSE) OR role = 'host') AND host_rating >= 4.7 AND total_properties >= 3 THEN 'Anfitrion destacado'
-        WHEN rating >= 4.5 THEN 'Huesped confiable'
-        WHEN identity_validated THEN 'Verificado'
-        ELSE 'Nuevo usuario'
-      END WHERE id = $1`,
-      [normalizedReviewedUserId]
     );
 
     res.status(201).json(result.rows[0]);
@@ -4639,8 +5012,18 @@ app.post('/api/leads', async (req, res) => {
 app.get('/api/properties/:id/reviews', async (req, res) => {
   try {
     const result = await db.query(
-      `SELECT id, reviewer_id, rating, comment, created_at
+      `SELECT id,
+              reviewer_id,
+              rating,
+              comment,
+              agreement_kept as "agreementKept",
+              would_interact_again as "wouldInteractAgain",
+              had_incident as "hadIncident",
+              photos_match_reality as "photosMatchReality",
+              reviewer.name as "userName",
+              created_at as date
        FROM reviews
+       LEFT JOIN users reviewer ON reviewer.id = reviews.reviewer_id
        WHERE property_id = $1
          AND type = 'guest_to_host'
        ORDER BY created_at DESC

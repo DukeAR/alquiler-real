@@ -31,6 +31,7 @@ import { LoadingState } from './LoadingState';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
+import { ReviewModal } from './ReviewModal';
 import { SectionTitle } from './ui/SectionTitle';
 import { AccountModeSwitch } from './ui/AccountModeSwitch';
 
@@ -393,6 +394,7 @@ export const MyBookings = () => {
     bookingId: string;
     action: 'pay-deposit' | 'confirm-arrival' | 'report-arrival-problem';
   } | null>(null);
+  const [reviewingBooking, setReviewingBooking] = useState<Booking | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -775,6 +777,7 @@ export const MyBookings = () => {
     const isConfirmingArrival = processingBookingAction?.bookingId === booking.id && processingBookingAction.action === 'confirm-arrival';
     const isReportingArrivalProblem = processingBookingAction?.bookingId === booking.id && processingBookingAction.action === 'report-arrival-problem';
     const arrivalActionsAvailable = isBookingCheckInReached(booking.startDate);
+    const canReviewBooking = booking.status === 'completed' && !booking.guestReviewSubmitted && Boolean(booking.hostId);
 
     return (
       <div
@@ -855,6 +858,26 @@ export const MyBookings = () => {
                   Abrir chat
                 </>
               </Button>
+            ) : null}
+
+            {canReviewBooking ? (
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => setReviewingBooking(booking)}
+                className="rounded-full"
+              >
+                <>
+                  <Icons.CheckCircle2 className="h-4 w-4" />
+                  Compartir cierre
+                </>
+              </Button>
+            ) : null}
+
+            {booking.status === 'completed' && booking.guestReviewSubmitted ? (
+              <div className="rounded-full bg-slate-100 px-4 py-2 text-xs font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+                Ya compartiste cómo cerró esta estadía
+              </div>
             ) : null}
 
             {booking.contractJson ? (
@@ -1373,6 +1396,20 @@ export const MyBookings = () => {
           </Card>
         </section>
       </div>
+
+      {reviewingBooking ? (
+        <ReviewModal
+          bookingId={reviewingBooking.id}
+          reviewedUserId={reviewingBooking.hostId || ''}
+          reviewedUserName={reviewingBooking.hostName || 'Anfitrión'}
+          type="guest_to_host"
+          onClose={() => setReviewingBooking(null)}
+          onComplete={() => {
+            setReviewingBooking(null);
+            void fetchBookings();
+          }}
+        />
+      ) : null}
 
       {selectedContract ? (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-md bg-slate-950/40">

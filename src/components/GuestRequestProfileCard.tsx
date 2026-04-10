@@ -8,6 +8,7 @@ import {
   getGuestRequestProfileScenario,
 } from '../lib/guestRequestProfile';
 import type { GuestHostReviewSnippet, GuestRequestProfile } from '../types';
+import { InteractionHistorySignals } from './ui/InteractionHistorySignals';
 import { VerificationMeter, VerificationSnippetList } from './ui/VerificationMeter';
 
 type GuestRequestProfileCardProps = {
@@ -131,14 +132,6 @@ export const GuestRequestProfileCard: React.FC<GuestRequestProfileCardProps> = (
     },
   ];
 
-  if (profile.dataAvailability.platformHistory && profile.platformHistory.conflictsCount > 0) {
-    guestDataItems.splice(3, 0, {
-      label: 'Conflictos reportados',
-      value: String(profile.platformHistory.conflictsCount),
-      muted: false,
-    });
-  }
-
   return (
     <div data-testid="guest-request-profile-card" className={cn('rounded-[22px] border border-slate-200/80 bg-white px-4 py-4 shadow-[0_18px_32px_-30px_rgba(15,23,42,0.18)] dark:border-slate-800 dark:bg-slate-950 md:px-5', className)}>
       <div className="space-y-1">
@@ -177,6 +170,19 @@ export const GuestRequestProfileCard: React.FC<GuestRequestProfileCardProps> = (
               <DataItem key={item.label} label={item.label} value={item.value} muted={item.muted} />
             ))}
           </div>
+        </section>
+
+        <section className="space-y-3 border-t border-slate-200/80 pt-4 dark:border-slate-800">
+          <p className={sectionLabelClass}>Historial compartido</p>
+          <InteractionHistorySignals
+            signals={profile.interactionHistory.publicSignals}
+            emptyText="Todavía no hay suficientes cierres compartidos para resumir esta cuenta."
+          />
+          {profile.interactionHistory.feedbackCount > 0 ? (
+            <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">
+              Sobre {profile.interactionHistory.feedbackCount} {profile.interactionHistory.feedbackCount === 1 ? 'cierre compartido' : 'cierres compartidos'}.
+            </p>
+          ) : null}
         </section>
 
         <section className="space-y-3 border-t border-slate-200/80 pt-4 dark:border-slate-800">

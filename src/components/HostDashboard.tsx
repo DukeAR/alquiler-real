@@ -744,7 +744,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
 
   const renderBookingEntry = (booking: any) => {
     const isExpanded = expandedBookingId === booking.id;
-    const canReviewBooking = booking.status === 'completed';
+    const canReviewBooking = booking.status === 'completed' && !booking.hostReviewSubmitted;
     const isDecisionStage = booking.status === 'pending';
     const shouldShowGuestProfile = isDecisionStage || isExpanded;
     const bookingSummaryItems = getBookingSummaryItems(booking);
@@ -928,8 +928,13 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
                 onClick={() => setReviewingBooking(booking)}
                 className="app-button-base rounded-[var(--app-radius-control)] bg-brand px-4 py-2 text-sm text-white hover:-translate-y-px hover:bg-brand-dark hover:shadow-[var(--app-shadow-brand)]"
               >
-                Evaluar huésped
+                Registrar cierre
               </button>
+            ) : null}
+            {booking.status === 'completed' && booking.hostReviewSubmitted ? (
+              <div className="rounded-full bg-slate-100 px-4 py-2 text-xs font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+                Ya compartiste el cierre de esta estadía
+              </div>
             ) : null}
           </div>
         ) : null}

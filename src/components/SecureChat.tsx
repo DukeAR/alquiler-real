@@ -13,7 +13,6 @@ import { useAuth } from '../hooks/useAuth';
 import { type ReservationRequestContext } from '../types';
 import { formatBookingDateShort, getBookingDateOnlyValue, isBookingCheckInReached } from '../lib/bookingDates';
 import { formatGuestMemberSinceYear, resolveGuestRequestProfile } from '../lib/guestRequestProfile';
-import { getHostTrust } from '../lib/hostTrust';
 import { getReservationFlowCopy } from '../lib/reservationFlow';
 import { getVerificationSummaryItems, getVerificationSummaryLabel } from './ui/VerificationMeter';
 
@@ -97,35 +96,15 @@ const formatCompactDateRange = (startDate?: string, endDate?: string) => {
   return `${startLabel}–${endLabel}`;
 };
 
-const getHostTrustItemShortLabel = (label: string) => {
-  if (/identidad/i.test(label)) {
-    return 'Identidad verificada';
-  }
-
-  if (/reservas/i.test(label)) {
-    return 'Historial';
-  }
-
-  if (/reseñas/i.test(label)) {
-    return 'Reseñas';
-  }
-
-  if (/antigüedad/i.test(label)) {
-    return 'Antigüedad';
-  }
-
-  return label;
-};
-
-const getHostVerificationLine = (completedLabels: string[]) => {
-  if (completedLabels.length === 0) {
+const getInteractionSummaryLine = (labels: string[]) => {
+  if (labels.length === 0) {
     return null;
   }
 
-  const visibleLabels = completedLabels.slice(0, 3);
-  const remainingCount = Math.max(0, completedLabels.length - visibleLabels.length);
+  const visibleLabels = labels.slice(0, 3);
+  const remainingCount = Math.max(0, labels.length - visibleLabels.length);
 
-  return `${visibleLabels.map((label) => `✔ ${label}`).join(' · ')}${remainingCount > 0 ? ` · +${remainingCount}` : ''}`;
+  return `${visibleLabels.join(' · ')}${remainingCount > 0 ? ` · +${remainingCount}` : ''}`;
 };
 
 const getGuestVerificationItemShortLabel = (label: string) => {
@@ -869,19 +848,14 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
       ? activeConv.hostName || 'Anfitrión'
       : activeConv.tenantName || 'Huésped'
     : 'Conversación';
-  const hostTrustSummary = activeConv ? getHostTrust(activeConv) : null;
-  const completedHostTrustLabels = hostTrustSummary
-    ? hostTrustSummary.items
-        .filter((item) => item.status === 'complete')
-        .map((item) => getHostTrustItemShortLabel(item.label))
+  const hostHistoryLabels = isTenantConversation && activeConv?.hostInteractionHistory
+    ? activeConv.hostInteractionHistory.publicSignals.map((signal) => `${signal.tone === 'positive' ? '✔' : '○'} ${signal.label}`)
     : [];
-  const hostVerificationLine = hostTrustSummary
-    ? getHostVerificationLine(completedHostTrustLabels)
-    : null;
+  const hostHistoryLine = getInteractionSummaryLine(hostHistoryLabels);
   const shouldShowGuestContext = Boolean(
     isHostConversation
     && activeConv
-    && (activeConv.guestProfile || typeof activeConv.guestPositiveReviewsCount === 'number'),
+    && activeConv.guestProfile,
   );
   const guestContextProfile = shouldShowGuestContext && activeConv
     ? resolveGuestRequestProfile({
@@ -902,9 +876,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
         guestContextProfile.dataAvailability.platformHistory && guestContextProfile.platformHistory.completedStays > 0
           ? formatCountLabel(guestContextProfile.platformHistory.completedStays, 'estadía completada', 'estadías completadas')
           : null,
-        typeof activeConv?.guestPositiveReviewsCount === 'number' && activeConv.guestPositiveReviewsCount > 0
-          ? formatCountLabel(activeConv.guestPositiveReviewsCount, 'reseña positiva', 'reseñas positivas')
-          : null,
+        ...guestContextProfile.interactionHistory.publicSignals.slice(0, 2).map((signal) => `${signal.tone === 'positive' ? '✔' : '○'} ${signal.label}`),
         guestContextProfile.dataAvailability.memberSince && guestContextProfile.memberSince.trim()
           ? `Usuario desde ${formatGuestMemberSinceYear(guestContextProfile.memberSince)}`
           : null,
@@ -1437,9 +1409,9 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                   <h3 className="text-base font-semibold tracking-tight text-slate-950 dark:text-white sm:text-lg">
                     {counterpartyName}
                   </h3>
-                  {hostVerificationLine ? (
+                  {hostHistoryLine ? (
                     <p className="mt-1 text-[11px] font-medium leading-5 text-slate-500 dark:text-slate-300">
-                      {isTenantConversation ? hostVerificationLine : `Perfil anfitrión · ${hostVerificationLine}`}
+                      {hostHistoryLine}
                     </p>
                   ) : null}
                 </div>

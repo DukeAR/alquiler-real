@@ -75,6 +75,20 @@ const sampleProperty = {
       { key: 'tenure', label: 'Antigüedad en la plataforma', description: '3 años en la plataforma.', status: 'complete' },
     ],
   },
+  hostInteractionHistory: {
+    completedReservationsCount: 6,
+    feedbackCount: 4,
+    agreementsKeptCount: 4,
+    listingConsistentCount: 4,
+    wouldInteractAgainCount: 4,
+    incidentsCount: 0,
+    avgResponseTimeMinutes: 18,
+    publicSignals: [
+      { key: 'completed-reservations', label: '6 reservas completadas', tone: 'positive', detail: 'Es el historial cerrado dentro de la plataforma.' },
+      { key: 'listing-consistency', label: 'El aviso suele coincidir con lo publicado', tone: 'positive', detail: '4 cierres compartidos remarcaron consistencia con el aviso.' },
+      { key: 'response-time', label: 'Responde en alrededor de 18 min', tone: 'positive' },
+    ],
+  },
 };
 
 const ChatRoute = () => {
@@ -400,7 +414,7 @@ describe('PropertyDetail', () => {
     expect(within(mobileContext).getByRole('button', { name: /seguir al resumen/i })).toBeDefined();
   });
 
-  test('renders clearer amenities and trust sections', async () => {
+  test('renders clearer amenities and interaction history sections', async () => {
     renderPropertyDetail();
 
     await waitForPropertyHeading();
@@ -429,9 +443,10 @@ describe('PropertyDetail', () => {
     expect(screen.getByText('Todavía no hay una verificación presencial registrada.')).toBeDefined();
     expect(screen.getByText('El aviso ya tiene 5 reseñas reales.')).toBeDefined();
     expect(screen.getByText('Mariana')).toBeDefined();
-    expect(screen.getByText('Información validada del anfitrión: Alto')).toBeDefined();
-    expect(screen.getByText('Historial de reservas')).toBeDefined();
-    expect(screen.getByText('Reseñas de huéspedes')).toBeDefined();
+    expect(screen.getByText('Mostramos reservas completadas, consistencia del aviso y tiempos de respuesta en lugar de puntajes públicos.')).toBeDefined();
+    expect(screen.getByText('6 reservas completadas')).toBeDefined();
+    expect(screen.getByText('El aviso suele coincidir con lo publicado')).toBeDefined();
+    expect(screen.getByText('Responde en alrededor de 18 min')).toBeDefined();
     expect(screen.queryByText('Antigüedad en la plataforma')).toBeNull();
   });
 

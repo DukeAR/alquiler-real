@@ -217,6 +217,18 @@ describe('HostDashboard', () => {
               conflictsCount: 1,
               cancellationsCount: 0,
             },
+            interactionHistory: {
+              completedStays: 4,
+              feedbackCount: 2,
+              agreementsKeptCount: 2,
+              wouldInteractAgainCount: 2,
+              incidentsCount: 1,
+              publicSignals: [
+                { key: 'agreements', label: 'Se cumplió lo acordado', tone: 'positive' },
+                { key: 'return', label: 'Volverían a interactuar', tone: 'positive' },
+                { key: 'caution', label: 'Hubo una situación a considerar', tone: 'neutral' },
+              ],
+            },
             hostReviews: [
               {
                 id: 'review-1',
@@ -273,11 +285,14 @@ describe('HostDashboard', () => {
     expect(within(profileCard).getByText('Email verificado')).toBeInTheDocument();
     expect(within(profileCard).getByText('Identidad documental')).toBeInTheDocument();
     expect(within(profileCard).getByText('Datos del huésped')).toBeInTheDocument();
+    expect(within(profileCard).getByText('Historial compartido')).toBeInTheDocument();
     expect(within(profileCard).getByText('Señales de esta operación')).toBeInTheDocument();
     expect(within(profileCard).getByText('Reseñas de anfitriones')).toBeInTheDocument();
     expect(within(profileCard).getByText('Confirmada')).toBeInTheDocument();
     expect(within(profileCard).getByText('Estadías completadas')).toBeInTheDocument();
-    expect(within(profileCard).getByText('Conflictos reportados')).toBeInTheDocument();
+    expect(within(profileCard).getByText('Se cumplió lo acordado')).toBeInTheDocument();
+    expect(within(profileCard).getByText('Volverían a interactuar')).toBeInTheDocument();
+    expect(within(profileCard).getByText('Hubo una situación a considerar')).toBeInTheDocument();
     expect(within(profileCard).getByText('Consultó antes de reservar')).toBeInTheDocument();
     expect(within(profileCard).getByText('Completó sus datos')).toBeInTheDocument();
     expect(within(profileCard).getByText('2022')).toBeInTheDocument();
@@ -286,6 +301,7 @@ describe('HostDashboard', () => {
 
     const profileText = profileCard.textContent ?? '';
     expect(profileText.indexOf('Datos del huésped')).toBeLessThan(profileText.indexOf('Señales de esta operación'));
+    expect(profileText.indexOf('Historial compartido')).toBeLessThan(profileText.indexOf('Señales de esta operación'));
     expect(profileText.indexOf('Señales de esta operación')).toBeLessThan(profileText.indexOf('Reseñas de anfitriones'));
   });
 

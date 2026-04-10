@@ -1,4 +1,5 @@
 import { buildHostTrust } from './hostTrust';
+import { buildHostInteractionHistory } from './interactionHistory';
 import { buildPropertyVerification } from './propertyVerification';
 
 const PROPERTY_COORDINATE_FALLBACK = {
@@ -20,6 +21,12 @@ type PropertyQueryRow = Record<string, unknown> & {
   hostProfileName?: unknown;
   hostCompletedReservationsCount?: unknown;
   hostGuestReviewsCount?: unknown;
+  hostGuestFeedbackCount?: unknown;
+  hostGuestAgreementsKeptCount?: unknown;
+  hostListingConsistentCount?: unknown;
+  hostGuestWouldInteractAgainCount?: unknown;
+  hostGuestIncidentsCount?: unknown;
+  hostAverageResponseTimeMinutes?: unknown;
   identityValidated?: unknown;
   hostIdentityValidated?: unknown;
   hostIdentityVerified?: unknown;
@@ -96,6 +103,12 @@ export const mapPropertyRecord = (row: PropertyQueryRow) => {
     hostSince: getResolvedHostSince(row),
     hostCompletedReservationsCount: toSafeInteger(row.hostCompletedReservationsCount),
     hostGuestReviewsCount: toSafeInteger(row.hostGuestReviewsCount),
+    hostGuestFeedbackCount: toSafeInteger(row.hostGuestFeedbackCount),
+    hostGuestAgreementsKeptCount: toSafeInteger(row.hostGuestAgreementsKeptCount),
+    hostListingConsistentCount: toSafeInteger(row.hostListingConsistentCount),
+    hostGuestWouldInteractAgainCount: toSafeInteger(row.hostGuestWouldInteractAgainCount),
+    hostGuestIncidentsCount: toSafeInteger(row.hostGuestIncidentsCount),
+    hostAverageResponseTimeMinutes: toSafeInteger(row.hostAverageResponseTimeMinutes),
     hostName: typeof row.hostName === 'string' && row.hostName.trim().length > 0
       ? row.hostName
       : typeof row.hostProfileName === 'string' && row.hostProfileName.trim().length > 0
@@ -121,6 +134,15 @@ export const mapPropertyRecord = (row: PropertyQueryRow) => {
       hostCompletedReservationsCount: normalizedProperty.hostCompletedReservationsCount,
       hostGuestReviewsCount: normalizedProperty.hostGuestReviewsCount,
       hostSince: normalizedProperty.hostSince,
+    }),
+    hostInteractionHistory: buildHostInteractionHistory({
+      completedReservationsCount: normalizedProperty.hostCompletedReservationsCount,
+      feedbackCount: normalizedProperty.hostGuestFeedbackCount,
+      agreementsKeptCount: normalizedProperty.hostGuestAgreementsKeptCount,
+      listingConsistentCount: normalizedProperty.hostListingConsistentCount,
+      wouldInteractAgainCount: normalizedProperty.hostGuestWouldInteractAgainCount,
+      incidentsCount: normalizedProperty.hostGuestIncidentsCount,
+      avgResponseTimeMinutes: normalizedProperty.hostAverageResponseTimeMinutes,
     }),
   };
 };

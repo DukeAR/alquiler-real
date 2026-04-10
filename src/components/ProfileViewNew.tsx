@@ -6,6 +6,7 @@ import { useUserProfile, type ValidationChecks } from '../hooks/useUserProfile';
 import { apiJson } from '../lib/apiConfig';
 import { VALID_ZONES } from '../lib/constants';
 import { formatPremiumPriceLabel } from '../lib/premiumVerification';
+import { getReviewInteractionSignals } from '../lib/interactionHistory';
 import { showToast } from '../lib/toast';
 import { cn } from '../lib/utils';
 import { Icons } from './Icons';
@@ -18,6 +19,7 @@ import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 import { FormField } from './ui/FormField';
 import { Input } from './ui/Input';
+import { InteractionHistorySignals } from './ui/InteractionHistorySignals';
 import { PageHeader } from './ui/PageHeader';
 import { AccountModeSwitch } from './ui/AccountModeSwitch';
 import { SectionTitle } from './ui/SectionTitle';
@@ -709,9 +711,9 @@ export const ProfileViewNew = () => {
                 <Card padding="lg" className="space-y-6 dark:border-slate-800 dark:bg-slate-900">
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                     <SectionTitle
-                      eyebrow="Reseñas"
-                      heading="Tus reseñas"
-                      description="Lo que recibiste y lo que dejaste escrito dentro de la app."
+                      eyebrow="Historial"
+                      heading="Tus cierres compartidos"
+                      description="Lo que recibiste y lo que dejaste registrado dentro de la app, sin estrellas ni puntajes públicos."
                       as="h2"
                       visualLevel="h4"
                     />
@@ -751,7 +753,7 @@ export const ProfileViewNew = () => {
 
                   <div className="space-y-4">
                     {currentReviews.length > 0 ? currentReviews.map((review, index) => (
-                      <div key={`${review.propertyTitle || review.userName || 'review'}-${index}`} className={`${profilePanelClass} space-y-3`}>
+                      <div key={`${review.propertyTitle || review.userName || 'review'}-${index}`} className={`${profilePanelClass} space-y-4`}>
                         <div className="flex flex-wrap items-start justify-between gap-3">
                           <div>
                             <p className="text-sm font-semibold tracking-tight text-slate-900 dark:text-slate-100">
@@ -759,12 +761,15 @@ export const ProfileViewNew = () => {
                             </p>
                             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{formatShortDate(review.created_at)}</p>
                           </div>
-                          <div className="flex items-center gap-0.5 text-amber-500">
-                            {Array.from({ length: Math.max(1, Math.round(review.rating || 0)) }).map((_, starIndex) => (
-                              <Icons.Star key={starIndex} className="h-3.5 w-3.5 fill-current" />
-                            ))}
+                          <div className="rounded-full bg-white px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 shadow-[var(--app-shadow-subtle)] dark:bg-slate-900 dark:text-slate-300">
+                            Historial
                           </div>
                         </div>
+                        <InteractionHistorySignals
+                          signals={getReviewInteractionSignals(review)}
+                          compact
+                          emptyText="Este cierre no dejó señales públicas adicionales."
+                        />
                         <p className="text-sm leading-6 text-slate-700 dark:text-slate-200">{review.comment || 'Sin comentario adicional.'}</p>
                       </div>
                     )) : (

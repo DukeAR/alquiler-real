@@ -18,6 +18,35 @@ export interface TraceabilityReport {
   factors: TraceabilityFactor[];
 }
 
+export type InteractionHistoryTone = 'positive' | 'neutral';
+
+export interface InteractionHistorySignal {
+  key: string;
+  label: string;
+  tone: InteractionHistoryTone;
+  detail?: string;
+}
+
+export interface GuestInteractionHistory {
+  completedStays: number;
+  feedbackCount: number;
+  agreementsKeptCount: number;
+  wouldInteractAgainCount: number;
+  incidentsCount: number;
+  publicSignals: InteractionHistorySignal[];
+}
+
+export interface HostInteractionHistory {
+  completedReservationsCount: number;
+  feedbackCount: number;
+  agreementsKeptCount: number;
+  listingConsistentCount: number;
+  wouldInteractAgainCount: number;
+  incidentsCount: number;
+  avgResponseTimeMinutes: number;
+  publicSignals: InteractionHistorySignal[];
+}
+
 export interface Property {
   id: string;
   title: string;
@@ -28,6 +57,7 @@ export interface Property {
   verificationItems?: PropertyVerificationItem[];
   hostTrustScore?: number;
   hostTrust?: HostTrustSummary;
+  hostInteractionHistory?: HostInteractionHistory;
   price: number;
   hostName: string;
   hostId: string;
@@ -70,6 +100,9 @@ export interface Review {
   rating: number;
   comment: string;
   date: string;
+  agreementKept?: boolean;
+  wouldInteractAgain?: boolean;
+  hadIncident?: boolean;
   photosMatchReality: boolean;
   pressureToBookFast: boolean;
 }
@@ -117,6 +150,7 @@ export type GuestRequestProfileDataSource = 'api' | 'mixed' | 'fallback';
 export interface GuestRequestProfile {
   identityVerified: boolean;
   platformHistory: GuestPlatformHistory;
+  interactionHistory: GuestInteractionHistory;
   hostReviews: GuestHostReviewSnippet[];
   profileCompletion: GuestProfileCompletion;
   verificationSummary: GuestVerificationSummary;
@@ -162,9 +196,11 @@ export interface Booking {
   id: string;
   propertyId: string;
   userId: string;
+  hostId?: string;
   conversationId?: string;
   status: BookingStatus;
   userName?: string;
+  hostName?: string;
   propertyTitle?: string;
   imageUrl?: string;
   location?: string;
@@ -182,6 +218,8 @@ export interface Booking {
   stay_code?: string;
   verified?: number;
   guestProfile?: GuestRequestProfile;
+  guestReviewSubmitted?: boolean;
+  hostReviewSubmitted?: boolean;
 }
 
 export interface Conversation {
@@ -211,6 +249,7 @@ export interface Conversation {
   requestTotalPrice?: number;
   hostTrustScore?: number;
   hostTrust?: HostTrustSummary;
+  hostInteractionHistory?: HostInteractionHistory;
   guestProfile?: GuestRequestProfile;
   guestPositiveReviewsCount?: number;
   updated_at: string;
@@ -278,6 +317,8 @@ export interface HostProfile {
   agreementsFinalizedCount: number;
   avgResponseTimeMinutes: number;
   hostCancellationsCount: number;
+
+  interactionHistory: HostInteractionHistory;
 
   reputation: {
     photosMatchRealityRate: number;

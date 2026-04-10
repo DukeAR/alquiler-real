@@ -188,6 +188,10 @@ describe('Host dashboard endpoint', () => {
               completedStays: 4,
               cancellationsCount: 1,
               conflictsCount: 0,
+              feedbackCount: 2,
+              agreementsKeptCount: 2,
+              wouldInteractAgainCount: 2,
+              incidentsCount: 0,
             },
           ],
         };
@@ -202,6 +206,9 @@ describe('Host dashboard endpoint', () => {
               authorName: 'Laura',
               date: '2025-11-14T00:00:00.000Z',
               comment: 'La coordinación fue clara y mantuvo buena comunicación durante toda la reserva.',
+              agreementKept: true,
+              wouldInteractAgain: true,
+              hadIncident: false,
             },
           ],
         };
@@ -236,6 +243,27 @@ describe('Host dashboard endpoint', () => {
         completedStays: 4,
         conflictsCount: 0,
         cancellationsCount: 1,
+      },
+      interactionHistory: {
+        completedStays: 4,
+        feedbackCount: 2,
+        agreementsKeptCount: 2,
+        wouldInteractAgainCount: 2,
+        incidentsCount: 0,
+        publicSignals: [
+          {
+            key: 'agreements',
+            label: 'Se cumplió lo acordado',
+            tone: 'positive',
+            detail: '2 cierres compartidos hablaron de acuerdos respetados.',
+          },
+          {
+            key: 'return',
+            label: 'Volverían a interactuar',
+            tone: 'positive',
+            detail: '2 anfitriones dejaron esta señal al cerrar la estadía.',
+          },
+        ],
       },
       hostReviews: [
         {

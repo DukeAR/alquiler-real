@@ -113,6 +113,9 @@ export type DemoReview = {
   rating: number;
   comment: string;
   type: DemoReviewType;
+  agreementKept: boolean;
+  wouldInteractAgain: boolean;
+  hadIncident: boolean;
   photosMatchReality: boolean;
   pressureToBookFast: boolean;
   createdAt: string;
@@ -592,6 +595,9 @@ export const buildDemoData = (referenceDate = new Date()): DemoSeedCatalog => {
     rating: number;
     comment: string;
     createdAtOffset: number;
+    agreementKept?: boolean;
+    wouldInteractAgain?: boolean;
+    hadIncident?: boolean;
     photosMatchReality?: boolean;
     pressureToBookFast?: boolean;
   }): DemoReview => ({
@@ -603,6 +609,9 @@ export const buildDemoData = (referenceDate = new Date()): DemoSeedCatalog => {
     rating: config.rating,
     comment: config.comment,
     type: config.type,
+    agreementKept: config.agreementKept ?? (config.photosMatchReality !== false && config.pressureToBookFast !== true && config.rating >= 4),
+    wouldInteractAgain: config.wouldInteractAgain ?? (config.pressureToBookFast !== true && config.rating >= 4),
+    hadIncident: config.hadIncident ?? (config.pressureToBookFast === true || config.photosMatchReality === false || config.rating <= 3),
     photosMatchReality: config.photosMatchReality ?? true,
     pressureToBookFast: config.pressureToBookFast ?? false,
     createdAt: timestamp(config.createdAtOffset, 20, 15),
@@ -611,14 +620,14 @@ export const buildDemoData = (referenceDate = new Date()): DemoSeedCatalog => {
   const reviews: DemoReview[] = [
     createReview({ id: 'demo_review_lucia_to_valeria_1', bookingId: 'demo_booking_lucia_past_1', reviewerId: 'demo_guest_lucia', reviewedUserId: 'demo_host_valeria', type: 'guest_to_host', rating: 5, comment: 'El PH estaba impecable, la parrilla lista para usar y el check-in fue tan claro como en la publicacion.', createdAtOffset: -23 }),
     createReview({ id: 'demo_review_valeria_to_lucia_1', bookingId: 'demo_booking_lucia_past_1', reviewerId: 'demo_host_valeria', reviewedUserId: 'demo_guest_lucia', type: 'host_to_guest', rating: 5, comment: 'Lucia llego en horario, cuido la casa y dejo todo en orden. Comunicacion muy clara durante la estadia.', createdAtOffset: -23 }),
-    createReview({ id: 'demo_review_martin_to_valeria_1', bookingId: 'demo_booking_martin_past_1', reviewerId: 'demo_guest_martin', reviewedUserId: 'demo_host_valeria', type: 'guest_to_host', rating: 4, comment: 'La vista y la ubicacion son muy buenas. El lugar coincide con las fotos y Valeria respondio rapido cuando consultamos por el estacionamiento.', createdAtOffset: -47 }),
+    createReview({ id: 'demo_review_martin_to_valeria_1', bookingId: 'demo_booking_martin_past_1', reviewerId: 'demo_guest_martin', reviewedUserId: 'demo_host_valeria', type: 'guest_to_host', rating: 4, comment: 'La vista y la ubicacion son muy buenas. El lugar coincide con las fotos y Valeria respondio rapido cuando consultamos por el estacionamiento.', createdAtOffset: -47, agreementKept: true, wouldInteractAgain: true, hadIncident: true }),
     createReview({ id: 'demo_review_valeria_to_martin_1', bookingId: 'demo_booking_martin_past_1', reviewerId: 'demo_host_valeria', reviewedUserId: 'demo_guest_martin', type: 'host_to_guest', rating: 5, comment: 'Martin fue respetuoso con las normas y muy prolijo. Lo recomendaria para otra reserva sin problema.', createdAtOffset: -47 }),
     createReview({ id: 'demo_review_martin_to_valeria_2', bookingId: 'demo_booking_martin_past_2', reviewerId: 'demo_guest_martin', reviewedUserId: 'demo_host_valeria', type: 'guest_to_host', rating: 5, comment: 'El duplex esta bien pensado para grupos, con espacios amplios y patio comodo. Todo estaba preparado antes de llegar.', createdAtOffset: -9 }),
-    createReview({ id: 'demo_review_valeria_to_martin_2', bookingId: 'demo_booking_martin_past_2', reviewerId: 'demo_host_valeria', reviewedUserId: 'demo_guest_martin', type: 'host_to_guest', rating: 4, comment: 'Buen trato y salida en horario. Tuvimos que coordinar una consulta extra por la cochera, pero se resolvio bien.', createdAtOffset: -9 }),
+    createReview({ id: 'demo_review_valeria_to_martin_2', bookingId: 'demo_booking_martin_past_2', reviewerId: 'demo_host_valeria', reviewedUserId: 'demo_guest_martin', type: 'host_to_guest', rating: 4, comment: 'Buen trato y salida en horario. Tuvimos que coordinar una consulta extra por la cochera, pero se resolvio bien.', createdAtOffset: -9, agreementKept: true, wouldInteractAgain: true, hadIncident: true }),
     createReview({ id: 'demo_review_rocio_to_ignacio_1', bookingId: 'demo_booking_rocio_past_1', reviewerId: 'demo_guest_rocio', reviewedUserId: 'demo_host_ignacio', type: 'guest_to_host', rating: 4, comment: 'El depto estaba prolijo y el wifi funciono bien para trabajar. El bano es chico, pero todo lo demas coincidió con lo publicado.', createdAtOffset: -31 }),
     createReview({ id: 'demo_review_ignacio_to_rocio_1', bookingId: 'demo_booking_rocio_past_1', reviewerId: 'demo_host_ignacio', reviewedUserId: 'demo_guest_rocio', type: 'host_to_guest', rating: 5, comment: 'Rocio aviso su horario de llegada, cuido el departamento y mantuvo muy buena comunicacion durante la estadia.', createdAtOffset: -31 }),
     createReview({ id: 'demo_review_tomas_to_valeria_1', bookingId: 'demo_booking_tomas_past_1', reviewerId: 'demo_guest_tomas', reviewedUserId: 'demo_host_valeria', type: 'guest_to_host', rating: 5, comment: 'El monoambiente es compacto pero muy funcional. La limpieza fue excelente y la informacion sobre el edificio estaba actualizada.', createdAtOffset: -65 }),
-    createReview({ id: 'demo_review_valeria_to_tomas_1', bookingId: 'demo_booking_tomas_past_1', reviewerId: 'demo_host_valeria', reviewedUserId: 'demo_guest_tomas', type: 'host_to_guest', rating: 4, comment: 'Tomas fue correcto y dejo todo bien. Se extendio un poco con el horario de salida, pero aviso y lo resolvimos sin problema.', createdAtOffset: -65 }),
+    createReview({ id: 'demo_review_valeria_to_tomas_1', bookingId: 'demo_booking_tomas_past_1', reviewerId: 'demo_host_valeria', reviewedUserId: 'demo_guest_tomas', type: 'host_to_guest', rating: 4, comment: 'Tomas fue correcto y dejo todo bien. Se extendio un poco con el horario de salida, pero aviso y lo resolvimos sin problema.', createdAtOffset: -65, agreementKept: true, wouldInteractAgain: true, hadIncident: true }),
     createReview({ id: 'demo_review_tomas_to_ignacio_1', bookingId: 'demo_booking_tomas_past_2', reviewerId: 'demo_guest_tomas', reviewedUserId: 'demo_host_ignacio', type: 'guest_to_host', rating: 4, comment: 'La casa es comoda para familia y el jardin suma mucho. El barrio es tranquilo y el ingreso fue simple con instrucciones por mensaje.', createdAtOffset: -53 }),
     createReview({ id: 'demo_review_ignacio_to_tomas_1', bookingId: 'demo_booking_tomas_past_2', reviewerId: 'demo_host_ignacio', reviewedUserId: 'demo_guest_tomas', type: 'host_to_guest', rating: 5, comment: 'Buen huesped, respetuoso con la casa y con excelente comunicacion antes y durante la estadia.', createdAtOffset: -53 }),
   ];
