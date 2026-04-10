@@ -14,5 +14,15 @@
     "noUnusedParameters": true,
     "types": ["node", "vitest/globals"]
   },
-  "include": ["server/**/*.ts", "src/lib/userVerification.ts", "src/lib/guestVerification.ts", "src/lib/premiumVerification.ts", "src/lib/verificationModel.ts"]
+  "include": [
+    "server/**/*.ts",
+    "src/types.ts",
+    "src/lib/userVerification.ts",
+    "src/lib/guestVerification.ts",
+    "src/lib/hostTrust.ts",
+    "src/lib/premiumVerification.ts",
+    "src/lib/positiveIncentives.ts",
+    "src/lib/propertyVerification.ts",
+    "src/lib/verificationModel.ts"
+  ]
 }

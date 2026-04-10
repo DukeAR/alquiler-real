@@ -47,6 +47,12 @@ export interface HostInteractionHistory {
   publicSignals: InteractionHistorySignal[];
 }
 
+export interface InteractionContinuity {
+  label: string;
+  detail: string;
+  sharedCompletedBookings: number;
+}
+
 export interface Property {
   id: string;
   title: string;
@@ -90,6 +96,7 @@ export interface Property {
   premiumVisibilityBoost?: number;
   premiumOnsiteOffer?: PremiumVerificationOffer | null;
   isVerifiedProperty?: boolean;
+  interactionContinuity?: InteractionContinuity;
 }
 
 export interface Review {
@@ -251,6 +258,7 @@ export interface Conversation {
   hostTrust?: HostTrustSummary;
   hostInteractionHistory?: HostInteractionHistory;
   guestProfile?: GuestRequestProfile;
+  interactionContinuity?: InteractionContinuity;
   guestPositiveReviewsCount?: number;
   updated_at: string;
   created_at: string;

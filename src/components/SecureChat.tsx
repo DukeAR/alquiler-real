@@ -13,6 +13,7 @@ import { useAuth } from '../hooks/useAuth';
 import { type ReservationRequestContext } from '../types';
 import { formatBookingDateShort, getBookingDateOnlyValue, isBookingCheckInReached } from '../lib/bookingDates';
 import { formatGuestMemberSinceYear, resolveGuestRequestProfile } from '../lib/guestRequestProfile';
+import { getGuestPositiveCoordinationSignals, getHostResponseSignal } from '../lib/positiveIncentives';
 import { getReservationFlowCopy } from '../lib/reservationFlow';
 import { getVerificationSummaryItems, getVerificationSummaryLabel } from './ui/VerificationMeter';
 
@@ -118,10 +119,6 @@ const getGuestVerificationItemShortLabel = (label: string) => {
 
   return label;
 };
-
-const formatCountLabel = (count: number, singular: string, plural: string) => (
-  `${count} ${count === 1 ? singular : plural}`
-);
 
 const buildHostGuestQuestionSuggestions = (requestContext: ReservationRequestContext | null) => {
   if (!requestContext) {
@@ -848,8 +845,15 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
       ? activeConv.hostName || 'Anfitrión'
       : activeConv.tenantName || 'Huésped'
     : 'Conversación';
+  const hostResponseSignal = isTenantConversation ? getHostResponseSignal(activeConv?.hostInteractionHistory) : null;
   const hostHistoryLabels = isTenantConversation && activeConv?.hostInteractionHistory
-    ? activeConv.hostInteractionHistory.publicSignals.map((signal) => `${signal.tone === 'positive' ? '✔' : '○'} ${signal.label}`)
+    ? activeConv.hostInteractionHistory.publicSignals.map((signal) => {
+        if (signal.key === 'response-time' && hostResponseSignal) {
+          return `✔ ${hostResponseSignal.label} · ${hostResponseSignal.detail}`;
+        }
+
+        return `${signal.tone === 'positive' ? '✔' : '○'} ${signal.label}`;
+      })
     : [];
   const hostHistoryLine = getInteractionSummaryLine(hostHistoryLabels);
   const shouldShowGuestContext = Boolean(
@@ -867,21 +871,22 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
   const guestVerificationLabel = guestContextProfile
     ? getVerificationSummaryLabel(guestContextProfile.verificationSummary)
     : null;
+  const guestPositiveSignals = guestContextProfile
+    ? getGuestPositiveCoordinationSignals(guestContextProfile)
+    : [];
   const guestCompletedChecks = guestContextProfile
     ? getVerificationSummaryItems(guestContextProfile.verificationSummary, { status: 'complete', limit: 3 })
         .map((item) => getGuestVerificationItemShortLabel(item.label))
     : [];
   const guestContextStats = guestContextProfile
     ? [
-        guestContextProfile.dataAvailability.platformHistory && guestContextProfile.platformHistory.completedStays > 0
-          ? formatCountLabel(guestContextProfile.platformHistory.completedStays, 'estadía completada', 'estadías completadas')
-          : null,
-        ...guestContextProfile.interactionHistory.publicSignals.slice(0, 2).map((signal) => `${signal.tone === 'positive' ? '✔' : '○'} ${signal.label}`),
+        ...guestPositiveSignals,
         guestContextProfile.dataAvailability.memberSince && guestContextProfile.memberSince.trim()
           ? `Usuario desde ${formatGuestMemberSinceYear(guestContextProfile.memberSince)}`
           : null,
       ].filter((value): value is string => Boolean(value))
     : [];
+  const interactionContinuity = activeConv?.interactionContinuity ?? null;
   const hostGuestQuestionSuggestions = isHostConversation
     && activeRequestContext
     && (flowCopy?.stage === 'request-pending' || flowCopy?.stage === 'request-accepted')
@@ -891,7 +896,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
     user && messages.some((message) => !message.is_system && message.sender_id === user.id),
   );
   const guestIntroPrompt = isTenantConversation && !hasAuthoredConversationMessage && flowCopy?.stage === 'request-pending'
-    ? 'Podés contar brevemente el motivo de tu estadía para coordinar mejor.'
+    ? 'Podés contar brevemente el motivo de tu estadía. Responder ayuda a avanzar más rápido.'
     : null;
   const visibleSuggestionTexts = isHostConversation && hostGuestQuestionSuggestions.length > 0
     ? []
@@ -1440,6 +1445,12 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                               : 'bg-slate-400'
                       )} />
                       <span>Estado: {compactReservationStatus.label}</span>
+                    </p>
+                  ) : null}
+                  {interactionContinuity ? (
+                    <p className="inline-flex items-center gap-2 whitespace-nowrap text-[11px] font-semibold text-emerald-700 dark:text-emerald-300">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                      <span>{interactionContinuity.label}</span>
                     </p>
                   ) : null}
                 </div>

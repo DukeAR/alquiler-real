@@ -219,6 +219,11 @@ describe('SecureChat', () => {
     fetchConversationsMock.mockResolvedValue([
       {
         ...baseConversation,
+        interactionContinuity: {
+          label: 'Ya interactuaron antes sin inconvenientes',
+          detail: 'Ya tuvieron una coordinación cerrada sin incidentes y pueden retomar desde una base conocida.',
+          sharedCompletedBookings: 1,
+        },
         requestMode: 'direct',
         requestStatus: 'pending',
         requestStartDate: '2026-05-10',
@@ -258,6 +263,11 @@ describe('SecureChat', () => {
     fetchConversationsMock.mockResolvedValue([
       {
         ...baseConversation,
+        interactionContinuity: {
+          label: 'Ya interactuaron antes sin inconvenientes',
+          detail: 'Ya tuvieron una coordinación cerrada sin incidentes y pueden retomar desde una base conocida.',
+          sharedCompletedBookings: 1,
+        },
         requestMode: 'direct',
         requestStatus: 'pending',
         requestStartDate: '2026-05-10',
@@ -287,6 +297,11 @@ describe('SecureChat', () => {
     fetchConversationsMock.mockResolvedValue([
       {
         ...baseConversation,
+        interactionContinuity: {
+          label: 'Ya interactuaron antes sin inconvenientes',
+          detail: 'Ya tuvieron una coordinación cerrada sin incidentes y pueden retomar desde una base conocida.',
+          sharedCompletedBookings: 1,
+        },
         requestMode: 'direct',
         requestStatus: 'pending',
         requestStartDate: '2026-05-10',
@@ -300,11 +315,12 @@ describe('SecureChat', () => {
     renderChat();
 
     expect(await screen.findByRole('heading', { name: 'Mariana' })).toBeInTheDocument();
-    expect(screen.getByText('✔ 6 reservas completadas · ✔ El aviso suele coincidir con lo publicado · ✔ Responde en alrededor de 18 min')).toBeInTheDocument();
+  expect(screen.getByText('✔ 6 reservas completadas · ✔ El aviso suele coincidir con lo publicado · ✔ Responde rápido · Promedio: ~18 min')).toBeInTheDocument();
     expect(screen.getByText((content) => content.includes('Casa de prueba') && content.includes('2 huéspedes') && content.includes('320'))).toBeInTheDocument();
     expect(screen.getByText('Estado: Esperando respuesta')).toBeInTheDocument();
+  expect(screen.getByText('Ya interactuaron antes sin inconvenientes')).toBeInTheDocument();
     expect(screen.getByText('Podés coordinar todo por acá. Evitá compartir datos sensibles o pagos por fuera hasta tener claro el acuerdo.')).toBeInTheDocument();
-    expect(screen.getByText('Podés contar brevemente el motivo de tu estadía para coordinar mejor.')).toBeInTheDocument();
+  expect(screen.getByText('Podés contar brevemente el motivo de tu estadía. Responder ayuda a avanzar más rápido.')).toBeInTheDocument();
     expect(screen.getByText('Propuesta enviada. Falta la respuesta del anfitrión.')).toBeInTheDocument();
     expect(screen.queryByText('Estado actual')).not.toBeInTheDocument();
     expect(screen.queryByText('Actúa ahora')).not.toBeInTheDocument();
@@ -337,8 +353,8 @@ describe('SecureChat', () => {
     expect(screen.getByText('Teléfono verificado')).toBeInTheDocument();
     expect(screen.getByText('Historial en la plataforma')).toBeInTheDocument();
     expect(screen.getByText('4 estadías completadas')).toBeInTheDocument();
-    expect(screen.getByText('✔ Se cumplió lo acordado')).toBeInTheDocument();
-    expect(screen.getByText('✔ Volverían a interactuar')).toBeInTheDocument();
+    expect(screen.getByText('Cumple lo acordado')).toBeInTheDocument();
+    expect(screen.getByText('Comunicación clara')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: '¿Vienen por descanso o trabajo?' }));
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Icons } from './Icons';
 import { HostProfile } from '../services/geminiService';
+import { getHostResponseSignal } from '../lib/positiveIncentives';
 import { InteractionHistorySignals } from './ui/InteractionHistorySignals';
 
 interface HostProfileViewProps {
@@ -45,6 +46,7 @@ const MetricCard = ({
 
 export const HostProfileView: React.FC<HostProfileViewProps> = ({ profile, onBack }) => {
   const memberSinceLabel = formatMonthYear(profile.memberSince);
+  const responseSignal = getHostResponseSignal(profile.interactionHistory);
   const responseTimeLabel = profile.avgResponseTimeMinutes > 0
     ? profile.avgResponseTimeMinutes < 60
       ? `~${profile.avgResponseTimeMinutes} min`
@@ -138,9 +140,9 @@ export const HostProfileView: React.FC<HostProfileViewProps> = ({ profile, onBac
               icon={<Icons.Calendar className="h-5 w-5" />}
             />
             <MetricCard
-              label="Tiempo de respuesta"
+              label={responseSignal?.label ?? 'Tiempo de respuesta'}
               value={responseTimeLabel}
-              helper="Tomamos la primera respuesta visible del anfitrión en cada conversación."
+              helper="Responder ayuda a avanzar más rápido y este promedio sale de la primera respuesta visible del anfitrión en cada conversación."
               icon={<Icons.Clock className="h-5 w-5" />}
             />
             <MetricCard

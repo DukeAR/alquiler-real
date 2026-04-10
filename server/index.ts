@@ -15,6 +15,11 @@ import { evaluateInternalRisk, getInternalRiskDecision, type InternalRiskAction 
 import { REAL_VERIFICATION_FILTER_MIN_SCORE } from './propertyVerification';
 import { getChatSystemMessages, getRequestAcceptedMessage, getRequestNotAdvancedMessage, type ChatSystemMessageKey } from './chatSystemMessages';
 import { buildGuestProfileCompletion } from '../src/lib/guestVerification';
+import {
+  buildInteractionContinuity,
+  getGuestPositiveBookingProfile,
+  getHostVisibilityBoost,
+} from '../src/lib/positiveIncentives';
 import { buildUserVerificationStatus } from '../src/lib/userVerification';
 import {
   PREMIUM_DOCUMENTARY_OFFER_TYPE,
@@ -2376,6 +2381,196 @@ const buildGuestRequestProfilePayload = (
   };
 };
 
+type QueryExecutor = {
+  query: (text: string, params?: unknown[]) => Promise<{ rows: any[]; rowCount?: number | null }>;
+};
+
+type InteractionContinuityStatsRow = {
+  tenantId?: string;
+  hostId?: string;
+  sharedCompletedBookings?: number | string | null;
+  sharedIncidentBookings?: number | string | null;
+};
+
+type GuestPositiveBookingStatsRow = {
+  completedStays?: number | string | null;
+  cancellationsCount?: number | string | null;
+  conflictsCount?: number | string | null;
+  feedbackCount?: number | string | null;
+  agreementsKeptCount?: number | string | null;
+  wouldInteractAgainCount?: number | string | null;
+  incidentsCount?: number | string | null;
+};
+
+type InteractionContinuityValue = NonNullable<ReturnType<typeof buildInteractionContinuity>>;
+
+const STREAMLINED_BOOKING_THRESHOLD = 240000;
+const STREAMLINED_PROTECTED_BOOKING_THRESHOLD = 280000;
+
+const createInteractionContinuityKey = (tenantId: string, hostId: string) => `${tenantId}::${hostId}`;
+
+const buildInteractionContinuityMap = (rows: InteractionContinuityStatsRow[]) => {
+  const continuityMap = new Map<string, InteractionContinuityValue>();
+
+  rows.forEach((row) => {
+    if (typeof row.tenantId !== 'string' || typeof row.hostId !== 'string') {
+      return;
+    }
+
+    const continuity = buildInteractionContinuity(
+      Number(row.sharedCompletedBookings ?? 0),
+      Number(row.sharedIncidentBookings ?? 0),
+    );
+
+    if (continuity) {
+      continuityMap.set(createInteractionContinuityKey(row.tenantId, row.hostId), continuity);
+    }
+  });
+
+  return continuityMap;
+};
+
+const getInteractionContinuityMapForUser = async (
+  userId: string,
+  runner: QueryExecutor = db,
+) => {
+  try {
+    const result = await runner.query(
+      `SELECT b."userId" as "tenantId",
+              p."hostId" as "hostId",
+              COUNT(*) FILTER (
+                WHERE b.status = 'completed'
+                  AND COALESCE(review_incidents.incident_count, 0) = 0
+              )::int as "sharedCompletedBookings",
+              COUNT(*) FILTER (
+                WHERE COALESCE(review_incidents.incident_count, 0) > 0
+              )::int as "sharedIncidentBookings"
+       FROM bookings b
+       JOIN properties p ON p.id = b."propertyId"
+       LEFT JOIN (
+         SELECT booking_id,
+                COUNT(*) FILTER (WHERE ${buildReviewHadIncidentSql('r')})::int as incident_count
+         FROM reviews r
+         GROUP BY booking_id
+       ) review_incidents ON review_incidents.booking_id = b.id
+       WHERE b."userId" = $1 OR p."hostId" = $1
+       GROUP BY b."userId", p."hostId"`,
+      [userId],
+    );
+
+    return buildInteractionContinuityMap(result.rows as InteractionContinuityStatsRow[]);
+  } catch {
+    return new Map<string, InteractionContinuityValue>();
+  }
+};
+
+const getInteractionContinuityForPair = async (
+  tenantId: string,
+  hostId: string,
+  runner: QueryExecutor = db,
+) => {
+  try {
+    const result = await runner.query(
+      `SELECT b."userId" as "tenantId",
+              p."hostId" as "hostId",
+              COUNT(*) FILTER (
+                WHERE b.status = 'completed'
+                  AND COALESCE(review_incidents.incident_count, 0) = 0
+              )::int as "sharedCompletedBookings",
+              COUNT(*) FILTER (
+                WHERE COALESCE(review_incidents.incident_count, 0) > 0
+              )::int as "sharedIncidentBookings"
+       FROM bookings b
+       JOIN properties p ON p.id = b."propertyId"
+       LEFT JOIN (
+         SELECT booking_id,
+                COUNT(*) FILTER (WHERE ${buildReviewHadIncidentSql('r')})::int as incident_count
+         FROM reviews r
+         GROUP BY booking_id
+       ) review_incidents ON review_incidents.booking_id = b.id
+       WHERE b."userId" = $1
+         AND p."hostId" = $2
+       GROUP BY b."userId", p."hostId"
+       LIMIT 1`,
+      [tenantId, hostId],
+    );
+
+    const row = result.rows[0] as InteractionContinuityStatsRow | undefined;
+
+    return row
+      ? buildInteractionContinuity(Number(row.sharedCompletedBookings ?? 0), Number(row.sharedIncidentBookings ?? 0))
+      : null;
+  } catch {
+    return null;
+  }
+};
+
+const attachInteractionContinuity = <T extends object>(
+  conversation: T,
+  continuityMap: Map<string, InteractionContinuityValue>,
+) => {
+  const tenantId = (conversation as { tenant_id?: unknown }).tenant_id;
+  const hostId = (conversation as { host_id?: unknown }).host_id;
+
+  if (typeof tenantId !== 'string' || typeof hostId !== 'string') {
+    return conversation;
+  }
+
+  const continuity = continuityMap.get(createInteractionContinuityKey(tenantId, hostId));
+
+  return continuity
+    ? { ...conversation, interactionContinuity: continuity }
+    : conversation;
+};
+
+const getGuestPositiveBookingStats = async (
+  userId: string,
+  runner: QueryExecutor = db,
+) => {
+  try {
+    const result = await runner.query(
+      `SELECT COALESCE(booking_stats.completed_stays, 0)::int as "completedStays",
+              COALESCE(booking_stats.cancellations_count, 0)::int as "cancellationsCount",
+              COALESCE(report_stats.conflicts_count, 0)::int as "conflictsCount",
+              COALESCE(feedback_stats.feedback_count, 0)::int as "feedbackCount",
+              COALESCE(feedback_stats.agreements_kept_count, 0)::int as "agreementsKeptCount",
+              COALESCE(feedback_stats.would_interact_again_count, 0)::int as "wouldInteractAgainCount",
+              COALESCE(feedback_stats.incidents_count, 0)::int as "incidentsCount"
+       FROM users u
+       LEFT JOIN (
+         SELECT "userId" as user_id,
+                COUNT(*) FILTER (WHERE status = 'completed')::int as completed_stays,
+                COUNT(*) FILTER (WHERE status = 'cancelled')::int as cancellations_count
+         FROM bookings
+         GROUP BY "userId"
+       ) booking_stats ON booking_stats.user_id = u.id
+       LEFT JOIN (
+         SELECT reported_user_id as user_id,
+                COUNT(*)::int as conflicts_count
+         FROM reports
+         GROUP BY reported_user_id
+       ) report_stats ON report_stats.user_id = u.id
+       LEFT JOIN (
+         SELECT reviewed_user_id as user_id,
+                COUNT(*)::int as feedback_count,
+                COUNT(*) FILTER (WHERE ${buildReviewAgreementSql('r')})::int as agreements_kept_count,
+                COUNT(*) FILTER (WHERE ${buildReviewWouldInteractAgainSql('r')})::int as would_interact_again_count,
+                COUNT(*) FILTER (WHERE ${buildReviewHadIncidentSql('r')})::int as incidents_count
+         FROM reviews r
+         WHERE type = 'host_to_guest'
+         GROUP BY reviewed_user_id
+       ) feedback_stats ON feedback_stats.user_id = u.id
+       WHERE u.id = $1
+       LIMIT 1`,
+      [userId],
+    );
+
+    return (result.rows[0] as GuestPositiveBookingStatsRow | undefined) ?? null;
+  } catch {
+    return null;
+  }
+};
+
 app.get('/api/host/dashboard', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: AUTH_REQUIRED_ERROR });
   try {
@@ -2776,6 +2971,7 @@ app.get('/api/properties', async (req, res) => {
         p.id, p.title, p.location, p.price, p."hostId", p."hostName",
         p.description, p."imageUrl", p.rating, p."reviewsCount",
         p."identityValidated", p."locationVerified", p."materialVerified", p."videoValidated",
+        COALESCE(u.internal_visibility_penalty, 0) as "internalVisibilityPenalty",
         p."traceabilityLevel", p."maxGuests", p."hasPresencialVerification", p."onsiteVerifiedAt", p."hasDigitalVerification", p.lat, p.lng,
         p.bedrooms, p.bathrooms, p.property_type as "propertyType",
         p.is_verified_property as "isVerifiedProperty",
@@ -2799,10 +2995,24 @@ app.get('/api/properties', async (req, res) => {
     query += ` ORDER BY COALESCE(u.internal_visibility_penalty, 0) ASC, p.rating DESC NULLS LAST`;
 
     const result = await db.query(query, params);
-    
+
     const properties = result.rows
-      .map((property) => mapPropertyRecord(property))
-      .filter((property) => verifiedOnly === 'true' ? property.verificationScore >= REAL_VERIFICATION_FILTER_MIN_SCORE : true);
+      .map((property) => {
+        const mappedProperty = mapPropertyRecord(property);
+
+        return {
+          property: mappedProperty,
+          internalVisibilityPenalty: Number(property.internalVisibilityPenalty ?? 0),
+          hostVisibilityBoost: getHostVisibilityBoost(mappedProperty.hostInteractionHistory),
+        };
+      })
+      .filter(({ property }) => verifiedOnly === 'true' ? property.verificationScore >= REAL_VERIFICATION_FILTER_MIN_SCORE : true)
+      .sort((left, right) => (
+        left.internalVisibilityPenalty - right.internalVisibilityPenalty
+        || right.hostVisibilityBoost - left.hostVisibilityBoost
+        || Number(right.property.rating ?? 0) - Number(left.property.rating ?? 0)
+      ))
+      .map(({ property }) => property);
     res.json(properties);
   } catch (err) {
     console.error('Error al obtener propiedades:', err);
@@ -2895,7 +3105,23 @@ app.get('/api/properties/:id', async (req, res) => {
       [req.params.id]
     );
     if (result.rows.length === 0) return res.status(404).json({ error: 'No encontramos esa propiedad.' });
-    res.json(mapPropertyRecord(result.rows[0]));
+
+    const property = mapPropertyRecord(result.rows[0]);
+    const viewerId = req.session.userId;
+    const hostId = typeof result.rows[0]?.hostId === 'string' ? result.rows[0].hostId : null;
+
+    if (viewerId && hostId && viewerId !== hostId) {
+      const interactionContinuity = await getInteractionContinuityForPair(viewerId, hostId);
+
+      if (interactionContinuity) {
+        return res.json({
+          ...property,
+          interactionContinuity,
+        });
+      }
+    }
+
+    res.json(property);
   } catch (err) {
     res.status(500).json({ error: 'No pudimos cargar la propiedad.' });
   }
@@ -3003,7 +3229,21 @@ const getEnrichedConversationById = async (conversationId: string) => {
     [conversationId],
   );
 
-  return result.rows[0] ? normalizeConversationRecord(result.rows[0]) : null;
+  if (!result.rows[0]) {
+    return null;
+  }
+
+  const conversation = normalizeConversationRecord(result.rows[0]);
+
+  if (typeof conversation.tenant_id !== 'string' || typeof conversation.host_id !== 'string') {
+    return conversation;
+  }
+
+  const interactionContinuity = await getInteractionContinuityForPair(conversation.tenant_id, conversation.host_id);
+
+  return interactionContinuity
+    ? { ...conversation, interactionContinuity }
+    : conversation;
 };
 
 const getFormatterPart = (parts: Intl.DateTimeFormatPart[], type: Intl.DateTimeFormatPartTypes) => (
@@ -3692,13 +3932,33 @@ app.post('/api/bookings', async (req, res) => {
     const totalPrice = Number((nightlyPrice * nights).toFixed(2));
 
     if (totalPrice > 200000 && !risk.isVerified) {
-      await client.query('ROLLBACK');
-      return sendBookingError(
-        res,
-        403,
-        'IDENTITY_VERIFICATION_REQUIRED',
-        'Para reservas mayores a $200.000 necesitás tener email y teléfono confirmados.'
-      );
+      const positiveBookingStats = await getGuestPositiveBookingStats(userId, client);
+      const positiveBookingProfile = positiveBookingStats
+        ? getGuestPositiveBookingProfile({
+            completedStays: Number(positiveBookingStats.completedStays ?? 0),
+            cancellationsCount: Number(positiveBookingStats.cancellationsCount ?? 0),
+            conflictsCount: Number(positiveBookingStats.conflictsCount ?? 0),
+            feedbackCount: Number(positiveBookingStats.feedbackCount ?? 0),
+            agreementsKeptCount: Number(positiveBookingStats.agreementsKeptCount ?? 0),
+            wouldInteractAgainCount: Number(positiveBookingStats.wouldInteractAgainCount ?? 0),
+            incidentsCount: Number(positiveBookingStats.incidentsCount ?? 0),
+          })
+        : null;
+      const verificationThreshold = positiveBookingProfile?.protectedBookingEligible
+        ? STREAMLINED_PROTECTED_BOOKING_THRESHOLD
+        : positiveBookingProfile?.streamlinedBookingEligible
+          ? STREAMLINED_BOOKING_THRESHOLD
+          : 200000;
+
+      if (totalPrice > verificationThreshold) {
+        await client.query('ROLLBACK');
+        return sendBookingError(
+          res,
+          403,
+          'IDENTITY_VERIFICATION_REQUIRED',
+          'Para reservas mayores a $200.000 necesitás tener email y teléfono confirmados.'
+        );
+      }
     }
 
     const collision = await client.query(
@@ -4023,35 +4283,39 @@ app.get('/api/conversations', async (req, res) => {
   if (!userId) return res.status(401).json({ error: AUTH_REQUIRED_ERROR });
 
   try {
-    const result = await db.query(
-      `SELECT c.*, 
-              u_tenant.name as "tenantName", u_host.name as "hostName",
-              p.title as "propertyTitle", p."imageUrl" as "propertyImage",
-              ${CONVERSATION_HOST_TRUST_SELECT},
-              ${CONVERSATION_GUEST_PROFILE_SELECT},
-              b.status as "bookingStatus", b.start_date as "startDate", b.end_date as "endDate",
-              b.guests, b.total_price as "totalPrice",
-              b.cancellation_actor as "cancellationActor",
-              COALESCE(c.request_mode, b.request_mode, CASE WHEN c.booking_id IS NOT NULL THEN 'protected' ELSE NULL END) as "requestMode",
-              c.request_status as "requestStatus",
-              c.request_created_at as "requestCreatedAt",
-              COALESCE(c.deposit_status, b.deposit_status) as "depositStatus",
-              c.request_start_date as "requestStartDate",
-              c.request_end_date as "requestEndDate",
-              c.request_guests as "requestGuests",
-              c.request_total_price as "requestTotalPrice"
-       FROM conversations c
-       JOIN users u_tenant ON c.tenant_id = u_tenant.id
-       JOIN users u_host ON c.host_id = u_host.id
-       JOIN properties p ON c.property_id = p.id
-      ${CONVERSATION_HOST_TRUST_JOINS}
-      ${CONVERSATION_GUEST_PROFILE_JOINS}
-       LEFT JOIN bookings b ON c.booking_id = b.id
-       WHERE c.tenant_id = $1 OR c.host_id = $1
-       ORDER BY c.updated_at DESC`,
-      [userId]
-    );
-    res.json(result.rows.map((row) => normalizeConversationRecord(row)));
+    const [result, interactionContinuityMap] = await Promise.all([
+      db.query(
+        `SELECT c.*, 
+                u_tenant.name as "tenantName", u_host.name as "hostName",
+                p.title as "propertyTitle", p."imageUrl" as "propertyImage",
+                ${CONVERSATION_HOST_TRUST_SELECT},
+                ${CONVERSATION_GUEST_PROFILE_SELECT},
+                b.status as "bookingStatus", b.start_date as "startDate", b.end_date as "endDate",
+                b.guests, b.total_price as "totalPrice",
+                b.cancellation_actor as "cancellationActor",
+                COALESCE(c.request_mode, b.request_mode, CASE WHEN c.booking_id IS NOT NULL THEN 'protected' ELSE NULL END) as "requestMode",
+                c.request_status as "requestStatus",
+                c.request_created_at as "requestCreatedAt",
+                COALESCE(c.deposit_status, b.deposit_status) as "depositStatus",
+                c.request_start_date as "requestStartDate",
+                c.request_end_date as "requestEndDate",
+                c.request_guests as "requestGuests",
+                c.request_total_price as "requestTotalPrice"
+         FROM conversations c
+         JOIN users u_tenant ON c.tenant_id = u_tenant.id
+         JOIN users u_host ON c.host_id = u_host.id
+         JOIN properties p ON c.property_id = p.id
+        ${CONVERSATION_HOST_TRUST_JOINS}
+        ${CONVERSATION_GUEST_PROFILE_JOINS}
+         LEFT JOIN bookings b ON c.booking_id = b.id
+         WHERE c.tenant_id = $1 OR c.host_id = $1
+         ORDER BY c.updated_at DESC`,
+        [userId]
+      ),
+      getInteractionContinuityMapForUser(userId),
+    ]);
+
+    res.json(result.rows.map((row) => attachInteractionContinuity(normalizeConversationRecord(row), interactionContinuityMap)));
   } catch (err) {
     res.status(500).json({ error: 'No pudimos cargar tus conversaciones.' });
   }

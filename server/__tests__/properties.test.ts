@@ -172,6 +172,96 @@ describe('Properties endpoints', () => {
     expect(queryMock.mock.calls[0][0]).not.toContain('p.is_verified_property = TRUE');
   });
 
+  test('GET /api/properties prioritizes healthier host coordination signals without exposing an internal score', async () => {
+    queryMock.mockResolvedValueOnce({
+      rows: [
+        {
+          id: 'prop-slower',
+          title: 'Casa con respuesta lenta',
+          location: 'Pinamar',
+          price: '120000',
+          hostId: 'host-1',
+          hostName: 'Ana',
+          description: 'Más lenta para responder.',
+          imageUrl: 'https://example.com/slow.jpg',
+          rating: '4.8',
+          reviewsCount: '10',
+          identityValidated: 0,
+          hostIdentityValidated: 1,
+          hostIdentityVerified: 0,
+          locationVerified: 1,
+          videoValidated: 1,
+          traceabilityLevel: 'medium',
+          maxGuests: 4,
+          hasPresencialVerification: 0,
+          hasDigitalVerification: 0,
+          hostCompletedReservationsCount: '5',
+          hostGuestReviewsCount: '4',
+          hostGuestFeedbackCount: '4',
+          hostGuestAgreementsKeptCount: '2',
+          hostListingConsistentCount: '3',
+          hostGuestWouldInteractAgainCount: '2',
+          hostGuestIncidentsCount: '1',
+          hostAverageResponseTimeMinutes: '420',
+          hostMemberSince: '2021-02-10T00:00:00.000Z',
+          internalVisibilityPenalty: 0,
+          lat: '-37.1',
+          lng: '-56.8',
+          bedrooms: 2,
+          bathrooms: 1,
+          propertyType: 'house',
+          isVerifiedProperty: false,
+          hostProfileName: 'Ana',
+        },
+        {
+          id: 'prop-faster',
+          title: 'Casa con mejor coordinación',
+          location: 'Pinamar',
+          price: '120000',
+          hostId: 'host-2',
+          hostName: 'Bruno',
+          description: 'Más ágil y clara para coordinar.',
+          imageUrl: 'https://example.com/fast.jpg',
+          rating: '4.8',
+          reviewsCount: '10',
+          identityValidated: 0,
+          hostIdentityValidated: 1,
+          hostIdentityVerified: 0,
+          locationVerified: 1,
+          videoValidated: 1,
+          traceabilityLevel: 'medium',
+          maxGuests: 4,
+          hasPresencialVerification: 0,
+          hasDigitalVerification: 0,
+          hostCompletedReservationsCount: '5',
+          hostGuestReviewsCount: '4',
+          hostGuestFeedbackCount: '4',
+          hostGuestAgreementsKeptCount: '4',
+          hostListingConsistentCount: '4',
+          hostGuestWouldInteractAgainCount: '4',
+          hostGuestIncidentsCount: '0',
+          hostAverageResponseTimeMinutes: '18',
+          hostMemberSince: '2021-02-10T00:00:00.000Z',
+          internalVisibilityPenalty: 0,
+          lat: '-37.1',
+          lng: '-56.8',
+          bedrooms: 2,
+          bathrooms: 1,
+          propertyType: 'house',
+          isVerifiedProperty: false,
+          hostProfileName: 'Bruno',
+        },
+      ],
+    });
+
+    const res = await request(app).get('/api/properties');
+
+    expect(res.status).toBe(200);
+    expect(res.body.map((property: any) => property.id)).toEqual(['prop-faster', 'prop-slower']);
+    expect(res.body[0]).not.toHaveProperty('internalVisibilityPenalty');
+    expect(res.body[0]).not.toHaveProperty('hostVisibilityBoost');
+  });
+
   test('POST /api/properties publishes the first property without forcing prior identity verification', async () => {
     queryMock.mockImplementation(async (text: string) => {
       if (text.includes('COALESCE(report_stats.total_reports') && text.includes('profile_photo as "profilePhoto"')) {

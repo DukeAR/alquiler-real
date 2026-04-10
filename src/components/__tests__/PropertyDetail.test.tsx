@@ -89,6 +89,11 @@ const sampleProperty = {
       { key: 'response-time', label: 'Responde en alrededor de 18 min', tone: 'positive' },
     ],
   },
+  interactionContinuity: {
+    label: 'Ya interactuaron antes sin inconvenientes',
+    detail: 'Ya tuvieron una coordinación cerrada sin incidentes y pueden retomar desde una base conocida.',
+    sharedCompletedBookings: 1,
+  },
 };
 
 const ChatRoute = () => {
@@ -444,10 +449,36 @@ describe('PropertyDetail', () => {
     expect(screen.getByText('El aviso ya tiene 5 reseñas reales.')).toBeDefined();
     expect(screen.getByText('Mariana')).toBeDefined();
     expect(screen.getByText('Mostramos reservas completadas, consistencia del aviso y tiempos de respuesta en lugar de puntajes públicos.')).toBeDefined();
+    expect(screen.getByText('Responde rápido')).toBeDefined();
+    expect(screen.getByText('Promedio: ~18 min')).toBeDefined();
+    expect(screen.getByText('Responder ayuda a avanzar más rápido.')).toBeDefined();
+    expect(screen.getByText('Ya interactuaron antes sin inconvenientes')).toBeDefined();
     expect(screen.getByText('6 reservas completadas')).toBeDefined();
     expect(screen.getByText('El aviso suele coincidir con lo publicado')).toBeDefined();
     expect(screen.getByText('Responde en alrededor de 18 min')).toBeDefined();
     expect(screen.queryByText('Antigüedad en la plataforma')).toBeNull();
+  });
+
+  test('shows positive coordination microcopy through the guided booking flow', async () => {
+    renderPropertyDetail();
+
+    await waitForPropertyHeading();
+
+    const checkInIso = isoPlusDays(2);
+    const checkOutIso = isoPlusDays(5);
+
+    await selectDateRange(checkInIso, checkOutIso);
+
+    fireEvent.click(screen.getByRole('button', { name: /^siguiente$/i }));
+    await waitFor(() => expect(screen.getByText('Ajustá cuántas personas viajan. Completar esto mejora la coordinación.')).toBeDefined());
+
+    fireEvent.click(screen.getByRole('button', { name: /^siguiente$/i }));
+    await waitFor(() => expect(screen.getByText('Elegí si seguís por chat o con reserva protegida. Usar reserva protegida suele facilitar la confirmación.')).toBeDefined());
+
+    fireEvent.click(screen.getByLabelText(/reserva protegida/i));
+    fireEvent.click(screen.getByRole('button', { name: /^siguiente$/i }));
+
+    await waitFor(() => expect(screen.getByText('Revisá y mandá la solicitud. Confirmar datos evita confusiones.')).toBeDefined());
   });
 
   test('shows the stronger guided verification message when the score reaches 4', async () => {

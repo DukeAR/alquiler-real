@@ -7,6 +7,7 @@ import {
   getGuestRequestProfileReviewsEmptyMessage,
   getGuestRequestProfileScenario,
 } from '../lib/guestRequestProfile';
+import { getGuestPositiveCoordinationSignals } from '../lib/positiveIncentives';
 import type { GuestHostReviewSnippet, GuestRequestProfile } from '../types';
 import { InteractionHistorySignals } from './ui/InteractionHistorySignals';
 import { VerificationMeter, VerificationSnippetList } from './ui/VerificationMeter';
@@ -95,6 +96,7 @@ export const GuestRequestProfileCard: React.FC<GuestRequestProfileCardProps> = (
   const bannerCopy = getGuestRequestProfileBannerCopy(profile);
   const scenario = getGuestRequestProfileScenario(profile);
   const visibleReviews = profile.hostReviews.slice(0, 2);
+  const positiveCoordinationSignals = getGuestPositiveCoordinationSignals(profile);
   const pendingSignals = profile.operationSignals.filter((signal) => signal.source === 'pending');
   const hasAnyActiveSignals = profile.operationSignals.some((signal) => signal.active);
   const guestDataItems = [
@@ -170,6 +172,24 @@ export const GuestRequestProfileCard: React.FC<GuestRequestProfileCardProps> = (
               <DataItem key={item.label} label={item.label} value={item.value} muted={item.muted} />
             ))}
           </div>
+        </section>
+
+        <section className="space-y-3 border-t border-slate-200/80 pt-4 dark:border-slate-800">
+          <p className={sectionLabelClass}>Señales positivas</p>
+          {positiveCoordinationSignals.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {positiveCoordinationSignals.map((signal) => (
+                <span
+                  key={signal}
+                  className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[12px] font-semibold leading-none text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-900/20 dark:text-emerald-300"
+                >
+                  {signal}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <SectionEmptyState message="Todavía no hay suficientes cierres para resumir señales positivas de coordinación." />
+          )}
         </section>
 
         <section className="space-y-3 border-t border-slate-200/80 pt-4 dark:border-slate-800">

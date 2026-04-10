@@ -9,6 +9,7 @@ import {
   type PropertyVerificationItem,
 } from '../lib/propertyVerification';
 import { getReviewInteractionSignals } from '../lib/interactionHistory';
+import { getHostResponseSignal } from '../lib/positiveIncentives';
 import { showToast } from '../lib/toast';
 import { cn, formatCurrency } from '../lib/utils';
 import {
@@ -237,21 +238,21 @@ const BOOKING_STEP_CONFIG: BookingStepConfig[] = [
   {
     key: 'guests',
     title: 'Definí quiénes viajan',
-    description: 'Ajustá cuántas personas viajan.',
+    description: 'Ajustá cuántas personas viajan. Completar esto mejora la coordinación.',
     shortLabel: 'Huéspedes',
     icon: Icons.Users,
   },
   {
     key: 'mode',
     title: 'Elegí cómo querés avanzar',
-    description: 'Elegí si seguís por chat o con reserva protegida.',
+    description: 'Elegí si seguís por chat o con reserva protegida. Usar reserva protegida suele facilitar la confirmación.',
     shortLabel: 'Cómo avanzar',
     icon: Icons.MessageSquare,
   },
   {
     key: 'confirm',
     title: 'Revisá el resumen final',
-    description: 'Revisá y mandá la solicitud.',
+    description: 'Revisá y mandá la solicitud. Confirmar datos evita confusiones.',
     shortLabel: 'Confirmación',
     icon: Icons.CheckCircle2,
   },
@@ -274,7 +275,7 @@ const RESERVATION_MODE_CONTENT: Record<ReservationRequestMode, {
   protected: {
     title: 'Reserva protegida',
     description: 'La solicitud queda registrada en la app.',
-    helper: 'Después seguís por chat con todo asentado.',
+    helper: 'Usar reserva protegida suele facilitar la confirmación.',
     confirmationHeading: 'La solicitud queda registrada',
     confirmationDescription: 'También la vas a ver en Mis reservas.',
   },
@@ -387,7 +388,9 @@ const HostHistoryPanel: React.FC<{
   hostTenureLabel: string | null;
   hostAvatarUrl?: string;
   interactionHistory?: AppProperty['hostInteractionHistory'];
-}> = ({ hostName, hostTenureLabel, hostAvatarUrl, interactionHistory }) => {
+  continuity?: AppProperty['interactionContinuity'];
+}> = ({ hostName, hostTenureLabel, hostAvatarUrl, interactionHistory, continuity }) => {
+  const hostResponseSignal = getHostResponseSignal(interactionHistory);
 
   return (
     <Card className="rounded-[30px] border-slate-200/80 bg-white p-5 shadow-[0_24px_60px_-46px_rgba(15,23,42,0.25)] sm:p-6">
@@ -409,6 +412,25 @@ const HostHistoryPanel: React.FC<{
           <p className="mt-3 text-sm leading-6 text-slate-500">
             Mostramos reservas completadas, consistencia del aviso y tiempos de respuesta en lugar de puntajes públicos.
           </p>
+          {hostResponseSignal ? (
+            <div className="mt-4 flex flex-wrap gap-2">
+              <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">
+                {hostResponseSignal.label}
+              </span>
+              <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-600">
+                {hostResponseSignal.detail}
+              </span>
+            </div>
+          ) : null}
+          <p className="mt-3 text-sm leading-6 text-slate-600">
+            Responder ayuda a avanzar más rápido.
+          </p>
+          {continuity ? (
+            <div className="mt-4 rounded-[22px] border border-emerald-200/80 bg-emerald-50/80 px-4 py-3.5">
+              <p className="text-sm font-semibold text-emerald-800">{continuity.label}</p>
+              <p className="mt-1 text-sm leading-6 text-emerald-700">{continuity.detail}</p>
+            </div>
+          ) : null}
           <div className="mt-4 space-y-3">
             <InteractionHistorySignals
               signals={interactionHistory?.publicSignals ?? []}
@@ -1721,6 +1743,7 @@ export const PropertyDetailShell: React.FC<{
             hostTenureLabel={hostTenureLabel}
             hostAvatarUrl={property.host?.avatarUrl}
             interactionHistory={hostInteractionHistory}
+            continuity={property.interactionContinuity}
           />
 
           <section className="space-y-5">

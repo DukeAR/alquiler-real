@@ -81,8 +81,17 @@ const getResolvedIdentityValidated = (row: PropertyQueryRow) => {
 const getResolvedHostSince = (row: PropertyQueryRow) => toDateString(row.hostSince) || toDateString(row.hostMemberSince);
 
 export const mapPropertyRecord = (row: PropertyQueryRow) => {
+  const {
+    internalVisibilityPenalty: _internalVisibilityPenalty,
+    internal_visibility_penalty: _internalVisibilityPenaltySnake,
+    ...safeRow
+  } = row as PropertyQueryRow & {
+    internalVisibilityPenalty?: unknown;
+    internal_visibility_penalty?: unknown;
+  };
+
   const normalizedProperty = {
-    ...row,
+    ...safeRow,
     price: toSafeNumber(row.price),
     rating: toSafeNumber(row.rating),
     reviewsCount: toSafeInteger(row.reviewsCount),

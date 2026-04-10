@@ -59,6 +59,14 @@ const matchesInternalRiskResponseQuery = (text: string) => (
   text.includes('JOIN messages m ON m.conversation_id = c.id') && text.includes('WHERE c.host_id = $1 OR c.tenant_id = $1')
 );
 
+const matchesInteractionContinuityQuery = (text: string) => (
+  text.includes('sharedCompletedBookings') && text.includes('review_incidents')
+);
+
+const matchesGuestPositiveBookingStatsQuery = (text: string) => (
+  text.includes('FROM users u') && text.includes('agreements_kept_count') && text.includes('would_interact_again_count')
+);
+
 const buildInternalRiskRow = (overrides: Record<string, unknown> = {}) => ({
   role: 'tenant',
   phone: null,
@@ -198,6 +206,133 @@ describe('Bookings and availability endpoints', () => {
     expect(res.body.booking.status).toBe('pending');
   });
 
+  test('POST /api/bookings lets a returning guest use protected booking with less verification friction', async () => {
+    const clientQueryMock = vi.fn();
+
+    getClientMock.mockResolvedValue({
+      query: clientQueryMock,
+      release: vi.fn(),
+    });
+
+    queryMock.mockImplementation(async (text: string) => {
+      if (matchesInternalRiskProfileQuery(text)) {
+        return { rows: [buildInternalRiskRow({
+          role: 'tenant',
+          phone: null,
+          bio: null,
+          zone: null,
+          profilePhoto: null,
+          totalReviews: 0,
+          emailVerified: false,
+          phoneVerified: false,
+        })] };
+      }
+
+      if (matchesInternalRiskResponseQuery(text)) {
+        return { rows: [] };
+      }
+
+      if (text.includes('UPDATE users') && text.includes('internal_trust_score')) {
+        return { rows: [] };
+      }
+
+      if (text.includes(LOG_ACTIVITY_QUERY_SNIPPET)) {
+        return { rows: [] };
+      }
+
+      throw new Error(`Unexpected query: ${text}`);
+    });
+
+    clientQueryMock.mockImplementation(async (text: string, params?: unknown[]) => {
+      if (text === 'BEGIN' || text === 'COMMIT') {
+        return { rows: [] };
+      }
+
+      if (text.includes('SELECT pg_advisory_xact_lock')) {
+        return { rows: [] };
+      }
+
+      if (matchesGuestPositiveBookingStatsQuery(text)) {
+        return {
+          rows: [{
+            completedStays: 4,
+            cancellationsCount: 0,
+            conflictsCount: 0,
+            feedbackCount: 3,
+            agreementsKeptCount: 3,
+            wouldInteractAgainCount: 3,
+            incidentsCount: 0,
+          }],
+        };
+      }
+
+      if (text.includes('FROM properties') && text.includes('WHERE id = $1')) {
+        return {
+          rows: [
+            {
+              id: 'prop-1',
+              title: 'Casa del bosque',
+              location: 'Pinamar',
+              price: 90000,
+              status: 'active',
+              hostName: 'Mariana',
+              hostId: 'host-1',
+              maxGuests: 4,
+            },
+          ],
+        };
+      }
+
+      if (text.includes('FROM bookings') && text.includes('LIMIT 1')) {
+        return { rows: [] };
+      }
+
+      if (text.includes('SELECT name FROM users')) {
+        return { rows: [{ name: 'Lucía' }] };
+      }
+
+      if (text.includes('INSERT INTO bookings')) {
+        expect(params?.[3]).toBe('pending');
+        expect(params?.[6]).toBe(270000);
+
+        return {
+          rows: [
+            {
+              id: 'booking-eligible',
+              propertyId: 'prop-1',
+              userId: 'user-1',
+              status: 'pending',
+              startDate: '2099-09-20',
+              endDate: '2099-09-23',
+              totalPrice: 270000,
+              guests: 2,
+              stay_code: 'AR5678',
+              contractAccepted: false,
+              contractJson: '{}',
+            },
+          ],
+        };
+      }
+
+      throw new Error(`Unexpected client query: ${text}`);
+    });
+
+    const res = await request(app)
+      .post('/api/bookings')
+      .set('x-test-user-id', 'user-1')
+      .send({
+        propertyId: 'prop-1',
+        startDate: '2099-09-20',
+        endDate: '2099-09-23',
+        guests: 2,
+        requestMode: 'protected',
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.requestMode).toBe('protected');
+    expect(res.body.booking.totalPrice).toBe(270000);
+  });
+
   test('POST /api/conversations reuses the property conversation and links the booking id', async () => {
     queryMock.mockImplementation(async (text: string, params?: unknown[]) => {
       if (matchesInternalRiskProfileQuery(text)) {
@@ -329,6 +464,17 @@ describe('Bookings and availability endpoints', () => {
 
   test('GET /api/conversations includes guest context for the host chat view', async () => {
     queryMock.mockImplementation(async (text: string) => {
+      if (matchesInteractionContinuityQuery(text)) {
+        return {
+          rows: [{
+            tenantId: 'tenant-1',
+            hostId: 'host-1',
+            sharedCompletedBookings: 1,
+            sharedIncidentBookings: 0,
+          }],
+        };
+      }
+
       if (text.includes('FROM conversations c') && text.includes('ORDER BY c.updated_at DESC')) {
         return {
           rows: [
@@ -394,6 +540,11 @@ describe('Bookings and availability endpoints', () => {
 
     expect(res.status).toBe(200);
     expect(res.body[0]).not.toHaveProperty('guestPositiveReviewsCount');
+    expect(res.body[0].interactionContinuity).toEqual({
+      label: 'Ya interactuaron antes sin inconvenientes',
+      detail: 'Ya tuvieron una coordinación cerrada sin incidentes y pueden retomar desde una base conocida.',
+      sharedCompletedBookings: 1,
+    });
     expect(res.body[0].guestProfile.verificationScore).toBe(3);
     expect(res.body[0].guestProfile.interactionHistory).toEqual({
       completedStays: 4,
