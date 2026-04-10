@@ -327,6 +327,8 @@ describe('SecureChat', () => {
   expect(screen.getByText('Ya interactuaron antes sin inconvenientes')).toBeInTheDocument();
     expect(screen.getByText('Podés coordinar todo por acá. Evitá compartir datos sensibles o pagos por fuera hasta tener claro el acuerdo.')).toBeInTheDocument();
   expect(screen.getByText('Podés contar brevemente el motivo de tu estadía. Responder ayuda a avanzar más rápido.')).toBeInTheDocument();
+    expect(screen.getByText('Mensaje sugerido')).toBeInTheDocument();
+    expect(screen.getByText('Preguntas rápidas')).toBeInTheDocument();
     expect(screen.getByText('Propuesta enviada. Falta la respuesta del anfitrión.')).toBeInTheDocument();
     expect(screen.queryByText('Estado actual')).not.toBeInTheDocument();
     expect(screen.queryByText('Actúa ahora')).not.toBeInTheDocument();

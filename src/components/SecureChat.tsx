@@ -16,6 +16,7 @@ import { formatGuestMemberSinceYear, resolveGuestRequestProfile } from '../lib/g
 import { getGuestPositiveCoordinationSignals, getHostResponseSignal } from '../lib/positiveIncentives';
 import { getProtectedDepositPricingFromBooking } from '../lib/protectedDeposit';
 import { getReservationFlowCopy } from '../lib/reservationFlow';
+import { trackFrontendFunnelEvent } from '../lib/funnelTracking';
 import { getVerificationSummaryItems, getVerificationSummaryLabel } from './ui/VerificationMeter';
 
 type InlineThreadNoticeTone = 'neutral' | 'warning' | 'brand';
@@ -134,6 +135,37 @@ const buildHostGuestQuestionSuggestions = (requestContext: ReservationRequestCon
     multipleGuests ? '¿Ya conocen la zona?' : '¿Ya conocés la zona?',
     multipleGuests ? '¿Necesitan algo puntual?' : '¿Necesitás algo puntual?',
   ];
+};
+
+const buildGuestQuickQuestionSuggestions = (requestContext: ReservationRequestContext | null) => {
+  if (!requestContext) {
+    return [
+      '¿Sigue disponible?',
+      '¿Qué incluye el precio?',
+      '¿Cómo es el ingreso?',
+    ];
+  }
+
+  return [
+    '¿Te sirven estas fechas?',
+    '¿Qué incluye el precio?',
+    '¿Cómo suele ser el ingreso?',
+    requestContext.mode === 'protected'
+      ? 'Si avanzamos, ¿te queda bien resolver la seña por la app?'
+      : '¿Hay algo importante que convenga coordinar antes de la seña?',
+  ];
+};
+
+const buildSuggestedFirstMessage = (counterpartyName: string, requestContext: ReservationRequestContext | null) => {
+  if (!requestContext) {
+    return `Hola ${counterpartyName}, me interesa esta propiedad. ¿Sigue disponible?`;
+  }
+
+  const guestLabel = `${requestContext.guests} ${requestContext.guests === 1 ? 'huésped' : 'huéspedes'}`;
+  const dateRange = formatCompactDateRange(requestContext.startDate, requestContext.endDate);
+  const stayDetail = dateRange ? ` del ${dateRange}` : '';
+
+  return `Hola ${counterpartyName}, me interesa ${requestContext.propertyTitle}${stayDetail} para ${guestLabel}. ¿Te sirven esas fechas?`;
 };
 
 const NOT_ADVANCE_REASON_OPTIONS = [
@@ -580,6 +612,9 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
   const [error, setError] = useState<string | null>(null);
   const [showReportModal, setShowReportModal] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const trackedGuestChatOpenIdsRef = useRef(new Set<string>());
+  const autoLoadedSuggestionIdsRef = useRef(new Set<string>());
+  const [loadedMessagesConversationId, setLoadedMessagesConversationId] = useState<string | null>(null);
 
   useEffect(() => {
     loadConversations();
@@ -611,11 +646,13 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
 
   useEffect(() => {
     if (activeConv) {
+      setInputText('');
+      setLoadedMessagesConversationId(null);
       loadMessages(activeConv.id);
       const interval = setInterval(() => loadMessages(activeConv.id), 5000);
       return () => clearInterval(interval);
     }
-  }, [activeConv]);
+  }, [activeConv?.id]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -653,6 +690,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
       setError(null);
       const data = await fetchMessages(id);
       setMessages(data || []);
+      setLoadedMessagesConversationId(id);
     } catch (err: any) {
       console.error('[SecureChat] Error loading messages:', err);
       setError(err?.message || 'No pudimos cargar los mensajes.');
@@ -967,8 +1005,6 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
     }
   };
 
-  if (loading) return <LoadingState message="Cargando conversaciones..." description="Estamos trayendo tus mensajes para que retomes la charla desde donde quedó." />;
-
   const activeRequestContext = getActiveRequestContext(activeConv, initialConversationId, initialRequestContext);
   const isTenantConversation = Boolean(user && activeConv && user.id === activeConv.tenant_id);
   const isHostConversation = Boolean(user && activeConv && user.id === activeConv.host_id);
@@ -1039,12 +1075,19 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
   const hasAuthoredConversationMessage = Boolean(
     user && messages.some((message) => !message.is_system && message.sender_id === user.id),
   );
+  const hasNonSystemConversationMessages = messages.some((message) => !message.is_system);
+  const guestQuickQuestionSuggestions = isTenantConversation && !hasAuthoredConversationMessage
+    ? buildGuestQuickQuestionSuggestions(activeRequestContext)
+    : [];
+  const suggestedFirstMessage = isTenantConversation && !hasAuthoredConversationMessage && !hasNonSystemConversationMessages
+    ? buildSuggestedFirstMessage(counterpartyName, activeRequestContext)
+    : null;
   const guestIntroPrompt = isTenantConversation && !hasAuthoredConversationMessage && flowCopy?.stage === 'request-pending'
     ? 'Podés contar brevemente el motivo de tu estadía. Responder ayuda a avanzar más rápido.'
     : null;
   const visibleSuggestionTexts = isHostConversation && hostGuestQuestionSuggestions.length > 0
     ? []
-    : suggestionTexts;
+    : suggestionTexts.filter((suggestion) => !guestQuickQuestionSuggestions.includes(suggestion));
   const contextSummaryLine = activeRequestContext
     ? [
         activeRequestContext.propertyTitle,
@@ -1168,6 +1211,39 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
     || canReportArrivalProblem
     || canCoordinateArrival,
   );
+
+  useEffect(() => {
+    if (!activeConv || !suggestedFirstMessage || loadedMessagesConversationId !== activeConv.id) {
+      return;
+    }
+
+    if (autoLoadedSuggestionIdsRef.current.has(activeConv.id)) {
+      return;
+    }
+
+    autoLoadedSuggestionIdsRef.current.add(activeConv.id);
+    setInputText((currentValue) => currentValue.trim() ? currentValue : suggestedFirstMessage);
+  }, [activeConv?.id, loadedMessagesConversationId, suggestedFirstMessage]);
+
+  useEffect(() => {
+    if (!activeConv || !isTenantConversation || loadedMessagesConversationId !== activeConv.id || hasNonSystemConversationMessages) {
+      return;
+    }
+
+    if (trackedGuestChatOpenIdsRef.current.has(activeConv.id)) {
+      return;
+    }
+
+    trackedGuestChatOpenIdsRef.current.add(activeConv.id);
+    trackFrontendFunnelEvent('chat_composer_opened', {
+      conversationId: activeConv.id,
+      propertyId: activeConv.property_id,
+      hostId: activeConv.host_id,
+      viewerRole: 'guest',
+    });
+  }, [activeConv?.host_id, activeConv?.id, activeConv?.property_id, hasNonSystemConversationMessages, isTenantConversation, loadedMessagesConversationId]);
+
+  if (loading) return <LoadingState message="Cargando conversaciones..." description="Estamos trayendo tus mensajes para que retomes la charla desde donde quedó." />;
 
   const activeReservationSystemKey = isExpiredPendingRequest
     ? null
@@ -1860,6 +1936,29 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
             {/* Input */}
             <div className="border-t border-slate-100 bg-white/96 px-4 py-4 dark:border-slate-800 dark:bg-slate-950/96 sm:px-6">
               <div className="mx-auto max-w-4xl space-y-3">
+                {suggestedFirstMessage ? (
+                  <div className="flex flex-col gap-3 rounded-[20px] border border-brand/15 bg-brand/5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-black uppercase tracking-[0.14em] text-brand">Mensaje sugerido</p>
+                      <p className="mt-1 text-xs leading-5 text-slate-600 dark:text-slate-300">
+                        {inputText === suggestedFirstMessage
+                          ? 'Cargamos un mensaje sugerido para que arranques más rápido. Podés editarlo antes de enviarlo.'
+                          : 'Si querés, podés volver al mensaje sugerido para arrancar más rápido.'}
+                      </p>
+                    </div>
+                    {inputText !== suggestedFirstMessage ? (
+                      <button
+                        type="button"
+                        onClick={() => setInputText(suggestedFirstMessage)}
+                        className="inline-flex shrink-0 items-center gap-2 rounded-full border border-brand/20 bg-white px-3.5 py-2 text-xs font-semibold text-brand transition-colors hover:border-brand/30 hover:text-brand-dark dark:border-brand/30 dark:bg-slate-950"
+                      >
+                        <Icons.Sparkles className="h-3.5 w-3.5" />
+                        <span>Usar mensaje sugerido</span>
+                      </button>
+                    ) : null}
+                  </div>
+                ) : null}
+
                 <div className="flex items-end gap-3">
                   <input
                     type="text"
@@ -1886,46 +1985,89 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                   <div className="space-y-3">
                     {showDepositChoiceComposer ? (
                       <div className="rounded-[24px] border border-slate-200 bg-slate-50/85 p-4 dark:border-slate-800 dark:bg-slate-900/60">
-                        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                          <div className="space-y-1.5">
-                            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">Siguiente paso</p>
-                            <p className="text-sm font-semibold text-slate-950 dark:text-slate-50">Elegí cómo resolver la seña</p>
-                            <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">
-                              La opción protegida la deja registrada y muestra el fee antes de pagar. Si preferís coordinarla por fuera, seguís directo por chat.
-                            </p>
-                          </div>
-
-                          {protectedDepositPreview ? (
-                            <div className="rounded-[18px] border border-brand/10 bg-white px-4 py-3 text-xs leading-5 text-slate-600 shadow-[0_18px_36px_-34px_rgba(15,23,42,0.12)] dark:border-brand/15 dark:bg-slate-950 dark:text-slate-300">
-                              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-brand">Seña protegida</p>
-                              <div className="mt-2 space-y-1">
-                                <p>Seña: <span className="font-semibold text-slate-950 dark:text-slate-50">{currencyFormatter.format(protectedDepositPreview.depositAmount)}</span></p>
-                                <p>Fee: {currencyFormatter.format(protectedDepositPreview.serviceFee)}</p>
-                                <p className="font-semibold text-slate-950 dark:text-slate-50">Total: {currencyFormatter.format(protectedDepositPreview.totalCharge)}</p>
-                              </div>
-                            </div>
-                          ) : null}
+                        <div className="space-y-1.5">
+                          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">Siguiente paso</p>
+                          <p className="text-sm font-semibold text-slate-950 dark:text-slate-50">Elegí cómo resolver la seña</p>
+                          <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">
+                            La opción protegida la deja registrada y muestra el fee antes de pagar. Si preferís coordinarla por fuera, seguís directo por chat.
+                          </p>
                         </div>
 
-                        <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-                          <button
-                            type="button"
-                            onClick={() => activeRequestContext?.bookingId && void handleSelectProtectedDeposit(activeRequestContext.bookingId)}
-                            disabled={processingFlowAction !== null}
-                            className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-[0_18px_34px_-28px_rgba(67,56,202,0.4)] transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-70"
-                          >
-                            {processingFlowAction === 'select-protected-deposit' ? <Icons.Loader2 className="h-4 w-4 animate-spin" /> : <Icons.ShieldCheck className="h-4 w-4" />}
-                            <span>Resolver la seña acá con claridad</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => activeRequestContext?.bookingId && void handleSelectExternalDeposit(activeRequestContext.bookingId)}
-                            disabled={processingFlowAction !== null}
-                            className="inline-flex flex-1 items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-slate-950 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 disabled:cursor-not-allowed disabled:opacity-70"
-                          >
-                            {processingFlowAction === 'select-external-deposit' ? <Icons.Loader2 className="h-4 w-4 animate-spin" /> : <Icons.MessageSquare className="h-4 w-4" />}
-                            <span>Coordinarla por fuera</span>
-                          </button>
+                        <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                          <div className="rounded-[22px] border border-brand/15 bg-white p-4 shadow-[0_18px_36px_-34px_rgba(15,23,42,0.12)] dark:border-brand/20 dark:bg-slate-950">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="space-y-1.5">
+                                <div className="flex items-center gap-2">
+                                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand/10 text-brand">
+                                    <Icons.ShieldCheck className="h-4.5 w-4.5" />
+                                  </span>
+                                  <div>
+                                    <p className="text-sm font-semibold text-slate-950 dark:text-slate-50">Seña protegida</p>
+                                    <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">La opción prioritaria para dejar todo claro.</p>
+                                  </div>
+                                </div>
+                                <span className="inline-flex items-center rounded-full border border-brand/15 bg-brand/5 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-brand">
+                                  Recomendada
+                                </span>
+                              </div>
+                            </div>
+
+                            {protectedDepositPreview ? (
+                              <div className="mt-3 rounded-[18px] border border-brand/10 bg-brand/5 px-4 py-3 text-xs leading-5 text-slate-600 dark:border-brand/15 dark:bg-brand/10 dark:text-slate-300">
+                                <div className="space-y-1">
+                                  <p>Seña: <span className="font-semibold text-slate-950 dark:text-slate-50">{currencyFormatter.format(protectedDepositPreview.depositAmount)}</span></p>
+                                  <p>Fee: {currencyFormatter.format(protectedDepositPreview.serviceFee)}</p>
+                                  <p className="font-semibold text-slate-950 dark:text-slate-50">Total: {currencyFormatter.format(protectedDepositPreview.totalCharge)}</p>
+                                </div>
+                              </div>
+                            ) : null}
+
+                            <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                              <li className="flex items-start gap-2"><Icons.Check className="mt-1 h-3.5 w-3.5 text-brand" /><span>Queda registrada dentro de la plataforma.</span></li>
+                              <li className="flex items-start gap-2"><Icons.Check className="mt-1 h-3.5 w-3.5 text-brand" /><span>Ves el fee antes de pagar.</span></li>
+                              <li className="flex items-start gap-2"><Icons.Check className="mt-1 h-3.5 w-3.5 text-brand" /><span>Se libera cuando confirmás la llegada.</span></li>
+                            </ul>
+
+                            <button
+                              type="button"
+                              onClick={() => activeRequestContext?.bookingId && void handleSelectProtectedDeposit(activeRequestContext.bookingId)}
+                              disabled={processingFlowAction !== null}
+                              className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-[0_18px_34px_-28px_rgba(67,56,202,0.4)] transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-70"
+                            >
+                              {processingFlowAction === 'select-protected-deposit' ? <Icons.Loader2 className="h-4 w-4 animate-spin" /> : <Icons.ShieldCheck className="h-4 w-4" />}
+                              <span>Resolver la seña acá con claridad</span>
+                            </button>
+                          </div>
+
+                          <div className="rounded-[22px] border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-950">
+                            <div className="space-y-1.5">
+                              <div className="flex items-center gap-2">
+                                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-600 dark:bg-slate-900 dark:text-slate-300">
+                                  <Icons.MessageSquare className="h-4.5 w-4.5" />
+                                </span>
+                                <div>
+                                  <p className="text-sm font-semibold text-slate-950 dark:text-slate-50">Seña coordinada por fuera</p>
+                                  <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">Seguís por chat y la confirmación llega después.</p>
+                                </div>
+                              </div>
+                            </div>
+
+                            <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                              <li className="flex items-start gap-2"><Icons.Check className="mt-1 h-3.5 w-3.5 text-slate-400" /><span>La coordinás directo con el anfitrión.</span></li>
+                              <li className="flex items-start gap-2"><Icons.Check className="mt-1 h-3.5 w-3.5 text-slate-400" /><span>La reserva avanza cuando quede informada y confirmada.</span></li>
+                              <li className="flex items-start gap-2"><Icons.Check className="mt-1 h-3.5 w-3.5 text-slate-400" /><span>Podés volver a la protegida mientras todavía no la informes.</span></li>
+                            </ul>
+
+                            <button
+                              type="button"
+                              onClick={() => activeRequestContext?.bookingId && void handleSelectExternalDeposit(activeRequestContext.bookingId)}
+                              disabled={processingFlowAction !== null}
+                              className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-slate-950 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 disabled:cursor-not-allowed disabled:opacity-70"
+                            >
+                              {processingFlowAction === 'select-external-deposit' ? <Icons.Loader2 className="h-4 w-4 animate-spin" /> : <Icons.MessageSquare className="h-4 w-4" />}
+                              <span>Coordinarla por fuera</span>
+                            </button>
+                          </div>
                         </div>
 
                         <p className="mt-3 text-xs leading-5 text-slate-500 dark:text-slate-400">
@@ -2087,6 +2229,26 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                   <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">
                     {guestIntroPrompt}
                   </p>
+                ) : null}
+
+                {guestQuickQuestionSuggestions.length > 0 ? (
+                  <div className="space-y-2">
+                    <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
+                      Preguntas rápidas
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {guestQuickQuestionSuggestions.map((suggestion) => (
+                        <button
+                          key={suggestion}
+                          type="button"
+                          onClick={() => setInputText(suggestion)}
+                          className="rounded-full border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-semibold text-slate-600 transition-colors hover:border-brand/30 hover:bg-white hover:text-brand dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+                        >
+                          {suggestion}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 ) : null}
 
                 {showGuestNoAdvanceActions ? (

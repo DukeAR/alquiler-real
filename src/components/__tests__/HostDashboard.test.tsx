@@ -129,6 +129,18 @@ describe('HostDashboard', () => {
           ],
           recentBookings: [],
           estimatedIncome: 250000,
+          funnelMetrics: {
+            windowDays: 30,
+            detailViews: 20,
+            availabilityClicks: 12,
+            availabilityClickRate: 60,
+            chatStarts: 7,
+            chatsWithFirstMessage: 5,
+            firstMessageRate: 71,
+            acceptedRequests: 4,
+            depositsCompleted: 2,
+            depositConversionRate: 50,
+          },
         };
       }
 
@@ -150,6 +162,10 @@ describe('HostDashboard', () => {
 
     expect(await screen.findByText('Qué conviene hacer ahora')).toBeInTheDocument();
     expect(screen.getByText('Tus publicaciones')).toBeInTheDocument();
+    expect(screen.getByText('Embudo reciente')).toBeInTheDocument();
+    expect(screen.getByText('Ficha → disponibilidad')).toBeInTheDocument();
+    expect(screen.getByText('60%')).toBeInTheDocument();
+    expect(screen.getByText('12 de 20 visitas abrieron disponibilidad.')).toBeInTheDocument();
     expect(screen.getByText('Mostramos qué está comprobado para que otros puedan decidir mejor sobre tu aviso.')).toBeInTheDocument();
     expect(screen.getByText('4 de 5 comprobaciones')).toBeInTheDocument();
     expect(screen.getByText('Te falta 1 comprobación para completar este aviso.')).toBeInTheDocument();

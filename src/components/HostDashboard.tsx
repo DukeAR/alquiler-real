@@ -88,6 +88,11 @@ const toSafeCount = (value: unknown) => {
   return Number.isFinite(numericValue) ? Math.max(0, Math.round(numericValue)) : 0;
 };
 
+const formatDashboardPercentage = (value: unknown) => {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) ? `${Math.round(numericValue)}%` : '—';
+};
+
 const scrollToSection = (sectionId: string) => {
   if (typeof document === 'undefined') {
     return;
@@ -670,6 +675,39 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
     };
   }, [hostProperties, nextArrivalFromProperties, pendingRequestBookings.length, recentBookings, upcomingArrivalBookings]);
 
+  const funnelOverview = useMemo(() => {
+    const funnelMetrics = dashboardData?.funnelMetrics ?? {};
+    const detailViews = toSafeCount(funnelMetrics.detailViews);
+    const availabilityClicks = toSafeCount(funnelMetrics.availabilityClicks);
+    const chatStarts = toSafeCount(funnelMetrics.chatStarts);
+    const chatsWithFirstMessage = toSafeCount(funnelMetrics.chatsWithFirstMessage);
+    const acceptedRequests = toSafeCount(funnelMetrics.acceptedRequests);
+    const depositsCompleted = toSafeCount(funnelMetrics.depositsCompleted);
+    const windowDays = toSafeCount(funnelMetrics.windowDays) || 30;
+
+    return {
+      windowDays,
+      availability: {
+        value: formatDashboardPercentage(funnelMetrics.availabilityClickRate),
+        helper: detailViews > 0
+          ? `${availabilityClicks} de ${detailViews} visitas abrieron disponibilidad.`
+          : `Todavía no hay visitas suficientes para medir este paso en los últimos ${windowDays} días.`,
+      },
+      chat: {
+        value: formatDashboardPercentage(funnelMetrics.firstMessageRate),
+        helper: chatStarts > 0
+          ? `${chatsWithFirstMessage} de ${chatStarts} aperturas de chat llegaron al primer mensaje.`
+          : `Todavía no hubo chats nuevos para medir este paso en los últimos ${windowDays} días.`,
+      },
+      deposit: {
+        value: formatDashboardPercentage(funnelMetrics.depositConversionRate),
+        helper: acceptedRequests > 0
+          ? `${depositsCompleted} de ${acceptedRequests} acuerdos avanzaron hasta la seña.`
+          : `Todavía no hubo acuerdos aceptados para medir este paso en los últimos ${windowDays} días.`,
+      },
+    };
+  }, [dashboardData?.funnelMetrics]);
+
   const priorityActions = useMemo(() => {
     const actions = [] as Array<{
       id: string;
@@ -1087,6 +1125,38 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
               label="Próxima llegada"
               value={dashboardOverview.nextArrival?.dateLabel || 'Sin fecha'}
               helper={dashboardOverview.nextArrival?.helper || 'No hay llegadas confirmadas por ahora.'}
+            />
+          </div>
+        </section>
+
+        <section className={dashboardSectionClass}>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Icons.Target className="h-5 w-5 text-brand" />
+              <h2 className="app-title-4 dark:text-white">Embudo reciente</h2>
+            </div>
+            <p className="app-body-sm app-text-muted">
+              Miramos dónde se frena el avance de tus avisos durante los últimos {funnelOverview.windowDays} días para detectar fricción antes de que se enfríe una reserva.
+            </p>
+          </div>
+
+          <div className="grid gap-3 xl:grid-cols-3">
+            <DashboardMetricTile
+              label="Ficha → disponibilidad"
+              value={funnelOverview.availability.value}
+              helper={funnelOverview.availability.helper}
+              accent="brand"
+            />
+            <DashboardMetricTile
+              label="Chat → primer mensaje"
+              value={funnelOverview.chat.value}
+              helper={funnelOverview.chat.helper}
+            />
+            <DashboardMetricTile
+              label="Acuerdo → seña"
+              value={funnelOverview.deposit.value}
+              helper={funnelOverview.deposit.helper}
+              accent="brand"
             />
           </div>
         </section>

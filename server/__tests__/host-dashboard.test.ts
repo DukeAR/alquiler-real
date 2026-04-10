@@ -92,6 +92,21 @@ describe('Host dashboard endpoint', () => {
         return { rows: [] };
       }
 
+      if (text.includes('FUNNEL_PROPERTY_DETAIL_VIEWED')) {
+        return {
+          rows: [
+            {
+              detailViews: 20,
+              availabilityClicks: 12,
+              chatStarts: 7,
+              chatsWithFirstMessage: 5,
+              acceptedRequests: 4,
+              depositsCompleted: 2,
+            },
+          ],
+        };
+      }
+
       throw new Error(`Unexpected query: ${text}`);
     });
 
@@ -116,6 +131,18 @@ describe('Host dashboard endpoint', () => {
       expect.objectContaining({ key: 'identity', status: 'complete' }),
       expect.objectContaining({ key: 'history', status: 'complete' }),
     ]));
+    expect(res.body.funnelMetrics).toEqual({
+      windowDays: 30,
+      detailViews: 20,
+      availabilityClicks: 12,
+      availabilityClickRate: 60,
+      chatStarts: 7,
+      chatsWithFirstMessage: 5,
+      firstMessageRate: 71,
+      acceptedRequests: 4,
+      depositsCompleted: 2,
+      depositConversionRate: 50,
+    });
   });
 
   test('GET /api/host/dashboard includes guest profiles built from backend data', async () => {
@@ -220,6 +247,21 @@ describe('Host dashboard endpoint', () => {
               consultedBeforeReserve: true,
               savedProperty: true,
               returnedToView: null,
+            },
+          ],
+        };
+      }
+
+      if (text.includes('FUNNEL_PROPERTY_DETAIL_VIEWED')) {
+        return {
+          rows: [
+            {
+              detailViews: 0,
+              availabilityClicks: 0,
+              chatStarts: 0,
+              chatsWithFirstMessage: 0,
+              acceptedRequests: 0,
+              depositsCompleted: 0,
             },
           ],
         };
@@ -356,6 +398,18 @@ describe('Host dashboard endpoint', () => {
         { id: 'returned-to-view', label: 'Volvió a verla', active: false, source: 'pending' },
         { id: 'completed-profile', label: 'Completó sus datos', active: true, source: 'derived' },
       ],
+    });
+    expect(res.body.funnelMetrics).toEqual({
+      windowDays: 30,
+      detailViews: 0,
+      availabilityClicks: 0,
+      availabilityClickRate: null,
+      chatStarts: 0,
+      chatsWithFirstMessage: 0,
+      firstMessageRate: null,
+      acceptedRequests: 0,
+      depositsCompleted: 0,
+      depositConversionRate: null,
     });
     expect(res.body.contactedGuests[0].guestProfile).toMatchObject({
       identityVerified: true,

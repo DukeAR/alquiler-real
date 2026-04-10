@@ -12,6 +12,7 @@ import { getReviewInteractionSignals } from '../lib/interactionHistory';
 import { getHostResponseSignal } from '../lib/positiveIncentives';
 import { showToast } from '../lib/toast';
 import { cn, formatCurrency } from '../lib/utils';
+import { trackFrontendFunnelEvent } from '../lib/funnelTracking';
 import {
   trackVerificationPreferenceOpen,
   trackVerificationPreferenceSave,
@@ -238,6 +239,8 @@ const BOOKING_STEP_CONFIG: BookingStepConfig[] = [
 ] as const;
 
 const BOOKING_STEP_COUNT = BOOKING_STEP_CONFIG.length;
+
+const BOOKING_ENTRY_STEPS = ['Fechas', 'Solicitud', 'Seña'] as const;
 
 const REQUEST_CONFIRMATION_NOTICE: BookingConfirmationNotice = {
   tone: 'info',
@@ -782,6 +785,14 @@ export const PropertyDetailShell: React.FC<{
   };
 
   const handleOpenBookingEntry = () => {
+    if (property.id && property.hostId) {
+      trackFrontendFunnelEvent('availability_cta_clicked', {
+        propertyId: property.id,
+        hostId: property.hostId,
+        viewerRole: user?.id === property.hostId ? 'host' : 'guest',
+      });
+    }
+
     clearBookingFeedback();
     resetBookingSubmitState();
     pendingDatePickerOpenRef.current = true;
@@ -1223,6 +1234,9 @@ export const PropertyDetailShell: React.FC<{
           <Card variant="elevated" className="rounded-[30px] border-slate-200/80 bg-white p-5 shadow-[0_30px_80px_-50px_rgba(15,23,42,0.28)] sm:p-6">
             <section role="region" aria-label="Contexto de la reserva" className="space-y-4">
               <div className="space-y-2">
+                <span className="inline-flex items-center rounded-full border border-brand/15 bg-brand/5 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-brand">
+                  Paso 1 de 3
+                </span>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Precio por noche</p>
                 <div className="flex items-end gap-2">
                   <span className="text-[2.8rem] font-black tracking-tight text-slate-950 sm:text-[3rem]">{nightly ? formatCurrency(nightly) : '—'}</span>
@@ -1245,6 +1259,22 @@ export const PropertyDetailShell: React.FC<{
               </Button>
 
               <p className="text-sm leading-6 text-slate-500">{bookingEntryHelperText}</p>
+
+              <div className="flex flex-wrap gap-2">
+                {BOOKING_ENTRY_STEPS.map((step, index) => (
+                  <span
+                    key={step}
+                    className={cn(
+                      'inline-flex items-center rounded-full border px-3 py-1.5 text-[11px] font-semibold tracking-[0.14em]',
+                      index === 0
+                        ? 'border-brand/20 bg-brand/10 text-brand'
+                        : 'border-slate-200 bg-slate-50 text-slate-500',
+                    )}
+                  >
+                    {index + 1}. {step}
+                  </span>
+                ))}
+              </div>
 
               {hasSelectedDates || guestCount > 1 ? (
                 <div className="rounded-[24px] border border-slate-200/80 bg-slate-50/80 px-4 py-4 shadow-[0_18px_36px_-34px_rgba(15,23,42,0.14)]">
@@ -1725,6 +1755,9 @@ export const PropertyDetailShell: React.FC<{
                   {bookingEntryCtaLabel}
                 </>
               </Button>
+              <p className="text-center text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">
+                1. Fechas  ·  2. Solicitud  ·  3. Seña
+              </p>
             </div>
           </section>
         </div>

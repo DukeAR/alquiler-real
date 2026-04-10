@@ -122,6 +122,31 @@ describe('Bookings and availability endpoints', () => {
     getClientMock.mockReset();
   });
 
+  test('POST /api/funnel/events stores the availability CTA click with host context', async () => {
+    queryMock.mockImplementation(async (text: string, params?: unknown[]) => {
+      if (text.includes(LOG_ACTIVITY_QUERY_SNIPPET)) {
+        expect(params?.[2]).toBe('FUNNEL_AVAILABILITY_CTA_CLICKED');
+        expect(String(params?.[3])).toContain('"propertyId":"prop-1"');
+        expect(String(params?.[3])).toContain('"hostId":"host-1"');
+        return { rows: [] };
+      }
+
+      throw new Error(`Unexpected query: ${text}`);
+    });
+
+    const res = await request(app)
+      .post('/api/funnel/events')
+      .send({
+        event: 'availability_cta_clicked',
+        propertyId: 'prop-1',
+        hostId: 'host-1',
+        viewerRole: 'guest',
+      });
+
+    expect(res.status).toBe(202);
+    expect(res.body).toEqual({ success: true });
+  });
+
   test('POST /api/bookings creates a pending protected request when requestMode is protected', async () => {
     const clientQueryMock = vi.fn();
 

@@ -137,13 +137,27 @@ if (!serverEnv.isTest) {
 }
 
 // LOGGING UTILITY
-const logActivity = async (userId: string, action: string, metadata: any = {}, ip_address: string = '') => {
+const normalizeActivityUserId = (userId: string | null | undefined) => {
+  if (typeof userId !== 'string') {
+    return null;
+  }
+
+  const normalizedUserId = userId.trim();
+
+  if (!normalizedUserId || normalizedUserId === 'anonymous' || normalizedUserId === 'system') {
+    return null;
+  }
+
+  return normalizedUserId;
+};
+
+const logActivity = async (userId: string | null | undefined, action: string, metadata: any = {}, ip_address: string = '') => {
   try {
     const id = `log_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     await db.query(
       `INSERT INTO user_activity_logs (id, user_id, action, metadata, ip_address)
        VALUES ($1, $2, $3, $4, $5)`,
-      [id, userId, action, JSON.stringify(metadata), ip_address]
+      [id, normalizeActivityUserId(userId), action, JSON.stringify(metadata), ip_address]
     );
   } catch (err) {
     console.error('Error logging activity:', err);
@@ -163,6 +177,66 @@ const NOTIFIABLE_ACTIVITY_ACTIONS = [
   'BOOKING_REQUEST_ACCEPTED',
   'BOOKING_CANCELLED',
 ] as const;
+
+const FRONTEND_FUNNEL_EVENT_ACTIONS = {
+  availability_cta_clicked: 'FUNNEL_AVAILABILITY_CTA_CLICKED',
+  chat_composer_opened: 'FUNNEL_CHAT_COMPOSER_OPENED',
+} as const;
+
+const FUNNEL_PROPERTY_DETAIL_VIEWED_ACTION = 'FUNNEL_PROPERTY_DETAIL_VIEWED';
+const FUNNEL_CHAT_FIRST_MESSAGE_SENT_ACTION = 'FUNNEL_CHAT_FIRST_MESSAGE_SENT';
+const FUNNEL_REQUEST_ACCEPTED_ACTION = 'FUNNEL_REQUEST_ACCEPTED';
+const FUNNEL_DEPOSIT_COMPLETED_ACTION = 'FUNNEL_DEPOSIT_COMPLETED';
+const FUNNEL_METRICS_WINDOW_DAYS = 30;
+
+const getRequestSessionId = (req: any) => {
+  const sessionId = req?.sessionID;
+  return typeof sessionId === 'string' && sessionId.trim() ? sessionId.trim() : null;
+};
+
+const buildFunnelMetadata = (req: any, metadata: Record<string, unknown>) => ({
+  ...metadata,
+  ...(getRequestSessionId(req) ? { sessionId: getRequestSessionId(req) } : {}),
+});
+
+const logFunnelActivity = async (req: any, action: string, metadata: Record<string, unknown>) => (
+  logActivity(req.session?.userId ?? null, action, buildFunnelMetadata(req, metadata), req.ip)
+);
+
+app.post('/api/funnel/events', async (req, res) => {
+  const rawEvent = typeof req.body?.event === 'string' ? req.body.event.trim() : '';
+  const action = FRONTEND_FUNNEL_EVENT_ACTIONS[rawEvent as keyof typeof FRONTEND_FUNNEL_EVENT_ACTIONS];
+
+  if (!action) {
+    return res.status(400).json({ error: 'Evento de embudo inválido.' });
+  }
+
+  const propertyId = typeof req.body?.propertyId === 'string' ? req.body.propertyId.trim() : '';
+  const hostId = typeof req.body?.hostId === 'string' ? req.body.hostId.trim() : '';
+  const conversationId = typeof req.body?.conversationId === 'string' ? req.body.conversationId.trim() : '';
+  const viewerRole = req.body?.viewerRole === 'host' ? 'host' : req.body?.viewerRole === 'guest' ? 'guest' : undefined;
+
+  if (!propertyId || !hostId) {
+    return res.status(400).json({ error: 'Faltan datos para registrar este evento.' });
+  }
+
+  if (action === FRONTEND_FUNNEL_EVENT_ACTIONS.chat_composer_opened && !conversationId) {
+    return res.status(400).json({ error: 'Necesitamos identificar la conversación para este evento.' });
+  }
+
+  if (req.session?.userId && req.session.userId === hostId) {
+    return res.status(202).json({ skipped: true });
+  }
+
+  await logFunnelActivity(req, action, {
+    propertyId,
+    hostId,
+    ...(conversationId ? { conversationId } : {}),
+    ...(viewerRole ? { viewerRole } : {}),
+  });
+
+  return res.status(202).json({ success: true });
+});
 
 type PremiumVerificationOrderRow = {
   id: string;
@@ -2003,6 +2077,10 @@ const deriveReviewRating = (params: {
 
 const roundToWhole = (value: number) => Math.round(value);
 
+const buildConversionRate = (numerator: number, denominator: number) => (
+  denominator > 0 ? roundToWhole((numerator / denominator) * 100) : null
+);
+
 const roundToOneDecimal = (value: number) => Math.round(value * 10) / 10;
 
 const getAverageHostResponseTimeMinutes = async (hostId: string) => {
@@ -2576,7 +2654,7 @@ const getGuestPositiveBookingStats = async (
 app.get('/api/host/dashboard', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: AUTH_REQUIRED_ERROR });
   try {
-    const [statsResult, propertiesResult, recentBookingsResult, totalsResult, contactedGuestsResult, premiumPropertyOrders, promotionalUsageRows] = await Promise.all([
+    const [statsResult, propertiesResult, recentBookingsResult, totalsResult, contactedGuestsResult, funnelMetricsResult, premiumPropertyOrders, promotionalUsageRows] = await Promise.all([
       db.query(
         `SELECT host_rating, host_verified, badge
          FROM users
@@ -2680,6 +2758,37 @@ app.get('/api/host/dashboard', async (req, res) => {
          LIMIT 3`,
         [req.session.userId],
       ),
+      db.query(
+        `SELECT
+            COUNT(DISTINCT CASE
+              WHEN action = '${FUNNEL_PROPERTY_DETAIL_VIEWED_ACTION}'
+              THEN CONCAT_WS(':', COALESCE(metadata->>'sessionId', user_id, id), COALESCE(metadata->>'propertyId', ''))
+            END)::int as "detailViews",
+            COUNT(DISTINCT CASE
+              WHEN action = '${FRONTEND_FUNNEL_EVENT_ACTIONS.availability_cta_clicked}'
+              THEN CONCAT_WS(':', COALESCE(metadata->>'sessionId', user_id, id), COALESCE(metadata->>'propertyId', ''))
+            END)::int as "availabilityClicks",
+            COUNT(DISTINCT CASE
+              WHEN action = '${FRONTEND_FUNNEL_EVENT_ACTIONS.chat_composer_opened}'
+              THEN COALESCE(metadata->>'conversationId', id)
+            END)::int as "chatStarts",
+            COUNT(DISTINCT CASE
+              WHEN action = '${FUNNEL_CHAT_FIRST_MESSAGE_SENT_ACTION}'
+              THEN COALESCE(metadata->>'conversationId', id)
+            END)::int as "chatsWithFirstMessage",
+            COUNT(DISTINCT CASE
+              WHEN action = '${FUNNEL_REQUEST_ACCEPTED_ACTION}'
+              THEN COALESCE(metadata->>'conversationId', COALESCE(metadata->>'bookingId', id))
+            END)::int as "acceptedRequests",
+            COUNT(DISTINCT CASE
+              WHEN action = '${FUNNEL_DEPOSIT_COMPLETED_ACTION}'
+              THEN COALESCE(metadata->>'bookingId', COALESCE(metadata->>'conversationId', id))
+            END)::int as "depositsCompleted"
+         FROM user_activity_logs
+         WHERE metadata->>'hostId' = $1
+           AND created_at >= NOW() - INTERVAL '${FUNNEL_METRICS_WINDOW_DAYS} days'`,
+        [req.session.userId],
+      ),
       getLatestPropertyPremiumOrders(req.session.userId),
       getPremiumPromotionalUsageRows(),
     ]);
@@ -2712,6 +2821,13 @@ app.get('/api/host/dashboard', async (req, res) => {
     const guestProfilesById = new Map<string, HostDashboardGuestProfileRow>();
     const guestReviewsByGuestId = new Map<string, HostDashboardGuestReviewRow[]>();
     const bookingSignalsByBookingId = new Map<string, HostDashboardBookingSignalRow>();
+    const funnelMetricsRow = funnelMetricsResult.rows[0] || {};
+    const detailViews = toSafeNumber(funnelMetricsRow.detailViews);
+    const availabilityClicks = toSafeNumber(funnelMetricsRow.availabilityClicks);
+    const chatStarts = toSafeNumber(funnelMetricsRow.chatStarts);
+    const chatsWithFirstMessage = toSafeNumber(funnelMetricsRow.chatsWithFirstMessage);
+    const acceptedRequests = toSafeNumber(funnelMetricsRow.acceptedRequests);
+    const depositsCompleted = toSafeNumber(funnelMetricsRow.depositsCompleted);
 
     if (guestIds.length > 0) {
       const recentBookingIds = recentBookings
@@ -2862,6 +2978,18 @@ app.get('/api/host/dashboard', async (req, res) => {
         };
       }),
       estimatedIncome: toSafeNumber(totals.estimated_income),
+      funnelMetrics: {
+        windowDays: FUNNEL_METRICS_WINDOW_DAYS,
+        detailViews,
+        availabilityClicks,
+        availabilityClickRate: buildConversionRate(availabilityClicks, detailViews),
+        chatStarts,
+        chatsWithFirstMessage,
+        firstMessageRate: buildConversionRate(chatsWithFirstMessage, chatStarts),
+        acceptedRequests,
+        depositsCompleted,
+        depositConversionRate: buildConversionRate(depositsCompleted, acceptedRequests),
+      },
     });
   } catch (err) {
     res.status(500).json({ error: 'No pudimos cargar tu panel de anfitrión.' });
@@ -3116,6 +3244,14 @@ app.get('/api/properties/:id', async (req, res) => {
     const property = mapPropertyRecord(result.rows[0]);
     const viewerId = req.session.userId;
     const hostId = typeof result.rows[0]?.hostId === 'string' ? result.rows[0].hostId : null;
+
+    if (hostId && (!viewerId || viewerId !== hostId)) {
+      void logFunnelActivity(req, FUNNEL_PROPERTY_DETAIL_VIEWED_ACTION, {
+        propertyId: req.params.id,
+        hostId,
+        viewerRole: viewerId ? 'guest' : 'anonymous',
+      });
+    }
 
     if (viewerId && hostId && viewerId !== hostId) {
       const interactionContinuity = await getInteractionContinuityForPair(viewerId, hostId);
@@ -4601,6 +4737,29 @@ app.post('/api/messages', filterChatMiddleware, async (req, res) => {
   }
   
   try {
+    const conversationResult = await db.query(
+      `SELECT tenant_id, host_id, property_id
+       FROM conversations
+       WHERE id = $1
+       LIMIT 1`,
+      [conversation_id],
+    );
+
+    const conversation = conversationResult.rows[0];
+
+    if (!conversation) {
+      return res.status(404).json({ error: 'No encontramos esta conversación.' });
+    }
+
+    const priorMessageCountResult = await db.query(
+      `SELECT COUNT(*)::int as count
+       FROM messages
+       WHERE conversation_id = $1
+         AND COALESCE(is_system, FALSE) = FALSE`,
+      [conversation_id],
+    );
+
+    const isFirstTenantMessage = toSafeNumber(priorMessageCountResult.rows[0]?.count) === 0 && conversation.tenant_id === userId;
     const id = `msg_${Date.now()}`;
     await db.query(
       `INSERT INTO messages (id, conversation_id, sender_id, receiver_id, content)
@@ -4609,6 +4768,14 @@ app.post('/api/messages', filterChatMiddleware, async (req, res) => {
     );
 
     await db.query(`UPDATE conversations SET last_message = $1, updated_at = NOW() WHERE id = $2`, [content, conversation_id]);
+
+    if (isFirstTenantMessage) {
+      await logFunnelActivity(req, FUNNEL_CHAT_FIRST_MESSAGE_SENT_ACTION, {
+        conversationId: conversation_id,
+        propertyId: conversation.property_id,
+        hostId: conversation.host_id,
+      });
+    }
 
     res.status(201).json({
       id,
@@ -4869,6 +5036,13 @@ app.post('/api/conversations/:id/accept-request', async (req, res) => {
     await logActivity(conversation.tenant_id, 'BOOKING_REQUEST_ACCEPTED', {
       bookingId: conversation.booking_id ?? undefined,
       conversationId: req.params.id,
+      requestMode: effectiveRequestMode,
+    });
+    await logFunnelActivity(req, FUNNEL_REQUEST_ACCEPTED_ACTION, {
+      propertyId: conversation.property_id,
+      hostId: conversation.host_id,
+      conversationId: req.params.id,
+      bookingId: conversation.booking_id ?? undefined,
       requestMode: effectiveRequestMode,
     });
 
@@ -5216,6 +5390,14 @@ app.post('/api/conversations/:id/confirm-direct-deposit', async (req, res) => {
       requestMode: conversation.request_mode === 'protected' ? 'protected' : 'direct',
       depositType: 'external',
     });
+    await logFunnelActivity(req, FUNNEL_DEPOSIT_COMPLETED_ACTION, {
+      propertyId: conversation.property_id,
+      hostId: conversation.host_id,
+      conversationId: req.params.id,
+      bookingId,
+      requestMode: conversation.request_mode === 'protected' ? 'protected' : 'direct',
+      depositType: 'external',
+    });
 
     return res.json(await getEnrichedConversationById(req.params.id));
   } catch (err) {
@@ -5401,6 +5583,14 @@ app.post('/api/bookings/:id/pay-deposit', async (req, res) => {
     });
 
     const updatedBooking = await getUserBookingById(userId, req.params.id);
+    await logFunnelActivity(req, FUNNEL_DEPOSIT_COMPLETED_ACTION, {
+      propertyId: booking.propertyId,
+      hostId: booking.hostId,
+      conversationId: booking.conversationId,
+      bookingId: req.params.id,
+      requestMode: booking.requestMode,
+      depositType: 'protected',
+    });
     return res.json({ booking: updatedBooking });
   } catch (err) {
     console.error('Error al marcar la seña protegida:', err);
