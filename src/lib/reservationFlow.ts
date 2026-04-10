@@ -8,6 +8,7 @@ import {
 
 export type ReservationFlowStage =
   | 'request-pending'
+  | 'request-not-advanced'
   | 'request-accepted'
   | 'direct-deposit-reported'
   | 'reservation-confirmed'
@@ -92,6 +93,8 @@ const getMilestoneIndex = (stage: ReservationFlowStageWithIssues | null) => {
   switch (stage) {
     case 'request-pending':
       return 0;
+    case 'request-not-advanced':
+      return 1;
     case 'request-accepted':
       return 1;
     case 'direct-deposit-reported':
@@ -119,7 +122,7 @@ export const getReservationFlowMilestones = (input: ReservationFlowInput): Reser
   const currentIndex = getMilestoneIndex(stage);
   const milestones = [
     getRequestStatusLabel(input.mode, viewerRole),
-    'Aceptada',
+    stage === 'request-not-advanced' ? 'No avanzó' : 'Aceptada',
     getDepositMilestoneLabel(input.mode, stage),
     stage === 'guest-cancelled' || stage === 'host-cancelled' ? 'Cancelada' : 'Confirmada',
   ] as const;
@@ -140,6 +143,13 @@ export const getReservationFlowStage = ({
 }: ReservationFlowInput): ReservationFlowStageWithIssues | null => {
   if (!mode) {
     return null;
+  }
+
+  if (
+    requestStatus === 'not_advanced'
+    || (bookingStatus === 'cancelled' && cancellationActor !== 'guest' && cancellationActor !== 'host' && !depositStatus)
+  ) {
+    return 'request-not-advanced';
   }
 
   if (bookingStatus === 'cancelled') {
@@ -223,6 +233,21 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
         primaryActionLabel: viewerRole === 'host'
           ? input.mode === 'protected' ? 'Aceptar solicitud' : 'Aceptar propuesta'
           : undefined,
+      };
+    case 'request-not-advanced':
+      return {
+        stage,
+        modelLabel,
+        statusLabel: 'No avanzó',
+        description: viewerRole === 'host'
+          ? 'Marcaste que no podés avanzar con esta reserva por ahora.'
+          : 'No se pudo avanzar con esta reserva.',
+        supportText: viewerRole === 'host'
+          ? 'El chat sigue abierto por si quieren recoordinar o dejar una nueva propuesta por acá.'
+          : 'El anfitrión no puede avanzar en este momento. Podés seguir conversando o buscar otras opciones.',
+        nextActor: 'none',
+        nextActorLabel: 'Sin acción pendiente',
+        nextStepLabel: 'Seguir por chat si hace falta',
       };
     case 'request-accepted':
       return {

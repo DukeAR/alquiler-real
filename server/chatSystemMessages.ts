@@ -4,11 +4,12 @@ type ReservationDepositStatus = 'reported' | 'confirmed' | 'held' | 'review' | '
 
 type ReservationRequestMode = 'direct' | 'protected';
 
-type ReservationRequestStatus = 'pending' | 'accepted';
+type ReservationRequestStatus = 'pending' | 'accepted' | 'not_advanced';
 
 export type ChatSystemMessageKey =
   | 'conversation-start'
   | 'request-sent'
+  | 'request-not-advanced'
   | 'request-accepted'
   | 'before-payment'
   | 'protected-payment'
@@ -39,6 +40,7 @@ export type ChatSystemMessageContext = {
 export const CHAT_SYSTEM_MESSAGE_COPY: Record<ChatSystemMessageKey, string> = {
   'conversation-start': 'Podés coordinar todo por acá. Evitá compartir datos sensibles o pagos por fuera hasta tener claro el acuerdo.',
   'request-sent': 'La solicitud o la propuesta ya quedó enviada en el chat.',
+  'request-not-advanced': 'No se pudo avanzar con esta reserva.',
   'request-accepted': 'La otra parte aceptó avanzar.',
   'before-payment': 'Antes de avanzar con la seña, confirmá que los datos coincidan con el anfitrión del aviso.',
   'protected-payment': 'Estás usando la reserva protegida para mayor claridad.',
@@ -73,6 +75,10 @@ const getEffectiveRequestStatus = (
   context: ChatSystemMessageContext,
   mode: ReservationRequestMode | null,
 ): ReservationRequestStatus => {
+  if (context.requestStatus === 'not_advanced') {
+    return 'not_advanced';
+  }
+
   if (context.requestStatus === 'accepted') {
     return 'accepted';
   }
@@ -111,6 +117,8 @@ export const getRequestAcceptedMessage = (mode: ReservationRequestMode) => (
     ? 'Ya pueden avanzar con una reserva protegida. La seña queda en custodia y se libera cuando se confirme la llegada.'
     : 'Ya pueden avanzar con la seña de esta reserva.'
 );
+
+export const getRequestNotAdvancedMessage = () => CHAT_SYSTEM_MESSAGE_COPY['request-not-advanced'];
 
 const getDirectAfterPaymentMessage = (depositStatus: ReservationDepositStatus | null) => {
   if (depositStatus === 'reported') {
@@ -171,6 +179,13 @@ export const getChatSystemMessages = (context: ChatSystemMessageContext): ChatSy
     messages.push({
       key: 'request-sent',
       content: getRequestSentMessage(mode),
+    });
+  }
+
+  if (requestStatus === 'not_advanced') {
+    messages.push({
+      key: 'request-not-advanced',
+      content: getRequestNotAdvancedMessage(),
     });
   }
 

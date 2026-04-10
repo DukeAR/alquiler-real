@@ -11,7 +11,7 @@ import { mapPropertyRecord } from './propertySerializer';
 import { buildGuestVerification } from './guestVerification';
 import { buildHostTrust } from './hostTrust';
 import { REAL_VERIFICATION_FILTER_MIN_SCORE } from './propertyVerification';
-import { getChatSystemMessages, getRequestAcceptedMessage, type ChatSystemMessageKey } from './chatSystemMessages';
+import { getChatSystemMessages, getRequestAcceptedMessage, getRequestNotAdvancedMessage, type ChatSystemMessageKey } from './chatSystemMessages';
 import { buildGuestProfileCompletion } from '../src/lib/guestVerification';
 import { buildUserVerificationStatus } from '../src/lib/userVerification';
 import {
@@ -3014,6 +3014,19 @@ const insertSystemConversationMessage = async (
   );
 };
 
+const clearSystemConversationMessages = async (conversationId: string, keys: ChatSystemMessageKey[]) => {
+  if (keys.length === 0) {
+    return;
+  }
+
+  await db.query(
+    `DELETE FROM messages
+     WHERE conversation_id = $1
+       AND system_key = ANY($2::text[])`,
+    [conversationId, keys],
+  );
+};
+
 const syncConversationSystemMessages = async (conversationId: string) => {
   const conversation = await getEnrichedConversationById(conversationId);
 
@@ -3995,6 +4008,107 @@ app.post('/api/conversations/:id/accept-request', async (req, res) => {
   } catch (err) {
     console.error('Error al aceptar solicitud en conversación:', err);
     return res.status(500).json({ error: 'No pudimos aceptar la solicitud. Intentá de nuevo.' });
+  }
+});
+
+app.post('/api/conversations/:id/not-advance-request', async (req, res) => {
+  const userId = req.session.userId;
+  if (!userId) return res.status(401).json({ error: AUTH_REQUIRED_ERROR });
+
+  try {
+    const conversationResult = await db.query(
+      `SELECT c.*, b.status as "bookingStatus", COALESCE(c.deposit_status, b.deposit_status) as "effectiveDepositStatus"
+       FROM conversations c
+       LEFT JOIN bookings b ON b.id = c.booking_id
+       WHERE c.id = $1
+       LIMIT 1`,
+      [req.params.id],
+    );
+
+    const conversation = conversationResult.rows[0];
+
+    if (!conversation) {
+      return res.status(404).json({ error: 'No encontramos esa conversación.' });
+    }
+
+    if (conversation.host_id !== userId) {
+      return res.status(403).json({ error: 'Solo el anfitrión puede actualizar este estado.' });
+    }
+
+    if (conversation.request_status === 'not_advanced') {
+      return res.json(await getEnrichedConversationById(req.params.id));
+    }
+
+    const requestResponseDeadline = getRequestResponseDeadline(conversation);
+    if (conversation.request_status !== 'accepted' && requestResponseDeadline && Date.now() > requestResponseDeadline.getTime()) {
+      return res.status(409).json({ error: 'La solicitud venció después de 24 horas sin respuesta. Pedile al huésped que mande una nueva si todavía quiere avanzar.' });
+    }
+
+    const effectiveRequestMode = conversation.request_mode === 'direct' || conversation.request_mode === 'protected'
+      ? conversation.request_mode
+      : conversation.booking_id
+        ? 'protected'
+        : 'direct';
+
+    if (!conversation.request_start_date || !conversation.request_end_date) {
+      return res.status(422).json({ error: 'No hay una reserva activa para marcar con este estado.' });
+    }
+
+    const effectiveDepositStatus = typeof conversation.effectiveDepositStatus === 'string' ? conversation.effectiveDepositStatus : null;
+
+    if (effectiveDepositStatus) {
+      return res.status(422).json({ error: 'La reserva ya avanzó con la seña. Si necesitás frenarla ahora, usá la cancelación correspondiente.' });
+    }
+
+    if (conversation.bookingStatus === 'completed') {
+      return res.status(422).json({ error: 'Esta reserva ya terminó y no admite este cambio.' });
+    }
+
+    const notAdvancedMessage = getRequestNotAdvancedMessage();
+    const rawReason = typeof req.body?.reason === 'string' ? req.body.reason.trim() : '';
+    const reason = rawReason ? rawReason.slice(0, 160) : undefined;
+
+    if (conversation.booking_id && (conversation.bookingStatus === 'pending' || conversation.bookingStatus === 'confirmed')) {
+      await db.query(
+        `UPDATE bookings
+         SET status = 'cancelled',
+             cancellation_actor = NULL,
+             deposit_status = NULL
+         WHERE id = $1`,
+        [conversation.booking_id],
+      );
+    }
+
+    await db.query(
+      `UPDATE conversations
+       SET request_status = 'not_advanced',
+           deposit_status = NULL,
+           last_message = $1,
+           updated_at = NOW()
+       WHERE id = $2`,
+      [notAdvancedMessage, req.params.id],
+    );
+
+    await clearSystemConversationMessages(req.params.id, ['request-accepted', 'before-payment', 'protected-payment']);
+
+    await db.query(
+      `INSERT INTO messages (id, conversation_id, sender_id, receiver_id, content, is_system, system_key)
+       VALUES ($1, $2, $3, $4, $5, TRUE, $6)
+       ON CONFLICT DO NOTHING`,
+      [`msg_${Date.now()}`, req.params.id, userId, conversation.tenant_id, notAdvancedMessage, 'request-not-advanced'],
+    );
+
+    await logActivity(userId, 'BOOKING_REQUEST_NOT_ADVANCED', {
+      bookingId: conversation.booking_id ?? undefined,
+      conversationId: req.params.id,
+      requestMode: effectiveRequestMode,
+      ...(reason ? { reason } : {}),
+    });
+
+    return res.json(await getEnrichedConversationById(req.params.id));
+  } catch (err) {
+    console.error('Error al marcar una conversación como no avanzada:', err);
+    return res.status(500).json({ error: 'No pudimos actualizar este estado. Intentá de nuevo.' });
   }
 });
 

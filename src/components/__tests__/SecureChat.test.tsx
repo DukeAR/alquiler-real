@@ -7,6 +7,7 @@ const fetchConversationsMock = vi.fn();
 const fetchMessagesMock = vi.fn();
 const sendMessageMock = vi.fn();
 const acceptConversationRequestMock = vi.fn();
+const notAdvanceConversationRequestMock = vi.fn();
 const reportDirectDepositMock = vi.fn();
 const confirmDirectDepositMock = vi.fn();
 const payProtectedDepositMock = vi.fn();
@@ -41,6 +42,7 @@ vi.mock('../../services/geminiService', () => ({
   fetchMessages: (...args: unknown[]) => fetchMessagesMock(...args),
   sendMessage: (...args: unknown[]) => sendMessageMock(...args),
   acceptConversationRequest: (...args: unknown[]) => acceptConversationRequestMock(...args),
+  notAdvanceConversationRequest: (...args: unknown[]) => notAdvanceConversationRequestMock(...args),
   reportDirectDeposit: (...args: unknown[]) => reportDirectDepositMock(...args),
   confirmDirectDeposit: (...args: unknown[]) => confirmDirectDepositMock(...args),
   payProtectedDeposit: (...args: unknown[]) => payProtectedDepositMock(...args),
@@ -114,6 +116,8 @@ const renderChat = () => {
       <Routes>
         <Route path="/chat/:id" element={<SecureChat initialConversationId="conv-1" />} />
         <Route path="/my-bookings" element={<div>Ruta Mis reservas</div>} />
+        <Route path="/explore" element={<div>Ruta Explorar</div>} />
+        <Route path="/detail/:id" element={<div>Ruta detalle propiedad</div>} />
       </Routes>
     </MemoryRouter>,
   );
@@ -126,6 +130,7 @@ describe('SecureChat', () => {
     fetchMessagesMock.mockReset();
     sendMessageMock.mockReset();
     acceptConversationRequestMock.mockReset();
+    notAdvanceConversationRequestMock.mockReset();
     reportDirectDepositMock.mockReset();
     confirmDirectDepositMock.mockReset();
     payProtectedDepositMock.mockReset();
@@ -570,6 +575,86 @@ describe('SecureChat', () => {
     expect(screen.getByText('Confirmar llegada o reportar un problema se habilitan el día del ingreso.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Confirmar llegada/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Reportar problema/i })).not.toBeInTheDocument();
+  });
+
+  test('lets the host mark a request as not advanced with an optional reason and keeps the chat open', async () => {
+    useAuthMock.mockReturnValue({ user: { id: 'host-1' } });
+    fetchConversationsMock.mockResolvedValue([
+      {
+        ...baseConversation,
+        requestMode: 'direct',
+        requestStatus: 'pending',
+        requestStartDate: '2026-05-10',
+        requestEndDate: '2026-05-13',
+        requestGuests: 2,
+        requestTotalPrice: 320000,
+      },
+    ]);
+    fetchMessagesMock.mockResolvedValue([]);
+    notAdvanceConversationRequestMock.mockResolvedValue({
+      ...baseConversation,
+      requestMode: 'direct',
+      requestStatus: 'not_advanced',
+      requestStartDate: '2026-05-10',
+      requestEndDate: '2026-05-13',
+      requestGuests: 2,
+      requestTotalPrice: 320000,
+    });
+
+    renderChat();
+
+    fireEvent.click(await screen.findByRole('button', { name: /No avanzar con esta reserva/i }));
+
+    expect(screen.getByText('Podés dejar un motivo opcional para tu registro. El chat sigue abierto.')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'no disponible en esas fechas' }));
+    fireEvent.click(screen.getByRole('button', { name: /Confirmar estado/i }));
+
+    await waitFor(() => {
+      expect(notAdvanceConversationRequestMock).toHaveBeenCalledWith('conv-1', 'no disponible en esas fechas');
+    });
+
+    expect(await screen.findByText('Estado: No avanzó')).toBeInTheDocument();
+    expect(screen.getByText('Marcaste que no podés avanzar con esta reserva.')).toBeInTheDocument();
+    expect(screen.getByText('El chat sigue abierto por si quieren recoordinar por acá.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Aceptar propuesta/i })).not.toBeInTheDocument();
+    expect(showToastMock).toHaveBeenCalledWith(
+      'Estado actualizado',
+      'Marcaste que no podés avanzar ahora. El chat sigue abierto por si quieren recoordinar.',
+      'success',
+    );
+  });
+
+  test('shows the guest follow-up CTAs after a request no longer advances', async () => {
+    useAuthMock.mockReturnValue({ user: { id: 'tenant-1' } });
+    fetchConversationsMock.mockResolvedValue([
+      {
+        ...baseConversation,
+        requestMode: 'direct',
+        requestStatus: 'not_advanced',
+        requestStartDate: '2026-05-10',
+        requestEndDate: '2026-05-13',
+        requestGuests: 2,
+        requestTotalPrice: 320000,
+      },
+    ]);
+    fetchMessagesMock.mockResolvedValue([]);
+
+    renderChat();
+
+    expect(await screen.findByText('No se pudo avanzar con esta reserva.')).toBeInTheDocument();
+    expect(screen.getByText('El anfitrión no puede avanzar en este momento. Podés seguir conversando o buscar otras opciones.')).toBeInTheDocument();
+    expect(screen.getByText('Estado: No avanzó')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Ver otras opciones/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Modificar fechas/i })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Enviar nueva propuesta/i }));
+
+    expect(screen.getByRole('textbox')).toHaveValue('Si te parece, te mando una nueva propuesta con otras fechas.');
+
+    fireEvent.click(screen.getByRole('button', { name: /Modificar fechas/i }));
+
+    expect(await screen.findByText('Ruta detalle propiedad')).toBeInTheDocument();
   });
 
   test('lets the host accept a pending request and updates the chat context', async () => {

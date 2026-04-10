@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Icons } from './Icons';
 import { showToast } from '../lib/toast';
 import { LoadingState } from './LoadingState';
 import { cn } from '../lib/utils';
 import { 
-  acceptConversationRequest, confirmArrival, confirmDirectDeposit, fetchConversations, fetchMessages, payProtectedDeposit, reportArrivalProblem, reportDirectDeposit, sendMessage, 
+  acceptConversationRequest, confirmArrival, confirmDirectDeposit, fetchConversations, fetchMessages, notAdvanceConversationRequest, payProtectedDeposit, reportArrivalProblem, reportDirectDeposit, sendMessage, 
   Conversation, Message 
 } from '../services/geminiService';
 import { ReportModal } from './ReportModal';
@@ -158,6 +159,13 @@ const buildHostGuestQuestionSuggestions = (requestContext: ReservationRequestCon
   ];
 };
 
+const NOT_ADVANCE_REASON_OPTIONS = [
+  'no disponible en esas fechas',
+  'no coincide con la dinámica del lugar',
+  'prefiero otra coordinación',
+  'otro',
+] as const;
+
 const getCompactReservationStatus = (
   stage: ReturnType<typeof getReservationFlowCopy>['stage'],
   isExpiredPendingRequest: boolean,
@@ -176,6 +184,12 @@ const getCompactReservationStatus = (
         key: 'esperando_respuesta',
         label: 'Esperando respuesta',
         tone: 'warning',
+      };
+    case 'request-not-advanced':
+      return {
+        key: 'no_avanzo',
+        label: 'No avanzó',
+        tone: 'neutral',
       };
     case 'request-accepted':
     case 'direct-deposit-reported':
@@ -285,8 +299,21 @@ const getConversationRequestStatus = (conversation: Conversation | null) => {
     return 'pending' as const;
   }
 
+  if (conversation.requestStatus === 'not_advanced') {
+    return 'not_advanced' as const;
+  }
+
   if (conversation.requestStatus === 'accepted') {
     return 'accepted' as const;
+  }
+
+  if (
+    conversation.bookingStatus === 'cancelled'
+    && conversation.cancellationActor !== 'guest'
+    && conversation.cancellationActor !== 'host'
+    && !conversation.depositStatus
+  ) {
+    return 'not_advanced' as const;
   }
 
   if ((conversation.requestMode === 'protected' || conversation.booking_id) && conversation.bookingStatus === 'confirmed') {
@@ -440,6 +467,18 @@ const getSuggestionTexts = (requestContext: ReservationRequestContext | null, is
         ];
   }
 
+  if (flow.stage === 'request-not-advanced') {
+    return isTenant
+      ? [
+          'Si te parece, puedo mandarte una nueva propuesta con otras fechas.',
+          'Gracias por avisar. Voy a revisar otras opciones.',
+        ]
+      : [
+          'Si cambia algo, te aviso por acá.',
+          'Si quieren recoordinar, lo seguimos por este chat.',
+        ];
+  }
+
   if (flow.stage === 'guest-cancelled' || flow.stage === 'host-cancelled') {
     return isTenant
       ? [
@@ -482,6 +521,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
   initialRequestContext = null,
 }) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConv, setActiveConv] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -490,6 +530,9 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
   const [sendingMessageId, setSendingMessageId] = useState<string | null>(null);
   const [acceptingRequest, setAcceptingRequest] = useState(false);
   const [processingFlowAction, setProcessingFlowAction] = useState<string | null>(null);
+  const [showNotAdvanceComposer, setShowNotAdvanceComposer] = useState(false);
+  const [selectedNotAdvanceReason, setSelectedNotAdvanceReason] = useState<(typeof NOT_ADVANCE_REASON_OPTIONS)[number] | null>(null);
+  const [otherNotAdvanceReason, setOtherNotAdvanceReason] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [showReportModal, setShowReportModal] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -535,6 +578,16 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
+
+  const resetNotAdvanceDraft = () => {
+    setShowNotAdvanceComposer(false);
+    setSelectedNotAdvanceReason(null);
+    setOtherNotAdvanceReason('');
+  };
+
+  useEffect(() => {
+    resetNotAdvanceDraft();
+  }, [activeConv?.id]);
 
   const loadConversations = async () => {
     try {
@@ -626,6 +679,34 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
       showToast('Solicitud', err instanceof Error ? err.message : 'No pudimos aceptar la solicitud. Intentá de nuevo.', 'error');
     } finally {
       setAcceptingRequest(false);
+    }
+  };
+
+  const handleNotAdvanceRequest = async () => {
+    if (!activeConv) {
+      return;
+    }
+
+    setProcessingFlowAction('not-advance-request');
+
+    const reason = selectedNotAdvanceReason === 'otro'
+      ? otherNotAdvanceReason.trim() || 'otro'
+      : selectedNotAdvanceReason ?? undefined;
+
+    try {
+      const updatedConversation = await notAdvanceConversationRequest(activeConv.id, reason);
+      applyConversationUpdate(updatedConversation);
+      await loadMessages(activeConv.id);
+      resetNotAdvanceDraft();
+      showToast(
+        'Estado actualizado',
+        'Marcaste que no podés avanzar ahora. El chat sigue abierto por si quieren recoordinar.',
+        'success',
+      );
+    } catch (err) {
+      showToast('Reserva', err instanceof Error ? err.message : 'No pudimos actualizar este estado. Intentá de nuevo.', 'error');
+    } finally {
+      setProcessingFlowAction(null);
     }
   };
 
@@ -899,6 +980,11 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
     ? 'Todavía no hubo respuesta. Podés enviar otro mensaje o ver otras opciones.'
     : null;
   const canAcceptRequest = Boolean(isHostConversation && flowCopy?.stage === 'request-pending' && !isRequestExpired);
+  const canNotAdvanceRequest = Boolean(
+    isHostConversation
+    && (flowCopy?.stage === 'request-pending' || flowCopy?.stage === 'request-accepted')
+    && !isRequestExpired,
+  );
   const canReportDirectDeposit = Boolean(isTenantConversation && activeRequestContext?.mode === 'direct' && flowCopy?.stage === 'request-accepted');
   const canConfirmDirectDeposit = Boolean(isHostConversation && activeRequestContext?.mode === 'direct' && flowCopy?.stage === 'direct-deposit-reported');
   const canPayProtectedDeposit = Boolean(isTenantConversation && activeRequestContext?.mode === 'protected' && flowCopy?.stage === 'request-accepted' && activeRequestContext.bookingId);
@@ -911,16 +997,28 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
       || flowCopy?.stage === 'protected-deposit-released'
       || flowCopy?.stage === 'reservation-confirmed'),
   );
+  const showGuestNoAdvanceActions = Boolean(
+    isTenantConversation
+    && flowCopy?.stage === 'request-not-advanced'
+    && activeRequestContext,
+  );
+  const noAdvanceRescheduleDraft = 'Si te parece, puedo acomodar otras fechas.';
+  const noAdvanceNewProposalDraft = activeRequestContext?.mode === 'protected'
+    ? 'Si te parece, puedo mandarte una nueva solicitud con otras fechas.'
+    : 'Si te parece, te mando una nueva propuesta con otras fechas.';
   const arrivalActionsHint = flowCopy?.stage === 'protected-deposit-held' && !arrivalActionsAvailable
     ? flowCopy.pendingActionHint
     : null;
   const arrivalCoordinationDraft = isTenantConversation
     ? '¿Qué horario de llegada te queda mejor?'
     : 'Si querés, definimos ahora el horario de llegada.';
+
   const activeReservationSystemKey = isExpiredPendingRequest
     ? null
     : flowCopy?.stage === 'request-pending'
       ? 'request-sent'
+      : flowCopy?.stage === 'request-not-advanced'
+        ? 'request-not-advanced'
       : flowCopy?.stage === 'request-accepted'
         ? 'request-accepted'
         : flowCopy?.stage === 'direct-deposit-reported' || flowCopy?.stage === 'reservation-confirmed'
@@ -1095,6 +1193,22 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
   })();
   const threadMessages = sortThreadTimeline([...messages, ...fallbackSystemMessages, ...derivedSafetyMessages]);
   const getSystemMessagePresentation = (message: Message): ThreadSystemMessagePresentation => {
+    if (
+      flowCopy?.stage === 'request-not-advanced'
+      && (
+        message.system_key === 'request-sent'
+        || message.system_key === 'request-accepted'
+        || message.system_key === 'before-payment'
+        || message.system_key === 'protected-payment'
+      )
+    ) {
+      return {
+        content: message.content,
+        emphasis: 'pill',
+        hidden: true,
+      };
+    }
+
     if (message.system_key === 'protected-payment') {
       return {
         content: message.content,
@@ -1108,6 +1222,18 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
           ? 'Solicitud enviada. Falta la respuesta del anfitrión.'
           : 'Propuesta enviada. Falta la respuesta del anfitrión.',
         emphasis: 'pill',
+      };
+    }
+
+    if (message.system_key === 'request-not-advanced' && flowCopy?.stage === 'request-not-advanced') {
+      return {
+        content: isHostConversation
+          ? 'Marcaste que no podés avanzar con esta reserva.'
+          : 'No se pudo avanzar con esta reserva.',
+        emphasis: 'card',
+        supplementaryContent: isHostConversation
+          ? 'El chat sigue abierto por si quieren recoordinar por acá.'
+          : 'El anfitrión no puede avanzar en este momento. Podés seguir conversando o buscar otras opciones.',
       };
     }
 
@@ -1555,7 +1681,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                   </button>
                 </div>
 
-                {canAcceptRequest || canConfirmArrival || canReportArrivalProblem || canCoordinateArrival ? (
+                {canAcceptRequest || canNotAdvanceRequest || canConfirmArrival || canReportArrivalProblem || canCoordinateArrival ? (
                   <div className="flex flex-wrap gap-2">
                     {canAcceptRequest ? (
                       <button
@@ -1566,6 +1692,24 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                       >
                         {acceptingRequest ? <Icons.Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Icons.CheckCircle2 className="h-3.5 w-3.5" />}
                         <span>{activeRequestContext?.mode === 'protected' ? 'Aceptar solicitud' : 'Aceptar propuesta'}</span>
+                      </button>
+                    ) : null}
+                    {canNotAdvanceRequest ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (showNotAdvanceComposer) {
+                            resetNotAdvanceDraft();
+                            return;
+                          }
+
+                          setShowNotAdvanceComposer(true);
+                        }}
+                        disabled={acceptingRequest || processingFlowAction !== null}
+                        className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-slate-950 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 disabled:cursor-not-allowed disabled:opacity-70"
+                      >
+                        {processingFlowAction === 'not-advance-request' ? <Icons.Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Icons.X className="h-3.5 w-3.5" />}
+                        <span>{showNotAdvanceComposer ? 'Cerrar' : 'No avanzar con esta reserva'}</span>
                       </button>
                     ) : null}
                     {canConfirmArrival ? (
@@ -1603,10 +1747,126 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                   </div>
                 ) : null}
 
+                {canNotAdvanceRequest && showNotAdvanceComposer ? (
+                  <div className="rounded-[24px] border border-slate-200 bg-slate-50 px-4 py-4 dark:border-slate-800 dark:bg-slate-900/70">
+                    <div className="space-y-3">
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
+                          No avanzar
+                        </p>
+                        <p className="text-xs font-medium leading-5 text-slate-600 dark:text-slate-300">
+                          Podés dejar un motivo opcional para tu registro. El chat sigue abierto.
+                        </p>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2">
+                        {NOT_ADVANCE_REASON_OPTIONS.map((reason) => {
+                          const selected = selectedNotAdvanceReason === reason;
+
+                          return (
+                            <button
+                              key={reason}
+                              type="button"
+                              onClick={() => {
+                                setSelectedNotAdvanceReason((current) => current === reason ? null : reason);
+
+                                if (reason !== 'otro') {
+                                  setOtherNotAdvanceReason('');
+                                }
+                              }}
+                              disabled={processingFlowAction !== null}
+                              className={cn(
+                                'rounded-full border px-3.5 py-2 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-70',
+                                selected
+                                  ? 'border-brand/30 bg-brand/10 text-brand dark:border-brand/40 dark:bg-brand/15 dark:text-brand-light'
+                                  : 'border-slate-200 bg-white text-slate-600 hover:border-brand/30 hover:text-brand dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300',
+                              )}
+                            >
+                              {reason}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {selectedNotAdvanceReason === 'otro' ? (
+                        <input
+                          type="text"
+                          value={otherNotAdvanceReason}
+                          onChange={(event) => setOtherNotAdvanceReason(event.target.value)}
+                          placeholder="Si querés, dejá un detalle breve"
+                          className="w-full rounded-[18px] border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-brand/30 focus:ring-2 focus:ring-brand/12 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                        />
+                      ) : null}
+
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={resetNotAdvanceDraft}
+                          disabled={processingFlowAction !== null}
+                          className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-slate-950 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 disabled:cursor-not-allowed disabled:opacity-70"
+                        >
+                          <Icons.X className="h-3.5 w-3.5" />
+                          <span>Seguir por chat</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleNotAdvanceRequest}
+                          disabled={processingFlowAction !== null}
+                          className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-3.5 py-2 text-xs font-semibold text-white transition-colors hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-950 dark:hover:bg-white disabled:cursor-not-allowed disabled:opacity-70"
+                        >
+                          {processingFlowAction === 'not-advance-request' ? <Icons.Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Icons.CheckCircle2 className="h-3.5 w-3.5" />}
+                          <span>{processingFlowAction === 'not-advance-request' ? 'Actualizando...' : 'Confirmar estado'}</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+
                 {guestIntroPrompt ? (
                   <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">
                     {guestIntroPrompt}
                   </p>
+                ) : null}
+
+                {showGuestNoAdvanceActions ? (
+                  <div className="space-y-2">
+                    <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
+                      Cómo seguir
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => navigate('/explore')}
+                        className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 transition-colors hover:border-brand/30 hover:text-brand dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                      >
+                        <Icons.Search className="h-3.5 w-3.5" />
+                        <span>Ver otras opciones</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/detail/${activeConv.property_id}`)}
+                        className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 transition-colors hover:border-brand/30 hover:text-brand dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                      >
+                        <Icons.Calendar className="h-3.5 w-3.5" />
+                        <span>Modificar fechas</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setInputText(noAdvanceNewProposalDraft)}
+                        className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 transition-colors hover:border-brand/30 hover:text-brand dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                      >
+                        <Icons.Send className="h-3.5 w-3.5" />
+                        <span>Enviar nueva propuesta</span>
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setInputText(noAdvanceRescheduleDraft)}
+                      className="text-left text-xs font-medium leading-5 text-slate-500 transition-colors hover:text-brand dark:text-slate-400 dark:hover:text-brand-light"
+                    >
+                      Si preferís, también podés seguir por este chat y recoordinar fechas primero.
+                    </button>
+                  </div>
                 ) : null}
 
                 {hostGuestQuestionSuggestions.length > 0 ? (

@@ -536,6 +536,131 @@ describe('Bookings and availability endpoints', () => {
     expect(res.body.error).toBe('La solicitud venció después de 24 horas sin respuesta. Pedile al huésped que mande una nueva si todavía quiere avanzar.');
   });
 
+  test('POST /api/conversations/:id/not-advance-request marks a protected request as not advanced before any deposit', async () => {
+    queryMock.mockImplementation(async (text: string, params?: unknown[]) => {
+      if (text.includes('FROM conversations c') && text.includes('LEFT JOIN bookings b ON b.id = c.booking_id') && text.includes('WHERE c.id = $1') && text.includes('LIMIT 1') && !text.includes('JOIN users u_tenant')) {
+        return {
+          rows: [
+            {
+              id: 'conv-1',
+              tenant_id: 'tenant-1',
+              host_id: 'host-1',
+              booking_id: 'booking-1',
+              request_mode: 'protected',
+              request_status: 'accepted',
+              request_start_date: '2099-09-20',
+              request_end_date: '2099-09-23',
+              bookingStatus: 'confirmed',
+              effectiveDepositStatus: null,
+            },
+          ],
+        };
+      }
+
+      if (text.includes('UPDATE bookings') && text.includes('cancellation_actor = NULL')) {
+        expect(params).toEqual(['booking-1']);
+        return { rows: [] };
+      }
+
+      if (text.includes('UPDATE conversations') && text.includes("request_status = 'not_advanced'")) {
+        expect(params).toEqual(['No se pudo avanzar con esta reserva.', 'conv-1']);
+        return { rows: [] };
+      }
+
+      if (text.includes('DELETE FROM messages')) {
+        expect(params?.[0]).toBe('conv-1');
+        return { rows: [] };
+      }
+
+      if (text.includes('INSERT INTO messages')) {
+        expect(params?.[1]).toBe('conv-1');
+        expect(params?.[4]).toBe('No se pudo avanzar con esta reserva.');
+        expect(params?.[5]).toBe('request-not-advanced');
+        return { rows: [] };
+      }
+
+      if (text.includes(LOG_ACTIVITY_QUERY_SNIPPET)) {
+        return { rows: [] };
+      }
+
+      if (text.includes('JOIN users u_tenant') && text.includes('WHERE c.id = $1')) {
+        return {
+          rows: [
+            {
+              id: 'conv-1',
+              property_id: 'prop-1',
+              booking_id: 'booking-1',
+              tenant_id: 'tenant-1',
+              host_id: 'host-1',
+              tenantName: 'Lucía',
+              hostName: 'Mariana',
+              propertyTitle: 'Casa del bosque',
+              propertyImage: 'https://example.com/property.jpg',
+              bookingStatus: 'cancelled',
+              startDate: '2099-09-20',
+              endDate: '2099-09-23',
+              guests: 2,
+              totalPrice: 360000,
+              requestMode: 'protected',
+              requestStatus: 'not_advanced',
+              requestStartDate: '2099-09-20',
+              requestEndDate: '2099-09-23',
+              requestGuests: 2,
+              requestTotalPrice: 360000,
+              depositStatus: null,
+              created_at: '2099-09-01T10:00:00.000Z',
+              updated_at: '2099-09-01T10:15:00.000Z',
+            },
+          ],
+        };
+      }
+
+      throw new Error(`Unexpected query: ${text}`);
+    });
+
+    const res = await request(app)
+      .post('/api/conversations/conv-1/not-advance-request')
+      .set('x-test-user-id', 'host-1')
+      .send({ reason: 'no disponible en esas fechas' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.requestStatus).toBe('not_advanced');
+    expect(res.body.bookingStatus).toBe('cancelled');
+    expect(res.body.requestMode).toBe('protected');
+  });
+
+  test('POST /api/conversations/:id/not-advance-request rejects the change once the deposit was reported', async () => {
+    queryMock.mockImplementation(async (text: string) => {
+      if (text.includes('FROM conversations c') && text.includes('LEFT JOIN bookings b ON b.id = c.booking_id') && text.includes('WHERE c.id = $1') && text.includes('LIMIT 1') && !text.includes('JOIN users u_tenant')) {
+        return {
+          rows: [
+            {
+              id: 'conv-1',
+              tenant_id: 'tenant-1',
+              host_id: 'host-1',
+              booking_id: null,
+              request_mode: 'direct',
+              request_status: 'accepted',
+              request_start_date: '2099-09-20',
+              request_end_date: '2099-09-23',
+              bookingStatus: 'confirmed',
+              effectiveDepositStatus: 'reported',
+            },
+          ],
+        };
+      }
+
+      throw new Error(`Unexpected query: ${text}`);
+    });
+
+    const res = await request(app)
+      .post('/api/conversations/conv-1/not-advance-request')
+      .set('x-test-user-id', 'host-1');
+
+    expect(res.status).toBe(422);
+    expect(res.body.error).toBe('La reserva ya avanzó con la seña. Si necesitás frenarla ahora, usá la cancelación correspondiente.');
+  });
+
   test('POST /api/conversations/:id/report-direct-deposit marks a direct deposit as reported', async () => {
     queryMock.mockImplementation(async (text: string, params?: unknown[]) => {
       if (text.includes('FROM conversations c') && text.includes('LEFT JOIN bookings b ON b.id = c.booking_id') && text.includes('WHERE c.id = $1') && text.includes('LIMIT 1') && !text.includes('JOIN users u_tenant')) {

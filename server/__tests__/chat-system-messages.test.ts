@@ -55,6 +55,23 @@ describe('chatSystemMessages', () => {
     expect(messages[4]?.content).toBe('Estás usando la reserva protegida para mayor claridad.');
   });
 
+  test('adds a neutral no-advance system step before any deposit is reported', () => {
+    const messages = getChatSystemMessages({
+      requestMode: 'direct',
+      requestStatus: 'not_advanced',
+      requestStartDate: '2026-06-10',
+      requestEndDate: '2026-06-15',
+      today: '2026-05-20',
+    });
+
+    expect(messages.map((message) => message.key)).toEqual([
+      'conversation-start',
+      'request-sent',
+      'request-not-advanced',
+    ]);
+    expect(messages[2]?.content).toBe('No se pudo avanzar con esta reserva.');
+  });
+
   test('adds post-payment and arrival coordination messages for a direct booking', () => {
     const messages = getChatSystemMessages({
       requestMode: 'direct',

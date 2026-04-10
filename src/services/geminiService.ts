@@ -156,6 +156,13 @@ export async function acceptConversationRequest(conversationId: string): Promise
   });
 }
 
+export async function notAdvanceConversationRequest(conversationId: string, reason?: string): Promise<Conversation> {
+  return apiJson<Conversation>(`/api/conversations/${conversationId}/not-advance-request`, {
+    method: 'POST',
+    body: JSON.stringify({ reason }),
+  });
+}
+
 export async function reportDirectDeposit(conversationId: string): Promise<Conversation> {
   return apiJson<Conversation>(`/api/conversations/${conversationId}/report-direct-deposit`, {
     method: 'POST'

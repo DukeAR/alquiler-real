@@ -133,7 +133,7 @@ export type BookingStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled';
 
 export type ReservationRequestMode = 'direct' | 'protected';
 
-export type ReservationRequestStatus = 'pending' | 'accepted';
+export type ReservationRequestStatus = 'pending' | 'accepted' | 'not_advanced';
 
 export type ReservationDepositStatus = 'reported' | 'confirmed' | 'held' | 'review' | 'pending_confirmation' | 'released' | 'refunded';
 
