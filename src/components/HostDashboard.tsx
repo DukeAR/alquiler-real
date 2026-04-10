@@ -351,7 +351,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
         acceptedMode === 'direct' ? 'Propuesta aceptada' : 'Solicitud aceptada',
         acceptedMode === 'direct'
           ? 'La propuesta quedó aceptada. Seguí por el chat para cerrar la seña.'
-          : 'La solicitud quedó aceptada. Ahora el huésped puede coordinar la seña por fuera o resolverla dentro de la plataforma.',
+          : 'La solicitud quedó aceptada. Ahora el huésped puede resolver la seña acá con claridad o coordinarla por fuera.',
         'success',
       );
     } catch (err) {

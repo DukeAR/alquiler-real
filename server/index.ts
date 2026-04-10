@@ -5302,7 +5302,7 @@ app.post('/api/bookings/:id/select-protected-deposit', async (req, res) => {
     }
 
     if (booking.status !== 'confirmed') {
-      return sendBookingError(res, 422, 'BOOKING_NOT_ACCEPTED', 'Esperá a que el anfitrión acepte la solicitud antes de resolver la seña dentro de la plataforma.');
+      return sendBookingError(res, 422, 'BOOKING_NOT_ACCEPTED', 'Esperá a que el anfitrión acepte la solicitud antes de resolver la seña acá.');
     }
 
     if (booking.depositStatus === 'reported' || booking.depositStatus === 'confirmed') {
@@ -5360,7 +5360,7 @@ app.post('/api/bookings/:id/pay-deposit', async (req, res) => {
     }
 
     if (booking.requestMode !== 'protected' || getEffectiveDepositTypeForRecord(booking) === 'external') {
-      return sendBookingError(res, 422, 'INVALID_PAYMENT_FLOW', 'Primero elegí resolver la seña dentro de la plataforma.');
+      return sendBookingError(res, 422, 'INVALID_PAYMENT_FLOW', 'Primero elegí resolver la seña acá.');
     }
 
     if (booking.status !== 'confirmed') {

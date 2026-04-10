@@ -240,7 +240,7 @@ const BOOKING_STEP_CONFIG: BookingStepConfig[] = [
 const REQUEST_CONFIRMATION_NOTICE: BookingConfirmationNotice = {
   tone: 'info',
   heading: 'La solicitud queda registrada primero',
-  description: 'Si el anfitrión la acepta, vas a poder elegir entre coordinar la seña por fuera sin costo o resolverla dentro de la plataforma con fee visible.',
+  description: 'Si el anfitrión la acepta, vas a poder resolver la seña acá con claridad o coordinarla por fuera. Si la resolvés acá, el fee queda visible antes de confirmar.',
 };
 
 const getHostName = (property: PropertyDetailData) => property.host?.name || property.hostName || 'Anfitrión';
@@ -1396,7 +1396,7 @@ export const PropertyDetailShell: React.FC<{
                             <div>
                               <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Seña</p>
                               <p className="mt-1 font-semibold text-slate-950">La elegís después de la aceptación</p>
-                              <p className="mt-1">Cuando el anfitrión acepte, vas a poder coordinar la seña por fuera sin costo o resolverla dentro de la plataforma con fee visible.</p>
+                              <p className="mt-1">Cuando el anfitrión acepte, vas a poder resolver la seña acá con claridad o coordinarla por fuera. Si la resolvés acá, el fee queda visible antes de confirmar.</p>
                             </div>
                             <span className="rounded-full bg-brand/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-brand">
                               Paso posterior

@@ -382,11 +382,11 @@ describe('HostDashboard', () => {
     });
 
     expect(await screen.findAllByText('Seña por definir')).not.toHaveLength(0);
-    expect(screen.getByText('Ya la aceptaste. Ahora el huésped puede coordinar la seña por fuera o resolverla dentro de la plataforma.')).toBeInTheDocument();
-    expect(screen.getByText('Si elige la opción protegida, la seña queda registrada en la plataforma y el fee aparece antes de confirmar.')).toBeInTheDocument();
+    expect(screen.getByText('Ya la aceptaste. Ahora el huésped puede resolver la seña acá con claridad o coordinarla por fuera.')).toBeInTheDocument();
+    expect(screen.getByText('Si la resuelve acá, la seña queda registrada en la plataforma y el fee aparece antes de confirmar.')).toBeInTheDocument();
     expect(showToastMock).toHaveBeenCalledWith(
       'Solicitud aceptada',
-      'La solicitud quedó aceptada. Ahora el huésped puede coordinar la seña por fuera o resolverla dentro de la plataforma.',
+      'La solicitud quedó aceptada. Ahora el huésped puede resolver la seña acá con claridad o coordinarla por fuera.',
       'success',
     );
   });

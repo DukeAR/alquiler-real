@@ -466,10 +466,11 @@ describe('SecureChat', () => {
 
     renderChat();
 
-    expect(await screen.findByText('Ahora podés elegir cómo resolver la seña.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Resolver la seña dentro de la plataforma/i })).toBeInTheDocument();
+    expect(await screen.findByText('Podés resolver la seña acá para dejar todo claro entre ambos.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Resolver la seña acá con claridad/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Coordinarla por fuera/i })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /Resolver la seña dentro de la plataforma/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Resolver la seña acá con claridad/i }));
 
     await waitFor(() => {
       expect(selectProtectedDepositMock).toHaveBeenCalledWith('booking-1');
@@ -488,6 +489,53 @@ describe('SecureChat', () => {
     expect(screen.getByText('Estado: Seña en custodia')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Confirmar llegada/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Coordinar llegada/i })).toBeInTheDocument();
+  });
+
+  test('keeps a protected return action visible after the guest chooses external coordination', async () => {
+    const arrivalDate = getRelativeArgentinaDate(5);
+    const departureDate = getRelativeArgentinaDate(8);
+
+    useAuthMock.mockReturnValue({ user: { id: 'tenant-1' } });
+    fetchConversationsMock.mockResolvedValue([
+      {
+        ...baseConversation,
+        booking_id: 'booking-external-1',
+        bookingStatus: 'confirmed',
+        requestMode: 'protected',
+        requestStatus: 'accepted',
+        depositType: 'external',
+        depositStatus: 'external_pending',
+        requestStartDate: arrivalDate,
+        requestEndDate: departureDate,
+        requestGuests: 2,
+        requestTotalPrice: 380000,
+      },
+    ]);
+    fetchMessagesMock.mockResolvedValue([]);
+    selectProtectedDepositMock.mockResolvedValue({
+      id: 'booking-external-1',
+      status: 'confirmed',
+      requestMode: 'protected',
+      depositType: 'protected',
+      depositStatus: null,
+    });
+
+    renderChat();
+
+    expect(await screen.findByText('Coordinás directamente con el anfitrión.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Resolver la seña acá con claridad/i })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Resolver la seña acá con claridad/i }));
+
+    await waitFor(() => {
+      expect(selectProtectedDepositMock).toHaveBeenCalledWith('booking-external-1');
+    });
+
+    expect(showToastMock).toHaveBeenCalledWith(
+      'Seña protegida',
+      'La seña queda registrada y se libera cuando confirmás la llegada. El fee ya quedó visible antes de pagar.',
+      'success',
+    );
   });
 
   test('shows the host-specific custody message when the protected deposit is already held', async () => {

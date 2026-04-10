@@ -330,12 +330,19 @@ describe('MyBookings', () => {
     );
 
     expect(await screen.findAllByText('Elegir seña')).not.toHaveLength(0);
-    expect(screen.getByText('El anfitrión ya aceptó. Ahora podés coordinar la seña por fuera sin costo o resolverla dentro de la plataforma.')).toBeInTheDocument();
+    expect(screen.getByText('El anfitrión ya aceptó. Ahora podés resolver la seña acá con claridad o coordinarla por fuera.')).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /Abrir chat/i }).length).toBeGreaterThan(0);
-    expect(screen.getByRole('button', { name: /Coordinar la seña por fuera/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Resolver la seña dentro de la plataforma/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Coordinarla por fuera/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Resolver la seña acá con claridad/i })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /Resolver la seña dentro de la plataforma/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Coordinarla por fuera/i }));
+
+    expect(selectExternalDepositMock).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: /Seguir por fuera/i })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /^Volver$/i }));
+
+    fireEvent.click(screen.getByRole('button', { name: /Resolver la seña acá con claridad/i }));
 
     await waitFor(() => {
       expect(selectProtectedDepositMock).toHaveBeenCalledWith('booking-protected-1');
@@ -361,6 +368,67 @@ describe('MyBookings', () => {
     expect(showToastMock).toHaveBeenCalledWith(
       'Seña en custodia',
       'La seña ya quedó resguardada en la plataforma hasta que confirmes la llegada.',
+      'success',
+    );
+  });
+
+  test('keeps a visible return to protected deposit after external coordination is selected', async () => {
+    mockDashboardApi({
+      bookings: [
+        {
+          id: 'booking-external-1',
+          propertyId: 'property-3',
+          userId: 'user-1',
+          conversationId: 'conv-external-1',
+          status: 'confirmed',
+          requestMode: 'protected',
+          depositType: 'external',
+          depositStatus: 'external_pending',
+          propertyTitle: 'PH con patio interno',
+          location: 'Villa Crespo',
+          startDate: '2026-08-10',
+          endDate: '2026-08-14',
+          guests: 2,
+          totalPrice: 410000,
+          contractAccepted: false,
+        },
+      ],
+    });
+    selectProtectedDepositMock.mockResolvedValue({
+      id: 'booking-external-1',
+      propertyId: 'property-3',
+      userId: 'user-1',
+      conversationId: 'conv-external-1',
+      status: 'confirmed',
+      requestMode: 'protected',
+      depositType: 'protected',
+      depositStatus: null,
+      propertyTitle: 'PH con patio interno',
+      location: 'Villa Crespo',
+      startDate: '2026-08-10',
+      endDate: '2026-08-14',
+      guests: 2,
+      totalPrice: 410000,
+      contractAccepted: false,
+    });
+
+    render(
+      <MemoryRouter>
+        <MyBookings />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('Coordinás directamente con el anfitrión.')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Resolver la seña acá con claridad/i }));
+
+    await waitFor(() => {
+      expect(selectProtectedDepositMock).toHaveBeenCalledWith('booking-external-1');
+    });
+
+    expect(showToastMock).toHaveBeenCalledWith(
+      'Seña protegida',
+      'La seña queda registrada y se libera cuando confirmás la llegada. El fee ya quedó visible antes de pagar.',
       'success',
     );
   });

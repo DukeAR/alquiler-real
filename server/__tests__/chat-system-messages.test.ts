@@ -50,9 +50,32 @@ describe('chatSystemMessages', () => {
       'before-payment',
       'deposit-choice',
     ]);
-    expect(messages[2]?.content).toBe('Ya pueden avanzar con la seña. Podés coordinarla por fuera sin costo o resolverla dentro de la plataforma con fee.');
+    expect(messages[2]?.content).toBe('Ya pueden avanzar con la seña. Podés resolverla acá para dejar todo claro entre ambos o coordinarla por fuera si preferís.');
     expect(messages[3]?.content).toBe('Antes de avanzar con la seña, confirmá que los datos coincidan con el anfitrión del aviso.');
-    expect(messages[4]?.content).toBe('Podés coordinar la seña por fuera sin costo o resolverla dentro de la plataforma con fee de servicio.');
+    expect(messages[4]?.content).toBe('Podés resolver la seña acá para dejar todo claro entre ambos. Si preferís, también podés coordinarla por fuera.');
+  });
+
+  test('adds the external coordination message with a return path to protected deposit', () => {
+    const messages = getChatSystemMessages({
+      requestMode: 'protected',
+      requestStatus: 'accepted',
+      bookingStatus: 'confirmed',
+      depositType: 'external',
+      depositStatus: 'external_pending',
+      requestStartDate: '2026-06-10',
+      requestEndDate: '2026-06-15',
+      bookingStartDate: '2026-06-10',
+      bookingEndDate: '2026-06-15',
+      today: '2026-05-20',
+    });
+
+    expect(messages.map((message) => message.key)).toEqual([
+      'conversation-start',
+      'request-sent',
+      'request-accepted',
+      'external-deposit',
+    ]);
+    expect(messages[3]?.content).toBe('Eligieron coordinar la seña por fuera. Si cambian de idea antes de informarla, todavía pueden resolverla acá.');
   });
 
   test('adds a neutral no-advance system step before any deposit is reported', () => {

@@ -294,10 +294,10 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
         modelLabel,
         statusLabel: viewerRole === 'host' ? 'Seña por definir' : 'Elegir seña',
         description: viewerRole === 'host'
-          ? 'Ya la aceptaste. Ahora el huésped puede coordinar la seña por fuera o resolverla dentro de la plataforma.'
-          : 'El anfitrión ya aceptó. Ahora podés coordinar la seña por fuera sin costo o resolverla dentro de la plataforma.',
+          ? 'Ya la aceptaste. Ahora el huésped puede resolver la seña acá con claridad o coordinarla por fuera.'
+          : 'El anfitrión ya aceptó. Ahora podés resolver la seña acá con claridad o coordinarla por fuera.',
         supportText: viewerRole === 'host'
-          ? 'Si elige la opción protegida, la seña queda registrada en la plataforma y el fee aparece antes de confirmar.'
+          ? 'Si la resuelve acá, la seña queda registrada en la plataforma y el fee aparece antes de confirmar.'
           : 'Si elegís la opción protegida, la seña queda registrada y se libera cuando confirmás la llegada. El fee se muestra antes de confirmar.',
         nextActor: 'guest',
         nextActorLabel: 'Huésped',
@@ -335,10 +335,10 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
         statusLabel: 'Seña externa',
         description: viewerRole === 'host'
           ? 'El huésped eligió coordinar la seña por fuera.'
-          : 'Elegiste coordinar la seña por fuera sin costo.',
+          : 'Elegiste coordinarla por fuera.',
         supportText: viewerRole === 'host'
-          ? 'La plataforma no cobra este paso. Si la reciben, después la pueden dejar asentada por chat.'
-          : 'Podés seguir por chat sin pagar dentro de la plataforma. Si querés dejarlo asentado después, informá la seña por acá.',
+          ? 'La plataforma no cobra este paso. Si cambian de idea antes de informarla, el huésped puede volver a resolverla acá.'
+          : 'Coordinás directamente con el anfitrión. Si cambiás de idea antes de informarla, podés resolver la seña acá para dejar todo claro entre ambos.',
         nextActor: viewerRole === 'guest' ? 'guest' : 'none',
         nextActorLabel: viewerRole === 'guest' ? 'Huésped' : 'Sin acción pendiente',
         nextStepLabel: viewerRole === 'guest' ? 'Seguir por chat' : 'Seguir por chat si hace falta',

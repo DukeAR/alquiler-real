@@ -27,7 +27,7 @@ type InlineThreadNotice = {
   tone?: InlineThreadNoticeTone;
 };
 
-type SystemMessageActionKind = 'report-direct-deposit' | 'pay-protected-deposit' | 'confirm-direct-deposit';
+type SystemMessageActionKind = 'report-direct-deposit' | 'pay-protected-deposit' | 'confirm-direct-deposit' | 'select-protected-deposit';
 
 type ThreadSystemMessagePresentation = {
   content: string;
@@ -574,6 +574,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
   const [sendingMessageId, setSendingMessageId] = useState<string | null>(null);
   const [acceptingRequest, setAcceptingRequest] = useState(false);
   const [processingFlowAction, setProcessingFlowAction] = useState<string | null>(null);
+  const [showExternalDepositChoiceConfirmation, setShowExternalDepositChoiceConfirmation] = useState(false);
   const [showNotAdvanceComposer, setShowNotAdvanceComposer] = useState(false);
   const [selectedNotAdvanceReason, setSelectedNotAdvanceReason] = useState<(typeof NOT_ADVANCE_REASON_OPTIONS)[number] | null>(null);
   const [otherNotAdvanceReason, setOtherNotAdvanceReason] = useState('');
@@ -631,6 +632,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
 
   useEffect(() => {
     resetNotAdvanceDraft();
+    setShowExternalDepositChoiceConfirmation(false);
   }, [activeConv?.id]);
 
   const loadConversations = async () => {
@@ -815,8 +817,9 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
         protectedDepositPricing: booking.protectedDepositPricing,
         depositPaymentReference: booking.depositPaymentReference,
       });
+      setShowExternalDepositChoiceConfirmation(false);
       await loadMessages(activeConv.id);
-      showToast('Seña externa', 'Podés seguir por chat sin pagar dentro de la plataforma. Si después quieren dejarla asentada, informala desde esta conversación.', 'success');
+      showToast('Seña externa', 'Quedó como coordinación por fuera. Si cambiás de idea antes de informarla, podés volver a la seña protegida desde esta conversación.', 'success');
     } catch (err) {
       showToast('Seña', err instanceof Error ? err.message : 'No pudimos registrar esta elección.', 'error');
     } finally {
@@ -841,6 +844,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
         protectedDepositPricing: booking.protectedDepositPricing,
         depositPaymentReference: booking.depositPaymentReference,
       });
+      setShowExternalDepositChoiceConfirmation(false);
       await loadMessages(activeConv.id);
       showToast('Seña protegida', 'La seña queda registrada y se libera cuando confirmás la llegada. El fee ya quedó visible antes de pagar.', 'success');
     } catch (err) {
@@ -1116,6 +1120,13 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
     : null;
   const canChooseExternalDeposit = Boolean(isTenantConversation && flowCopy?.stage === 'deposit-choice' && activeRequestContext?.bookingId);
   const canChooseProtectedDeposit = Boolean(isTenantConversation && flowCopy?.stage === 'deposit-choice' && activeRequestContext?.bookingId);
+  const showDepositChoiceComposer = Boolean(canChooseExternalDeposit || canChooseProtectedDeposit);
+  const canReturnToProtectedDeposit = Boolean(
+    isTenantConversation
+    && activeRequestContext?.bookingId
+    && activeRequestContext.depositType === 'external'
+    && flowCopy?.stage === 'external-deposit-pending',
+  );
   const canReportDirectDeposit = Boolean(
     isTenantConversation
     && (
@@ -1154,6 +1165,13 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
   const arrivalCoordinationDraft = isTenantConversation
     ? '¿Qué horario de llegada te queda mejor?'
     : 'Si querés, definimos ahora el horario de llegada.';
+  const hasInlineComposerActions = Boolean(
+    canAcceptRequest
+    || canNotAdvanceRequest
+    || canConfirmArrival
+    || canReportArrivalProblem
+    || canCoordinateArrival,
+  );
 
   const activeReservationSystemKey = isExpiredPendingRequest
     ? null
@@ -1387,11 +1405,13 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
       return {
         content: isHostConversation
           ? 'El siguiente paso es que el huésped elija cómo resolver la seña.'
-          : 'Ahora podés elegir cómo resolver la seña.',
+          : 'Podés resolver la seña acá para dejar todo claro entre ambos.',
         emphasis: 'card',
-        supplementaryContent: protectedDepositPreview
-          ? `Por fuera: sin pago en la plataforma. Protegida: seña ${currencyFormatter.format(protectedDepositPreview.depositAmount)} + fee ${currencyFormatter.format(protectedDepositPreview.serviceFee)} = ${currencyFormatter.format(protectedDepositPreview.totalCharge)}.`
-          : 'Por fuera: sin pago en la plataforma. Dentro de la plataforma: la seña queda registrada y se libera cuando se confirma la llegada.',
+        supplementaryContent: isHostConversation
+          ? 'La opción protegida deja la seña registrada y la externa sigue por chat, sin esconder ninguna de las dos.'
+          : protectedDepositPreview
+            ? `Acá: seña ${currencyFormatter.format(protectedDepositPreview.depositAmount)} + fee ${currencyFormatter.format(protectedDepositPreview.serviceFee)} = ${currencyFormatter.format(protectedDepositPreview.totalCharge)}. Por fuera: coordinás directo con el anfitrión.`
+            : 'Acá la seña queda registrada. Si preferís coordinarla por fuera, seguís directo por chat con el anfitrión.',
       };
     }
 
@@ -1456,11 +1476,25 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
 
     if (message.system_key === 'external-deposit' && flowCopy?.stage === 'external-deposit-pending') {
       return {
-        content: message.content,
+        content: isHostConversation
+          ? 'El huésped eligió coordinar la seña por fuera.'
+          : 'Coordinás directamente con el anfitrión.',
         emphasis: 'card',
         supplementaryContent: isHostConversation
-          ? 'La plataforma no cobra este paso. Si después reciben la seña, pueden dejarla asentada por acá.'
-          : 'La plataforma no cobra este paso y el chat sigue abierto para que dejen la coordinación por escrito.',
+          ? 'Si cambian de idea antes de informarla, el huésped puede volver a resolverla acá.'
+          : 'Si cambiás de idea antes de informarla, podés resolver la seña acá para dejar todo claro entre ambos.',
+        action: canReturnToProtectedDeposit
+          ? {
+              kind: 'select-protected-deposit',
+              label: 'Resolver la seña acá con claridad',
+              loading: processingFlowAction === 'select-protected-deposit',
+              onClick: () => {
+                if (activeRequestContext?.bookingId) {
+                  void handleSelectProtectedDeposit(activeRequestContext.bookingId);
+                }
+              },
+            }
+          : undefined,
       };
     }
 
@@ -1770,7 +1804,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                       return null;
                     }
 
-                    const ActionIcon = systemMessage.action?.kind === 'pay-protected-deposit'
+                    const ActionIcon = systemMessage.action?.kind === 'pay-protected-deposit' || systemMessage.action?.kind === 'select-protected-deposit'
                       ? Icons.ShieldCheck
                       : systemMessage.action?.kind === 'confirm-direct-deposit'
                         ? Icons.CheckCircle2
@@ -1865,95 +1899,174 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                   </button>
                 </div>
 
-                {canAcceptRequest || canNotAdvanceRequest || canChooseExternalDeposit || canChooseProtectedDeposit || canConfirmArrival || canReportArrivalProblem || canCoordinateArrival ? (
-                  <div className="flex flex-wrap gap-2">
-                    {canAcceptRequest ? (
-                      <button
-                        type="button"
-                        onClick={handleAcceptRequest}
-                        disabled={acceptingRequest || processingFlowAction !== null}
-                        className="inline-flex items-center gap-2 rounded-full bg-brand px-3.5 py-2 text-xs font-semibold text-white shadow-[0_18px_34px_-28px_rgba(67,56,202,0.4)] transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-70"
-                      >
-                        {acceptingRequest ? <Icons.Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Icons.CheckCircle2 className="h-3.5 w-3.5" />}
-                        <span>{activeRequestContext?.mode === 'protected' ? 'Aceptar solicitud' : 'Aceptar propuesta'}</span>
-                      </button>
-                    ) : null}
-                    {canNotAdvanceRequest ? (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (showNotAdvanceComposer) {
-                            resetNotAdvanceDraft();
-                            return;
-                          }
+                {showDepositChoiceComposer || hasInlineComposerActions ? (
+                  <div className="space-y-3">
+                    {showDepositChoiceComposer ? (
+                      <div className="grid gap-3 md:grid-cols-[minmax(0,1.2fr)_minmax(0,0.9fr)]">
+                        <div className="rounded-[24px] border border-brand/15 bg-white/95 p-4 shadow-[0_20px_44px_-34px_rgba(67,56,202,0.34)] dark:border-brand/20 dark:bg-slate-950/90">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="space-y-1.5">
+                              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-brand">Seña protegida</p>
+                              <p className="text-sm font-semibold text-slate-950 dark:text-slate-50">Resolver la seña acá con claridad</p>
+                              <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">La seña queda registrada y se libera cuando confirmás la llegada.</p>
+                            </div>
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-brand/10 text-brand dark:bg-brand/15 dark:text-brand-light">
+                              <Icons.ShieldCheck className="h-5 w-5" />
+                            </div>
+                          </div>
 
-                          setShowNotAdvanceComposer(true);
-                        }}
-                        disabled={acceptingRequest || processingFlowAction !== null}
-                        className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-slate-950 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 disabled:cursor-not-allowed disabled:opacity-70"
-                      >
-                        {processingFlowAction === 'not-advance-request' ? <Icons.Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Icons.X className="h-3.5 w-3.5" />}
-                        <span>{showNotAdvanceComposer ? 'Cerrar' : 'No avanzar con esta reserva'}</span>
-                      </button>
+                          {protectedDepositPreview ? (
+                            <div className="mt-4 grid gap-2 rounded-[20px] border border-brand/10 bg-brand/5 px-4 py-3 text-xs leading-5 text-slate-600 dark:border-brand/15 dark:bg-brand/10 dark:text-slate-300">
+                              <div className="flex items-center justify-between gap-3">
+                                <span>Seña</span>
+                                <span className="font-semibold text-slate-950 dark:text-slate-50">{currencyFormatter.format(protectedDepositPreview.depositAmount)}</span>
+                              </div>
+                              <div className="flex items-center justify-between gap-3">
+                                <span>Fee de servicio</span>
+                                <span>{currencyFormatter.format(protectedDepositPreview.serviceFee)}</span>
+                              </div>
+                              <div className="flex items-center justify-between gap-3 border-t border-brand/10 pt-2 text-slate-950 dark:border-brand/20 dark:text-slate-50">
+                                <span className="font-semibold">Total</span>
+                                <span className="font-semibold">{currencyFormatter.format(protectedDepositPreview.totalCharge)}</span>
+                              </div>
+                            </div>
+                          ) : null}
+
+                          <button
+                            type="button"
+                            onClick={() => activeRequestContext?.bookingId && void handleSelectProtectedDeposit(activeRequestContext.bookingId)}
+                            disabled={processingFlowAction !== null}
+                            className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-[0_18px_34px_-28px_rgba(67,56,202,0.4)] transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-70"
+                          >
+                            {processingFlowAction === 'select-protected-deposit' ? <Icons.Loader2 className="h-4 w-4 animate-spin" /> : <Icons.ShieldCheck className="h-4 w-4" />}
+                            <span>Resolver la seña acá con claridad</span>
+                          </button>
+                        </div>
+
+                        <div className="rounded-[24px] border border-slate-200 bg-white/85 p-4 dark:border-slate-800 dark:bg-slate-950/60">
+                          <div className="space-y-1.5">
+                            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">Seña por fuera</p>
+                            <p className="text-sm font-semibold text-slate-950 dark:text-slate-50">Coordinarla por fuera</p>
+                            <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">Coordinás directamente con el anfitrión.</p>
+                          </div>
+
+                          {showExternalDepositChoiceConfirmation ? (
+                            <div className="mt-4 rounded-[20px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-300">
+                              <div className="space-y-2">
+                                <p className="inline-flex items-start gap-2 leading-6">
+                                  <Icons.MessageSquare className="mt-0.5 h-4 w-4 shrink-0 text-slate-400 dark:text-slate-500" />
+                                  La coordinás por chat con el anfitrión y seguís por fuera de la plataforma.
+                                </p>
+                                <p className="inline-flex items-start gap-2 leading-6">
+                                  <Icons.ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
+                                  Si cambiás de idea antes de informarla, podés volver a resolverla acá.
+                                </p>
+                              </div>
+
+                              <div className="mt-4 flex flex-wrap gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => setShowExternalDepositChoiceConfirmation(false)}
+                                  disabled={processingFlowAction !== null}
+                                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-slate-950 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 disabled:cursor-not-allowed disabled:opacity-70"
+                                >
+                                  <span>Volver</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => activeRequestContext?.bookingId && void handleSelectExternalDeposit(activeRequestContext.bookingId)}
+                                  disabled={processingFlowAction !== null}
+                                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-slate-950 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 disabled:cursor-not-allowed disabled:opacity-70"
+                                >
+                                  {processingFlowAction === 'select-external-deposit' ? <Icons.Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Icons.MessageSquare className="h-3.5 w-3.5" />}
+                                  <span>Seguir por fuera</span>
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setShowExternalDepositChoiceConfirmation(true)}
+                              disabled={processingFlowAction !== null}
+                              className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-slate-950 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 disabled:cursor-not-allowed disabled:opacity-70"
+                            >
+                              <Icons.MessageSquare className="h-4 w-4" />
+                              <span>Coordinarla por fuera</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     ) : null}
-                    {canChooseExternalDeposit ? (
-                      <button
-                        type="button"
-                        onClick={() => activeRequestContext?.bookingId && void handleSelectExternalDeposit(activeRequestContext.bookingId)}
-                        disabled={processingFlowAction !== null}
-                        className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-slate-950 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 disabled:cursor-not-allowed disabled:opacity-70"
-                      >
-                        {processingFlowAction === 'select-external-deposit' ? <Icons.Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Icons.MessageSquare className="h-3.5 w-3.5" />}
-                        <span>Coordinar la seña por fuera</span>
-                      </button>
-                    ) : null}
-                    {canChooseProtectedDeposit ? (
-                      <button
-                        type="button"
-                        onClick={() => activeRequestContext?.bookingId && void handleSelectProtectedDeposit(activeRequestContext.bookingId)}
-                        disabled={processingFlowAction !== null}
-                        className="inline-flex items-center gap-2 rounded-full bg-brand px-3.5 py-2 text-xs font-semibold text-white shadow-[0_18px_34px_-28px_rgba(67,56,202,0.4)] transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-70"
-                      >
-                        {processingFlowAction === 'select-protected-deposit' ? <Icons.Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Icons.ShieldCheck className="h-3.5 w-3.5" />}
-                        <span>Resolver la seña dentro de la plataforma</span>
-                      </button>
-                    ) : null}
-                    {canConfirmArrival ? (
-                      <button
-                        type="button"
-                        onClick={() => activeRequestContext?.bookingId && void handleConfirmArrival(activeRequestContext.bookingId)}
-                        disabled={processingFlowAction !== null}
-                        className="inline-flex items-center gap-2 rounded-full bg-brand px-3.5 py-2 text-xs font-semibold text-white shadow-[0_18px_34px_-28px_rgba(67,56,202,0.4)] transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-70"
-                      >
-                        {processingFlowAction === 'confirm-arrival' ? <Icons.Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Icons.CheckCircle2 className="h-3.5 w-3.5" />}
-                        <span>{processingFlowAction === 'confirm-arrival' ? 'Confirmando...' : flowCopy?.primaryActionLabel}</span>
-                      </button>
-                    ) : null}
-                    {canReportArrivalProblem ? (
-                      <button
-                        type="button"
-                        onClick={() => activeRequestContext?.bookingId && void handleReportArrivalProblem(activeRequestContext.bookingId)}
-                        disabled={processingFlowAction !== null}
-                        className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 transition-colors hover:border-brand/30 hover:text-brand dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 disabled:cursor-not-allowed disabled:opacity-70"
-                      >
-                        {processingFlowAction === 'report-arrival-problem' ? <Icons.Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Icons.AlertTriangle className="h-3.5 w-3.5" />}
-                        <span>{processingFlowAction === 'report-arrival-problem' ? 'Informando...' : flowCopy?.secondaryActionLabel}</span>
-                      </button>
-                    ) : null}
-                    {canCoordinateArrival ? (
-                      <button
-                        type="button"
-                        onClick={() => setInputText(arrivalCoordinationDraft)}
-                        className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 transition-colors hover:border-brand/30 hover:text-brand dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
-                      >
-                        <Icons.Calendar className="h-3.5 w-3.5" />
-                        <span>Coordinar llegada</span>
-                      </button>
+
+                    {hasInlineComposerActions ? (
+                      <div className="flex flex-wrap gap-2">
+                        {canAcceptRequest ? (
+                          <button
+                            type="button"
+                            onClick={handleAcceptRequest}
+                            disabled={acceptingRequest || processingFlowAction !== null}
+                            className="inline-flex items-center gap-2 rounded-full bg-brand px-3.5 py-2 text-xs font-semibold text-white shadow-[0_18px_34px_-28px_rgba(67,56,202,0.4)] transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-70"
+                          >
+                            {acceptingRequest ? <Icons.Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Icons.CheckCircle2 className="h-3.5 w-3.5" />}
+                            <span>{activeRequestContext?.mode === 'protected' ? 'Aceptar solicitud' : 'Aceptar propuesta'}</span>
+                          </button>
+                        ) : null}
+                        {canNotAdvanceRequest ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (showNotAdvanceComposer) {
+                                resetNotAdvanceDraft();
+                                return;
+                              }
+
+                              setShowNotAdvanceComposer(true);
+                            }}
+                            disabled={acceptingRequest || processingFlowAction !== null}
+                            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-slate-950 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 disabled:cursor-not-allowed disabled:opacity-70"
+                          >
+                            {processingFlowAction === 'not-advance-request' ? <Icons.Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Icons.X className="h-3.5 w-3.5" />}
+                            <span>{showNotAdvanceComposer ? 'Cerrar' : 'No avanzar con esta reserva'}</span>
+                          </button>
+                        ) : null}
+                        {canConfirmArrival ? (
+                          <button
+                            type="button"
+                            onClick={() => activeRequestContext?.bookingId && void handleConfirmArrival(activeRequestContext.bookingId)}
+                            disabled={processingFlowAction !== null}
+                            className="inline-flex items-center gap-2 rounded-full bg-brand px-3.5 py-2 text-xs font-semibold text-white shadow-[0_18px_34px_-28px_rgba(67,56,202,0.4)] transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-70"
+                          >
+                            {processingFlowAction === 'confirm-arrival' ? <Icons.Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Icons.CheckCircle2 className="h-3.5 w-3.5" />}
+                            <span>{processingFlowAction === 'confirm-arrival' ? 'Confirmando...' : flowCopy?.primaryActionLabel}</span>
+                          </button>
+                        ) : null}
+                        {canReportArrivalProblem ? (
+                          <button
+                            type="button"
+                            onClick={() => activeRequestContext?.bookingId && void handleReportArrivalProblem(activeRequestContext.bookingId)}
+                            disabled={processingFlowAction !== null}
+                            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 transition-colors hover:border-brand/30 hover:text-brand dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 disabled:cursor-not-allowed disabled:opacity-70"
+                          >
+                            {processingFlowAction === 'report-arrival-problem' ? <Icons.Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Icons.AlertTriangle className="h-3.5 w-3.5" />}
+                            <span>{processingFlowAction === 'report-arrival-problem' ? 'Informando...' : flowCopy?.secondaryActionLabel}</span>
+                          </button>
+                        ) : null}
+                        {canCoordinateArrival ? (
+                          <button
+                            type="button"
+                            onClick={() => setInputText(arrivalCoordinationDraft)}
+                            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 transition-colors hover:border-brand/30 hover:text-brand dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                          >
+                            <Icons.Calendar className="h-3.5 w-3.5" />
+                            <span>Coordinar llegada</span>
+                          </button>
+                        ) : null}
+                      </div>
                     ) : null}
                   </div>
                 ) : null}
 
-                {(flowCopy?.stage === 'deposit-choice' || flowCopy?.stage === 'request-accepted') && protectedDepositPreview ? (
+                {flowCopy?.stage === 'request-accepted' && protectedDepositPreview ? (
                   <div className="rounded-[24px] border border-brand/15 bg-brand/5 px-4 py-4 text-sm text-slate-700 dark:border-brand/20 dark:bg-brand/10 dark:text-slate-200">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>

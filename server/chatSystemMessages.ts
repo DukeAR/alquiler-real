@@ -48,9 +48,9 @@ export const CHAT_SYSTEM_MESSAGE_COPY: Record<ChatSystemMessageKey, string> = {
   'request-not-advanced': 'No se pudo avanzar con esta reserva.',
   'request-accepted': 'La otra parte aceptó avanzar.',
   'before-payment': 'Antes de avanzar con la seña, confirmá que los datos coincidan con el anfitrión del aviso.',
-  'deposit-choice': 'Podés coordinar la seña por fuera sin costo o resolverla dentro de la plataforma con fee de servicio.',
+  'deposit-choice': 'Podés resolver la seña acá para dejar todo claro entre ambos. Si preferís, también podés coordinarla por fuera.',
   'protected-payment': 'Si elegís la seña protegida, queda registrada y se libera cuando se confirme la llegada.',
-  'external-deposit': 'Eligieron coordinar la seña por fuera. La plataforma no cobra este paso y el chat sigue abierto para dejarlo claro.',
+  'external-deposit': 'Eligieron coordinar la seña por fuera. Si cambian de idea antes de informarla, todavía pueden resolverla acá.',
   'direct-after-payment': 'La seña ya quedó informada y el siguiente paso depende de la otra parte.',
   'protected-after-payment': 'La reserva protegida sigue avanzando y la seña cambia de estado según la llegada.',
   'before-arrival': 'Coordiná horario y detalles con el anfitrión antes de llegar.',
@@ -141,7 +141,7 @@ export const getRequestSentMessage = (mode: ReservationRequestMode) => (
 
 export const getRequestAcceptedMessage = (mode: ReservationRequestMode, depositType?: ReservationDepositType | null) => {
   if (mode === 'protected' && depositType !== 'protected') {
-    return 'Ya pueden avanzar con la seña. Podés coordinarla por fuera sin costo o resolverla dentro de la plataforma con fee.';
+    return 'Ya pueden avanzar con la seña. Podés resolverla acá para dejar todo claro entre ambos o coordinarla por fuera si preferís.';
   }
 
   if (mode === 'protected') {
