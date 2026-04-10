@@ -11,6 +11,7 @@ import { mapPropertyRecord } from './propertySerializer';
 import { buildGuestVerification } from './guestVerification';
 import { buildHostTrust } from './hostTrust';
 import { buildGuestInteractionHistory, buildHostInteractionHistory } from './interactionHistory';
+import { evaluateInternalRisk, getInternalRiskDecision, type InternalRiskAction } from './internalRisk';
 import { REAL_VERIFICATION_FILTER_MIN_SCORE } from './propertyVerification';
 import { getChatSystemMessages, getRequestAcceptedMessage, getRequestNotAdvancedMessage, type ChatSystemMessageKey } from './chatSystemMessages';
 import { buildGuestProfileCompletion } from '../src/lib/guestVerification';
@@ -595,20 +596,26 @@ const mapActivityLogToNotification = (row: any) => {
 
 // Chat Filter Middleware
 const filterChatMiddleware = async (req: any, res: any, next: any) => {
-  const { text } = req.body;
-  if (!text) return next();
+  const rawMessage = typeof req.body?.text === 'string'
+    ? req.body.text
+    : typeof req.body?.content === 'string'
+      ? req.body.content
+      : typeof req.body?.message === 'string'
+        ? req.body.message
+        : '';
+
+  if (!rawMessage) return next();
 
   const phoneRegex = /(\+?\d{1,4}[\s.-]?)?(\(?\d{3}\)?[\s.-]?)?\d{3}[\s.-]?\d{4}/g;
   const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
   const linkRegex = /(https?:\/\/[^\s]+)|(www\.[^\s]+)/g;
 
-  if (phoneRegex.test(text) || emailRegex.test(text) || linkRegex.test(text)) {
+  if (phoneRegex.test(rawMessage) || emailRegex.test(rawMessage) || linkRegex.test(rawMessage)) {
     const userId = req.session.userId;
-    await logActivity(userId || 'anonymous', 'SUSPICIOUS_MESSAGE_BLOCKED', { text }, req.ip);
-    
-    // Increment risk_score for suspicious behavior
+    await logActivity(userId || 'anonymous', 'SUSPICIOUS_MESSAGE_BLOCKED', { text: rawMessage }, req.ip);
+
     if (userId) {
-      await db.query(`UPDATE users SET risk_score = risk_score + 10 WHERE id = $1`, [userId]);
+      await evaluateInternalRisk(userId);
     }
 
     return res.status(403).json({ 
@@ -635,16 +642,13 @@ app.post('/api/reports', async (req, res) => {
       [id, reported_user_id, reporterId, reason, description]
     );
 
-    // Increment risk_score of reported user
-    await db.query(`UPDATE users SET risk_score = risk_score + 15 WHERE id = $1`, [reported_user_id]);
+    const evaluation = await evaluateInternalRisk(reported_user_id);
 
-    // Check for critical risk
-    const userRes = await db.query(`SELECT risk_score FROM users WHERE id = $1`, [reported_user_id]);
-    if (userRes.rows[0]?.risk_score >= 80) {
-      // Auto-block if risk is critical
-      await db.query(`UPDATE users SET role = 'blocked' WHERE id = $1`, [reported_user_id]);
-      await db.query(`UPDATE properties SET status = 'inactive' WHERE "hostId" = $1`, [reported_user_id]);
-      await logActivity('system', 'AUTO_BLOCK_CRITICAL_RISK', { userId: reported_user_id });
+    if (evaluation?.snapshot.manualReviewRequired) {
+      await logActivity('system', 'RISK_MANUAL_REVIEW_REQUIRED', {
+        userId: reported_user_id,
+        source: 'report',
+      });
     }
 
     res.json({ success: true, message: 'Recibimos tu reporte. Lo vamos a revisar.' });
@@ -669,41 +673,31 @@ app.post('/api/chat/analyze', filterChatMiddleware, async (req, res) => {
 });
 
 // Helper for Risk Check
-const checkUserRisk = async (userId: string) => {
-  const res = await db.query(
-    `SELECT risk_score,
-            role,
-            phone,
-            bio,
-            zone,
-            profile_photo as "profilePhoto",
-            total_reviews as "totalReviews",
-            (COALESCE(email_verified, FALSE) OR COALESCE(is_email_verified, FALSE)) as "emailVerified",
-            (COALESCE(phone_verified, FALSE) OR COALESCE(is_phone_verified, FALSE)) as "phoneVerified",
-            (COALESCE(identity_validated, FALSE) OR COALESCE(is_identity_verified, FALSE)) as "documentaryVerified"
-     FROM users
-     WHERE id = $1`,
-    [userId],
-  );
-  const user = res.rows[0];
-  if (!user) return { blocked: true, reason: 'No encontramos esa cuenta.' };
-  if (user.role === 'blocked') return { blocked: true, reason: 'Bloqueamos tu cuenta por seguridad. Si creés que es un error, contactanos.' };
-  if (user.risk_score >= 80) return { blocked: true, reason: 'Detectamos actividad inusual y estamos revisando tu cuenta.' };
+const checkUserRisk = async (userId: string, action: InternalRiskAction) => {
+  const decision = await getInternalRiskDecision(userId, action);
+
+  if (decision.blocked || !decision.evaluation) {
+    return {
+      blocked: true,
+      reason: decision.reason || 'No pudimos validar esta acción.',
+    };
+  }
 
   const verificationStatus = buildUserVerificationStatus({
-    emailVerified: user.emailVerified,
-    phoneVerified: user.phoneVerified,
-    phone: user.phone,
-    bio: user.bio,
-    zone: user.zone,
-    profilePhoto: user.profilePhoto,
-    totalReviewsReceived: user.totalReviews,
-    documentaryVerified: user.documentaryVerified,
+    emailVerified: decision.evaluation.userContext.emailVerified,
+    phoneVerified: decision.evaluation.userContext.phoneVerified,
+    phone: decision.evaluation.userContext.phone,
+    bio: decision.evaluation.userContext.bio,
+    zone: decision.evaluation.userContext.zone,
+    profilePhoto: decision.evaluation.userContext.profilePhoto,
+    totalReviewsReceived: decision.evaluation.userContext.totalReviews,
+    documentaryVerified: decision.evaluation.userContext.documentaryVerified,
   });
 
   return {
     blocked: false,
-    riskScore: user.risk_score,
+    riskScore: decision.evaluation.snapshot.riskScore,
+    trustScore: decision.evaluation.snapshot.trustScore,
     isVerified: verificationStatus.highValueBookingEligible,
     verificationLevel: verificationStatus.levelNumber,
   };
@@ -715,8 +709,6 @@ const AUTH_USER_SELECT = `id, email, role, is_host as "isHost", active_mode as "
         profile_photo as "profilePhoto",
         rating,
         total_reviews as "totalReviews",
-        trust_score as "trustScore",
-        risk_score as "riskScore",
         host_rating as "hostRating",
         total_properties as "totalProperties",
         total_bookings_hosted as "totalBookingsHosted",
@@ -1193,6 +1185,8 @@ app.put('/api/auth/profile', async (req, res) => {
       return res.status(404).json({ error: 'No encontramos esa cuenta.' });
     }
 
+    await evaluateInternalRisk(req.session.userId);
+
     res.json({ user });
   } catch (err) {
     res.status(500).json({ error: 'No pudimos guardar tu perfil. Intentá de nuevo.' });
@@ -1262,6 +1256,8 @@ app.post('/api/verification/validate-id', memoryUpload.single('idImage'), async 
       await markPremiumOrderState(premiumAccess.order.id, 'in_progress');
     }
 
+    await evaluateInternalRisk(req.session.userId);
+
     res.json({ success: true });
   } catch (err) {
     console.error('Error en validate-id:', err);
@@ -1313,6 +1309,8 @@ app.post('/api/verification/complete', async (req, res) => {
     }
 
     await logActivity(req.session.userId, 'IDENTITY_VERIFIED');
+
+    await evaluateInternalRisk(req.session.userId);
 
     res.json({ user: nextUser });
   } catch (err) {
@@ -1380,6 +1378,8 @@ app.post('/api/verification/submit', async (req, res) => {
     }
 
     await logActivity(req.session.userId, 'IDENTITY_DOCUMENTS_SUBMITTED', { hasProofOfAddress });
+
+    await evaluateInternalRisk(req.session.userId);
 
     res.json({ user });
   } catch (err) {
@@ -1767,6 +1767,7 @@ app.post('/api/verification/confirm-contact', async (req, res) => {
     );
 
     await logActivity(req.session.userId, field === 'email' ? 'EMAIL_CONFIRMED' : 'PHONE_CONFIRMED');
+    await evaluateInternalRisk(req.session.userId);
 
     const nextUser = await getAuthUserById(req.session.userId);
     res.json({ user: nextUser });
@@ -2042,7 +2043,6 @@ const getHostProfileData = async (hostId: string) => {
               email_verified as "emailVerified",
               identity_validated as "identityValidated",
               member_since as "memberSince",
-              risk_score as "riskScore",
               role,
               is_host as "isHost",
               total_properties as "totalProperties"
@@ -2201,7 +2201,6 @@ const getHostProfileData = async (hostId: string) => {
       videoValidationCount: properties.filter((property) => !!property.materialVerified || !!property.videoValidated).length,
     },
     alerts,
-    riskScore: toSafeNumber(host.riskScore),
   };
 };
 
@@ -2382,7 +2381,7 @@ app.get('/api/host/dashboard', async (req, res) => {
   try {
     const [statsResult, propertiesResult, recentBookingsResult, totalsResult, contactedGuestsResult, premiumPropertyOrders, promotionalUsageRows] = await Promise.all([
       db.query(
-        `SELECT host_rating, host_verified, trust_score, badge
+        `SELECT host_rating, host_verified, badge
          FROM users
          WHERE id = $1`,
         [req.session.userId],
@@ -2468,8 +2467,6 @@ app.get('/api/host/dashboard', async (req, res) => {
            SELECT DISTINCT ON (guest.id)
                   guest.id,
                   guest.name,
-                  guest.trust_score,
-                  guest.risk_score,
                   b.created_at
            FROM bookings b
            JOIN properties p ON p.id = b."propertyId"
@@ -2638,7 +2635,6 @@ app.get('/api/host/dashboard', async (req, res) => {
         total_properties: hostProperties.length,
         total_bookings_hosted: toSafeNumber(totals.total_bookings_hosted),
         host_verified: !!stats.host_verified,
-        trust_score: toSafeNumber(stats.trust_score),
         badge: stats.badge || 'Nuevo usuario',
       },
       properties: hostProperties,
@@ -2660,8 +2656,6 @@ app.get('/api/host/dashboard', async (req, res) => {
         return {
           id: guest.id,
           name: guest.name || 'Huesped',
-          score: toSafeNumber(guest.trust_score),
-          risk: toSafeNumber(guest.risk_score) >= 40 ? 'high' : toSafeNumber(guest.risk_score) >= 20 ? 'medium' : 'low',
           ...(guestProfile ? { guestProfile } : {}),
         };
       }),
@@ -2675,7 +2669,7 @@ app.get('/api/host/dashboard', async (req, res) => {
 app.post('/api/properties', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: AUTH_REQUIRED_ERROR });
   
-  const risk = await checkUserRisk(req.session.userId);
+  const risk = await checkUserRisk(req.session.userId, 'publish_property');
   if (risk.blocked) return res.status(403).json({ error: risk.reason });
 
   const { title, location, price, description, imageUrl, lat, lng, maxGuests, bedrooms, bathrooms, propertyType } = req.body;
@@ -2789,6 +2783,7 @@ app.get('/api/properties', async (req, res) => {
       FROM properties p
       ${PROPERTY_HOST_TRUST_JOINS}
       WHERE status = 'active'
+        AND COALESCE(u.internal_manual_review_required, FALSE) = FALSE
     `;
 
     const params: any[] = [];
@@ -2801,7 +2796,7 @@ app.get('/api/properties', async (req, res) => {
       query += ` AND (p.location ILIKE $${params.length} OR p.title ILIKE $${params.length})`; 
     }
 
-    query += ` ORDER BY p.rating DESC NULLS LAST`;
+    query += ` ORDER BY COALESCE(u.internal_visibility_penalty, 0) ASC, p.rating DESC NULLS LAST`;
 
     const result = await db.query(query, params);
     
@@ -2895,7 +2890,8 @@ app.get('/api/properties/:id', async (req, res) => {
               ${PROPERTY_HOST_TRUST_SELECT}
        FROM properties p
        ${PROPERTY_HOST_TRUST_JOINS}
-       WHERE p.id = $1`,
+       WHERE p.id = $1
+         AND COALESCE(u.internal_manual_review_required, FALSE) = FALSE`,
       [req.params.id]
     );
     if (result.rows.length === 0) return res.status(404).json({ error: 'No encontramos esa propiedad.' });
@@ -3604,7 +3600,7 @@ app.post('/api/bookings', async (req, res) => {
   const requestMode = req.body?.requestMode === 'protected' ? 'protected' : 'direct';
   const bookingStatus = requestMode === 'protected' ? 'pending' : 'confirmed';
 
-  const risk = await checkUserRisk(userId);
+  const risk = await checkUserRisk(userId, 'create_booking');
   if (risk.blocked) {
     return sendBookingError(res, 403, 'BOOKING_BLOCKED', risk.reason || 'No pudimos validar tu cuenta para reservar.');
   }
@@ -3856,6 +3852,7 @@ app.post('/api/bookings/:id/cancel', async (req, res) => {
     await syncConversationDepositStatus(req.params.id, nextDepositStatus);
 
     await logActivity(userId, 'BOOKING_CANCELLED', { bookingId: req.params.id, propertyId: booking.propertyId });
+    await evaluateInternalRisk(userId);
 
     const updatedBooking = await getUserBookingById(userId, req.params.id);
     res.json({ booking: updatedBooking });
@@ -3906,6 +3903,7 @@ app.post('/api/bookings/:id/cancel-as-host', async (req, res) => {
     await syncConversationDepositStatus(req.params.id, nextDepositStatus);
 
     await logActivity(booking.userId, 'BOOKING_CANCELLED', { bookingId: req.params.id, propertyId: booking.propertyId });
+    await evaluateInternalRisk(userId);
 
     const updatedBooking = await getHostBookingById(userId, req.params.id);
     return res.json({ booking: updatedBooking });
@@ -4083,6 +4081,11 @@ app.post('/api/messages', filterChatMiddleware, async (req, res) => {
   if (!userId) return res.status(401).json({ error: AUTH_REQUIRED_ERROR });
 
   const { conversation_id, content, receiver_id } = req.body;
+
+  const risk = await checkUserRisk(userId, 'send_message');
+  if (risk.blocked) {
+    return res.status(403).json({ error: risk.reason || 'No pudimos validar esta acción.' });
+  }
   
   try {
     const id = `msg_${Date.now()}`;
@@ -4127,6 +4130,11 @@ app.post('/api/conversations', async (req, res) => {
 
   if (!propertyId) {
     return res.status(400).json({ error: 'Elegí la propiedad antes de abrir el chat.' });
+  }
+
+  const risk = await checkUserRisk(userId, 'start_conversation');
+  if (risk.blocked) {
+    return res.status(403).json({ error: risk.reason || 'No pudimos validar esta acción.' });
   }
 
   try {
@@ -4917,6 +4925,7 @@ app.get('/api/favorites', async (req, res) => {
        JOIN properties p ON p.id = f.property_id
        ${PROPERTY_HOST_TRUST_JOINS}
        WHERE f.user_id = $1
+         AND COALESCE(u.internal_manual_review_required, FALSE) = FALSE
        ORDER BY f.created_at DESC`,
       [userId]
     );

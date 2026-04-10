@@ -174,10 +174,9 @@ describe('Properties endpoints', () => {
 
   test('POST /api/properties publishes the first property without forcing prior identity verification', async () => {
     queryMock.mockImplementation(async (text: string) => {
-      if (text.includes('SELECT risk_score,') && text.includes('profile_photo as "profilePhoto"')) {
+      if (text.includes('COALESCE(report_stats.total_reports') && text.includes('profile_photo as "profilePhoto"')) {
         return {
           rows: [{
-            risk_score: 0,
             role: 'tenant',
             phone: null,
             bio: null,
@@ -187,8 +186,25 @@ describe('Properties endpoints', () => {
             emailVerified: false,
             phoneVerified: false,
             documentaryVerified: false,
+            identityVerificationStatus: 'unverified',
+            reportsCount: 0,
+            pendingReportsCount: 0,
+            guestCancellationsCount: 0,
+            hostCancellationsCount: 0,
+            blockedMessagesCount: 0,
+            notAdvancedRequestsCount: 0,
+            phoneMatchesCount: 0,
+            dniMatchesCount: 0,
           }],
         };
+      }
+
+      if (text.includes('JOIN messages m ON m.conversation_id = c.id')) {
+        return { rows: [] };
+      }
+
+      if (text.includes('UPDATE users') && text.includes('internal_trust_score')) {
+        return { rows: [] };
       }
 
       if (text.includes('INSERT INTO properties')) {
@@ -246,8 +262,11 @@ describe('Properties endpoints', () => {
       property_type: 'house',
       status: 'active',
     });
-    expect(queryMock).toHaveBeenCalledTimes(3);
-    expect(queryMock.mock.calls[1]?.[0]).toContain('INSERT INTO properties');
-    expect(queryMock.mock.calls[2]?.[0]).toContain('UPDATE users');
+    expect(queryMock).toHaveBeenCalledTimes(5);
+    expect(queryMock.mock.calls[0]?.[0]).toContain('COALESCE(report_stats.total_reports');
+    expect(queryMock.mock.calls[1]?.[0]).toContain('JOIN messages m ON m.conversation_id = c.id');
+    expect(queryMock.mock.calls[2]?.[0]).toContain('internal_trust_score');
+    expect(queryMock.mock.calls[3]?.[0]).toContain('INSERT INTO properties');
+    expect(queryMock.mock.calls[4]?.[0]).toContain('total_properties = total_properties + 1');
   });
 });

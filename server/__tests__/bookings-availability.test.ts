@@ -51,6 +51,36 @@ const getDateInArgentina = (offsetDays: number) => {
   return `${year}-${month}-${day}`;
 };
 
+const matchesInternalRiskProfileQuery = (text: string) => (
+  text.includes('COALESCE(report_stats.total_reports') && text.includes('profile_photo as "profilePhoto"')
+);
+
+const matchesInternalRiskResponseQuery = (text: string) => (
+  text.includes('JOIN messages m ON m.conversation_id = c.id') && text.includes('WHERE c.host_id = $1 OR c.tenant_id = $1')
+);
+
+const buildInternalRiskRow = (overrides: Record<string, unknown> = {}) => ({
+  role: 'tenant',
+  phone: null,
+  bio: null,
+  zone: null,
+  profilePhoto: null,
+  totalReviews: 0,
+  emailVerified: false,
+  phoneVerified: false,
+  documentaryVerified: false,
+  identityVerificationStatus: 'unverified',
+  reportsCount: 0,
+  pendingReportsCount: 0,
+  guestCancellationsCount: 0,
+  hostCancellationsCount: 0,
+  blockedMessagesCount: 0,
+  notAdvancedRequestsCount: 0,
+  phoneMatchesCount: 0,
+  dniMatchesCount: 0,
+  ...overrides,
+});
+
 describe('Bookings and availability endpoints', () => {
   beforeEach(() => {
     queryMock.mockReset();
@@ -66,21 +96,24 @@ describe('Bookings and availability endpoints', () => {
     });
 
     queryMock.mockImplementation(async (text: string) => {
-      if (text.includes('SELECT risk_score,') && text.includes('profile_photo as "profilePhoto"')) {
-        return {
-          rows: [{
-            risk_score: 10,
-            role: 'tenant',
-            phone: '+5491122334455',
-            bio: 'Perfil activo para reservar.',
-            zone: 'Pinamar',
-            profilePhoto: 'https://example.com/avatar.jpg',
-            totalReviews: 1,
-            emailVerified: true,
-            phoneVerified: true,
-            documentaryVerified: false,
-          }],
-        };
+      if (matchesInternalRiskProfileQuery(text)) {
+        return { rows: [buildInternalRiskRow({
+          phone: '+5491122334455',
+          bio: 'Perfil activo para reservar.',
+          zone: 'Pinamar',
+          profilePhoto: 'https://example.com/avatar.jpg',
+          totalReviews: 1,
+          emailVerified: true,
+          phoneVerified: true,
+        })] };
+      }
+
+      if (matchesInternalRiskResponseQuery(text)) {
+        return { rows: [] };
+      }
+
+      if (text.includes('UPDATE users') && text.includes('internal_trust_score')) {
+        return { rows: [] };
       }
 
       if (text.includes(LOG_ACTIVITY_QUERY_SNIPPET)) {
@@ -167,6 +200,18 @@ describe('Bookings and availability endpoints', () => {
 
   test('POST /api/conversations reuses the property conversation and links the booking id', async () => {
     queryMock.mockImplementation(async (text: string, params?: unknown[]) => {
+      if (matchesInternalRiskProfileQuery(text)) {
+        return { rows: [buildInternalRiskRow()] };
+      }
+
+      if (matchesInternalRiskResponseQuery(text)) {
+        return { rows: [] };
+      }
+
+      if (text.includes('UPDATE users') && text.includes('internal_trust_score')) {
+        return { rows: [] };
+      }
+
       if (text.includes('FROM properties') && text.includes('LIMIT 1')) {
         return { rows: [{ id: 'prop-1', hostId: 'host-1' }] };
       }
@@ -203,6 +248,18 @@ describe('Bookings and availability endpoints', () => {
 
   test('POST /api/conversations resets an accepted conversation when a new direct request starts on the same property', async () => {
     queryMock.mockImplementation(async (text: string, params?: unknown[]) => {
+      if (matchesInternalRiskProfileQuery(text)) {
+        return { rows: [buildInternalRiskRow()] };
+      }
+
+      if (matchesInternalRiskResponseQuery(text)) {
+        return { rows: [] };
+      }
+
+      if (text.includes('UPDATE users') && text.includes('internal_trust_score')) {
+        return { rows: [] };
+      }
+
       if (text.includes('FROM properties') && text.includes('LIMIT 1')) {
         return { rows: [{ id: 'prop-1', hostId: 'host-1' }] };
       }
@@ -1117,6 +1174,18 @@ describe('Bookings and availability endpoints', () => {
     const futureEndDate = getDateInArgentina(10);
 
     queryMock.mockImplementation(async (text: string, params?: unknown[]) => {
+      if (matchesInternalRiskProfileQuery(text)) {
+        return { rows: [buildInternalRiskRow()] };
+      }
+
+      if (matchesInternalRiskResponseQuery(text)) {
+        return { rows: [] };
+      }
+
+      if (text.includes('UPDATE users') && text.includes('internal_trust_score')) {
+        return { rows: [] };
+      }
+
       if (text.includes(BOOKING_LOOKUP_QUERY_SNIPPET) && text.includes('LIMIT 1')) {
         bookingLookupCount += 1;
 
@@ -1176,6 +1245,18 @@ describe('Bookings and availability endpoints', () => {
     const futureEndDate = getDateInArgentina(12);
 
     queryMock.mockImplementation(async (text: string, params?: unknown[]) => {
+      if (matchesInternalRiskProfileQuery(text)) {
+        return { rows: [buildInternalRiskRow()] };
+      }
+
+      if (matchesInternalRiskResponseQuery(text)) {
+        return { rows: [] };
+      }
+
+      if (text.includes('UPDATE users') && text.includes('internal_trust_score')) {
+        return { rows: [] };
+      }
+
       if (text.includes(BOOKING_LOOKUP_QUERY_SNIPPET) && text.includes('WHERE b."userId" = $1 AND b.id = $2')) {
         bookingLookupCount += 1;
 
@@ -1234,6 +1315,18 @@ describe('Bookings and availability endpoints', () => {
     let bookingLookupCount = 0;
 
     queryMock.mockImplementation(async (text: string, params?: unknown[]) => {
+      if (matchesInternalRiskProfileQuery(text)) {
+        return { rows: [buildInternalRiskRow({ role: 'host' })] };
+      }
+
+      if (matchesInternalRiskResponseQuery(text)) {
+        return { rows: [] };
+      }
+
+      if (text.includes('UPDATE users') && text.includes('internal_trust_score')) {
+        return { rows: [] };
+      }
+
       if (text.includes(BOOKING_LOOKUP_QUERY_SNIPPET) && text.includes('WHERE p."hostId" = $1 AND b.id = $2')) {
         bookingLookupCount += 1;
 
@@ -1294,6 +1387,18 @@ describe('Bookings and availability endpoints', () => {
     const departureDate = getDateInArgentina(3);
 
     queryMock.mockImplementation(async (text: string, params?: unknown[]) => {
+      if (matchesInternalRiskProfileQuery(text)) {
+        return { rows: [buildInternalRiskRow()] };
+      }
+
+      if (matchesInternalRiskResponseQuery(text)) {
+        return { rows: [] };
+      }
+
+      if (text.includes('UPDATE users') && text.includes('internal_trust_score')) {
+        return { rows: [] };
+      }
+
       if (text.includes(BOOKING_LOOKUP_QUERY_SNIPPET) && text.includes('WHERE b."userId" = $1 AND b.id = $2')) {
         bookingLookupCount += 1;
 
@@ -1387,6 +1492,18 @@ describe('Bookings and availability endpoints', () => {
     const departureDate = getDateInArgentina(3);
 
     queryMock.mockImplementation(async (text: string, params?: unknown[]) => {
+      if (matchesInternalRiskProfileQuery(text)) {
+        return { rows: [buildInternalRiskRow({ role: 'host' })] };
+      }
+
+      if (matchesInternalRiskResponseQuery(text)) {
+        return { rows: [] };
+      }
+
+      if (text.includes('UPDATE users') && text.includes('internal_trust_score')) {
+        return { rows: [] };
+      }
+
       if (text.includes(BOOKING_LOOKUP_QUERY_SNIPPET) && text.includes('WHERE p."hostId" = $1 AND b.id = $2')) {
         bookingLookupCount += 1;
 

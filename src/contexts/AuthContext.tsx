@@ -25,8 +25,6 @@ export interface User {
     totalProperties?: number;
     totalBookingsHosted?: number;
     badge?: string;
-    trustScore?: number;
-    riskScore?: number;
 }
 
 export interface UpdateProfilePayload {

@@ -589,6 +589,15 @@ export const initDB = async () => {
       BEGIN ALTER TABLE users ADD COLUMN badge TEXT DEFAULT 'Nuevo usuario'; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE users ADD COLUMN trust_score INTEGER DEFAULT 0; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE users ADD COLUMN risk_score INTEGER DEFAULT 0; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE users ADD COLUMN internal_trust_score INTEGER DEFAULT 100; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE users ADD COLUMN internal_risk_flags JSONB DEFAULT '[]'::jsonb; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE users ADD COLUMN internal_behavior_signals JSONB DEFAULT '[]'::jsonb; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE users ADD COLUMN internal_risk_level TEXT DEFAULT 'none'; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE users ADD COLUMN internal_visibility_penalty INTEGER DEFAULT 0; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE users ADD COLUMN internal_requires_additional_verification BOOLEAN DEFAULT FALSE; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE users ADD COLUMN internal_action_limited BOOLEAN DEFAULT FALSE; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE users ADD COLUMN internal_manual_review_required BOOLEAN DEFAULT FALSE; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE users ADD COLUMN internal_risk_updated_at TIMESTAMP; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE users ADD COLUMN is_email_verified BOOLEAN DEFAULT FALSE; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE users ADD COLUMN is_phone_verified BOOLEAN DEFAULT FALSE; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE users ADD COLUMN is_identity_verified BOOLEAN DEFAULT FALSE; EXCEPTION WHEN duplicate_column THEN NULL; END;
@@ -615,6 +624,23 @@ export const initDB = async () => {
       WHEN role = 'host' THEN 'host'
       ELSE 'guest'
     END;
+  `);
+
+  await db.query(`
+    UPDATE users
+    SET internal_trust_score = COALESCE(internal_trust_score, 100),
+        internal_risk_flags = COALESCE(internal_risk_flags, '[]'::jsonb),
+        internal_behavior_signals = COALESCE(internal_behavior_signals, '[]'::jsonb),
+        internal_risk_level = COALESCE(NULLIF(internal_risk_level, ''), 'none'),
+        internal_visibility_penalty = COALESCE(internal_visibility_penalty, 0),
+        internal_requires_additional_verification = COALESCE(internal_requires_additional_verification, FALSE),
+        internal_action_limited = COALESCE(internal_action_limited, FALSE),
+        internal_manual_review_required = COALESCE(internal_manual_review_required, FALSE);
+  `);
+
+  await db.query(`
+    CREATE INDEX IF NOT EXISTS idx_users_internal_visibility
+      ON users (internal_manual_review_required, internal_visibility_penalty);
   `);
 
   // ============================================================

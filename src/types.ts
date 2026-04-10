@@ -292,7 +292,6 @@ export interface TenantProfile {
   status: 'new' | 'active' | 'with_history' | 'with_alerts';
   reviews: TenantReview[];
   hasBehavioralWarnings: boolean;
-  riskScore: number;
 }
 
 export interface HostProfile {
@@ -335,5 +334,4 @@ export interface HostProfile {
   };
 
   alerts: string[];
-  riskScore: number;
 }

@@ -36,8 +36,8 @@ describe('Host dashboard endpoint', () => {
 
   test('GET /api/host/dashboard returns properties enriched with the real verification model', async () => {
     queryMock.mockImplementation(async (text: string) => {
-      if (text.includes('SELECT host_rating, host_verified, trust_score, badge')) {
-        return { rows: [{ host_rating: 4.9, host_verified: true, trust_score: 88, badge: 'Verificado' }] };
+      if (text.includes('SELECT host_rating, host_verified, badge')) {
+        return { rows: [{ host_rating: 4.9, host_verified: true, badge: 'Verificado' }] };
       }
 
       if (text.includes('SELECT DISTINCT ON (property_id)')) {
@@ -120,8 +120,8 @@ describe('Host dashboard endpoint', () => {
 
   test('GET /api/host/dashboard includes guest profiles built from backend data', async () => {
     queryMock.mockImplementation(async (text: string) => {
-      if (text.includes('SELECT host_rating, host_verified, trust_score, badge')) {
-        return { rows: [{ host_rating: 4.8, host_verified: true, trust_score: 84, badge: 'Verificado' }] };
+      if (text.includes('SELECT host_rating, host_verified, badge')) {
+        return { rows: [{ host_rating: 4.8, host_verified: true, badge: 'Verificado' }] };
       }
 
       if (text.includes('SELECT DISTINCT ON (property_id)')) {
@@ -165,8 +165,6 @@ describe('Host dashboard endpoint', () => {
             {
               id: 'guest-1',
               name: 'Marina',
-              trust_score: 82,
-              risk_score: 8,
             },
           ],
         };
