@@ -262,6 +262,47 @@ describe('Properties endpoints', () => {
     expect(res.body[0]).not.toHaveProperty('hostVisibilityBoost');
   });
 
+  test('GET /api/properties/:id/reviews returns property reviews without ambiguous joined columns', async () => {
+    queryMock.mockResolvedValueOnce({
+      rows: [
+        {
+          id: 'review-1',
+          reviewerId: 'guest-1',
+          rating: 5,
+          comment: 'Todo coincidia con las fotos y la coordinacion fue clara.',
+          agreementKept: true,
+          wouldInteractAgain: true,
+          hadIncident: false,
+          photosMatchReality: true,
+          userName: 'Lucia',
+          date: '2026-04-01T12:00:00.000Z',
+        },
+      ],
+    });
+
+    const res = await request(app).get('/api/properties/prop-1/reviews');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([
+      {
+        id: 'review-1',
+        reviewerId: 'guest-1',
+        rating: 5,
+        comment: 'Todo coincidia con las fotos y la coordinacion fue clara.',
+        agreementKept: true,
+        wouldInteractAgain: true,
+        hadIncident: false,
+        photosMatchReality: true,
+        userName: 'Lucia',
+        date: '2026-04-01T12:00:00.000Z',
+      },
+    ]);
+    expect(queryMock).toHaveBeenCalledTimes(1);
+    expect(queryMock.mock.calls[0]?.[0]).toContain('SELECT reviews.id');
+    expect(queryMock.mock.calls[0]?.[0]).toContain('reviews.created_at as date');
+    expect(queryMock.mock.calls[0]?.[0]).toContain('ORDER BY reviews.created_at DESC');
+  });
+
   test('POST /api/properties publishes the first property without forcing prior identity verification', async () => {
     queryMock.mockImplementation(async (text: string) => {
       if (text.includes('COALESCE(report_stats.total_reports') && text.includes('profile_photo as "profilePhoto"')) {

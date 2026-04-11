@@ -6919,21 +6919,21 @@ app.post('/api/leads', async (req, res) => {
 app.get('/api/properties/:id/reviews', async (req, res) => {
   try {
     const result = await db.query(
-      `SELECT id,
-              reviewer_id,
-              rating,
-              comment,
-              agreement_kept as "agreementKept",
-              would_interact_again as "wouldInteractAgain",
-              had_incident as "hadIncident",
-              photos_match_reality as "photosMatchReality",
+      `SELECT reviews.id,
+              reviews.reviewer_id as "reviewerId",
+              reviews.rating,
+              reviews.comment,
+              reviews.agreement_kept as "agreementKept",
+              reviews.would_interact_again as "wouldInteractAgain",
+              reviews.had_incident as "hadIncident",
+              reviews.photos_match_reality as "photosMatchReality",
               reviewer.name as "userName",
-              created_at as date
+              reviews.created_at as date
        FROM reviews
        LEFT JOIN users reviewer ON reviewer.id = reviews.reviewer_id
-       WHERE property_id = $1
-         AND type = 'guest_to_host'
-       ORDER BY created_at DESC
+       WHERE reviews.property_id = $1
+         AND reviews.type = 'guest_to_host'
+       ORDER BY reviews.created_at DESC
        LIMIT 20`,
       [req.params.id]
     );
