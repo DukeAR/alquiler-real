@@ -128,6 +128,15 @@ type HostResponseChip = {
   message: string;
 };
 
+type HostCloseIntent = 'advance-deposit' | 'confirm-reservation';
+
+type HostClosingChip = {
+  key: HostCloseIntent;
+  label: string;
+  message: string;
+  intent: HostCloseIntent;
+};
+
 type GuestStarterChip = {
   key: 'trip-reason' | 'arrival-time' | 'price-includes';
   label: string;
@@ -136,6 +145,27 @@ type GuestStarterChip = {
 
 const buildHostSuggestedReply = (...segments: Array<string | null | undefined>) => {
   return ['Hola, ¿cómo estás?', ...segments.filter((segment): segment is string => Boolean(segment && segment.trim()))].join(' ');
+};
+
+const buildHostClosingChips = (requestContext: ReservationRequestContext | null) => {
+  const advanceWithDepositMessage = requestContext?.mode === 'protected'
+    ? 'Si te parece bien, podemos avanzar con la seña. Podés coordinarla por fuera o resolverla por acá.'
+    : 'Si te parece bien, podemos avanzar con la seña.';
+
+  return [
+    {
+      key: 'advance-deposit',
+      label: 'Avanzar con la seña',
+      message: advanceWithDepositMessage,
+      intent: 'advance-deposit',
+    },
+    {
+      key: 'confirm-reservation',
+      label: 'Confirmar reserva',
+      message: 'Si te parece bien, podemos avanzar con la seña y dejar la reserva confirmada.',
+      intent: 'confirm-reservation',
+    },
+  ] as const satisfies HostClosingChip[];
 };
 
 const formatSuggestedMessageDateRange = (requestContext: ReservationRequestContext | null) => {
@@ -744,6 +774,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
   const [loading, setLoading] = useState(true);
   const [sendingMessageId, setSendingMessageId] = useState<string | null>(null);
   const [acceptingRequest, setAcceptingRequest] = useState(false);
+  const [pendingHostCloseIntent, setPendingHostCloseIntent] = useState<HostCloseIntent | null>(null);
   const [processingFlowAction, setProcessingFlowAction] = useState<string | null>(null);
   const [showNotAdvanceComposer, setShowNotAdvanceComposer] = useState(false);
   const [selectedNotAdvanceReason, setSelectedNotAdvanceReason] = useState<(typeof NOT_ADVANCE_REASON_OPTIONS)[number] | null>(null);
@@ -786,6 +817,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
   useEffect(() => {
     if (activeConv) {
       autoLoadedSuggestionIdsRef.current.delete(activeConv.id);
+      setPendingHostCloseIntent(null);
       setInputText('');
       setLoadedMessagesConversationId(null);
       loadMessages(activeConv.id);
@@ -837,12 +869,50 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
     }
   };
 
+  const acceptActiveRequest = async ({
+    successTitle,
+    successDescription,
+  }: {
+    successTitle?: string;
+    successDescription?: string;
+  } = {}) => {
+    if (!activeConv) {
+      return null;
+    }
+
+    setAcceptingRequest(true);
+
+    try {
+      const updatedConversation = await acceptConversationRequest(activeConv.id);
+      const acceptedMode = updatedConversation.requestMode === 'direct' ? 'direct' : 'protected';
+      applyConversationUpdate(updatedConversation);
+      await loadMessages(activeConv.id);
+      showToast(
+        successTitle ?? (acceptedMode === 'protected' ? 'Solicitud aceptada' : 'Propuesta aceptada'),
+        successDescription ?? (
+          acceptedMode === 'protected'
+            ? 'La solicitud ya quedó aceptada. El siguiente paso es que el huésped elija si coordina la seña por fuera o dentro de la plataforma.'
+            : 'La propuesta ya quedó aceptada. El siguiente paso es que el huésped informe la seña por chat.'
+        ),
+        'success',
+      );
+
+      return updatedConversation;
+    } catch (err) {
+      showToast('Solicitud', err instanceof Error ? err.message : 'No pudimos aceptar la solicitud. Intentá de nuevo.', 'error');
+      return null;
+    } finally {
+      setAcceptingRequest(false);
+    }
+  };
+
   const handleSend = async () => {
     if (!inputText.trim() || !activeConv || !user) return;
 
     const receiverId = user.id === activeConv.tenant_id ? activeConv.host_id : activeConv.tenant_id;
     const messageText = inputText;
     const optimisticId = `opt-${Date.now()}`;
+    const shouldAdvanceReservationAfterSend = user.id === activeConv.host_id && pendingHostCloseIntent !== null;
     
     // Optimistic update - show message immediately
     const optimisticMessage: Message = {
@@ -864,6 +934,16 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
       const newMsg = await sendMessage(activeConv.id, messageText, receiverId);
       // Replace optimistic message with real one from server
       setMessages(prev => prev.map(msg => msg.id === optimisticId ? newMsg : msg));
+      setPendingHostCloseIntent(null);
+
+      if (shouldAdvanceReservationAfterSend) {
+        await acceptActiveRequest({
+          successTitle: 'Cierre enviado',
+          successDescription: activeConv.requestMode === 'protected'
+            ? 'El chat ya pasó a la elección de seña para que el huésped siga sin fricción.'
+            : 'La propuesta quedó aceptada y el chat ya pasó al siguiente paso de seña.',
+        });
+      }
     } catch (err: any) {
       setError(err?.message || 'No pudimos enviar el mensaje. Intentá de nuevo.');
       setInputText(messageText); // Restore input on error
@@ -876,32 +956,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
   };
 
   const handleAcceptRequest = async () => {
-    if (!activeConv) {
-      return;
-    }
-
-    setAcceptingRequest(true);
-
-    try {
-      const updatedConversation = await acceptConversationRequest(activeConv.id);
-      const acceptedMode = updatedConversation.requestMode === 'direct' ? 'direct' : 'protected';
-      setConversations((current) => current.map((conversation) => (
-        conversation.id === updatedConversation.id ? { ...conversation, ...updatedConversation } : conversation
-      )));
-      setActiveConv((current) => (current && current.id === updatedConversation.id ? { ...current, ...updatedConversation } : current));
-      await loadMessages(activeConv.id);
-      showToast(
-        acceptedMode === 'protected' ? 'Solicitud aceptada' : 'Propuesta aceptada',
-        acceptedMode === 'protected'
-          ? 'La solicitud ya quedó aceptada. El siguiente paso es que el huésped elija si coordina la seña por fuera o dentro de la plataforma.'
-          : 'La propuesta ya quedó aceptada. El siguiente paso es que el huésped informe la seña por chat.',
-        'success',
-      );
-    } catch (err) {
-      showToast('Solicitud', err instanceof Error ? err.message : 'No pudimos aceptar la solicitud. Intentá de nuevo.', 'error');
-    } finally {
-      setAcceptingRequest(false);
-    }
+    await acceptActiveRequest();
   };
 
   const handleNotAdvanceRequest = async () => {
@@ -1207,11 +1262,6 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
       ].filter((value): value is string => Boolean(value))
     : [];
   const interactionContinuity = activeConv?.interactionContinuity ?? null;
-  const hostResponseChips = isHostConversation
-    && activeRequestContext
-    && flowCopy?.stage === 'request-pending'
-    ? buildHostResponseChips(activeRequestContext)
-    : [];
   const hasAuthoredConversationMessage = Boolean(
     user && messages.some((message) => !message.is_system && message.sender_id === user.id),
   );
@@ -1223,11 +1273,6 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
     ? buildSuggestedFirstMessage(counterpartyName, activeRequestContext)
     : null;
   const guestIntroPrompt = null;
-  const visibleSuggestionTexts = isHostConversation && hostResponseChips.length > 0
-    ? []
-    : guestStarterChips.length > 0
-      ? []
-      : suggestionTexts;
   const contextSummaryLine = activeRequestContext
     ? [
         activeRequestContext.propertyTitle,
@@ -1284,6 +1329,32 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
     ? 'Todavía no hubo respuesta. Podés enviar otro mensaje o ver otras opciones.'
     : null;
   const canAcceptRequest = Boolean(isHostConversation && flowCopy?.stage === 'request-pending' && !isRequestExpired);
+  const counterpartyHasConversationMessage = Boolean(
+    counterpartyId && messages.some((message) => !message.is_system && message.sender_id === counterpartyId),
+  );
+  const shouldShowHostClosingChips = Boolean(
+    isHostConversation
+    && canAcceptRequest
+    && activeRequestContext?.startDate
+    && activeRequestContext?.endDate
+    && activeRequestContext?.guests
+    && hasAuthoredConversationMessage
+    && counterpartyHasConversationMessage,
+  );
+  const hostClosingChips = shouldShowHostClosingChips
+    ? buildHostClosingChips(activeRequestContext)
+    : [];
+  const hostResponseChips = isHostConversation
+    && activeRequestContext
+    && flowCopy?.stage === 'request-pending'
+    && hostClosingChips.length === 0
+    ? buildHostResponseChips(activeRequestContext)
+    : [];
+  const visibleSuggestionTexts = isHostConversation && (hostResponseChips.length > 0 || hostClosingChips.length > 0)
+    ? []
+    : guestStarterChips.length > 0
+      ? []
+      : suggestionTexts;
   const canNotAdvanceRequest = Boolean(
     isHostConversation
     && (
@@ -1299,7 +1370,9 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
     : null;
   const canChooseExternalDeposit = Boolean(isTenantConversation && flowCopy?.stage === 'deposit-choice' && activeRequestContext?.bookingId);
   const canChooseProtectedDeposit = Boolean(isTenantConversation && flowCopy?.stage === 'deposit-choice' && activeRequestContext?.bookingId);
+  const showHostDepositChoicePreview = Boolean(isHostConversation && flowCopy?.stage === 'deposit-choice');
   const showDepositChoiceComposer = Boolean(canChooseExternalDeposit || canChooseProtectedDeposit);
+  const showDepositChoiceBlock = Boolean(showDepositChoiceComposer || showHostDepositChoicePreview);
   const canReturnToProtectedDeposit = Boolean(
     isTenantConversation
     && activeRequestContext?.bookingId
@@ -2080,12 +2153,20 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                   <input
                     type="text"
                     value={inputText}
-                    onChange={(e) => setInputText(e.target.value)}
+                    onChange={(e) => {
+                      const nextValue = e.target.value;
+                      setInputText(nextValue);
+
+                      if (!nextValue.trim()) {
+                        setPendingHostCloseIntent(null);
+                      }
+                    }}
                     onKeyDown={(e) => e.key === 'Enter' && handleSend()}
                     placeholder="Escribí un mensaje..."
                     className="flex-1 rounded-[22px] border border-slate-200 bg-white px-5 py-3.5 text-sm font-medium text-slate-900 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.18)] outline-none transition-all placeholder:text-slate-400 focus:border-brand/30 focus:ring-2 focus:ring-brand/12 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
                   />
                   <button
+                    aria-label="Enviar mensaje"
                     onClick={handleSend}
                     disabled={!inputText.trim() || sendingMessageId !== null}
                     className="rounded-[20px] bg-brand p-3.5 text-white shadow-[0_18px_38px_-24px_rgba(67,56,202,0.42)] transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
@@ -2098,15 +2179,17 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                   </button>
                 </div>
 
-                {showDepositChoiceComposer || hasInlineComposerActions ? (
+                {showDepositChoiceBlock || hasInlineComposerActions ? (
                   <div className="space-y-3">
-                    {showDepositChoiceComposer ? (
+                    {showDepositChoiceBlock ? (
                       <div className="rounded-[24px] border border-slate-200 bg-slate-50/85 p-4 dark:border-slate-800 dark:bg-slate-900/60">
                         <div className="space-y-1.5">
                           <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">Siguiente paso</p>
-                          <p className="text-sm font-semibold text-slate-950 dark:text-slate-50">Elegí cómo resolver la seña</p>
+                          <p className="text-sm font-semibold text-slate-950 dark:text-slate-50">{showDepositChoiceComposer ? 'Elegí cómo resolver la seña' : 'El huésped ya puede elegir cómo resolver la seña'}</p>
                           <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">
-                            La opción protegida la deja registrada y muestra el fee antes de pagar. Si preferís coordinarla por fuera, seguís directo por chat.
+                            {showDepositChoiceComposer
+                              ? 'La opción protegida la deja registrada y muestra el fee antes de pagar. Si preferís coordinarla por fuera, seguís directo por chat.'
+                              : 'La opción protegida la deja registrada y la externa sigue por chat. No hace falta explicarlo manualmente: ya queda visible en esta conversación.'}
                           </p>
                         </div>
 
@@ -2145,15 +2228,22 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                               <li className="flex items-start gap-2"><Icons.Check className="mt-1 h-3.5 w-3.5 text-brand" /><span>Se libera cuando confirmás la llegada.</span></li>
                             </ul>
 
-                            <button
-                              type="button"
-                              onClick={() => activeRequestContext?.bookingId && void handleSelectProtectedDeposit(activeRequestContext.bookingId)}
-                              disabled={processingFlowAction !== null}
-                              className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-[0_18px_34px_-28px_rgba(67,56,202,0.4)] transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-70"
-                            >
-                              {processingFlowAction === 'select-protected-deposit' ? <Icons.Loader2 className="h-4 w-4 animate-spin" /> : <Icons.ShieldCheck className="h-4 w-4" />}
-                              <span>Resolver la seña acá con claridad</span>
-                            </button>
+                            {showDepositChoiceComposer ? (
+                              <button
+                                type="button"
+                                onClick={() => activeRequestContext?.bookingId && void handleSelectProtectedDeposit(activeRequestContext.bookingId)}
+                                disabled={processingFlowAction !== null}
+                                className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-[0_18px_34px_-28px_rgba(67,56,202,0.4)] transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-70"
+                              >
+                                {processingFlowAction === 'select-protected-deposit' ? <Icons.Loader2 className="h-4 w-4 animate-spin" /> : <Icons.ShieldCheck className="h-4 w-4" />}
+                                <span>Resolver la seña acá con claridad</span>
+                              </button>
+                            ) : (
+                              <div className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full border border-brand/15 bg-brand/5 px-4 py-2.5 text-sm font-semibold text-brand dark:border-brand/20 dark:bg-brand/10">
+                                <Icons.ShieldCheck className="h-4 w-4" />
+                                <span>Disponible para el huésped</span>
+                              </div>
+                            )}
                           </div>
 
                           <div className="rounded-[22px] border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-950">
@@ -2175,20 +2265,29 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                               <li className="flex items-start gap-2"><Icons.Check className="mt-1 h-3.5 w-3.5 text-slate-400" /><span>Podés volver a la protegida mientras todavía no la informes.</span></li>
                             </ul>
 
-                            <button
-                              type="button"
-                              onClick={() => activeRequestContext?.bookingId && void handleSelectExternalDeposit(activeRequestContext.bookingId)}
-                              disabled={processingFlowAction !== null}
-                              className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-slate-950 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 disabled:cursor-not-allowed disabled:opacity-70"
-                            >
-                              {processingFlowAction === 'select-external-deposit' ? <Icons.Loader2 className="h-4 w-4 animate-spin" /> : <Icons.MessageSquare className="h-4 w-4" />}
-                              <span>Coordinarla por fuera</span>
-                            </button>
+                            {showDepositChoiceComposer ? (
+                              <button
+                                type="button"
+                                onClick={() => activeRequestContext?.bookingId && void handleSelectExternalDeposit(activeRequestContext.bookingId)}
+                                disabled={processingFlowAction !== null}
+                                className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-slate-950 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 disabled:cursor-not-allowed disabled:opacity-70"
+                              >
+                                {processingFlowAction === 'select-external-deposit' ? <Icons.Loader2 className="h-4 w-4 animate-spin" /> : <Icons.MessageSquare className="h-4 w-4" />}
+                                <span>Coordinarla por fuera</span>
+                              </button>
+                            ) : (
+                              <div className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+                                <Icons.MessageSquare className="h-4 w-4" />
+                                <span>También visible para el huésped</span>
+                              </div>
+                            )}
                           </div>
                         </div>
 
                         <p className="mt-3 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                          La protegida prioriza claridad. La externa sigue disponible y queda asentada en esta conversación.
+                          {showDepositChoiceComposer
+                            ? 'La protegida prioriza claridad. La externa sigue disponible y queda asentada en esta conversación.'
+                            : 'Así el siguiente paso queda claro sin que el anfitrión tenga que vender ni detallar opciones manualmente.'}
                         </p>
                       </div>
                     ) : null}
@@ -2404,6 +2503,29 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                   </div>
                 ) : null}
 
+                {hostClosingChips.length > 0 ? (
+                  <div className="space-y-2">
+                    <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
+                      Cierre sugerido
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {hostClosingChips.map((chip) => (
+                        <button
+                          key={chip.key}
+                          type="button"
+                          onClick={() => {
+                            setPendingHostCloseIntent(chip.intent);
+                            setInputText(chip.message);
+                          }}
+                          className="rounded-full border border-brand/20 bg-brand/5 px-3.5 py-2 text-xs font-semibold text-brand transition-colors hover:border-brand/30 hover:bg-white hover:text-brand-dark dark:border-brand/30 dark:bg-brand/10"
+                        >
+                          {chip.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
                 {hostResponseChips.length > 0 ? (
                   <div className="space-y-2">
                     <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
@@ -2414,7 +2536,10 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                         <button
                           key={chip.key}
                           type="button"
-                          onClick={() => setInputText(chip.message)}
+                          onClick={() => {
+                            setPendingHostCloseIntent(null);
+                            setInputText(chip.message);
+                          }}
                           className="rounded-full border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-semibold text-slate-600 transition-colors hover:border-brand/30 hover:bg-white hover:text-brand dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
                         >
                           {chip.label}
@@ -2430,7 +2555,10 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                       <button
                         key={suggestion}
                         type="button"
-                        onClick={() => setInputText(suggestion)}
+                        onClick={() => {
+                          setPendingHostCloseIntent(null);
+                          setInputText(suggestion);
+                        }}
                         className="rounded-full border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-semibold text-slate-600 transition-colors hover:border-brand/30 hover:bg-white hover:text-brand dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
                       >
                         {suggestion}

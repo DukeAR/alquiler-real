@@ -409,11 +409,14 @@ describe('SecureChat', () => {
     expect(screen.getByText('4 estadías completadas')).toBeInTheDocument();
     expect(screen.getByText('Cumple lo acordado')).toBeInTheDocument();
     expect(screen.getByText('Comunicación clara')).toBeInTheDocument();
+    expect(screen.queryByText('Cierre sugerido')).not.toBeInTheDocument();
     expect(screen.getByText('Respuestas sugeridas')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Confirmar disponibilidad' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Consultar horario de llegada' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Preguntar cantidad de personas' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Aclarar condiciones' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Avanzar con la seña' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Confirmar reserva' })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Consultar horario de llegada' }));
 
@@ -451,6 +454,104 @@ describe('SecureChat', () => {
     fireEvent.click(screen.getByRole('button', { name: unavailableReply }));
 
     expect(screen.getByRole('textbox')).toHaveValue(unavailableReply);
+  });
+
+  test('shows closing chips for the host after the conversation matures and advances the chat to the deposit step on send', async () => {
+    useAuthMock.mockReturnValue({ user: { id: 'host-1' } });
+    fetchConversationsMock.mockResolvedValue([
+      {
+        ...baseConversation,
+        booking_id: 'booking-1',
+        bookingStatus: 'pending',
+        requestMode: 'protected',
+        requestStatus: 'pending',
+        requestStartDate: '2026-05-10',
+        requestEndDate: '2026-05-13',
+        requestGuests: 2,
+        requestTotalPrice: 320000,
+      },
+    ]);
+    const closeMessage = 'Si te parece bien, podemos avanzar con la seña. Podés coordinarla por fuera o resolverla por acá.';
+    const progressedMessages = [
+      {
+        id: 'msg-guest-1',
+        conversation_id: 'conv-1',
+        sender_id: 'tenant-1',
+        receiver_id: 'host-1',
+        content: 'Hola, nos sirven esas fechas y seríamos dos.',
+        created_at: '2026-04-06T12:00:00.000Z',
+      },
+      {
+        id: 'msg-host-1',
+        conversation_id: 'conv-1',
+        sender_id: 'host-1',
+        receiver_id: 'tenant-1',
+        content: 'Perfecto, gracias por avisar.',
+        created_at: '2026-04-06T12:03:00.000Z',
+      },
+    ];
+    fetchMessagesMock
+      .mockResolvedValueOnce(progressedMessages)
+      .mockResolvedValueOnce([
+        ...progressedMessages,
+        {
+          id: 'msg-close-1',
+          conversation_id: 'conv-1',
+          sender_id: 'host-1',
+          receiver_id: 'tenant-1',
+          content: closeMessage,
+          created_at: '2026-04-06T12:05:00.000Z',
+        },
+      ]);
+    sendMessageMock.mockResolvedValue({
+      id: 'msg-close-1',
+      conversation_id: 'conv-1',
+      sender_id: 'host-1',
+      receiver_id: 'tenant-1',
+      content: closeMessage,
+      created_at: '2026-04-06T12:05:00.000Z',
+    });
+    acceptConversationRequestMock.mockResolvedValue({
+      ...baseConversation,
+      booking_id: 'booking-1',
+      bookingStatus: 'confirmed',
+      requestMode: 'protected',
+      requestStatus: 'accepted',
+      requestStartDate: '2026-05-10',
+      requestEndDate: '2026-05-13',
+      requestGuests: 2,
+      requestTotalPrice: 320000,
+    });
+
+    renderChat();
+
+    expect(await screen.findByText('Cierre sugerido')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Avanzar con la seña' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Confirmar reserva' })).toBeInTheDocument();
+    expect(screen.queryByText('Respuestas sugeridas')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Avanzar con la seña' }));
+
+    const composer = screen.getByRole('textbox');
+    expect(composer).toHaveValue(closeMessage);
+
+    fireEvent.keyDown(composer, { key: 'Enter', code: 'Enter', charCode: 13 });
+
+    await waitFor(() => {
+      expect(sendMessageMock).toHaveBeenCalledWith('conv-1', closeMessage, 'tenant-1');
+    });
+    await waitFor(() => {
+      expect(acceptConversationRequestMock).toHaveBeenCalledWith('conv-1');
+    });
+
+    expect(await screen.findByText('El huésped ya puede elegir cómo resolver la seña')).toBeInTheDocument();
+    expect(screen.getByText('Disponible para el huésped')).toBeInTheDocument();
+    expect(screen.getByText('También visible para el huésped')).toBeInTheDocument();
+    expect(showToastMock).toHaveBeenCalledWith(
+      'Cierre enviado',
+      'El chat ya pasó a la elección de seña para que el huésped siga sin fricción.',
+      'success',
+    );
   });
 
   test('falls back to the only available conversation when the initial id no longer matches', async () => {
