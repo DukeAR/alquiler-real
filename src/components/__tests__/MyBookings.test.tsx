@@ -256,6 +256,7 @@ describe('MyBookings', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Aceptar condiciones/i }));
 
+    expect(screen.getByText(/Ya podés coordinar tranquilo la llegada por el chat/i)).toBeInTheDocument();
     expect(screen.getByText('Próximo paso: coordiná horario de llegada con el anfitrión.')).toBeInTheDocument();
 
     await waitFor(() => {
@@ -341,6 +342,7 @@ describe('MyBookings', () => {
     expect(screen.getAllByRole('button', { name: /Abrir chat/i }).length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: /Coordinarla por fuera/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Dejarla registrada acá/i })).toBeInTheDocument();
+    expect(screen.getByText('Coordinarla por fuera (más manual)')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Coordinarla por fuera/i }));
 

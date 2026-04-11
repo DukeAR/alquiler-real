@@ -471,7 +471,8 @@ export const PropertyDetailShell: React.FC<{
   const mobileBookingSummary = hasCompleteDates
     ? `${nightsSummaryLabel} · ${guestCountLabel} · ${formatCurrency(total)}`
     : `${guestCountLabel} · Total al elegir fechas`;
-  const bookingEntryCtaLabel = 'Ver disponibilidad';
+  const bookingEntryCtaLabel = 'Consultar disponibilidad';
+  const bookingEntryCtaNote = 'No estás reservando todavía';
   const bookingEntryHelperText = hasSelectedDates
     ? 'Tu selección queda guardada mientras seguís revisando este lugar.'
     : 'Elegí fechas para ver total y disponibilidad.';
@@ -1067,18 +1068,21 @@ export const PropertyDetailShell: React.FC<{
               <p className="max-w-xl text-sm leading-6 text-slate-500">{bookingEntryHelperText}</p>
             </div>
 
-            <Button
-              type="button"
-              variant="primary"
-              size="lg"
-              onClick={handleOpenBookingEntry}
-              className="rounded-2xl px-6 shadow-[0_24px_46px_-28px_rgba(67,56,202,0.42)]"
-            >
-              <>
-                <Icons.Calendar className="h-4 w-4" />
-                {bookingEntryCtaLabel}
-              </>
-            </Button>
+            <div className="flex flex-col items-start gap-2 lg:items-end">
+              <Button
+                type="button"
+                variant="primary"
+                size="lg"
+                onClick={handleOpenBookingEntry}
+                className="rounded-2xl px-6 shadow-[0_24px_46px_-28px_rgba(67,56,202,0.42)]"
+              >
+                <>
+                  <Icons.Calendar className="h-4 w-4" />
+                  {bookingEntryCtaLabel}
+                </>
+              </Button>
+              <p className="pl-1 text-xs font-medium text-slate-500 lg:pr-1">{bookingEntryCtaNote}</p>
+            </div>
           </div>
 
           {hasSelectedDates || guestCount > 1 ? (
@@ -1257,7 +1261,7 @@ export const PropertyDetailShell: React.FC<{
                 <div className="flex items-start justify-between gap-4">
                   <div className="space-y-1.5">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Reserva</p>
-                    <h2 id="booking-flow-title" className="text-2xl font-semibold tracking-tight text-slate-950">Ver disponibilidad</h2>
+                    <h2 id="booking-flow-title" className="text-2xl font-semibold tracking-tight text-slate-950">Consultar disponibilidad</h2>
                     <p id="booking-flow-description" className="text-sm leading-6 text-slate-600">
                       Elegí fechas y huéspedes sin salir de esta ficha. La seña se define después, si el anfitrión acepta.
                     </p>
@@ -1563,19 +1567,22 @@ export const PropertyDetailShell: React.FC<{
                 <p className="min-w-0 truncate text-xs font-medium leading-5 text-slate-600">{mobileBookingSummary}</p>
                 <p className="shrink-0 text-sm font-bold text-slate-950">{nightly ? `${formatCurrency(nightly)} / noche` : '—'}</p>
               </div>
-              <Button
-                type="button"
-                variant="primary"
-                size="lg"
-                fullWidth
-                onClick={handleOpenBookingEntry}
-                className="rounded-2xl shadow-[0_24px_46px_-28px_rgba(67,56,202,0.42)]"
-              >
-                <>
-                  <Icons.Calendar className="h-4 w-4" />
-                  {bookingEntryCtaLabel}
-                </>
-              </Button>
+              <div className="space-y-2">
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="lg"
+                  fullWidth
+                  onClick={handleOpenBookingEntry}
+                  className="rounded-2xl shadow-[0_24px_46px_-28px_rgba(67,56,202,0.42)]"
+                >
+                  <>
+                    <Icons.Calendar className="h-4 w-4" />
+                    {bookingEntryCtaLabel}
+                  </>
+                </Button>
+                <p className="text-center text-xs font-medium text-slate-500">{bookingEntryCtaNote}</p>
+              </div>
             </div>
           </section>
         </div>

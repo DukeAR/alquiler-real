@@ -1037,7 +1037,7 @@ export const MyBookings = () => {
                           {
                             key: 'external',
                             eyebrow: 'Seña por fuera',
-                            title: 'Coordinarla por fuera',
+                            title: 'Coordinarla por fuera (más manual)',
                             description: 'Coordinás la seña directo con el anfitrión.',
                             icon: <Icons.MessageSquare className="h-5 w-5" />,
                             tone: 'neutral',
@@ -1194,7 +1194,7 @@ export const MyBookings = () => {
             <ReservationConfirmedState
               eyebrow="Datos para el ingreso"
               title="La reserva ya quedó ordenada"
-              description="La reserva y la seña ya quedaron registradas. Ahora falta coordinar la llegada con el anfitrión."
+              description="La reserva y la seña ya quedaron registradas. Ya podés coordinar tranquilo la llegada por el chat."
               details={[
                 {
                   label: 'Código de ingreso',

@@ -125,8 +125,8 @@ type HostClosingChip = {
 
 const buildHostClosingChips = (requestContext: ReservationRequestContext | null) => {
   const advanceWithDepositMessage = requestContext?.mode === 'protected'
-    ? 'Si te parece bien, podemos seguir con la seña. Podés dejarla registrada acá o coordinarla por fuera.'
-    : 'Si te parece bien, podemos avanzar con la seña.';
+    ? 'Si te parece bien, podemos seguir con la seña. Podés dejarla registrada acá o coordinarla por fuera. Si te cierra, lo podemos dejar confirmado.'
+    : 'Si te parece bien, podemos avanzar con la seña. Si te cierra, lo podemos dejar confirmado.';
 
   return [
     {
@@ -138,7 +138,7 @@ const buildHostClosingChips = (requestContext: ReservationRequestContext | null)
     {
       key: 'confirm-reservation',
       label: 'Confirmar reserva',
-      message: 'Si te parece bien, podemos avanzar con la seña y dejar la reserva confirmada.',
+      message: 'Si te cierra, lo podemos dejar confirmado.',
       intent: 'confirm-reservation',
     },
   ] as const satisfies HostClosingChip[];
@@ -184,7 +184,7 @@ const buildSuggestedFirstMessage = (_counterpartyName: string, requestContext: R
     messageParts.push(guestCount);
   }
 
-  return `${messageParts.join(' ')}. ¿Sigue disponible?`;
+  return `${messageParts.join(' ')}. ¿Sigue disponible? Me interesa avanzar si está todo bien.`;
 };
 
 const NOT_ADVANCE_REASON_OPTIONS = [
@@ -1277,6 +1277,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
     const protectedClarityText = 'Estás usando la seña en la app para dejar el proceso registrado.';
     const keywordReminderText = 'Verificá que la cuenta esté a nombre del anfitrión antes de transferir.';
     const directProofReminderText = 'Guardá el comprobante de la seña por si necesitás revisarlo.';
+    const noAdvanceReactivationText = 'Cuando lo tengan definido, pueden avanzar con la seña para dejar todo confirmado.';
     const currentMessages = [...messages, ...fallbackSystemMessages];
     const existingSystemTexts = new Set(
       currentMessages
@@ -1321,6 +1322,20 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
         content: protectedClarityText,
         is_system: true,
         system_key: 'assist-protected-clarity',
+        created_at: new Date(baseDate.getTime() + 2).toISOString(),
+      });
+    }
+
+    if (flowCopy?.stage === 'request-not-advanced' && !existingSystemTexts.has(noAdvanceReactivationText) && activeConv) {
+      const baseDate = parseTimestampValue(currentMessages.at(-1)?.created_at) ?? new Date();
+      reminders.push({
+        id: `assist-no-advance-reactivation-${activeConv.id}`,
+        conversation_id: activeConv.id,
+        sender_id: activeConv.host_id,
+        receiver_id: activeConv.tenant_id,
+        content: noAdvanceReactivationText,
+        is_system: true,
+        system_key: 'assist-no-advance-reactivation',
         created_at: new Date(baseDate.getTime() + 2).toISOString(),
       });
     }
@@ -1577,6 +1592,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
       message.system_key === 'assist-safer-chat'
       || message.system_key === 'assist-before-payment'
       || message.system_key === 'assist-protected-clarity'
+      || message.system_key === 'assist-no-advance-reactivation'
       || message.system_key === 'assist-account-check'
       || message.system_key === 'assist-direct-proof'
     ) {
@@ -1867,7 +1883,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                           {
                             key: 'external',
                             eyebrow: 'Seña por fuera',
-                            title: showDepositChoiceComposer ? 'Coordinarla por fuera' : 'Por fuera',
+                            title: showDepositChoiceComposer ? 'Coordinarla por fuera (más manual)' : 'Por fuera (más manual)',
                             description: 'Siguen por chat directo con el anfitrión.',
                             icon: <Icons.MessageSquare className="h-5 w-5" />,
                             tone: 'neutral',

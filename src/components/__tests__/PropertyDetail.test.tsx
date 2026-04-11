@@ -129,7 +129,7 @@ const getDesktopBookingContext = () => screen.getByRole('region', { name: /conte
 
 const getMobileBookingSummary = () => screen.getByRole('region', { name: /resumen móvil de la reserva/i });
 
-const getBookingFlowDialog = () => screen.getByRole('dialog', { name: /ver disponibilidad/i });
+const getBookingFlowDialog = () => screen.getByRole('dialog', { name: /consultar disponibilidad/i });
 
 const DEFAULT_WINDOW_WIDTH = window.innerWidth;
 
@@ -157,8 +157,8 @@ const isoPlusDays = (days: number) => {
 };
 
 const openBookingFlow = async () => {
-  if (!screen.queryByRole('heading', { name: /ver disponibilidad/i })) {
-    fireEvent.click(screen.getAllByRole('button', { name: /ver disponibilidad/i })[0]);
+  if (!screen.queryByRole('heading', { name: /consultar disponibilidad/i })) {
+    fireEvent.click(screen.getAllByRole('button', { name: /consultar disponibilidad/i })[0]);
   }
 
   await waitFor(() => expect(getBookingFlowDialog()).toBeDefined());
@@ -320,10 +320,11 @@ describe('PropertyDetail', () => {
 
     const desktopContext = getDesktopBookingContext();
 
-    expect(within(desktopContext).getByRole('button', { name: /ver disponibilidad/i })).toBeDefined();
+    expect(within(desktopContext).getByRole('button', { name: /consultar disponibilidad/i })).toBeDefined();
+    expect(within(desktopContext).getByText('No estás reservando todavía')).toBeDefined();
     expect(within(desktopContext).getByText('Elegí fechas para ver total y disponibilidad.')).toBeDefined();
 
-    fireEvent.click(within(desktopContext).getByRole('button', { name: /ver disponibilidad/i }));
+    fireEvent.click(within(desktopContext).getByRole('button', { name: /consultar disponibilidad/i }));
 
     await waitFor(() => expect(getBookingFlowDialog()).toBeDefined());
     await waitFor(() => expect(screen.getByRole('dialog', { name: /selector de rango de fechas/i })).toBeDefined());
@@ -338,10 +339,11 @@ describe('PropertyDetail', () => {
     const mobileContext = getMobileBookingSummary();
 
     expect(within(desktopContext).getByText('Precio por noche')).toBeDefined();
-    expect(within(desktopContext).getByRole('button', { name: /ver disponibilidad/i })).toBeDefined();
+    expect(within(desktopContext).getByRole('button', { name: /consultar disponibilidad/i })).toBeDefined();
     expect(within(desktopContext).getByText('Elegí fechas para ver total y disponibilidad.')).toBeDefined();
     expect(within(mobileContext).getByText('1 huésped · Total al elegir fechas')).toBeDefined();
-    expect(within(mobileContext).getByRole('button', { name: /ver disponibilidad/i })).toBeDefined();
+    expect(within(mobileContext).getByRole('button', { name: /consultar disponibilidad/i })).toBeDefined();
+    expect(within(mobileContext).getByText('No estás reservando todavía')).toBeDefined();
     expect(within(mobileContext).getByText(/120/)).toBeDefined();
 
     const checkInIso = isoPlusDays(2);
@@ -351,7 +353,7 @@ describe('PropertyDetail', () => {
 
     const bookingFlow = getBookingFlowDialog();
 
-    expect(within(bookingFlow).getByText('Ver disponibilidad')).toBeDefined();
+    expect(within(bookingFlow).getByText('Consultar disponibilidad')).toBeDefined();
     expect(within(bookingFlow).getByText(/3 noches · 1 huésped ·/i)).toBeDefined();
     expect(within(bookingFlow).getAllByText(new RegExp('360')).length).toBeGreaterThan(0);
     expect(within(desktopContext).getByText('Tu selección queda guardada mientras seguís revisando este lugar.')).toBeDefined();
@@ -377,13 +379,13 @@ describe('PropertyDetail', () => {
 
     const mobileContext = getMobileBookingSummary();
 
-    expect(within(mobileContext).getByRole('button', { name: /ver disponibilidad/i })).toBeDefined();
+    expect(within(mobileContext).getByRole('button', { name: /consultar disponibilidad/i })).toBeDefined();
     expect(screen.queryByRole('button', { name: /^siguiente$/i })).toBeNull();
 
     const checkInIso = isoPlusDays(2);
     const checkOutIso = isoPlusDays(5);
 
-    fireEvent.click(within(mobileContext).getByRole('button', { name: /ver disponibilidad/i }));
+    fireEvent.click(within(mobileContext).getByRole('button', { name: /consultar disponibilidad/i }));
     await selectDateRange(checkInIso, checkOutIso);
 
     const bookingFlow = getBookingFlowDialog();
@@ -412,12 +414,12 @@ describe('PropertyDetail', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /cerrar flujo de reserva/i }));
 
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: /ver disponibilidad/i })).toBeNull());
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: /consultar disponibilidad/i })).toBeNull());
     expect(getDesktopBookingContext()).toHaveTextContent(/tu selección/i);
 
-    fireEvent.click(screen.getAllByRole('button', { name: /ver disponibilidad/i })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: /consultar disponibilidad/i })[0]);
 
-    const bookingFlow = await screen.findByRole('dialog', { name: /ver disponibilidad/i });
+    const bookingFlow = await screen.findByRole('dialog', { name: /consultar disponibilidad/i });
     expect(within(bookingFlow).getAllByText(/3 noches · 1 huésped ·/i).length).toBeGreaterThan(0);
   });
 

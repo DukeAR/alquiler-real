@@ -1,9 +1,9 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 const apiJsonMock = vi.fn();
 const showToastMock = vi.fn();
-const navigateMock = vi.fn();
 const setActiveModeMock = vi.fn();
 
 const ARGENTINA_TIME_ZONE = 'America/Argentina/Buenos_Aires';
@@ -44,15 +44,6 @@ vi.mock('../../hooks/useAuth', () => ({
   }),
 }));
 
-vi.mock('react-router-dom', async () => {
-  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
-
-  return {
-    ...actual,
-    useNavigate: () => navigateMock,
-  };
-});
-
 vi.mock('../PropertyUploadForm.tsx', () => ({
   PropertyUploadForm: () => <div>PropertyUploadForm</div>,
 }));
@@ -67,11 +58,21 @@ vi.mock('../ui/AccountModeSwitch', () => ({
 
 import { HostDashboard } from '../HostDashboard.tsx';
 
+const renderDashboard = () => render(
+  <MemoryRouter initialEntries={['/host-dashboard']}>
+    <Routes>
+      <Route path="/host-dashboard" element={<HostDashboard onBack={vi.fn()} />} />
+      <Route path="/chat/:id" element={<div>Ruta chat anfitrión</div>} />
+      <Route path="/detail/:id" element={<div>Ruta detalle anfitrión</div>} />
+      <Route path="/verification" element={<div>Ruta verificación anfitrión</div>} />
+    </Routes>
+  </MemoryRouter>,
+);
+
 describe('HostDashboard', () => {
   beforeEach(() => {
     apiJsonMock.mockReset();
     showToastMock.mockReset();
-    navigateMock.mockReset();
     setActiveModeMock.mockReset();
     vi.spyOn(window, 'confirm').mockReturnValue(true);
   });
@@ -158,7 +159,7 @@ describe('HostDashboard', () => {
       return {};
     });
 
-    render(<HostDashboard onBack={vi.fn()} />);
+    renderDashboard();
 
     expect(await screen.findByText('Qué conviene hacer ahora')).toBeInTheDocument();
     expect(screen.getByText('Tus publicaciones')).toBeInTheDocument();
@@ -286,7 +287,7 @@ describe('HostDashboard', () => {
       estimatedIncome: 250000,
     });
 
-    render(<HostDashboard onBack={vi.fn()} />);
+    renderDashboard();
 
     expect(await screen.findByText('Solicitudes y reservas')).toBeInTheDocument();
     expect(screen.getAllByText('Marina').length).toBeGreaterThan(0);
@@ -374,13 +375,9 @@ describe('HostDashboard', () => {
       return {};
     });
 
-    render(<HostDashboard onBack={vi.fn()} />);
+    renderDashboard();
 
     expect(await screen.findByRole('button', { name: /Aceptar solicitud/i })).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: /Abrir chat/i }));
-
-    expect(navigateMock).toHaveBeenCalledWith('/chat/conv-accept');
 
     fireEvent.click(screen.getByRole('button', { name: /Aceptar solicitud/i }));
 
@@ -399,6 +396,10 @@ describe('HostDashboard', () => {
       'La solicitud quedó aceptada. Ahora el huésped puede definir la seña desde el chat.',
       'success',
     );
+
+    fireEvent.click(screen.getByRole('button', { name: /Abrir chat/i }));
+
+    expect(await screen.findByText('Ruta chat anfitrión')).toBeInTheDocument();
   });
 
   test('shows explicit missing-data states when the guest profile is not structured yet', async () => {
@@ -445,7 +446,7 @@ describe('HostDashboard', () => {
       estimatedIncome: 250000,
     });
 
-    render(<HostDashboard onBack={vi.fn()} />);
+    renderDashboard();
 
     const profileCard = await screen.findByTestId('guest-request-profile-card');
 
@@ -554,7 +555,7 @@ describe('HostDashboard', () => {
       estimatedIncome: 250000,
     });
 
-    render(<HostDashboard onBack={vi.fn()} />);
+    renderDashboard();
 
     const profileCard = await screen.findByTestId('guest-request-profile-card');
 
@@ -640,7 +641,7 @@ describe('HostDashboard', () => {
       return {};
     });
 
-    render(<HostDashboard onBack={vi.fn()} />);
+    renderDashboard();
 
     fireEvent.click(await screen.findByRole('button', { name: /Informar no show/i }));
 
@@ -704,7 +705,7 @@ describe('HostDashboard', () => {
       estimatedIncome: 250000,
     });
 
-    render(<HostDashboard onBack={vi.fn()} />);
+    renderDashboard();
 
     expect(await screen.findAllByText('Seña en custodia')).not.toHaveLength(0);
     expect(screen.getByText('Informar no show se habilita el día del ingreso.')).toBeInTheDocument();
@@ -754,7 +755,7 @@ describe('HostDashboard', () => {
       estimatedIncome: 250000,
     });
 
-    render(<HostDashboard onBack={vi.fn()} />);
+    renderDashboard();
 
     expect(await screen.findAllByText('Seña en custodia')).not.toHaveLength(0);
     expect(screen.getByText('La seña ya quedó registrada.')).toBeInTheDocument();
@@ -830,7 +831,7 @@ describe('HostDashboard', () => {
       return {};
     });
 
-    render(<HostDashboard onBack={vi.fn()} />);
+    renderDashboard();
 
     fireEvent.click(await screen.findByRole('button', { name: /Cancelar reserva/i }));
 
