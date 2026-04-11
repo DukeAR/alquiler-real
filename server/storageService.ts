@@ -9,6 +9,8 @@ export type StoredFileVisibility = 'public' | 'semi-public' | 'private';
 
 export type StoredFileType = 'image' | 'video' | 'document';
 
+export type SignedFileAccessMode = 'standard' | 'internal';
+
 type StoreVerificationFileInput = {
   fileId: string;
   buffer: Buffer;
@@ -32,6 +34,7 @@ export type StoredVerificationFile = {
 type SignedFilePayload = {
   fileId: string;
   expiresAt: number;
+  accessMode?: SignedFileAccessMode;
 };
 
 const STORAGE_DIR_BY_VISIBILITY: Record<StoredFileVisibility, string> = {
@@ -114,10 +117,15 @@ export const getCanonicalFileUrl = (fileId: string, visibility: StoredFileVisibi
 
 export const getPublicThumbnailUrl = (fileId: string) => `/api/files/public/${fileId}/thumbnail`;
 
-export const createSignedFileUrl = (fileId: string, expiresInSeconds = 60 * 30) => {
+export const createSignedFileUrl = (
+  fileId: string,
+  expiresInSeconds = 60 * 30,
+  accessMode: SignedFileAccessMode = 'standard',
+) => {
   const payload: SignedFilePayload = {
     fileId,
     expiresAt: Date.now() + (expiresInSeconds * 1000),
+    accessMode,
   };
   const encodedPayload = toBase64Url(JSON.stringify(payload));
   const signature = toBase64Url(signPayload(encodedPayload));
@@ -144,6 +152,8 @@ export const parseSignedFileToken = (token: string): SignedFilePayload | null =>
     if (!parsedPayload.fileId || !Number.isFinite(parsedPayload.expiresAt) || parsedPayload.expiresAt < Date.now()) {
       return null;
     }
+
+    parsedPayload.accessMode = parsedPayload.accessMode === 'internal' ? 'internal' : 'standard';
 
     return parsedPayload;
   } catch {

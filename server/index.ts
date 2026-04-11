@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'node:crypto';
 import express, { type Express } from 'express';
 import session from 'express-session';
 import pgSession from 'connect-pg-simple';
@@ -40,6 +41,7 @@ import {
   openStoredFileStream,
   parseSignedFileToken,
   storeVerificationFile,
+  type SignedFileAccessMode,
   type StoredFileType,
   type StoredFileVisibility,
 } from './storageService';
@@ -956,6 +958,10 @@ const PROPERTY_VERIFICATION_FILE_SUMMARY_JOINS = `
 
 type VerificationAssetKind = 'photo' | 'video' | 'document';
 
+type PropertyVerificationReviewAction = 'approve-documents' | 'reject-documents' | 'complete-manual-review' | 'clear-manual-review';
+
+const INTERNAL_OPS_SECRET_HEADER = 'x-internal-ops-secret';
+
 type VerificationFileRow = {
   id: string;
   storageKey: string;
@@ -974,21 +980,66 @@ type VerificationFileRow = {
   createdAt: string | Date;
 };
 
-const VERIFICATION_FILE_SELECT = `id,
-  storage_key as "storageKey",
-  thumbnail_storage_key as "thumbnailStorageKey",
-  file_url as "fileUrl",
-  thumbnail_url as "thumbnailUrl",
-  file_type as "fileType",
-  visibility,
-  verification_scope as "verificationScope",
-  verification_status as "verificationStatus",
-  user_id as "userId",
-  property_id as "propertyId",
-  original_name as "originalName",
-  mime_type as "mimeType",
-  size_bytes as "sizeBytes",
-  created_at as "createdAt"`;
+type InternalPropertyVerificationQueueRow = VerificationFileRow & {
+  propertyTitle?: string | null;
+  propertyHostId?: string | null;
+  propertyHostName?: string | null;
+};
+
+const getVerificationFileSelect = (tableAlias?: string) => {
+  const prefix = tableAlias ? `${tableAlias}.` : '';
+
+  return `${prefix}id,
+  ${prefix}storage_key as "storageKey",
+  ${prefix}thumbnail_storage_key as "thumbnailStorageKey",
+  ${prefix}file_url as "fileUrl",
+  ${prefix}thumbnail_url as "thumbnailUrl",
+  ${prefix}file_type as "fileType",
+  ${prefix}visibility,
+  ${prefix}verification_scope as "verificationScope",
+  ${prefix}verification_status as "verificationStatus",
+  ${prefix}user_id as "userId",
+  ${prefix}property_id as "propertyId",
+  ${prefix}original_name as "originalName",
+  ${prefix}mime_type as "mimeType",
+  ${prefix}size_bytes as "sizeBytes",
+  ${prefix}created_at as "createdAt"`;
+};
+
+const VERIFICATION_FILE_SELECT = getVerificationFileSelect();
+
+const secureCompareText = (left: string, right: string) => {
+  const leftBuffer = Buffer.from(left);
+  const rightBuffer = Buffer.from(right);
+
+  return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
+};
+
+const hasInternalOpsAccess = (req: express.Request) => {
+  const providedSecret = req.header(INTERNAL_OPS_SECRET_HEADER)?.trim();
+
+  if (!providedSecret || !serverEnv.internalOpsSecret) {
+    return false;
+  }
+
+  return secureCompareText(providedSecret, serverEnv.internalOpsSecret);
+};
+
+const requireInternalOpsAccess = (req: express.Request, res: express.Response) => {
+  if (hasInternalOpsAccess(req)) {
+    return true;
+  }
+
+  res.status(403).json({ error: 'No podés usar esta operación interna.' });
+  return false;
+};
+
+const isPropertyVerificationReviewAction = (value: unknown): value is PropertyVerificationReviewAction => (
+  value === 'approve-documents'
+  || value === 'reject-documents'
+  || value === 'complete-manual-review'
+  || value === 'clear-manual-review'
+);
 
 const createVerificationFileId = () => `vfile_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
@@ -1038,7 +1089,10 @@ const isDocumentMimeType = (value: string) => {
   return normalizedMimeType === 'application/pdf' || normalizedMimeType.startsWith('image/');
 };
 
-const mapVerificationFileToAsset = (row: VerificationFileRow, options?: { signedExpirySeconds?: number }) => ({
+const mapVerificationFileToAsset = (
+  row: VerificationFileRow,
+  options?: { signedExpirySeconds?: number; signedAccessMode?: SignedFileAccessMode },
+) => ({
   id: row.id,
   fileType: row.fileType,
   visibility: row.visibility,
@@ -1046,12 +1100,19 @@ const mapVerificationFileToAsset = (row: VerificationFileRow, options?: { signed
   verificationStatus: row.verificationStatus,
   url: row.visibility === 'public'
     ? row.fileUrl
-    : createSignedFileUrl(row.id, options?.signedExpirySeconds ?? 60 * 30),
+    : createSignedFileUrl(row.id, options?.signedExpirySeconds ?? 60 * 30, options?.signedAccessMode ?? 'standard'),
   thumbnailUrl: row.thumbnailUrl ?? null,
   createdAt: typeof row.createdAt === 'string' ? row.createdAt : row.createdAt.toISOString(),
   originalName: row.originalName ?? null,
   mimeType: row.mimeType ?? null,
 });
+
+const mapVerificationFileToInternalAsset = (row: VerificationFileRow, options?: { signedExpirySeconds?: number }) => (
+  mapVerificationFileToAsset(row, {
+    signedExpirySeconds: options?.signedExpirySeconds,
+    signedAccessMode: 'internal',
+  })
+);
 
 const getVerificationFileById = async (fileId: string) => {
   const result = await db.query(
@@ -1956,7 +2017,7 @@ app.get('/api/files/access/:token', async (req, res) => {
       return res.status(404).json({ error: 'No encontramos ese archivo.' });
     }
 
-    if (file.visibility === 'private') {
+    if (file.visibility === 'private' && payload.accessMode !== 'internal') {
       if (!req.session.userId) {
         return res.status(401).json({ error: AUTH_REQUIRED_ERROR });
       }
@@ -1972,6 +2033,211 @@ app.get('/api/files/access/:token', async (req, res) => {
   } catch (err) {
     console.error('Error serving signed file:', err);
     res.status(500).json({ error: 'No pudimos abrir ese archivo.' });
+  }
+});
+
+app.get('/api/internal/property-verification/review-queue', async (req, res) => {
+  if (!requireInternalOpsAccess(req, res)) {
+    return;
+  }
+
+  const propertyId = typeof req.query.propertyId === 'string' ? req.query.propertyId.trim() : '';
+  const requestedStatus = typeof req.query.status === 'string' ? req.query.status.trim() : 'pending_review';
+  const normalizedStatus = requestedStatus === 'all'
+    ? 'all'
+    : requestedStatus === 'approved' || requestedStatus === 'verified' || requestedStatus === 'rejected' || requestedStatus === 'uploaded'
+      ? requestedStatus
+      : 'pending_review';
+
+  try {
+    const params: string[] = [];
+    const whereClauses = [
+      'vf.property_id IS NOT NULL',
+      "vf.verification_scope = 'property-document'",
+    ];
+
+    if (normalizedStatus !== 'all') {
+      params.push(normalizedStatus);
+      whereClauses.push(`vf.verification_status = $${params.length}`);
+    }
+
+    if (propertyId) {
+      params.push(propertyId);
+      whereClauses.push(`vf.property_id = $${params.length}`);
+    }
+
+    const result = await db.query(
+      `SELECT ${getVerificationFileSelect('vf')},
+              p.title as "propertyTitle",
+              p."hostId" as "propertyHostId",
+              p."hostName" as "propertyHostName"
+       FROM verification_files vf
+       JOIN properties p ON p.id = vf.property_id
+       WHERE ${whereClauses.join(' AND ')}
+       ORDER BY vf.created_at DESC`,
+      params,
+    );
+
+    const groupedItems = new Map<string, {
+      propertyId: string;
+      propertyTitle: string | null;
+      hostId: string | null;
+      hostName: string | null;
+      pendingDocumentsCount: number;
+      documents: ReturnType<typeof mapVerificationFileToInternalAsset>[];
+    }>();
+
+    (result.rows as InternalPropertyVerificationQueueRow[]).forEach((row) => {
+      if (!row.propertyId) {
+        return;
+      }
+
+      if (!groupedItems.has(row.propertyId)) {
+        groupedItems.set(row.propertyId, {
+          propertyId: row.propertyId,
+          propertyTitle: row.propertyTitle ?? null,
+          hostId: row.propertyHostId ?? null,
+          hostName: row.propertyHostName ?? null,
+          pendingDocumentsCount: 0,
+          documents: [],
+        });
+      }
+
+      const group = groupedItems.get(row.propertyId);
+
+      if (!group) {
+        return;
+      }
+
+      if (row.verificationStatus === 'pending_review') {
+        group.pendingDocumentsCount += 1;
+      }
+
+      group.documents.push(mapVerificationFileToInternalAsset(row, { signedExpirySeconds: 60 * 60 * 12 }));
+    });
+
+    return res.json({ items: Array.from(groupedItems.values()) });
+  } catch (err) {
+    console.error('Error loading internal verification review queue:', err);
+    return res.status(500).json({ error: 'No pudimos cargar la cola interna de revisión.' });
+  }
+});
+
+app.post('/api/internal/properties/:id/verification/review', async (req, res) => {
+  if (!requireInternalOpsAccess(req, res)) {
+    return;
+  }
+
+  const action = req.body?.action;
+  const notes = typeof req.body?.notes === 'string' ? req.body.notes.trim() : '';
+  const fileIds = Array.isArray(req.body?.fileIds)
+    ? req.body.fileIds.filter((value: unknown): value is string => typeof value === 'string' && value.trim().length > 0)
+    : [];
+
+  if (!isPropertyVerificationReviewAction(action)) {
+    return res.status(400).json({ error: 'Elegí una acción interna válida.' });
+  }
+
+  try {
+    const propertyResult = await db.query(
+      `SELECT id, title, "hostId", "hostName"
+       FROM properties
+       WHERE id = $1
+       LIMIT 1`,
+      [req.params.id],
+    );
+    const property = propertyResult.rows[0] as { id: string; title?: string | null; hostId?: string | null; hostName?: string | null } | undefined;
+
+    if (!property) {
+      return res.status(404).json({ error: 'No encontramos esa propiedad para revisar.' });
+    }
+
+    let reviewedDocuments: ReturnType<typeof mapVerificationFileToInternalAsset>[] = [];
+    let manualReviewCompleted: boolean | null = null;
+    let manualReviewUpdatedAt: string | null = null;
+
+    if (action === 'approve-documents' || action === 'reject-documents') {
+      const selectQuery = fileIds.length > 0
+        ? `SELECT ${VERIFICATION_FILE_SELECT}
+           FROM verification_files
+           WHERE property_id = $1
+             AND verification_scope = 'property-document'
+             AND id = ANY($2::text[])
+           ORDER BY created_at DESC`
+        : `SELECT ${VERIFICATION_FILE_SELECT}
+           FROM verification_files
+           WHERE property_id = $1
+             AND verification_scope = 'property-document'
+           ORDER BY created_at DESC`;
+      const selectParams = fileIds.length > 0 ? [req.params.id, fileIds] : [req.params.id];
+      const existingDocumentsResult = await db.query(selectQuery, selectParams);
+      const existingDocuments = existingDocumentsResult.rows as VerificationFileRow[];
+
+      if (existingDocuments.length === 0) {
+        return res.status(404).json({ error: 'No encontramos documentos para revisar en esa propiedad.' });
+      }
+
+      const nextStatus = action === 'approve-documents' ? 'approved' : 'rejected';
+      const reviewMetadata = JSON.stringify({
+        internalReviewAction: action,
+        internalReviewNotes: notes || null,
+        internalReviewedAt: new Date().toISOString(),
+      });
+
+      const updateQuery = fileIds.length > 0
+        ? `UPDATE verification_files
+           SET verification_status = $1,
+               metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb
+           WHERE property_id = $3
+             AND verification_scope = 'property-document'
+             AND id = ANY($4::text[])
+           RETURNING ${VERIFICATION_FILE_SELECT}`
+        : `UPDATE verification_files
+           SET verification_status = $1,
+               metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb
+           WHERE property_id = $3
+             AND verification_scope = 'property-document'
+           RETURNING ${VERIFICATION_FILE_SELECT}`;
+      const updateParams = fileIds.length > 0
+        ? [nextStatus, reviewMetadata, req.params.id, fileIds]
+        : [nextStatus, reviewMetadata, req.params.id];
+      const updatedDocumentsResult = await db.query(updateQuery, updateParams);
+
+      reviewedDocuments = (updatedDocumentsResult.rows as VerificationFileRow[]).map((row) => (
+        mapVerificationFileToInternalAsset(row, { signedExpirySeconds: 60 * 60 * 12 })
+      ));
+    }
+
+    if (action === 'complete-manual-review' || action === 'clear-manual-review') {
+      manualReviewCompleted = action === 'complete-manual-review';
+      manualReviewUpdatedAt = manualReviewCompleted
+        ? (typeof req.body?.reviewedAt === 'string' && req.body.reviewedAt.trim().length > 0 && !Number.isNaN(Date.parse(req.body.reviewedAt))
+            ? new Date(req.body.reviewedAt).toISOString()
+            : new Date().toISOString())
+        : null;
+
+      await db.query(
+        `UPDATE properties
+         SET "hasPresencialVerification" = $2,
+             "onsiteVerifiedAt" = CASE WHEN $2 = 1 THEN COALESCE($3, "onsiteVerifiedAt") ELSE NULL END
+         WHERE id = $1`,
+        [req.params.id, manualReviewCompleted ? 1 : 0, manualReviewUpdatedAt],
+      );
+    }
+
+    return res.json({
+      propertyId: property.id,
+      propertyTitle: property.title ?? null,
+      hostId: property.hostId ?? null,
+      hostName: property.hostName ?? null,
+      action,
+      reviewedDocuments,
+      manualReviewCompleted,
+      manualReviewUpdatedAt,
+    });
+  } catch (err) {
+    console.error('Error applying internal property verification review:', err);
+    return res.status(500).json({ error: 'No pudimos guardar esa revisión interna.' });
   }
 });
 
