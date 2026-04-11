@@ -398,11 +398,11 @@ describe('HostDashboard', () => {
     });
 
     expect(await screen.findAllByText('Seña por definir')).not.toHaveLength(0);
-    expect(screen.getByText('Ya la aceptaste. Ahora el huésped puede resolver la seña acá con claridad o coordinarla por fuera.')).toBeInTheDocument();
-    expect(screen.getByText('Si la resuelve acá, la seña queda registrada en la plataforma y el fee aparece antes de confirmar.')).toBeInTheDocument();
+    expect(screen.getByText('Ya la aceptaste. Ahora el huésped define si deja la seña registrada acá o si la coordina por fuera.')).toBeInTheDocument();
+    expect(screen.getByText('Si la deja registrada acá, el fee aparece antes de pagar y la seña queda asentada.')).toBeInTheDocument();
     expect(showToastMock).toHaveBeenCalledWith(
       'Solicitud aceptada',
-      'La solicitud quedó aceptada. Ahora el huésped puede resolver la seña acá con claridad o coordinarla por fuera.',
+      'La solicitud quedó aceptada. Ahora el huésped puede definir la seña desde el chat.',
       'success',
     );
   });
@@ -761,8 +761,8 @@ describe('HostDashboard', () => {
     render(<HostDashboard onBack={vi.fn()} />);
 
     expect(await screen.findAllByText('Seña en custodia')).not.toHaveLength(0);
-    expect(screen.getByText('La seña ya fue recibida')).toBeInTheDocument();
-    expect(screen.getByText('El huésped confirmó la seña a través de la plataforma. El monto queda en custodia y se libera cuando el huésped confirma su llegada al lugar.')).toBeInTheDocument();
+    expect(screen.getByText('La seña ya quedó registrada.')).toBeInTheDocument();
+    expect(screen.getByText('Queda en custodia hasta que el huésped confirme la llegada.')).toBeInTheDocument();
     expect(screen.getByText('Vas a poder ver el estado y el momento de liberación desde esta reserva.')).toBeInTheDocument();
   });
 

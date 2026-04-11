@@ -33,14 +33,6 @@ const getPropertyTypeLabel = (property: Property) => {
   return 'Alojamiento';
 };
 
-const formatReviewCount = (count: number) => {
-  if (count <= 0) {
-    return 'Sin reseñas';
-  }
-
-  return count === 1 ? '1 reseña' : `${count} reseñas`;
-};
-
 interface PropertyCardProps {
   property: Property;
   onClick?: () => void;
@@ -63,8 +55,6 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   const auth = useAuth();
   const user = auth.user;
   const imageSrc = property.imageUrl || 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=900&q=80';
-  const rating = Number(property.rating || 0);
-  const reviewsCount = Number(property.reviewsCount || 0);
   const isFavoritesVariant = variant === 'favorites';
   const verificationBadge = getPropertyVerificationBadge(property);
   const verificationSummary = {
@@ -77,8 +67,6 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   const verificationTagLabel = !isFavoritesVariant && verificationBadge.score >= HIGH_VERIFICATION_HIGHLIGHT_MIN_SCORE
     ? verificationGuidanceLabel || 'Más comprobado'
     : null;
-
-  const ratingLabel = rating > 0 ? rating.toFixed(1) : 'Sin puntaje';
 
   const handleFavoriteToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -168,28 +156,18 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           <h3 className="line-clamp-2 text-[1.04rem] font-semibold leading-[1.35] tracking-[-0.02em] text-slate-950 transition-colors duration-150 group-hover:text-slate-950 sm:text-[1.08rem] md:text-[1.12rem]">{property.title}</h3>
         </div>
 
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0 flex-1">
-            <p className="text-[1.55rem] font-black leading-none tracking-[-0.04em] text-slate-950 md:text-[1.75rem]">
-              {formatCurrency(Number(property.price) || 0)}
-              {' '}
-              <span className="text-sm font-medium tracking-normal text-slate-500">por noche</span>
-            </p>
-          </div>
-
-          <div className="shrink-0 pt-0.5 text-right">
-            <div className="inline-flex items-center justify-end gap-1.5 text-sm font-semibold text-slate-900">
-              <Icons.Star className="h-4 w-4 fill-brand text-brand" />
-              <span>{ratingLabel}</span>
-            </div>
-            <p className="mt-1 text-[11px] font-medium text-slate-500">{formatReviewCount(reviewsCount)}</p>
-          </div>
+        <div className="border-t border-slate-100 pt-4">
+          <p className="text-[1.55rem] font-black leading-none tracking-[-0.04em] text-slate-950 md:text-[1.75rem]">
+            {formatCurrency(Number(property.price) || 0)}
+            {' '}
+            <span className="text-sm font-medium tracking-normal text-slate-500">por noche</span>
+          </p>
         </div>
 
-        <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
+        <div className="rounded-[22px] border border-slate-100 bg-slate-50/80 px-4 py-3.5">
           <VerificationMeter
             summary={verificationSummary}
-            eyebrow="Comprobaciones"
+            eyebrow="Comprobado"
             layout="inline"
             tone={shouldEmphasizeVerification ? 'success' : 'neutral'}
             className="flex-1"
@@ -203,7 +181,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           />
         </div>
 
-        <div className="mt-auto flex items-end justify-end gap-4 border-t border-slate-100/90 pt-4">
+        <div className="mt-auto flex items-end justify-end gap-4 pt-2">
           {onClick ? (
             <div className="inline-flex items-center gap-2 text-[13.5px] font-semibold tracking-[-0.01em] text-slate-700 transition-colors duration-150 group-hover:text-slate-950">
               <span>{isFavoritesVariant ? 'Abrir detalle' : 'Ver detalle'}</span>

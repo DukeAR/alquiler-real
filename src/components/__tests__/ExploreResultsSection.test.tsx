@@ -91,11 +91,10 @@ describe('ExploreResultsSection', () => {
   test('renders the decision-oriented hierarchy on the home results view', () => {
     renderSection();
 
-    expect(screen.getByText('Mostramos primero los avisos con más información comprobada.')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Con más información comprobada' })).toBeInTheDocument();
-    expect(screen.getByText('Acá aparecen primero los avisos con más comprobaciones visibles y, si empatan, miramos calificación y reseñas.')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Empezá por las más completas' })).toBeInTheDocument();
+    expect(screen.getByText('Acá aparecen primero las que muestran más información visible para decidir más rápido.')).toBeInTheDocument();
     expect(screen.getByText('Más comprobado')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Más avisos' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Más opciones' })).toBeInTheDocument();
     expect(screen.getByText('Casa frente al mar')).toBeInTheDocument();
     expect(screen.getByText('Departamento luminoso')).toBeInTheDocument();
     expect(screen.queryByText('Cabaña entre pinos')).toBeInTheDocument();
@@ -104,7 +103,7 @@ describe('ExploreResultsSection', () => {
   test('shows the subtle verification hint and emphasizes cards when the preference is active', () => {
     renderSection({ caresAboutVerification: true });
 
-    expect(screen.getByText('Estás viendo avisos con más información comprobada')).toBeInTheDocument();
+    expect(screen.getByText('Estás priorizando avisos con más información comprobada')).toBeInTheDocument();
     expect(screen.getAllByText('Verificación más visible')).toHaveLength(3);
   });
 

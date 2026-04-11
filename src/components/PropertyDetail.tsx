@@ -124,11 +124,6 @@ const parseLocalIso = (value: string) => {
   return new Date(year, month - 1, day);
 };
 
-const formatReviewCount = (count: number) => {
-  if (count <= 0) return 'Sin reseñas';
-  return count === 1 ? '1 reseña' : `${count} reseñas`;
-};
-
 const getPositiveNumber = (value: unknown) => {
   const numericValue = Number(value);
 
@@ -218,27 +213,25 @@ const BOOKING_STEP_CONFIG: BookingStepConfig[] = [
   {
     key: 'guests',
     title: 'Definí quiénes viajan',
-    description: 'Ajustá cuántas personas viajan. Completar esto mejora la coordinación.',
+    description: 'Ajustá cuántas personas viajan.',
     shortLabel: 'Huéspedes',
     icon: Icons.Users,
   },
   {
     key: 'confirm',
-    title: 'Revisá el resumen final',
-    description: 'Revisá y mandá la solicitud. La elección de seña aparece recién cuando el anfitrión acepta.',
-    shortLabel: 'Confirmación',
+    title: 'Revisá antes de enviarla',
+    description: 'Revisá el resumen y mandá la solicitud. La seña recién se define si el anfitrión acepta.',
+    shortLabel: 'Resumen',
     icon: Icons.CheckCircle2,
   },
 ] as const;
 
 const BOOKING_STEP_COUNT = BOOKING_STEP_CONFIG.length;
 
-const BOOKING_ENTRY_STEPS = ['Fechas', 'Solicitud', 'Seña'] as const;
-
 const REQUEST_CONFIRMATION_NOTICE: BookingConfirmationNotice = {
   tone: 'info',
-  heading: 'La solicitud queda registrada primero',
-  description: 'Si el anfitrión la acepta, vas a poder resolver la seña acá con claridad o coordinarla por fuera. Si la resolvés acá, el fee queda visible antes de confirmar.',
+  heading: 'La seña se define después',
+  description: 'Si el anfitrión acepta, elegís si la dejás registrada acá o si la coordinás por fuera.',
 };
 
 const getHostName = (property: PropertyDetailData) => property.host?.name || property.hostName || 'Anfitrión';
@@ -370,7 +363,7 @@ const HostHistoryPanel: React.FC<{
             description={hostTenureLabel ?? 'Perfil activo en la plataforma'}
           />
           <p className="mt-3 text-sm leading-6 text-slate-500">
-            Mostramos reservas completadas, consistencia del aviso y tiempos de respuesta en lugar de puntajes públicos.
+            Acá ves reservas cerradas, consistencia del aviso y tiempos de respuesta.
           </p>
           {hostResponseSignal ? (
             <div className="mt-4 flex flex-wrap gap-2">
@@ -382,9 +375,6 @@ const HostHistoryPanel: React.FC<{
               </span>
             </div>
           ) : null}
-          <p className="mt-3 text-sm leading-6 text-slate-600">
-            Responder ayuda a avanzar más rápido.
-          </p>
           {continuity ? (
             <div className="mt-4 rounded-[22px] border border-emerald-200/80 bg-emerald-50/80 px-4 py-3.5">
               <p className="text-sm font-semibold text-emerald-800">{continuity.label}</p>
@@ -419,8 +409,8 @@ const PropertyVerificationPanel: React.FC<{
         <div className="max-w-2xl">
           <SectionTitle
             eyebrow="Comprobaciones"
-            heading="Nivel de comprobación"
-            description="Mostramos las 5 comprobaciones del aviso para ver rápido qué ya fue comprobado y qué falta completar."
+            heading="Qué ya está comprobado"
+            description="Estas 5 comprobaciones muestran qué parte del aviso ya está validada y qué falta completar."
           />
         </div>
 
@@ -585,6 +575,10 @@ export const PropertyDetailShell: React.FC<{
   const hostTenureLabel = getHostTenureLabel(property);
   const propertyTypeLabel = getPropertyTypeLabel(property);
   const decisionAmenityLabel = getDecisionAmenityLabel(property.amenities);
+  const roomSummary = [
+    bedroomsCount ? formatCountLabel(bedroomsCount, 'dormitorio', 'dormitorios') : null,
+    bathroomsCount ? formatCountLabel(bathroomsCount, 'baño', 'baños') : null,
+  ].filter((value): value is string => Boolean(value));
   const verificationDetails = getPropertyVerificationDetails(property);
   const hostInteractionHistory = property.hostInteractionHistory;
 
@@ -598,10 +592,8 @@ export const PropertyDetailShell: React.FC<{
   const total = nights * nightly;
   const decisionHighlights = [
     guestCapacity ? `Puede alojar hasta ${formatCountLabel(maxGuestsNumber ?? 0, 'huésped', 'huéspedes')}.` : null,
-    bedroomsCount ? `Tiene ${formatCountLabel(bedroomsCount, 'dormitorio', 'dormitorios')}.` : null,
-    bathroomsCount ? `Tiene ${formatCountLabel(bathroomsCount, 'baño', 'baños')}.` : null,
-    decisionAmenityLabel ? `Comodidades destacadas: ${decisionAmenityLabel}.` : null,
-    `Tipo de propiedad: ${propertyTypeLabel}.`,
+    roomSummary.length > 0 ? `Tiene ${roomSummary.join(' · ')}.` : null,
+    decisionAmenityLabel ? `Comodidades clave: ${decisionAmenityLabel}.` : null,
   ].filter(Boolean) as string[];
   const visibleReviews = [...reviews]
     .sort((left, right) => {
@@ -631,8 +623,8 @@ export const PropertyDetailShell: React.FC<{
     : `${guestCountLabel} · Total al elegir fechas`;
   const bookingEntryCtaLabel = 'Ver disponibilidad';
   const bookingEntryHelperText = hasSelectedDates
-    ? 'Tu selección queda guardada mientras decidís si querés avanzar con este lugar.'
-    : 'Elegí fechas para ver el total y seguir recién cuando decidas avanzar.';
+    ? 'Tu selección queda guardada mientras seguís revisando este lugar.'
+    : 'Elegí fechas para ver total y disponibilidad.';
   const mobilePrimaryActionLabel = bookingStep === 'dates'
     ? hasCompleteDates
       ? 'Seguir con huéspedes'
@@ -1214,9 +1206,6 @@ export const PropertyDetailShell: React.FC<{
           <Card variant="elevated" className="rounded-[30px] border-slate-200/80 bg-white p-5 shadow-[0_30px_80px_-50px_rgba(15,23,42,0.28)] sm:p-6">
             <section role="region" aria-label="Contexto de la reserva" className="space-y-4">
               <div className="space-y-2">
-                <span className="inline-flex items-center rounded-full border border-brand/15 bg-brand/5 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-brand">
-                  Paso 1 de 3
-                </span>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Precio por noche</p>
                 <div className="flex items-end gap-2">
                   <span className="text-[2.8rem] font-black tracking-tight text-slate-950 sm:text-[3rem]">{nightly ? formatCurrency(nightly) : '—'}</span>
@@ -1239,22 +1228,6 @@ export const PropertyDetailShell: React.FC<{
               </Button>
 
               <p className="text-sm leading-6 text-slate-500">{bookingEntryHelperText}</p>
-
-              <div className="flex flex-wrap gap-2">
-                {BOOKING_ENTRY_STEPS.map((step, index) => (
-                  <span
-                    key={step}
-                    className={cn(
-                      'inline-flex items-center rounded-full border px-3 py-1.5 text-[11px] font-semibold tracking-[0.14em]',
-                      index === 0
-                        ? 'border-brand/20 bg-brand/10 text-brand'
-                        : 'border-slate-200 bg-slate-50 text-slate-500',
-                    )}
-                  >
-                    {index + 1}. {step}
-                  </span>
-                ))}
-              </div>
 
               {hasSelectedDates || guestCount > 1 ? (
                 <div className="rounded-[24px] border border-slate-200/80 bg-slate-50/80 px-4 py-4 shadow-[0_18px_36px_-34px_rgba(15,23,42,0.14)]">
@@ -1285,7 +1258,7 @@ export const PropertyDetailShell: React.FC<{
           data-testid="property-verification-preview"
           className="xl:col-span-2 rounded-[30px] border border-slate-200/80 bg-white/94 px-5 py-4 shadow-[0_24px_60px_-46px_rgba(15,23,42,0.22)] sm:px-6"
         >
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Información comprobada</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Qué ya está comprobado</p>
           {heroTrustItems.length > 0 ? (
             <ul className="mt-3 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-6 sm:gap-y-3">
               {heroTrustItems.map((item) => (
@@ -1298,7 +1271,7 @@ export const PropertyDetailShell: React.FC<{
               ))}
             </ul>
           ) : (
-            <p className="mt-2 text-sm leading-6 text-slate-500">Todavía no hay información comprobada visible en este aviso.</p>
+            <p className="mt-2 text-sm leading-6 text-slate-500">Todavía no hay datos comprobados visibles en este aviso.</p>
           )}
         </section>
 
@@ -1307,8 +1280,8 @@ export const PropertyDetailShell: React.FC<{
             <div className="space-y-4">
               <SectionTitle
                 eyebrow="Antes de decidir"
-                heading="Lo importante de este aviso"
-                description="Descripción completa y datos concretos para ver si este lugar te cierra."
+                heading="Lo esencial de este lugar"
+                description="Descripción y datos concretos para decidir si te sirve."
               />
               <p className="max-w-3xl text-base leading-8 text-slate-600">
                 {property.description || 'Todavía no hay descripción disponible.'}
@@ -1327,7 +1300,7 @@ export const PropertyDetailShell: React.FC<{
 
               {hasAmenities ? (
                 <div className="border-t border-slate-200/70 pt-5">
-                  <p className="text-sm font-semibold text-slate-900">Comodidades que ya están detalladas</p>
+                  <p className="text-sm font-semibold text-slate-900">Comodidades ya detalladas</p>
                   <ul className="mt-3 flex flex-wrap gap-2.5">
                     {property.amenities?.map((amenity) => (
                       <li key={amenity} className="rounded-full border border-slate-200/80 bg-slate-50 px-3.5 py-2 text-sm font-medium text-slate-700">
@@ -1357,18 +1330,6 @@ export const PropertyDetailShell: React.FC<{
                 heading="Cómo fue la experiencia de otros huéspedes"
                 description={reviewCount > 0 ? 'Reseñas reales para entender mejor cómo fue la estadía.' : 'Todavía no hay reseñas reales publicadas para esta propiedad.'}
               />
-
-              <Card padding="sm" variant="muted" className="w-full rounded-[28px] border-slate-200/80 bg-white lg:max-w-xs">
-                <div className="flex items-center gap-3">
-                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand/10 text-brand">
-                    <Icons.MessageSquare className="h-5 w-5" />
-                  </span>
-                  <div>
-                    <div className="text-xl font-bold tracking-tight text-slate-950">{reviewCount > 0 ? String(reviewCount) : '0'}</div>
-                    <div className="text-sm text-slate-500">{reviewCount > 0 ? formatReviewCount(reviewCount) : 'Todavía no hay experiencias compartidas'}</div>
-                  </div>
-                </div>
-              </Card>
             </div>
 
             {visibleReviews.length > 0 ? (
@@ -1410,9 +1371,9 @@ export const PropertyDetailShell: React.FC<{
                 <div className="flex items-start justify-between gap-4">
                   <div className="space-y-1.5">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Reserva</p>
-                    <h2 id="booking-flow-title" className="text-2xl font-semibold tracking-tight text-slate-950">Ver disponibilidad y reservar</h2>
+                    <h2 id="booking-flow-title" className="text-2xl font-semibold tracking-tight text-slate-950">Ver disponibilidad</h2>
                     <p id="booking-flow-description" className="text-sm leading-6 text-slate-600">
-                      Elegí fechas y huéspedes sin salir de esta ficha. La seña aparece recién cuando el anfitrión acepta.
+                      Elegí fechas y huéspedes sin salir de esta ficha. La seña se define después, si el anfitrión acepta.
                     </p>
                   </div>
                   <Button
@@ -1432,32 +1393,26 @@ export const PropertyDetailShell: React.FC<{
               <form className="flex min-h-0 flex-1 flex-col" onSubmit={handleReserve}>
                 <div className="flex-1 overflow-y-auto px-4 py-5 sm:px-6 sm:py-6">
                   <div className="space-y-6">
-                    <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-                      <div className="rounded-[24px] border border-slate-200/80 bg-slate-50/80 px-4 py-4 shadow-[0_18px_36px_-34px_rgba(15,23,42,0.14)] lg:flex-1">
-                        <div className="grid gap-4 sm:grid-cols-3">
-                          <div>
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Fechas</p>
-                            <p className="mt-1 text-sm font-semibold leading-6 text-slate-900">{dateSelectionSummary}</p>
-                          </div>
-                          <div>
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Huéspedes</p>
-                            <p className="mt-1 text-sm font-semibold leading-6 text-slate-900">{guestCountLabel}</p>
-                          </div>
-                          <div>
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Total estimado</p>
-                            <p className="mt-1 text-sm font-semibold leading-6 text-slate-900">{totalSummaryLabel}</p>
-                          </div>
+                    <div className="rounded-[24px] border border-slate-200/80 bg-slate-50/80 px-4 py-4 shadow-[0_18px_36px_-34px_rgba(15,23,42,0.14)]">
+                      <div className="grid gap-4 sm:grid-cols-3">
+                        <div>
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Fechas</p>
+                          <p className="mt-1 text-sm font-semibold leading-6 text-slate-900">{dateSelectionSummary}</p>
+                        </div>
+                        <div>
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Huéspedes</p>
+                          <p className="mt-1 text-sm font-semibold leading-6 text-slate-900">{guestCountLabel}</p>
+                        </div>
+                        <div>
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Total estimado</p>
+                          <p className="mt-1 text-sm font-semibold leading-6 text-slate-900">{totalSummaryLabel}</p>
                         </div>
                       </div>
-
-                      <span className="inline-flex w-fit items-center rounded-full border border-slate-200 bg-slate-50 px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">
-                        {bookingStepProgressLabel}
-                      </span>
                     </div>
 
                     <div className="animate-[booking-step-in_220ms_var(--app-interaction-ease)] rounded-[26px] border border-slate-200/80 bg-slate-50/70 p-4 shadow-[0_24px_56px_-42px_rgba(15,23,42,0.16)] sm:p-5">
                       <div className="space-y-1.5">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{bookingStepProgressLabel}</p>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{currentBookingStep.shortLabel}</p>
                         <h3 className="text-xl font-semibold tracking-tight text-slate-950">{currentBookingStep.title}</h3>
                         <p className="text-sm leading-6 text-slate-600">{currentBookingStep.description}</p>
                         {isMobileBookingLayout && mobileStepStatusLabel ? <p className="text-sm font-medium text-slate-600">{mobileStepStatusLabel}</p> : null}
@@ -1552,8 +1507,8 @@ export const PropertyDetailShell: React.FC<{
                           <div className="space-y-3 rounded-[24px] border border-slate-200/80 bg-white p-4 shadow-[0_18px_36px_-30px_rgba(15,23,42,0.14)]">
                             <div className="flex items-end justify-between gap-4 border-b border-slate-200/70 pb-3">
                               <div>
-                                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Listo para enviar</p>
-                                <p className="mt-1 text-base font-semibold text-slate-950">Solicitud registrada</p>
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Antes de enviarla</p>
+                                <p className="mt-1 text-base font-semibold text-slate-950">Revisá los datos</p>
                               </div>
                               <div className="text-right">
                                 <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Total</p>
@@ -1586,11 +1541,11 @@ export const PropertyDetailShell: React.FC<{
                               <div className="flex items-start justify-between gap-3 border-t border-slate-200/70 pt-3">
                                 <div>
                                   <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Seña</p>
-                                  <p className="mt-1 font-semibold text-slate-950">La elegís después de la aceptación</p>
-                                  <p className="mt-1">Cuando el anfitrión acepte, vas a poder resolverla acá con claridad o coordinarla por fuera. Si la resolvés acá, el fee queda visible antes de confirmar.</p>
+                                  <p className="mt-1 font-semibold text-slate-950">Se define después</p>
+                                  <p className="mt-1">Si el anfitrión acepta, elegís si la dejás registrada acá o si la coordinás por fuera.</p>
                                 </div>
                                 <span className="rounded-full bg-brand/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-brand">
-                                  Paso posterior
+                                  Sigue después
                                 </span>
                               </div>
                             </div>
@@ -1735,9 +1690,6 @@ export const PropertyDetailShell: React.FC<{
                   {bookingEntryCtaLabel}
                 </>
               </Button>
-              <p className="text-center text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">
-                1. Fechas  ·  2. Solicitud  ·  3. Seña
-              </p>
             </div>
           </section>
         </div>

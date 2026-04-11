@@ -85,23 +85,18 @@ export const ExploreResultsSection = ({
       .slice(0, TOP_VERIFIED_RESULTS_COUNT)
       .map((property) => property.id),
   );
-  const rankingLead = sortBy === 'price'
-    ? 'Mostramos primero el precio más bajo y usamos la información comprobada para ordenar mejor cuando hace falta.'
-    : sortBy === 'rating'
-      ? 'Mostramos primero los avisos mejor calificados y usamos la información comprobada para desempatar.'
-      : 'Mostramos primero los avisos con más información comprobada.';
   const listingHeading = hasActiveFilters
     ? 'Resultados para revisar'
     : showFeaturedSection
-      ? 'Más avisos'
-      : 'Avisos para revisar';
+      ? 'Más opciones'
+      : 'Opciones para revisar';
   const listingDescription = loading
     ? 'Estamos actualizando los avisos disponibles.'
     : hasActiveFilters
       ? `${formatPropertyCount(listingProperties.length)} para revisar en esta búsqueda.`
       : listingProperties.length > 0
         ? showFeaturedSection
-          ? `${formatPropertyCount(listingProperties.length)} para seguir revisando con el mismo criterio.`
+          ? `${formatPropertyCount(listingProperties.length)} para seguir comparando sin cambiar el criterio.`
           : `${formatPropertyCount(listingProperties.length)} para revisar con este criterio.`
         : 'No hay más propiedades para revisar por ahora.';
 
@@ -177,7 +172,7 @@ export const ExploreResultsSection = ({
   const verificationPreferenceHint = showVerificationPreferenceHint ? (
     <p className="mt-3 inline-flex items-center gap-2 rounded-full border border-emerald-200/80 bg-emerald-50/80 px-3 py-1.5 text-[12.5px] font-medium leading-5 text-emerald-800">
       <Icons.ShieldCheck className="h-4 w-4" />
-      <span>Estás viendo avisos con más información comprobada</span>
+      <span>Estás priorizando avisos con más información comprobada</span>
     </p>
   ) : null;
 
@@ -268,12 +263,6 @@ export const ExploreResultsSection = ({
 
   return (
     <section className="space-y-8 md:space-y-10">
-      {!loading && hasAnyResults ? (
-        <div className="rounded-[24px] border border-slate-200/80 bg-white/90 px-4 py-3.5 shadow-[0_18px_36px_-34px_rgba(15,23,42,0.16)]">
-          <p className="text-sm font-medium leading-6 text-slate-700">{rankingLead}</p>
-        </div>
-      ) : null}
-
       {showSummaryCard ? summaryCard : null}
 
       {showHomeBlocks && showingStaleResults ? (
@@ -288,8 +277,14 @@ export const ExploreResultsSection = ({
         <section className="space-y-5 md:space-y-6">
           <div className="max-w-2xl space-y-2">
             <SectionTitle
-              heading="Con más información comprobada"
-              description="Acá aparecen primero los avisos con más comprobaciones visibles y, si empatan, miramos calificación y reseñas."
+              heading={sortBy === 'price' ? 'Empezá por las más convenientes' : sortBy === 'rating' ? 'Empezá por las mejor valoradas' : 'Empezá por las más completas'}
+              description={loading
+                ? 'Estamos ordenando las primeras opciones.'
+                : sortBy === 'price'
+                  ? 'Acá aparecen primero las más baratas y, si empatan, priorizamos las que muestran más información visible.'
+                  : sortBy === 'rating'
+                    ? 'Acá aparecen primero las mejor valoradas y, si empatan, las que muestran más información visible.'
+                    : 'Acá aparecen primero las que muestran más información visible para decidir más rápido.'}
               className="max-w-2xl"
             />
             {!loading ? (
@@ -377,7 +372,7 @@ export const ExploreResultsSection = ({
 
           {!loading && hasMoreResults ? (
             <div className="flex flex-col items-center gap-4 pt-4 md:pt-6">
-              <p className="text-sm text-slate-500">Mostrando {visibleCount} de {listingProperties.length} propiedades para comparar.</p>
+              <p className="text-sm text-slate-500">Mostrando {visibleCount} de {listingProperties.length} propiedades.</p>
               <Button type="button" className="rounded-full px-6 md:px-8" onClick={onLoadMore}>
                 Ver más propiedades
               </Button>

@@ -129,7 +129,7 @@ const getDesktopBookingContext = () => screen.getByRole('region', { name: /conte
 
 const getMobileBookingSummary = () => screen.getByRole('region', { name: /resumen móvil de la reserva/i });
 
-const getBookingFlowDialog = () => screen.getByRole('dialog', { name: /ver disponibilidad y reservar/i });
+const getBookingFlowDialog = () => screen.getByRole('dialog', { name: /ver disponibilidad/i });
 
 const DEFAULT_WINDOW_WIDTH = window.innerWidth;
 
@@ -157,7 +157,7 @@ const isoPlusDays = (days: number) => {
 };
 
 const openBookingFlow = async () => {
-  if (!screen.queryByRole('heading', { name: /ver disponibilidad y reservar/i })) {
+  if (!screen.queryByRole('heading', { name: /ver disponibilidad/i })) {
     fireEvent.click(screen.getAllByRole('button', { name: /ver disponibilidad/i })[0]);
   }
 
@@ -186,7 +186,7 @@ const advanceToConfirmationStep = async () => {
   await waitFor(() => expect(screen.getByText('Definí quiénes viajan')).toBeDefined());
 
   fireEvent.click(screen.getByRole('button', { name: /^siguiente$/i }));
-  await waitFor(() => expect(screen.getByText('Revisá el resumen final')).toBeDefined());
+  await waitFor(() => expect(screen.getByText('Revisá antes de enviarla')).toBeDefined());
 
   return { checkInIso, checkOutIso };
 };
@@ -295,7 +295,7 @@ describe('PropertyDetail', () => {
 
     expect(screen.queryByText('Elegí las fechas')).toBeNull();
     expect(screen.queryByText('Definí quiénes viajan')).toBeNull();
-    expect(screen.queryByText('La elegís después de la aceptación')).toBeNull();
+    expect(screen.queryByText('Se define después')).toBeNull();
 
     await openBookingFlow();
 
@@ -309,8 +309,8 @@ describe('PropertyDetail', () => {
     await waitFor(() => expect(screen.getByText('Definí quiénes viajan')).toBeDefined());
 
     fireEvent.click(screen.getByRole('button', { name: /^siguiente$/i }));
-    await waitFor(() => expect(screen.getByText('Revisá el resumen final')).toBeDefined());
-    expect(screen.getByText('La elegís después de la aceptación')).toBeDefined();
+    await waitFor(() => expect(screen.getByText('Revisá antes de enviarla')).toBeDefined());
+    expect(screen.getByText('Se define después')).toBeDefined();
   });
 
   test('uses a dominant availability CTA to open the calendar directly', async () => {
@@ -321,7 +321,7 @@ describe('PropertyDetail', () => {
     const desktopContext = getDesktopBookingContext();
 
     expect(within(desktopContext).getByRole('button', { name: /ver disponibilidad/i })).toBeDefined();
-    expect(within(desktopContext).getByText('Elegí fechas para ver el total y seguir recién cuando decidas avanzar.')).toBeDefined();
+    expect(within(desktopContext).getByText('Elegí fechas para ver total y disponibilidad.')).toBeDefined();
 
     fireEvent.click(within(desktopContext).getByRole('button', { name: /ver disponibilidad/i }));
 
@@ -339,7 +339,7 @@ describe('PropertyDetail', () => {
 
     expect(within(desktopContext).getByText('Precio por noche')).toBeDefined();
     expect(within(desktopContext).getByRole('button', { name: /ver disponibilidad/i })).toBeDefined();
-    expect(within(desktopContext).getByText('Elegí fechas para ver el total y seguir recién cuando decidas avanzar.')).toBeDefined();
+    expect(within(desktopContext).getByText('Elegí fechas para ver total y disponibilidad.')).toBeDefined();
     expect(within(mobileContext).getByText('1 huésped · Total al elegir fechas')).toBeDefined();
     expect(within(mobileContext).getByRole('button', { name: /ver disponibilidad/i })).toBeDefined();
     expect(within(mobileContext).getByText(/120/)).toBeDefined();
@@ -351,7 +351,7 @@ describe('PropertyDetail', () => {
 
     const bookingFlow = getBookingFlowDialog();
 
-    expect(within(bookingFlow).getByText('Ver disponibilidad y reservar')).toBeDefined();
+    expect(within(bookingFlow).getByText('Ver disponibilidad')).toBeDefined();
     expect(within(bookingFlow).getByText(/3 noches · 1 huésped ·/i)).toBeDefined();
     expect(within(bookingFlow).getAllByText(new RegExp('360')).length).toBeGreaterThan(0);
     expect(within(desktopContext).getByText('Tu selección')).toBeDefined();
@@ -394,7 +394,7 @@ describe('PropertyDetail', () => {
     expect(within(bookingFlow).getByRole('button', { name: /seguir al resumen/i })).toBeDefined();
 
     fireEvent.click(within(bookingFlow).getByRole('button', { name: /seguir al resumen/i }));
-    await waitFor(() => expect(screen.getByText('Revisá el resumen final')).toBeDefined());
+    await waitFor(() => expect(screen.getByText('Revisá antes de enviarla')).toBeDefined());
     expect(within(bookingFlow).getByRole('button', { name: /enviar solicitud/i })).toBeDefined();
   });
 
@@ -410,12 +410,12 @@ describe('PropertyDetail', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /cerrar flujo de reserva/i }));
 
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: /ver disponibilidad y reservar/i })).toBeNull());
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: /ver disponibilidad/i })).toBeNull());
     expect(getDesktopBookingContext()).toHaveTextContent(/tu selección/i);
 
     fireEvent.click(screen.getAllByRole('button', { name: /ver disponibilidad/i })[0]);
 
-    const bookingFlow = await screen.findByRole('dialog', { name: /ver disponibilidad y reservar/i });
+    const bookingFlow = await screen.findByRole('dialog', { name: /ver disponibilidad/i });
     expect(within(bookingFlow).getAllByText(/3 noches · 1 huésped ·/i).length).toBeGreaterThan(0);
   });
 
@@ -425,12 +425,11 @@ describe('PropertyDetail', () => {
     await waitForPropertyHeading();
 
     expect(screen.getByText('Precio por noche')).toBeDefined();
-    expect(screen.getByText('Lo importante de este aviso')).toBeDefined();
-    expect(screen.getByText('Comodidades que ya están detalladas')).toBeDefined();
+    expect(screen.getByText('Lo esencial de este lugar')).toBeDefined();
+    expect(screen.getByText('Comodidades ya detalladas')).toBeDefined();
     expect(screen.getByText('Wifi rápido')).toBeDefined();
-    expect(screen.getByText('Información comprobada')).toBeDefined();
-    expect(screen.getByText('Nivel de comprobación')).toBeDefined();
-    expect(screen.getByText('Mostramos las 5 comprobaciones del aviso para ver rápido qué ya fue comprobado y qué falta completar.')).toBeDefined();
+    expect(screen.getAllByText('Qué ya está comprobado').length).toBeGreaterThan(0);
+    expect(screen.getByText('Estas 5 comprobaciones muestran qué parte del aviso ya está validada y qué falta completar.')).toBeDefined();
     expect(screen.getAllByText('4 de 5 comprobaciones').length).toBeGreaterThan(0);
     expect(screen.getAllByText('✔✔✔✔○').length).toBeGreaterThan(0);
     const verificationPreview = screen.getByTestId('property-verification-preview');
@@ -439,8 +438,8 @@ describe('PropertyDetail', () => {
     expect(within(verificationPreview).getByText('Material real del lugar')).toBeDefined();
     expect(within(verificationPreview).queryByText('Verificación presencial')).toBeNull();
     expect(screen.getByText('Puede alojar hasta 4 huéspedes.')).toBeDefined();
-    expect(screen.getByText('Tiene 3 dormitorios.')).toBeDefined();
-    expect(screen.getByText('Tiene 2 baños.')).toBeDefined();
+    expect(screen.getByText('Tiene 3 dormitorios · 2 baños.')).toBeDefined();
+    expect(screen.getByText('Comodidades clave: Wifi rápido · Cocina equipada · Entrada autónoma.')).toBeDefined();
     expect(screen.getAllByText('Identidad del anfitrión').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Ubicación de la propiedad').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Material real del lugar').length).toBeGreaterThan(0);
@@ -448,10 +447,9 @@ describe('PropertyDetail', () => {
     expect(screen.getByText('Todavía no hay una verificación presencial registrada.')).toBeDefined();
     expect(screen.getByText('El aviso ya tiene 5 reseñas reales.')).toBeDefined();
     expect(screen.getByText('Mariana')).toBeDefined();
-    expect(screen.getByText('Mostramos reservas completadas, consistencia del aviso y tiempos de respuesta en lugar de puntajes públicos.')).toBeDefined();
+    expect(screen.getByText('Acá ves reservas cerradas, consistencia del aviso y tiempos de respuesta.')).toBeDefined();
     expect(screen.getByText('Responde rápido')).toBeDefined();
     expect(screen.getByText('Promedio: ~18 min')).toBeDefined();
-    expect(screen.getByText('Responder ayuda a avanzar más rápido.')).toBeDefined();
     expect(screen.getByText('Ya interactuaron antes sin inconvenientes')).toBeDefined();
     expect(screen.getByText('6 reservas completadas')).toBeDefined();
     expect(screen.getByText('El aviso suele coincidir con lo publicado')).toBeDefined();
@@ -470,10 +468,10 @@ describe('PropertyDetail', () => {
     await selectDateRange(checkInIso, checkOutIso);
 
     fireEvent.click(screen.getByRole('button', { name: /^siguiente$/i }));
-    await waitFor(() => expect(screen.getByText('Ajustá cuántas personas viajan. Completar esto mejora la coordinación.')).toBeDefined());
+    await waitFor(() => expect(screen.getByText('Ajustá cuántas personas viajan.')).toBeDefined());
 
     fireEvent.click(screen.getByRole('button', { name: /^siguiente$/i }));
-    await waitFor(() => expect(screen.getByText('Revisá y mandá la solicitud. La elección de seña aparece recién cuando el anfitrión acepta.')).toBeDefined());
+    await waitFor(() => expect(screen.getByText('Revisá el resumen y mandá la solicitud. La seña recién se define si el anfitrión acepta.')).toBeDefined());
   });
 
   test('shows the stronger guided verification message when the score reaches 4', async () => {
@@ -492,8 +490,8 @@ describe('PropertyDetail', () => {
     await waitForPropertyHeading();
 
     expect(screen.getAllByText('4 de 5 comprobaciones').length).toBeGreaterThan(0);
-    expect(screen.getByText('Nivel de comprobación')).toBeDefined();
-    expect(screen.getByText('Mostramos las 5 comprobaciones del aviso para ver rápido qué ya fue comprobado y qué falta completar.')).toBeDefined();
+    expect(screen.getAllByText('Qué ya está comprobado').length).toBeGreaterThan(0);
+    expect(screen.getByText('Estas 5 comprobaciones muestran qué parte del aviso ya está validada y qué falta completar.')).toBeDefined();
   });
 
   test('records the detail visit when the property reaches a high verification level', async () => {
@@ -541,7 +539,7 @@ describe('PropertyDetail', () => {
     expect(within(verificationPreview).getByText('Historial real del aviso')).toBeDefined();
     expect(within(verificationPreview).queryByText('Identidad del anfitrión')).toBeNull();
     expect(screen.getByText('Todavía falta verificar la identidad del anfitrión.')).toBeDefined();
-    expect(screen.getByText('Nivel de comprobación')).toBeDefined();
+    expect(screen.getAllByText('Qué ya está comprobado').length).toBeGreaterThan(0);
   });
 
   test('guides the booking flow and stops guest selection at capacity', async () => {
@@ -575,8 +573,8 @@ describe('PropertyDetail', () => {
 
     await advanceToConfirmationStep();
 
-    expect(screen.getByText('Revisá el resumen final')).toBeDefined();
-    expect(screen.getByText('La elegís después de la aceptación')).toBeDefined();
+    expect(screen.getByText('Revisá antes de enviarla')).toBeDefined();
+    expect(screen.getByText('Se define después')).toBeDefined();
     expect(screen.getAllByRole('status').length).toBeGreaterThan(0);
     expect(screen.getAllByRole('button', { name: /editar/i })).toHaveLength(2);
     expect(screen.getByRole('button', { name: /^enviar solicitud$/i })).toBeDefined();

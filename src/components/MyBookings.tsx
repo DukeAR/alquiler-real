@@ -593,7 +593,7 @@ export const MyBookings = () => {
       const nextBooking = await selectExternalDeposit(bookingId);
       updateBookingState(nextBooking);
       setExternalDepositChoiceBookingId((currentBookingId) => (currentBookingId === bookingId ? null : currentBookingId));
-      showToast('Seña externa', 'Quedó como coordinación por fuera. Si cambiás de idea antes de informarla, podés volver a la seña protegida desde esta reserva.', 'success');
+      showToast('Seña externa', 'Quedó como coordinación por fuera. Si cambiás de idea antes de informarla, podés dejarla registrada desde esta reserva.', 'success');
     } catch (error) {
       showToast('Seña', error instanceof Error ? error.message : 'No pudimos registrar esta elección.', 'error');
     } finally {
@@ -608,7 +608,7 @@ export const MyBookings = () => {
       const nextBooking = await selectProtectedDeposit(bookingId);
       updateBookingState(nextBooking);
       setExternalDepositChoiceBookingId((currentBookingId) => (currentBookingId === bookingId ? null : currentBookingId));
-      showToast('Seña protegida', 'La seña queda registrada y se libera cuando confirmás la llegada. El fee ya quedó visible antes de pagar.', 'success');
+      showToast('Seña protegida', 'La seña quedó lista para registrarse acá. Vas a ver el fee antes de pagar.', 'success');
     } catch (error) {
       showToast('Seña', error instanceof Error ? error.message : 'No pudimos registrar esta elección.', 'error');
     } finally {
@@ -622,7 +622,7 @@ export const MyBookings = () => {
     try {
       const nextBooking = await confirmArrival(bookingId);
       updateBookingState(nextBooking);
-      showToast('Seña liberada', 'La llegada quedó confirmada y la seña pasó a liberación.', 'success');
+      showToast('Seña liberada', 'La llegada ya quedó confirmada y la seña salió de custodia.', 'success');
     } catch (error) {
       showToast('Llegada', error instanceof Error ? error.message : 'No pudimos confirmar la llegada.', 'error');
     } finally {
@@ -744,7 +744,7 @@ export const MyBookings = () => {
       ? `Elegí cómo resolver la seña de ${depositActionBooking.propertyTitle || 'esta reserva'}`
       : `Pagá la seña de ${depositActionBooking.propertyTitle || 'esta reserva'}`,
     description: getBookingFlow(depositActionBooking).stage === 'deposit-choice'
-      ? 'El anfitrión ya aceptó la solicitud. Ahora podés resolver la seña acá con claridad o coordinarla por fuera.'
+      ? 'El anfitrión ya aceptó la solicitud. Ahora podés definir si dejás la seña registrada acá o si la coordinás por fuera.'
       : 'El anfitrión ya aceptó la solicitud y elegiste la seña protegida. Falta el pago dentro de la app para dejarla en custodia.',
     actionLabel: 'Ver solicitud',
     icon: <Icons.ShieldCheck className="h-5 w-5" />,
@@ -1013,8 +1013,8 @@ export const MyBookings = () => {
                         <div className="flex items-start justify-between gap-3">
                           <div className="space-y-1.5">
                             <p className="text-[10px] font-black uppercase tracking-[0.14em] text-brand">Seña protegida</p>
-                            <p className="text-sm font-semibold text-slate-950 dark:text-slate-50">Resolver la seña acá con claridad</p>
-                            <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">La seña queda registrada y se libera cuando confirmás la llegada.</p>
+                            <p className="text-sm font-semibold text-slate-950 dark:text-slate-50">Dejarla registrada acá</p>
+                            <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">La seña ya queda asentada y se libera cuando confirmás la llegada.</p>
                           </div>
                           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand/10 text-brand dark:bg-brand/15 dark:text-brand-light">
                             <Icons.ShieldCheck className="h-5 w-5" />
@@ -1049,7 +1049,7 @@ export const MyBookings = () => {
                         >
                           <>
                             <Icons.ShieldCheck className="h-4 w-4" />
-                            Resolver la seña acá con claridad
+                            Dejarla registrada acá
                           </>
                         </Button>
                       </div>
@@ -1058,7 +1058,7 @@ export const MyBookings = () => {
                         <div className="space-y-1.5">
                           <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">Seña por fuera</p>
                           <p className="text-sm font-semibold text-slate-950 dark:text-slate-50">Coordinarla por fuera</p>
-                          <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">Coordinás directamente con el anfitrión.</p>
+                          <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">Coordinás la seña directo con el anfitrión.</p>
                         </div>
 
                         {isReviewingExternalDepositChoice ? (
@@ -1070,7 +1070,7 @@ export const MyBookings = () => {
                               </p>
                               <p className="inline-flex items-start gap-2 leading-6">
                                 <Icons.ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
-                                Si cambiás de idea antes de informarla, podés volver a resolverla acá.
+                                Si cambiás de idea antes de informarla, podés dejarla registrada acá.
                               </p>
                             </div>
 
@@ -1123,8 +1123,8 @@ export const MyBookings = () => {
                     <div className="w-full rounded-[24px] border border-slate-200 bg-white/85 p-4 dark:border-slate-800 dark:bg-slate-950/60 lg:max-w-[27rem]">
                       <div className="space-y-1.5">
                         <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">Coordinación por fuera</p>
-                        <p className="text-sm font-semibold text-slate-950 dark:text-slate-50">Coordinás directamente con el anfitrión.</p>
-                        <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">Si cambiás de idea antes de informarla, podés resolver la seña acá para dejar todo claro entre ambos.</p>
+                        <p className="text-sm font-semibold text-slate-950 dark:text-slate-50">Coordinás la seña directo con el anfitrión.</p>
+                        <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">Si cambiás de idea antes de informarla, podés dejarla registrada acá.</p>
                       </div>
 
                       <Button
@@ -1138,7 +1138,7 @@ export const MyBookings = () => {
                       >
                         <>
                           <Icons.ShieldCheck className="h-4 w-4" />
-                          Resolver la seña acá con claridad
+                          Dejarla registrada acá
                         </>
                       </Button>
                     </div>
@@ -1200,7 +1200,7 @@ export const MyBookings = () => {
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-brand">Seña protegida</p>
-                      <p className="mt-1 font-semibold text-slate-950 dark:text-slate-50">La seña queda registrada y se libera cuando confirmás la llegada.</p>
+                      <p className="mt-1 font-semibold text-slate-950 dark:text-slate-50">La seña ya queda registrada y se libera cuando confirmás la llegada.</p>
                     </div>
                     <div className="text-right text-xs leading-5">
                       <p>Seña: {formatCurrency(protectedDepositPricing.depositAmount)}</p>

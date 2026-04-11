@@ -294,11 +294,11 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
         modelLabel,
         statusLabel: viewerRole === 'host' ? 'Seña por definir' : 'Elegir seña',
         description: viewerRole === 'host'
-          ? 'Ya la aceptaste. Ahora el huésped puede resolver la seña acá con claridad o coordinarla por fuera.'
-          : 'El anfitrión ya aceptó. Ahora podés resolver la seña acá con claridad o coordinarla por fuera.',
+          ? 'Ya la aceptaste. Ahora el huésped define si deja la seña registrada acá o si la coordina por fuera.'
+          : 'El anfitrión ya aceptó. Ahora definís si dejás la seña registrada acá o si la coordinás por fuera.',
         supportText: viewerRole === 'host'
-          ? 'Si la resuelve acá, la seña queda registrada en la plataforma y el fee aparece antes de confirmar.'
-          : 'Si elegís la opción protegida, la seña queda registrada y se libera cuando confirmás la llegada. El fee se muestra antes de confirmar.',
+          ? 'Si la deja registrada acá, el fee aparece antes de pagar y la seña queda asentada.'
+          : 'Si la dejás registrada acá, ves el fee antes de pagar y la seña queda asentada hasta confirmar la llegada.',
         nextActor: 'guest',
         nextActorLabel: 'Huésped',
         nextStepLabel: viewerRole === 'host' ? 'Esperar elección de seña' : 'Elegir cómo resolver la seña',
@@ -310,8 +310,8 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
         statusLabel: input.mode === 'protected' ? 'Solicitud aceptada' : 'Propuesta aceptada',
         description: input.mode === 'protected'
           ? viewerRole === 'host'
-            ? 'Ya la aceptaste. Ahora el huésped puede registrar la seña protegida desde la app.'
-            : 'El anfitrión ya aceptó. Para seguir, registrá la seña protegida desde la app.'
+            ? 'Ya la aceptaste. Ahora falta que el huésped registre la seña desde la app.'
+            : 'El anfitrión ya aceptó. Ahora falta registrar la seña desde la app.'
           : viewerRole === 'host'
             ? 'Ya la aceptaste. Esperá que el huésped confirme la seña por acá.'
             : 'La propuesta ya fue aceptada. Confirmá por acá cuando hayas enviado la seña.',
@@ -337,8 +337,8 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
           ? 'El huésped eligió coordinar la seña por fuera.'
           : 'Elegiste coordinarla por fuera.',
         supportText: viewerRole === 'host'
-          ? 'La plataforma no cobra este paso. Si cambian de idea antes de informarla, el huésped puede volver a resolverla acá.'
-          : 'Coordinás directamente con el anfitrión. Si cambiás de idea antes de informarla, podés resolver la seña acá para dejar todo claro entre ambos.',
+          ? 'La plataforma no cobra este paso. Si cambian de idea antes de informarla, el huésped puede dejarla registrada acá.'
+          : 'Coordinás la seña directo con el anfitrión. Si cambiás de idea antes de informarla, podés dejarla registrada acá.',
         nextActor: viewerRole === 'guest' ? 'guest' : 'none',
         nextActorLabel: viewerRole === 'guest' ? 'Huésped' : 'Sin acción pendiente',
         nextStepLabel: viewerRole === 'guest' ? 'Seguir por chat' : 'Seguir por chat si hace falta',
@@ -363,10 +363,10 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
         stage,
         modelLabel,
         statusLabel: 'Reserva confirmada',
-        description: 'La reserva ya quedó registrada.',
+        description: 'La reserva ya quedó confirmada.',
         supportText: viewerRole === 'host'
-          ? 'Próximo paso: coordiná horario de llegada con el huésped.'
-          : 'Próximo paso: coordiná horario de llegada con el anfitrión.',
+          ? 'Solo queda coordinar la llegada por chat.'
+          : 'Solo queda coordinar la llegada por chat.',
         nextActor: 'none',
         nextActorLabel: 'Sin acción pendiente',
         nextStepLabel: 'Seguir por chat si hace falta',
@@ -377,8 +377,8 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
           stage,
           modelLabel,
           statusLabel: 'Seña en custodia',
-          description: 'La seña ya fue recibida',
-          supportText: 'El huésped confirmó la seña a través de la plataforma. El monto queda en custodia y se libera cuando el huésped confirma su llegada al lugar.',
+          description: 'La seña ya quedó registrada.',
+          supportText: 'Queda en custodia hasta que el huésped confirme la llegada.',
           trackingHint: 'Vas a poder ver el estado y el momento de liberación desde esta reserva.',
           nextActor: 'none',
           nextActorLabel: 'Sin acción pendiente',
@@ -392,8 +392,8 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
         stage,
         modelLabel,
         statusLabel: 'Seña en custodia',
-        description: 'La seña se mantiene protegida hasta tu llegada.',
-        supportText: 'Próximo paso: coordiná horario de llegada con el anfitrión.',
+        description: 'La seña ya quedó registrada.',
+        supportText: 'Solo queda coordinar y confirmar la llegada.',
         trackingHint: 'Si surge un problema al llegar, podés reportarlo desde la app.',
         nextActor: 'none',
         nextActorLabel: 'Sin acción pendiente',
@@ -429,7 +429,7 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
         stage,
         modelLabel,
         statusLabel: 'Seña liberada',
-        description: 'La llegada ya quedó confirmada y la seña salió de custodia.',
+        description: 'La llegada ya quedó confirmada y la seña ya salió de custodia.',
         nextActor: 'none',
         nextActorLabel: 'Sin acción pendiente',
         nextStepLabel: 'Seguir por chat si hace falta',

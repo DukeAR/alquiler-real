@@ -75,9 +75,9 @@ describe('PropertyCard', () => {
     expect(screen.getByText(/120\.000/)).toBeInTheDocument();
     expect(screen.getByText('por noche')).toBeInTheDocument();
     expect(screen.queryByText('Precio por noche')).toBeNull();
-    expect(screen.getByText('4.8')).toBeInTheDocument();
-    expect(screen.getByText('12 reseñas')).toBeInTheDocument();
-    expect(screen.getByText('Comprobaciones')).toBeInTheDocument();
+    expect(screen.queryByText('4.8')).toBeNull();
+    expect(screen.queryByText('12 reseñas')).toBeNull();
+    expect(screen.getByText('Comprobado')).toBeInTheDocument();
     expect(screen.getByText('Más comprobado')).toBeInTheDocument();
     expect(screen.getByText('4 de 5 comprobaciones')).toBeInTheDocument();
     expect(screen.getByText('✔✔✔✔○')).toBeInTheDocument();
@@ -155,6 +155,7 @@ describe('PropertyCard', () => {
   test('keeps the favorites variant free of Explore guidance labels', () => {
     render(<PropertyCard property={sampleProperty} variant="favorites" onClick={vi.fn()} />);
 
+    expect(screen.getByText('Comprobado')).toBeInTheDocument();
     expect(screen.getByText('4 de 5 comprobaciones')).toBeInTheDocument();
     expect(screen.getByText('✔✔✔✔○')).toBeInTheDocument();
     expect(screen.queryByText('Más comprobado')).toBeNull();

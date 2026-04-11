@@ -335,12 +335,12 @@ describe('MyBookings', () => {
     );
 
     expect(await screen.findAllByText('Elegir seña')).not.toHaveLength(0);
-    expect(screen.getByText('El anfitrión ya aceptó. Ahora podés resolver la seña acá con claridad o coordinarla por fuera.')).toBeInTheDocument();
+    expect(screen.getByText('El anfitrión ya aceptó. Ahora definís si dejás la seña registrada acá o si la coordinás por fuera.')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Antes de elegir la seña' })).toBeInTheDocument();
     expect(screen.getByText('Cuándo no interviene')).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /Abrir chat/i }).length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: /Coordinarla por fuera/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Resolver la seña acá con claridad/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Dejarla registrada acá/i })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Coordinarla por fuera/i }));
 
@@ -349,14 +349,14 @@ describe('MyBookings', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /^Volver$/i }));
 
-    fireEvent.click(screen.getByRole('button', { name: /Resolver la seña acá con claridad/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Dejarla registrada acá/i }));
 
     await waitFor(() => {
       expect(selectProtectedDepositMock).toHaveBeenCalledWith('booking-protected-1');
     });
 
     expect(await screen.findAllByText('Solicitud aceptada')).not.toHaveLength(0);
-    expect(screen.getByText('El anfitrión ya aceptó. Para seguir, registrá la seña protegida desde la app.')).toBeInTheDocument();
+    expect(screen.getByText('El anfitrión ya aceptó. Ahora falta registrar la seña desde la app.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Registrar seña protegida/i })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Registrar seña protegida/i }));
@@ -366,10 +366,10 @@ describe('MyBookings', () => {
     });
 
     expect(await screen.findAllByText('Seña en custodia')).not.toHaveLength(0);
-    expect(screen.getAllByText('La seña se mantiene protegida hasta tu llegada.')).not.toHaveLength(0);
+    expect(screen.getAllByText('Solo queda coordinar y confirmar la llegada.')).not.toHaveLength(0);
     expect(showToastMock).toHaveBeenCalledWith(
       'Seña protegida',
-      'La seña queda registrada y se libera cuando confirmás la llegada. El fee ya quedó visible antes de pagar.',
+      'La seña quedó lista para registrarse acá. Vas a ver el fee antes de pagar.',
       'success',
     );
     expect(showToastMock).toHaveBeenCalledWith(
@@ -425,9 +425,9 @@ describe('MyBookings', () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText('Coordinás directamente con el anfitrión.')).toBeInTheDocument();
+    expect(await screen.findByText('Coordinás la seña directo con el anfitrión.')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /Resolver la seña acá con claridad/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Dejarla registrada acá/i }));
 
     await waitFor(() => {
       expect(selectProtectedDepositMock).toHaveBeenCalledWith('booking-external-1');
@@ -435,7 +435,7 @@ describe('MyBookings', () => {
 
     expect(showToastMock).toHaveBeenCalledWith(
       'Seña protegida',
-      'La seña queda registrada y se libera cuando confirmás la llegada. El fee ya quedó visible antes de pagar.',
+      'La seña quedó lista para registrarse acá. Vas a ver el fee antes de pagar.',
       'success',
     );
   });
@@ -524,7 +524,7 @@ describe('MyBookings', () => {
     });
 
     expect(await screen.findAllByText('Seña liberada')).not.toHaveLength(0);
-    expect(screen.getAllByText('La llegada ya quedó confirmada y la seña salió de custodia.')).not.toHaveLength(0);
+    expect(screen.getAllByText('La llegada ya quedó confirmada y la seña ya salió de custodia.')).not.toHaveLength(0);
   });
 
   test('lets the guest report an arrival problem while the protected deposit is in custody', async () => {

@@ -149,7 +149,7 @@ const buildHostSuggestedReply = (...segments: Array<string | null | undefined>) 
 
 const buildHostClosingChips = (requestContext: ReservationRequestContext | null) => {
   const advanceWithDepositMessage = requestContext?.mode === 'protected'
-    ? 'Si te parece bien, podemos avanzar con la seña. Podés coordinarla por fuera o resolverla por acá.'
+    ? 'Si te parece bien, podemos seguir con la seña. Podés dejarla registrada acá o coordinarla por fuera.'
     : 'Si te parece bien, podemos avanzar con la seña.';
 
   return [
@@ -891,8 +891,8 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
         successTitle ?? (acceptedMode === 'protected' ? 'Solicitud aceptada' : 'Propuesta aceptada'),
         successDescription ?? (
           acceptedMode === 'protected'
-            ? 'La solicitud ya quedó aceptada. El siguiente paso es que el huésped elija si coordina la seña por fuera o dentro de la plataforma.'
-            : 'La propuesta ya quedó aceptada. El siguiente paso es que el huésped informe la seña por chat.'
+            ? 'La solicitud ya quedó aceptada. Ahora el huésped puede definir la seña desde este chat.'
+            : 'La propuesta ya quedó aceptada. Ahora falta que el huésped informe la seña por chat.'
         ),
         'success',
       );
@@ -940,8 +940,8 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
         await acceptActiveRequest({
           successTitle: 'Cierre enviado',
           successDescription: activeConv.requestMode === 'protected'
-            ? 'El chat ya pasó a la elección de seña para que el huésped siga sin fricción.'
-            : 'La propuesta quedó aceptada y el chat ya pasó al siguiente paso de seña.',
+            ? 'El chat ya quedó listo para que el huésped defina la seña.'
+            : 'La propuesta quedó aceptada y el chat ya quedó listo para la seña.',
         });
       }
     } catch (err: any) {
@@ -1049,7 +1049,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
         depositPaymentReference: booking.depositPaymentReference,
       });
       await loadMessages(activeConv.id);
-      showToast('Seña externa', 'Quedó como coordinación por fuera. Si cambiás de idea antes de informarla, podés volver a la seña protegida desde esta conversación.', 'success');
+      showToast('Seña externa', 'Quedó como coordinación por fuera. Si cambiás de idea antes de informarla, podés dejarla registrada desde esta conversación.', 'success');
     } catch (err) {
       showToast('Seña', err instanceof Error ? err.message : 'No pudimos registrar esta elección.', 'error');
     } finally {
@@ -1075,7 +1075,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
         depositPaymentReference: booking.depositPaymentReference,
       });
       await loadMessages(activeConv.id);
-      showToast('Seña protegida', 'La seña queda registrada y se libera cuando confirmás la llegada. El fee ya quedó visible antes de pagar.', 'success');
+      showToast('Seña protegida', 'La seña quedó lista para registrarse acá. Vas a ver el fee antes de pagar.', 'success');
     } catch (err) {
       showToast('Seña', err instanceof Error ? err.message : 'No pudimos registrar esta elección.', 'error');
     } finally {
@@ -1113,7 +1113,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
       const updatedConversation = await confirmDirectDeposit(activeConv.id);
       applyConversationUpdate(updatedConversation);
       await loadMessages(activeConv.id);
-      showToast('Reserva confirmada', 'La seña ya quedó confirmada y la reserva sigue por chat con los últimos detalles.', 'success');
+      showToast('Reserva confirmada', 'La reserva ya quedó confirmada. Ahora solo falta coordinar la llegada.', 'success');
     } catch (err) {
       showToast('Reserva', err instanceof Error ? err.message : 'No pudimos confirmar la recepción de la seña.', 'error');
     } finally {
@@ -1139,7 +1139,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
         depositPaymentReference: booking.depositPaymentReference,
       });
       await loadMessages(activeConv.id);
-      showToast('Seña en custodia', 'La seña queda asentada en la plataforma hasta que confirmes la llegada.', 'success');
+      showToast('Seña en custodia', 'La seña ya quedó registrada hasta que confirmes la llegada.', 'success');
     } catch (err) {
       showToast('Seña', err instanceof Error ? err.message : 'No pudimos registrar el pago de la seña.', 'error');
     } finally {
@@ -1165,7 +1165,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
         depositPaymentReference: booking.depositPaymentReference,
       });
       await loadMessages(activeConv.id);
-      showToast('Seña liberada', 'La llegada ya quedó confirmada y la seña pasó a liberación.', 'success');
+      showToast('Seña liberada', 'La llegada ya quedó confirmada y la seña salió de custodia.', 'success');
     } catch (err) {
       showToast('Llegada', err instanceof Error ? err.message : 'No pudimos confirmar la llegada.', 'error');
     } finally {
@@ -1689,14 +1689,14 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
     if (message.system_key === 'deposit-choice' && flowCopy?.stage === 'deposit-choice') {
       return {
         content: isHostConversation
-          ? 'El siguiente paso es que el huésped elija cómo resolver la seña.'
-          : 'Podés resolver la seña acá para dejar todo claro entre ambos.',
+          ? 'El siguiente paso es que el huésped defina la seña.'
+          : 'Podés elegir si dejar la seña registrada acá o coordinarla por fuera.',
         emphasis: 'card',
         supplementaryContent: isHostConversation
-          ? 'La opción protegida deja la seña registrada y la externa sigue por chat, sin esconder ninguna de las dos.'
+          ? 'La opción registrada la deja asentada. La externa sigue por chat y ambas quedan visibles.'
           : protectedDepositPreview
-            ? `Acá: seña ${currencyFormatter.format(protectedDepositPreview.depositAmount)} + fee ${currencyFormatter.format(protectedDepositPreview.serviceFee)} = ${currencyFormatter.format(protectedDepositPreview.totalCharge)}. Por fuera: coordinás directo con el anfitrión.`
-            : 'Acá la seña queda registrada. Si preferís coordinarla por fuera, seguís directo por chat con el anfitrión.',
+            ? `Acá: seña ${currencyFormatter.format(protectedDepositPreview.depositAmount)} + fee ${currencyFormatter.format(protectedDepositPreview.serviceFee)} = ${currencyFormatter.format(protectedDepositPreview.totalCharge)}. Por fuera: la coordinás directo con el anfitrión.`
+            : 'Acá la seña queda asentada. Si preferís coordinarla por fuera, seguís directo por chat con el anfitrión.',
       };
     }
 
@@ -1710,10 +1710,10 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
           : 'El anfitrión aceptó la propuesta.';
       const supplementaryContent = activeRequestContext?.mode === 'protected'
         ? canPayProtectedDeposit
-          ? 'Ya podés avanzar con la seña protegida.'
+          ? 'Ya podés dejar la seña registrada.'
           : 'Ahora falta que el huésped registre la seña protegida.'
         : canReportDirectDeposit
-          ? 'Ya podés avanzar con la seña.'
+          ? 'Ya podés informar la seña.'
           : 'Ahora falta que el huésped informe la seña.';
 
       return {
@@ -1763,15 +1763,15 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
       return {
         content: isHostConversation
           ? 'El huésped eligió coordinar la seña por fuera.'
-          : 'Coordinás directamente con el anfitrión.',
+          : 'Coordinás la seña directo con el anfitrión.',
         emphasis: 'card',
         supplementaryContent: isHostConversation
-          ? 'Si cambian de idea antes de informarla, el huésped puede volver a resolverla acá.'
-          : 'Si cambiás de idea antes de informarla, podés resolver la seña acá para dejar todo claro entre ambos.',
+          ? 'Si cambian de idea antes de informarla, el huésped puede dejarla registrada acá.'
+          : 'Si cambiás de idea antes de informarla, podés dejarla registrada acá.',
         action: canReturnToProtectedDeposit
           ? {
               kind: 'select-protected-deposit',
-              label: 'Resolver la seña acá con claridad',
+              label: 'Dejarla registrada acá',
               loading: processingFlowAction === 'select-protected-deposit',
               onClick: () => {
                 if (activeRequestContext?.bookingId) {
@@ -1803,15 +1803,15 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
       return {
         content: 'Reserva confirmada',
         emphasis: 'pill',
-        supplementaryContent: 'Ya pueden seguir por chat con los detalles finales.',
+        supplementaryContent: 'La reserva ya quedó cerrada. Solo falta coordinar la llegada.',
       };
     }
 
     if (message.system_key === 'protected-after-payment' && flowCopy?.stage === 'protected-deposit-held') {
       return {
         content: isTenantConversation
-          ? 'La seña quedó registrada y se libera cuando confirmás la llegada.'
-          : 'La seña quedó registrada y se libera cuando el huésped confirma la llegada.',
+          ? 'La seña ya quedó registrada y se libera cuando confirmás la llegada.'
+          : 'La seña ya quedó registrada y se libera cuando el huésped confirma la llegada.',
         emphasis: 'card',
       };
     }
@@ -1836,7 +1836,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
       return {
         content: 'Reserva confirmada',
         emphasis: 'pill',
-        supplementaryContent: 'La llegada ya quedó confirmada y la seña salió de custodia.',
+        supplementaryContent: 'La llegada ya quedó confirmada y la seña ya salió de custodia.',
       };
     }
 
@@ -2185,11 +2185,11 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                       <div className="rounded-[24px] border border-slate-200 bg-slate-50/85 p-4 dark:border-slate-800 dark:bg-slate-900/60">
                         <div className="space-y-1.5">
                           <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">Siguiente paso</p>
-                          <p className="text-sm font-semibold text-slate-950 dark:text-slate-50">{showDepositChoiceComposer ? 'Elegí cómo resolver la seña' : 'El huésped ya puede elegir cómo resolver la seña'}</p>
+                          <p className="text-sm font-semibold text-slate-950 dark:text-slate-50">{showDepositChoiceComposer ? 'Elegí cómo dejar la seña' : 'El huésped ya puede definir la seña'}</p>
                           <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">
                             {showDepositChoiceComposer
-                              ? 'La opción protegida la deja registrada y muestra el fee antes de pagar. Si preferís coordinarla por fuera, seguís directo por chat.'
-                              : 'La opción protegida la deja registrada y la externa sigue por chat. No hace falta explicarlo manualmente: ya queda visible en esta conversación.'}
+                              ? 'Podés dejarla registrada acá o coordinarla por fuera. Las dos opciones quedan claras en este chat.'
+                              : 'Las dos opciones ya quedan visibles acá. No hace falta explicarlas por separado.'}
                           </p>
                         </div>
 
@@ -2203,7 +2203,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                                   </span>
                                   <div>
                                     <p className="text-sm font-semibold text-slate-950 dark:text-slate-50">Seña protegida</p>
-                                    <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">La opción prioritaria para dejar todo claro.</p>
+                                    <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">La forma más clara de dejarla asentada.</p>
                                   </div>
                                 </div>
                                 <span className="inline-flex items-center rounded-full border border-brand/15 bg-brand/5 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-brand">
@@ -2236,7 +2236,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                                 className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-[0_18px_34px_-28px_rgba(67,56,202,0.4)] transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-70"
                               >
                                 {processingFlowAction === 'select-protected-deposit' ? <Icons.Loader2 className="h-4 w-4 animate-spin" /> : <Icons.ShieldCheck className="h-4 w-4" />}
-                                <span>Resolver la seña acá con claridad</span>
+                                <span>Dejarla registrada acá</span>
                               </button>
                             ) : (
                               <div className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full border border-brand/15 bg-brand/5 px-4 py-2.5 text-sm font-semibold text-brand dark:border-brand/20 dark:bg-brand/10">
@@ -2254,7 +2254,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                                 </span>
                                 <div>
                                   <p className="text-sm font-semibold text-slate-950 dark:text-slate-50">Seña coordinada por fuera</p>
-                                  <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">Seguís por chat y la confirmación llega después.</p>
+                                  <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">Se coordina directo y se confirma después.</p>
                                 </div>
                               </div>
                             </div>
@@ -2286,8 +2286,8 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
 
                         <p className="mt-3 text-xs leading-5 text-slate-500 dark:text-slate-400">
                           {showDepositChoiceComposer
-                            ? 'La protegida prioriza claridad. La externa sigue disponible y queda asentada en esta conversación.'
-                            : 'Así el siguiente paso queda claro sin que el anfitrión tenga que vender ni detallar opciones manualmente.'}
+                            ? 'La opción registrada deja todo asentado. La externa sigue disponible si prefieren resolverla por fuera.'
+                            : 'Así el siguiente paso ya queda claro en la conversación.'}
                         </p>
                       </div>
                     ) : null}

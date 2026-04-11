@@ -10,8 +10,8 @@ type ExploreHeroProps = {
   onLocationSelect: (location: LocationSuggestion) => void;
 };
 
-const trustLine = 'Antes de reservar, ves rápido quién publica, dónde está el lugar y qué ya fue comprobado.';
-const compactTrustLine = 'Antes de reservar, ves rápido qué ya fue comprobado.';
+const trustLine = 'Revisá ubicación, quién publica y qué ya fue comprobado antes de reservar.';
+const compactTrustLine = 'Revisá qué ya fue comprobado antes de reservar.';
 
 export const ExploreHero = ({
   searchValue,
@@ -38,10 +38,10 @@ export const ExploreHero = ({
             <h1 className="font-display max-w-[19rem] text-balance text-[2.12rem] font-semibold leading-[1.02] tracking-[-0.035em] text-white sm:max-w-[30rem] sm:text-[2.78rem] md:max-w-[41rem] md:text-[4.15rem] lg:text-[4.45rem]">
               Reservar es fácil.
               <br />
-              Confiar, no tanto.
+              Decidir bien no siempre.
             </h1>
             <p className="max-w-[32rem] text-[0.94rem] leading-6 text-slate-100 sm:text-[0.98rem] sm:leading-7 md:max-w-[43rem] md:text-[1.08rem] md:leading-8">
-              Por eso mostramos quién publica, dónde está el lugar y qué ya fue comprobado antes de que hables o pagues.
+              Por eso mostramos ubicación, quién publica y qué parte del aviso ya está comprobada antes de que mandes un mensaje o pagues.
             </p>
           </div>
           <form
@@ -61,7 +61,7 @@ export const ExploreHero = ({
                   value={searchValue}
                   suggestions={locationSuggestions}
                   onChange={onSearchChange}
-                  placeholder="Buscá una zona, ciudad o barrio"
+                  placeholder="¿A dónde querés ir?"
                   onSelect={onLocationSelect}
                   onSubmitValue={onSearchSubmitValue}
                 />
