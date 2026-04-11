@@ -122,25 +122,20 @@ const getGuestVerificationItemShortLabel = (label: string) => {
   return label;
 };
 
-const buildHostGuestQuestionSuggestions = (requestContext: ReservationRequestContext | null) => {
-  if (!requestContext) {
-    return [] as string[];
-  }
-
-  const multipleGuests = requestContext.guests !== 1;
-
-  return [
-    multipleGuests ? '¿Vienen por descanso o trabajo?' : '¿Venís por descanso o trabajo?',
-    multipleGuests ? '¿En qué horario estiman llegar?' : '¿En qué horario estimás llegar?',
-    multipleGuests ? '¿Ya conocen la zona?' : '¿Ya conocés la zona?',
-    multipleGuests ? '¿Necesitan algo puntual?' : '¿Necesitás algo puntual?',
-  ];
+type HostResponseChip = {
+  key: 'confirm-availability' | 'arrival-time' | 'guest-count' | 'clarify-conditions';
+  label: string;
+  message: string;
 };
 
 type GuestStarterChip = {
   key: 'trip-reason' | 'arrival-time' | 'price-includes';
   label: string;
   snippet: string;
+};
+
+const buildHostSuggestedReply = (...segments: Array<string | null | undefined>) => {
+  return ['Hola, ¿cómo estás?', ...segments.filter((segment): segment is string => Boolean(segment && segment.trim()))].join(' ');
 };
 
 const formatSuggestedMessageDateRange = (requestContext: ReservationRequestContext | null) => {
@@ -168,6 +163,91 @@ const formatSuggestedMessageGuestCount = (requestContext: ReservationRequestCont
   }
 
   return `para ${requestContext.guests} ${requestContext.guests === 1 ? 'persona' : 'personas'}`;
+};
+
+const buildHostAvailabilitySentence = (
+  requestContext: ReservationRequestContext | null,
+  { includeGuestCount = false }: { includeGuestCount?: boolean } = {},
+) => {
+  const availabilityDetails = [
+    formatSuggestedMessageDateRange(requestContext),
+    includeGuestCount ? formatSuggestedMessageGuestCount(requestContext) : null,
+  ].filter((value): value is string => Boolean(value));
+
+  if (availabilityDetails.length === 0) {
+    return 'Sí, está disponible para esas fechas.';
+  }
+
+  return `Sí, está disponible ${availabilityDetails.join(' ')}.`;
+};
+
+const buildHostGuestCountFollowUp = (requestContext: ReservationRequestContext | null) => {
+  if (!requestContext?.guests || requestContext.guests < 1) {
+    return '¿Cuántas personas serían en total? Si querés, contame también brevemente el motivo del viaje.';
+  }
+
+  if (requestContext.guests === 1) {
+    return '¿Seguís viniendo vos solo? Si querés, contame también brevemente el motivo del viaje.';
+  }
+
+  return `¿Se mantienen las ${requestContext.guests} personas o se suma alguien más? Si querés, contame también brevemente el motivo del viaje.`;
+};
+
+const buildHostConditionsFollowUp = (requestContext: ReservationRequestContext | null) => {
+  const guestCount = formatSuggestedMessageGuestCount(requestContext);
+
+  if (guestCount) {
+    return `De mi lado lo estoy viendo ${guestCount} y el ingreso lo coordinamos con horario previo.`;
+  }
+
+  return 'El ingreso lo coordinamos con horario previo y prefiero dejar cerrada la cantidad de personas antes de avanzar.';
+};
+
+const buildHostUnavailableReply = (requestContext: ReservationRequestContext | null) => {
+  const dateRange = formatSuggestedMessageDateRange(requestContext);
+  const unavailableSentence = dateRange
+    ? `Ya no lo tengo disponible ${dateRange}.`
+    : 'Ya no lo tengo disponible para esas fechas.';
+
+  return buildHostSuggestedReply(unavailableSentence, 'Si te sirve, podemos revisar otra opción.');
+};
+
+const buildHostResponseChips = (requestContext: ReservationRequestContext | null) => {
+  const arrivalQuestion = requestContext?.guests && requestContext.guests > 1
+    ? '¿A qué hora estiman llegar?'
+    : '¿A qué hora estimás llegar?';
+
+  return [
+    {
+      key: 'confirm-availability',
+      label: 'Confirmar disponibilidad',
+      message: buildHostSuggestedReply(buildHostAvailabilitySentence(requestContext, { includeGuestCount: true })),
+    },
+    {
+      key: 'arrival-time',
+      label: 'Consultar horario de llegada',
+      message: buildHostSuggestedReply(
+        buildHostAvailabilitySentence(requestContext, { includeGuestCount: true }),
+        arrivalQuestion,
+      ),
+    },
+    {
+      key: 'guest-count',
+      label: 'Preguntar cantidad de personas',
+      message: buildHostSuggestedReply(
+        buildHostAvailabilitySentence(requestContext),
+        buildHostGuestCountFollowUp(requestContext),
+      ),
+    },
+    {
+      key: 'clarify-conditions',
+      label: 'Aclarar condiciones',
+      message: buildHostSuggestedReply(
+        buildHostAvailabilitySentence(requestContext),
+        buildHostConditionsFollowUp(requestContext),
+      ),
+    },
+  ] as const satisfies HostResponseChip[];
 };
 
 const buildGuestStarterChips = (requestContext: ReservationRequestContext | null) => {
@@ -609,8 +689,8 @@ const getSuggestionTexts = (requestContext: ReservationRequestContext | null, is
           'Gracias por avisar. Voy a revisar otras opciones.',
         ]
       : [
-          'Si cambia algo, te aviso por acá.',
-          'Si quieren recoordinar, lo seguimos por este chat.',
+          buildHostUnavailableReply(requestContext),
+          'Si podés mover fechas, lo vemos por este chat.',
         ];
   }
 
@@ -1127,10 +1207,10 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
       ].filter((value): value is string => Boolean(value))
     : [];
   const interactionContinuity = activeConv?.interactionContinuity ?? null;
-  const hostGuestQuestionSuggestions = isHostConversation
+  const hostResponseChips = isHostConversation
     && activeRequestContext
-    && (flowCopy?.stage === 'request-pending' || flowCopy?.stage === 'request-accepted')
-    ? buildHostGuestQuestionSuggestions(activeRequestContext)
+    && flowCopy?.stage === 'request-pending'
+    ? buildHostResponseChips(activeRequestContext)
     : [];
   const hasAuthoredConversationMessage = Boolean(
     user && messages.some((message) => !message.is_system && message.sender_id === user.id),
@@ -1143,7 +1223,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
     ? buildSuggestedFirstMessage(counterpartyName, activeRequestContext)
     : null;
   const guestIntroPrompt = null;
-  const visibleSuggestionTexts = isHostConversation && hostGuestQuestionSuggestions.length > 0
+  const visibleSuggestionTexts = isHostConversation && hostResponseChips.length > 0
     ? []
     : guestStarterChips.length > 0
       ? []
@@ -2324,20 +2404,20 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                   </div>
                 ) : null}
 
-                {hostGuestQuestionSuggestions.length > 0 ? (
+                {hostResponseChips.length > 0 ? (
                   <div className="space-y-2">
                     <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
-                      Preguntas opcionales
+                      Respuestas sugeridas
                     </p>
                     <div className="flex flex-wrap gap-2">
-                      {hostGuestQuestionSuggestions.map((suggestion) => (
+                      {hostResponseChips.map((chip) => (
                         <button
-                          key={suggestion}
+                          key={chip.key}
                           type="button"
-                          onClick={() => setInputText(suggestion)}
+                          onClick={() => setInputText(chip.message)}
                           className="rounded-full border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-semibold text-slate-600 transition-colors hover:border-brand/30 hover:bg-white hover:text-brand dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
                         >
-                          {suggestion}
+                          {chip.label}
                         </button>
                       ))}
                     </div>

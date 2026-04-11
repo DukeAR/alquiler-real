@@ -383,7 +383,7 @@ describe('SecureChat', () => {
     expect(composer.value).toContain('¿Qué incluye exactamente el precio?');
   });
 
-  test('shows lightweight guest context and natural host questions inside the chat', async () => {
+  test('shows lightweight guest context and host response chips inside the chat', async () => {
     useAuthMock.mockReturnValue({ user: { id: 'host-1' } });
     fetchConversationsMock.mockResolvedValue([
       {
@@ -409,13 +409,48 @@ describe('SecureChat', () => {
     expect(screen.getByText('4 estadías completadas')).toBeInTheDocument();
     expect(screen.getByText('Cumple lo acordado')).toBeInTheDocument();
     expect(screen.getByText('Comunicación clara')).toBeInTheDocument();
+    expect(screen.getByText('Respuestas sugeridas')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Confirmar disponibilidad' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Consultar horario de llegada' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Preguntar cantidad de personas' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Aclarar condiciones' })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: '¿Vienen por descanso o trabajo?' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Consultar horario de llegada' }));
 
-    expect(screen.getByRole('textbox')).toHaveValue('¿Vienen por descanso o trabajo?');
-    expect(screen.getByRole('button', { name: '¿En qué horario estiman llegar?' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '¿Ya conocen la zona?' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '¿Necesitan algo puntual?' })).toBeInTheDocument();
+    expect(screen.getByRole('textbox')).toHaveValue('Hola, ¿cómo estás? Sí, está disponible del 10 may al 13 may para 2 personas. ¿A qué hora estiman llegar?');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Preguntar cantidad de personas' }));
+
+    expect(screen.getByRole('textbox')).toHaveValue('Hola, ¿cómo estás? Sí, está disponible del 10 may al 13 may. ¿Se mantienen las 2 personas o se suma alguien más? Si querés, contame también brevemente el motivo del viaje.');
+  });
+
+  test('shows a natural unavailable reply suggestion for the host when the reservation did not advance', async () => {
+    useAuthMock.mockReturnValue({ user: { id: 'host-1' } });
+    fetchConversationsMock.mockResolvedValue([
+      {
+        ...baseConversation,
+        requestMode: 'direct',
+        requestStatus: 'not_advanced',
+        requestStartDate: '2026-05-10',
+        requestEndDate: '2026-05-13',
+        requestGuests: 2,
+        requestTotalPrice: 320000,
+      },
+    ]);
+    fetchMessagesMock.mockResolvedValue([]);
+
+    renderChat();
+
+    expect(await screen.findByText('Estado: No avanzó')).toBeInTheDocument();
+
+    const unavailableReply = 'Hola, ¿cómo estás? Ya no lo tengo disponible del 10 may al 13 may. Si te sirve, podemos revisar otra opción.';
+
+    expect(screen.getByRole('button', { name: unavailableReply })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Si podés mover fechas, lo vemos por este chat.' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: unavailableReply }));
+
+    expect(screen.getByRole('textbox')).toHaveValue(unavailableReply);
   });
 
   test('falls back to the only available conversation when the initial id no longer matches', async () => {
