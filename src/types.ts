@@ -1,4 +1,9 @@
-import type { PropertyVerificationItem, PropertyVerificationSummary } from './lib/propertyVerification';
+import type {
+  PropertyAdvancedVerificationItem,
+  PropertyVerificationItem,
+  PropertyVerificationProgress,
+  PropertyVerificationSummary,
+} from './lib/propertyVerification';
 import type { GuestVerificationItem, GuestVerificationSummary } from './lib/guestVerification';
 import type { HostTrustSummary } from './lib/hostTrust';
 import type { ProtectedDepositPricing } from './lib/protectedDeposit';
@@ -63,6 +68,8 @@ export interface Property {
   verificationScore?: number;
   verificationSummary?: PropertyVerificationSummary;
   verificationItems?: PropertyVerificationItem[];
+  advancedVerificationItems?: PropertyAdvancedVerificationItem[];
+  verificationProgress?: PropertyVerificationProgress;
   hostTrustScore?: number;
   hostTrust?: HostTrustSummary;
   hostInteractionHistory?: HostInteractionHistory;
@@ -81,6 +88,8 @@ export interface Property {
   traceabilityReport?: TraceabilityReport;
   imageUrl: string;
   coordinates: { lat: number; lng: number };
+  lat?: number;
+  lng?: number;
   description: string;
   rating: number;
   reviewsCount: number;
@@ -89,17 +98,42 @@ export interface Property {
   beds?: number;
   bedrooms?: number;
   bathrooms?: number;
+  verificationPhotoCount?: number;
+  verificationVideoCount?: number;
+  verificationDocumentCount?: number;
+  verificationDocumentsReviewedCount?: number;
+  documentationSubmitted?: boolean;
+  documentationVerified?: boolean;
+  manualReviewReady?: boolean;
+  manualReviewCompleted?: boolean;
   propertyRelationshipVerified?: boolean;
   hasPresencialVerification?: boolean;
   onsiteVerifiedAt?: string;
-  completedBookingsCount?: number;
-  realReviewsCount?: number;
   hasDigitalVerification?: boolean;
   hostPremiumDocumentaryVerified?: boolean;
   premiumVisibilityBoost?: number;
   premiumOnsiteOffer?: PremiumVerificationOffer | null;
   isVerifiedProperty?: boolean;
   interactionContinuity?: InteractionContinuity;
+  isOwnedByViewer?: boolean;
+  verificationMedia?: {
+    photos?: VerificationAsset[];
+    video?: VerificationAsset | null;
+    documents?: VerificationAsset[];
+  };
+}
+
+export interface VerificationAsset {
+  id: string;
+  fileType: 'image' | 'video' | 'document';
+  visibility: 'public' | 'semi-public' | 'private';
+  verificationScope: string;
+  verificationStatus: string;
+  url: string;
+  thumbnailUrl?: string | null;
+  createdAt: string;
+  originalName?: string | null;
+  mimeType?: string | null;
 }
 
 export interface Review {
@@ -189,6 +223,8 @@ export interface ReservationRequestContext {
   propertyId: string;
   propertyTitle: string;
   hostName: string;
+  propertyVerificationScore?: number;
+  propertyVerificationLabel?: string;
   startDate: string;
   endDate: string;
   guests: number;

@@ -5,7 +5,7 @@ import { apiJson } from '../lib/apiConfig';
 import { isBookingCheckInReached } from '../lib/bookingDates';
 import { resolveGuestRequestProfile } from '../lib/guestRequestProfile';
 import { formatPremiumPriceLabel } from '../lib/premiumVerification';
-import { getPropertyVerificationBadge, getPropertyVerificationItems } from '../lib/propertyVerification';
+import { getPropertyVerificationBadge, getPropertyVerificationItems, getPropertyVerificationProgress } from '../lib/propertyVerification';
 import { getReservationFlowCopy, getReservationNextActorDisplayLabel, getReservationNextStepDisplayLabel } from '../lib/reservationFlow';
 import { acceptConversationRequest, confirmDirectDeposit } from '../services/geminiService';
 import { showToast } from '../lib/toast';
@@ -562,6 +562,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
         };
         const verificationItems = getPropertyVerificationItems(property);
         const verificationBadge = getPropertyVerificationBadge({ ...property, verificationItems });
+        const verificationProgress = getPropertyVerificationProgress({ ...property, verificationItems });
 
         return {
           ...property,
@@ -572,6 +573,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
             : fallbackStats.nextArrivalDate,
           verificationBadge,
           verificationItems,
+          verificationProgress,
           completedVerificationItems: verificationItems.filter((item) => item.status === 'complete'),
           pendingVerificationItems: verificationItems.filter((item) => item.status !== 'complete'),
         };
@@ -749,9 +751,10 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
         id: 'missing-verifications',
         eyebrow: 'Verificación',
         title: `Completar verificaciones de ${propertyNeedingVerification.title}`,
-        description: propertyNeedingVerification.pendingVerificationItems.length === 1
-          ? `Le falta ${propertyNeedingVerification.pendingVerificationItems[0]?.label?.toLowerCase() || 'una comprobación'} para quedar más claro.`
-          : `Le faltan ${propertyNeedingVerification.pendingVerificationItems.length} comprobaciones. Completar lo pendiente hace que el aviso quede más claro en segundos.`,
+        description: propertyNeedingVerification.verificationProgress?.nextStep
+          || (propertyNeedingVerification.pendingVerificationItems.length === 1
+            ? `Le falta ${propertyNeedingVerification.pendingVerificationItems[0]?.label?.toLowerCase() || 'una comprobación'} para quedar más claro.`
+            : `Le faltan ${propertyNeedingVerification.pendingVerificationItems.length} comprobaciones. Completar lo pendiente hace que el aviso quede más claro en segundos.`),
         actionLabel: 'Revisar aviso',
         icon: <Icons.Shield className="h-5 w-5" />,
         kind: 'property',
@@ -1207,10 +1210,17 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
             {hostProperties.map((property: any, index: number) => {
               const pendingLabels = property.pendingVerificationItems.map((item: any) => item.label);
               const pendingKeys = new Set(property.pendingVerificationItems.map((item: any) => item.key));
-              const showVerificationReviewAction = pendingKeys.has('identity') || pendingKeys.has('location');
-              const showMaterialAction = pendingKeys.has('material');
-              const showHistoryGuidance = pendingKeys.has('history');
-              const showOnsiteAction = pendingKeys.has('onsite') && property.premiumOnsiteOffer && !property.premiumOnsiteOffer.completed;
+              const showIdentityAction = pendingKeys.has('identity');
+              const showListingAction = pendingKeys.has('basics') || pendingKeys.has('location');
+              const showPhotoAction = pendingKeys.has('photos');
+              const showVideoAction = pendingKeys.has('video');
+              const showDocumentsAction = property.verificationProgress?.level !== 'base'
+                && Array.isArray(property.verificationProgress?.advancedChecks)
+                && property.verificationProgress.advancedChecks.some((item: any) => item.key === 'documents' && item.status !== 'complete');
+              const showOnsiteAction = property.premiumOnsiteOffer
+                && !property.premiumOnsiteOffer.completed
+                && Array.isArray(property.verificationProgress?.advancedChecks)
+                && property.verificationProgress.advancedChecks.some((item: any) => item.key === 'manualReview' && item.status !== 'complete');
               const propertyVerificationSummary = {
                 score: property.verificationBadge.score,
                 maxScore: property.verificationBadge.max,
@@ -1270,11 +1280,10 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
                         summary={propertyVerificationSummary}
                         title="Comprobaciones del aviso"
                         description={pendingLabels.length === 0
-                          ? 'Este aviso ya muestra sus 5 comprobaciones visibles.'
-                          : pendingLabels.length === 1
-                            ? 'Falta 1 comprobación para terminar de ordenar este aviso.'
-                            : `Faltan ${pendingLabels.length} comprobaciones para terminar de ordenar este aviso.`}
-                        tone={pendingLabels.length === 0 ? 'success' : 'neutral'}
+                          ? `Este aviso ya muestra sus 5 comprobaciones visibles. ${property.verificationProgress?.summary || ''}`.trim()
+                          : property.verificationProgress?.nextStep || 'Todavía hay margen para sumar más contexto y confianza.'}
+                        badgeLabel={property.verificationProgress?.label}
+                        tone={pendingLabels.length === 0 ? 'success' : property.verificationProgress?.level === 'medium' ? 'brand' : 'neutral'}
                         showDescriptions={false}
                         className="shadow-none"
                       />
@@ -1283,7 +1292,22 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
                         <div className="rounded-[22px] border border-slate-200/80 bg-slate-50/90 p-4 dark:border-slate-800 dark:bg-slate-900/70">
                           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">Acciones para sumar información validada</p>
                           <div className="mt-3 flex flex-wrap gap-2">
-                            {showVerificationReviewAction ? (
+                            {showIdentityAction ? (
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => navigate('/profile')}
+                                className="rounded-full"
+                              >
+                                <>
+                                  <Icons.ShieldCheck className="h-4 w-4" />
+                                  Validar identidad
+                                </>
+                              </Button>
+                            ) : null}
+
+                            {showListingAction ? (
                               <Button
                                 type="button"
                                 variant="secondary"
@@ -1292,13 +1316,13 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
                                 className="rounded-full"
                               >
                                 <>
-                                  <Icons.Shield className="h-4 w-4" />
-                                  Completar verificación
+                                  <Icons.MapPin className="h-4 w-4" />
+                                  Ordenar datos base
                                 </>
                               </Button>
                             ) : null}
 
-                            {showMaterialAction ? (
+                            {showPhotoAction ? (
                               <Button
                                 type="button"
                                 variant="secondary"
@@ -1308,15 +1332,45 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
                               >
                                 <>
                                   <Icons.ImagePlus className="h-4 w-4" />
-                                  Agregar material
+                                  Subir fotos reales
+                                </>
+                              </Button>
+                            ) : null}
+
+                            {showVideoAction ? (
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => navigate(`/detail/${property.id}`)}
+                                className="rounded-full"
+                              >
+                                <>
+                                  <Icons.Video className="h-4 w-4" />
+                                  Cargar video
+                                </>
+                              </Button>
+                            ) : null}
+
+                            {showDocumentsAction ? (
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => navigate(`/detail/${property.id}`)}
+                                className="rounded-full"
+                              >
+                                <>
+                                  <Icons.Lock className="h-4 w-4" />
+                                  Sumar documentos
                                 </>
                               </Button>
                             ) : null}
                           </div>
 
-                          {showHistoryGuidance ? (
-                            <p className="mt-3 text-xs leading-5 text-slate-500 dark:text-slate-400">El historial real se suma cuando el aviso ya tiene reservas o reseñas visibles.</p>
-                          ) : null}
+                          <p className="mt-3 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                            {property.verificationProgress?.nextStep || 'Podés completar estas capas sin frenar la publicación del aviso.'}
+                          </p>
                         </div>
                       ) : null}
 

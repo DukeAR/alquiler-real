@@ -14,21 +14,30 @@ describe('propertyVerification', () => {
   test('derives a frontend verification score when the API does not send one', () => {
     const property = withPropertyVerificationScore({
       id: 'p1',
+      title: 'Casa luminosa en Pinamar',
+      description: 'Tiene patio, parrilla y espacio para trabajar.',
+      location: 'Pinamar norte',
+      propertyType: 'Casa',
+      price: 120000,
+      maxGuests: 5,
+      imageUrl: 'https://example.com/cover.jpg',
+      images: ['https://example.com/cover.jpg'],
+      lat: -37.107,
+      lng: -56.861,
       identityValidated: true,
       locationVerified: true,
-      materialVerified: false,
-      hasPresencialVerification: true,
-      completedBookingsCount: 2,
+      verificationPhotoCount: 4,
+      videoValidated: false,
     });
 
     expect(property.verificationScore).toBe(4);
     expect(getPropertyVerificationScore(property)).toBe(4);
     expect(getPropertyVerificationItems(property).map((item) => item.label)).toEqual([
-      'Identidad del anfitrión',
-      'Ubicación de la propiedad',
-      'Material real del lugar',
-      'Verificación presencial',
-      'Historial real del aviso',
+      'Datos básicos',
+      'Ubicación',
+      'Fotos reales',
+      'Video del lugar',
+      'Identidad validada',
     ]);
     expect(getPropertyVerificationBadge(property)).toEqual({
       score: 4,
@@ -45,31 +54,27 @@ describe('propertyVerification', () => {
       identityValidated: true,
       locationVerified: true,
       materialVerified: true,
-      hasPresencialVerification: false,
-      completedBookingsCount: 0,
-      realReviewsCount: 0,
+      videoValidated: false,
     });
 
     expect(details.summaryLabel).toBe('3 de 5 comprobaciones');
     expect(details.spacedVisual).toBe('✔ ✔ ✔ ○ ○');
-    expect(details.helperText).toBe('Ves rápido qué ya fue comprobado y qué falta completar.');
-    expect(details.items.map((item) => item.status)).toEqual(['complete', 'complete', 'complete', 'pending', 'pending']);
+    expect(details.helperText).toBe('Ves rápido qué ya está comprobado y qué suma confianza extra.');
+    expect(details.items.map((item) => item.status)).toEqual(['pending', 'complete', 'complete', 'pending', 'complete']);
   });
 
-  test('does not infer listing history from legacy relationship flags alone', () => {
+  test('does not infer basics from legacy relationship flags alone', () => {
     const details = getPropertyVerificationDetails({
       identityValidated: true,
       locationVerified: true,
       propertyRelationshipVerified: true,
-      completedBookingsCount: 0,
-      realReviewsCount: 0,
     });
 
     expect(details.summaryLabel).toBe('2 de 5 comprobaciones');
-    expect(details.items[4]).toEqual({
-      key: 'history',
-      label: 'Historial real del aviso',
-      description: 'Todavía no hay reservas completadas ni reseñas reales asociadas al aviso.',
+    expect(details.items[0]).toEqual({
+      key: 'basics',
+      label: 'Datos básicos',
+      description: 'Todavía faltan datos básicos para que el aviso se entienda mejor.',
       status: 'pending',
     });
   });

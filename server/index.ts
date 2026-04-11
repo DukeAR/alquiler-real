@@ -34,6 +34,15 @@ import {
   type PremiumVerificationProcessStatus,
   type PremiumVerificationTargetType,
 } from '../src/lib/premiumVerification';
+import {
+  createSignedFileUrl,
+  getCanonicalFileUrl,
+  openStoredFileStream,
+  parseSignedFileToken,
+  storeVerificationFile,
+  type StoredFileType,
+  type StoredFileVisibility,
+} from './storageService';
 
 declare module "express-session" {
   interface SessionData {
@@ -44,6 +53,7 @@ declare module "express-session" {
 const app: Express = express();
 const port = serverEnv.port;
 const memoryUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
+const verificationAssetUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024, files: 6 } });
 
 const SESSION_SENSITIVE_ROUTE_PATTERNS = [
   /^\/api\/auth(?:\/|$)/,
@@ -914,6 +924,365 @@ const PROPERTY_HOST_TRUST_JOINS = `
       ) property_real_reviews ON property_real_reviews.property_id = p.id
 `;
 
+const PROPERTY_VERIFICATION_FILE_SUMMARY_SELECT = `COALESCE(property_file_summary."verificationPhotoCount", 0)::int as "verificationPhotoCount",
+        COALESCE(property_file_summary."verificationVideoCount", 0)::int as "verificationVideoCount",
+        COALESCE(property_file_summary."verificationDocumentCount", 0)::int as "verificationDocumentCount",
+  COALESCE(property_file_summary."verificationDocumentsReviewedCount", 0)::int as "verificationDocumentsReviewedCount",
+  CASE WHEN COALESCE(property_file_summary."verificationDocumentCount", 0) > 0 THEN TRUE ELSE FALSE END as "documentationSubmitted",
+  CASE WHEN COALESCE(property_file_summary."verificationDocumentsReviewedCount", 0) > 0 THEN TRUE ELSE FALSE END as "documentationVerified",
+  CASE
+    WHEN COALESCE(property_file_summary."verificationDocumentCount", 0) > 0 OR COALESCE(p."hasPresencialVerification", 0) = 1
+    THEN TRUE
+    ELSE FALSE
+  END as "manualReviewReady",
+  CASE WHEN COALESCE(p."hasPresencialVerification", 0) = 1 THEN TRUE ELSE FALSE END as "manualReviewCompleted"`;
+
+const PROPERTY_VERIFICATION_FILE_SUMMARY_JOINS = `
+      LEFT JOIN (
+        SELECT property_id,
+               COUNT(*) FILTER (WHERE verification_scope = 'property-photo' AND file_type = 'image')::int as "verificationPhotoCount",
+               COUNT(*) FILTER (WHERE verification_scope = 'property-video' AND file_type = 'video')::int as "verificationVideoCount",
+               COUNT(*) FILTER (WHERE verification_scope = 'property-document' AND file_type = 'document')::int as "verificationDocumentCount",
+               COUNT(*) FILTER (
+                 WHERE verification_scope = 'property-document'
+                   AND file_type = 'document'
+                   AND verification_status IN ('verified', 'approved')
+               )::int as "verificationDocumentsReviewedCount"
+        FROM verification_files
+        WHERE property_id IS NOT NULL
+        GROUP BY property_id
+      ) property_file_summary ON property_file_summary.property_id = p.id
+`;
+
+type VerificationAssetKind = 'photo' | 'video' | 'document';
+
+type VerificationFileRow = {
+  id: string;
+  storageKey: string;
+  thumbnailStorageKey?: string | null;
+  fileUrl: string;
+  thumbnailUrl?: string | null;
+  fileType: StoredFileType;
+  visibility: StoredFileVisibility;
+  verificationScope: string;
+  verificationStatus: string;
+  userId?: string | null;
+  propertyId?: string | null;
+  originalName?: string | null;
+  mimeType?: string | null;
+  sizeBytes?: number | string | null;
+  createdAt: string | Date;
+};
+
+const VERIFICATION_FILE_SELECT = `id,
+  storage_key as "storageKey",
+  thumbnail_storage_key as "thumbnailStorageKey",
+  file_url as "fileUrl",
+  thumbnail_url as "thumbnailUrl",
+  file_type as "fileType",
+  visibility,
+  verification_scope as "verificationScope",
+  verification_status as "verificationStatus",
+  user_id as "userId",
+  property_id as "propertyId",
+  original_name as "originalName",
+  mime_type as "mimeType",
+  size_bytes as "sizeBytes",
+  created_at as "createdAt"`;
+
+const createVerificationFileId = () => `vfile_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+const normalizeStoredFileUrlList = (value: unknown) => {
+  if (Array.isArray(value)) {
+    return value
+      .filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+      .map((item) => item.trim());
+  }
+
+  if (typeof value === 'string' && value.trim().length > 0) {
+    try {
+      const parsedValue = JSON.parse(value);
+      return normalizeStoredFileUrlList(parsedValue);
+    } catch {
+      return [value.trim()];
+    }
+  }
+
+  return [];
+};
+
+const uniqueFileUrls = (values: string[]) => {
+  const seenUrls = new Set<string>();
+  const normalizedUrls: string[] = [];
+
+  values.forEach((value) => {
+    const normalizedValue = value.trim();
+
+    if (!normalizedValue || seenUrls.has(normalizedValue)) {
+      return;
+    }
+
+    seenUrls.add(normalizedValue);
+    normalizedUrls.push(normalizedValue);
+  });
+
+  return normalizedUrls;
+};
+
+const isImageMimeType = (value: string) => value.trim().toLowerCase().startsWith('image/');
+
+const isVideoMimeType = (value: string) => value.trim().toLowerCase().startsWith('video/');
+
+const isDocumentMimeType = (value: string) => {
+  const normalizedMimeType = value.trim().toLowerCase();
+  return normalizedMimeType === 'application/pdf' || normalizedMimeType.startsWith('image/');
+};
+
+const mapVerificationFileToAsset = (row: VerificationFileRow, options?: { signedExpirySeconds?: number }) => ({
+  id: row.id,
+  fileType: row.fileType,
+  visibility: row.visibility,
+  verificationScope: row.verificationScope,
+  verificationStatus: row.verificationStatus,
+  url: row.visibility === 'public'
+    ? row.fileUrl
+    : createSignedFileUrl(row.id, options?.signedExpirySeconds ?? 60 * 30),
+  thumbnailUrl: row.thumbnailUrl ?? null,
+  createdAt: typeof row.createdAt === 'string' ? row.createdAt : row.createdAt.toISOString(),
+  originalName: row.originalName ?? null,
+  mimeType: row.mimeType ?? null,
+});
+
+const getVerificationFileById = async (fileId: string) => {
+  const result = await db.query(
+    `SELECT ${VERIFICATION_FILE_SELECT}
+     FROM verification_files
+     WHERE id = $1
+     LIMIT 1`,
+    [fileId],
+  );
+
+  return (result.rows[0] as VerificationFileRow | undefined) ?? null;
+};
+
+const getPropertyVerificationFiles = async (propertyId: string, includePrivate: boolean) => {
+  const result = await db.query(
+    `SELECT ${VERIFICATION_FILE_SELECT}
+     FROM verification_files
+     WHERE property_id = $1
+       ${includePrivate ? '' : "AND visibility <> 'private'"}
+     ORDER BY created_at DESC`,
+    [propertyId],
+  );
+
+  return result.rows as VerificationFileRow[];
+};
+
+const insertVerificationFileRecord = async (input: {
+  id: string;
+  storageKey: string;
+  thumbnailStorageKey?: string | null;
+  fileUrl: string;
+  thumbnailUrl?: string | null;
+  fileType: StoredFileType;
+  visibility: StoredFileVisibility;
+  verificationScope: string;
+  verificationStatus: string;
+  userId?: string | null;
+  propertyId?: string | null;
+  originalName: string;
+  mimeType: string;
+  sizeBytes: number;
+  metadata?: Record<string, unknown>;
+}) => {
+  await db.query(
+    `INSERT INTO verification_files (
+       id, storage_key, thumbnail_storage_key, file_url, thumbnail_url, file_type, visibility, verification_scope,
+       verification_status, user_id, property_id, original_name, mime_type, size_bytes, metadata
+     )
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15::jsonb)`,
+    [
+      input.id,
+      input.storageKey,
+      input.thumbnailStorageKey ?? null,
+      input.fileUrl,
+      input.thumbnailUrl ?? null,
+      input.fileType,
+      input.visibility,
+      input.verificationScope,
+      input.verificationStatus,
+      input.userId ?? null,
+      input.propertyId ?? null,
+      input.originalName,
+      input.mimeType,
+      input.sizeBytes,
+      JSON.stringify(input.metadata ?? {}),
+    ],
+  );
+};
+
+const canAccessVerificationFile = async (userId: string, file: VerificationFileRow) => {
+  if (file.userId && file.userId === userId) {
+    return true;
+  }
+
+  if (file.propertyId) {
+    const propertyResult = await db.query(
+      `SELECT 1
+       FROM properties
+       WHERE id = $1 AND "hostId" = $2
+       LIMIT 1`,
+      [file.propertyId, userId],
+    );
+
+    if (propertyResult.rows.length > 0) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
+const storeAndPersistVerificationFile = async (input: {
+  fileId: string;
+  buffer: Buffer;
+  mimeType: string;
+  originalName: string;
+  fileType: StoredFileType;
+  visibility: StoredFileVisibility;
+  verificationScope: string;
+  verificationStatus: string;
+  userId?: string | null;
+  propertyId?: string | null;
+  metadata?: Record<string, unknown>;
+  createThumbnail?: boolean;
+}) => {
+  const storedFile = await storeVerificationFile({
+    fileId: input.fileId,
+    buffer: input.buffer,
+    mimeType: input.mimeType,
+    originalName: input.originalName,
+    fileType: input.fileType,
+    visibility: input.visibility,
+    createThumbnail: input.createThumbnail,
+  });
+
+  await insertVerificationFileRecord({
+    id: input.fileId,
+    storageKey: storedFile.storageKey,
+    thumbnailStorageKey: storedFile.thumbnailStorageKey,
+    fileUrl: storedFile.fileUrl,
+    thumbnailUrl: storedFile.thumbnailUrl,
+    fileType: input.fileType,
+    visibility: input.visibility,
+    verificationScope: input.verificationScope,
+    verificationStatus: input.verificationStatus,
+    userId: input.userId,
+    propertyId: input.propertyId,
+    originalName: storedFile.originalName,
+    mimeType: storedFile.mimeType,
+    sizeBytes: storedFile.sizeBytes,
+    metadata: input.metadata,
+  });
+
+  return storedFile;
+};
+
+const storePrivateUserVerificationFile = async (input: {
+  userId: string;
+  file: Express.Multer.File;
+  verificationScope: string;
+  verificationStatus?: string;
+  metadata?: Record<string, unknown>;
+}) => {
+  const fileId = createVerificationFileId();
+
+  await storeAndPersistVerificationFile({
+    fileId,
+    buffer: input.file.buffer,
+    mimeType: input.file.mimetype,
+    originalName: input.file.originalname,
+    fileType: isImageMimeType(input.file.mimetype) ? 'image' : 'document',
+    visibility: 'private',
+    verificationScope: input.verificationScope,
+    verificationStatus: input.verificationStatus ?? 'pending_review',
+    userId: input.userId,
+    createThumbnail: false,
+    metadata: input.metadata,
+  });
+
+  return fileId;
+};
+
+const storePropertyVerificationAsset = async (input: {
+  propertyId: string;
+  userId: string;
+  file: Express.Multer.File;
+  assetKind: VerificationAssetKind;
+}) => {
+  const fileId = createVerificationFileId();
+  const visibility: StoredFileVisibility = input.assetKind === 'photo' ? 'public' : input.assetKind === 'video' ? 'semi-public' : 'private';
+  const fileType: StoredFileType = input.assetKind === 'video'
+    ? 'video'
+    : input.assetKind === 'document' && !isImageMimeType(input.file.mimetype)
+      ? 'document'
+      : 'image';
+  const verificationScope = input.assetKind === 'photo' ? 'property-photo' : input.assetKind === 'video' ? 'property-video' : 'property-document';
+  const verificationStatus = input.assetKind === 'document' ? 'pending_review' : 'verified';
+
+  const storedFile = await storeAndPersistVerificationFile({
+    fileId,
+    buffer: input.file.buffer,
+    mimeType: input.file.mimetype,
+    originalName: input.file.originalname,
+    fileType,
+    visibility,
+    verificationScope,
+    verificationStatus,
+    userId: input.userId,
+    propertyId: input.propertyId,
+    createThumbnail: input.assetKind === 'photo' || (input.assetKind === 'document' && isImageMimeType(input.file.mimetype)),
+  });
+
+  return mapVerificationFileToAsset({
+    id: fileId,
+    storageKey: storedFile.storageKey,
+    thumbnailStorageKey: storedFile.thumbnailStorageKey,
+    fileUrl: storedFile.fileUrl,
+    thumbnailUrl: storedFile.thumbnailUrl,
+    fileType,
+    visibility,
+    verificationScope,
+    verificationStatus,
+    userId: input.userId,
+    propertyId: input.propertyId,
+    originalName: storedFile.originalName,
+    mimeType: storedFile.mimeType,
+    sizeBytes: storedFile.sizeBytes,
+    createdAt: new Date().toISOString(),
+  }, { signedExpirySeconds: input.assetKind === 'document' ? 60 * 15 : 60 * 60 * 24 });
+};
+
+const buildPropertyVerificationMedia = async (propertyId: string, includePrivate: boolean) => {
+  const files = await getPropertyVerificationFiles(propertyId, includePrivate);
+  const photos = files
+    .filter((file) => file.verificationScope === 'property-photo')
+    .map((file) => mapVerificationFileToAsset(file, { signedExpirySeconds: 60 * 60 * 24 }));
+  const video = files
+    .filter((file) => file.verificationScope === 'property-video')
+    .map((file) => mapVerificationFileToAsset(file, { signedExpirySeconds: 60 * 60 * 24 }))
+    [0] ?? null;
+  const documents = files
+    .filter((file) => file.verificationScope === 'property-document')
+    .map((file) => mapVerificationFileToAsset(file, { signedExpirySeconds: 60 * 15 }));
+
+  return {
+    photos,
+    video,
+    documents,
+  };
+};
+
 const CONVERSATION_HOST_TRUST_SELECT = `u_host.identity_validated as "hostIdentityValidated",
             u_host.is_identity_verified as "hostIdentityVerified",
             COALESCE(u_host.member_since, u_host.created_at) as "hostMemberSince",
@@ -1324,14 +1693,20 @@ app.post('/api/verification/validate-id', memoryUpload.single('idImage'), async 
       return res.status(422).json({ error: premiumAccess.error });
     }
 
-    const encodedImage = `data:${idImage.mimetype};base64,${idImage.buffer.toString('base64')}`;
+    const documentFileId = await storePrivateUserVerificationFile({
+      userId: req.session.userId,
+      file: idImage,
+      verificationScope: 'identity-dni-front',
+      verificationStatus: 'uploaded',
+      metadata: { source: 'validate-id' },
+    });
 
     await db.query(
       `UPDATE users
        SET dni_number = $1,
            dni_front = $2
        WHERE id = $3`,
-      [dni, encodedImage, req.session.userId],
+      [dni, documentFileId, req.session.userId],
     );
 
     if (premiumAccess.order?.id) {
@@ -1401,72 +1776,298 @@ app.post('/api/verification/complete', async (req, res) => {
   }
 });
 
-app.post('/api/verification/submit', async (req, res) => {
+app.post(
+  '/api/verification/submit',
+  verificationAssetUpload.fields([
+    { name: 'dniFront', maxCount: 1 },
+    { name: 'dniBack', maxCount: 1 },
+    { name: 'selfie', maxCount: 1 },
+    { name: 'proofOfAddress', maxCount: 1 },
+  ]),
+  async (req, res) => {
+    if (!req.session.userId) {
+      return res.status(401).json({ error: AUTH_REQUIRED_ERROR });
+    }
+
+    const files = req.files as Record<string, Express.Multer.File[]> | undefined;
+    const dniFront = files?.dniFront?.[0] ?? null;
+    const dniBack = files?.dniBack?.[0] ?? null;
+    const selfie = files?.selfie?.[0] ?? null;
+    const proofOfAddress = files?.proofOfAddress?.[0] ?? null;
+    const orderId = typeof req.body?.orderId === 'string' ? req.body.orderId.trim() : null;
+
+    const hasFront = Boolean(dniFront);
+    const hasBack = Boolean(dniBack);
+    const hasSelfie = Boolean(selfie);
+    const hasProofOfAddress = Boolean(proofOfAddress);
+    const hasIdentityDocs = hasFront && hasBack && hasSelfie;
+
+    if (!hasIdentityDocs) {
+      return res.status(400).json({ error: 'Completá la documentación requerida para enviar la verificación.' });
+    }
+
+    try {
+      const premiumAccess = await requireDocumentaryPremiumAccess(req.session.userId, orderId);
+
+      if (!premiumAccess.allowed) {
+        return res.status(422).json({ error: premiumAccess.error });
+      }
+
+      const [dniFrontId, dniBackId, selfieId, proofOfAddressId] = await Promise.all([
+        storePrivateUserVerificationFile({
+          userId: req.session.userId,
+          file: dniFront!,
+          verificationScope: 'identity-dni-front',
+          metadata: { source: 'verification-submit' },
+        }),
+        storePrivateUserVerificationFile({
+          userId: req.session.userId,
+          file: dniBack!,
+          verificationScope: 'identity-dni-back',
+          metadata: { source: 'verification-submit' },
+        }),
+        storePrivateUserVerificationFile({
+          userId: req.session.userId,
+          file: selfie!,
+          verificationScope: 'identity-selfie',
+          metadata: { source: 'verification-submit' },
+        }),
+        hasProofOfAddress && proofOfAddress
+          ? storePrivateUserVerificationFile({
+              userId: req.session.userId,
+              file: proofOfAddress,
+              verificationScope: 'identity-proof-of-address',
+              metadata: { source: 'verification-submit' },
+            })
+          : Promise.resolve(null),
+      ]);
+
+      await db.query(
+        `UPDATE users
+         SET dni_front = $1,
+             dni_back = $2,
+             selfie_with_dni = $3,
+             identity_validated = TRUE,
+             is_identity_verified = TRUE,
+             identity_verification_status = 'verified',
+             identity_verification_provider = COALESCE(identity_verification_provider, 'documentary'),
+             identity_verified_at = COALESCE(identity_verified_at, NOW()),
+             validation_level = CASE WHEN validation_level = 'trusted_user' THEN validation_level ELSE 'verified_dni' END,
+             host_verified = CASE WHEN $4 THEN TRUE ELSE host_verified END
+         WHERE id = $5`,
+        [dniFrontId, dniBackId, selfieId, hasProofOfAddress, req.session.userId],
+      );
+
+      if (hasProofOfAddress && proofOfAddressId) {
+        const documentId = `doc_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        await db.query(
+          `INSERT INTO user_verification_documents (id, user_id, document_type, document_url)
+           VALUES ($1, $2, 'utility_bill', $3)`,
+          [documentId, req.session.userId, getCanonicalFileUrl(proofOfAddressId, 'private')],
+        );
+      }
+
+      const user = await getAuthUserById(req.session.userId);
+
+      if (premiumAccess.order?.id) {
+        await markPremiumOrderState(premiumAccess.order.id, 'completed');
+      }
+
+      await logActivity(req.session.userId, 'IDENTITY_DOCUMENTS_SUBMITTED', { hasProofOfAddress });
+
+      await evaluateInternalRisk(req.session.userId);
+
+      res.json({ user });
+    } catch (err) {
+      console.error('Error en verification-submit:', err);
+      res.status(500).json({ error: 'No pudimos guardar la verificación. Intentá de nuevo.' });
+    }
+  },
+);
+
+app.get('/api/files/public/:id/thumbnail', async (req, res) => {
+  try {
+    const file = await getVerificationFileById(req.params.id);
+
+    if (!file || file.visibility !== 'public' || !file.thumbnailStorageKey) {
+      return res.status(404).json({ error: 'No encontramos ese archivo.' });
+    }
+
+    res.set('Cache-Control', 'public, max-age=86400');
+    res.type('image/jpeg');
+    openStoredFileStream(file.thumbnailStorageKey).pipe(res);
+  } catch (err) {
+    console.error('Error serving public thumbnail:', err);
+    res.status(500).json({ error: 'No pudimos abrir ese archivo.' });
+  }
+});
+
+app.get('/api/files/public/:id', async (req, res) => {
+  try {
+    const file = await getVerificationFileById(req.params.id);
+
+    if (!file || file.visibility !== 'public') {
+      return res.status(404).json({ error: 'No encontramos ese archivo.' });
+    }
+
+    res.set('Cache-Control', 'public, max-age=86400');
+    res.type(file.mimeType || 'application/octet-stream');
+    openStoredFileStream(file.storageKey).pipe(res);
+  } catch (err) {
+    console.error('Error serving public file:', err);
+    res.status(500).json({ error: 'No pudimos abrir ese archivo.' });
+  }
+});
+
+app.get('/api/files/:id/signed-url', async (req, res) => {
   if (!req.session.userId) {
     return res.status(401).json({ error: AUTH_REQUIRED_ERROR });
   }
 
-  const { dniFront, dniBack, selfie, proofOfAddress, orderId } = req.body ?? {};
+  try {
+    const file = await getVerificationFileById(req.params.id);
 
-  const hasFront = typeof dniFront === 'string' && dniFront.trim().length > 0;
-  const hasBack = typeof dniBack === 'string' && dniBack.trim().length > 0;
-  const hasSelfie = typeof selfie === 'string' && selfie.trim().length > 0;
-  const hasProofOfAddress = typeof proofOfAddress === 'string' && proofOfAddress.trim().length > 0;
-  const hasIdentityDocs = hasFront && hasBack && hasSelfie;
+    if (!file) {
+      return res.status(404).json({ error: 'No encontramos ese archivo.' });
+    }
 
-  if (!hasIdentityDocs) {
-    return res.status(400).json({ error: 'Completá la documentación requerida para enviar la verificación.' });
+    if (file.visibility === 'private' && !(await canAccessVerificationFile(req.session.userId, file))) {
+      return res.status(403).json({ error: 'No podés abrir ese archivo.' });
+    }
+
+    return res.json({ url: file.visibility === 'public' ? file.fileUrl : createSignedFileUrl(file.id) });
+  } catch (err) {
+    console.error('Error creating signed file URL:', err);
+    return res.status(500).json({ error: 'No pudimos preparar ese archivo.' });
+  }
+});
+
+app.get('/api/files/access/:token', async (req, res) => {
+  try {
+    const payload = parseSignedFileToken(req.params.token);
+
+    if (!payload) {
+      return res.status(401).json({ error: 'Ese acceso ya venció o no es válido.' });
+    }
+
+    const file = await getVerificationFileById(payload.fileId);
+
+    if (!file) {
+      return res.status(404).json({ error: 'No encontramos ese archivo.' });
+    }
+
+    if (file.visibility === 'private') {
+      if (!req.session.userId) {
+        return res.status(401).json({ error: AUTH_REQUIRED_ERROR });
+      }
+
+      if (!(await canAccessVerificationFile(req.session.userId, file))) {
+        return res.status(403).json({ error: 'No podés abrir ese archivo.' });
+      }
+    }
+
+    res.set('Cache-Control', file.visibility === 'semi-public' ? 'private, max-age=300' : 'private, no-store');
+    res.type(file.mimeType || 'application/octet-stream');
+    openStoredFileStream(file.storageKey).pipe(res);
+  } catch (err) {
+    console.error('Error serving signed file:', err);
+    res.status(500).json({ error: 'No pudimos abrir ese archivo.' });
+  }
+});
+
+app.post('/api/properties/:id/verification/assets', verificationAssetUpload.array('files', 6), async (req, res) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ error: AUTH_REQUIRED_ERROR });
+  }
+
+  const assetKind: VerificationAssetKind = req.body?.assetKind === 'video'
+    ? 'video'
+    : req.body?.assetKind === 'document'
+      ? 'document'
+      : 'photo';
+  const files = Array.isArray(req.files) ? req.files : [];
+
+  if (files.length === 0) {
+    return res.status(400).json({ error: 'Subí al menos un archivo para continuar.' });
+  }
+
+  if (assetKind === 'video' && files.length !== 1) {
+    return res.status(400).json({ error: 'Subí un solo video por vez para mantener esta comprobación clara.' });
+  }
+
+  const mimeTypeValidator = assetKind === 'photo'
+    ? isImageMimeType
+    : assetKind === 'video'
+      ? isVideoMimeType
+      : isDocumentMimeType;
+
+  if (files.some((file) => !mimeTypeValidator(file.mimetype))) {
+    return res.status(422).json({ error: assetKind === 'video' ? 'El video tiene que venir en un formato válido.' : 'Revisá el tipo de archivo que subiste.' });
   }
 
   try {
-    const premiumAccess = await requireDocumentaryPremiumAccess(
-      req.session.userId,
-      typeof orderId === 'string' ? orderId.trim() : null,
+    const propertyResult = await db.query(
+      `SELECT id, images, "imageUrl"
+       FROM properties
+       WHERE id = $1 AND "hostId" = $2
+       LIMIT 1`,
+      [req.params.id, req.session.userId],
     );
+    const property = propertyResult.rows[0];
 
-    if (!premiumAccess.allowed) {
-      return res.status(422).json({ error: premiumAccess.error });
+    if (!property) {
+      return res.status(404).json({ error: 'No encontramos esa propiedad o no te pertenece.' });
     }
 
-    await db.query(
-      `UPDATE users
-       SET dni_front = $1,
-           dni_back = $2,
-           selfie_with_dni = $3,
-           identity_validated = TRUE,
-           is_identity_verified = TRUE,
-           identity_verification_status = 'verified',
-           identity_verification_provider = COALESCE(identity_verification_provider, 'documentary'),
-           identity_verified_at = COALESCE(identity_verified_at, NOW()),
-           validation_level = CASE WHEN validation_level = 'trusted_user' THEN validation_level ELSE 'verified_dni' END,
-           host_verified = CASE WHEN $4 THEN TRUE ELSE host_verified END
-       WHERE id = $5`,
-      [dniFront, dniBack, selfie, hasProofOfAddress, req.session.userId],
-    );
+    const uploadedFiles = [] as ReturnType<typeof mapVerificationFileToAsset>[];
 
-    if (hasProofOfAddress) {
-      const documentId = `doc_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    for (const file of files) {
+      uploadedFiles.push(await storePropertyVerificationAsset({
+        propertyId: req.params.id,
+        userId: req.session.userId,
+        file,
+        assetKind,
+      }));
+    }
+
+    if (assetKind === 'photo') {
+      const existingImages = normalizeStoredFileUrlList(property.images);
+      const mergedImages = uniqueFileUrls([...existingImages, ...uploadedFiles.map((file) => file.url)]);
+      const nextImageUrl = typeof property.imageUrl === 'string' && property.imageUrl.trim().length > 0
+        ? property.imageUrl
+        : mergedImages[0] ?? null;
+
       await db.query(
-        `INSERT INTO user_verification_documents (id, user_id, document_type, document_url)
-         VALUES ($1, $2, 'utility_bill', $3)`,
-        [documentId, req.session.userId, proofOfAddress],
+        `UPDATE properties
+         SET images = $1,
+             "imageUrl" = COALESCE($2, "imageUrl"),
+             "materialVerified" = CASE WHEN COALESCE("materialVerified", 0) = 1 OR $3 >= 4 THEN 1 ELSE 0 END,
+             "hasDigitalVerification" = CASE WHEN COALESCE("hasDigitalVerification", 0) = 1 OR $3 > 0 THEN 1 ELSE 0 END
+         WHERE id = $4 AND "hostId" = $5`,
+        [JSON.stringify(mergedImages), nextImageUrl, uploadedFiles.length, req.params.id, req.session.userId],
       );
     }
 
-    const user = await getAuthUserById(req.session.userId);
-
-    if (premiumAccess.order?.id) {
-      await markPremiumOrderState(premiumAccess.order.id, 'completed');
+    if (assetKind === 'video') {
+      await db.query(
+        `UPDATE properties
+         SET "videoValidated" = 1,
+             "hasDigitalVerification" = 1
+         WHERE id = $1 AND "hostId" = $2`,
+        [req.params.id, req.session.userId],
+      );
     }
 
-    await logActivity(req.session.userId, 'IDENTITY_DOCUMENTS_SUBMITTED', { hasProofOfAddress });
+    await logActivity(req.session.userId, 'PROPERTY_AVAILABILITY_UPDATED', {
+      propertyId: req.params.id,
+      verificationAssetKind: assetKind,
+      filesUploaded: uploadedFiles.length,
+    });
 
-    await evaluateInternalRisk(req.session.userId);
-
-    res.json({ user });
+    return res.status(201).json({ uploadedFiles });
   } catch (err) {
-    console.error('Error en verification-submit:', err);
-    res.status(500).json({ error: 'No pudimos guardar la verificación. Intentá de nuevo.' });
+    console.error('Error uploading property verification assets:', err);
+    return res.status(500).json({ error: 'No pudimos guardar estos archivos ahora.' });
   }
 });
 
@@ -2663,16 +3264,19 @@ app.get('/api/host/dashboard', async (req, res) => {
         [req.session.userId],
       ),
       db.query(
-        `SELECT p.id, p.title, p.location, p.price, p.status, p."reviewsCount", p.rating, p."imageUrl",
+        `SELECT p.id, p.title, p.location, p.price, p.status, p."reviewsCount", p.rating, p."imageUrl", p.images,
+          p.description, p."maxGuests", p.lat, p.lng,
           p."hostId", p."hostName", p."identityValidated", p."locationVerified", p."materialVerified", p."videoValidated",
           p."hasPresencialVerification", p."onsiteVerifiedAt", p."hasDigitalVerification", p.property_type as "propertyType",
                 p.is_verified_property as "isVerifiedProperty",
                 COALESCE(booking_summary.pending_requests_count, 0)::int as "pendingRequestsCount",
                 COALESCE(booking_summary.active_reservations_count, 0)::int as "activeReservationsCount",
                 booking_summary.next_arrival_date as "nextArrivalDate",
+                ${PROPERTY_VERIFICATION_FILE_SUMMARY_SELECT},
                 ${PROPERTY_HOST_TRUST_SELECT}
          FROM properties p
          ${PROPERTY_HOST_TRUST_JOINS}
+         ${PROPERTY_VERIFICATION_FILE_SUMMARY_JOINS}
          LEFT JOIN (
            SELECT "propertyId" as property_id,
                   COUNT(*) FILTER (WHERE status = 'pending')::int as pending_requests_count,
@@ -3205,9 +3809,11 @@ app.get('/api/properties', async (req, res) => {
         p."traceabilityLevel", p."maxGuests", p."hasPresencialVerification", p."onsiteVerifiedAt", p."hasDigitalVerification", p.lat, p.lng,
         p.beds, p.bedrooms, p.bathrooms, p.property_type as "propertyType",
         p.is_verified_property as "isVerifiedProperty",
+        ${PROPERTY_VERIFICATION_FILE_SUMMARY_SELECT},
         ${PROPERTY_HOST_TRUST_SELECT}
       FROM properties p
       ${PROPERTY_HOST_TRUST_JOINS}
+      ${PROPERTY_VERIFICATION_FILE_SUMMARY_JOINS}
       WHERE status = 'active'
         AND COALESCE(u.internal_manual_review_required, FALSE) = FALSE
     `;
@@ -3329,9 +3935,11 @@ app.get('/api/properties/:id', async (req, res) => {
   try {
     const result = await db.query(
       `SELECT p.*, COALESCE(p.lat, -36.3536) as lat, COALESCE(p.lng, -56.7196) as lng,
+              ${PROPERTY_VERIFICATION_FILE_SUMMARY_SELECT},
               ${PROPERTY_HOST_TRUST_SELECT}
        FROM properties p
        ${PROPERTY_HOST_TRUST_JOINS}
+       ${PROPERTY_VERIFICATION_FILE_SUMMARY_JOINS}
        WHERE p.id = $1
          AND COALESCE(u.internal_manual_review_required, FALSE) = FALSE`,
       [req.params.id]
@@ -3341,6 +3949,8 @@ app.get('/api/properties/:id', async (req, res) => {
     const property = mapPropertyRecord(result.rows[0]);
     const viewerId = req.session.userId;
     const hostId = typeof result.rows[0]?.hostId === 'string' ? result.rows[0].hostId : null;
+    const isOwnedByViewer = Boolean(viewerId && hostId && viewerId === hostId);
+    const verificationMedia = await buildPropertyVerificationMedia(req.params.id, isOwnedByViewer);
 
     if (hostId && (!viewerId || viewerId !== hostId)) {
       void logFunnelActivity(req, FUNNEL_PROPERTY_DETAIL_VIEWED_ACTION, {
@@ -3356,12 +3966,18 @@ app.get('/api/properties/:id', async (req, res) => {
       if (interactionContinuity) {
         return res.json({
           ...property,
+          isOwnedByViewer,
+          verificationMedia,
           interactionContinuity,
         });
       }
     }
 
-    res.json(property);
+    res.json({
+      ...property,
+      isOwnedByViewer,
+      verificationMedia,
+    });
   } catch (err) {
     res.status(500).json({ error: 'No pudimos cargar la propiedad.' });
   }

@@ -42,8 +42,14 @@ type PropertyQueryRow = Record<string, unknown> & {
   beds?: unknown;
   propertyRelationshipVerified?: unknown;
   hostPremiumDocumentaryVerified?: unknown;
-  propertyCompletedBookingsCount?: unknown;
-  propertyRealReviewsCount?: unknown;
+  verificationPhotoCount?: unknown;
+  verificationVideoCount?: unknown;
+  verificationDocumentCount?: unknown;
+  verificationDocumentsReviewedCount?: unknown;
+  documentationSubmitted?: unknown;
+  documentationVerified?: unknown;
+  manualReviewReady?: unknown;
+  manualReviewCompleted?: unknown;
   premiumVisibilityBoost?: unknown;
 };
 
@@ -125,17 +131,21 @@ export const mapPropertyRecord = (row: PropertyQueryRow) => {
     beds: hasOwn(row, 'beds') ? toSafeInteger(row.beds) : undefined,
     identityValidated: getResolvedIdentityValidated(row),
     locationVerified: toBoolean(row.locationVerified),
-    materialVerified: toBoolean(row.materialVerified) || toBoolean(row.videoValidated),
+    materialVerified: toBoolean(row.materialVerified),
     videoValidated: toBoolean(row.videoValidated),
     propertyRelationshipVerified: toBoolean(row.propertyRelationshipVerified),
     hasPresencialVerification: toBoolean(row.hasPresencialVerification),
     onsiteVerifiedAt: toDateString(row.onsiteVerifiedAt),
     hasDigitalVerification: toBoolean(row.hasDigitalVerification),
     hostPremiumDocumentaryVerified: toBoolean(row.hostPremiumDocumentaryVerified),
-    completedBookingsCount: toSafeInteger(row.propertyCompletedBookingsCount),
-    realReviewsCount: hasOwn(row, 'propertyRealReviewsCount')
-      ? toSafeInteger(row.propertyRealReviewsCount)
-      : toSafeInteger(row.reviewsCount),
+    verificationPhotoCount: toSafeInteger(row.verificationPhotoCount),
+    verificationVideoCount: toSafeInteger(row.verificationVideoCount),
+    verificationDocumentCount: toSafeInteger(row.verificationDocumentCount),
+    verificationDocumentsReviewedCount: toSafeInteger(row.verificationDocumentsReviewedCount),
+    documentationSubmitted: toBoolean(row.documentationSubmitted) || toSafeInteger(row.verificationDocumentCount) > 0,
+    documentationVerified: toBoolean(row.documentationVerified) || toSafeInteger(row.verificationDocumentsReviewedCount) > 0,
+    manualReviewReady: toBoolean(row.manualReviewReady),
+    manualReviewCompleted: toBoolean(row.manualReviewCompleted) || toBoolean(row.hasPresencialVerification),
     isVerifiedProperty: toBoolean(row.isVerifiedProperty) || toBoolean(row.is_verified_property),
     hostSince: getResolvedHostSince(row),
     hostCompletedReservationsCount: toSafeInteger(row.hostCompletedReservationsCount),
@@ -165,6 +175,8 @@ export const mapPropertyRecord = (row: PropertyQueryRow) => {
       lat: toSafeNumber(row.lat, PROPERTY_COORDINATE_FALLBACK.lat),
       lng: toSafeNumber(row.lng, PROPERTY_COORDINATE_FALLBACK.lng),
     },
+    lat: toSafeNumber(row.lat, PROPERTY_COORDINATE_FALLBACK.lat),
+    lng: toSafeNumber(row.lng, PROPERTY_COORDINATE_FALLBACK.lng),
     premiumVisibilityBoost: toSafeNumber(row.premiumVisibilityBoost, 0),
   };
 

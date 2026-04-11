@@ -100,12 +100,22 @@ describe('HostDashboard', () => {
               imageUrl: 'https://example.com/property.jpg',
               verificationScore: 4,
               verificationItems: [
-                { key: 'identity', label: 'Identidad confirmada', description: 'Sabés con quién estás hablando.', status: 'complete' },
-                { key: 'location', label: 'Ubicación verificada', description: 'El lugar existe y está ubicado.', status: 'complete' },
-                { key: 'visual', label: 'Material real del lugar', description: 'Podés ver mejor el estado real.', status: 'complete' },
-                { key: 'relationship', label: 'Relación con la propiedad', description: 'Está confirmado el vínculo con el lugar.', status: 'complete' },
-                { key: 'onsite', label: 'Verificación presencial', description: 'Todavía no hay revisión en el lugar.', status: 'pending' },
+                { key: 'basics', label: 'Datos básicos', description: 'El aviso ya se entiende con claridad.', status: 'complete' },
+                { key: 'location', label: 'Ubicación', description: 'La zona ya está cargada dentro del mapa.', status: 'complete' },
+                { key: 'photos', label: 'Fotos reales', description: 'Ya hay fotos reales del lugar.', status: 'complete' },
+                { key: 'identity', label: 'Identidad validada', description: 'La identidad del perfil ya quedó validada.', status: 'complete' },
+                { key: 'video', label: 'Video del lugar', description: 'Todavía no hay video cargado.', status: 'pending' },
               ],
+              verificationProgress: {
+                level: 'medium',
+                label: 'Nivel medio',
+                summary: 'Ya sumaste identidad validada y fotos reales como base visible del aviso.',
+                nextStep: 'Un video corto alcanza para subir al nivel medio con una señal fuerte de confianza.',
+                advancedChecks: [
+                  { key: 'documents', label: 'Documentación avanzada', status: 'pending', description: 'Podés sumar documentación privada para moderación interna.' },
+                  { key: 'manualReview', label: 'Revisión manual o presencial', status: 'pending', description: 'La revisión manual queda como capa avanzada.' },
+                ],
+              },
               premiumOnsiteOffer: {
                 offerType: 'onsite-property',
                 targetType: 'property',
@@ -169,7 +179,7 @@ describe('HostDashboard', () => {
     expect(screen.getByText('12 de 20 visitas abrieron disponibilidad.')).toBeInTheDocument();
     expect(screen.getByText('Mostramos qué está comprobado para que otros puedan decidir mejor sobre tu aviso.')).toBeInTheDocument();
     expect(screen.getByText('4 de 5 comprobaciones')).toBeInTheDocument();
-    expect(screen.getByText('Falta 1 comprobación para terminar de ordenar este aviso.')).toBeInTheDocument();
+    expect(screen.getAllByText('Un video corto alcanza para subir al nivel medio con una señal fuerte de confianza.').length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: /Solicitar verificación presencial/i })).toBeInTheDocument();
 
     fireEvent.click((await screen.findAllByRole('button', { name: /Disponibilidad/i }))[1]!);

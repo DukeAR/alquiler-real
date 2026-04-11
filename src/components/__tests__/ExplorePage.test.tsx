@@ -83,12 +83,14 @@ describe('ExplorePage', () => {
         title: 'Casa frente al mar',
         location: 'Santa Teresita',
         price: 120000,
+        description: 'Amplia, luminosa y cerca de la playa.',
+        propertyType: 'house',
+        maxGuests: 5,
         rating: 4.8,
         reviewsCount: 12,
         identityValidated: true,
         locationVerified: true,
         videoValidated: true,
-        verificationScore: 4,
       },
     ]);
     useFavoritesMock.mockReturnValue({

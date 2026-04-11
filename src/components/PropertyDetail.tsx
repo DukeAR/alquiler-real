@@ -5,7 +5,6 @@ import { LoadingState } from './LoadingState';
 import { Icons } from './Icons';
 import DateRangePicker from './DateRangePicker';
 import {
-  HIGH_VERIFICATION_HIGHLIGHT_MIN_SCORE,
   getPropertyVerificationDetails,
 } from '../lib/propertyVerification';
 import { getHostResponseSignal } from '../lib/positiveIncentives';
@@ -27,7 +26,7 @@ import { Card } from './ui/Card';
 import { NoticeBanner } from './ui/NoticeBanner';
 import { SectionTitle } from './ui/SectionTitle';
 import { TrustSignalsInline, getTrustSignalsFromInteractionHistory, getTrustSignalsFromItems, type TrustSignal } from './ui/TrustSignalsInline';
-import { VerificationDetailsBlock } from './ui/VerificationDetailsBlock';
+import { PropertyVerificationPanel } from './verification/PropertyVerificationPanel';
 
 const FALLBACK = 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=1200&q=80&auto=format&fit=crop';
 
@@ -341,7 +340,9 @@ export const PropertyDetailShell: React.FC<{
   isFav: boolean;
   toggleFav: () => void;
   reviews?: PropertyReviewItem[];
-}> = ({ property, images, mainIndex, setMainIndex, isFav, toggleFav, reviews = [] }) => {
+  onRefresh?: () => Promise<void> | void;
+  onOpenIdentityVerification?: () => void;
+}> = ({ property, images, mainIndex, setMainIndex, isFav, toggleFav, reviews = [], onRefresh, onOpenIdentityVerification }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { createBooking } = useBookings({ autoLoad: false });
@@ -412,7 +413,6 @@ export const PropertyDetailShell: React.FC<{
     label,
     tone: 'neutral' as const,
   }));
-  const verificationBadgeLabel = verificationDetails.score >= HIGH_VERIFICATION_HIGHLIGHT_MIN_SCORE ? 'Mas comprobado' : undefined;
   const hostSinceLabel = property.hostSince ? `Miembro desde ${formatMonthYear(property.hostSince)}` : null;
   const visibleReviews = reviews.slice(0, 2);
   const hostTrustSignals = (() => {
@@ -805,6 +805,8 @@ export const PropertyDetailShell: React.FC<{
     requestStatus: bookingStatus === 'confirmed' ? 'accepted' : 'pending',
     bookingId,
     bookingStatus,
+    propertyVerificationScore: verificationDetails.score,
+    propertyVerificationLabel: verificationDetails.label,
   });
 
   const prepareConversationForRequest = async (requestContext: ReservationRequestContext, bookingId?: string) => {
@@ -1144,15 +1146,10 @@ export const PropertyDetailShell: React.FC<{
             </div>
           </Card>
 
-          <VerificationDetailsBlock
-            summary={{
-              score: verificationDetails.score,
-              maxScore: verificationDetails.max,
-              items: verificationDetails.items,
-            }}
-            title="Comprobaciones del aviso"
-            description={verificationDetails.helperText}
-            badgeLabel={verificationBadgeLabel}
+          <PropertyVerificationPanel
+            property={property as AppProperty}
+            onRefresh={onRefresh}
+            onOpenIdentityVerification={onOpenIdentityVerification}
           />
 
           <Card className="rounded-[32px] border-slate-200/80 bg-white p-6 shadow-[0_28px_70px_-50px_rgba(15,23,42,0.25)] sm:p-7">
@@ -1652,6 +1649,7 @@ export const PropertyDetailShell: React.FC<{
 
 export const PropertyDetail: React.FC = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [property, setProperty] = useState<PropertyDetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [mainIndex, setMainIndex] = useState(0);
@@ -1661,6 +1659,11 @@ export const PropertyDetail: React.FC = () => {
   const isFav = id ? favCtx.isFavorite(id) : false;
 
   const { user } = useAuth();
+
+  const refreshProperty = async (propertyId: string) => {
+    const nextProperty = await apiJson<PropertyDetailData>(`/api/properties/${propertyId}`);
+    setProperty(nextProperty);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -1733,6 +1736,8 @@ export const PropertyDetail: React.FC = () => {
       isFav={isFav}
       toggleFav={handleFavoriteToggle}
       reviews={reviews}
+      onRefresh={id ? () => refreshProperty(id) : undefined}
+      onOpenIdentityVerification={() => navigate('/profile')}
     />
   );
 };

@@ -120,4 +120,6 @@ export const serverEnv = {
   premiumOnsitePriceArs: parseNonNegativeInt(process.env.PREMIUM_ONSITE_PRICE_ARS, 42000),
   premiumDocumentaryFreeSlots: parseNonNegativeInt(process.env.PREMIUM_DOCUMENTARY_FREE_SLOTS, 20),
   premiumOnsiteFreeSlots: parseNonNegativeInt(process.env.PREMIUM_ONSITE_FREE_SLOTS, 10),
+  fileStorageRoot: resolve(process.cwd(), process.env.FILE_STORAGE_ROOT?.trim() || 'temp/storage'),
+  fileAccessSecret: process.env.FILE_ACCESS_SECRET?.trim() || sessionSecret,
 };

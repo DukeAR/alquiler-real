@@ -47,6 +47,7 @@ const sampleProperty = {
   isSuperHost: true,
   maxGuests: 5,
   propertyType: 'house',
+  verificationPhotoCount: 4,
   propertyRelationshipVerified: true,
   hasPresencialVerification: true,
   isVerifiedProperty: true,
@@ -92,6 +93,7 @@ describe('PropertyCard', () => {
       <PropertyCard
         property={{
           ...sampleProperty,
+          verificationPhotoCount: 0,
           propertyRelationshipVerified: false,
           hasPresencialVerification: false,
           isSuperHost: false,

@@ -42,33 +42,33 @@ describe('mapPropertyRecord', () => {
     ]));
     expect(property.verificationItems).toEqual([
       {
-        key: 'identity',
-        label: 'Identidad del anfitrión',
-        description: 'La identidad del anfitrión ya está verificada.',
-        status: 'complete',
-      },
-      {
-        key: 'location',
-        label: 'Ubicación de la propiedad',
-        description: 'La ubicación de la propiedad ya está validada.',
-        status: 'complete',
-      },
-      {
-        key: 'material',
-        label: 'Material real del lugar',
-        description: 'Hay material real validado del lugar.',
-        status: 'complete',
-      },
-      {
-        key: 'onsite',
-        label: 'Verificación presencial',
-        description: 'Todavía no hay una verificación presencial registrada.',
+        key: 'basics',
+        label: 'Datos básicos',
+        description: 'Todavía faltan datos básicos para que el aviso se entienda mejor.',
         status: 'pending',
       },
       {
-        key: 'history',
-        label: 'Historial real del aviso',
-        description: 'El aviso ya tiene 2 reseñas reales.',
+        key: 'location',
+        label: 'Ubicación',
+        description: 'La zona del lugar ya está cargada y se puede ubicar dentro del mapa.',
+        status: 'complete',
+      },
+      {
+        key: 'photos',
+        label: 'Fotos reales',
+        description: 'El aviso ya suma fotos reales cargadas como respaldo visual del lugar.',
+        status: 'complete',
+      },
+      {
+        key: 'video',
+        label: 'Video del lugar',
+        description: 'El aviso ya muestra un video del lugar como respaldo fuerte.',
+        status: 'complete',
+      },
+      {
+        key: 'identity',
+        label: 'Identidad validada',
+        description: 'La identidad del anfitrión ya quedó validada.',
         status: 'complete',
       },
     ]);
@@ -109,9 +109,9 @@ describe('mapPropertyRecord', () => {
       level: 'low',
     });
     expect(property.verificationItems?.[0]).toEqual({
-      key: 'identity',
-      label: 'Identidad del anfitrión',
-      description: 'Todavía falta verificar la identidad del anfitrión.',
+      key: 'basics',
+      label: 'Datos básicos',
+      description: 'Todavía faltan datos básicos para que el aviso se entienda mejor.',
       status: 'pending',
     });
   });

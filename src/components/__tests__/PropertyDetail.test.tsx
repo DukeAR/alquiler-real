@@ -435,11 +435,11 @@ describe('PropertyDetail', () => {
     expect(screen.getByText('Qué ya está comprobado')).toBeDefined();
     const verificationPreview = screen.getByTestId('property-verification-preview');
     expect(within(verificationPreview).getAllByRole('listitem')).toHaveLength(3);
-    expect(within(verificationPreview).getByText('Identidad del anfitrión')).toBeDefined();
-    expect(within(verificationPreview).getByText('Ubicación de la propiedad')).toBeDefined();
-    expect(within(verificationPreview).getByText('Material real del lugar')).toBeDefined();
-    expect(within(verificationPreview).queryByText('Historial real del aviso')).toBeNull();
-    expect(within(verificationPreview).queryByText('Verificación presencial')).toBeNull();
+    expect(within(verificationPreview).getByText('Ubicación')).toBeDefined();
+    expect(within(verificationPreview).getByText('Video del lugar')).toBeDefined();
+    expect(within(verificationPreview).getByText('Identidad validada')).toBeDefined();
+    expect(within(verificationPreview).queryByText('Datos básicos')).toBeNull();
+    expect(within(verificationPreview).queryByText('Fotos reales')).toBeNull();
     expect(screen.getByText('Puede alojar hasta 4 huéspedes.')).toBeDefined();
     expect(screen.getByText('Tiene 3 dormitorios · 2 baños.')).toBeDefined();
     expect(screen.getByText('Comodidades clave: Wifi rápido · Cocina equipada · Entrada autónoma.')).toBeDefined();
@@ -475,7 +475,7 @@ describe('PropertyDetail', () => {
 
       return {
         ...sampleProperty,
-        propertyRelationshipVerified: true,
+        propertyType: 'house',
       };
     });
 
@@ -486,13 +486,13 @@ describe('PropertyDetail', () => {
     const verificationPreview = screen.getByTestId('property-verification-preview');
     expect(screen.getByText('Qué ya está comprobado')).toBeDefined();
     expect(within(verificationPreview).getAllByRole('listitem')).toHaveLength(3);
-    expect(within(verificationPreview).getByText('Identidad del anfitrión')).toBeDefined();
-    expect(within(verificationPreview).getByText('Ubicación de la propiedad')).toBeDefined();
-    expect(within(verificationPreview).getByText('Material real del lugar')).toBeDefined();
+    expect(within(verificationPreview).getByText('Datos básicos')).toBeDefined();
+    expect(within(verificationPreview).getByText('Ubicación')).toBeDefined();
+    expect(within(verificationPreview).getByText('Video del lugar')).toBeDefined();
     expect(within(verificationPreview).queryByText('4 de 5 comprobaciones')).toBeNull();
-    expect(screen.getByText('Comprobaciones del aviso')).toBeDefined();
+    expect(screen.getByText('Confianza del aviso')).toBeDefined();
     expect(screen.getByText('4 de 5 comprobaciones')).toBeDefined();
-    expect(screen.getByText('Ves rápido qué ya fue comprobado y qué falta completar.')).toBeDefined();
+    expect(screen.getByText('Mostramos solo senales visibles que ayudan a decidir rapido, sin exponer documentacion privada.')).toBeDefined();
   });
 
   test('records the detail visit when the property reaches a high verification level', async () => {
@@ -502,7 +502,7 @@ describe('PropertyDetail', () => {
 
       return {
         ...sampleProperty,
-        propertyRelationshipVerified: true,
+        propertyType: 'house',
       };
     });
 
@@ -524,7 +524,6 @@ describe('PropertyDetail', () => {
         identityValidated: false,
         locationVerified: true,
         videoValidated: false,
-        propertyRelationshipVerified: false,
         hasPresencialVerification: false,
       };
     });
@@ -535,15 +534,14 @@ describe('PropertyDetail', () => {
 
     expect(screen.getByText('Qué ya está comprobado')).toBeDefined();
     const verificationPreview = screen.getByTestId('property-verification-preview');
-    expect(within(verificationPreview).getAllByRole('listitem')).toHaveLength(2);
-    expect(within(verificationPreview).getByText('Ubicación de la propiedad')).toBeDefined();
-    expect(within(verificationPreview).getByText('Historial real del aviso')).toBeDefined();
-    expect(within(verificationPreview).queryByText('Identidad del anfitrión')).toBeNull();
-    expect(within(verificationPreview).queryByText('Material real del lugar')).toBeNull();
-    expect(within(verificationPreview).queryByText('2 de 5 comprobaciones')).toBeNull();
-    expect(screen.getByText('Comprobaciones del aviso')).toBeDefined();
-    expect(screen.getByText('2 de 5 comprobaciones')).toBeDefined();
-    expect(screen.getByText('Identidad del anfitrión')).toBeDefined();
+    expect(within(verificationPreview).getAllByRole('listitem')).toHaveLength(1);
+    expect(within(verificationPreview).getByText('Ubicación')).toBeDefined();
+    expect(within(verificationPreview).queryByText('Identidad validada')).toBeNull();
+    expect(within(verificationPreview).queryByText('Video del lugar')).toBeNull();
+    expect(within(verificationPreview).queryByText('1 de 5 comprobaciones')).toBeNull();
+    expect(screen.getByText('Confianza del aviso')).toBeDefined();
+    expect(screen.getByText('1 de 5 comprobaciones')).toBeDefined();
+    expect(screen.queryByText('Identidad validada')).toBeNull();
   });
 
   test('guides the booking flow and stops guest selection at capacity', async () => {

@@ -66,6 +66,9 @@ describe('Host dashboard endpoint', () => {
               hostIdentityValidated: 1,
               hostIdentityVerified: 0,
               locationVerified: 1,
+              description: 'Casa amplia con jardin y parrilla.',
+              maxGuests: 5,
+              verificationPhotoCount: 4,
               videoValidated: 1,
               hasPresencialVerification: 1,
               hasDigitalVerification: 0,
@@ -128,8 +131,9 @@ describe('Host dashboard endpoint', () => {
       },
     });
     expect(res.body.properties[0].verificationItems).toEqual(expect.arrayContaining([
+      expect.objectContaining({ key: 'basics', status: 'complete' }),
       expect.objectContaining({ key: 'identity', status: 'complete' }),
-      expect.objectContaining({ key: 'history', status: 'complete' }),
+      expect.objectContaining({ key: 'video', status: 'complete' }),
     ]));
     expect(res.body.funnelMetrics).toEqual({
       windowDays: 30,

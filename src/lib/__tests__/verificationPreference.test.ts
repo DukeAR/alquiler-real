@@ -10,10 +10,20 @@ import {
 
 const buildHighVerificationProperty = (id: string) => ({
   id,
+  title: 'Casa con patio',
+  description: 'Una casa lista para escapadas de fin de semana.',
+  location: 'Villa Gesell',
+  propertyType: 'Casa',
+  price: 98000,
+  maxGuests: 4,
+  imageUrl: 'https://example.com/property.jpg',
+  images: ['https://example.com/property.jpg'],
+  verificationPhotoCount: 4,
   identityValidated: true,
   locationVerified: true,
   videoValidated: true,
-  completedBookingsCount: 1,
+  lat: -37.257,
+  lng: -56.973,
 });
 
 describe('verificationPreference', () => {
@@ -54,8 +64,7 @@ describe('verificationPreference', () => {
       identityValidated: true,
       locationVerified: true,
       videoValidated: false,
-      completedBookingsCount: 0,
-      realReviewsCount: 0,
+      verificationPhotoCount: 0,
     });
     trackVerificationPreferenceSave({
       id: 'p3',

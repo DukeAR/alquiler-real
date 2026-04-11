@@ -685,6 +685,42 @@ export const initDB = async () => {
   `);
 
   await db.query(`
+    CREATE TABLE IF NOT EXISTS verification_files (
+      id TEXT PRIMARY KEY,
+      storage_key TEXT NOT NULL UNIQUE,
+      thumbnail_storage_key TEXT,
+      file_url TEXT NOT NULL,
+      thumbnail_url TEXT,
+      file_type TEXT NOT NULL,
+      visibility TEXT NOT NULL,
+      verification_scope TEXT NOT NULL,
+      verification_status TEXT NOT NULL DEFAULT 'uploaded',
+      user_id TEXT REFERENCES users(id) ON DELETE CASCADE,
+      property_id TEXT REFERENCES properties(id) ON DELETE CASCADE,
+      original_name TEXT,
+      mime_type TEXT,
+      size_bytes INTEGER NOT NULL DEFAULT 0,
+      metadata JSONB DEFAULT '{}'::jsonb,
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
+
+  await db.query(`
+    CREATE INDEX IF NOT EXISTS verification_files_property_idx
+      ON verification_files (property_id, verification_scope, created_at DESC);
+  `);
+
+  await db.query(`
+    CREATE INDEX IF NOT EXISTS verification_files_user_idx
+      ON verification_files (user_id, verification_scope, created_at DESC);
+  `);
+
+  await db.query(`
+    CREATE INDEX IF NOT EXISTS verification_files_visibility_idx
+      ON verification_files (visibility, file_type, created_at DESC);
+  `);
+
+  await db.query(`
     CREATE TABLE IF NOT EXISTS premium_verification_orders (
       id TEXT PRIMARY KEY,
       user_id TEXT REFERENCES users(id) ON DELETE CASCADE,

@@ -13,26 +13,57 @@ export interface VerificationSummary<K extends string = string> {
   items: Array<VerificationItem<K>>;
 }
 
-export const PROPERTY_VERIFICATION_KEYS = ['identity', 'location', 'material', 'onsite', 'history'] as const;
+export const PROPERTY_VERIFICATION_KEYS = ['basics', 'location', 'photos', 'video', 'identity'] as const;
+
+export const PROPERTY_ADVANCED_CHECK_KEYS = ['documents', 'manualReview'] as const;
 
 export type PropertyVerificationKey = typeof PROPERTY_VERIFICATION_KEYS[number];
 
-export type LegacyPropertyVerificationKey = 'visual' | 'relationship';
+export type PropertyAdvancedVerificationKey = typeof PROPERTY_ADVANCED_CHECK_KEYS[number];
+
+export type LegacyPropertyVerificationKey = 'visual' | 'relationship' | 'material' | 'onsite' | 'history';
 
 export type PropertyVerificationItem = VerificationItem<PropertyVerificationKey | LegacyPropertyVerificationKey | string>;
 
 export type PropertyVerificationSummary = VerificationSummary<PropertyVerificationKey | string>;
 
+export type PropertyAdvancedVerificationItem = VerificationItem<PropertyAdvancedVerificationKey>;
+
+export type PropertyVerificationProgressLevel = 'base' | 'medium' | 'high';
+
+export type PropertyVerificationProgress = {
+  level: PropertyVerificationProgressLevel;
+  label: string;
+  summary: string;
+  nextStep: string;
+  advancedChecks: PropertyAdvancedVerificationItem[];
+};
+
 export type PropertyVerificationSummaryInput = {
+  title?: string | null;
+  location?: string | null;
+  description?: string | null;
+  price?: number | string | null;
+  maxGuests?: number | string | null;
+  propertyType?: string | null;
+  imageUrl?: string | null;
+  images?: string[] | string | null;
+  verificationPhotoCount?: number | string | null;
+  verificationVideoCount?: number | string | null;
+  verificationDocumentCount?: number | string | null;
+  verificationDocumentsReviewedCount?: number | string | null;
   identityValidated?: boolean | number | string | null;
   locationVerified?: boolean | number | string | null;
   materialVerified?: boolean | number | string | null;
   videoValidated?: boolean | number | string | null;
   hasPresencialVerification?: boolean | number | string | null;
   onsiteVerifiedAt?: string | Date | null;
-  completedBookingsCount?: number | string | null;
-  realReviewsCount?: number | string | null;
-  reviewsCount?: number | string | null;
+  documentationSubmitted?: boolean | number | string | null;
+  documentationVerified?: boolean | number | string | null;
+  manualReviewReady?: boolean | number | string | null;
+  manualReviewCompleted?: boolean | number | string | null;
+  lat?: number | string | null;
+  lng?: number | string | null;
 };
 
 export type IdentityVerificationStatus = 'unverified' | 'pending' | 'verified' | 'rejected';
@@ -63,11 +94,29 @@ const toSafeInteger = (value: unknown) => {
   return Number.isFinite(parsed) ? Math.max(0, Math.round(parsed)) : 0;
 };
 
-const hasProvidedCount = (value: unknown) => value !== null && value !== undefined && value !== '';
+const toSafeNumber = (value: unknown) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
 
-const resolveReviewHistoryCount = (realReviewsCount: unknown, reviewsCount: unknown) => (
-  hasProvidedCount(realReviewsCount) ? toSafeInteger(realReviewsCount) : toSafeInteger(reviewsCount)
-);
+const hasText = (value: unknown) => typeof value === 'string' && value.trim().length > 0;
+
+const toStringArray = (value: unknown): string[] => {
+  if (Array.isArray(value)) {
+    return value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
+  }
+
+  if (typeof value === 'string' && value.trim().length > 0) {
+    try {
+      const parsedValue = JSON.parse(value);
+      return toStringArray(parsedValue);
+    } catch {
+      return [value.trim()];
+    }
+  }
+
+  return [];
+};
 
 const toDateString = (value: unknown) => {
   if (typeof value === 'string' && value.trim().length > 0) {
@@ -112,9 +161,54 @@ const formatProviderLabel = (provider: string | null) => {
 
   return normalizedProvider.replace(/_/g, ' ');
 };
+const hasListingCoordinates = (input: Pick<PropertyVerificationSummaryInput, 'lat' | 'lng'>) => (
+  toSafeNumber(input.lat) !== null && toSafeNumber(input.lng) !== null
+);
 
-const withCountLabel = (count: number, singular: string, plural: string) => (
-  `${count} ${count === 1 ? singular : plural}`
+const resolvePublishedPhotoCount = (input: Pick<PropertyVerificationSummaryInput, 'images' | 'imageUrl'>) => {
+  const galleryImages = toStringArray(input.images);
+
+  if (galleryImages.length > 0) {
+    return galleryImages.length;
+  }
+
+  return hasText(input.imageUrl) ? 1 : 0;
+};
+
+const isPropertyBasicsComplete = (input: PropertyVerificationSummaryInput) => (
+  hasText(input.title)
+  && hasText(input.description)
+  && hasText(input.location)
+  && hasText(input.propertyType)
+  && toSafeNumber(input.price) !== null
+  && (toSafeNumber(input.price) ?? 0) > 0
+  && toSafeInteger(input.maxGuests) > 0
+);
+
+const isLocationVisible = (input: PropertyVerificationSummaryInput) => (
+  isTruthyFlag(input.locationVerified) || (hasText(input.location) && hasListingCoordinates(input))
+);
+
+const isRealPhotoCheckComplete = (input: PropertyVerificationSummaryInput) => (
+  isTruthyFlag(input.materialVerified) || toSafeInteger(input.verificationPhotoCount) >= 4
+);
+
+const isVideoCheckComplete = (input: PropertyVerificationSummaryInput) => (
+  isTruthyFlag(input.videoValidated) || toSafeInteger(input.verificationVideoCount) > 0
+);
+
+const isIdentityCheckComplete = (input: PropertyVerificationSummaryInput) => isTruthyFlag(input.identityValidated);
+
+const isDocumentationAdvancedReady = (input: PropertyVerificationSummaryInput) => (
+  isTruthyFlag(input.documentationVerified)
+  || isTruthyFlag(input.documentationSubmitted)
+  || toSafeInteger(input.verificationDocumentCount) > 0
+);
+
+const isManualReviewAdvancedReady = (input: PropertyVerificationSummaryInput) => (
+  isTruthyFlag(input.manualReviewCompleted)
+  || isTruthyFlag(input.manualReviewReady)
+  || isTruthyFlag(input.hasPresencialVerification)
 );
 
 export const buildVerificationSummary = <K extends string>(items: Array<VerificationItem<K>>): VerificationSummary<K> => ({
@@ -126,108 +220,143 @@ export const buildVerificationSummary = <K extends string>(items: Array<Verifica
 export const buildPropertyVerificationItem = (input: {
   key: PropertyVerificationKey;
   complete: boolean;
-  completedBookingsCount?: number | string | null;
-  realReviewsCount?: number | string | null;
-  reviewsCount?: number | string | null;
   onsiteVerifiedAt?: string | Date | null;
 }): VerificationItem<PropertyVerificationKey> => {
   const status: VerificationItemStatus = input.complete ? 'complete' : 'pending';
-  const completedBookingsCount = toSafeInteger(input.completedBookingsCount);
-  const realReviewsCount = resolveReviewHistoryCount(input.realReviewsCount, input.reviewsCount);
   const onsiteVerifiedAt = formatIsoDateLabel(toDateString(input.onsiteVerifiedAt));
 
-  if (input.key === 'identity') {
+  if (input.key === 'basics') {
     return {
-      key: 'identity',
-      label: 'Identidad del anfitrión',
+      key: 'basics',
+      label: 'Datos básicos',
       status,
-      description: input.complete ? 'La identidad del anfitrión ya está verificada.' : 'Todavía falta verificar la identidad del anfitrión.',
+      description: input.complete
+        ? 'El aviso ya tiene fotos, capacidad, precio y descripción para mostrarse con claridad.'
+        : 'Todavía faltan datos básicos para que el aviso se entienda mejor.',
     };
   }
 
   if (input.key === 'location') {
     return {
       key: 'location',
-      label: 'Ubicación de la propiedad',
+      label: 'Ubicación',
       status,
-      description: input.complete ? 'La ubicación de la propiedad ya está validada.' : 'Todavía falta validar la ubicación de la propiedad.',
+      description: input.complete
+        ? 'La zona del lugar ya está cargada y se puede ubicar dentro del mapa.'
+        : 'Todavía falta dejar más clara la ubicación aproximada del lugar.',
     };
   }
 
-  if (input.key === 'material') {
+  if (input.key === 'photos') {
     return {
-      key: 'material',
-      label: 'Material real del lugar',
+      key: 'photos',
+      label: 'Fotos reales',
       status,
-      description: input.complete ? 'Hay material real validado del lugar.' : 'Todavía falta material real validado del lugar.',
+      description: input.complete
+        ? 'El aviso ya suma fotos reales cargadas como respaldo visual del lugar.'
+        : 'Todavía faltan fotos reales cargadas como respaldo visual del lugar.',
     };
   }
 
-  if (input.key === 'onsite') {
+  if (input.key === 'video') {
     return {
-      key: 'onsite',
-      label: 'Verificación presencial',
+      key: 'video',
+      label: 'Video del lugar',
       status,
       description: input.complete
         ? onsiteVerifiedAt
-          ? `La verificación presencial quedó registrada el ${onsiteVerifiedAt}.`
-          : 'La verificación presencial ya quedó registrada.'
-        : 'Todavía no hay una verificación presencial registrada.',
-    };
-  }
-
-  if (input.complete) {
-    const evidence: string[] = [];
-
-    if (completedBookingsCount > 0) {
-      evidence.push(withCountLabel(completedBookingsCount, 'reserva completada', 'reservas completadas'));
-    }
-
-    if (realReviewsCount > 0) {
-      evidence.push(withCountLabel(realReviewsCount, 'reseña real', 'reseñas reales'));
-    }
-
-    return {
-      key: 'history',
-      label: 'Historial real del aviso',
-      status,
-      description: evidence.length > 0
-        ? `El aviso ya tiene ${evidence.join(' y ')}.`
-        : 'El aviso ya tiene historial real registrado.',
+          ? `El video del lugar ya quedó cargado y se actualizó el ${onsiteVerifiedAt}.`
+          : 'El aviso ya muestra un video del lugar como respaldo fuerte.'
+        : 'Todavía no hay un video del lugar cargado como respaldo fuerte.',
     };
   }
 
   return {
-    key: 'history',
-    label: 'Historial real del aviso',
+    key: 'identity',
+    label: 'Identidad validada',
     status,
-    description: 'Todavía no hay reservas completadas ni reseñas reales asociadas al aviso.',
+    description: input.complete
+      ? 'La identidad del anfitrión ya quedó validada.'
+      : 'Todavía falta validar la identidad del anfitrión para sumar más confianza.',
   };
 };
 
 export const buildPropertyVerificationSummary = (
   input: PropertyVerificationSummaryInput,
 ): PropertyVerificationSummary => {
-  const materialComplete = isTruthyFlag(input.materialVerified) || isTruthyFlag(input.videoValidated);
-  const historyReviewsCount = resolveReviewHistoryCount(input.realReviewsCount, input.reviewsCount);
-  const historyComplete = toSafeInteger(input.completedBookingsCount) > 0 || historyReviewsCount > 0;
-
   return buildVerificationSummary<PropertyVerificationKey>([
-    buildPropertyVerificationItem({ key: 'identity', complete: isTruthyFlag(input.identityValidated) }),
-    buildPropertyVerificationItem({ key: 'location', complete: isTruthyFlag(input.locationVerified) }),
-    buildPropertyVerificationItem({ key: 'material', complete: materialComplete }),
+    buildPropertyVerificationItem({ key: 'basics', complete: isPropertyBasicsComplete(input) }),
+    buildPropertyVerificationItem({ key: 'location', complete: isLocationVisible(input) }),
+    buildPropertyVerificationItem({ key: 'photos', complete: isRealPhotoCheckComplete(input) }),
     buildPropertyVerificationItem({
-      key: 'onsite',
-      complete: isTruthyFlag(input.hasPresencialVerification),
+      key: 'video',
+      complete: isVideoCheckComplete(input),
       onsiteVerifiedAt: input.onsiteVerifiedAt,
     }),
-    buildPropertyVerificationItem({
-      key: 'history',
-      complete: historyComplete,
-      completedBookingsCount: input.completedBookingsCount,
-      realReviewsCount: historyReviewsCount,
-    }),
+    buildPropertyVerificationItem({ key: 'identity', complete: isIdentityCheckComplete(input) }),
   ]);
+};
+
+export const buildPropertyAdvancedVerificationItems = (
+  input: PropertyVerificationSummaryInput,
+): PropertyAdvancedVerificationItem[] => ([
+  {
+    key: 'documents',
+    label: 'Documentación avanzada',
+    status: isDocumentationAdvancedReady(input) ? 'complete' : 'pending',
+    description: isDocumentationAdvancedReady(input)
+      ? 'Ya hay documentación privada cargada como respaldo interno para moderación.'
+      : 'Podés sumar DNI, comprobantes u otros archivos como respaldo interno, sin volverlo obligatorio para publicar.',
+  },
+  {
+    key: 'manualReview',
+    label: 'Revisión manual o presencial',
+    status: isManualReviewAdvancedReady(input) ? 'complete' : 'pending',
+    description: isManualReviewAdvancedReady(input)
+      ? 'La estructura de revisión manual o presencial ya quedó preparada para este aviso.'
+      : 'La capa manual o presencial queda lista para una etapa avanzada, sin frenar el alta.',
+  },
+]);
+
+export const buildPropertyVerificationProgress = (
+  input: PropertyVerificationSummaryInput,
+): PropertyVerificationProgress => {
+  const advancedChecks = buildPropertyAdvancedVerificationItems(input);
+  const baseReady = isPropertyBasicsComplete(input) && resolvePublishedPhotoCount(input) > 0 && hasText(input.location);
+  const mediumReady = baseReady && isIdentityCheckComplete(input) && isVideoCheckComplete(input);
+  const highReady = mediumReady && advancedChecks.every((item) => item.status === 'complete');
+
+  if (highReady) {
+    return {
+      level: 'high',
+      label: 'Nivel alto',
+      summary: 'El aviso ya combina una base clara, identidad validada, video y respaldo avanzado.',
+      nextStep: 'La capa avanzada ya quedó lista. Solo mantené el material al día cuando el lugar cambie.',
+      advancedChecks,
+    };
+  }
+
+  if (mediumReady) {
+    return {
+      level: 'medium',
+      label: 'Nivel medio',
+      summary: 'Ya sumaste identidad validada y video del lugar como señales fuertes de confianza.',
+      nextStep: advancedChecks[0]?.status === 'pending'
+        ? 'Si querés sumar una capa avanzada, podés cargar documentación privada para moderación interna.'
+        : 'La siguiente mejora fuerte es dejar preparada una revisión manual o presencial.',
+      advancedChecks,
+    };
+  }
+
+  return {
+    level: 'base',
+    label: 'Nivel base',
+    summary: 'El aviso ya puede publicarse con fotos y datos mínimos, sin frenar el alta por validaciones extra.',
+    nextStep: !isIdentityCheckComplete(input)
+      ? 'Validá la identidad del perfil para subir al nivel medio.'
+      : 'Subí un video del lugar para reforzar confianza sin complicar la publicación.',
+    advancedChecks,
+  };
 };
 
 export const normalizeIdentityVerificationStatus = (input: {

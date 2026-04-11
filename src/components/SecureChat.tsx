@@ -1013,7 +1013,14 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
   const isRequestExpired = Boolean(requestDeadline && Date.now() > requestDeadline.getTime());
   const isExpiredPendingRequest = Boolean(flowCopy?.stage === 'request-pending' && isRequestExpired);
   const compactReservationStatus = getCompactReservationStatus(flowCopy?.stage ?? null, isExpiredPendingRequest);
-  const chatContextHelper = interactionContinuity?.detail ?? (isTenantConversation ? hostHistoryLine : null);
+  const propertyVerificationHelper = activeRequestContext?.propertyVerificationLabel
+    && Number(activeRequestContext.propertyVerificationScore || 0) >= 3
+    ? `Este aviso llega con ${activeRequestContext.propertyVerificationLabel.toLowerCase()}.`
+    : null;
+  const chatContextHelper = [
+    interactionContinuity?.detail ?? (isTenantConversation ? hostHistoryLine : null),
+    propertyVerificationHelper,
+  ].filter(Boolean).join(' · ') || null;
   const requestHeading = isExpiredPendingRequest ? 'Solicitud vencida' : flowCopy?.statusLabel ?? null;
   const requestDescription = isExpiredPendingRequest
     ? isTenantConversation
