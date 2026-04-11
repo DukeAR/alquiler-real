@@ -120,7 +120,7 @@ const BookingConfirmationModal: React.FC<Props> = ({
   const activeNotice = submitNotice ?? {
     tone: 'info' as const,
     heading: 'Elegí cómo querés seguir con estas fechas',
-    description: 'Podés abrir un acuerdo directo por chat o dejar una solicitud protegida en la app. En ambos casos después seguís por mensajes.',
+    description: 'Podés abrir un acuerdo directo por chat o dejar una solicitud en la app. En ambos casos después seguís por mensajes.',
   };
 
   useEffect(() => {
@@ -190,7 +190,7 @@ const BookingConfirmationModal: React.FC<Props> = ({
                 as="h3"
                 visualLevel="h3"
                 heading="Elegí cómo querés avanzar con esta estadía"
-                description="Las fechas, huéspedes y total ya reflejan tu selección actual. Ahora definí si querés abrir un acuerdo directo por chat o dejar una solicitud protegida en la app."
+                description="Las fechas, huéspedes y total ya reflejan tu selección actual. Ahora definí si querés abrir un acuerdo directo por chat o dejar una solicitud en la app."
                 headingClassName="font-semibold tracking-tight"
                 className="pr-2"
               />
@@ -245,11 +245,11 @@ const BookingConfirmationModal: React.FC<Props> = ({
                 <div className="space-y-2">
                   <Badge variant="brand" size="md" className="gap-2">
                     <Icons.ShieldCheck className="h-3.5 w-3.5" />
-                    <span>Reserva protegida</span>
+                    <span>Solicitud en la app</span>
                   </Badge>
                   <p className="text-base font-semibold text-slate-950">La solicitud queda pendiente en la app</p>
                   <p className="text-sm leading-6 text-slate-600">
-                    Conviene si querés dejar fechas, huéspedes y total asentados desde ahora mientras esperás la respuesta del anfitrión y después avanzar con seña en custodia.
+                    Conviene si querés dejar fechas, huéspedes y total asentados desde ahora mientras esperás la respuesta del anfitrión y después avanzar con la seña dentro de la app.
                   </p>
                 </div>
 
@@ -262,7 +262,7 @@ const BookingConfirmationModal: React.FC<Props> = ({
                   loadingLabel="Enviando solicitud..."
                   disabled={isBusy && actionLoadingMode !== 'protected'}
                 >
-                  Enviar solicitud protegida
+                  Enviar solicitud en la app
                 </Button>
               </div>
             </Card>

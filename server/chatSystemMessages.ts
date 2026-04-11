@@ -49,10 +49,10 @@ export const CHAT_SYSTEM_MESSAGE_COPY: Record<ChatSystemMessageKey, string> = {
   'request-accepted': 'La otra parte aceptó avanzar.',
   'before-payment': 'Antes de avanzar con la seña, confirmá que los datos coincidan con el anfitrión del aviso.',
   'deposit-choice': 'Podés resolver la seña acá para dejar todo claro entre ambos. Si preferís, también podés coordinarla por fuera.',
-  'protected-payment': 'Si elegís la seña protegida, queda registrada y se libera cuando se confirme la llegada.',
+  'protected-payment': 'Si elegís dejar la seña en la app, queda registrada y se libera cuando se confirme la llegada.',
   'external-deposit': 'Eligieron coordinar la seña por fuera. Si cambian de idea antes de informarla, todavía pueden resolverla acá.',
   'direct-after-payment': 'La seña ya quedó informada y el siguiente paso depende de la otra parte.',
-  'protected-after-payment': 'La reserva protegida sigue avanzando y la seña cambia de estado según la llegada.',
+  'protected-after-payment': 'La reserva sigue avanzando dentro de la app y la seña cambia de estado según la llegada.',
   'before-arrival': 'Coordiná horario y detalles con el anfitrión antes de llegar.',
   'protected-arrival': 'Cuando estés en el lugar, podés confirmar tu llegada para continuar.',
   problem: 'Si algo no coincide con lo acordado, reportalo desde acá para dejarlo asentado.',
@@ -145,7 +145,7 @@ export const getRequestAcceptedMessage = (mode: ReservationRequestMode, depositT
   }
 
   if (mode === 'protected') {
-    return 'Ya pueden avanzar con una seña protegida. Queda registrada y se libera cuando se confirme la llegada.';
+    return 'Ya pueden avanzar con la seña dentro de la app. Queda registrada y se libera cuando se confirme la llegada.';
   }
 
   return 'Ya pueden avanzar con la seña de esta reserva.';

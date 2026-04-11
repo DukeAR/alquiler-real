@@ -22,7 +22,7 @@ export const TermsPage: React.FC<TermsPageProps> = ({ onBack }) => {
         onBack={onBack}
         eyebrow="Términos"
         heading="Términos y condiciones"
-        description="Qué responsabilidad asume cada anfitrión, qué hace Alquiler Real y en qué casos la plataforma no interviene."
+        description="Qué responsabilidad asume cada anfitrión, qué deja registrado Alquiler Real y en qué casos la plataforma no interviene."
         contentClassName="mx-auto w-full max-w-5xl"
       />
 
@@ -30,7 +30,7 @@ export const TermsPage: React.FC<TermsPageProps> = ({ onBack }) => {
         <PlatformTermsQuickGuide
           eyebrow="Lectura rápida"
           title="Lo esencial en 1 minuto"
-          description="Arrancá por este resumen corto si querés entender rápido qué hace Alquiler Real, cuándo te protege y cuándo no."
+          description="Arrancá por este resumen corto si querés entender rápido qué deja registrado Alquiler Real, qué depende del anfitrión y cuándo la app puede revisar un caso."
         />
 
         <section className="space-y-6">

@@ -41,7 +41,7 @@ export const ExploreHero = ({
               Decidir bien no siempre.
             </h1>
             <p className="max-w-[32rem] text-[0.94rem] leading-6 text-slate-100 sm:text-[0.98rem] sm:leading-7 md:max-w-[43rem] md:text-[1.08rem] md:leading-8">
-              Por eso mostramos ubicación, quién publica y qué parte del aviso ya está comprobada antes de que mandes un mensaje o pagues.
+              Por eso mostramos ubicación, quién publica y qué parte del aviso ya está comprobada antes de que mandes un mensaje o pagues. La idea es que sepas con quién tratás y qué ya quedó claro desde el inicio.
             </p>
           </div>
           <form

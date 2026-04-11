@@ -773,7 +773,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
         depositPaymentReference: booking.depositPaymentReference,
       });
       await loadMessages(activeConv.id);
-      showToast('Seña protegida', 'La seña quedó lista para registrarse acá. Vas a ver el fee antes de pagar.', 'success');
+      showToast('Seña en la app', 'La seña quedó lista para registrarse acá. Vas a ver el fee antes de pagar.', 'success');
     } catch (err) {
       showToast('Seña', err instanceof Error ? err.message : 'No pudimos registrar esta elección.', 'error');
     } finally {
@@ -1257,7 +1257,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
     const reminders: Message[] = [];
     const saferChatStartText = 'Podés coordinar todo por acá. Evitá compartir datos sensibles o pagos por fuera hasta tener claro el acuerdo.';
     const beforeDepositReminderText = 'Antes de avanzar con la seña, confirmá que los datos coincidan con el anfitrión del aviso.';
-    const protectedClarityText = 'Estás usando la reserva protegida para mayor claridad.';
+    const protectedClarityText = 'Estás usando la seña en la app para dejar el proceso registrado.';
     const keywordReminderText = 'Verificá que la cuenta esté a nombre del anfitrión antes de transferir.';
     const directProofReminderText = 'Guardá el comprobante de la seña por si necesitás revisarlo.';
     const currentMessages = [...messages, ...fallbackSystemMessages];
@@ -1411,7 +1411,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
       const supplementaryContent = activeRequestContext?.mode === 'protected'
         ? canPayProtectedDeposit
           ? 'Ya podés dejar la seña registrada.'
-          : 'Ahora falta que el huésped registre la seña protegida.'
+          : 'Ahora falta que el huésped registre la seña en la app.'
         : canReportDirectDeposit
           ? 'Ya podés informar la seña.'
           : 'Ahora falta que el huésped informe la seña.';
@@ -2023,7 +2023,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
 
                 {flowCopy?.stage === 'request-accepted' && protectedDepositPreview ? (
                   <div className="rounded-full border border-brand/15 bg-brand/5 px-4 py-2.5 text-xs leading-5 text-slate-700 dark:border-brand/20 dark:bg-brand/10 dark:text-slate-200">
-                    Seña protegida: {currencyFormatter.format(protectedDepositPreview.depositAmount)} · Fee {currencyFormatter.format(protectedDepositPreview.serviceFee)} · Total {currencyFormatter.format(protectedDepositPreview.totalCharge)}
+                    Seña en la app: {currencyFormatter.format(protectedDepositPreview.depositAmount)} · Fee {currencyFormatter.format(protectedDepositPreview.serviceFee)} · Total {currencyFormatter.format(protectedDepositPreview.totalCharge)}
                   </div>
                 ) : null}
 

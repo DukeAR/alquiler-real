@@ -72,7 +72,7 @@ const getRequestStatusLabel = (mode: ReservationRequestMode, viewerRole: Reserva
 
 const getModelLabel = (mode: ReservationRequestMode, depositType?: ReservationDepositType | null) => {
   if (depositType === 'protected') {
-    return 'Seña protegida';
+    return 'Seña en la app';
   }
 
   if (depositType === 'external' || mode === 'direct') {
@@ -321,10 +321,10 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
         nextActor: 'guest',
         nextActorLabel: 'Huésped',
         nextStepLabel: input.mode === 'protected'
-          ? viewerRole === 'host' ? 'Esperar registro de seña' : 'Registrar seña protegida'
+          ? viewerRole === 'host' ? 'Esperar registro de seña' : 'Registrar seña'
           : viewerRole === 'host' ? 'Esperar que el huésped informe la seña' : 'Informar seña',
         primaryActionLabel: viewerRole === 'guest'
-          ? input.mode === 'protected' ? 'Registrar seña protegida' : 'Informar seña'
+          ? input.mode === 'protected' ? 'Registrar seña' : 'Informar seña'
           : undefined,
         directDepositHint: input.mode === 'direct' ? 'Revisá que el titular coincida con quien publica antes de transferir.' : undefined,
       };

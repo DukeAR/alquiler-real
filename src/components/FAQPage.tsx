@@ -92,8 +92,8 @@ const supportCards: SupportCard[] = [
     descriptionClassName: 'text-slate-600 dark:text-slate-400',
   },
   {
-    eyebrow: 'Reserva protegida',
-    title: 'La seña queda en custodia',
+    eyebrow: 'Seña en la app',
+    title: 'La seña queda registrada',
     description: 'Se paga después de la aceptación del anfitrión. En estadías de 1 a 3 noches equivale a 1 noche. Desde 4 noches, equivale a 2 noches.',
     icon: Icons.ShieldCheck,
     className: 'border-brand/15 bg-[radial-gradient(circle_at_top_right,rgba(67,56,202,0.12),transparent_42%),linear-gradient(180deg,rgba(255,255,255,0.99),rgba(248,250,252,0.98))] shadow-[0_18px_38px_-30px_rgba(15,23,42,0.18)] dark:border-brand/20 dark:bg-slate-900',
@@ -106,19 +106,19 @@ const supportCards: SupportCard[] = [
 const faqGroups: FAQGroup[] = [
   {
     eyebrow: 'Modelos de reserva',
-    description: 'Qué cambia entre acuerdo directo y reserva protegida antes de pagar o confirmar.',
+    description: 'Qué cambia entre acuerdo directo y dejar la seña en la app antes de pagar o confirmar.',
     items: [
       {
-        question: '¿Qué cambia entre acuerdo directo y reserva protegida?',
-        answer: 'En acuerdo directo la plataforma acompaña la conversación, pero no cobra ni retiene la seña. En reserva protegida la seña se paga dentro del flujo y queda en custodia.',
+        question: '¿Qué cambia entre acuerdo directo y dejar la seña en la app?',
+        answer: 'En acuerdo directo la plataforma acompaña la conversación, pero no cobra ni retiene la seña. Si elegís dejar la seña en la app, el pago entra dentro del flujo y queda registrado.',
         bullets: [
-          'Acuerdo directo: la plataforma solo muestra estados y deja contexto para la operación.',
-          'Reserva protegida: la plataforma puede retener, revisar o devolver la seña según cómo cierre la reserva.',
+          'Acuerdo directo: la plataforma deja el chat y el estado visibles, pero la seña se resuelve entre huésped y anfitrión.',
+          'Seña en la app: la plataforma puede retener, revisar o devolver esa seña según cómo cierre la reserva.',
         ],
         icon: Icons.MessageSquare,
       },
       {
-        question: '¿Cómo se calcula la seña en una reserva protegida?',
+        question: '¿Cómo se calcula la seña si la registrás en la app?',
         answer: 'La seña se calcula por cantidad de noches y solo se paga después de que el anfitrión acepta la solicitud.',
         bullets: [
           'De 1 a 3 noches: 1 noche de seña.',
@@ -127,11 +127,11 @@ const faqGroups: FAQGroup[] = [
         icon: Icons.FileSpreadsheet,
       },
       {
-        question: '¿Cuándo se paga la seña protegida?',
+        question: '¿Cuándo se paga la seña en la app?',
         answer: 'Después de la aceptación del anfitrión. Antes de eso, la solicitud puede quedar pendiente o cancelarse sin una seña cobrada dentro de la app.',
         bullets: [
           'Primero se define si el anfitrión acepta.',
-          'Después recién se activa el paso de seña y custodia.',
+          'Después recién se activa el paso de seña y queda todo asentado en la app.',
         ],
         icon: Icons.Clock,
       },
@@ -142,7 +142,7 @@ const faqGroups: FAQGroup[] = [
     description: 'Cómo se revisa la seña según cancelaciones, no show y problemas reportados.',
     items: [
       {
-        question: '¿Cuándo puede devolverse la seña protegida?',
+        question: '¿Cuándo puede devolverse la seña registrada en la app?',
         answer: 'La devolución depende del momento de la cancelación y del estado de la reserva.',
         bullets: [
           'Si el anfitrión cancela o la propiedad no está realmente disponible, la seña se devuelve.',
@@ -152,12 +152,12 @@ const faqGroups: FAQGroup[] = [
       },
       {
         question: '¿Qué pasa si cancela el anfitrión o la propiedad no existe?',
-        answer: 'En reserva protegida, la seña se devuelve. En acuerdo directo, la plataforma deja asentado el estado, pero no interviene sobre pagos hechos por fuera.',
+        answer: 'Si la seña estaba en la app, se devuelve. En acuerdo directo, la plataforma deja asentado el estado, pero no interviene sobre pagos hechos por fuera.',
         icon: Icons.Home,
       },
       {
         question: '¿Qué pasa si hay no show o un problema reportado al llegar?',
-        answer: 'En reserva protegida, la seña no se libera automáticamente. La llegada puede quedar en revisión o la seña puede pasar a revisión hasta cerrar qué corresponde.',
+        answer: 'Si la seña estaba en la app, no se libera automáticamente. La llegada puede quedar en revisión o la seña puede pasar a revisión hasta cerrar qué corresponde.',
         bullets: [
           'Si el huésped no llega, la llegada queda en revisión mientras la plataforma confirma qué pasó.',
           'Si la propiedad no coincide de forma sustancial o surge un problema al llegar, la seña puede quedar en revisión.',
@@ -177,10 +177,10 @@ const roleGuides: RoleGuide[] = [
   {
     eyebrow: 'Para anfitriones',
     title: 'Elegí bien el modelo antes de aceptar',
-    description: 'El acuerdo directo y la reserva protegida no cierran igual. Conviene dejar claro cuál usás y qué pasa con la seña en cada caso.',
+    description: 'El acuerdo directo y el flujo con seña en la app no cierran igual. Conviene dejar claro cuál usás y qué pasa con la seña en cada caso.',
     points: [
-      'En reserva protegida, la seña recién entra después de tu aceptación.',
-      'Si cancelás una reserva protegida, la seña se devuelve.',
+      'Si dejás la seña en la app, recién entra después de tu aceptación.',
+      'Si cancelás una reserva con seña en la app, esa seña se devuelve.',
       'Si informás un no show, la llegada queda en revisión y la seña sigue en pausa hasta que se revise.',
     ],
     icon: Icons.Home,
@@ -189,10 +189,10 @@ const roleGuides: RoleGuide[] = [
   {
     eyebrow: 'Para huéspedes',
     title: 'Antes de pagar, revisá qué modelo elegiste',
-    description: 'No es lo mismo abrir un acuerdo por chat que dejar una reserva protegida con seña en custodia.',
+    description: 'No es lo mismo abrir un acuerdo por chat que dejar la seña dentro de la app.',
     points: [
       'En acuerdo directo, la plataforma no cobra ni devuelve la seña.',
-      'En reserva protegida, la seña depende de la cantidad de noches.',
+      'Si dejás la seña en la app, el monto depende de la cantidad de noches.',
       'La devolución depende del momento de la cancelación y del estado final de la reserva.',
     ],
     icon: Icons.UserCheck,
@@ -304,7 +304,7 @@ export const FAQPage: React.FC<FAQPageProps> = ({ onBack }) => {
         onBack={onBack}
         eyebrow="Ayuda"
         heading="Preguntas frecuentes"
-        description="Qué cambia entre acuerdo directo y reserva protegida, cómo se calcula la seña y cuándo puede revisarse o devolverse."
+        description="Qué cambia entre acuerdo directo y dejar la seña en la app, cómo se calcula y cuándo puede revisarse o devolverse."
         action={(
           <Link
             to="/terms"
@@ -420,8 +420,8 @@ export const FAQPage: React.FC<FAQPageProps> = ({ onBack }) => {
 
         <PlatformTermsQuickGuide
           eyebrow="En 1 minuto"
-          title="Qué hace Alquiler Real, cuándo te protege y cuándo no"
-          description="Cinco bloques cortos para entender qué depende del anfitrión, qué queda registrado y en qué casos la app puede intervenir."
+          title="Qué hace Alquiler Real, qué deja registrado y qué no controla"
+          description="Cinco bloques cortos para entender qué depende del anfitrión, qué queda registrado y en qué casos la app puede revisar un caso."
         />
 
         <section className="space-y-6">

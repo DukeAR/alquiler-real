@@ -444,11 +444,11 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
 
                 <div className="max-w-3xl space-y-4">
                   <p className="app-body leading-8 text-slate-700 dark:text-slate-300">
-                    Alquiler Real nace de algo simple: la frustración de no saber en qué confiar.
+                    Alquiler Real nace de algo simple: muchas veces no está claro con quién estás hablando ni qué parte del aviso es real.
                   </p>
 
                   <p className="app-body leading-8 text-slate-700 dark:text-slate-300">
-                    Fotos que no representan el lugar, ubicaciones poco claras, condiciones que cambian después de hablar… y muchas veces, directamente, estafas.
+                    Fotos que no representan el lugar, ubicaciones poco claras y condiciones que cambian después de hablar vuelven más difícil una decisión que debería ser bastante más simple.
                   </p>
 
                   <p className="app-body leading-8 text-slate-700 dark:text-slate-300">
@@ -468,11 +468,11 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                   <p className="app-body leading-8 text-slate-700 dark:text-slate-300">
                     No reemplazamos el acuerdo entre huésped y anfitrión.<br />
                     Si la operación va por fuera, no intervenimos en pagos ni devoluciones.<br />
-                    Si la seña se gestiona acá, sí podemos revisar lo reportado.
+                    Si la seña se gestiona acá, queda registrada y sí podemos revisar lo reportado.
                   </p>
 
                   <p className="app-body leading-8 text-slate-700 dark:text-slate-300">
-                    Porque elegir bien no debería depender de la suerte.
+                    Porque decidir mejor debería depender de información clara, no de adivinar.
                   </p>
                 </div>
               </section>

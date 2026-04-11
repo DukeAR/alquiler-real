@@ -659,7 +659,7 @@ describe('SecureChat', () => {
 
     expect(await screen.findByText('El anfitrión aceptó la solicitud.')).toBeInTheDocument();
     expect(screen.getByText('Ya podés dejar la seña registrada.')).toBeInTheDocument();
-  expect(screen.getByText(/Seña protegida:/i)).toBeInTheDocument();
+  expect(screen.getByText(/Seña en la app:/i)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Pagar seña/i }));
 
@@ -757,7 +757,7 @@ describe('SecureChat', () => {
     });
 
     expect(showToastMock).toHaveBeenCalledWith(
-      'Seña protegida',
+      'Seña en la app',
       'La seña quedó lista para registrarse acá. Vas a ver el fee antes de pagar.',
       'success',
     );

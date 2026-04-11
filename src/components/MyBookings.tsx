@@ -373,7 +373,7 @@ const getHighlightedStayDescription = (booking: Booking) => {
   }
 
   if (flow.stage === 'protected-deposit-held') {
-    return 'La reserva ya quedó protegida. Dejala a mano para coordinar la llegada cuando se acerque el ingreso.';
+    return 'La reserva ya quedó ordenada en la app. Dejala a mano para coordinar la llegada cuando se acerque el ingreso.';
   }
 
   if (flow.stage === 'protected-deposit-released') {
@@ -578,7 +578,7 @@ export const MyBookings = () => {
     try {
       const nextBooking = await payProtectedDeposit(bookingId);
       updateBookingState(nextBooking);
-      showToast('Seña en custodia', 'La seña ya quedó resguardada en la plataforma hasta que confirmes la llegada.', 'success');
+      showToast('Seña en custodia', 'La seña ya quedó registrada en la plataforma hasta que confirmes la llegada.', 'success');
     } catch (error) {
       showToast('Seña', error instanceof Error ? error.message : 'No pudimos registrar el pago de la seña.', 'error');
     } finally {
@@ -608,7 +608,7 @@ export const MyBookings = () => {
       const nextBooking = await selectProtectedDeposit(bookingId);
       updateBookingState(nextBooking);
       setExternalDepositChoiceBookingId((currentBookingId) => (currentBookingId === bookingId ? null : currentBookingId));
-      showToast('Seña protegida', 'La seña quedó lista para registrarse acá. Vas a ver el fee antes de pagar.', 'success');
+      showToast('Seña en la app', 'La seña quedó lista para registrarse acá. Vas a ver el fee antes de pagar.', 'success');
     } catch (error) {
       showToast('Seña', error instanceof Error ? error.message : 'No pudimos registrar esta elección.', 'error');
     } finally {
@@ -721,7 +721,7 @@ export const MyBookings = () => {
     id: `arrival-${arrivalActionBooking.id}`,
     eyebrow: 'Resolver hoy',
     title: `Tu llegada a ${arrivalActionBooking.propertyTitle || 'esta reserva'} ya pide confirmación`,
-    description: 'Hoy ya podés confirmar el ingreso o reportar un problema si la reserva protegida no salió como esperabas.',
+    description: 'Hoy ya podés confirmar el ingreso o reportar un problema si la llegada no salió como esperabas.',
     actionLabel: 'Ir a la reserva',
     icon: <Icons.CheckCircle2 className="h-5 w-5" />,
     onAction: () => scrollToBooking(arrivalActionBooking.id),
@@ -745,7 +745,7 @@ export const MyBookings = () => {
       : `Pagá la seña de ${depositActionBooking.propertyTitle || 'esta reserva'}`,
     description: getBookingFlow(depositActionBooking).stage === 'deposit-choice'
       ? 'El anfitrión ya aceptó la solicitud. Ahora podés definir si dejás la seña registrada acá o si la coordinás por fuera.'
-      : 'El anfitrión ya aceptó la solicitud y elegiste la seña protegida. Falta el pago dentro de la app para dejarla en custodia.',
+      : 'El anfitrión ya aceptó la solicitud y elegiste resolver la seña en la app. Falta el pago para dejarla en custodia.',
     actionLabel: 'Ver solicitud',
     icon: <Icons.ShieldCheck className="h-5 w-5" />,
     onAction: () => scrollToBooking(depositActionBooking.id),
@@ -861,7 +861,7 @@ export const MyBookings = () => {
                         : booking.depositType === 'external'
                           ? 'Seña externa'
                           : booking.depositType === 'protected'
-                            ? 'Seña protegida'
+                            ? 'Seña en la app'
                             : 'Solicitud registrada'}
                     </Badge>
                   ) : null}
@@ -1012,7 +1012,7 @@ export const MyBookings = () => {
                       <div className="rounded-[24px] border border-brand/15 bg-white/95 p-4 shadow-[0_20px_44px_-34px_rgba(67,56,202,0.34)] dark:border-brand/20 dark:bg-slate-950/90">
                         <div className="flex items-start justify-between gap-3">
                           <div className="space-y-1.5">
-                            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-brand">Seña protegida</p>
+                            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-brand">Seña en la app</p>
                             <p className="text-sm font-semibold text-slate-950 dark:text-slate-50">Dejarla registrada acá</p>
                             <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">La seña ya queda asentada y se libera cuando confirmás la llegada.</p>
                           </div>
@@ -1199,7 +1199,7 @@ export const MyBookings = () => {
                 <div className="mt-4 rounded-[20px] border border-white/80 bg-white/90 px-4 py-4 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-300">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-brand">Seña protegida</p>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-brand">Seña en la app</p>
                       <p className="mt-1 font-semibold text-slate-950 dark:text-slate-50">La seña ya queda registrada y se libera cuando confirmás la llegada.</p>
                     </div>
                     <div className="text-right text-xs leading-5">

@@ -33,9 +33,9 @@ describe('BookingConfirmationModal', () => {
     expect(screen.getByText('Laura')).toBeInTheDocument();
     expect(screen.getByText('Elegí cómo querés avanzar con esta estadía')).toBeInTheDocument();
     expect(screen.getByText('Acuerdo directo')).toBeInTheDocument();
-    expect(screen.getByText('Reserva protegida')).toBeInTheDocument();
+    expect(screen.getByText('Solicitud en la app')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /enviar solicitud protegida/i }));
+    fireEvent.click(screen.getByRole('button', { name: /enviar solicitud en la app/i }));
     expect(onStartProtected).toHaveBeenCalledTimes(1);
     expect(onStartDirect).not.toHaveBeenCalled();
   });

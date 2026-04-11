@@ -357,9 +357,9 @@ describe('MyBookings', () => {
 
     expect(await screen.findAllByText('Solicitud aceptada')).not.toHaveLength(0);
     expect(screen.getByText('El anfitrión ya aceptó. Ahora falta registrar la seña desde la app.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Registrar seña protegida/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Registrar seña/i })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /Registrar seña protegida/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Registrar seña/i }));
 
     await waitFor(() => {
       expect(payProtectedDepositMock).toHaveBeenCalledWith('booking-protected-1');
@@ -368,13 +368,13 @@ describe('MyBookings', () => {
     expect(await screen.findAllByText('Seña en custodia')).not.toHaveLength(0);
     expect(screen.getAllByText('Solo queda coordinar y confirmar la llegada.')).not.toHaveLength(0);
     expect(showToastMock).toHaveBeenCalledWith(
-      'Seña protegida',
+      'Seña en la app',
       'La seña quedó lista para registrarse acá. Vas a ver el fee antes de pagar.',
       'success',
     );
     expect(showToastMock).toHaveBeenCalledWith(
       'Seña en custodia',
-      'La seña ya quedó resguardada en la plataforma hasta que confirmes la llegada.',
+      'La seña ya quedó registrada en la plataforma hasta que confirmes la llegada.',
       'success',
     );
   });
@@ -434,7 +434,7 @@ describe('MyBookings', () => {
     });
 
     expect(showToastMock).toHaveBeenCalledWith(
-      'Seña protegida',
+      'Seña en la app',
       'La seña quedó lista para registrarse acá. Vas a ver el fee antes de pagar.',
       'success',
     );

@@ -21,9 +21,9 @@ export type PlatformTermsQuickGuideSection = {
   body: string;
 };
 
-export const PLATFORM_TERMS_INTRO = 'Estos términos explican qué depende del anfitrión, qué registra Alquiler Real y en qué situaciones la plataforma puede ayudar a revisar un caso.';
+export const PLATFORM_TERMS_INTRO = 'Estos términos explican qué depende del anfitrión, qué deja registrado Alquiler Real y en qué situaciones la plataforma puede revisar un caso.';
 
-export const PLATFORM_TERMS_QUICK_GUIDE_INTRO = 'En menos de un minuto: qué hace la plataforma, cuándo te protege y cuándo no.';
+export const PLATFORM_TERMS_QUICK_GUIDE_INTRO = 'En menos de un minuto: qué registra la plataforma, qué depende del anfitrión y cuándo puede revisar un caso.';
 
 export const PLATFORM_TERMS_QUICK_GUIDE_SECTIONS: PlatformTermsQuickGuideSection[] = [
   {
@@ -34,17 +34,17 @@ export const PLATFORM_TERMS_QUICK_GUIDE_SECTIONS: PlatformTermsQuickGuideSection
   {
     id: 'contact',
     title: 'Contacto',
-    body: 'Si hablás dentro de la app, queda registro. Si deciden seguir por fuera, ese tramo ya no queda respaldado por la plataforma.',
+    body: 'Si hablás dentro de la app, queda registro. Si deciden seguir por fuera, ese tramo deja de quedar asentado acá.',
   },
   {
     id: 'deposit',
     title: 'Seña',
-    body: 'Tenés dos opciones: coordinarla por fuera o usar la seña protegida. La protegida se paga dentro de la app y queda registrada.',
+    body: 'Tenés dos opciones: coordinarla por fuera o dejarla dentro de la app. Si la dejás acá, se paga dentro del flujo y queda registrada.',
   },
   {
     id: 'platform-intervention',
     title: 'Cuándo interviene la plataforma',
-    body: 'Si la seña se gestiona acá, Alquiler Real puede revisar cancelaciones, problemas al llegar o situaciones reportadas para ayudar a resolver qué sigue.',
+    body: 'Si la seña se gestiona acá, Alquiler Real puede revisar cancelaciones, problemas al llegar o situaciones reportadas para ayudar a ordenar cómo sigue.',
   },
   {
     id: 'no-intervention',
@@ -77,7 +77,7 @@ export const PLATFORM_TERMS_CLAUSES: PlatformTermsClause[] = [
     id: 'platform-intervention',
     eyebrow: 'Intervención',
     title: 'Cuándo puede intervenir la plataforma',
-    body: 'En reservas con seña gestionada dentro de la plataforma, Alquiler Real puede intervenir para revisar situaciones reportadas y ayudar a resolver cómo sigue esa seña según el estado de la reserva y la información disponible.',
+    body: 'En reservas con seña gestionada dentro de la plataforma, Alquiler Real puede revisar situaciones reportadas y ayudar a ordenar cómo sigue esa seña según el estado de la reserva y la información disponible.',
   },
   {
     id: 'external-operations',

@@ -640,7 +640,7 @@ const mapActivityLogToNotification = (row: any) => {
         id: row.id,
         title: metadata.requestMode === 'protected' ? 'Solicitud enviada' : 'Reserva confirmada',
         message: metadata.requestMode === 'protected'
-          ? 'La solicitud protegida ya quedó registrada. Cuando el anfitrión la acepte, vas a ver cómo seguir.'
+          ? 'La solicitud ya quedó registrada en la app. Cuando el anfitrión la acepte, vas a ver cómo seguir.'
           : 'Registramos tu reserva. Revisá las fechas y los próximos pasos en Mis reservas.',
         type: metadata.requestMode === 'protected' ? 'info' : 'success',
         createdAt,
@@ -700,7 +700,7 @@ const filterChatMiddleware = async (req: any, res: any, next: any) => {
     }
 
     return res.status(403).json({ 
-      error: 'Por tu seguridad, no podés compartir contactos, redes ni datos externos por acá. Mantené todo dentro de la plataforma.' 
+      error: 'Para que el proceso quede registrado en la app, no podés compartir contactos, redes ni datos externos por acá. Mantené esta conversación dentro de la plataforma.' 
     });
   }
   next();
@@ -4567,7 +4567,7 @@ app.post('/api/bookings/:id/report-arrival-problem', async (req, res) => {
     }
 
     if (!isProtectedDepositBooking(booking)) {
-      return sendBookingError(res, 422, 'INVALID_REPORT_FLOW', 'Esta acción solo aplica a reservas protegidas.');
+      return sendBookingError(res, 422, 'INVALID_REPORT_FLOW', 'Esta acción solo aplica a reservas con seña gestionada en la app.');
     }
 
     if (booking.status !== 'confirmed') {
@@ -4617,7 +4617,7 @@ app.post('/api/bookings/:id/report-no-show', async (req, res) => {
     }
 
     if (!isProtectedDepositBooking(booking)) {
-      return sendBookingError(res, 422, 'INVALID_NO_SHOW_FLOW', 'Esta acción solo aplica a reservas protegidas.');
+      return sendBookingError(res, 422, 'INVALID_NO_SHOW_FLOW', 'Esta acción solo aplica a reservas con seña gestionada en la app.');
     }
 
     if (booking.status !== 'confirmed') {
@@ -5500,7 +5500,7 @@ app.post('/api/bookings/:id/select-protected-deposit', async (req, res) => {
     const protectedDeposit = buildProtectedDepositPersistence(booking);
 
     if (!protectedDeposit) {
-      return sendBookingError(res, 422, 'INVALID_PROTECTED_DEPOSIT_PRICING', 'No pudimos calcular la seña protegida para esta reserva.');
+      return sendBookingError(res, 422, 'INVALID_PROTECTED_DEPOSIT_PRICING', 'No pudimos calcular la seña dentro de la app para esta reserva.');
     }
 
     await db.query(
@@ -5558,7 +5558,7 @@ app.post('/api/bookings/:id/pay-deposit', async (req, res) => {
     const protectedDeposit = buildProtectedDepositPersistence(booking);
 
     if (!protectedDeposit) {
-      return sendBookingError(res, 422, 'INVALID_PAYMENT_PRICING', 'No pudimos calcular la seña protegida para esta reserva.');
+      return sendBookingError(res, 422, 'INVALID_PAYMENT_PRICING', 'No pudimos calcular la seña dentro de la app para esta reserva.');
     }
 
     const depositPaymentReference = booking.depositPaymentReference || buildDepositPaymentReference(req.params.id);
@@ -5612,7 +5612,7 @@ app.post('/api/bookings/:id/confirm-arrival', async (req, res) => {
     }
 
     if (!isProtectedDepositBooking(booking)) {
-      return sendBookingError(res, 422, 'INVALID_ARRIVAL_FLOW', 'Esta acción solo aplica a reservas protegidas.');
+      return sendBookingError(res, 422, 'INVALID_ARRIVAL_FLOW', 'Esta acción solo aplica a reservas con seña gestionada en la app.');
     }
 
     if (booking.depositStatus !== 'held') {
