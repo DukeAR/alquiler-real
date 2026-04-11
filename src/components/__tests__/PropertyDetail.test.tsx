@@ -610,16 +610,6 @@ describe('PropertyDetail', () => {
           updated_at: new Date().toISOString(),
         };
       }
-      if (url === '/api/messages' && options?.method === 'POST') {
-        return {
-          id: 'msg-1',
-          conversation_id: 'conv-1',
-          sender_id: 'u1',
-          receiver_id: 'h1',
-          content: 'Hola Mariana',
-          created_at: new Date().toISOString(),
-        };
-      }
 
       return sampleProperty;
     });
@@ -669,10 +659,10 @@ describe('PropertyDetail', () => {
       expect(apiJsonCalls).toEqual(
         expect.arrayContaining([
           expect.objectContaining({ url: '/api/conversations' }),
-          expect.objectContaining({ url: '/api/messages' }),
         ]),
       );
     });
+    expect(apiJsonCalls.some((call) => call.url === '/api/messages')).toBe(false);
 
     await waitFor(() => expect(screen.getByText('Chat abierto conv-1')).toBeDefined());
     expect(screen.getByText('Modo: protected')).toBeDefined();
@@ -704,16 +694,6 @@ describe('PropertyDetail', () => {
           propertyTitle: 'Casa de prueba',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-        };
-      }
-      if (url === '/api/messages' && options?.method === 'POST') {
-        return {
-          id: 'msg-1',
-          conversation_id: 'conv-1',
-          sender_id: 'u1',
-          receiver_id: 'h1',
-          content: 'Hola Mariana',
-          created_at: new Date().toISOString(),
         };
       }
 
@@ -773,9 +753,9 @@ describe('PropertyDetail', () => {
     expect(apiJsonCalls).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ url: '/api/conversations' }),
-        expect.objectContaining({ url: '/api/messages' }),
       ]),
     );
+    expect(apiJsonCalls.some((call) => call.url === '/api/messages')).toBe(false);
     expect(
       dispatchSpy.mock.calls.some(([event]) => event instanceof CustomEvent && event.type === 'app-notification')
     ).toBe(true);

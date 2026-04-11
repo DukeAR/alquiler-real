@@ -321,20 +321,66 @@ describe('SecureChat', () => {
     renderChat();
 
     expect(await screen.findByRole('heading', { name: 'Mariana' })).toBeInTheDocument();
-  expect(screen.getByText('✔ 6 reservas completadas · ✔ El aviso suele coincidir con lo publicado · ✔ Responde rápido · Promedio: ~18 min')).toBeInTheDocument();
+    expect(screen.getByText('✔ 6 reservas completadas · ✔ El aviso suele coincidir con lo publicado · ✔ Responde rápido · Promedio: ~18 min')).toBeInTheDocument();
     expect(screen.getByText((content) => content.includes('Casa de prueba') && content.includes('2 huéspedes') && content.includes('320'))).toBeInTheDocument();
     expect(screen.getByText('Estado: Esperando respuesta')).toBeInTheDocument();
-  expect(screen.getByText('Ya interactuaron antes sin inconvenientes')).toBeInTheDocument();
+    expect(screen.getByText('Ya interactuaron antes sin inconvenientes')).toBeInTheDocument();
     expect(screen.getByText('Podés coordinar todo por acá. Evitá compartir datos sensibles o pagos por fuera hasta tener claro el acuerdo.')).toBeInTheDocument();
-  expect(screen.getByText('Podés contar brevemente el motivo de tu estadía. Responder ayuda a avanzar más rápido.')).toBeInTheDocument();
-    expect(screen.getByText('Mensaje sugerido')).toBeInTheDocument();
-    expect(screen.getByText('Preguntas rápidas')).toBeInTheDocument();
     expect(screen.getByText('Propuesta enviada. Falta la respuesta del anfitrión.')).toBeInTheDocument();
     expect(screen.queryByText('Estado actual')).not.toBeInTheDocument();
     expect(screen.queryByText('Actúa ahora')).not.toBeInTheDocument();
     expect(screen.queryByText('Próximo paso')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '¿Te sirven estas fechas?' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '¿Qué incluye el precio?' })).toBeInTheDocument();
+    expect(screen.queryByText('Mensaje sugerido')).not.toBeInTheDocument();
+    expect(screen.queryByText('Preguntas rápidas')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Agregar motivo del viaje' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Consultar horario de llegada' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Preguntar qué incluye' })).toBeInTheDocument();
+
+    const composer = screen.getByRole('textbox') as HTMLTextAreaElement;
+    await waitFor(() => {
+      expect(composer.value).toContain('Hola, ¿cómo estás? Estoy viendo el lugar');
+    });
+    expect(composer.value).toContain('Hola, ¿cómo estás? Estoy viendo el lugar');
+    expect(composer.value).toContain('10 may');
+    expect(composer.value).toContain('13 may');
+    expect(composer.value).toContain('para 2 personas');
+    expect(composer.value).toContain('¿Sigue disponible?');
+  });
+
+  test('appends the starter chips into the suggested first message instead of replacing it', async () => {
+    useAuthMock.mockReturnValue({ user: { id: 'tenant-1' } });
+    fetchConversationsMock.mockResolvedValue([
+      {
+        ...baseConversation,
+        requestMode: 'direct',
+        requestStatus: 'pending',
+        requestStartDate: '2026-05-10',
+        requestEndDate: '2026-05-13',
+        requestGuests: 2,
+        requestTotalPrice: 320000,
+      },
+    ]);
+    fetchMessagesMock.mockResolvedValue([]);
+
+    renderChat();
+
+    await screen.findByRole('heading', { name: 'Mariana' });
+
+    const composer = screen.getByRole('textbox') as HTMLTextAreaElement;
+    await waitFor(() => {
+      expect(composer.value).toContain('Hola, ¿cómo estás? Estoy viendo el lugar');
+    });
+    const baseMessage = composer.value;
+
+    fireEvent.click(screen.getByRole('button', { name: 'Agregar motivo del viaje' }));
+    expect(composer.value).toBe(`${baseMessage} Vamos por una escapada corta.`);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Consultar horario de llegada' }));
+    expect(composer.value).toContain('Vamos por una escapada corta.');
+    expect(composer.value).toContain('¿Qué horario de llegada les queda mejor?');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Preguntar qué incluye' }));
+    expect(composer.value).toContain('¿Qué incluye exactamente el precio?');
   });
 
   test('shows lightweight guest context and natural host questions inside the chat', async () => {

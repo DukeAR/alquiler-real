@@ -137,35 +137,94 @@ const buildHostGuestQuestionSuggestions = (requestContext: ReservationRequestCon
   ];
 };
 
-const buildGuestQuickQuestionSuggestions = (requestContext: ReservationRequestContext | null) => {
-  if (!requestContext) {
-    return [
-      '¿Sigue disponible?',
-      '¿Qué incluye el precio?',
-      '¿Cómo es el ingreso?',
-    ];
-  }
-
-  return [
-    '¿Te sirven estas fechas?',
-    '¿Qué incluye el precio?',
-    '¿Cómo suele ser el ingreso?',
-    requestContext.mode === 'protected'
-      ? 'Si avanzamos, ¿te queda bien resolver la seña por la app?'
-      : '¿Hay algo importante que convenga coordinar antes de la seña?',
-  ];
+type GuestStarterChip = {
+  key: 'trip-reason' | 'arrival-time' | 'price-includes';
+  label: string;
+  snippet: string;
 };
 
-const buildSuggestedFirstMessage = (counterpartyName: string, requestContext: ReservationRequestContext | null) => {
-  if (!requestContext) {
-    return `Hola ${counterpartyName}, me interesa esta propiedad. ¿Sigue disponible?`;
+const formatSuggestedMessageDateRange = (requestContext: ReservationRequestContext | null) => {
+  const startLabel = formatRequestDate(requestContext?.startDate);
+  const endLabel = formatRequestDate(requestContext?.endDate);
+
+  if (startLabel && endLabel) {
+    return `del ${startLabel} al ${endLabel}`;
   }
 
-  const guestLabel = `${requestContext.guests} ${requestContext.guests === 1 ? 'huésped' : 'huéspedes'}`;
-  const dateRange = formatCompactDateRange(requestContext.startDate, requestContext.endDate);
-  const stayDetail = dateRange ? ` del ${dateRange}` : '';
+  if (startLabel) {
+    return `para el ${startLabel}`;
+  }
 
-  return `Hola ${counterpartyName}, me interesa ${requestContext.propertyTitle}${stayDetail} para ${guestLabel}. ¿Te sirven esas fechas?`;
+  if (endLabel) {
+    return `hasta ${endLabel}`;
+  }
+
+  return null;
+};
+
+const formatSuggestedMessageGuestCount = (requestContext: ReservationRequestContext | null) => {
+  if (!requestContext?.guests || requestContext.guests < 1) {
+    return null;
+  }
+
+  return `para ${requestContext.guests} ${requestContext.guests === 1 ? 'persona' : 'personas'}`;
+};
+
+const buildGuestStarterChips = (requestContext: ReservationRequestContext | null) => {
+  const arrivalQuestion = requestContext?.guests && requestContext.guests > 1
+    ? '¿Qué horario de llegada les queda mejor?'
+    : '¿Qué horario de llegada te queda mejor?';
+
+  return [
+    {
+      key: 'trip-reason',
+      label: 'Agregar motivo del viaje',
+      snippet: requestContext?.guests && requestContext.guests > 1
+        ? 'Vamos por una escapada corta.'
+        : 'Voy por una escapada corta.',
+    },
+    {
+      key: 'arrival-time',
+      label: 'Consultar horario de llegada',
+      snippet: arrivalQuestion,
+    },
+    {
+      key: 'price-includes',
+      label: 'Preguntar qué incluye',
+      snippet: '¿Qué incluye exactamente el precio?',
+    },
+  ] as const satisfies GuestStarterChip[];
+};
+
+const appendChipSnippetToMessage = (currentValue: string, snippet: string) => {
+  const trimmedCurrentValue = currentValue.trim();
+  const trimmedSnippet = snippet.trim();
+
+  if (!trimmedSnippet || trimmedCurrentValue.includes(trimmedSnippet)) {
+    return trimmedCurrentValue || currentValue;
+  }
+
+  if (!trimmedCurrentValue) {
+    return trimmedSnippet;
+  }
+
+  return `${trimmedCurrentValue} ${trimmedSnippet}`;
+};
+
+const buildSuggestedFirstMessage = (_counterpartyName: string, requestContext: ReservationRequestContext | null) => {
+  const messageParts = ['Hola, ¿cómo estás? Estoy viendo el lugar'];
+  const dateRange = formatSuggestedMessageDateRange(requestContext);
+  const guestCount = formatSuggestedMessageGuestCount(requestContext);
+
+  if (dateRange) {
+    messageParts.push(dateRange);
+  }
+
+  if (guestCount) {
+    messageParts.push(guestCount);
+  }
+
+  return `${messageParts.join(' ')}. ¿Sigue disponible?`;
 };
 
 const NOT_ADVANCE_REASON_OPTIONS = [
@@ -646,6 +705,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
 
   useEffect(() => {
     if (activeConv) {
+      autoLoadedSuggestionIdsRef.current.delete(activeConv.id);
       setInputText('');
       setLoadedMessagesConversationId(null);
       loadMessages(activeConv.id);
@@ -1076,18 +1136,18 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
     user && messages.some((message) => !message.is_system && message.sender_id === user.id),
   );
   const hasNonSystemConversationMessages = messages.some((message) => !message.is_system);
-  const guestQuickQuestionSuggestions = isTenantConversation && !hasAuthoredConversationMessage
-    ? buildGuestQuickQuestionSuggestions(activeRequestContext)
+  const guestStarterChips = isTenantConversation && !hasNonSystemConversationMessages
+    ? buildGuestStarterChips(activeRequestContext)
     : [];
   const suggestedFirstMessage = isTenantConversation && !hasAuthoredConversationMessage && !hasNonSystemConversationMessages
     ? buildSuggestedFirstMessage(counterpartyName, activeRequestContext)
     : null;
-  const guestIntroPrompt = isTenantConversation && !hasAuthoredConversationMessage && flowCopy?.stage === 'request-pending'
-    ? 'Podés contar brevemente el motivo de tu estadía. Responder ayuda a avanzar más rápido.'
-    : null;
+  const guestIntroPrompt = null;
   const visibleSuggestionTexts = isHostConversation && hostGuestQuestionSuggestions.length > 0
     ? []
-    : suggestionTexts.filter((suggestion) => !guestQuickQuestionSuggestions.includes(suggestion));
+    : guestStarterChips.length > 0
+      ? []
+      : suggestionTexts;
   const contextSummaryLine = activeRequestContext
     ? [
         activeRequestContext.propertyTitle,
@@ -1936,29 +1996,6 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
             {/* Input */}
             <div className="border-t border-slate-100 bg-white/96 px-4 py-4 dark:border-slate-800 dark:bg-slate-950/96 sm:px-6">
               <div className="mx-auto max-w-4xl space-y-3">
-                {suggestedFirstMessage ? (
-                  <div className="flex flex-col gap-3 rounded-[20px] border border-brand/15 bg-brand/5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="min-w-0">
-                      <p className="text-[10px] font-black uppercase tracking-[0.14em] text-brand">Mensaje sugerido</p>
-                      <p className="mt-1 text-xs leading-5 text-slate-600 dark:text-slate-300">
-                        {inputText === suggestedFirstMessage
-                          ? 'Cargamos un mensaje sugerido para que arranques más rápido. Podés editarlo antes de enviarlo.'
-                          : 'Si querés, podés volver al mensaje sugerido para arrancar más rápido.'}
-                      </p>
-                    </div>
-                    {inputText !== suggestedFirstMessage ? (
-                      <button
-                        type="button"
-                        onClick={() => setInputText(suggestedFirstMessage)}
-                        className="inline-flex shrink-0 items-center gap-2 rounded-full border border-brand/20 bg-white px-3.5 py-2 text-xs font-semibold text-brand transition-colors hover:border-brand/30 hover:text-brand-dark dark:border-brand/30 dark:bg-slate-950"
-                      >
-                        <Icons.Sparkles className="h-3.5 w-3.5" />
-                        <span>Usar mensaje sugerido</span>
-                      </button>
-                    ) : null}
-                  </div>
-                ) : null}
-
                 <div className="flex items-end gap-3">
                   <input
                     type="text"
@@ -2231,23 +2268,18 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                   </p>
                 ) : null}
 
-                {guestQuickQuestionSuggestions.length > 0 ? (
-                  <div className="space-y-2">
-                    <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
-                      Preguntas rápidas
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {guestQuickQuestionSuggestions.map((suggestion) => (
-                        <button
-                          key={suggestion}
-                          type="button"
-                          onClick={() => setInputText(suggestion)}
-                          className="rounded-full border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-semibold text-slate-600 transition-colors hover:border-brand/30 hover:bg-white hover:text-brand dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
-                        >
-                          {suggestion}
-                        </button>
-                      ))}
-                    </div>
+                {guestStarterChips.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {guestStarterChips.map((chip) => (
+                      <button
+                        key={chip.key}
+                        type="button"
+                        onClick={() => setInputText((currentValue) => appendChipSnippetToMessage(currentValue, chip.snippet))}
+                        className="rounded-full border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-semibold text-slate-600 transition-colors hover:border-brand/30 hover:bg-white hover:text-brand dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+                      >
+                        {chip.label}
+                      </button>
+                    ))}
                   </div>
                 ) : null}
 

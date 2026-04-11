@@ -21,7 +21,7 @@ import { type Property as AppProperty, type ReservationRequestContext, type Rese
 import { useFavorites } from '../hooks/useFavorites';
 import { useBookings } from '../hooks/useBookings';
 import { useAuth } from '../hooks/useAuth';
-import { sendMessage, startConversation } from '../services/geminiService';
+import { startConversation } from '../services/geminiService';
 import { Button } from './ui/Button';
 import { Badge } from './ui/Badge';
 import { Card } from './ui/Card';
@@ -205,13 +205,6 @@ const formatDateSelectionSummary = (checkIn: string, checkOut: string) => {
   }
 
   return `${formatRequestDate(checkIn)} al ${formatRequestDate(checkOut)}`;
-};
-
-const buildInitialRequestMessage = (requestContext: ReservationRequestContext) => {
-  const dateRangeLabel = `${formatRequestDate(requestContext.startDate)} al ${formatRequestDate(requestContext.endDate)}`;
-  const guestLabel = `${requestContext.guests} ${requestContext.guests === 1 ? 'huésped' : 'huéspedes'}`;
-
-  return `Hola ${requestContext.hostName}, te mandé una solicitud para ${requestContext.propertyTitle} del ${dateRangeLabel} para ${guestLabel}. El total estimado es ${formatCurrency(requestContext.totalPrice)}. Si te sirve, seguimos por acá y después definimos la seña.`;
 };
 
 const BOOKING_STEP_CONFIG: BookingStepConfig[] = [
@@ -981,21 +974,10 @@ export const PropertyDetailShell: React.FC<{
       totalPrice: requestContext.totalPrice,
     });
 
-    try {
-      await sendMessage(conversation.id, buildInitialRequestMessage(requestContext), property.hostId);
-      return {
-        conversationId: conversation.id,
-        initialMessageSent: true,
-        requestCreatedAt: conversation.requestCreatedAt ?? new Date().toISOString(),
-      };
-    } catch (error) {
-      console.error('Request message error', error);
-      return {
-        conversationId: conversation.id,
-        initialMessageSent: false,
-        requestCreatedAt: conversation.requestCreatedAt ?? new Date().toISOString(),
-      };
-    }
+    return {
+      conversationId: conversation.id,
+      requestCreatedAt: conversation.requestCreatedAt ?? new Date().toISOString(),
+    };
   };
 
   const navigateToConversation = (conversationId: string, requestContext: ReservationRequestContext) => {
@@ -1070,15 +1052,13 @@ export const PropertyDetailShell: React.FC<{
     setAvailabilityRefreshToken((currentValue) => currentValue + 1);
 
     try {
-      const { conversationId, initialMessageSent, requestCreatedAt } = await prepareConversationForRequest(requestContext, result.data.booking.id);
+      const { conversationId, requestCreatedAt } = await prepareConversationForRequest(requestContext, result.data.booking.id);
 
       navigateToConversation(conversationId, { ...requestContext, requestCreatedAt });
       showToast(
         'Solicitud enviada',
-        initialMessageSent
-          ? `La solicitud quedó enviada por ${formatCurrency(bookedTotal)}. Si el anfitrión acepta, después vas a poder elegir si coordinás la seña por fuera o dentro de la plataforma.`
-          : 'La solicitud quedó pendiente. Abrimos el chat, pero la propuesta automática no salió; seguí desde ahí.',
-        initialMessageSent ? 'success' : 'warning',
+        `La solicitud quedó registrada por ${formatCurrency(bookedTotal)}. Abrimos el chat con un primer mensaje sugerido para que lo revises y lo envíes en un click.`,
+        'success',
       );
     } catch (error) {
       console.error('Protected request conversation error', error);
