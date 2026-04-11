@@ -15,7 +15,7 @@ import { formatBookingDateShort, getBookingDateOnlyValue, isBookingCheckInReache
 import { formatGuestMemberSinceYear, resolveGuestRequestProfile } from '../lib/guestRequestProfile';
 import { getGuestPositiveCoordinationSignals, getHostResponseSignal } from '../lib/positiveIncentives';
 import { getProtectedDepositPricingFromBooking } from '../lib/protectedDeposit';
-import { getReservationFlowCopy } from '../lib/reservationFlow';
+import { getReservationFlowCopy, getReservationFlowMilestones } from '../lib/reservationFlow';
 import { trackFrontendFunnelEvent } from '../lib/funnelTracking';
 import { getVerificationSummaryItems, getVerificationSummaryLabel } from './ui/VerificationMeter';
 
@@ -122,12 +122,6 @@ const getGuestVerificationItemShortLabel = (label: string) => {
   return label;
 };
 
-type HostResponseChip = {
-  key: 'confirm-availability' | 'arrival-time' | 'guest-count' | 'clarify-conditions';
-  label: string;
-  message: string;
-};
-
 type HostCloseIntent = 'advance-deposit' | 'confirm-reservation';
 
 type HostClosingChip = {
@@ -135,16 +129,6 @@ type HostClosingChip = {
   label: string;
   message: string;
   intent: HostCloseIntent;
-};
-
-type GuestStarterChip = {
-  key: 'trip-reason' | 'arrival-time' | 'price-includes';
-  label: string;
-  snippet: string;
-};
-
-const buildHostSuggestedReply = (...segments: Array<string | null | undefined>) => {
-  return ['Hola, ¿cómo estás?', ...segments.filter((segment): segment is string => Boolean(segment && segment.trim()))].join(' ');
 };
 
 const buildHostClosingChips = (requestContext: ReservationRequestContext | null) => {
@@ -193,132 +177,6 @@ const formatSuggestedMessageGuestCount = (requestContext: ReservationRequestCont
   }
 
   return `para ${requestContext.guests} ${requestContext.guests === 1 ? 'persona' : 'personas'}`;
-};
-
-const buildHostAvailabilitySentence = (
-  requestContext: ReservationRequestContext | null,
-  { includeGuestCount = false }: { includeGuestCount?: boolean } = {},
-) => {
-  const availabilityDetails = [
-    formatSuggestedMessageDateRange(requestContext),
-    includeGuestCount ? formatSuggestedMessageGuestCount(requestContext) : null,
-  ].filter((value): value is string => Boolean(value));
-
-  if (availabilityDetails.length === 0) {
-    return 'Sí, está disponible para esas fechas.';
-  }
-
-  return `Sí, está disponible ${availabilityDetails.join(' ')}.`;
-};
-
-const buildHostGuestCountFollowUp = (requestContext: ReservationRequestContext | null) => {
-  if (!requestContext?.guests || requestContext.guests < 1) {
-    return '¿Cuántas personas serían en total? Si querés, contame también brevemente el motivo del viaje.';
-  }
-
-  if (requestContext.guests === 1) {
-    return '¿Seguís viniendo vos solo? Si querés, contame también brevemente el motivo del viaje.';
-  }
-
-  return `¿Se mantienen las ${requestContext.guests} personas o se suma alguien más? Si querés, contame también brevemente el motivo del viaje.`;
-};
-
-const buildHostConditionsFollowUp = (requestContext: ReservationRequestContext | null) => {
-  const guestCount = formatSuggestedMessageGuestCount(requestContext);
-
-  if (guestCount) {
-    return `De mi lado lo estoy viendo ${guestCount} y el ingreso lo coordinamos con horario previo.`;
-  }
-
-  return 'El ingreso lo coordinamos con horario previo y prefiero dejar cerrada la cantidad de personas antes de avanzar.';
-};
-
-const buildHostUnavailableReply = (requestContext: ReservationRequestContext | null) => {
-  const dateRange = formatSuggestedMessageDateRange(requestContext);
-  const unavailableSentence = dateRange
-    ? `Ya no lo tengo disponible ${dateRange}.`
-    : 'Ya no lo tengo disponible para esas fechas.';
-
-  return buildHostSuggestedReply(unavailableSentence, 'Si te sirve, podemos revisar otra opción.');
-};
-
-const buildHostResponseChips = (requestContext: ReservationRequestContext | null) => {
-  const arrivalQuestion = requestContext?.guests && requestContext.guests > 1
-    ? '¿A qué hora estiman llegar?'
-    : '¿A qué hora estimás llegar?';
-
-  return [
-    {
-      key: 'confirm-availability',
-      label: 'Confirmar disponibilidad',
-      message: buildHostSuggestedReply(buildHostAvailabilitySentence(requestContext, { includeGuestCount: true })),
-    },
-    {
-      key: 'arrival-time',
-      label: 'Consultar horario de llegada',
-      message: buildHostSuggestedReply(
-        buildHostAvailabilitySentence(requestContext, { includeGuestCount: true }),
-        arrivalQuestion,
-      ),
-    },
-    {
-      key: 'guest-count',
-      label: 'Preguntar cantidad de personas',
-      message: buildHostSuggestedReply(
-        buildHostAvailabilitySentence(requestContext),
-        buildHostGuestCountFollowUp(requestContext),
-      ),
-    },
-    {
-      key: 'clarify-conditions',
-      label: 'Aclarar condiciones',
-      message: buildHostSuggestedReply(
-        buildHostAvailabilitySentence(requestContext),
-        buildHostConditionsFollowUp(requestContext),
-      ),
-    },
-  ] as const satisfies HostResponseChip[];
-};
-
-const buildGuestStarterChips = (requestContext: ReservationRequestContext | null) => {
-  const arrivalQuestion = requestContext?.guests && requestContext.guests > 1
-    ? '¿Qué horario de llegada les queda mejor?'
-    : '¿Qué horario de llegada te queda mejor?';
-
-  return [
-    {
-      key: 'trip-reason',
-      label: 'Agregar motivo del viaje',
-      snippet: requestContext?.guests && requestContext.guests > 1
-        ? 'Vamos por una escapada corta.'
-        : 'Voy por una escapada corta.',
-    },
-    {
-      key: 'arrival-time',
-      label: 'Consultar horario de llegada',
-      snippet: arrivalQuestion,
-    },
-    {
-      key: 'price-includes',
-      label: 'Preguntar qué incluye',
-      snippet: '¿Qué incluye exactamente el precio?',
-    },
-  ] as const satisfies GuestStarterChip[];
-};
-
-const appendChipSnippetToMessage = (currentValue: string, snippet: string) => {
-  const trimmedCurrentValue = currentValue.trim();
-  const trimmedSnippet = snippet.trim();
-
-  if (!trimmedSnippet || trimmedCurrentValue.includes(trimmedSnippet)) {
-    return trimmedCurrentValue || currentValue;
-  }
-
-  if (!trimmedCurrentValue) {
-    return trimmedSnippet;
-  }
-
-  return `${trimmedCurrentValue} ${trimmedSnippet}`;
 };
 
 const buildSuggestedFirstMessage = (_counterpartyName: string, requestContext: ReservationRequestContext | null) => {
@@ -599,166 +457,6 @@ const getActiveRequestContext = (
   }
 
   return null;
-};
-
-const getSuggestionTexts = (requestContext: ReservationRequestContext | null, isTenant: boolean) => {
-  if (!requestContext) {
-    return [] as string[];
-  }
-
-  const flow = getReservationFlowCopy({
-    mode: requestContext.mode,
-    depositType: requestContext.depositType,
-    requestStatus: requestContext.requestStatus,
-    bookingStatus: requestContext.bookingStatus,
-    depositStatus: requestContext.depositStatus,
-    cancellationActor: requestContext.cancellationActor,
-    viewerRole: isTenant ? 'guest' : 'host',
-  });
-
-  if (flow.stage === 'request-accepted' && requestContext.mode === 'direct') {
-    return isTenant
-      ? [
-          'Cuando la envíe, informo la seña por acá.',
-          '¿Hay algo más que convenga dejar cerrado ahora?',
-        ]
-      : [
-          'Quedo atento a que el huésped informe la seña.',
-          'Si querés, dejamos acordados los detalles finales por acá.',
-        ];
-  }
-
-  if (flow.stage === 'deposit-choice') {
-    return isTenant
-      ? [
-          'Voy a definir ahora cómo resolver la seña.',
-          'Si te parece, mientras tanto dejamos cerrados los detalles de llegada.',
-        ]
-      : [
-          'Quedo atento a la elección de seña del huésped.',
-          'Mientras tanto, si querés dejamos cerrados los detalles finales por acá.',
-        ];
-  }
-
-  if (flow.stage === 'external-deposit-pending') {
-    return isTenant
-      ? [
-          'Voy a coordinar la seña por fuera y la dejo asentada por acá.',
-          'Sigamos por chat con los detalles finales.',
-        ]
-      : [
-          'Quedo atento a la coordinación de la seña por fuera.',
-          'Si querés, dejamos por acá los últimos detalles.',
-        ];
-  }
-
-  if (flow.stage === 'direct-deposit-reported') {
-    return isTenant
-      ? [
-          'Ya te avisé que la seña está enviada.',
-          'Quedo atento a tu confirmación.',
-        ]
-      : [
-          'Estoy revisando la recepción de la seña.',
-          'Apenas la vea, te la confirmo por acá.',
-        ];
-  }
-
-  if (flow.stage === 'request-accepted' && requestContext.mode === 'protected') {
-    return isTenant
-      ? [
-          'Voy a pagar la seña desde la app.',
-          'Mientras tanto, dejamos definidos los detalles de llegada.',
-        ]
-      : [
-          'Cuando se complete el pago, la seña va a quedar en custodia.',
-          'Si querés, cerramos los detalles finales por acá.',
-        ];
-  }
-
-  if (flow.stage === 'protected-deposit-held' || flow.stage === 'protected-deposit-released' || flow.stage === 'reservation-confirmed') {
-    return isTenant
-      ? [
-          'Ya tengo todo listo de mi lado.',
-          '¿Qué horario de llegada te queda mejor?',
-          'Dejemos por acá cualquier detalle final.',
-        ]
-      : [
-          'Te paso por acá los datos finales.',
-          'Si querés, definimos ahora el horario de llegada.',
-          'Quedo atento a cualquier detalle que falte.',
-        ];
-  }
-
-  if (flow.stage === 'protected-deposit-review') {
-    return isTenant
-      ? [
-          'Dejo por acá lo que pasó al llegar.',
-          'Quedo atento a la revisión desde la app.',
-        ]
-      : [
-          'Dejo por acá mi versión de lo que pasó al llegar.',
-          'Quedo atento a la revisión desde la plataforma.',
-        ];
-  }
-
-  if (flow.stage === 'protected-no-show-pending') {
-    return isTenant
-      ? [
-          'Quiero dejar asentado por acá lo que pasó con la llegada.',
-        ]
-      : [
-          'Dejo asentado por acá el detalle del no show informado.',
-        ];
-  }
-
-  if (flow.stage === 'request-not-advanced') {
-    return isTenant
-      ? [
-          'Si te parece, puedo mandarte una nueva propuesta con otras fechas.',
-          'Gracias por avisar. Voy a revisar otras opciones.',
-        ]
-      : [
-          buildHostUnavailableReply(requestContext),
-          'Si podés mover fechas, lo vemos por este chat.',
-        ];
-  }
-
-  if (flow.stage === 'guest-cancelled' || flow.stage === 'host-cancelled') {
-    return isTenant
-      ? [
-          'Dejo por acá cualquier dato final de la cancelación.',
-        ]
-      : [
-          'Dejo asentado por acá cómo seguimos después de la cancelación.',
-        ];
-  }
-
-  if (requestContext.mode === 'protected') {
-    return isTenant
-      ? [
-          '¿Te sirven estas fechas?',
-          '¿Hay algo importante que deba tener en cuenta antes de avanzar?',
-          'Si te cierra, seguimos por la reserva protegida.',
-        ]
-      : [
-          'Sí, estas fechas me sirven.',
-          'Antes de responder, quiero confirmar estos puntos:',
-          'Si te parece, lo seguimos por la reserva protegida.',
-        ];
-  }
-
-  return isTenant
-    ? [
-        '¿Te sirven estas fechas?',
-        '¿Qué incluye el precio?',
-        '¿Hay algo del ingreso o de la estadía que convenga coordinar ahora?',
-      ]
-    : [
-        'Sí, esas fechas están disponibles.',
-        'Te cuento qué incluye el precio:',
-        'Si querés, coordinamos los detalles por acá.',
-      ];
 };
 
 export const SecureChat: React.FC<{ initialConversationId?: string; initialRequestContext?: ReservationRequestContext | null }> = ({
@@ -1214,7 +912,6 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
         viewerRole: isTenantConversation ? 'guest' : 'host',
       })
     : null;
-  const suggestionTexts = getSuggestionTexts(activeRequestContext, isTenantConversation);
   const counterpartyName = user && activeConv
     ? user.id === activeConv.tenant_id
       ? activeConv.hostName || 'Anfitrión'
@@ -1261,14 +958,16 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
           : null,
       ].filter((value): value is string => Boolean(value))
     : [];
+  const guestSummaryBadges = guestContextProfile
+    ? [guestVerificationLabel, guestCompletedChecks[0] ?? null, guestContextStats[0] ?? null]
+        .filter((value): value is string => Boolean(value))
+        .slice(0, 3)
+    : [];
   const interactionContinuity = activeConv?.interactionContinuity ?? null;
   const hasAuthoredConversationMessage = Boolean(
     user && messages.some((message) => !message.is_system && message.sender_id === user.id),
   );
   const hasNonSystemConversationMessages = messages.some((message) => !message.is_system);
-  const guestStarterChips = isTenantConversation && !hasNonSystemConversationMessages
-    ? buildGuestStarterChips(activeRequestContext)
-    : [];
   const suggestedFirstMessage = isTenantConversation && !hasAuthoredConversationMessage && !hasNonSystemConversationMessages
     ? buildSuggestedFirstMessage(counterpartyName, activeRequestContext)
     : null;
@@ -1287,6 +986,17 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
   const isRequestExpired = Boolean(requestDeadline && Date.now() > requestDeadline.getTime());
   const isExpiredPendingRequest = Boolean(flowCopy?.stage === 'request-pending' && isRequestExpired);
   const compactReservationStatus = getCompactReservationStatus(flowCopy?.stage ?? null, isExpiredPendingRequest);
+  const reservationMilestones = activeRequestContext
+    ? getReservationFlowMilestones({
+        mode: activeRequestContext.mode,
+        depositType: activeRequestContext.depositType,
+        requestStatus: activeRequestContext.requestStatus,
+        bookingStatus: activeRequestContext.bookingStatus,
+        depositStatus: activeRequestContext.depositStatus,
+        cancellationActor: activeRequestContext.cancellationActor,
+        viewerRole: isTenantConversation ? 'guest' : 'host',
+      })
+    : [];
   const requestHeading = isExpiredPendingRequest ? 'Solicitud vencida' : flowCopy?.statusLabel ?? null;
   const requestDescription = isExpiredPendingRequest
     ? isTenantConversation
@@ -1341,20 +1051,9 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
     && hasAuthoredConversationMessage
     && counterpartyHasConversationMessage,
   );
-  const hostClosingChips = shouldShowHostClosingChips
-    ? buildHostClosingChips(activeRequestContext)
-    : [];
-  const hostResponseChips = isHostConversation
-    && activeRequestContext
-    && flowCopy?.stage === 'request-pending'
-    && hostClosingChips.length === 0
-    ? buildHostResponseChips(activeRequestContext)
-    : [];
-  const visibleSuggestionTexts = isHostConversation && (hostResponseChips.length > 0 || hostClosingChips.length > 0)
-    ? []
-    : guestStarterChips.length > 0
-      ? []
-      : suggestionTexts;
+  const hostAdvanceAction = shouldShowHostClosingChips
+    ? buildHostClosingChips(activeRequestContext)[0]
+    : null;
   const canNotAdvanceRequest = Boolean(
     isHostConversation
     && (
@@ -1418,7 +1117,8 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
     ? '¿Qué horario de llegada te queda mejor?'
     : 'Si querés, definimos ahora el horario de llegada.';
   const hasInlineComposerActions = Boolean(
-    canAcceptRequest
+    hostAdvanceAction
+    || canAcceptRequest
     || canNotAdvanceRequest
     || canConfirmArrival
     || canReportArrivalProblem
@@ -1946,69 +1646,70 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
               </button>
             </div>
 
-            {contextSummaryLine || compactReservationStatus || interactionContinuity ? (
+            {contextSummaryLine || compactReservationStatus || interactionContinuity || guestSummaryBadges.length > 0 || reservationMilestones.length > 0 ? (
               <div className="border-b border-slate-100 bg-slate-50/75 px-4 py-2.5 dark:border-slate-800 dark:bg-slate-900/40 sm:px-6">
-                <div className="mx-auto flex max-w-4xl flex-wrap gap-2 overflow-x-auto no-scrollbar">
-                  {contextSummaryLine ? (
-                    <p className="inline-flex items-center rounded-full border border-slate-200/80 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200">
-                      {contextSummaryLine}
-                    </p>
-                  ) : null}
-                  {compactReservationStatus ? (
-                    <p className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white px-3 py-1.5 text-[11px] font-medium text-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300">
-                      <span className={cn(
-                        'h-1.5 w-1.5 rounded-full',
-                        compactReservationStatus.tone === 'success'
-                          ? 'bg-emerald-500'
-                          : compactReservationStatus.tone === 'brand'
-                            ? 'bg-brand'
-                            : compactReservationStatus.tone === 'warning'
-                              ? 'bg-amber-500'
-                              : 'bg-slate-400'
-                      )} />
-                      <span>Estado: {compactReservationStatus.label}</span>
-                    </p>
-                  ) : null}
-                  {interactionContinuity ? (
-                    <p className="inline-flex items-center gap-2 rounded-full border border-emerald-200/80 bg-emerald-50 px-3 py-1.5 text-[11px] font-semibold text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-950/40 dark:text-emerald-300">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                      <span>{interactionContinuity.label}</span>
-                    </p>
-                  ) : null}
-                </div>
-              </div>
-            ) : null}
-
-            {guestContextProfile ? (
-              <div className="border-b border-slate-100 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-950 sm:px-6">
-                <div className="mx-auto max-w-4xl rounded-[20px] border border-slate-200/80 bg-slate-50/80 px-4 py-3.5 dark:border-slate-800 dark:bg-slate-900/50">
-                  <div className="flex flex-wrap items-center gap-2.5 text-xs">
-                    <p className="font-black uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
-                      Perfil del huésped
-                    </p>
-                    {guestVerificationLabel ? (
-                      <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1.5 font-semibold text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100">
-                        {guestVerificationLabel}
-                      </span>
+                <div className="mx-auto max-w-4xl space-y-3">
+                  <div className="flex flex-wrap gap-2 overflow-x-auto no-scrollbar">
+                    {contextSummaryLine ? (
+                      <p className="inline-flex items-center rounded-full border border-slate-200/80 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200">
+                        {contextSummaryLine}
+                      </p>
                     ) : null}
-                    {guestCompletedChecks.map((label) => (
-                      <span
-                        key={label}
-                        className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
-                      >
-                        <span aria-hidden="true" className="text-emerald-600 dark:text-emerald-300">✔</span>
-                        <span>{label}</span>
-                      </span>
-                    ))}
-                    {guestContextStats.map((stat) => (
-                      <span
-                        key={stat}
-                        className="inline-flex items-center rounded-full bg-white px-3 py-1.5 font-medium text-slate-600 dark:bg-slate-950 dark:text-slate-300"
-                      >
-                        {stat}
-                      </span>
+                    {compactReservationStatus ? (
+                      <p className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white px-3 py-1.5 text-[11px] font-medium text-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300">
+                        <span className={cn(
+                          'h-1.5 w-1.5 rounded-full',
+                          compactReservationStatus.tone === 'success'
+                            ? 'bg-emerald-500'
+                            : compactReservationStatus.tone === 'brand'
+                              ? 'bg-brand'
+                              : compactReservationStatus.tone === 'warning'
+                                ? 'bg-amber-500'
+                                : 'bg-slate-400'
+                        )} />
+                        <span>Estado: {compactReservationStatus.label}</span>
+                      </p>
+                    ) : null}
+                    {interactionContinuity ? (
+                      <p className="inline-flex items-center gap-2 rounded-full border border-emerald-200/80 bg-emerald-50 px-3 py-1.5 text-[11px] font-semibold text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-950/40 dark:text-emerald-300">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                        <span>{interactionContinuity.label}</span>
+                      </p>
+                    ) : null}
+                    {guestSummaryBadges.map((badge) => (
+                      <p key={badge} className="inline-flex items-center rounded-full border border-slate-200/80 bg-white px-3 py-1.5 text-[11px] font-medium text-slate-600 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300">
+                        {badge}
+                      </p>
                     ))}
                   </div>
+
+                  {reservationMilestones.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {reservationMilestones.map((milestone) => (
+                        <div
+                          key={milestone.key}
+                          className={cn(
+                            'inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] font-medium',
+                            milestone.state === 'completed'
+                              ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-950/40 dark:text-emerald-300'
+                              : milestone.state === 'current'
+                                ? 'border-brand/20 bg-brand/10 text-brand-dark dark:border-brand/30 dark:bg-brand/15 dark:text-brand-light'
+                                : 'border-slate-200/80 bg-white text-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400',
+                          )}
+                        >
+                          <span className={cn(
+                            'h-1.5 w-1.5 rounded-full',
+                            milestone.state === 'completed'
+                              ? 'bg-emerald-500'
+                              : milestone.state === 'current'
+                                ? 'bg-brand'
+                                : 'bg-slate-300 dark:bg-slate-600',
+                          )} />
+                          <span>{milestone.label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
               </div>
             ) : null}
@@ -2183,118 +1884,78 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                   <div className="space-y-3">
                     {showDepositChoiceBlock ? (
                       <div className="rounded-[24px] border border-slate-200 bg-slate-50/85 p-4 dark:border-slate-800 dark:bg-slate-900/60">
-                        <div className="space-y-1.5">
-                          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">Siguiente paso</p>
-                          <p className="text-sm font-semibold text-slate-950 dark:text-slate-50">{showDepositChoiceComposer ? 'Elegí cómo dejar la seña' : 'El huésped ya puede definir la seña'}</p>
-                          <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">
-                            {showDepositChoiceComposer
-                              ? 'Podés dejarla registrada acá o coordinarla por fuera. Las dos opciones quedan claras en este chat.'
-                              : 'Las dos opciones ya quedan visibles acá. No hace falta explicarlas por separado.'}
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="space-y-1.5">
+                            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">Seña</p>
+                            <p className="text-sm font-semibold text-slate-950 dark:text-slate-50">{showDepositChoiceComposer ? 'Elegí cómo dejarla' : 'El huésped ya puede definirla'}</p>
+                            <p className="text-xs leading-5 text-slate-600 dark:text-slate-300">
+                              {showDepositChoiceComposer
+                                ? 'Registrarla acá o coordinarla por fuera.'
+                                : 'Registrarla acá o coordinarla por fuera ya quedó visible en este chat.'}
+                            </p>
+                          </div>
+
+                          <div className="flex flex-wrap gap-2">
+                            {showDepositChoiceComposer ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => activeRequestContext?.bookingId && void handleSelectProtectedDeposit(activeRequestContext.bookingId)}
+                                  disabled={processingFlowAction !== null}
+                                  className="inline-flex items-center gap-2 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white shadow-[0_18px_34px_-28px_rgba(67,56,202,0.4)] transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-70"
+                                >
+                                  {processingFlowAction === 'select-protected-deposit' ? <Icons.Loader2 className="h-4 w-4 animate-spin" /> : <Icons.ShieldCheck className="h-4 w-4" />}
+                                  <span>Dejarla registrada acá</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => activeRequestContext?.bookingId && void handleSelectExternalDeposit(activeRequestContext.bookingId)}
+                                  disabled={processingFlowAction !== null}
+                                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-slate-950 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 disabled:cursor-not-allowed disabled:opacity-70"
+                                >
+                                  {processingFlowAction === 'select-external-deposit' ? <Icons.Loader2 className="h-4 w-4 animate-spin" /> : <Icons.MessageSquare className="h-4 w-4" />}
+                                  <span>Coordinarla por fuera</span>
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <span className="inline-flex items-center gap-2 rounded-full border border-brand/15 bg-brand/5 px-3.5 py-2 text-xs font-semibold text-brand dark:border-brand/20 dark:bg-brand/10">
+                                  <Icons.ShieldCheck className="h-3.5 w-3.5" />
+                                  <span>Registrada acá</span>
+                                </span>
+                                <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+                                  <Icons.MessageSquare className="h-3.5 w-3.5" />
+                                  <span>Por fuera</span>
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+
+                        {protectedDepositPreview ? (
+                          <p className="mt-3 text-xs leading-5 text-slate-600 dark:text-slate-300">
+                            Registrada acá: seña {currencyFormatter.format(protectedDepositPreview.depositAmount)} · fee {currencyFormatter.format(protectedDepositPreview.serviceFee)} · total {currencyFormatter.format(protectedDepositPreview.totalCharge)}.
                           </p>
-                        </div>
-
-                        <div className="mt-4 grid gap-3 lg:grid-cols-2">
-                          <div className="rounded-[22px] border border-brand/15 bg-white p-4 shadow-[0_18px_36px_-34px_rgba(15,23,42,0.12)] dark:border-brand/20 dark:bg-slate-950">
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="space-y-1.5">
-                                <div className="flex items-center gap-2">
-                                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand/10 text-brand">
-                                    <Icons.ShieldCheck className="h-4.5 w-4.5" />
-                                  </span>
-                                  <div>
-                                    <p className="text-sm font-semibold text-slate-950 dark:text-slate-50">Seña protegida</p>
-                                    <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">La forma más clara de dejarla asentada.</p>
-                                  </div>
-                                </div>
-                                <span className="inline-flex items-center rounded-full border border-brand/15 bg-brand/5 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-brand">
-                                  Recomendada
-                                </span>
-                              </div>
-                            </div>
-
-                            {protectedDepositPreview ? (
-                              <div className="mt-3 rounded-[18px] border border-brand/10 bg-brand/5 px-4 py-3 text-xs leading-5 text-slate-600 dark:border-brand/15 dark:bg-brand/10 dark:text-slate-300">
-                                <div className="space-y-1">
-                                  <p>Seña: <span className="font-semibold text-slate-950 dark:text-slate-50">{currencyFormatter.format(protectedDepositPreview.depositAmount)}</span></p>
-                                  <p>Fee: {currencyFormatter.format(protectedDepositPreview.serviceFee)}</p>
-                                  <p className="font-semibold text-slate-950 dark:text-slate-50">Total: {currencyFormatter.format(protectedDepositPreview.totalCharge)}</p>
-                                </div>
-                              </div>
-                            ) : null}
-
-                            <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                              <li className="flex items-start gap-2"><Icons.Check className="mt-1 h-3.5 w-3.5 text-brand" /><span>Queda registrada dentro de la plataforma.</span></li>
-                              <li className="flex items-start gap-2"><Icons.Check className="mt-1 h-3.5 w-3.5 text-brand" /><span>Ves el fee antes de pagar.</span></li>
-                              <li className="flex items-start gap-2"><Icons.Check className="mt-1 h-3.5 w-3.5 text-brand" /><span>Se libera cuando confirmás la llegada.</span></li>
-                            </ul>
-
-                            {showDepositChoiceComposer ? (
-                              <button
-                                type="button"
-                                onClick={() => activeRequestContext?.bookingId && void handleSelectProtectedDeposit(activeRequestContext.bookingId)}
-                                disabled={processingFlowAction !== null}
-                                className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-[0_18px_34px_-28px_rgba(67,56,202,0.4)] transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-70"
-                              >
-                                {processingFlowAction === 'select-protected-deposit' ? <Icons.Loader2 className="h-4 w-4 animate-spin" /> : <Icons.ShieldCheck className="h-4 w-4" />}
-                                <span>Dejarla registrada acá</span>
-                              </button>
-                            ) : (
-                              <div className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full border border-brand/15 bg-brand/5 px-4 py-2.5 text-sm font-semibold text-brand dark:border-brand/20 dark:bg-brand/10">
-                                <Icons.ShieldCheck className="h-4 w-4" />
-                                <span>Disponible para el huésped</span>
-                              </div>
-                            )}
-                          </div>
-
-                          <div className="rounded-[22px] border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-950">
-                            <div className="space-y-1.5">
-                              <div className="flex items-center gap-2">
-                                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-600 dark:bg-slate-900 dark:text-slate-300">
-                                  <Icons.MessageSquare className="h-4.5 w-4.5" />
-                                </span>
-                                <div>
-                                  <p className="text-sm font-semibold text-slate-950 dark:text-slate-50">Seña coordinada por fuera</p>
-                                  <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">Se coordina directo y se confirma después.</p>
-                                </div>
-                              </div>
-                            </div>
-
-                            <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                              <li className="flex items-start gap-2"><Icons.Check className="mt-1 h-3.5 w-3.5 text-slate-400" /><span>La coordinás directo con el anfitrión.</span></li>
-                              <li className="flex items-start gap-2"><Icons.Check className="mt-1 h-3.5 w-3.5 text-slate-400" /><span>La reserva avanza cuando quede informada y confirmada.</span></li>
-                              <li className="flex items-start gap-2"><Icons.Check className="mt-1 h-3.5 w-3.5 text-slate-400" /><span>Podés volver a la protegida mientras todavía no la informes.</span></li>
-                            </ul>
-
-                            {showDepositChoiceComposer ? (
-                              <button
-                                type="button"
-                                onClick={() => activeRequestContext?.bookingId && void handleSelectExternalDeposit(activeRequestContext.bookingId)}
-                                disabled={processingFlowAction !== null}
-                                className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-slate-950 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 disabled:cursor-not-allowed disabled:opacity-70"
-                              >
-                                {processingFlowAction === 'select-external-deposit' ? <Icons.Loader2 className="h-4 w-4 animate-spin" /> : <Icons.MessageSquare className="h-4 w-4" />}
-                                <span>Coordinarla por fuera</span>
-                              </button>
-                            ) : (
-                              <div className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
-                                <Icons.MessageSquare className="h-4 w-4" />
-                                <span>También visible para el huésped</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        <p className="mt-3 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                          {showDepositChoiceComposer
-                            ? 'La opción registrada deja todo asentado. La externa sigue disponible si prefieren resolverla por fuera.'
-                            : 'Así el siguiente paso ya queda claro en la conversación.'}
-                        </p>
+                        ) : null}
                       </div>
                     ) : null}
 
                     {hasInlineComposerActions ? (
                       <div className="flex flex-wrap gap-2">
-                        {canAcceptRequest ? (
+                        {hostAdvanceAction ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPendingHostCloseIntent(hostAdvanceAction.intent);
+                              setInputText(hostAdvanceAction.message);
+                            }}
+                            className="inline-flex items-center gap-2 rounded-full bg-brand px-3.5 py-2 text-xs font-semibold text-white shadow-[0_18px_34px_-28px_rgba(67,56,202,0.4)] transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-70"
+                          >
+                            <Icons.ArrowRight className="h-3.5 w-3.5" />
+                            <span>{hostAdvanceAction.label}</span>
+                          </button>
+                        ) : null}
+                        {!hostAdvanceAction && canAcceptRequest ? (
                           <button
                             type="button"
                             onClick={handleAcceptRequest}
@@ -2447,21 +2108,6 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                   </p>
                 ) : null}
 
-                {guestStarterChips.length > 0 ? (
-                  <div className="flex flex-wrap gap-2">
-                    {guestStarterChips.map((chip) => (
-                      <button
-                        key={chip.key}
-                        type="button"
-                        onClick={() => setInputText((currentValue) => appendChipSnippetToMessage(currentValue, chip.snippet))}
-                        className="rounded-full border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-semibold text-slate-600 transition-colors hover:border-brand/30 hover:bg-white hover:text-brand dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
-                      >
-                        {chip.label}
-                      </button>
-                    ))}
-                  </div>
-                ) : null}
-
                 {showGuestNoAdvanceActions ? (
                   <div className="space-y-2">
                     <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
@@ -2500,70 +2146,6 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                     >
                       Si preferís, también podés seguir por este chat y recoordinar fechas primero.
                     </button>
-                  </div>
-                ) : null}
-
-                {hostClosingChips.length > 0 ? (
-                  <div className="space-y-2">
-                    <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
-                      Cierre sugerido
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {hostClosingChips.map((chip) => (
-                        <button
-                          key={chip.key}
-                          type="button"
-                          onClick={() => {
-                            setPendingHostCloseIntent(chip.intent);
-                            setInputText(chip.message);
-                          }}
-                          className="rounded-full border border-brand/20 bg-brand/5 px-3.5 py-2 text-xs font-semibold text-brand transition-colors hover:border-brand/30 hover:bg-white hover:text-brand-dark dark:border-brand/30 dark:bg-brand/10"
-                        >
-                          {chip.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
-
-                {hostResponseChips.length > 0 ? (
-                  <div className="space-y-2">
-                    <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
-                      Respuestas sugeridas
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {hostResponseChips.map((chip) => (
-                        <button
-                          key={chip.key}
-                          type="button"
-                          onClick={() => {
-                            setPendingHostCloseIntent(null);
-                            setInputText(chip.message);
-                          }}
-                          className="rounded-full border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-semibold text-slate-600 transition-colors hover:border-brand/30 hover:bg-white hover:text-brand dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
-                        >
-                          {chip.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
-
-                {visibleSuggestionTexts.length > 0 ? (
-                  <div className="flex flex-wrap gap-2">
-                    {visibleSuggestionTexts.map((suggestion) => (
-                      <button
-                        key={suggestion}
-                        type="button"
-                        onClick={() => {
-                          setPendingHostCloseIntent(null);
-                          setInputText(suggestion);
-                        }}
-                        className="rounded-full border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-semibold text-slate-600 transition-colors hover:border-brand/30 hover:bg-white hover:text-brand dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
-                      >
-                        {suggestion}
-                      </button>
-                    ))}
                   </div>
                 ) : null}
               </div>

@@ -354,8 +354,10 @@ describe('PropertyDetail', () => {
     expect(within(bookingFlow).getByText('Ver disponibilidad')).toBeDefined();
     expect(within(bookingFlow).getByText(/3 noches · 1 huésped ·/i)).toBeDefined();
     expect(within(bookingFlow).getAllByText(new RegExp('360')).length).toBeGreaterThan(0);
-    expect(within(desktopContext).getByText('Tu selección')).toBeDefined();
+    expect(within(desktopContext).getByText('Tu selección queda guardada mientras seguís revisando este lugar.')).toBeDefined();
+    expect(within(desktopContext).getByText(/\d{1,2} \w{3} al \d{1,2} \w{3}/i)).toBeDefined();
     expect(within(desktopContext).getAllByText('1 huésped').length).toBeGreaterThan(0);
+    expect(within(desktopContext).getAllByText(new RegExp('360')).length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByRole('button', { name: /^siguiente$/i }));
     await waitFor(() => expect(screen.getByText('Definí quiénes viajan')).toBeDefined());
@@ -419,42 +421,32 @@ describe('PropertyDetail', () => {
     expect(within(bookingFlow).getAllByText(/3 noches · 1 huésped ·/i).length).toBeGreaterThan(0);
   });
 
-  test('renders clearer amenities and interaction history sections', async () => {
+  test('renders a lean essentials card with compact verification and decision signals', async () => {
     renderPropertyDetail();
 
     await waitForPropertyHeading();
 
     expect(screen.getByText('Precio por noche')).toBeDefined();
     expect(screen.getByText('Lo esencial de este lugar')).toBeDefined();
-    expect(screen.getByText('Comodidades ya detalladas')).toBeDefined();
-    expect(screen.getByText('Wifi rápido')).toBeDefined();
-    expect(screen.getAllByText('Qué ya está comprobado').length).toBeGreaterThan(0);
-    expect(screen.getByText('Estas 5 comprobaciones muestran qué parte del aviso ya está validada y qué falta completar.')).toBeDefined();
-    expect(screen.getAllByText('4 de 5 comprobaciones').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('✔✔✔✔○').length).toBeGreaterThan(0);
+    expect(screen.getByText('Lo mínimo para decidir rápido si este lugar te cierra.')).toBeDefined();
+    expect(screen.queryByText('Comodidades ya detalladas')).toBeNull();
+    expect(screen.getByText('Qué ya está comprobado')).toBeDefined();
     const verificationPreview = screen.getByTestId('property-verification-preview');
+    expect(within(verificationPreview).getAllByRole('listitem')).toHaveLength(3);
     expect(within(verificationPreview).getByText('Identidad del anfitrión')).toBeDefined();
     expect(within(verificationPreview).getByText('Ubicación de la propiedad')).toBeDefined();
     expect(within(verificationPreview).getByText('Material real del lugar')).toBeDefined();
+    expect(within(verificationPreview).queryByText('Historial real del aviso')).toBeNull();
     expect(within(verificationPreview).queryByText('Verificación presencial')).toBeNull();
     expect(screen.getByText('Puede alojar hasta 4 huéspedes.')).toBeDefined();
     expect(screen.getByText('Tiene 3 dormitorios · 2 baños.')).toBeDefined();
     expect(screen.getByText('Comodidades clave: Wifi rápido · Cocina equipada · Entrada autónoma.')).toBeDefined();
-    expect(screen.getAllByText('Identidad del anfitrión').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Ubicación de la propiedad').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Material real del lugar').length).toBeGreaterThan(0);
-    expect(screen.getByText('Hay material real validado del lugar.')).toBeDefined();
-    expect(screen.getByText('Todavía no hay una verificación presencial registrada.')).toBeDefined();
-    expect(screen.getByText('El aviso ya tiene 5 reseñas reales.')).toBeDefined();
-    expect(screen.getByText('Mariana')).toBeDefined();
-    expect(screen.getByText('Acá ves reservas cerradas, consistencia del aviso y tiempos de respuesta.')).toBeDefined();
+    expect(screen.getByText('5 reseñas reales')).toBeDefined();
+    expect(screen.getByText('6 reservas cerradas')).toBeDefined();
     expect(screen.getByText('Responde rápido')).toBeDefined();
-    expect(screen.getByText('Promedio: ~18 min')).toBeDefined();
-    expect(screen.getByText('Ya interactuaron antes sin inconvenientes')).toBeDefined();
-    expect(screen.getByText('6 reservas completadas')).toBeDefined();
-    expect(screen.getByText('El aviso suele coincidir con lo publicado')).toBeDefined();
-    expect(screen.getByText('Responde en alrededor de 18 min')).toBeDefined();
-    expect(screen.queryByText('Antigüedad en la plataforma')).toBeNull();
+    expect(screen.queryByText('Estas 5 comprobaciones muestran qué parte del aviso ya está validada y qué falta completar.')).toBeNull();
+    expect(screen.queryByText('Acá ves reservas cerradas, consistencia del aviso y tiempos de respuesta.')).toBeNull();
+    expect(screen.queryByText('Ya interactuaron antes sin inconvenientes')).toBeNull();
   });
 
   test('shows positive coordination microcopy through the guided booking flow', async () => {
@@ -474,7 +466,7 @@ describe('PropertyDetail', () => {
     await waitFor(() => expect(screen.getByText('Revisá el resumen y mandá la solicitud. La seña recién se define si el anfitrión acepta.')).toBeDefined());
   });
 
-  test('shows the stronger guided verification message when the score reaches 4', async () => {
+  test('keeps the verification preview compact when the listing has many checks complete', async () => {
     (apiJson as any).mockImplementation(async (url: string) => {
       if (url.endsWith('/reviews')) return [{ id: 'r1', reviewer_id: 'u1', rating: 5, comment: 'Buen lugar' }];
       if (url === '/api/bookings') return [];
@@ -489,9 +481,14 @@ describe('PropertyDetail', () => {
 
     await waitForPropertyHeading();
 
-    expect(screen.getAllByText('4 de 5 comprobaciones').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Qué ya está comprobado').length).toBeGreaterThan(0);
-    expect(screen.getByText('Estas 5 comprobaciones muestran qué parte del aviso ya está validada y qué falta completar.')).toBeDefined();
+    const verificationPreview = screen.getByTestId('property-verification-preview');
+    expect(screen.getByText('Qué ya está comprobado')).toBeDefined();
+    expect(within(verificationPreview).getAllByRole('listitem')).toHaveLength(3);
+    expect(within(verificationPreview).getByText('Identidad del anfitrión')).toBeDefined();
+    expect(within(verificationPreview).getByText('Ubicación de la propiedad')).toBeDefined();
+    expect(within(verificationPreview).getByText('Material real del lugar')).toBeDefined();
+    expect(screen.queryByText('4 de 5 comprobaciones')).toBeNull();
+    expect(screen.queryByText('Estas 5 comprobaciones muestran qué parte del aviso ya está validada y qué falta completar.')).toBeNull();
   });
 
   test('records the detail visit when the property reaches a high verification level', async () => {
@@ -532,14 +529,15 @@ describe('PropertyDetail', () => {
 
     await waitForPropertyHeading();
 
-    expect(screen.getAllByText('2 de 5 comprobaciones').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('✔✔○○○').length).toBeGreaterThan(0);
+    expect(screen.getByText('Qué ya está comprobado')).toBeDefined();
     const verificationPreview = screen.getByTestId('property-verification-preview');
+    expect(within(verificationPreview).getAllByRole('listitem')).toHaveLength(2);
     expect(within(verificationPreview).getByText('Ubicación de la propiedad')).toBeDefined();
     expect(within(verificationPreview).getByText('Historial real del aviso')).toBeDefined();
     expect(within(verificationPreview).queryByText('Identidad del anfitrión')).toBeNull();
-    expect(screen.getByText('Todavía falta verificar la identidad del anfitrión.')).toBeDefined();
-    expect(screen.getAllByText('Qué ya está comprobado').length).toBeGreaterThan(0);
+    expect(within(verificationPreview).queryByText('Material real del lugar')).toBeNull();
+    expect(screen.queryByText('2 de 5 comprobaciones')).toBeNull();
+    expect(screen.queryByText('Todavía falta verificar la identidad del anfitrión.')).toBeNull();
   });
 
   test('guides the booking flow and stops guest selection at capacity', async () => {

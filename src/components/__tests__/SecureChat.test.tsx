@@ -327,14 +327,18 @@ describe('SecureChat', () => {
     expect(screen.getByText('Ya interactuaron antes sin inconvenientes')).toBeInTheDocument();
     expect(screen.getByText('Podés coordinar todo por acá. Evitá compartir datos sensibles o pagos por fuera hasta tener claro el acuerdo.')).toBeInTheDocument();
     expect(screen.getByText('Propuesta enviada. Falta la respuesta del anfitrión.')).toBeInTheDocument();
+    expect(screen.getByText('Propuesta enviada')).toBeInTheDocument();
+    expect(screen.getByText('Aceptada')).toBeInTheDocument();
+    expect(screen.getByText('Seña confirmada')).toBeInTheDocument();
+    expect(screen.getByText('Confirmada')).toBeInTheDocument();
     expect(screen.queryByText('Estado actual')).not.toBeInTheDocument();
     expect(screen.queryByText('Actúa ahora')).not.toBeInTheDocument();
     expect(screen.queryByText('Próximo paso')).not.toBeInTheDocument();
     expect(screen.queryByText('Mensaje sugerido')).not.toBeInTheDocument();
     expect(screen.queryByText('Preguntas rápidas')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Agregar motivo del viaje' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Consultar horario de llegada' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Preguntar qué incluye' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Agregar motivo del viaje' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Consultar horario de llegada' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Preguntar qué incluye' })).not.toBeInTheDocument();
 
     const composer = screen.getByRole('textbox') as HTMLTextAreaElement;
     await waitFor(() => {
@@ -347,7 +351,7 @@ describe('SecureChat', () => {
     expect(composer.value).toContain('¿Sigue disponible?');
   });
 
-  test('appends the starter chips into the suggested first message instead of replacing it', async () => {
+  test('prefills a single first guest message without extra starter chips', async () => {
     useAuthMock.mockReturnValue({ user: { id: 'tenant-1' } });
     fetchConversationsMock.mockResolvedValue([
       {
@@ -370,20 +374,16 @@ describe('SecureChat', () => {
     await waitFor(() => {
       expect(composer.value).toContain('Hola, ¿cómo estás? Estoy viendo el lugar');
     });
-    const baseMessage = composer.value;
-
-    fireEvent.click(screen.getByRole('button', { name: 'Agregar motivo del viaje' }));
-    expect(composer.value).toBe(`${baseMessage} Vamos por una escapada corta.`);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Consultar horario de llegada' }));
-    expect(composer.value).toContain('Vamos por una escapada corta.');
-    expect(composer.value).toContain('¿Qué horario de llegada les queda mejor?');
-
-    fireEvent.click(screen.getByRole('button', { name: 'Preguntar qué incluye' }));
-    expect(composer.value).toContain('¿Qué incluye exactamente el precio?');
+    expect(composer.value).toContain('10 may');
+    expect(composer.value).toContain('13 may');
+    expect(composer.value).toContain('para 2 personas');
+    expect(composer.value).toContain('¿Sigue disponible?');
+    expect(screen.queryByRole('button', { name: 'Agregar motivo del viaje' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Consultar horario de llegada' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Preguntar qué incluye' })).not.toBeInTheDocument();
   });
 
-  test('shows lightweight guest context and host response chips inside the chat', async () => {
+  test('shows compact guest context without response chip groups', async () => {
     useAuthMock.mockReturnValue({ user: { id: 'host-1' } });
     fetchConversationsMock.mockResolvedValue([
       {
@@ -401,33 +401,28 @@ describe('SecureChat', () => {
 
     renderChat();
 
-    expect(await screen.findByText('Perfil del huésped')).toBeInTheDocument();
+    expect(await screen.findByText('3 de 5 comprobaciones')).toBeInTheDocument();
     expect(screen.getByText('3 de 5 comprobaciones')).toBeInTheDocument();
     expect(screen.getByText('Email verificado')).toBeInTheDocument();
-    expect(screen.getByText('Teléfono verificado')).toBeInTheDocument();
-    expect(screen.getByText('Historial en la plataforma')).toBeInTheDocument();
     expect(screen.getByText('4 estadías completadas')).toBeInTheDocument();
-    expect(screen.getByText('Cumple lo acordado')).toBeInTheDocument();
-    expect(screen.getByText('Comunicación clara')).toBeInTheDocument();
+    expect(screen.queryByText('Perfil del huésped')).not.toBeInTheDocument();
+    expect(screen.queryByText('Teléfono verificado')).not.toBeInTheDocument();
+    expect(screen.queryByText('Historial en la plataforma')).not.toBeInTheDocument();
+    expect(screen.queryByText('Cumple lo acordado')).not.toBeInTheDocument();
+    expect(screen.queryByText('Comunicación clara')).not.toBeInTheDocument();
     expect(screen.queryByText('Cierre sugerido')).not.toBeInTheDocument();
-    expect(screen.getByText('Respuestas sugeridas')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Confirmar disponibilidad' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Consultar horario de llegada' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Preguntar cantidad de personas' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Aclarar condiciones' })).toBeInTheDocument();
+    expect(screen.queryByText('Respuestas sugeridas')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Confirmar disponibilidad' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Consultar horario de llegada' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Preguntar cantidad de personas' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Aclarar condiciones' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Avanzar con la seña' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Confirmar reserva' })).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Consultar horario de llegada' }));
-
-    expect(screen.getByRole('textbox')).toHaveValue('Hola, ¿cómo estás? Sí, está disponible del 10 may al 13 may para 2 personas. ¿A qué hora estiman llegar?');
-
-    fireEvent.click(screen.getByRole('button', { name: 'Preguntar cantidad de personas' }));
-
-    expect(screen.getByRole('textbox')).toHaveValue('Hola, ¿cómo estás? Sí, está disponible del 10 may al 13 may. ¿Se mantienen las 2 personas o se suma alguien más? Si querés, contame también brevemente el motivo del viaje.');
+    expect(screen.getByRole('button', { name: 'Aceptar propuesta' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'No avanzar con esta reserva' })).toBeInTheDocument();
   });
 
-  test('shows a natural unavailable reply suggestion for the host when the reservation did not advance', async () => {
+  test('keeps the not-advanced state visible without suggestion chips for the host', async () => {
     useAuthMock.mockReturnValue({ user: { id: 'host-1' } });
     fetchConversationsMock.mockResolvedValue([
       {
@@ -445,18 +440,14 @@ describe('SecureChat', () => {
     renderChat();
 
     expect(await screen.findByText('Estado: No avanzó')).toBeInTheDocument();
-
-    const unavailableReply = 'Hola, ¿cómo estás? Ya no lo tengo disponible del 10 may al 13 may. Si te sirve, podemos revisar otra opción.';
-
-    expect(screen.getByRole('button', { name: unavailableReply })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Si podés mover fechas, lo vemos por este chat.' })).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: unavailableReply }));
-
-    expect(screen.getByRole('textbox')).toHaveValue(unavailableReply);
+    expect(screen.getByText('Marcaste que no podés avanzar con esta reserva.')).toBeInTheDocument();
+    expect(screen.getByText('El chat sigue abierto por si quieren recoordinar por acá.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Ya no lo tengo disponible/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Si podés mover fechas, lo vemos por este chat.' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Avanzar con la seña' })).not.toBeInTheDocument();
   });
 
-  test('shows closing chips for the host after the conversation matures and advances the chat to the deposit step on send', async () => {
+  test('shows one host advance action and moves the chat to deposit choice on send', async () => {
     useAuthMock.mockReturnValue({ user: { id: 'host-1' } });
     fetchConversationsMock.mockResolvedValue([
       {
@@ -525,9 +516,10 @@ describe('SecureChat', () => {
 
     renderChat();
 
-    expect(await screen.findByText('Cierre sugerido')).toBeInTheDocument();
+  expect(await screen.findByRole('button', { name: 'Avanzar con la seña' })).toBeInTheDocument();
+  expect(screen.queryByText('Cierre sugerido')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Avanzar con la seña' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Confirmar reserva' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Confirmar reserva' })).not.toBeInTheDocument();
     expect(screen.queryByText('Respuestas sugeridas')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Avanzar con la seña' }));
@@ -545,8 +537,11 @@ describe('SecureChat', () => {
     });
 
     expect(await screen.findByText('El siguiente paso es que el huésped defina la seña.')).toBeInTheDocument();
-    expect(screen.getByText('Disponible para el huésped')).toBeInTheDocument();
-    expect(screen.getByText('También visible para el huésped')).toBeInTheDocument();
+    expect(screen.getByText('La opción registrada la deja asentada. La externa sigue por chat y ambas quedan visibles.')).toBeInTheDocument();
+    expect(screen.getByText('El huésped ya puede definirla')).toBeInTheDocument();
+    expect(screen.getByText('Registrarla acá o coordinarla por fuera ya quedó visible en este chat.')).toBeInTheDocument();
+    expect(screen.getByText('Registrada acá')).toBeInTheDocument();
+    expect(screen.getByText('Por fuera')).toBeInTheDocument();
     expect(showToastMock).toHaveBeenCalledWith(
       'Cierre enviado',
       'El chat ya quedó listo para que el huésped defina la seña.',
@@ -651,8 +646,8 @@ describe('SecureChat', () => {
     renderChat();
 
     expect(await screen.findByText('Podés elegir si dejar la seña registrada acá o coordinarla por fuera.')).toBeInTheDocument();
-    expect(screen.getByText('Elegí cómo dejar la seña')).toBeInTheDocument();
-    expect(screen.getByText('Podés dejarla registrada acá o coordinarla por fuera. Las dos opciones quedan claras en este chat.')).toBeInTheDocument();
+  expect(screen.getByText('Elegí cómo dejarla')).toBeInTheDocument();
+  expect(screen.getByText('Registrarla acá o coordinarla por fuera.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Dejarla registrada acá/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Coordinarla por fuera/i })).toBeInTheDocument();
 
@@ -664,6 +659,7 @@ describe('SecureChat', () => {
 
     expect(await screen.findByText('El anfitrión aceptó la solicitud.')).toBeInTheDocument();
     expect(screen.getByText('Ya podés dejar la seña registrada.')).toBeInTheDocument();
+  expect(screen.getByText(/Seña protegida:/i)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Pagar seña/i }));
 
@@ -703,7 +699,8 @@ describe('SecureChat', () => {
 
     renderChat();
 
-    expect(await screen.findByText('Elegí cómo dejar la seña')).toBeInTheDocument();
+    expect(await screen.findByText('Elegí cómo dejarla')).toBeInTheDocument();
+    expect(screen.getByText('Registrarla acá o coordinarla por fuera.')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Coordinarla por fuera/i }));
 
@@ -711,6 +708,7 @@ describe('SecureChat', () => {
       expect(selectExternalDepositMock).toHaveBeenCalledWith('booking-direct-choice-1');
     });
 
+    expect(await screen.findByText('Coordinás la seña directo con el anfitrión.')).toBeInTheDocument();
     expect(showToastMock).toHaveBeenCalledWith(
       'Seña externa',
       'Quedó como coordinación por fuera. Si cambiás de idea antes de informarla, podés dejarla registrada desde esta conversación.',

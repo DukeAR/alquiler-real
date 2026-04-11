@@ -6,9 +6,7 @@ import { Icons } from './Icons';
 import DateRangePicker from './DateRangePicker';
 import {
   getPropertyVerificationDetails,
-  type PropertyVerificationItem,
 } from '../lib/propertyVerification';
-import { getReviewInteractionSignals } from '../lib/interactionHistory';
 import { getHostResponseSignal } from '../lib/positiveIncentives';
 import { showToast } from '../lib/toast';
 import { cn, formatCurrency } from '../lib/utils';
@@ -25,10 +23,8 @@ import { startConversation } from '../services/geminiService';
 import { Button } from './ui/Button';
 import { Badge } from './ui/Badge';
 import { Card } from './ui/Card';
-import { InteractionHistorySignals } from './ui/InteractionHistorySignals';
 import { NoticeBanner } from './ui/NoticeBanner';
 import { SectionTitle } from './ui/SectionTitle';
-import { VerificationMeter } from './ui/VerificationMeter';
 
 const FALLBACK = 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=1200&q=80&auto=format&fit=crop';
 
@@ -103,15 +99,6 @@ type BookingConfirmationNotice = {
   description: string;
 };
 
-const formatMonthYear = (value?: string) => {
-  if (!value) return null;
-
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return null;
-
-  return parsed.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
-};
-
 const formatLocalIso = (date: Date) => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -139,19 +126,6 @@ const formatCountLabel = (count: number, singular: string, plural: string) => `$
 const formatGuestCapacity = (maxGuests?: number | null) => {
   if (!maxGuests) return null;
   return `Hasta ${formatCountLabel(maxGuests, 'huésped', 'huéspedes')}`;
-};
-
-const formatReviewDate = (value?: string) => {
-  if (!value) return 'Reseña publicada';
-
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return 'Reseña publicada';
-
-  return parsed.toLocaleDateString('es-AR', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
 };
 
 const formatGuestSelection = (adults: number, childrenCount: number) => {
@@ -236,27 +210,6 @@ const REQUEST_CONFIRMATION_NOTICE: BookingConfirmationNotice = {
 
 const getHostName = (property: PropertyDetailData) => property.host?.name || property.hostName || 'Anfitrión';
 
-const getHostTenureLabel = (property: PropertyDetailData) => {
-  if (property.hostExperienceYears && property.hostExperienceYears > 0) {
-    return `${property.hostExperienceYears} ${property.hostExperienceYears === 1 ? 'año' : 'años'} hospedando`;
-  }
-
-  const hostSince = formatMonthYear(property.hostSince);
-  if (hostSince) {
-    return `Recibe huéspedes desde ${hostSince}`;
-  }
-
-  return null;
-};
-
-const getReviewerLabel = (review: PropertyReviewItem) => {
-  if (review.userName) return review.userName;
-  if (review.reviewer_id) return `Huésped ${review.reviewer_id}`;
-  return 'Huésped';
-};
-
-const getInitial = (value?: string) => value?.trim().charAt(0).toUpperCase() || 'A';
-
 const getPropertyTypeLabel = (property: PropertyDetailData) => {
   const explicitType = property.propertyType?.toLowerCase();
 
@@ -303,165 +256,6 @@ const getDecisionAmenityLabel = (amenities?: string[]) => {
   });
 
   return selected.slice(0, 3).join(' · ');
-};
-
-const getReviewUsefulnessScore = (review: PropertyReviewItem) => {
-  const comment = review.comment.toLowerCase();
-  const usefulKeywords = ['ubic', 'wifi', 'limp', 'silenc', 'tranqui', 'céntr', 'parrilla', 'cochera', 'playa', 'precio', 'anfitri', 'detalle'];
-
-  return usefulKeywords.reduce((score, keyword) => score + (comment.includes(keyword) ? 20 : 0), Math.min(review.comment.length, 140))
-    + (comment.split(/\s+/).length >= 12 ? 20 : 0)
-    + (/\d/.test(comment) ? 10 : 0);
-};
-
-const VerificationChecklistRow: React.FC<{ item: PropertyVerificationItem }> = ({ item }) => {
-  return (
-    <li className="flex items-start gap-3 py-3.5">
-      <span
-        className={cn(
-          'mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-sm font-semibold',
-          item.status === 'complete'
-            ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-            : 'border-slate-200 bg-slate-50 text-slate-500',
-        )}
-        aria-hidden="true"
-      >
-        {item.status === 'complete' ? '✔' : '○'}
-      </span>
-      <div className="min-w-0">
-        <p className="line-clamp-1 text-sm font-semibold leading-5 text-slate-900">{item.label}</p>
-        <p className="mt-1 line-clamp-1 text-sm leading-5 text-slate-600">{item.description}</p>
-      </div>
-    </li>
-  );
-};
-
-const HostHistoryPanel: React.FC<{
-  hostName: string;
-  hostTenureLabel: string | null;
-  hostAvatarUrl?: string;
-  interactionHistory?: AppProperty['hostInteractionHistory'];
-  continuity?: AppProperty['interactionContinuity'];
-}> = ({ hostName, hostTenureLabel, hostAvatarUrl, interactionHistory, continuity }) => {
-  const hostResponseSignal = getHostResponseSignal(interactionHistory);
-
-  return (
-    <Card className="rounded-[30px] border-slate-200/80 bg-white p-5 shadow-[0_24px_60px_-46px_rgba(15,23,42,0.25)] sm:p-6">
-      <div className="grid gap-5 lg:grid-cols-[auto_minmax(0,1fr)] lg:items-start">
-        <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-slate-900 text-lg font-semibold text-white">
-          {hostAvatarUrl ? (
-            <img src={hostAvatarUrl} alt={hostName} className="h-full w-full object-cover" />
-          ) : (
-            getInitial(hostName)
-          )}
-        </div>
-
-        <div className="min-w-0">
-          <SectionTitle
-            eyebrow="Anfitrión"
-            heading={hostName}
-            description={hostTenureLabel ?? 'Perfil activo en la plataforma'}
-          />
-          <p className="mt-3 text-sm leading-6 text-slate-500">
-            Acá ves reservas cerradas, consistencia del aviso y tiempos de respuesta.
-          </p>
-          {hostResponseSignal ? (
-            <div className="mt-4 flex flex-wrap gap-2">
-              <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">
-                {hostResponseSignal.label}
-              </span>
-              <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-600">
-                {hostResponseSignal.detail}
-              </span>
-            </div>
-          ) : null}
-          {continuity ? (
-            <div className="mt-4 rounded-[22px] border border-emerald-200/80 bg-emerald-50/80 px-4 py-3.5">
-              <p className="text-sm font-semibold text-emerald-800">{continuity.label}</p>
-              <p className="mt-1 text-sm leading-6 text-emerald-700">{continuity.detail}</p>
-            </div>
-          ) : null}
-          <div className="mt-4 space-y-3">
-            <InteractionHistorySignals
-              signals={interactionHistory?.publicSignals ?? []}
-              emptyText="Todavía no hay suficientes cierres compartidos para resumir este historial del anfitrión."
-            />
-            {interactionHistory && interactionHistory.feedbackCount > 0 ? (
-              <p className="text-sm leading-6 text-slate-500">
-                Sobre {interactionHistory.feedbackCount} {interactionHistory.feedbackCount === 1 ? 'cierre compartido' : 'cierres compartidos'}.
-              </p>
-            ) : null}
-          </div>
-        </div>
-      </div>
-    </Card>
-  );
-};
-
-const PropertyVerificationPanel: React.FC<{
-  details: ReturnType<typeof getPropertyVerificationDetails>;
-}> = ({ details }) => {
-  const { items } = details;
-
-  return (
-    <Card className="rounded-[30px] border-slate-200/80 bg-white p-5 shadow-[0_24px_60px_-46px_rgba(15,23,42,0.25)] sm:p-6">
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
-        <div className="max-w-2xl">
-          <SectionTitle
-            eyebrow="Comprobaciones"
-            heading="Qué ya está comprobado"
-            description="Estas 5 comprobaciones muestran qué parte del aviso ya está validada y qué falta completar."
-          />
-        </div>
-
-        <div className="rounded-[22px] border border-slate-200/80 bg-slate-50/90 px-4 py-3.5 lg:min-w-[260px]">
-          <VerificationMeter
-            summary={details}
-            tone={details.score >= 4 ? 'brand' : 'neutral'}
-            helper={details.helperText}
-            visualClassName="tracking-[0.18em] text-slate-900 dark:text-slate-50"
-          />
-        </div>
-      </div>
-
-      <ul className="mt-5 divide-y divide-slate-200/80 border-t border-slate-200/80">
-        {items.map((item) => (
-          <VerificationChecklistRow key={item.key} item={item} />
-        ))}
-      </ul>
-    </Card>
-  );
-};
-
-const ReviewPreviewCard: React.FC<{ review: PropertyReviewItem }> = ({ review }) => {
-  const reviewerLabel = getReviewerLabel(review);
-  const reviewSignals = getReviewInteractionSignals(review);
-
-  return (
-    <Card padding="md" className="rounded-[28px] border-slate-200/80 bg-white shadow-[0_22px_60px_-44px_rgba(15,23,42,0.24)]">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white">
-            {getInitial(reviewerLabel)}
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-slate-900">{reviewerLabel}</p>
-            <p className="text-xs text-slate-500">{formatReviewDate(review.date)}</p>
-          </div>
-        </div>
-        <div className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-          Historial
-        </div>
-      </div>
-      {reviewSignals.length > 0 ? (
-        <div className="mt-4">
-          <InteractionHistorySignals signals={reviewSignals} compact />
-        </div>
-      ) : null}
-      <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Fragmento útil</p>
-      <p className="mt-2 text-sm leading-7 text-slate-700">{review.comment}</p>
-    </Card>
-  );
 };
 
 const GuestCounterCard: React.FC<GuestCounterCardProps> = ({
@@ -572,7 +366,6 @@ export const PropertyDetailShell: React.FC<{
   const bathroomsCount = getPositiveNumber(property.bathrooms);
   const guestCapacity = formatGuestCapacity(maxGuestsNumber);
   const hostName = getHostName(property);
-  const hostTenureLabel = getHostTenureLabel(property);
   const propertyTypeLabel = getPropertyTypeLabel(property);
   const decisionAmenityLabel = getDecisionAmenityLabel(property.amenities);
   const roomSummary = [
@@ -580,10 +373,16 @@ export const PropertyDetailShell: React.FC<{
     bathroomsCount ? formatCountLabel(bathroomsCount, 'baño', 'baños') : null,
   ].filter((value): value is string => Boolean(value));
   const verificationDetails = getPropertyVerificationDetails(property);
-  const hostInteractionHistory = property.hostInteractionHistory;
-
-  const hasAmenities = (property.amenities?.length ?? 0) > 0;
+  const hostResponseSignal = getHostResponseSignal(property.hostInteractionHistory);
+  const completedReservationsLabel = property.hostInteractionHistory?.completedReservationsCount
+    ? `${property.hostInteractionHistory.completedReservationsCount} ${property.hostInteractionHistory.completedReservationsCount === 1 ? 'reserva cerrada' : 'reservas cerradas'}`
+    : null;
   const heroTrustItems = verificationDetails.items.filter((item) => item.status === 'complete').slice(0, 3);
+  const quickDecisionSignals = [
+    reviewCount > 0 ? `${reviewCount} ${reviewCount === 1 ? 'reseña real' : 'reseñas reales'}` : null,
+    completedReservationsLabel,
+    hostResponseSignal?.label ?? null,
+  ].filter((value): value is string => Boolean(value)).slice(0, 3);
 
   const todayISO = formatLocalIso(new Date());
 
@@ -595,17 +394,6 @@ export const PropertyDetailShell: React.FC<{
     roomSummary.length > 0 ? `Tiene ${roomSummary.join(' · ')}.` : null,
     decisionAmenityLabel ? `Comodidades clave: ${decisionAmenityLabel}.` : null,
   ].filter(Boolean) as string[];
-  const visibleReviews = [...reviews]
-    .sort((left, right) => {
-      const scoreDifference = getReviewUsefulnessScore(right) - getReviewUsefulnessScore(left);
-
-      if (scoreDifference !== 0) {
-        return scoreDifference;
-      }
-
-      return new Date(right.date ?? 0).getTime() - new Date(left.date ?? 0).getTime();
-    })
-    .slice(0, 4);
   const hasCompleteDates = Boolean(checkIn && checkOut);
   const hasSelectedDates = Boolean(checkIn || checkOut);
   const guestCapacityReached = Boolean(maxGuestsNumber && guestCount >= maxGuestsNumber);
@@ -1085,7 +873,7 @@ export const PropertyDetailShell: React.FC<{
         <span>Volver</span>
       </button>
 
-      <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_320px] xl:gap-10">
+      <div className="space-y-6 md:space-y-8">
         <section className="space-y-6 md:space-y-8">
           <Card padding="none" variant="elevated" className="overflow-hidden rounded-[32px] border-slate-200/80 bg-white shadow-[0_34px_80px_-50px_rgba(15,23,42,0.35)]">
             <div className="grid gap-0 lg:grid-cols-[104px_minmax(0,1fr)]">
@@ -1202,150 +990,105 @@ export const PropertyDetailShell: React.FC<{
           </Card>
         </section>
 
-        <aside className="mx-auto w-full max-w-2xl xl:max-w-none xl:self-start">
-          <Card variant="elevated" className="rounded-[30px] border-slate-200/80 bg-white p-5 shadow-[0_30px_80px_-50px_rgba(15,23,42,0.28)] sm:p-6">
-            <section role="region" aria-label="Contexto de la reserva" className="space-y-4">
-              <div className="space-y-2">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Precio por noche</p>
-                <div className="flex items-end gap-2">
-                  <span className="text-[2.8rem] font-black tracking-tight text-slate-950 sm:text-[3rem]">{nightly ? formatCurrency(nightly) : '—'}</span>
-                  <span className="pb-1 text-sm font-medium text-slate-500">/ noche</span>
-                </div>
-              </div>
-
-              <Button
-                type="button"
-                variant="primary"
-                size="lg"
-                fullWidth
-                onClick={handleOpenBookingEntry}
-                className="rounded-2xl shadow-[0_24px_46px_-28px_rgba(67,56,202,0.42)]"
-              >
-                <>
-                  <Icons.Calendar className="h-4 w-4" />
-                  {bookingEntryCtaLabel}
-                </>
-              </Button>
-
-              <p className="text-sm leading-6 text-slate-500">{bookingEntryHelperText}</p>
-
-              {hasSelectedDates || guestCount > 1 ? (
-                <div className="rounded-[24px] border border-slate-200/80 bg-slate-50/80 px-4 py-4 shadow-[0_18px_36px_-34px_rgba(15,23,42,0.14)]">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Tu selección</p>
-                  <div className="mt-3 space-y-3 text-sm text-slate-600">
-                    <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Fechas</p>
-                      <p className="mt-1 font-semibold text-slate-900">{dateSelectionSummary}</p>
-                    </div>
-                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-                      <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Huéspedes</p>
-                        <p className="mt-1 font-semibold text-slate-900">{guestCountLabel}</p>
-                      </div>
-                      <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Total estimado</p>
-                        <p className="mt-1 font-semibold text-slate-900">{totalSummaryLabel}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : null}
-            </section>
-          </Card>
-        </aside>
-
         <section
-          data-testid="property-verification-preview"
-          className="xl:col-span-2 rounded-[30px] border border-slate-200/80 bg-white/94 px-5 py-4 shadow-[0_24px_60px_-46px_rgba(15,23,42,0.22)] sm:px-6"
+          role="region"
+          aria-label="Contexto de la reserva"
+          className="rounded-[30px] border border-slate-200/80 bg-white p-5 shadow-[0_30px_80px_-50px_rgba(15,23,42,0.28)] sm:p-6"
         >
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Qué ya está comprobado</p>
-          {heroTrustItems.length > 0 ? (
-            <ul className="mt-3 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-6 sm:gap-y-3">
-              {heroTrustItems.map((item) => (
-                <li key={item.key} className="flex items-center gap-2.5 text-sm font-semibold text-slate-900">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-700">
-                    <Icons.Check className="h-4 w-4" />
-                  </span>
-                  <span>{item.label}</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="mt-2 text-sm leading-6 text-slate-500">Todavía no hay datos comprobados visibles en este aviso.</p>
-          )}
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="space-y-2">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Precio por noche</p>
+              <div className="flex items-end gap-2">
+                <span className="text-[2.8rem] font-black tracking-tight text-slate-950 sm:text-[3rem]">{nightly ? formatCurrency(nightly) : '—'}</span>
+                <span className="pb-1 text-sm font-medium text-slate-500">/ noche</span>
+              </div>
+              <p className="max-w-xl text-sm leading-6 text-slate-500">{bookingEntryHelperText}</p>
+            </div>
+
+            <Button
+              type="button"
+              variant="primary"
+              size="lg"
+              onClick={handleOpenBookingEntry}
+              className="rounded-2xl px-6 shadow-[0_24px_46px_-28px_rgba(67,56,202,0.42)]"
+            >
+              <>
+                <Icons.Calendar className="h-4 w-4" />
+                {bookingEntryCtaLabel}
+              </>
+            </Button>
+          </div>
+
+          {hasSelectedDates || guestCount > 1 ? (
+            <div className="mt-5 flex flex-wrap gap-3 border-t border-slate-200/70 pt-5">
+              <div className="rounded-full border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm font-medium text-slate-700">
+                {dateSelectionSummary}
+              </div>
+              <div className="rounded-full border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm font-medium text-slate-700">
+                {guestCountLabel}
+              </div>
+              <div className="rounded-full border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm font-medium text-slate-700">
+                {totalSummaryLabel}
+              </div>
+            </div>
+          ) : null}
+
+          <section
+            data-testid="property-verification-preview"
+            className="mt-5 space-y-3 border-t border-slate-200/70 pt-5"
+          >
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Qué ya está comprobado</p>
+            {heroTrustItems.length > 0 ? (
+              <ul className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-6 sm:gap-y-3">
+                {heroTrustItems.map((item) => (
+                  <li key={item.key} className="flex items-center gap-2.5 text-sm font-semibold text-slate-900">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-700">
+                      <Icons.Check className="h-4 w-4" />
+                    </span>
+                    <span>{item.label}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm leading-6 text-slate-500">Todavía no hay datos comprobados visibles en este aviso.</p>
+            )}
+          </section>
         </section>
 
-        <main className="space-y-8 xl:col-span-2">
+        <main className="space-y-8">
           <Card className="rounded-[32px] border-slate-200/80 bg-white p-6 shadow-[0_28px_70px_-50px_rgba(15,23,42,0.25)] sm:p-7">
-            <div className="space-y-4">
+            <div className="space-y-5">
               <SectionTitle
-                eyebrow="Antes de decidir"
+                eyebrow="Lo esencial"
                 heading="Lo esencial de este lugar"
-                description="Descripción y datos concretos para decidir si te sirve."
+                description="Lo mínimo para decidir rápido si este lugar te cierra."
               />
               <p className="max-w-3xl text-base leading-8 text-slate-600">
                 {property.description || 'Todavía no hay descripción disponible.'}
               </p>
 
-              <ul className="space-y-3">
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {decisionHighlights.map((item) => (
-                  <li key={item} className="flex items-start gap-3 rounded-[24px] border border-slate-200/80 bg-slate-50/80 px-4 py-3 text-sm leading-6 text-slate-700">
-                    <span className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand">
-                      <Icons.Check className="h-3.5 w-3.5" />
-                    </span>
-                    <span>{item}</span>
-                  </li>
+                  <div key={item} className="rounded-[24px] border border-slate-200/80 bg-slate-50/80 px-4 py-3 text-sm font-medium leading-6 text-slate-700">
+                    {item}
+                  </div>
                 ))}
-              </ul>
+              </div>
 
-              {hasAmenities ? (
+              {quickDecisionSignals.length > 0 ? (
                 <div className="border-t border-slate-200/70 pt-5">
-                  <p className="text-sm font-semibold text-slate-900">Comodidades ya detalladas</p>
-                  <ul className="mt-3 flex flex-wrap gap-2.5">
-                    {property.amenities?.map((amenity) => (
-                      <li key={amenity} className="rounded-full border border-slate-200/80 bg-slate-50 px-3.5 py-2 text-sm font-medium text-slate-700">
-                        {amenity}
-                      </li>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Qué ayuda a decidir más rápido</p>
+                  <div className="mt-3 flex flex-wrap gap-2.5">
+                    {quickDecisionSignals.map((item) => (
+                      <span key={item} className="rounded-full border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700">
+                        {item}
+                      </span>
                     ))}
-                  </ul>
+                  </div>
                 </div>
               ) : null}
             </div>
           </Card>
-
-          <PropertyVerificationPanel details={verificationDetails} />
-
-          <HostHistoryPanel
-            hostName={hostName}
-            hostTenureLabel={hostTenureLabel}
-            hostAvatarUrl={property.host?.avatarUrl}
-            interactionHistory={hostInteractionHistory}
-            continuity={property.interactionContinuity}
-          />
-
-          <section className="space-y-5">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-              <SectionTitle
-                eyebrow="Reseñas"
-                heading="Cómo fue la experiencia de otros huéspedes"
-                description={reviewCount > 0 ? 'Reseñas reales para entender mejor cómo fue la estadía.' : 'Todavía no hay reseñas reales publicadas para esta propiedad.'}
-              />
-            </div>
-
-            {visibleReviews.length > 0 ? (
-              <div className="grid gap-4 md:grid-cols-2">
-                {visibleReviews.map((review) => (
-                  <ReviewPreviewCard key={review.id} review={review} />
-                ))}
-              </div>
-            ) : (
-              <NoticeBanner
-                tone="info"
-                heading="Todavía no hay opiniones publicadas"
-                description="Cuando haya estadías completadas, vas a ver reseñas reales para comparar mejor."
-              />
-            )}
-          </section>
         </main>
       </div>
 
