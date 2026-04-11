@@ -13,6 +13,7 @@ type PropertyQueryRow = Record<string, unknown> & {
   reviewsCount?: unknown;
   lat?: unknown;
   lng?: unknown;
+  images?: unknown;
   imageUrl?: unknown;
   image_url?: unknown;
   hostName?: unknown;
@@ -38,6 +39,7 @@ type PropertyQueryRow = Record<string, unknown> & {
   hasDigitalVerification?: unknown;
   isVerifiedProperty?: unknown;
   is_verified_property?: unknown;
+  beds?: unknown;
   propertyRelationshipVerified?: unknown;
   hostPremiumDocumentaryVerified?: unknown;
   propertyCompletedBookingsCount?: unknown;
@@ -55,6 +57,31 @@ const toSafeNumber = (value: unknown, fallback = 0) => {
 const toSafeInteger = (value: unknown, fallback = 0) => Math.round(toSafeNumber(value, fallback));
 
 const toBoolean = (value: unknown) => value === true || value === 1 || value === '1';
+
+const toStringArray = (value: unknown): string[] => {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => typeof item === 'string' ? item.trim() : '')
+      .filter(Boolean);
+  }
+
+  if (typeof value === 'string') {
+    const trimmedValue = value.trim();
+
+    if (!trimmedValue) {
+      return [];
+    }
+
+    try {
+      const parsedValue = JSON.parse(trimmedValue);
+      return toStringArray(parsedValue);
+    } catch {
+      return [trimmedValue];
+    }
+  }
+
+  return [];
+};
 
 const toDateString = (value: unknown) => {
   if (typeof value === 'string' && value.trim().length > 0) {
@@ -95,6 +122,7 @@ export const mapPropertyRecord = (row: PropertyQueryRow) => {
     price: toSafeNumber(row.price),
     rating: toSafeNumber(row.rating),
     reviewsCount: toSafeInteger(row.reviewsCount),
+    beds: hasOwn(row, 'beds') ? toSafeInteger(row.beds) : undefined,
     identityValidated: getResolvedIdentityValidated(row),
     locationVerified: toBoolean(row.locationVerified),
     materialVerified: toBoolean(row.materialVerified) || toBoolean(row.videoValidated),
@@ -128,6 +156,11 @@ export const mapPropertyRecord = (row: PropertyQueryRow) => {
       : typeof row.image_url === 'string' && row.image_url.trim().length > 0
         ? row.image_url
         : 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800',
+    images: (() => {
+      const normalizedImages = toStringArray(row.images);
+
+      return normalizedImages.length > 0 ? normalizedImages : undefined;
+    })(),
     coordinates: {
       lat: toSafeNumber(row.lat, PROPERTY_COORDINATE_FALLBACK.lat),
       lng: toSafeNumber(row.lng, PROPERTY_COORDINATE_FALLBACK.lng),

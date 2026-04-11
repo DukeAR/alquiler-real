@@ -59,6 +59,7 @@ export interface Property {
   title: string;
   location: string;
   propertyType?: string;
+  images?: string[];
   verificationScore?: number;
   verificationSummary?: PropertyVerificationSummary;
   verificationItems?: PropertyVerificationItem[];
@@ -85,6 +86,7 @@ export interface Property {
   reviewsCount: number;
   isSuperHost?: boolean;
   maxGuests?: number;
+  beds?: number;
   bedrooms?: number;
   bathrooms?: number;
   propertyRelationshipVerified?: boolean;

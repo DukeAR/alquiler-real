@@ -20,6 +20,7 @@ const getPropertyTypeLabel = (property: Property) => {
 
   if (explicitType.includes('house') || explicitType.includes('casa')) return 'Casa';
   if (explicitType.includes('apartment') || explicitType.includes('depto') || explicitType.includes('depart')) return 'Departamento';
+  if (explicitType.includes('room') || explicitType.includes('habitacion') || explicitType.includes('habitación')) return 'Habitación';
   if (explicitType.includes('cabin') || explicitType.includes('caba')) return 'Cabaña';
 
   const title = normalizePropertyText(property.title);
@@ -28,6 +29,7 @@ const getPropertyTypeLabel = (property: Property) => {
   if (title.includes('duplex') || title.includes('chalet') || /(^|\s)ph($|\s)/.test(title)) return 'Casa';
   if (title.includes('monoambiente')) return 'Departamento';
   if (title.includes('depto') || title.includes('depart')) return 'Departamento';
+  if (title.includes('habitacion') || title.includes('habitación') || title.includes('cuarto')) return 'Habitación';
   if (title.includes('caba')) return 'Cabaña';
 
   return 'Alojamiento';

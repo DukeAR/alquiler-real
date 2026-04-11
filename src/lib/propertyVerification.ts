@@ -1,4 +1,5 @@
 import type { PremiumVerificationOffer } from './premiumVerification';
+import { getPropertyListingQualityScore } from './propertyListingQuality';
 import {
   PROPERTY_VERIFICATION_KEYS,
   buildPropertyVerificationItem,
@@ -58,6 +59,9 @@ type PropertySortLike = PropertyVerificationLike & {
   title?: string;
   location?: string;
   propertyType?: string;
+  imageUrl?: string;
+  images?: string[];
+  description?: string;
   maxGuests?: number;
   rating?: number;
   reviewsCount?: number;
@@ -128,6 +132,7 @@ const derivePropertyTypeLabel = (property: Pick<PropertySortLike, 'propertyType'
 
   if (explicitType.includes('house') || explicitType.includes('casa')) return 'casa';
   if (explicitType.includes('apartment') || explicitType.includes('depto') || explicitType.includes('depart')) return 'departamento';
+  if (explicitType.includes('room') || explicitType.includes('habitacion') || explicitType.includes('habitación')) return 'habitacion';
   if (explicitType.includes('cabin') || explicitType.includes('caba')) return 'cabana';
 
   const title = normalizeCatalogText(property.title);
@@ -136,6 +141,7 @@ const derivePropertyTypeLabel = (property: Pick<PropertySortLike, 'propertyType'
   if (title.includes('duplex') || title.includes('chalet') || /(^|\s)ph($|\s)/.test(title)) return 'casa';
   if (title.includes('monoambiente')) return 'departamento';
   if (title.includes('depto') || title.includes('depart')) return 'departamento';
+  if (title.includes('habitacion') || title.includes('habitación') || title.includes('cuarto')) return 'habitacion';
   if (title.includes('caba')) return 'cabana';
 
   return 'alojamiento';
@@ -386,6 +392,7 @@ export const sortPropertiesByCatalogOrder = <T extends PropertySortLike>(
 
   sortedItems.sort((left, right) => {
     const verificationDifference = getPropertyVerificationScore(right) - getPropertyVerificationScore(left);
+    const qualityDifference = getPropertyListingQualityScore(right) - getPropertyListingQualityScore(left);
     const ratingDifference = Number(right.rating || 0) - Number(left.rating || 0);
     const reviewsDifference = Number(right.reviewsCount || 0) - Number(left.reviewsCount || 0);
     const relevanceDifference = getPropertyRelevanceScore(right, context) - getPropertyRelevanceScore(left, context);
@@ -398,6 +405,10 @@ export const sortPropertiesByCatalogOrder = <T extends PropertySortLike>(
 
       if (verificationDifference !== 0) {
         return verificationDifference;
+      }
+
+      if (qualityDifference !== 0) {
+        return qualityDifference;
       }
 
       if (ratingDifference !== 0) {
@@ -428,6 +439,10 @@ export const sortPropertiesByCatalogOrder = <T extends PropertySortLike>(
         return verificationDifference;
       }
 
+      if (qualityDifference !== 0) {
+        return qualityDifference;
+      }
+
       if (relevanceDifference !== 0) {
         return relevanceDifference;
       }
@@ -441,6 +456,10 @@ export const sortPropertiesByCatalogOrder = <T extends PropertySortLike>(
 
     if (verificationDifference !== 0) {
       return verificationDifference;
+    }
+
+    if (qualityDifference !== 0) {
+      return qualityDifference;
     }
 
     if (ratingDifference !== 0) {

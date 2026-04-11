@@ -126,4 +126,37 @@ describe('propertyVerification', () => {
 
     expect(sorted.map((property) => property.id)).toEqual(['p3', 'p2', 'p1']);
   });
+
+  test('uses internal listing quality when verification is tied', () => {
+    const sorted = sortPropertiesByCatalogOrder([
+      {
+        id: 'p1',
+        verificationScore: 4,
+        rating: 4.8,
+        reviewsCount: 6,
+        price: 120_000,
+        imageUrl: 'https://example.com/cover-1.jpg',
+        location: 'Santa Teresita',
+        description: 'Casa simple.',
+      },
+      {
+        id: 'p2',
+        verificationScore: 4,
+        rating: 4.8,
+        reviewsCount: 6,
+        price: 120_000,
+        imageUrl: 'https://example.com/cover-2.jpg',
+        images: [
+          'https://example.com/cover-2.jpg',
+          'https://example.com/living-2.jpg',
+          'https://example.com/room-2.jpg',
+          'https://example.com/bath-2.jpg',
+        ],
+        location: 'Santa Teresita · centro, cerca de la playa',
+        description: 'Departamento luminoso, con cocina equipada y una zona facil para llegar caminando a la playa y al centro.',
+      },
+    ], 'verification');
+
+    expect(sorted.map((property) => property.id)).toEqual(['p2', 'p1']);
+  });
 });

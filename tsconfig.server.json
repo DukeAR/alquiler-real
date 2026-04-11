@@ -24,6 +24,7 @@
     "src/lib/platformTerms.ts",
     "src/lib/premiumVerification.ts",
     "src/lib/positiveIncentives.ts",
+    "src/lib/propertyListingQuality.ts",
     "src/lib/propertyVerification.ts",
     "src/lib/verificationModel.ts"
   ]

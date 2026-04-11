@@ -20,6 +20,7 @@ import {
   getGuestPositiveBookingProfile,
   getHostVisibilityBoost,
 } from '../src/lib/positiveIncentives';
+import { getPropertyListingQualityScore } from '../src/lib/propertyListingQuality';
 import { BOOKING_CONTRACT_PLATFORM_TERMS } from '../src/lib/platformTerms';
 import { getProtectedDepositPricingFromBooking } from '../src/lib/protectedDeposit';
 import { buildUserVerificationStatus } from '../src/lib/userVerification';
@@ -3002,45 +3003,139 @@ app.post('/api/properties', async (req, res) => {
   const risk = await checkUserRisk(req.session.userId, 'publish_property');
   if (risk.blocked) return res.status(403).json({ error: risk.reason });
 
-  const { title, location, price, description, imageUrl, lat, lng, maxGuests, bedrooms, bathrooms, propertyType } = req.body;
-  const normalizedTitle = typeof title === 'string' ? title.trim() : '';
+  const normalizePublishedPhotoUrls = (images: unknown, imageUrl: unknown) => {
+    const uniqueUrls = new Set<string>();
+
+    const pushPhoto = (candidate: unknown) => {
+      if (typeof candidate !== 'string') {
+        return;
+      }
+
+      const normalizedCandidate = candidate.trim();
+
+      if (normalizedCandidate) {
+        uniqueUrls.add(normalizedCandidate);
+      }
+    };
+
+    if (Array.isArray(images)) {
+      images.forEach(pushPhoto);
+    } else if (typeof images === 'string' && images.trim().length > 0) {
+      try {
+        const parsedImages = JSON.parse(images);
+
+        if (Array.isArray(parsedImages)) {
+          parsedImages.forEach(pushPhoto);
+        } else {
+          pushPhoto(images);
+        }
+      } catch {
+        pushPhoto(images);
+      }
+    }
+
+    pushPhoto(imageUrl);
+
+    return [...uniqueUrls];
+  };
+
+  const normalizePositiveOptionalInteger = (value: unknown) => {
+    const numericValue = typeof value === 'number' ? value : Number(value);
+    return Number.isFinite(numericValue) && numericValue > 0 ? Math.round(numericValue) : null;
+  };
+
+  const normalizePublishedPropertyType = (value: unknown) => {
+    if (typeof value !== 'string') {
+      return '';
+    }
+
+    const normalizedValue = value.trim().toLowerCase();
+    return ['house', 'apartment', 'room', 'cabin'].includes(normalizedValue) ? normalizedValue : '';
+  };
+
+  const getPublishedPropertyTypeLabel = (value: string) => {
+    if (value === 'room') return 'Habitación';
+    if (value === 'apartment') return 'Departamento';
+    if (value === 'cabin') return 'Cabaña';
+    return 'Casa';
+  };
+
+  const buildPublishTitleFallback = (input: { propertyType: string; maxGuests: number; location: string }) => {
+    const typeLabel = getPublishedPropertyTypeLabel(input.propertyType);
+    const guestLabel = `${input.maxGuests} ${input.maxGuests === 1 ? 'persona' : 'personas'}`;
+    return `${typeLabel} para ${guestLabel} en ${input.location}`;
+  };
+
+  const { title, location, price, description, imageUrl, images, lat, lng, maxGuests, beds, bedrooms, bathrooms, propertyType } = req.body;
   const normalizedLocation = typeof location === 'string' ? location.trim() : '';
   const normalizedDescription = typeof description === 'string' ? description.trim() : '';
-  const normalizedImageUrl = typeof imageUrl === 'string' ? imageUrl.trim() : '';
+  const normalizedPhotos = normalizePublishedPhotoUrls(images, imageUrl);
   const normalizedPrice = Number(price);
   const normalizedLat = lat === null || lat === undefined || lat === '' ? null : Number(lat);
   const normalizedLng = lng === null || lng === undefined || lng === '' ? null : Number(lng);
-  const normalizedMaxGuests = Number(maxGuests);
-  const normalizedBedrooms = Number(bedrooms);
-  const normalizedBathrooms = Number(bathrooms);
-  const normalizedPropertyType = typeof propertyType === 'string' ? propertyType.trim().toLowerCase() : '';
+  const normalizedMaxGuests = normalizePositiveOptionalInteger(maxGuests);
+  const normalizedBeds = normalizePositiveOptionalInteger(beds);
+  const normalizedBedrooms = normalizePositiveOptionalInteger(bedrooms);
+  const normalizedBathrooms = normalizePositiveOptionalInteger(bathrooms);
+  const normalizedPropertyType = normalizePublishedPropertyType(propertyType);
+  const normalizedTitle = typeof title === 'string' && title.trim().length > 0
+    ? title.trim()
+    : normalizedLocation && normalizedPropertyType && normalizedMaxGuests
+      ? buildPublishTitleFallback({
+          propertyType: normalizedPropertyType,
+          maxGuests: normalizedMaxGuests,
+          location: normalizedLocation,
+        })
+      : '';
 
-  if (!normalizedTitle || !normalizedLocation || !Number.isFinite(normalizedPrice) || normalizedPrice <= 0) {
-    return res.status(400).json({ error: 'Completá el tipo, la ubicación y el precio para publicar.' });
+  if (normalizedPhotos.length < 4) {
+    return res.status(400).json({ error: 'Sumá al menos 4 fotos para publicar.' });
+  }
+
+  if (!normalizedLocation) {
+    return res.status(400).json({ error: 'Marcá la zona o barrio para publicar.' });
+  }
+
+  if (!normalizedPropertyType) {
+    return res.status(400).json({ error: 'Elegí si es departamento, casa o habitación.' });
+  }
+
+  if (!normalizedMaxGuests || !normalizedBeds) {
+    return res.status(400).json({ error: 'Completá personas y camas para publicar.' });
+  }
+
+  if (!Number.isFinite(normalizedPrice) || normalizedPrice <= 0) {
+    return res.status(400).json({ error: 'Definí un precio por noche para publicar.' });
+  }
+
+  if (!normalizedTitle) {
+    return res.status(400).json({ error: 'No pudimos generar un título para publicar.' });
   }
 
   try {
     const id = `prop_${Date.now()}`;
     const result = await db.query(
       `INSERT INTO properties (
-         id, title, location, price, "hostId", description, "imageUrl", lat, lng, status,
-         "maxGuests", bedrooms, bathrooms, property_type
+         id, title, location, price, "hostId", description, "imageUrl", images, lat, lng, status,
+         "maxGuests", beds, bedrooms, bathrooms, property_type
        )
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'active', $10, $11, $12, $13) RETURNING *`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'active', $11, $12, $13, $14, $15) RETURNING *`,
       [
         id,
         normalizedTitle,
         normalizedLocation,
         normalizedPrice,
         req.session.userId,
-        normalizedDescription,
-        normalizedImageUrl || null,
+        normalizedDescription || null,
+        normalizedPhotos[0] ?? null,
+        JSON.stringify(normalizedPhotos),
         Number.isFinite(normalizedLat) ? normalizedLat : null,
         Number.isFinite(normalizedLng) ? normalizedLng : null,
-        Number.isFinite(normalizedMaxGuests) && normalizedMaxGuests > 0 ? normalizedMaxGuests : 1,
-        Number.isFinite(normalizedBedrooms) && normalizedBedrooms > 0 ? normalizedBedrooms : 1,
-        Number.isFinite(normalizedBathrooms) && normalizedBathrooms > 0 ? normalizedBathrooms : 1,
-        normalizedPropertyType || 'house',
+        normalizedMaxGuests,
+        normalizedBeds,
+        normalizedBedrooms,
+        normalizedBathrooms,
+        normalizedPropertyType,
       ]
     );
     // Update host total_properties
@@ -3104,11 +3199,11 @@ app.get('/api/properties', async (req, res) => {
     let query = `
       SELECT
         p.id, p.title, p.location, p.price, p."hostId", p."hostName",
-        p.description, p."imageUrl", p.rating, p."reviewsCount",
+        p.description, p."imageUrl", p.images, p.rating, p."reviewsCount",
         p."identityValidated", p."locationVerified", p."materialVerified", p."videoValidated",
         COALESCE(u.internal_visibility_penalty, 0) as "internalVisibilityPenalty",
         p."traceabilityLevel", p."maxGuests", p."hasPresencialVerification", p."onsiteVerifiedAt", p."hasDigitalVerification", p.lat, p.lng,
-        p.bedrooms, p.bathrooms, p.property_type as "propertyType",
+        p.beds, p.bedrooms, p.bathrooms, p.property_type as "propertyType",
         p.is_verified_property as "isVerifiedProperty",
         ${PROPERTY_HOST_TRUST_SELECT}
       FROM properties p
@@ -3139,12 +3234,14 @@ app.get('/api/properties', async (req, res) => {
           property: mappedProperty,
           internalVisibilityPenalty: Number(property.internalVisibilityPenalty ?? 0),
           hostVisibilityBoost: getHostVisibilityBoost(mappedProperty.hostInteractionHistory),
+          listingQualityScore: getPropertyListingQualityScore(mappedProperty),
         };
       })
       .filter(({ property }) => verifiedOnly === 'true' ? property.verificationScore >= REAL_VERIFICATION_FILTER_MIN_SCORE : true)
       .sort((left, right) => (
         left.internalVisibilityPenalty - right.internalVisibilityPenalty
         || right.hostVisibilityBoost - left.hostVisibilityBoost
+        || right.listingQualityScore - left.listingQualityScore
         || Number(right.property.rating ?? 0) - Number(left.property.rating ?? 0)
       ))
       .map(({ property }) => property);

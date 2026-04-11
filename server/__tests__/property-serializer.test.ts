@@ -115,4 +115,27 @@ describe('mapPropertyRecord', () => {
       status: 'pending',
     });
   });
+
+  test('normalizes optional gallery images and beds when they are available', () => {
+    const property = mapPropertyRecord({
+      id: 'prop-3',
+      title: 'Habitacion cerca del centro',
+      location: 'Santa Teresita · centro',
+      price: '72000',
+      rating: '4.2',
+      reviewsCount: '3',
+      imageUrl: 'https://example.com/cover.jpg',
+      images: JSON.stringify([
+        'https://example.com/cover.jpg',
+        'https://example.com/room.jpg',
+      ]),
+      beds: '2',
+    });
+
+    expect(property.images).toEqual([
+      'https://example.com/cover.jpg',
+      'https://example.com/room.jpg',
+    ]);
+    expect(property.beds).toBe(2);
+  });
 });

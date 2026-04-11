@@ -302,15 +302,22 @@ describe('Properties endpoints', () => {
           rows: [
             {
               id: 'prop_new',
-              title: 'Casa en Santa Teresita',
-              location: 'Santa Teresita · Calle 35',
+              title: 'Casa para 4 personas en Santa Teresita · centro',
+              location: 'Santa Teresita · centro',
               price: 98000,
               hostId: 'user-1',
               description: 'Lista para publicarse.',
-              imageUrl: 'https://example.com/photo.jpg',
+              imageUrl: 'https://example.com/photo-1.jpg',
+              images: JSON.stringify([
+                'https://example.com/photo-1.jpg',
+                'https://example.com/photo-2.jpg',
+                'https://example.com/photo-3.jpg',
+                'https://example.com/photo-4.jpg',
+              ]),
               maxGuests: 4,
-              bedrooms: 2,
-              bathrooms: 1,
+              beds: 3,
+              bedrooms: null,
+              bathrooms: null,
               property_type: 'house',
               status: 'active',
             },
@@ -329,26 +336,29 @@ describe('Properties endpoints', () => {
       .post('/api/properties')
       .set('x-test-user-id', 'user-1')
       .send({
-        title: 'Casa en Santa Teresita',
-        location: 'Santa Teresita · Calle 35',
+        title: 'Casa para 4 personas en Santa Teresita · centro',
+        location: 'Santa Teresita · centro',
         price: 98000,
         description: 'Lista para publicarse.',
-        imageUrl: 'https://example.com/photo.jpg',
+        images: [
+          'https://example.com/photo-1.jpg',
+          'https://example.com/photo-2.jpg',
+          'https://example.com/photo-3.jpg',
+          'https://example.com/photo-4.jpg',
+        ],
         maxGuests: 4,
-        bedrooms: 2,
-        bathrooms: 1,
+        beds: 3,
         propertyType: 'house',
       });
 
     expect(res.status).toBe(201);
     expect(res.body).toMatchObject({
       id: 'prop_new',
-      title: 'Casa en Santa Teresita',
-      location: 'Santa Teresita · Calle 35',
+      title: 'Casa para 4 personas en Santa Teresita · centro',
+      location: 'Santa Teresita · centro',
       price: 98000,
       maxGuests: 4,
-      bedrooms: 2,
-      bathrooms: 1,
+      beds: 3,
       property_type: 'house',
       status: 'active',
     });
@@ -358,5 +368,18 @@ describe('Properties endpoints', () => {
     expect(queryMock.mock.calls[2]?.[0]).toContain('internal_trust_score');
     expect(queryMock.mock.calls[3]?.[0]).toContain('INSERT INTO properties');
     expect(queryMock.mock.calls[4]?.[0]).toContain('total_properties = total_properties + 1');
+    expect(queryMock.mock.calls[3]?.[1]).toEqual(expect.arrayContaining([
+      'Casa para 4 personas en Santa Teresita · centro',
+      'Santa Teresita · centro',
+      JSON.stringify([
+        'https://example.com/photo-1.jpg',
+        'https://example.com/photo-2.jpg',
+        'https://example.com/photo-3.jpg',
+        'https://example.com/photo-4.jpg',
+      ]),
+      4,
+      3,
+      'house',
+    ]));
   });
 });

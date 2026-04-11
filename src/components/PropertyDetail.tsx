@@ -235,6 +235,7 @@ const getPropertyTypeLabel = (property: PropertyDetailData) => {
 
   if (explicitType?.includes('house') || explicitType?.includes('casa')) return 'Casa';
   if (explicitType?.includes('apartment') || explicitType?.includes('depto') || explicitType?.includes('depart')) return 'Departamento';
+  if (explicitType?.includes('room') || explicitType?.includes('habitacion') || explicitType?.includes('habitación')) return 'Habitación';
   if (explicitType?.includes('cabin') || explicitType?.includes('caba')) return 'Cabaña';
 
   const title = property.title
@@ -246,6 +247,7 @@ const getPropertyTypeLabel = (property: PropertyDetailData) => {
   if (title.includes('duplex') || title.includes('chalet') || /(^|\s)ph($|\s)/.test(title)) return 'Casa';
   if (title.includes('monoambiente')) return 'Departamento';
   if (title.includes('depto') || title.includes('depart')) return 'Departamento';
+  if (title.includes('habitacion') || title.includes('habitación') || title.includes('cuarto')) return 'Habitación';
   if (title.includes('caba')) return 'Cabaña';
 
   return 'Alojamiento';
@@ -382,6 +384,7 @@ export const PropertyDetailShell: React.FC<{
   const reviewCount = Math.max(Number(property.reviewsCount) || 0, reviews.length);
   const nightly = getPositiveNumber(property?.price) ?? 0;
   const maxGuestsNumber = getPositiveNumber(property.maxGuests);
+  const bedsCount = getPositiveNumber(property.beds);
   const bedroomsCount = getPositiveNumber(property.bedrooms);
   const bathroomsCount = getPositiveNumber(property.bathrooms);
   const guestCapacity = formatGuestCapacity(maxGuestsNumber);
@@ -389,6 +392,7 @@ export const PropertyDetailShell: React.FC<{
   const propertyTypeLabel = getPropertyTypeLabel(property);
   const decisionAmenityLabel = getDecisionAmenityLabel(property.amenities);
   const roomSummary = [
+    bedsCount ? formatCountLabel(bedsCount, 'cama', 'camas') : null,
     bedroomsCount ? formatCountLabel(bedroomsCount, 'dormitorio', 'dormitorios') : null,
     bathroomsCount ? formatCountLabel(bathroomsCount, 'baño', 'baños') : null,
   ].filter((value): value is string => Boolean(value));

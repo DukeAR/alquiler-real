@@ -747,6 +747,7 @@ export const initDB = async () => {
       "hostName" TEXT DEFAULT 'Anfitrión',
       description TEXT,
       "imageUrl" TEXT,
+      images TEXT DEFAULT '[]',
       rating REAL DEFAULT 0,
       "reviewsCount" INTEGER DEFAULT 0,
       "identityValidated" INTEGER DEFAULT 0,
@@ -755,6 +756,7 @@ export const initDB = async () => {
       "videoValidated" INTEGER DEFAULT 0,
       "traceabilityLevel" TEXT DEFAULT 'low',
       "maxGuests" INTEGER DEFAULT 4,
+      beds INTEGER,
       "hasPresencialVerification" INTEGER DEFAULT 0,
       "onsiteVerifiedAt" TIMESTAMP,
       "hasDigitalVerification" INTEGER DEFAULT 0,
@@ -772,10 +774,12 @@ export const initDB = async () => {
   // Add lat/lng columns if they don't exist yet
   await db.query(`
     DO $$ BEGIN
+      BEGIN ALTER TABLE properties ADD COLUMN images TEXT DEFAULT '[]'; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE properties ADD COLUMN lat DOUBLE PRECISION DEFAULT -36.3536; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE properties ADD COLUMN lng DOUBLE PRECISION DEFAULT -56.7196; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE properties ADD COLUMN status TEXT DEFAULT 'active'; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE properties ADD COLUMN is_verified_property BOOLEAN DEFAULT FALSE; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE properties ADD COLUMN beds INTEGER; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE properties ADD COLUMN bedrooms INTEGER DEFAULT 1; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE properties ADD COLUMN bathrooms INTEGER DEFAULT 1; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE properties ADD COLUMN property_type TEXT DEFAULT 'house'; EXCEPTION WHEN duplicate_column THEN NULL; END;
@@ -790,6 +794,21 @@ export const initDB = async () => {
     SET "materialVerified" = COALESCE("videoValidated", 0)
     WHERE COALESCE("materialVerified", 0) = 0
       AND COALESCE("videoValidated", 0) <> 0;
+  `);
+
+  await db.query(`
+    UPDATE properties
+    SET images = CASE
+      WHEN COALESCE(TRIM(images), '') = '' AND COALESCE(TRIM("imageUrl"), '') <> '' THEN json_build_array("imageUrl")::text
+      ELSE COALESCE(images, '[]')
+    END
+    WHERE images IS NULL OR TRIM(images) = '';
+  `);
+
+  await db.query(`
+    UPDATE properties
+    SET beds = COALESCE(beds, bedrooms)
+    WHERE beds IS NULL AND bedrooms IS NOT NULL;
   `);
 
   // ============================================================
