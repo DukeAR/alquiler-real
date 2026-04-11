@@ -168,7 +168,7 @@ describe('HostDashboard', () => {
     expect(screen.getByText('12 de 20 visitas abrieron disponibilidad.')).toBeInTheDocument();
     expect(screen.getByText('Mostramos qué está comprobado para que otros puedan decidir mejor sobre tu aviso.')).toBeInTheDocument();
     expect(screen.getByText('4 de 5 comprobaciones')).toBeInTheDocument();
-    expect(screen.getByText('Te falta 1 comprobación para completar este aviso.')).toBeInTheDocument();
+    expect(screen.getByText('Falta 1 comprobación para terminar de ordenar este aviso.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Solicitar verificación presencial/i })).toBeInTheDocument();
 
     fireEvent.click((await screen.findAllByRole('button', { name: /Disponibilidad/i }))[1]!);
@@ -294,31 +294,25 @@ describe('HostDashboard', () => {
 
     const profileCard = await screen.findByTestId('guest-request-profile-card');
 
-    expect(within(profileCard).getByText('Antes de aceptar, podés revisar esto')).toBeInTheDocument();
+    expect(within(profileCard).getByText('Lo que ya podés revisar antes de aceptar')).toBeInTheDocument();
+    expect(within(profileCard).getByText('Señales rápidas')).toBeInTheDocument();
     expect(within(profileCard).getByText('Comprobaciones del huésped')).toBeInTheDocument();
     expect(within(profileCard).getByText('5 de 5 comprobaciones')).toBeInTheDocument();
-    expect(within(profileCard).getByText('Mostramos qué ya está comprobado en esta cuenta.')).toBeInTheDocument();
-    expect(within(profileCard).getByText('Email verificado')).toBeInTheDocument();
-    expect(within(profileCard).getByText('Identidad documental')).toBeInTheDocument();
-    expect(within(profileCard).getByText('Datos del huésped')).toBeInTheDocument();
+    expect(within(profileCard).getByText('Mostramos qué ya está comprobado en esta cuenta y qué todavía no aparece como visible.')).toBeInTheDocument();
+    expect(within(profileCard).getAllByText('Email verificado').length).toBeGreaterThan(0);
+    expect(within(profileCard).getAllByText('Identidad documental').length).toBeGreaterThan(0);
     expect(within(profileCard).getByText('Historial compartido')).toBeInTheDocument();
-    expect(within(profileCard).getByText('Señales de esta operación')).toBeInTheDocument();
-    expect(within(profileCard).getByText('Reseñas de anfitriones')).toBeInTheDocument();
-    expect(within(profileCard).getByText('Confirmada')).toBeInTheDocument();
+    expect(within(profileCard).getByText('Última referencia visible')).toBeInTheDocument();
+    expect(within(profileCard).getByText('Usuario desde')).toBeInTheDocument();
     expect(within(profileCard).getByText('Estadías completadas')).toBeInTheDocument();
     expect(within(profileCard).getByText('Se cumplió lo acordado')).toBeInTheDocument();
-    expect(within(profileCard).getByText('Volverían a interactuar')).toBeInTheDocument();
-    expect(within(profileCard).getByText('Hubo una situación a considerar')).toBeInTheDocument();
-    expect(within(profileCard).getByText('Consultó antes de reservar')).toBeInTheDocument();
-    expect(within(profileCard).getByText('Completó sus datos')).toBeInTheDocument();
     expect(within(profileCard).getByText('2022')).toBeInTheDocument();
     expect(within(profileCard).getByText('La coordinación fue clara y la estadía avanzó sin cambios de último momento.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Ver ficha del huésped' })).not.toBeInTheDocument();
 
     const profileText = profileCard.textContent ?? '';
-    expect(profileText.indexOf('Datos del huésped')).toBeLessThan(profileText.indexOf('Señales de esta operación'));
-    expect(profileText.indexOf('Historial compartido')).toBeLessThan(profileText.indexOf('Señales de esta operación'));
-    expect(profileText.indexOf('Señales de esta operación')).toBeLessThan(profileText.indexOf('Reseñas de anfitriones'));
+    expect(profileText.indexOf('Señales rápidas')).toBeLessThan(profileText.indexOf('Comprobaciones del huésped'));
+    expect(profileText.indexOf('Comprobaciones del huésped')).toBeLessThan(profileText.indexOf('Historial compartido'));
   });
 
   test('lets the host accept a pending request from the dashboard and open its chat', async () => {
@@ -457,7 +451,9 @@ describe('HostDashboard', () => {
 
     expect(within(profileCard).getByText('Estamos armando esta ficha')).toBeInTheDocument();
     expect(within(profileCard).getByText('Todavía se están cargando los primeros datos de esta cuenta.')).toBeInTheDocument();
-    expect(within(profileCard).getAllByText('Todavía no disponible').length).toBeGreaterThan(0);
+    expect(within(profileCard).getByText('Todavía no hay suficientes señales visibles para resumir esta cuenta.')).toBeInTheDocument();
+    expect(within(profileCard).getByText('0 de 5 comprobaciones')).toBeInTheDocument();
+    expect(within(profileCard).getAllByText('Todavía no visible').length).toBeGreaterThan(0);
   });
 
   test('shows a specific copy for a guest with an account but no visible history yet', async () => {
@@ -565,13 +561,13 @@ describe('HostDashboard', () => {
     expect(within(profileCard).getByText('Cuenta sin historial todavía')).toBeInTheDocument();
     expect(within(profileCard).getByText('Comprobaciones del huésped')).toBeInTheDocument();
     expect(within(profileCard).getByText('Todavía no hay estadías ni reseñas de anfitriones para revisar.')).toBeInTheDocument();
-    expect(within(profileCard).getByText('Todavía no hay reseñas de anfitriones porque esta cuenta todavía no tiene estadías visibles.')).toBeInTheDocument();
-    expect(within(profileCard).getByText('Completó sus datos')).toBeInTheDocument();
+    expect(within(profileCard).getByText('Historial compartido')).toBeInTheDocument();
+    expect(within(profileCard).getByText('Todavía no hay suficientes cierres compartidos para resumir esta cuenta.')).toBeInTheDocument();
     expect(within(profileCard).getByText('2 de 5 comprobaciones')).toBeInTheDocument();
-    expect(within(profileCard).getByText('Mostramos qué ya está comprobado en esta cuenta.')).toBeInTheDocument();
-    expect(within(profileCard).getByText('Email verificado')).toBeInTheDocument();
-    expect(within(profileCard).getByText('Identidad documental')).toBeInTheDocument();
-    expect(within(profileCard).queryByText('Teléfono verificado')).not.toBeInTheDocument();
+    expect(within(profileCard).getByText('Mostramos qué ya está comprobado en esta cuenta y qué todavía no aparece como visible.')).toBeInTheDocument();
+    expect(within(profileCard).getAllByText('Email verificado').length).toBeGreaterThan(0);
+    expect(within(profileCard).getAllByText('Identidad documental').length).toBeGreaterThan(0);
+    expect(within(profileCard).getByText('Teléfono verificado')).toBeInTheDocument();
   });
 
   test('lets the host mark a protected no show and keeps the deposit pending confirmation', async () => {

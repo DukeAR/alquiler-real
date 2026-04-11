@@ -3,6 +3,7 @@ import { Icons } from './Icons';
 import { HostProfile } from '../services/geminiService';
 import { getHostResponseSignal } from '../lib/positiveIncentives';
 import { InteractionHistorySignals } from './ui/InteractionHistorySignals';
+import { TrustSignalsInline, type TrustSignal } from './ui/TrustSignalsInline';
 
 interface HostProfileViewProps {
   profile: HostProfile;
@@ -52,6 +53,27 @@ export const HostProfileView: React.FC<HostProfileViewProps> = ({ profile, onBac
       ? `~${profile.avgResponseTimeMinutes} min`
       : 'Dentro del día'
     : 'Sin dato';
+  const headerSignals: TrustSignal[] = [];
+
+  if (profile.identityValidated) {
+    headerSignals.push({ key: 'identity', label: 'Identidad validada', tone: 'brand' });
+  }
+
+  if (profile.emailVerified) {
+    headerSignals.push({ key: 'email', label: 'Email confirmado', tone: 'neutral' });
+  }
+
+  if (responseSignal?.label) {
+    headerSignals.push({ key: 'response', label: responseSignal.label, tone: 'neutral' });
+  }
+
+  if (profile.completedStaysCount > 0) {
+    headerSignals.push({
+      key: 'stays',
+      label: formatCountLabel(profile.completedStaysCount, '1 estadía cerrada', `${profile.completedStaysCount} estadías cerradas`),
+      tone: 'neutral',
+    });
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 pb-24 dark:bg-slate-950">
@@ -69,26 +91,34 @@ export const HostProfileView: React.FC<HostProfileViewProps> = ({ profile, onBac
 
       <main className="mx-auto max-w-3xl space-y-6 px-4 py-6 sm:px-6">
         <section className="rounded-[32px] border border-slate-200/80 bg-white p-6 shadow-[0_24px_60px_-46px_rgba(15,23,42,0.24)] dark:border-slate-800 dark:bg-slate-900">
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-4">
-              <div className="relative flex h-20 w-20 items-center justify-center rounded-full bg-slate-200 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
-                <Icons.User className="h-10 w-10" />
-                {profile.identityValidated ? (
-                  <span className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full border-4 border-white bg-emerald-500 text-white dark:border-slate-900">
-                    <Icons.ShieldCheck className="h-4 w-4" />
-                  </span>
-                ) : null}
+          <div className="space-y-5">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-4">
+                <div className="relative flex h-20 w-20 items-center justify-center rounded-full bg-slate-200 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+                  <Icons.User className="h-10 w-10" />
+                  {profile.identityValidated ? (
+                    <span className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full border-4 border-white bg-emerald-500 text-white dark:border-slate-900">
+                      <Icons.ShieldCheck className="h-4 w-4" />
+                    </span>
+                  ) : null}
+                </div>
+
+                <div>
+                  <h2 className="text-2xl font-semibold tracking-tight text-slate-950 dark:text-slate-50">{profile.name}</h2>
+                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Miembro desde {memberSinceLabel}</p>
+                </div>
               </div>
 
-              <div>
-                <h2 className="text-2xl font-semibold tracking-tight text-slate-950 dark:text-slate-50">{profile.name}</h2>
-                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Miembro desde {memberSinceLabel}</p>
-              </div>
+              <p className="max-w-sm text-sm leading-6 text-slate-500 dark:text-slate-400">
+                Mostramos actividad real, tiempos de respuesta y cierres compartidos. No usamos etiquetas públicas de resultado.
+              </p>
             </div>
 
-            <div className="rounded-[24px] border border-brand/15 bg-brand/5 px-4 py-3 text-sm leading-6 text-slate-600 dark:border-brand/20 dark:bg-brand/10 dark:text-slate-300">
-              Mostramos actividad real, tiempos de respuesta y cierres compartidos. No usamos estrellas ni etiquetas públicas.
-            </div>
+            <TrustSignalsInline
+              title="Qué deja claro este perfil"
+              signals={headerSignals}
+              emptyText="Todavía no hay suficientes señales visibles para resumir este perfil."
+            />
           </div>
         </section>
 

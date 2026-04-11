@@ -15,9 +15,12 @@ import { formatBookingDateShort, getBookingDateOnlyValue, isBookingCheckInReache
 import { formatGuestMemberSinceYear, resolveGuestRequestProfile } from '../lib/guestRequestProfile';
 import { getGuestPositiveCoordinationSignals, getHostResponseSignal } from '../lib/positiveIncentives';
 import { getProtectedDepositPricingFromBooking } from '../lib/protectedDeposit';
-import { getReservationFlowCopy, getReservationFlowMilestones } from '../lib/reservationFlow';
+import { getReservationFlowCopy } from '../lib/reservationFlow';
 import { trackFrontendFunnelEvent } from '../lib/funnelTracking';
-import { getVerificationSummaryItems, getVerificationSummaryLabel } from './ui/VerificationMeter';
+import { ChatContextBar } from './ui/ChatContextBar';
+import { DepositChoiceBlock } from './ui/DepositChoiceBlock';
+import { SystemEventMessage } from './ui/SystemEventMessage';
+import { getTrustSignalsFromInteractionHistory, getTrustSignalsFromItems, type TrustSignal } from './ui/TrustSignalsInline';
 
 type InlineThreadNoticeTone = 'neutral' | 'warning' | 'brand';
 
@@ -33,6 +36,7 @@ type SystemMessageActionKind = 'report-direct-deposit' | 'pay-protected-deposit'
 type ThreadSystemMessagePresentation = {
   content: string;
   emphasis: 'pill' | 'card';
+  tone?: 'neutral' | 'brand' | 'warning' | 'success';
   hidden?: boolean;
   supplementaryContent?: string;
   action?: {
@@ -108,18 +112,6 @@ const getInteractionSummaryLine = (labels: string[]) => {
   const remainingCount = Math.max(0, labels.length - visibleLabels.length);
 
   return `${visibleLabels.join(' · ')}${remainingCount > 0 ? ` · +${remainingCount}` : ''}`;
-};
-
-const getGuestVerificationItemShortLabel = (label: string) => {
-  if (/historial/i.test(label)) {
-    return 'Historial en la plataforma';
-  }
-
-  if (/identidad/i.test(label)) {
-    return 'Identidad verificada';
-  }
-
-  return label;
 };
 
 type HostCloseIntent = 'advance-deposit' | 'confirm-reservation';
@@ -940,30 +932,65 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
         guestProfile: activeConv.guestProfile ?? null,
       })
     : null;
-  const guestVerificationLabel = guestContextProfile
-    ? getVerificationSummaryLabel(guestContextProfile.verificationSummary)
-    : null;
   const guestPositiveSignals = guestContextProfile
     ? getGuestPositiveCoordinationSignals(guestContextProfile)
     : [];
-  const guestCompletedChecks = guestContextProfile
-    ? getVerificationSummaryItems(guestContextProfile.verificationSummary, { status: 'complete', limit: 3 })
-        .map((item) => getGuestVerificationItemShortLabel(item.label))
-    : [];
-  const guestContextStats = guestContextProfile
-    ? [
-        ...guestPositiveSignals,
-        guestContextProfile.dataAvailability.memberSince && guestContextProfile.memberSince.trim()
-          ? `Usuario desde ${formatGuestMemberSinceYear(guestContextProfile.memberSince)}`
-          : null,
-      ].filter((value): value is string => Boolean(value))
-    : [];
-  const guestSummaryBadges = guestContextProfile
-    ? [guestVerificationLabel, guestCompletedChecks[0] ?? null, guestContextStats[0] ?? null]
-        .filter((value): value is string => Boolean(value))
-        .slice(0, 3)
-    : [];
   const interactionContinuity = activeConv?.interactionContinuity ?? null;
+  const chatContextSignals = (() => {
+    const mergedSignals: TrustSignal[] = [];
+    const seenLabels = new Set<string>();
+    const pushSignals = (nextSignals: TrustSignal[]) => {
+      nextSignals.forEach((signal) => {
+        if (mergedSignals.length >= 3 || seenLabels.has(signal.label)) {
+          return;
+        }
+
+        mergedSignals.push(signal);
+        seenLabels.add(signal.label);
+      });
+    };
+
+    if (isTenantConversation) {
+      pushSignals(getTrustSignalsFromItems(Array.isArray(activeConv?.hostTrust?.items) ? activeConv.hostTrust.items : [], { limit: 3, tone: 'brand' }));
+      const hostChatSignals: TrustSignal[] = [];
+
+      if (hostResponseSignal?.label) {
+        hostChatSignals.push({ key: 'host-response', label: hostResponseSignal.label, tone: 'neutral' });
+      }
+
+      pushSignals(hostChatSignals);
+      pushSignals(getTrustSignalsFromInteractionHistory(activeConv?.hostInteractionHistory?.publicSignals ?? [], { limit: 2, tone: 'neutral' }));
+    }
+
+    if (isHostConversation && guestContextProfile) {
+      pushSignals(getTrustSignalsFromItems(guestContextProfile.verificationSummary.items ?? [], { limit: 2, tone: 'success' }));
+      const guestChatSignals: TrustSignal[] = [];
+
+      if (guestPositiveSignals[0]) {
+        guestChatSignals.push({ key: 'guest-positive', label: guestPositiveSignals[0], tone: 'neutral' });
+      }
+
+      if (guestContextProfile.dataAvailability.memberSince && guestContextProfile.memberSince.trim()) {
+        guestChatSignals.push({
+          key: 'guest-member-since',
+          label: `Usuario desde ${formatGuestMemberSinceYear(guestContextProfile.memberSince)}`,
+          tone: 'neutral',
+        });
+      }
+
+      pushSignals(guestChatSignals);
+    }
+
+    const continuitySignals: TrustSignal[] = [];
+
+    if (interactionContinuity?.label) {
+      continuitySignals.push({ key: 'interaction-continuity', label: interactionContinuity.label, tone: 'brand' });
+    }
+
+    pushSignals(continuitySignals);
+
+    return mergedSignals.slice(0, 3);
+  })();
   const hasAuthoredConversationMessage = Boolean(
     user && messages.some((message) => !message.is_system && message.sender_id === user.id),
   );
@@ -986,17 +1013,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
   const isRequestExpired = Boolean(requestDeadline && Date.now() > requestDeadline.getTime());
   const isExpiredPendingRequest = Boolean(flowCopy?.stage === 'request-pending' && isRequestExpired);
   const compactReservationStatus = getCompactReservationStatus(flowCopy?.stage ?? null, isExpiredPendingRequest);
-  const reservationMilestones = activeRequestContext
-    ? getReservationFlowMilestones({
-        mode: activeRequestContext.mode,
-        depositType: activeRequestContext.depositType,
-        requestStatus: activeRequestContext.requestStatus,
-        bookingStatus: activeRequestContext.bookingStatus,
-        depositStatus: activeRequestContext.depositStatus,
-        cancellationActor: activeRequestContext.cancellationActor,
-        viewerRole: isTenantConversation ? 'guest' : 'host',
-      })
-    : [];
+  const chatContextHelper = interactionContinuity?.detail ?? (isTenantConversation ? hostHistoryLine : null);
   const requestHeading = isExpiredPendingRequest ? 'Solicitud vencida' : flowCopy?.statusLabel ?? null;
   const requestDescription = isExpiredPendingRequest
     ? isTenantConversation
@@ -1362,6 +1379,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
       return {
         content: message.content,
         emphasis: 'pill',
+        tone: 'brand',
       };
     }
 
@@ -1371,6 +1389,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
           ? 'Solicitud enviada. Falta la respuesta del anfitrión.'
           : 'Propuesta enviada. Falta la respuesta del anfitrión.',
         emphasis: 'pill',
+        tone: 'brand',
       };
     }
 
@@ -1380,6 +1399,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
           ? 'Marcaste que no podés avanzar con esta reserva.'
           : 'No se pudo avanzar con esta reserva.',
         emphasis: 'card',
+        tone: 'warning',
         supplementaryContent: isHostConversation
           ? 'El chat sigue abierto por si quieren recoordinar por acá.'
           : 'El anfitrión no puede avanzar en este momento. Podés seguir conversando o buscar otras opciones.',
@@ -1392,6 +1412,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
           ? 'El siguiente paso es que el huésped defina la seña.'
           : 'Podés elegir si dejar la seña registrada acá o coordinarla por fuera.',
         emphasis: 'card',
+        tone: 'brand',
         supplementaryContent: isHostConversation
           ? 'La opción registrada la deja asentada. La externa sigue por chat y ambas quedan visibles.'
           : protectedDepositPreview
@@ -1410,7 +1431,9 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
           : 'El anfitrión aceptó la propuesta.';
       const supplementaryContent = activeRequestContext?.mode === 'protected'
         ? canPayProtectedDeposit
-          ? 'Ya podés dejar la seña registrada.'
+          ? protectedDepositPreview
+            ? `Ya podés registrar la seña: ${currencyFormatter.format(protectedDepositPreview.depositAmount)} + fee ${currencyFormatter.format(protectedDepositPreview.serviceFee)} = ${currencyFormatter.format(protectedDepositPreview.totalCharge)}.`
+            : 'Ya podés dejar la seña registrada.'
           : 'Ahora falta que el huésped registre la seña en la app.'
         : canReportDirectDeposit
           ? 'Ya podés informar la seña.'
@@ -1419,6 +1442,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
       return {
         content,
         emphasis: 'card',
+        tone: 'brand',
         supplementaryContent,
         action: canPayProtectedDeposit
           ? {
@@ -1446,6 +1470,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
       return {
         content: message.content,
         emphasis: 'pill',
+        tone: 'neutral',
       };
     }
 
@@ -1453,6 +1478,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
       return {
         content: message.content,
         emphasis: 'card',
+        tone: 'brand',
         supplementaryContent: protectedDepositPreview
           ? `Seña ${currencyFormatter.format(protectedDepositPreview.depositAmount)} · Fee ${currencyFormatter.format(protectedDepositPreview.serviceFee)} · Total ${currencyFormatter.format(protectedDepositPreview.totalCharge)}`
           : undefined,
@@ -1465,6 +1491,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
           ? 'El huésped eligió coordinar la seña por fuera.'
           : 'Coordinás la seña directo con el anfitrión.',
         emphasis: 'card',
+        tone: 'neutral',
         supplementaryContent: isHostConversation
           ? 'Si cambian de idea antes de informarla, el huésped puede dejarla registrada acá.'
           : 'Si cambiás de idea antes de informarla, podés dejarla registrada acá.',
@@ -1487,6 +1514,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
       return {
         content: 'La seña fue informada.',
         emphasis: 'card',
+        tone: 'brand',
         supplementaryContent: 'Falta confirmar la recepción.',
         action: canConfirmDirectDeposit
           ? {
@@ -1503,6 +1531,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
       return {
         content: 'Reserva confirmada',
         emphasis: 'pill',
+        tone: 'success',
         supplementaryContent: 'La reserva ya quedó cerrada. Solo falta coordinar la llegada.',
       };
     }
@@ -1513,6 +1542,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
           ? 'La seña ya quedó registrada y se libera cuando confirmás la llegada.'
           : 'La seña ya quedó registrada y se libera cuando el huésped confirma la llegada.',
         emphasis: 'card',
+        tone: 'brand',
       };
     }
 
@@ -1520,6 +1550,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
       return {
         content: 'La seña quedó en revisión.',
         emphasis: 'pill',
+        tone: 'warning',
         supplementaryContent: 'La plataforma está revisando qué pasó.',
       };
     }
@@ -1528,6 +1559,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
       return {
         content: 'La llegada quedó en revisión.',
         emphasis: 'pill',
+        tone: 'warning',
         supplementaryContent: 'La seña sigue en pausa hasta cerrar la revisión.',
       };
     }
@@ -1536,6 +1568,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
       return {
         content: 'Reserva confirmada',
         emphasis: 'pill',
+        tone: 'success',
         supplementaryContent: 'La llegada ya quedó confirmada y la seña ya salió de custodia.',
       };
     }
@@ -1550,12 +1583,14 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
       return {
         content: message.content,
         emphasis: 'pill',
+        tone: 'neutral',
       };
     }
 
     return {
       content: message.content,
       emphasis: 'pill',
+      tone: 'neutral',
     };
   };
 
@@ -1634,11 +1669,6 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                   <h3 className="text-base font-semibold tracking-tight text-slate-950 dark:text-white sm:text-lg">
                     {counterpartyName}
                   </h3>
-                  {hostHistoryLine ? (
-                    <p className="mt-1 text-[11px] font-medium leading-5 text-slate-500 dark:text-slate-300">
-                      {hostHistoryLine}
-                    </p>
-                  ) : null}
                 </div>
               </div>
               <button onClick={() => setShowReportModal(true)} className="rounded-full p-2.5 text-slate-400 transition-colors hover:text-red-500">
@@ -1646,73 +1676,12 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
               </button>
             </div>
 
-            {contextSummaryLine || compactReservationStatus || interactionContinuity || guestSummaryBadges.length > 0 || reservationMilestones.length > 0 ? (
-              <div className="border-b border-slate-100 bg-slate-50/75 px-4 py-2.5 dark:border-slate-800 dark:bg-slate-900/40 sm:px-6">
-                <div className="mx-auto max-w-4xl space-y-3">
-                  <div className="flex flex-wrap gap-2 overflow-x-auto no-scrollbar">
-                    {contextSummaryLine ? (
-                      <p className="inline-flex items-center rounded-full border border-slate-200/80 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200">
-                        {contextSummaryLine}
-                      </p>
-                    ) : null}
-                    {compactReservationStatus ? (
-                      <p className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white px-3 py-1.5 text-[11px] font-medium text-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300">
-                        <span className={cn(
-                          'h-1.5 w-1.5 rounded-full',
-                          compactReservationStatus.tone === 'success'
-                            ? 'bg-emerald-500'
-                            : compactReservationStatus.tone === 'brand'
-                              ? 'bg-brand'
-                              : compactReservationStatus.tone === 'warning'
-                                ? 'bg-amber-500'
-                                : 'bg-slate-400'
-                        )} />
-                        <span>Estado: {compactReservationStatus.label}</span>
-                      </p>
-                    ) : null}
-                    {interactionContinuity ? (
-                      <p className="inline-flex items-center gap-2 rounded-full border border-emerald-200/80 bg-emerald-50 px-3 py-1.5 text-[11px] font-semibold text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-950/40 dark:text-emerald-300">
-                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                        <span>{interactionContinuity.label}</span>
-                      </p>
-                    ) : null}
-                    {guestSummaryBadges.map((badge) => (
-                      <p key={badge} className="inline-flex items-center rounded-full border border-slate-200/80 bg-white px-3 py-1.5 text-[11px] font-medium text-slate-600 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300">
-                        {badge}
-                      </p>
-                    ))}
-                  </div>
-
-                  {reservationMilestones.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {reservationMilestones.map((milestone) => (
-                        <div
-                          key={milestone.key}
-                          className={cn(
-                            'inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] font-medium',
-                            milestone.state === 'completed'
-                              ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-950/40 dark:text-emerald-300'
-                              : milestone.state === 'current'
-                                ? 'border-brand/20 bg-brand/10 text-brand-dark dark:border-brand/30 dark:bg-brand/15 dark:text-brand-light'
-                                : 'border-slate-200/80 bg-white text-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400',
-                          )}
-                        >
-                          <span className={cn(
-                            'h-1.5 w-1.5 rounded-full',
-                            milestone.state === 'completed'
-                              ? 'bg-emerald-500'
-                              : milestone.state === 'current'
-                                ? 'bg-brand'
-                                : 'bg-slate-300 dark:bg-slate-600',
-                          )} />
-                          <span>{milestone.label}</span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-            ) : null}
+            <ChatContextBar
+              summary={contextSummaryLine}
+              helper={chatContextHelper}
+              status={compactReservationStatus ? { label: compactReservationStatus.label, tone: compactReservationStatus.tone } : null}
+              signals={chatContextSignals}
+            />
 
             {/* Messages */}
             <div ref={scrollRef} className="flex-1 overflow-y-auto bg-[linear-gradient(180deg,rgba(248,250,252,0.72),rgba(255,255,255,1))] px-4 py-5 no-scrollbar dark:bg-slate-950 sm:px-6 sm:py-6">
@@ -1783,38 +1752,21 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                         ? Icons.CheckCircle2
                         : Icons.MessageSquare;
 
-                    return systemMessage.emphasis === 'card' ? (
-                      <div key={msg.id} className="mx-auto w-full max-w-lg rounded-2xl border border-slate-200/80 bg-white px-4 py-3.5 text-center dark:border-slate-800 dark:bg-slate-900">
-                        <p className="whitespace-pre-line text-sm font-semibold leading-6 text-slate-700 dark:text-slate-100">
-                          {systemMessage.content}
-                        </p>
-                        {systemMessage.supplementaryContent ? (
-                          <p className="mt-1.5 text-xs font-medium leading-5 text-slate-500 dark:text-slate-300">
-                            {systemMessage.supplementaryContent}
-                          </p>
-                        ) : null}
-                        {systemMessage.action ? (
-                          <div className="mt-2.5 flex justify-center">
-                            <button
-                              type="button"
-                              onClick={systemMessage.action.onClick}
-                              disabled={systemMessage.action.loading}
-                              className="inline-flex items-center gap-2 rounded-full bg-brand px-3.5 py-2 text-xs font-semibold text-white shadow-[0_18px_34px_-28px_rgba(67,56,202,0.4)] transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-70"
-                            >
-                              {systemMessage.action.loading ? <Icons.Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ActionIcon className="h-3.5 w-3.5" />}
-                              <span>{systemMessage.action.loading ? 'Procesando...' : systemMessage.action.label}</span>
-                            </button>
-                          </div>
-                        ) : null}
-                      </div>
-                    ) : (
-                      <div key={msg.id} className="flex items-center gap-3 py-1">
-                        <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
-                        <div className="max-w-md rounded-full border border-slate-200/80 bg-white px-4 py-2 text-center text-[11px] font-medium leading-5 text-slate-500 dark:border-slate-800 dark:bg-slate-900/90 dark:text-slate-300">
-                          {systemMessage.supplementaryContent ? `${systemMessage.content} · ${systemMessage.supplementaryContent}` : systemMessage.content}
-                        </div>
-                        <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
-                      </div>
+                    return (
+                      <SystemEventMessage
+                        key={msg.id}
+                        title={systemMessage.content}
+                        description={systemMessage.supplementaryContent}
+                        compact={systemMessage.emphasis === 'pill'}
+                        tone={systemMessage.tone ?? (systemMessage.emphasis === 'card' ? 'brand' : 'neutral')}
+                        action={systemMessage.action ? {
+                          label: systemMessage.action.label,
+                          onClick: systemMessage.action.onClick,
+                          loading: systemMessage.action.loading,
+                          loadingLabel: 'Procesando...',
+                          icon: systemMessage.action.loading ? <Icons.Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ActionIcon className="h-3.5 w-3.5" />,
+                        } : undefined}
+                      />
                     );
                   }
 
@@ -1883,61 +1835,56 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                 {showDepositChoiceBlock || hasInlineComposerActions ? (
                   <div className="space-y-3">
                     {showDepositChoiceBlock ? (
-                      <div className="rounded-[24px] border border-slate-200 bg-slate-50/85 p-4 dark:border-slate-800 dark:bg-slate-900/60">
-                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                          <div className="space-y-1.5">
-                            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">Seña</p>
-                            <p className="text-sm font-semibold text-slate-950 dark:text-slate-50">{showDepositChoiceComposer ? 'Elegí cómo dejarla' : 'El huésped ya puede definirla'}</p>
-                            <p className="text-xs leading-5 text-slate-600 dark:text-slate-300">
-                              {showDepositChoiceComposer
-                                ? 'Registrarla acá o coordinarla por fuera.'
-                                : 'Registrarla acá o coordinarla por fuera ya quedó visible en este chat.'}
-                            </p>
-                          </div>
-
-                          <div className="flex flex-wrap gap-2">
-                            {showDepositChoiceComposer ? (
-                              <>
-                                <button
-                                  type="button"
-                                  onClick={() => activeRequestContext?.bookingId && void handleSelectProtectedDeposit(activeRequestContext.bookingId)}
-                                  disabled={processingFlowAction !== null}
-                                  className="inline-flex items-center gap-2 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white shadow-[0_18px_34px_-28px_rgba(67,56,202,0.4)] transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-70"
-                                >
-                                  {processingFlowAction === 'select-protected-deposit' ? <Icons.Loader2 className="h-4 w-4 animate-spin" /> : <Icons.ShieldCheck className="h-4 w-4" />}
-                                  <span>Dejarla registrada acá</span>
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => activeRequestContext?.bookingId && void handleSelectExternalDeposit(activeRequestContext.bookingId)}
-                                  disabled={processingFlowAction !== null}
-                                  className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-slate-950 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 disabled:cursor-not-allowed disabled:opacity-70"
-                                >
-                                  {processingFlowAction === 'select-external-deposit' ? <Icons.Loader2 className="h-4 w-4 animate-spin" /> : <Icons.MessageSquare className="h-4 w-4" />}
-                                  <span>Coordinarla por fuera</span>
-                                </button>
-                              </>
-                            ) : (
-                              <>
-                                <span className="inline-flex items-center gap-2 rounded-full border border-brand/15 bg-brand/5 px-3.5 py-2 text-xs font-semibold text-brand dark:border-brand/20 dark:bg-brand/10">
-                                  <Icons.ShieldCheck className="h-3.5 w-3.5" />
-                                  <span>Registrada acá</span>
-                                </span>
-                                <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
-                                  <Icons.MessageSquare className="h-3.5 w-3.5" />
-                                  <span>Por fuera</span>
-                                </span>
-                              </>
-                            )}
-                          </div>
-                        </div>
-
-                        {protectedDepositPreview ? (
-                          <p className="mt-3 text-xs leading-5 text-slate-600 dark:text-slate-300">
-                            Registrada acá: seña {currencyFormatter.format(protectedDepositPreview.depositAmount)} · fee {currencyFormatter.format(protectedDepositPreview.serviceFee)} · total {currencyFormatter.format(protectedDepositPreview.totalCharge)}.
-                          </p>
-                        ) : null}
-                      </div>
+                      <DepositChoiceBlock
+                        eyebrow="Seña"
+                        title={showDepositChoiceComposer ? 'Elegí cómo dejarla' : 'El huésped ya puede definirla'}
+                        description={showDepositChoiceComposer
+                          ? 'La plataforma deja visible si la registran acá o si la coordinan por fuera.'
+                          : 'La opción elegida queda visible dentro de este chat.'}
+                        options={[
+                          {
+                            key: 'protected',
+                            eyebrow: 'Seña en la app',
+                            title: showDepositChoiceComposer ? 'Dejarla registrada acá' : 'Registrada acá',
+                            description: 'La seña queda asentada dentro de la app.',
+                            icon: <Icons.ShieldCheck className="h-5 w-5" />,
+                            tone: 'brand',
+                            priceLines: protectedDepositPreview ? [
+                              { label: 'Seña', value: currencyFormatter.format(protectedDepositPreview.depositAmount) },
+                              { label: 'Fee', value: currencyFormatter.format(protectedDepositPreview.serviceFee) },
+                              { label: 'Total', value: currencyFormatter.format(protectedDepositPreview.totalCharge), emphasize: true },
+                            ] : undefined,
+                            action: showDepositChoiceComposer
+                              ? {
+                                  label: 'Dejarla registrada acá',
+                                  onClick: () => activeRequestContext?.bookingId && void handleSelectProtectedDeposit(activeRequestContext.bookingId),
+                                  loading: processingFlowAction === 'select-protected-deposit',
+                                  loadingLabel: 'Guardando...',
+                                  icon: <Icons.ShieldCheck className="h-4 w-4" />,
+                                }
+                              : undefined,
+                          },
+                          {
+                            key: 'external',
+                            eyebrow: 'Seña por fuera',
+                            title: showDepositChoiceComposer ? 'Coordinarla por fuera' : 'Por fuera',
+                            description: 'Siguen por chat directo con el anfitrión.',
+                            icon: <Icons.MessageSquare className="h-5 w-5" />,
+                            tone: 'neutral',
+                            helper: showDepositChoiceComposer ? undefined : 'Esta elección también queda registrada en el chat.',
+                            action: showDepositChoiceComposer
+                              ? {
+                                  label: 'Coordinarla por fuera',
+                                  onClick: () => activeRequestContext?.bookingId && void handleSelectExternalDeposit(activeRequestContext.bookingId),
+                                  loading: processingFlowAction === 'select-external-deposit',
+                                  loadingLabel: 'Guardando...',
+                                  icon: <Icons.MessageSquare className="h-4 w-4" />,
+                                  variant: 'outline',
+                                }
+                              : undefined,
+                          },
+                        ]}
+                      />
                     ) : null}
 
                     {hasInlineComposerActions ? (
@@ -2018,12 +1965,6 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                         ) : null}
                       </div>
                     ) : null}
-                  </div>
-                ) : null}
-
-                {flowCopy?.stage === 'request-accepted' && protectedDepositPreview ? (
-                  <div className="rounded-full border border-brand/15 bg-brand/5 px-4 py-2.5 text-xs leading-5 text-slate-700 dark:border-brand/20 dark:bg-brand/10 dark:text-slate-200">
-                    Seña en la app: {currencyFormatter.format(protectedDepositPreview.depositAmount)} · Fee {currencyFormatter.format(protectedDepositPreview.serviceFee)} · Total {currencyFormatter.format(protectedDepositPreview.totalCharge)}
                   </div>
                 ) : null}
 

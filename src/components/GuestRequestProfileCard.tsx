@@ -3,14 +3,11 @@ import { cn } from '../lib/utils';
 import {
   formatGuestMemberSinceYear,
   getGuestRequestProfileBannerCopy,
-  getGuestRequestProfileOperationEmptyMessage,
-  getGuestRequestProfileReviewsEmptyMessage,
   getGuestRequestProfileScenario,
 } from '../lib/guestRequestProfile';
-import { getGuestPositiveCoordinationSignals } from '../lib/positiveIncentives';
-import type { GuestHostReviewSnippet, GuestRequestProfile } from '../types';
-import { InteractionHistorySignals } from './ui/InteractionHistorySignals';
-import { VerificationMeter, VerificationSnippetList } from './ui/VerificationMeter';
+import type { GuestRequestProfile } from '../types';
+import { TrustSignalsInline, getTrustSignalsFromInteractionHistory, getTrustSignalsFromItems } from './ui/TrustSignalsInline';
+import { VerificationDetailsBlock } from './ui/VerificationDetailsBlock';
 
 type GuestRequestProfileCardProps = {
   guestName: string;
@@ -41,45 +38,6 @@ const DataItem = ({ label, value, muted = false }: { label: string; value: strin
   </div>
 );
 
-const SignalItem = ({
-  status,
-  label,
-}: {
-  status: 'active' | 'inactive' | 'pending';
-  label: string;
-}) => (
-  <div className="flex items-start gap-3 rounded-[16px] bg-slate-50/85 px-3 py-3 text-sm leading-6 text-slate-700 dark:bg-slate-900/70 dark:text-slate-300">
-    <span
-      aria-hidden="true"
-      className={cn(
-        'mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs font-semibold',
-        status === 'active'
-          ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-900/20 dark:text-emerald-300'
-          : status === 'pending'
-            ? 'border-slate-200 bg-slate-100 text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'
-            : 'border-slate-200 bg-white text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400',
-      )}
-    >
-      {status === 'active' ? '✔' : status === 'pending' ? '…' : '○'}
-    </span>
-    <div>
-      <p>{label}</p>
-      {status === 'pending' ? (
-        <p className="text-xs font-medium text-slate-400 dark:text-slate-500">Todavía no disponible</p>
-      ) : null}
-    </div>
-  </div>
-);
-
-const ReviewSnippet = ({ review }: { review: GuestHostReviewSnippet }) => (
-  <li className="rounded-[18px] border border-slate-200/80 bg-white/92 px-4 py-3 shadow-[0_12px_24px_-22px_rgba(15,23,42,0.12)] dark:border-slate-800 dark:bg-slate-950/80">
-    <p className="text-sm leading-6 text-slate-700 dark:text-slate-300">{review.comment}</p>
-    <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400 dark:text-slate-500">
-      {review.authorName} • {formatReviewDate(review.date)}
-    </p>
-  </li>
-);
-
 const SectionEmptyState = ({ message }: { message: string }) => (
   <p className={emptySectionClass}>{message}</p>
 );
@@ -95,50 +53,47 @@ export const GuestRequestProfileCard: React.FC<GuestRequestProfileCardProps> = (
   ].filter((value) => !value).length;
   const bannerCopy = getGuestRequestProfileBannerCopy(profile);
   const scenario = getGuestRequestProfileScenario(profile);
-  const visibleReviews = profile.hostReviews.slice(0, 2);
-  const positiveCoordinationSignals = getGuestPositiveCoordinationSignals(profile);
-  const pendingSignals = profile.operationSignals.filter((signal) => signal.source === 'pending');
-  const hasAnyActiveSignals = profile.operationSignals.some((signal) => signal.active);
+  const trustSignals = [
+    ...getTrustSignalsFromItems(profile.verificationItems, { limit: 2, tone: 'success' }),
+    ...getTrustSignalsFromInteractionHistory(profile.interactionHistory.publicSignals, { limit: 2, tone: 'neutral' }),
+  ].slice(0, 3);
   const guestDataItems = [
-    {
-      label: 'Identidad',
-      value: profile.dataAvailability.identity
-        ? profile.identityVerified
-          ? 'Confirmada'
-          : 'No verificada'
-        : 'Todavía no disponible',
-      muted: !profile.dataAvailability.identity,
-    },
     {
       label: 'Usuario desde',
       value: profile.dataAvailability.memberSince
         ? formatGuestMemberSinceYear(profile.memberSince)
-        : 'Todavía no disponible',
+        : 'Todavía no visible',
       muted: !profile.dataAvailability.memberSince,
     },
     {
       label: 'Estadías completadas',
       value: profile.dataAvailability.platformHistory
         ? String(profile.platformHistory.completedStays)
-        : 'Todavía no disponible',
+        : 'Todavía no visible',
       muted: !profile.dataAvailability.platformHistory,
     },
     {
-      label: 'Perfil',
-      value: profile.dataAvailability.profileCompletion
-        ? profile.profileCompletion.profileComplete
-          ? 'Completo'
-          : 'Incompleto'
-        : 'Todavía no disponible',
-      muted: !profile.dataAvailability.profileCompletion,
+      label: 'Cancelaciones',
+      value: profile.dataAvailability.platformHistory
+        ? String(profile.platformHistory.cancellationsCount)
+        : 'Todavía no visible',
+      muted: !profile.dataAvailability.platformHistory,
+    },
+    {
+      label: 'Cierres compartidos',
+      value: profile.interactionHistory.feedbackCount > 0
+        ? String(profile.interactionHistory.feedbackCount)
+        : 'Todavía no visible',
+      muted: profile.interactionHistory.feedbackCount === 0,
     },
   ];
+  const latestHostReference = profile.hostReviews[0] ?? null;
 
   return (
     <div data-testid="guest-request-profile-card" className={cn('rounded-[22px] border border-slate-200/80 bg-white px-4 py-4 shadow-[0_18px_32px_-30px_rgba(15,23,42,0.18)] dark:border-slate-800 dark:bg-slate-950 md:px-5', className)}>
       <div className="space-y-1">
         <p className={sectionLabelClass}>Ficha del huésped</p>
-        <h4 className="text-[1rem] font-semibold leading-6 tracking-[-0.015em] text-slate-950 dark:text-slate-50">Antes de aceptar, podés revisar esto</h4>
+        <h4 className="text-[1rem] font-semibold leading-6 tracking-[-0.015em] text-slate-950 dark:text-slate-50">Lo que ya podés revisar antes de aceptar</h4>
         <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">Huésped: <span className="font-semibold text-slate-900 dark:text-slate-100">{guestName}</span></p>
       </div>
 
@@ -150,96 +105,40 @@ export const GuestRequestProfileCard: React.FC<GuestRequestProfileCardProps> = (
           </div>
         ) : null}
 
-        <section className="space-y-3 border-t border-slate-200/80 pt-4 dark:border-slate-800">
-          <VerificationMeter
-            summary={profile.verificationSummary}
-            eyebrow="Comprobaciones del huésped"
-            helper="Mostramos qué ya está comprobado en esta cuenta."
-            tone="neutral"
-          />
-          <VerificationSnippetList
-            summary={profile.verificationSummary}
-            status="complete"
-            showDescriptions={false}
-            emptyText="Todavía no hay comprobaciones visibles en esta cuenta."
-          />
-        </section>
+        <TrustSignalsInline
+          title="Señales rápidas"
+          signals={trustSignals}
+          emptyText="Todavía no hay suficientes señales visibles para resumir esta cuenta."
+        />
+
+        <VerificationDetailsBlock
+          summary={profile.verificationSummary}
+          title="Comprobaciones del huésped"
+          description="Mostramos qué ya está comprobado en esta cuenta y qué todavía no aparece como visible."
+          showDescriptions={false}
+        />
 
         <section className="space-y-3 border-t border-slate-200/80 pt-4 dark:border-slate-800">
-          <p className={sectionLabelClass}>Datos del huésped</p>
+          <p className={sectionLabelClass}>Historial compartido</p>
           <div className="grid gap-2 sm:grid-cols-2">
             {guestDataItems.map((item) => (
               <DataItem key={item.label} label={item.label} value={item.value} muted={item.muted} />
             ))}
           </div>
-        </section>
 
-        <section className="space-y-3 border-t border-slate-200/80 pt-4 dark:border-slate-800">
-          <p className={sectionLabelClass}>Señales positivas</p>
-          {positiveCoordinationSignals.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {positiveCoordinationSignals.map((signal) => (
-                <span
-                  key={signal}
-                  className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[12px] font-semibold leading-none text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-900/20 dark:text-emerald-300"
-                >
-                  {signal}
-                </span>
-              ))}
+          {latestHostReference ? (
+            <div className="rounded-[18px] border border-slate-200/80 bg-slate-50/85 px-4 py-3 text-sm leading-6 text-slate-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-300">
+              <p className="font-semibold text-slate-900 dark:text-slate-100">Última referencia visible</p>
+              <p className="mt-1">{latestHostReference.comment}</p>
+              <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400 dark:text-slate-500">
+                {latestHostReference.authorName} • {formatReviewDate(latestHostReference.date)}
+              </p>
             </div>
-          ) : (
-            <SectionEmptyState message="Todavía no hay suficientes cierres para resumir señales positivas de coordinación." />
-          )}
-        </section>
-
-        <section className="space-y-3 border-t border-slate-200/80 pt-4 dark:border-slate-800">
-          <p className={sectionLabelClass}>Historial compartido</p>
-          <InteractionHistorySignals
-            signals={profile.interactionHistory.publicSignals}
-            emptyText="Todavía no hay suficientes cierres compartidos para resumir esta cuenta."
-          />
-          {profile.interactionHistory.feedbackCount > 0 ? (
-            <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">
-              Sobre {profile.interactionHistory.feedbackCount} {profile.interactionHistory.feedbackCount === 1 ? 'cierre compartido' : 'cierres compartidos'}.
-            </p>
           ) : null}
-        </section>
 
-        <section className="space-y-3 border-t border-slate-200/80 pt-4 dark:border-slate-800">
-          <p className={sectionLabelClass}>Señales de esta operación</p>
-          {!profile.dataAvailability.operationSignals ? (
-            <SectionEmptyState message="Todavía no hay una operación activa para mostrar acá." />
-          ) : (
-            <>
-              <div className="grid gap-2 sm:grid-cols-2">
-                {profile.operationSignals.map((signal) => (
-                  <SignalItem
-                    key={signal.id}
-                    status={signal.source === 'pending' ? 'pending' : signal.active ? 'active' : 'inactive'}
-                    label={signal.label}
-                  />
-                ))}
-              </div>
-              {!hasAnyActiveSignals && pendingSignals.length === 0 ? (
-                <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">{getGuestRequestProfileOperationEmptyMessage(profile)}</p>
-              ) : null}
-            </>
-          )}
-        </section>
-
-        <section className="space-y-3 border-t border-slate-200/80 pt-4 dark:border-slate-800">
-          <p className={sectionLabelClass}>Reseñas de anfitriones</p>
-          {!profile.dataAvailability.hostReviews ? (
-            <SectionEmptyState message="Todavía no hay reseñas visibles para esta cuenta." />
-          ) : visibleReviews.length > 0 ? (
-            <ul className="space-y-3">
-              {visibleReviews.map((review) => (
-                <ReviewSnippet key={review.id} review={review} />
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">{getGuestRequestProfileReviewsEmptyMessage(profile)}</p>
-          )}
+          {!latestHostReference && profile.interactionHistory.feedbackCount === 0 ? (
+            <SectionEmptyState message="Todavía no hay suficientes cierres compartidos para resumir esta cuenta." />
+          ) : null}
         </section>
       </div>
     </div>

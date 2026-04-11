@@ -487,8 +487,10 @@ describe('PropertyDetail', () => {
     expect(within(verificationPreview).getByText('Identidad del anfitrión')).toBeDefined();
     expect(within(verificationPreview).getByText('Ubicación de la propiedad')).toBeDefined();
     expect(within(verificationPreview).getByText('Material real del lugar')).toBeDefined();
-    expect(screen.queryByText('4 de 5 comprobaciones')).toBeNull();
-    expect(screen.queryByText('Estas 5 comprobaciones muestran qué parte del aviso ya está validada y qué falta completar.')).toBeNull();
+    expect(within(verificationPreview).queryByText('4 de 5 comprobaciones')).toBeNull();
+    expect(screen.getByText('Comprobaciones del aviso')).toBeDefined();
+    expect(screen.getByText('4 de 5 comprobaciones')).toBeDefined();
+    expect(screen.getByText('Ves rápido qué ya fue comprobado y qué falta completar.')).toBeDefined();
   });
 
   test('records the detail visit when the property reaches a high verification level', async () => {
@@ -536,8 +538,10 @@ describe('PropertyDetail', () => {
     expect(within(verificationPreview).getByText('Historial real del aviso')).toBeDefined();
     expect(within(verificationPreview).queryByText('Identidad del anfitrión')).toBeNull();
     expect(within(verificationPreview).queryByText('Material real del lugar')).toBeNull();
-    expect(screen.queryByText('2 de 5 comprobaciones')).toBeNull();
-    expect(screen.queryByText('Todavía falta verificar la identidad del anfitrión.')).toBeNull();
+    expect(within(verificationPreview).queryByText('2 de 5 comprobaciones')).toBeNull();
+    expect(screen.getByText('Comprobaciones del aviso')).toBeDefined();
+    expect(screen.getByText('2 de 5 comprobaciones')).toBeDefined();
+    expect(screen.getByText('Identidad del anfitrión')).toBeDefined();
   });
 
   test('guides the booking flow and stops guest selection at capacity', async () => {

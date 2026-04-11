@@ -12,7 +12,7 @@ import { showToast } from '../lib/toast';
 import { cn } from '../lib/utils';
 import { AccountModeSwitch } from './ui/AccountModeSwitch';
 import { Button } from './ui/Button';
-import { VerificationMeter, VerificationSnippetList } from './ui/VerificationMeter';
+import { VerificationDetailsBlock } from './ui/VerificationDetailsBlock';
 import { EmptyState } from './EmptyState';
 import { ErrorState } from './ErrorState';
 import GuestRequestProfileCard from './GuestRequestProfileCard';
@@ -1256,71 +1256,59 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
                     </div>
 
                     <div className="space-y-2.5">
-                      <div className="rounded-[22px] border border-slate-200/80 bg-slate-50/90 p-4 dark:border-slate-800 dark:bg-slate-900/70">
-                        <VerificationMeter
-                          summary={propertyVerificationSummary}
-                          eyebrow="Comprobaciones del aviso"
-                          helper={pendingLabels.length === 0
-                            ? 'Este aviso ya muestra sus 5 comprobaciones visibles.'
-                            : pendingLabels.length === 1
-                              ? 'Te falta 1 comprobación para completar este aviso.'
-                              : `Te faltan ${pendingLabels.length} comprobaciones para completar este aviso.`}
-                          tone={pendingLabels.length === 0 ? 'success' : 'neutral'}
-                        />
+                      <VerificationDetailsBlock
+                        summary={propertyVerificationSummary}
+                        title="Comprobaciones del aviso"
+                        description={pendingLabels.length === 0
+                          ? 'Este aviso ya muestra sus 5 comprobaciones visibles.'
+                          : pendingLabels.length === 1
+                            ? 'Falta 1 comprobación para terminar de ordenar este aviso.'
+                            : `Faltan ${pendingLabels.length} comprobaciones para terminar de ordenar este aviso.`}
+                        tone={pendingLabels.length === 0 ? 'success' : 'neutral'}
+                        showDescriptions={false}
+                        className="shadow-none"
+                      />
 
-                        {property.completedVerificationItems.length > 0 ? (
-                          <div className="mt-3 space-y-2.5">
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">Qué ya está comprobado</p>
-                            <VerificationSnippetList
-                              summary={propertyVerificationSummary}
-                              status="complete"
-                              limit={2}
-                              showDescriptions={false}
-                            />
-                          </div>
-                        ) : null}
+                      {pendingLabels.length > 0 ? (
+                        <div className="rounded-[22px] border border-slate-200/80 bg-slate-50/90 p-4 dark:border-slate-800 dark:bg-slate-900/70">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">Acciones para sumar información validada</p>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {showVerificationReviewAction ? (
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => navigate(`/detail/${property.id}`)}
+                                className="rounded-full"
+                              >
+                                <>
+                                  <Icons.Shield className="h-4 w-4" />
+                                  Completar verificación
+                                </>
+                              </Button>
+                            ) : null}
 
-                        {pendingLabels.length > 0 ? (
-                          <div className="mt-3 space-y-2.5">
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">Acciones para sumar información validada</p>
-                            <div className="flex flex-wrap gap-2">
-                              {showVerificationReviewAction ? (
-                                <Button
-                                  type="button"
-                                  variant="secondary"
-                                  size="sm"
-                                  onClick={() => navigate(`/detail/${property.id}`)}
-                                  className="rounded-full"
-                                >
-                                  <>
-                                    <Icons.Shield className="h-4 w-4" />
-                                    Completar verificación
-                                  </>
-                                </Button>
-                              ) : null}
-
-                              {showMaterialAction ? (
-                                <Button
-                                  type="button"
-                                  variant="secondary"
-                                  size="sm"
-                                  onClick={() => navigate(`/detail/${property.id}`)}
-                                  className="rounded-full"
-                                >
-                                  <>
-                                    <Icons.ImagePlus className="h-4 w-4" />
-                                    Agregar material
-                                  </>
-                                </Button>
-                              ) : null}
-                            </div>
-
-                            {showHistoryGuidance ? (
-                              <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">El historial real se suma cuando el aviso ya tiene reservas o reseñas visibles.</p>
+                            {showMaterialAction ? (
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => navigate(`/detail/${property.id}`)}
+                                className="rounded-full"
+                              >
+                                <>
+                                  <Icons.ImagePlus className="h-4 w-4" />
+                                  Agregar material
+                                </>
+                              </Button>
                             ) : null}
                           </div>
-                        ) : null}
-                      </div>
+
+                          {showHistoryGuidance ? (
+                            <p className="mt-3 text-xs leading-5 text-slate-500 dark:text-slate-400">El historial real se suma cuando el aviso ya tiene reservas o reseñas visibles.</p>
+                          ) : null}
+                        </div>
+                      ) : null}
 
                       {showOnsiteAction ? (
                         <div className="rounded-[20px] border border-indigo-200/70 bg-indigo-50/70 p-3 dark:border-indigo-900/40 dark:bg-indigo-950/30">

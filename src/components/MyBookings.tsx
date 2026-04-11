@@ -35,7 +35,9 @@ import { LoadingState } from './LoadingState';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
+import { DepositChoiceBlock } from './ui/DepositChoiceBlock';
 import { PlatformTermsQuickGuide } from './ui/PlatformTermsQuickGuide';
+import { ReservationConfirmedState } from './ui/ReservationConfirmedState';
 import { ReviewModal } from './ReviewModal';
 import { SectionTitle } from './ui/SectionTitle';
 import { AccountModeSwitch } from './ui/AccountModeSwitch';
@@ -836,6 +838,11 @@ export const MyBookings = () => {
     const isReviewingExternalDepositChoice = externalDepositChoiceBookingId === booking.id;
     const arrivalActionsAvailable = isBookingCheckInReached(booking.startDate);
     const canReviewBooking = booking.status === 'completed' && !booking.guestReviewSubmitted && Boolean(booking.hostId);
+    const protectedDepositPriceLines = protectedDepositPricing ? [
+      { label: 'Seña', value: formatCurrency(protectedDepositPricing.depositAmount) },
+      { label: 'Fee de servicio', value: formatCurrency(protectedDepositPricing.serviceFee) },
+      { label: 'Total', value: formatCurrency(protectedDepositPricing.totalCharge), emphasize: true },
+    ] : undefined;
 
     return (
       <div
@@ -1008,143 +1015,88 @@ export const MyBookings = () => {
 
                 <div className="flex flex-wrap gap-2 lg:justify-end">
                   {bookingFlow.stage === 'deposit-choice' ? (
-                    <div className="w-full space-y-3 lg:max-w-[27rem]">
-                      <div className="rounded-[24px] border border-brand/15 bg-white/95 p-4 shadow-[0_20px_44px_-34px_rgba(67,56,202,0.34)] dark:border-brand/20 dark:bg-slate-950/90">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="space-y-1.5">
-                            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-brand">Seña en la app</p>
-                            <p className="text-sm font-semibold text-slate-950 dark:text-slate-50">Dejarla registrada acá</p>
-                            <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">La seña ya queda asentada y se libera cuando confirmás la llegada.</p>
-                          </div>
-                          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand/10 text-brand dark:bg-brand/15 dark:text-brand-light">
-                            <Icons.ShieldCheck className="h-5 w-5" />
-                          </div>
-                        </div>
-
-                        {protectedDepositPricing ? (
-                          <div className="mt-4 grid gap-2 rounded-[20px] border border-brand/10 bg-brand/5 px-4 py-3 text-xs leading-5 text-slate-600 dark:border-brand/15 dark:bg-brand/10 dark:text-slate-300">
-                            <div className="flex items-center justify-between gap-3">
-                              <span>Seña</span>
-                              <span className="font-semibold text-slate-950 dark:text-slate-50">{formatCurrency(protectedDepositPricing.depositAmount)}</span>
-                            </div>
-                            <div className="flex items-center justify-between gap-3">
-                              <span>Fee de servicio</span>
-                              <span>{formatCurrency(protectedDepositPricing.serviceFee)}</span>
-                            </div>
-                            <div className="flex items-center justify-between gap-3 border-t border-brand/10 pt-2 text-slate-950 dark:border-brand/20 dark:text-slate-50">
-                              <span className="font-semibold">Total</span>
-                              <span className="font-semibold">{formatCurrency(protectedDepositPricing.totalCharge)}</span>
-                            </div>
-                          </div>
-                        ) : null}
-
-                        <Button
-                          type="button"
-                          size="sm"
-                          fullWidth
-                          onClick={() => void handleSelectProtectedDeposit(booking.id)}
-                          loading={isSelectingProtectedDeposit}
-                          loadingLabel="Guardando..."
-                          className="mt-4 rounded-full"
-                        >
-                          <>
-                            <Icons.ShieldCheck className="h-4 w-4" />
-                            Dejarla registrada acá
-                          </>
-                        </Button>
-                      </div>
-
-                      <div className="rounded-[24px] border border-slate-200 bg-white/85 p-4 dark:border-slate-800 dark:bg-slate-950/60">
-                        <div className="space-y-1.5">
-                          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">Seña por fuera</p>
-                          <p className="text-sm font-semibold text-slate-950 dark:text-slate-50">Coordinarla por fuera</p>
-                          <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">Coordinás la seña directo con el anfitrión.</p>
-                        </div>
-
-                        {isReviewingExternalDepositChoice ? (
-                          <div className="mt-4 rounded-[20px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-300">
-                            <div className="space-y-2">
-                              <p className="inline-flex items-start gap-2 leading-6">
-                                <Icons.MessageSquare className="mt-0.5 h-4 w-4 shrink-0 text-slate-400 dark:text-slate-500" />
-                                La coordinás por chat con el anfitrión y seguís por fuera de la plataforma.
-                              </p>
-                              <p className="inline-flex items-start gap-2 leading-6">
-                                <Icons.ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-brand" />
-                                Si cambiás de idea antes de informarla, podés dejarla registrada acá.
-                              </p>
-                            </div>
-
-                            <div className="mt-4 flex flex-wrap gap-2">
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setExternalDepositChoiceBookingId(null)}
-                                className="rounded-full"
-                              >
-                                Volver
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => void handleSelectExternalDeposit(booking.id)}
-                                loading={isSelectingExternalDeposit}
-                                loadingLabel="Guardando..."
-                                className="rounded-full"
-                              >
-                                <>
-                                  <Icons.MessageSquare className="h-4 w-4" />
-                                  Seguir por fuera
-                                </>
-                              </Button>
-                            </div>
-                          </div>
-                        ) : (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            fullWidth
-                            onClick={() => setExternalDepositChoiceBookingId(booking.id)}
-                            className="mt-4 rounded-full"
-                          >
-                            <>
-                              <Icons.MessageSquare className="h-4 w-4" />
-                              Coordinarla por fuera
-                            </>
-                          </Button>
-                        )}
-                      </div>
+                    <div className="w-full lg:max-w-[38rem]">
+                      <DepositChoiceBlock
+                        options={[
+                          {
+                            key: 'protected',
+                            eyebrow: 'Seña en la app',
+                            title: 'Dejarla registrada acá',
+                            description: 'La seña ya queda asentada y se libera cuando confirmás la llegada.',
+                            icon: <Icons.ShieldCheck className="h-5 w-5" />,
+                            tone: 'brand',
+                            priceLines: protectedDepositPriceLines,
+                            action: {
+                              label: 'Dejarla registrada acá',
+                              onClick: () => void handleSelectProtectedDeposit(booking.id),
+                              loading: isSelectingProtectedDeposit,
+                              loadingLabel: 'Guardando...',
+                              icon: <Icons.ShieldCheck className="h-4 w-4" />,
+                            },
+                          },
+                          {
+                            key: 'external',
+                            eyebrow: 'Seña por fuera',
+                            title: 'Coordinarla por fuera',
+                            description: 'Coordinás la seña directo con el anfitrión.',
+                            icon: <Icons.MessageSquare className="h-5 w-5" />,
+                            tone: 'neutral',
+                            helper: isReviewingExternalDepositChoice
+                              ? 'Seguís por chat y, si cambiás de idea antes de informarla, podés volver a dejarla registrada acá.'
+                              : undefined,
+                            action: isReviewingExternalDepositChoice
+                              ? {
+                                  label: 'Seguir por fuera',
+                                  onClick: () => void handleSelectExternalDeposit(booking.id),
+                                  loading: isSelectingExternalDeposit,
+                                  loadingLabel: 'Guardando...',
+                                  icon: <Icons.MessageSquare className="h-4 w-4" />,
+                                  variant: 'outline',
+                                }
+                              : {
+                                  label: 'Coordinarla por fuera',
+                                  onClick: () => setExternalDepositChoiceBookingId(booking.id),
+                                  icon: <Icons.MessageSquare className="h-4 w-4" />,
+                                  variant: 'outline',
+                                },
+                            secondaryAction: isReviewingExternalDepositChoice
+                              ? {
+                                  label: 'Volver',
+                                  onClick: () => setExternalDepositChoiceBookingId(null),
+                                  variant: 'ghost',
+                                }
+                              : undefined,
+                          },
+                        ]}
+                      />
                     </div>
                   ) : null}
 
                   {bookingFlow.stage === 'external-deposit-pending' ? (
-                    <div className="w-full rounded-[24px] border border-slate-200 bg-white/85 p-4 dark:border-slate-800 dark:bg-slate-950/60 lg:max-w-[27rem]">
-                      <div className="space-y-1.5">
-                        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">Coordinación por fuera</p>
-                        <p className="text-sm font-semibold text-slate-950 dark:text-slate-50">Coordinás la seña directo con el anfitrión.</p>
-                        <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">Si cambiás de idea antes de informarla, podés dejarla registrada acá.</p>
-                      </div>
-
-                      <Button
-                        type="button"
-                        size="sm"
-                        fullWidth
-                        onClick={() => void handleSelectProtectedDeposit(booking.id)}
-                        loading={isSelectingProtectedDeposit}
-                        loadingLabel="Guardando..."
-                        className="mt-4 rounded-full"
-                      >
-                        <>
-                          <Icons.ShieldCheck className="h-4 w-4" />
-                          Dejarla registrada acá
-                        </>
-                      </Button>
+                    <div className="w-full lg:max-w-[27rem]">
+                      <DepositChoiceBlock
+                        options={[
+                          {
+                            key: 'switch-to-protected',
+                            eyebrow: 'Coordinación por fuera',
+                            title: 'Seguís coordinando por chat',
+                            description: 'Si cambiás de idea antes de informarla, podés dejar la seña registrada acá.',
+                            icon: <Icons.MessageSquare className="h-5 w-5" />,
+                            tone: 'neutral',
+                            action: {
+                              label: 'Dejarla registrada acá',
+                              onClick: () => void handleSelectProtectedDeposit(booking.id),
+                              loading: isSelectingProtectedDeposit,
+                              loadingLabel: 'Guardando...',
+                              icon: <Icons.ShieldCheck className="h-4 w-4" />,
+                            },
+                          },
+                        ]}
+                      />
                     </div>
                   ) : null}
 
-                  {bookingFlow.stage === 'request-accepted' ? (
+                  {bookingFlow.stage === 'request-accepted' && !protectedDepositPricing ? (
                     <Button
                       type="button"
                       size="sm"
@@ -1196,19 +1148,27 @@ export const MyBookings = () => {
               </div>
 
               {bookingFlow.stage === 'request-accepted' && protectedDepositPricing ? (
-                <div className="mt-4 rounded-[20px] border border-white/80 bg-white/90 px-4 py-4 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-300">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-brand">Seña en la app</p>
-                      <p className="mt-1 font-semibold text-slate-950 dark:text-slate-50">La seña ya queda registrada y se libera cuando confirmás la llegada.</p>
-                    </div>
-                    <div className="text-right text-xs leading-5">
-                      <p>Seña: {formatCurrency(protectedDepositPricing.depositAmount)}</p>
-                      <p>Fee de servicio: {formatCurrency(protectedDepositPricing.serviceFee)}</p>
-                      <p className="font-semibold text-slate-950 dark:text-slate-50">Total: {formatCurrency(protectedDepositPricing.totalCharge)}</p>
-                    </div>
-                  </div>
-                </div>
+                <DepositChoiceBlock
+                  className="mt-4"
+                  options={[
+                    {
+                      key: 'pay-protected-deposit',
+                      eyebrow: 'Seña en la app',
+                      title: 'Registrarla ahora',
+                      description: 'La seña ya queda registrada y se libera cuando confirmás la llegada.',
+                      icon: <Icons.ShieldCheck className="h-5 w-5" />,
+                      tone: 'brand',
+                      priceLines: protectedDepositPriceLines,
+                      action: {
+                        label: bookingFlow.primaryActionLabel,
+                        onClick: () => void handlePayDeposit(booking.id),
+                        loading: isPayingDeposit,
+                        loadingLabel: 'Registrando pago...',
+                        icon: <Icons.ShieldCheck className="h-4 w-4" />,
+                      },
+                    },
+                  ]}
+                />
               ) : null}
 
               {bookingFlow.stage === 'protected-deposit-held' && !arrivalActionsAvailable ? (
@@ -1231,22 +1191,18 @@ export const MyBookings = () => {
           ) : null}
 
           {(bookingFlow.stage === 'reservation-confirmed' || (!booking.requestMode && booking.status === 'confirmed')) ? (
-            <div className="rounded-[24px] border border-brand/10 bg-brand/5 p-4 dark:border-brand/20 dark:bg-brand/10">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-brand shadow-[var(--app-shadow-subtle)] dark:bg-slate-900 dark:text-brand-light">
-                    <Icons.CheckCircle2 className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-brand">Datos para el ingreso</p>
-                    <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">Código de ingreso: {booking.stay_code || 'Se confirma desde el chat'}</p>
-                  </div>
-                </div>
-              </div>
-              <div className="mt-4 rounded-[20px] border border-white/80 bg-white/80 px-4 py-3 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-300">
-                Próximo paso: coordiná horario de llegada con el anfitrión.
-              </div>
-            </div>
+            <ReservationConfirmedState
+              eyebrow="Datos para el ingreso"
+              title="La reserva ya quedó ordenada"
+              description="La reserva y la seña ya quedaron registradas. Ahora falta coordinar la llegada con el anfitrión."
+              details={[
+                {
+                  label: 'Código de ingreso',
+                  value: booking.stay_code || 'Se confirma desde el chat',
+                },
+              ]}
+              nextStep="Próximo paso: coordiná horario de llegada con el anfitrión."
+            />
           ) : null}
 
           {booking.status === 'cancelled' && !showReservationFlowPanel ? (

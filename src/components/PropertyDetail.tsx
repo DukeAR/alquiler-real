@@ -5,6 +5,7 @@ import { LoadingState } from './LoadingState';
 import { Icons } from './Icons';
 import DateRangePicker from './DateRangePicker';
 import {
+  HIGH_VERIFICATION_HIGHLIGHT_MIN_SCORE,
   getPropertyVerificationDetails,
 } from '../lib/propertyVerification';
 import { getHostResponseSignal } from '../lib/positiveIncentives';
@@ -25,6 +26,8 @@ import { Badge } from './ui/Badge';
 import { Card } from './ui/Card';
 import { NoticeBanner } from './ui/NoticeBanner';
 import { SectionTitle } from './ui/SectionTitle';
+import { TrustSignalsInline, getTrustSignalsFromInteractionHistory, getTrustSignalsFromItems, type TrustSignal } from './ui/TrustSignalsInline';
+import { VerificationDetailsBlock } from './ui/VerificationDetailsBlock';
 
 const FALLBACK = 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=1200&q=80&auto=format&fit=crop';
 
@@ -157,6 +160,23 @@ const formatRequestDate = (value: string) => {
   return parsed.toLocaleDateString('es-AR', {
     day: 'numeric',
     month: 'short',
+  });
+};
+
+const formatMonthYear = (value?: string) => {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = new Date(value);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+
+  return parsed.toLocaleDateString('es-AR', {
+    month: 'short',
+    year: 'numeric',
   });
 };
 
@@ -377,12 +397,54 @@ export const PropertyDetailShell: React.FC<{
   const completedReservationsLabel = property.hostInteractionHistory?.completedReservationsCount
     ? `${property.hostInteractionHistory.completedReservationsCount} ${property.hostInteractionHistory.completedReservationsCount === 1 ? 'reserva cerrada' : 'reservas cerradas'}`
     : null;
-  const heroTrustItems = verificationDetails.items.filter((item) => item.status === 'complete').slice(0, 3);
+  const heroTrustSignals = getTrustSignalsFromItems(verificationDetails.items, { limit: 3, tone: 'success' });
   const quickDecisionSignals = [
     reviewCount > 0 ? `${reviewCount} ${reviewCount === 1 ? 'reseña real' : 'reseñas reales'}` : null,
     completedReservationsLabel,
     hostResponseSignal?.label ?? null,
   ].filter((value): value is string => Boolean(value)).slice(0, 3);
+  const quickDecisionTrustSignals = quickDecisionSignals.map((label, index) => ({
+    key: `decision-${index + 1}`,
+    label,
+    tone: 'neutral' as const,
+  }));
+  const verificationBadgeLabel = verificationDetails.score >= HIGH_VERIFICATION_HIGHLIGHT_MIN_SCORE ? 'Mas comprobado' : undefined;
+  const hostSinceLabel = property.hostSince ? `Miembro desde ${formatMonthYear(property.hostSince)}` : null;
+  const visibleReviews = reviews.slice(0, 2);
+  const hostTrustSignals = (() => {
+    const mergedSignals: TrustSignal[] = [];
+    const seenLabels = new Set<string>();
+    const pushSignals = (nextSignals: TrustSignal[]) => {
+      nextSignals.forEach((signal) => {
+        if (mergedSignals.length >= 3 || seenLabels.has(signal.label)) {
+          return;
+        }
+
+        mergedSignals.push(signal);
+        seenLabels.add(signal.label);
+      });
+    };
+
+    pushSignals(getTrustSignalsFromItems(Array.isArray(property.hostTrust?.items) ? property.hostTrust.items : [], { limit: 3, tone: 'brand' }));
+    const directHostSignals: TrustSignal[] = [];
+
+    if (property.identityValidated) {
+      directHostSignals.push({ key: 'host-identity', label: 'Identidad verificada', tone: 'brand' });
+    }
+
+    if (completedReservationsLabel) {
+      directHostSignals.push({ key: 'host-history', label: completedReservationsLabel, tone: 'brand' });
+    }
+
+    if (hostResponseSignal?.label) {
+      directHostSignals.push({ key: 'host-response', label: hostResponseSignal.label, tone: 'brand' });
+    }
+
+    pushSignals(directHostSignals);
+    pushSignals(getTrustSignalsFromInteractionHistory(property.hostInteractionHistory?.publicSignals ?? [], { limit: 3, tone: 'brand' }));
+
+    return mergedSignals.slice(0, 3);
+  })();
 
   const todayISO = formatLocalIso(new Date());
 
@@ -1038,24 +1100,14 @@ export const PropertyDetailShell: React.FC<{
             className="mt-5 space-y-3 border-t border-slate-200/70 pt-5"
           >
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Qué ya está comprobado</p>
-            {heroTrustItems.length > 0 ? (
-              <ul className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-6 sm:gap-y-3">
-                {heroTrustItems.map((item) => (
-                  <li key={item.key} className="flex items-center gap-2.5 text-sm font-semibold text-slate-900">
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-700">
-                      <Icons.Check className="h-4 w-4" />
-                    </span>
-                    <span>{item.label}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm leading-6 text-slate-500">Todavía no hay datos comprobados visibles en este aviso.</p>
-            )}
+            <TrustSignalsInline
+              signals={heroTrustSignals}
+              emptyText="Todavía no hay datos comprobados visibles en este aviso."
+            />
           </section>
         </section>
 
-        <main className="space-y-8">
+        <main className="space-y-6 md:space-y-8">
           <Card className="rounded-[32px] border-slate-200/80 bg-white p-6 shadow-[0_28px_70px_-50px_rgba(15,23,42,0.25)] sm:p-7">
             <div className="space-y-5">
               <SectionTitle
@@ -1078,15 +1130,106 @@ export const PropertyDetailShell: React.FC<{
               {quickDecisionSignals.length > 0 ? (
                 <div className="border-t border-slate-200/70 pt-5">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Qué ayuda a decidir más rápido</p>
-                  <div className="mt-3 flex flex-wrap gap-2.5">
-                    {quickDecisionSignals.map((item) => (
-                      <span key={item} className="rounded-full border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700">
-                        {item}
-                      </span>
-                    ))}
-                  </div>
+                  <TrustSignalsInline signals={quickDecisionTrustSignals} className="mt-3" compact />
                 </div>
               ) : null}
+            </div>
+          </Card>
+
+          <VerificationDetailsBlock
+            summary={{
+              score: verificationDetails.score,
+              maxScore: verificationDetails.max,
+              items: verificationDetails.items,
+            }}
+            title="Comprobaciones del aviso"
+            description={verificationDetails.helperText}
+            badgeLabel={verificationBadgeLabel}
+          />
+
+          <Card className="rounded-[32px] border-slate-200/80 bg-white p-6 shadow-[0_28px_70px_-50px_rgba(15,23,42,0.25)] sm:p-7">
+            <div className="space-y-5">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+                    {property.host?.avatarUrl ? (
+                      <img
+                        src={property.host.avatarUrl}
+                        alt={hostName}
+                        className="h-full w-full object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <Icons.User className="h-8 w-8" />
+                    )}
+                  </div>
+
+                  <div className="space-y-1">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Anfitrión</p>
+                    <h2 className="text-xl font-semibold tracking-tight text-slate-950">{hostName}</h2>
+                    {hostSinceLabel ? <p className="text-sm leading-6 text-slate-500">{hostSinceLabel}</p> : null}
+                  </div>
+                </div>
+
+                {property.hostId ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => navigate(`/host/${property.hostId}`)}
+                    className="rounded-full"
+                  >
+                    <>
+                      <Icons.ArrowRight className="h-4 w-4" />
+                      Ver perfil
+                    </>
+                  </Button>
+                ) : null}
+              </div>
+
+              <p className="text-sm leading-7 text-slate-600">
+                {property.host?.bio?.trim() || 'Ves quién publica, qué historial ya aparece y qué información quedó validada dentro de la plataforma.'}
+              </p>
+
+              <TrustSignalsInline
+                title="Qué ya deja claro este perfil"
+                signals={hostTrustSignals}
+                emptyText="Todavía no hay suficientes señales visibles para resumir este perfil."
+              />
+            </div>
+          </Card>
+
+          <Card className="rounded-[32px] border-slate-200/80 bg-white p-6 shadow-[0_28px_70px_-50px_rgba(15,23,42,0.25)] sm:p-7">
+            <div className="space-y-5">
+              <SectionTitle
+                eyebrow="Opiniones"
+                heading={reviewCount > 0 ? `${reviewCount} ${reviewCount === 1 ? 'opinión visible' : 'opiniones visibles'}` : 'Opiniones del lugar'}
+                description="Mostramos comentarios de estadías reales para dar contexto, no para prometer una experiencia sin problemas."
+              />
+
+              {visibleReviews.length > 0 ? (
+                <ul className="grid gap-3 lg:grid-cols-2">
+                  {visibleReviews.map((review) => (
+                    <li key={review.id} className="rounded-[24px] border border-slate-200/80 bg-slate-50/80 px-4 py-4 shadow-[0_16px_34px_-30px_rgba(15,23,42,0.18)]">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-950">{review.userName || 'Huésped'}</p>
+                          {formatMonthYear(review.date) ? <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">{formatMonthYear(review.date)}</p> : null}
+                        </div>
+                        <div className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700">
+                          <Icons.Star className="h-4 w-4 text-amber-500" />
+                          <span>{review.rating.toFixed(1).replace('.', ',')}</span>
+                        </div>
+                      </div>
+                      <p className="mt-3 text-sm leading-6 text-slate-600">{review.comment}</p>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="rounded-[24px] border border-slate-200/80 bg-slate-50/80 px-4 py-4 text-sm leading-6 text-slate-500">
+                  Todavía no hay opiniones visibles de estadías cerradas para este lugar.
+                </p>
+              )}
             </div>
           </Card>
         </main>

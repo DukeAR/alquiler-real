@@ -425,7 +425,8 @@ describe('MyBookings', () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText('Coordinás la seña directo con el anfitrión.')).toBeInTheDocument();
+    expect(await screen.findByText('Seguís coordinando por chat')).toBeInTheDocument();
+    expect(screen.getByText('Si cambiás de idea antes de informarla, podés dejar la seña registrada acá.')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Dejarla registrada acá/i }));
 

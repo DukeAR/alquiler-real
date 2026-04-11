@@ -164,13 +164,13 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           </p>
         </div>
 
-        <div className="rounded-[22px] border border-slate-100 bg-slate-50/80 px-4 py-3.5">
+        <div className="border-t border-slate-100 pt-1">
           <VerificationMeter
             summary={verificationSummary}
             eyebrow="Comprobado"
             layout="inline"
             tone={shouldEmphasizeVerification ? 'success' : 'neutral'}
-            className="flex-1"
+            className="flex-1 px-1 py-2"
             labelClassName={cn(
               'text-[13px] font-semibold leading-5 text-slate-900',
               shouldEmphasizeVerification && 'text-emerald-900',
