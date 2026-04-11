@@ -193,6 +193,44 @@ describe('HostDashboard', () => {
     );
   });
 
+  test('opens the property upload flow from the dashboard when the host already has listings', async () => {
+    apiJsonMock.mockResolvedValue({
+      stats: {
+        host_rating: 4.9,
+        total_bookings_hosted: 3,
+        trust_score: 88,
+        badge: 'Verificado',
+        host_verified: true,
+      },
+      properties: [
+        {
+          id: 'prop-1',
+          title: 'Casa del bosque',
+          location: 'Pinamar',
+          price: 150000,
+          status: 'active',
+          reviewsCount: 8,
+          rating: 4.9,
+          imageUrl: 'https://example.com/property.jpg',
+          verificationScore: 4,
+          verificationItems: [
+            { key: 'identity', label: 'Identidad confirmada', description: 'Sabés con quién estás hablando.', status: 'complete' },
+          ],
+        },
+      ],
+      recentBookings: [],
+      contactedGuests: [],
+      estimatedIncome: 250000,
+    });
+
+    renderDashboard();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Publicar otra propiedad/i }));
+
+    expect(await screen.findByText('PropertyUploadForm')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Cancelar/i })).toBeInTheDocument();
+  });
+
   test('shows the guest profile sheet for a pending booking before evaluation is enabled', async () => {
     apiJsonMock.mockResolvedValue({
       stats: {

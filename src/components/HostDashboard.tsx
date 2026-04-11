@@ -294,6 +294,16 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
   const [activePremiumOffer, setActivePremiumOffer] = useState<any>(null);
   const [processingPremiumOffer, setProcessingPremiumOffer] = useState(false);
 
+  const openPublishingFlow = () => {
+    setIsAddingProperty(true);
+    setShowPublishingFlow(true);
+  };
+
+  const closePublishingFlow = () => {
+    setIsAddingProperty(false);
+    setShowPublishingFlow(false);
+  };
+
   useEffect(() => {
     void fetchData();
   }, []);
@@ -1024,20 +1034,20 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
     );
   }
 
-  if (!dashboardData || dashboardData.properties?.length === 0) {
-    if (isAddingProperty || showPublishingFlow) {
-      return (
-        <div className="min-h-screen bg-slate-50 py-12 dark:bg-slate-950">
-          <div className="mx-auto mb-6 max-w-5xl px-4">
-            <Button variant="ghost" onClick={() => { setIsAddingProperty(false); setShowPublishingFlow(false); }} className="rounded-full px-3 py-2 text-sm text-slate-600 dark:text-slate-400">
-              <Icons.ArrowLeft className="h-4 w-4" /> Cancelar
-            </Button>
-          </div>
-          <PropertyUploadForm onComplete={() => { setIsAddingProperty(false); setShowPublishingFlow(false); void fetchData(); }} />
+  if (isAddingProperty || showPublishingFlow) {
+    return (
+      <div className="min-h-screen bg-slate-50 py-12 dark:bg-slate-950">
+        <div className="mx-auto mb-6 max-w-5xl px-4">
+          <Button variant="ghost" onClick={closePublishingFlow} className="rounded-full px-3 py-2 text-sm text-slate-600 dark:text-slate-400">
+            <Icons.ArrowLeft className="h-4 w-4" /> Cancelar
+          </Button>
         </div>
-      );
-    }
+        <PropertyUploadForm onComplete={() => { closePublishingFlow(); void fetchData(); }} />
+      </div>
+    );
+  }
 
+  if (!dashboardData || dashboardData.properties?.length === 0) {
     return (
       <div className="min-h-screen bg-slate-50 px-6 py-16 dark:bg-slate-950">
         <div className="mx-auto max-w-3xl">
@@ -1049,7 +1059,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
             description="Publicá rápido lo esencial y seguí mejorando el aviso con fotos, verificaciones y ajustes cuando quieras."
             action={{
               label: 'Publicá tu primera propiedad',
-              onClick: () => { setIsAddingProperty(true); setShowPublishingFlow(true); },
+              onClick: openPublishingFlow,
             }}
             secondaryAction={{
               label: 'Volver a explorar',
@@ -1096,7 +1106,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
                 En pocos segundos podés ver cómo están tus avisos, qué quedó pendiente y dónde conviene actuar primero.
               </p>
             </div>
-            <Button type="button" onClick={() => { setIsAddingProperty(true); setShowPublishingFlow(true); }} className="rounded-full">
+            <Button type="button" onClick={openPublishingFlow} className="rounded-full">
               <>
                 <Icons.Home className="h-4 w-4" />
                 Publicar otra propiedad
