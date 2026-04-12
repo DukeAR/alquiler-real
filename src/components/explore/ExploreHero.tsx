@@ -84,8 +84,6 @@ export const ExploreHero = ({
         </div>
       </div>
     </section>
-    </section>
-  );
   );
 };
 

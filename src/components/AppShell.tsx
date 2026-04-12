@@ -1,7 +1,6 @@
 import React, { Suspense } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Icons } from './Icons';
-import { Logo } from './Logo';
 import { NotificationToast } from './NotificationToast';
 import { AIAssistant } from './AIAssistant';
 import { NotificationsMenu } from './NotificationsMenu';
@@ -13,38 +12,34 @@ import { useSocket } from '../hooks/useSocket';
 import { cn } from '../lib/utils';
 import { showToast } from '../lib/toast';
 import { getResolvedAuthViewState } from '../lib/authViewState';
-  return (
-    <div className="min-h-screen flex flex-col bg-[var(--color-bg)]" style={{ fontFamily: 'var(--font-ui)' }}>
-      <header className="border-b border-[var(--color-border)] bg-white/95 backdrop-blur-md z-30 sticky top-0">
-        <div className="container mx-auto flex items-center justify-between h-16 px-4">
-          <div className="flex items-center gap-3">
-            <Logo height={36} />
-            <span className="font-bold text-2xl text-[var(--color-primary)] tracking-tight" style={{ letterSpacing: '-0.5px' }}>Alquiler Real</span>
-          </div>
-          <nav className="flex items-center gap-4">
-            {navLinks.map((link) => (
-              <NavLink key={link.href} href={link.href} className="text-[var(--color-text)] hover:text-[var(--color-primary-accent)] font-medium px-2 py-1 rounded-md transition-colors">
-                {link.label}
-              </NavLink>
-            ))}
-          </nav>
-          <div className="flex items-center gap-2">
-            {right}
-          </div>
-        </div>
-      </header>
-      <main className="flex-1 container mx-auto px-4 py-10 w-full">
-        {children}
-      </main>
-    </div>
-  );
 
-  if (action.badgeLabel) {
-    return `${action.label}, ${action.badgeLabel(action.badge)}`;
-  }
-
-  return `${action.label}, ${action.badge} ${action.badge === 1 ? 'elemento guardado' : 'elementos guardados'}`;
+// --- Types and Utility Functions (local definitions) ---
+export type NavAction = {
+  label: string;
+  shortLabel: string;
+  path?: string;
+  icon: React.ComponentType<{ className?: string }>;
+  badge?: number | string;
+  badgeLabel?: (count: number) => string;
+  protected?: boolean;
+  onClick?: () => void;
 };
+
+export interface AppShellProps {
+  children: React.ReactNode;
+}
+
+function matchesPath(pathname: string, prefix: string): boolean {
+  // Simple prefix match, can be improved for more complex routing
+  return pathname === prefix || pathname.startsWith(prefix + '/') || pathname.startsWith(prefix + '?');
+}
+
+function getNavAriaLabel(action: NavAction): string {
+  if (action.badge && typeof action.badge === 'number' && action.badgeLabel) {
+    return `${action.label} (${action.badgeLabel(action.badge)})`;
+  }
+  return action.label;
+}
 
 const hiddenHeaderPrefixes = [
   '/login',

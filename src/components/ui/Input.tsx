@@ -60,7 +60,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
                 hasError && 'border-red-300 bg-red-50/60 text-slate-900 placeholder:text-red-300 hover:border-red-400 focus:border-red-400 focus:shadow-[0_0_0_4px_rgba(248,113,113,0.16)] dark:border-red-900/50 dark:bg-red-950/20 dark:text-white dark:hover:border-red-800/70',
                 className,
               )}
-              style={{ ...style, fontFamily: 'var(--font-ui)' }}
+              style={{ ...(props.style || {}), fontFamily: 'var(--font-ui)' }}
               {...props}
             />
         {endAdornment ? (

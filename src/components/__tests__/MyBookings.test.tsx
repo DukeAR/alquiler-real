@@ -360,7 +360,7 @@ describe('MyBookings', () => {
     expect(await screen.findAllByText('Pendiente seña')).not.toHaveLength(0);
     // Robust matcher for split/multiline copy
     expect(
-      await screen.findByText((content, node) => {
+      await screen.findByText((_, node) => {
         const hasText = (n: Node): string =>
           Array.from(n.childNodes).map((c) => (c.nodeType === 3 ? c.textContent : hasText(c))).join('');
         const text = hasText(node as HTMLElement).replace(/\s+/g, ' ');
@@ -438,7 +438,7 @@ describe('MyBookings', () => {
     expect(await screen.findByText('Coordinación por fuera')).toBeInTheDocument();
     // Robust matcher for split/multiline copy
     expect(
-      await screen.findByText((content, node) => {
+      await screen.findByText((_, node) => {
         const hasText = (n: Node): string =>
           Array.from(n.childNodes).map((c) => (c.nodeType === 3 ? c.textContent : hasText(c))).join('');
         const text = hasText(node as HTMLElement).replace(/\s+/g, ' ');

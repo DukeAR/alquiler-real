@@ -1,6 +1,5 @@
 import React from 'react';
 import { cn } from '../../lib/utils';
-import { Icons } from '../Icons';
 
 type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost';
 type ButtonSize = 'sm' | 'md' | 'lg' | 'icon' | 'auto';
@@ -27,22 +26,15 @@ const loadingClasses: Record<ButtonVariant, string> = {
   ghost: 'disabled:bg-transparent disabled:text-slate-600 disabled:opacity-80 dark:disabled:text-slate-300',
 };
 
-const iconSizeClasses: Record<ButtonSize, string> = {
-  sm: 'h-4 w-4',
-  md: 'h-4 w-4',
-  lg: 'h-5 w-5',
-  icon: 'h-5 w-5',
-  auto: 'h-4 w-4',
-};
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: ButtonVariant;
-  size?: ButtonSize;
-  fullWidth?: boolean;
-  loading?: boolean;
-  loadingLabel?: React.ReactNode;
-  success?: boolean;
-  successLabel?: React.ReactNode;
+	variant?: ButtonVariant;
+	size?: ButtonSize;
+	fullWidth?: boolean;
+	loading?: boolean;
+	loadingLabel?: React.ReactNode;
+	success?: boolean;
+	successLabel?: React.ReactNode;
 }
 
 
@@ -79,7 +71,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           fullWidth && 'w-full',
           className,
         )}
-        style={{ fontFamily: 'var(--font-ui)' }}
+        style={{ ...(props.style || {}), fontFamily: 'var(--font-ui)' }}
         {...props}
       >
         {loading

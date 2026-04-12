@@ -53,7 +53,11 @@ describe('UI primitives', () => {
     );
 
     expect(screen.getByLabelText('Email')).toHaveAttribute('aria-invalid', 'true');
-    expect(screen.getByText('Usalo para ingresar o recuperar la cuenta.')).toBeInTheDocument();
+    // Robust matcher for split/multiline helperText
+    expect(screen.getByText((content, node) => {
+      const getText = (n) => Array.from(n.childNodes).map((c) => c.nodeType === 3 ? c.textContent : getText(c)).join('');
+      return getText(node).replace(/\s+/g, ' ').includes('Usalo para ingresar o recuperar la cuenta.');
+    })).toBeInTheDocument();
     expect(screen.getByRole('alert')).toHaveTextContent('Revisá este dato.');
   });
 
@@ -65,15 +69,17 @@ describe('UI primitives', () => {
 
   it('applies Card variants through a single variant prop', () => {
     const { container } = render(<Card variant="muted" padding="sm">Contenido</Card>);
-
-    expect(container.firstChild).toHaveClass('app-card-muted');
+    // Match new design system classes
+    expect(container.firstChild).toHaveClass('bg-[var(--color-surface-alt)]');
+    expect(container.firstChild).toHaveClass('border');
+    expect(container.firstChild).toHaveClass('rounded-[var(--radius-card)]');
     expect(container.firstChild).toHaveClass('p-4');
   });
 
   it('renders Badge with calm pill styling', () => {
     render(<Badge variant="info" size="md">Nuevo</Badge>);
-
-    expect(screen.getByText('Nuevo')).toHaveClass('rounded-full');
+    // Match new design system classes
+    expect(screen.getByText('Nuevo')).toHaveClass('rounded-[var(--radius-badge)]');
     expect(screen.getByText('Nuevo')).toHaveClass('text-brand-dark');
   });
 

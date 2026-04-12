@@ -14,8 +14,17 @@ export interface FormFieldProps extends React.HTMLAttributes<HTMLDivElement> {
 export const FormField: React.FC<FormFieldProps> = ({
   className,
   label,
+  hint,
+  helperText,
+  error,
+  htmlFor,
+  helperTextId,
+  errorId,
+  children,
+  ...props
+}) => {
   return (
-    <div className={clsx("mb-4", className)} style={{ fontFamily: 'var(--font-ui)' }}>
+    <div className={cn("mb-4", className)} style={{ fontFamily: 'var(--font-ui)' }} {...props}>
       {label && (
         <label htmlFor={htmlFor} className="block text-sm font-medium text-[var(--color-primary)] mb-1">
           {label}
@@ -33,14 +42,6 @@ export const FormField: React.FC<FormFieldProps> = ({
           {error}
         </p>
       )}
-    </div>
-  );
-          {hint ? <p className="app-form-hint sm:text-right">{hint}</p> : null}
-        </div>
-      ) : null}
-      {children}
-      {helperText ? <p id={helperTextId} className="app-form-hint">{helperText}</p> : null}
-      {error ? <p id={errorId} className="app-form-error" role="alert">{error}</p> : null}
     </div>
   );
 };

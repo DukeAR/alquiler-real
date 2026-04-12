@@ -28,26 +28,29 @@ export interface NoticeBannerProps extends React.HTMLAttributes<HTMLDivElement> 
 export const NoticeBanner: React.FC<NoticeBannerProps> = ({
   className,
   tone = 'info',
+  heading,
+  description,
+  icon,
+  children,
+  ...props
+}) => {
   return (
     <div
-      className={clsx(
+      className={cn(
         "flex items-center gap-3 px-4 py-3 rounded-[var(--radius-card)] border",
-        {
-          'bg-[var(--color-primary-soft)] border-[var(--color-primary-accent)] text-[var(--color-primary-accent)]': variant === 'info',
-          'bg-[var(--color-success)] border-[var(--color-success)] text-white': variant === 'success',
-          'bg-[var(--color-danger)] border-[var(--color-danger)] text-white': variant === 'danger',
-          'bg-[var(--color-warning)] border-[var(--color-warning)] text-white': variant === 'warning',
-        },
+        toneClasses[tone],
         className
       )}
       style={{ fontFamily: 'var(--font-ui)' }}
       {...props}
     >
-      {icon && <span className="shrink-0">{icon}</span>}
-      <span>{children}</span>
-    </div>
-  );
-        {description ? <p className="app-body-sm leading-6 text-current/80">{description}</p> : null}
+      <span className="shrink-0">{icon ?? toneIcons[tone]}</span>
+      <div className="flex flex-col">
+        <span className="font-semibold leading-6">{heading}</span>
+        {description ? (
+          <p className="app-body-sm leading-6 text-current/80">{description}</p>
+        ) : null}
+        {children}
       </div>
     </div>
   );
