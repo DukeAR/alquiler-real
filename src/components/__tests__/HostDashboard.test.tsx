@@ -108,9 +108,9 @@ describe('HostDashboard', () => {
               ],
               verificationProgress: {
                 level: 'medium',
-                label: 'Nivel medio',
+                label: 'Confianza reforzada',
                 summary: 'Ya sumaste identidad validada y fotos reales como base visible del aviso.',
-                nextStep: 'Un video corto alcanza para subir al nivel medio con una señal fuerte de confianza.',
+                nextStep: 'Un video corto ayuda a generar mas confianza.',
                 advancedChecks: [
                   { key: 'documents', label: 'Documentación avanzada', status: 'pending', description: 'Podés sumar documentación privada para moderación interna.' },
                   { key: 'manualReview', label: 'Revisión manual o presencial', status: 'pending', description: 'La revisión manual queda como capa avanzada.' },
@@ -171,15 +171,13 @@ describe('HostDashboard', () => {
 
     renderDashboard();
 
-    expect(await screen.findByText('Qué conviene hacer ahora')).toBeInTheDocument();
+    expect(await screen.findByText('Publica, responde y mejora sin complicarte')).toBeInTheDocument();
     expect(screen.getByText('Tus publicaciones')).toBeInTheDocument();
-    expect(screen.getByText('Embudo reciente')).toBeInTheDocument();
-    expect(screen.getByText('Ficha → disponibilidad')).toBeInTheDocument();
-    expect(screen.getByText('60%')).toBeInTheDocument();
-    expect(screen.getByText('12 de 20 visitas abrieron disponibilidad.')).toBeInTheDocument();
-    expect(screen.getByText('Mostramos qué está comprobado para que otros puedan decidir mejor sobre tu aviso.')).toBeInTheDocument();
-    expect(screen.getByText('4 de 5 comprobaciones')).toBeInTheDocument();
-    expect(screen.getAllByText('Un video corto alcanza para subir al nivel medio con una señal fuerte de confianza.').length).toBeGreaterThan(0);
+    expect(screen.getByText('Actividad reciente')).toBeInTheDocument();
+    expect(screen.getByText('Sugerencias para mover tus avisos')).toBeInTheDocument();
+    expect(screen.getByText('Primero ves si cada aviso esta activo y despues cuanto ya queda claro para quien consulta.')).toBeInTheDocument();
+    expect(screen.getAllByText('4 de 5 comprobaciones').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Un video corto ayuda a generar mas confianza.').length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: /Solicitar verificación presencial/i })).toBeInTheDocument();
 
     fireEvent.click((await screen.findAllByRole('button', { name: /Disponibilidad/i }))[1]!);
@@ -235,7 +233,7 @@ describe('HostDashboard', () => {
 
     renderDashboard();
 
-    fireEvent.click(await screen.findByRole('button', { name: /Publicar otra propiedad/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Publicar propiedad/i }));
 
     expect(await screen.findByText('PropertyUploadForm')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Cancelar/i })).toBeInTheDocument();
@@ -337,7 +335,7 @@ describe('HostDashboard', () => {
 
     renderDashboard();
 
-    expect(await screen.findByText('Solicitudes y reservas')).toBeInTheDocument();
+    expect(await screen.findByText('Actividad reciente')).toBeInTheDocument();
     expect(screen.getAllByText('Marina').length).toBeGreaterThan(0);
     expect(screen.queryByRole('button', { name: 'Evaluar huésped' })).not.toBeInTheDocument();
 
@@ -437,8 +435,8 @@ describe('HostDashboard', () => {
     });
 
     expect(await screen.findAllByText('Seña por definir')).not.toHaveLength(0);
-    expect(screen.getByText('Ya la aceptaste. Ahora el huésped define si deja la seña registrada acá o si la coordina por fuera.')).toBeInTheDocument();
-    expect(screen.getByText('Si la deja registrada acá, el fee aparece antes de pagar y la seña queda asentada.')).toBeInTheDocument();
+    expect(screen.getByText('Ya la aceptaste. Ahora el huesped define como dejar la seña para seguir.')).toBeInTheDocument();
+    expect(screen.getByText('Si la deja registrada aca, la seña queda asentada y el acuerdo se ve mas claro.')).toBeInTheDocument();
     expect(showToastMock).toHaveBeenCalledWith(
       'Solicitud aceptada',
       'La solicitud quedó aceptada. Ahora el huésped puede definir la seña desde el chat.',

@@ -48,7 +48,7 @@ export const CHAT_SYSTEM_MESSAGE_COPY: Record<ChatSystemMessageKey, string> = {
   'request-not-advanced': 'No se pudo avanzar con esta reserva.',
   'request-accepted': 'La otra parte aceptó avanzar.',
   'before-payment': 'Antes de avanzar con la seña, confirmá que los datos coincidan con el anfitrión del aviso.',
-  'deposit-choice': 'Podés resolver la seña acá para dejar todo claro entre ambos. Si preferís, también podés coordinarla por fuera.',
+  'deposit-choice': 'Podés resolver la seña acá para dejar todo claro y confirmado entre ambos. Si preferís, también podés coordinarla por fuera.',
   'protected-payment': 'Si elegís dejar la seña en la app, queda registrada y se libera cuando se confirme la llegada.',
   'external-deposit': 'Eligieron coordinar la seña por fuera. Si cambian de idea antes de informarla, todavía pueden resolverla acá.',
   'direct-after-payment': 'La seña ya quedó informada y el siguiente paso depende de la otra parte.',
@@ -141,24 +141,24 @@ export const getRequestSentMessage = (mode: ReservationRequestMode) => (
 
 export const getRequestAcceptedMessage = (mode: ReservationRequestMode, depositType?: ReservationDepositType | null) => {
   if (mode === 'protected' && depositType !== 'protected') {
-    return 'Ya pueden avanzar con la seña. Podés resolverla acá para dejar todo claro entre ambos o coordinarla por fuera si preferís.';
+    return 'Ya pueden avanzar con la seña y dejarlo confirmado. Podés resolverla acá para dejar todo claro entre ambos o coordinarla por fuera si preferís.';
   }
 
   if (mode === 'protected') {
-    return 'Ya pueden avanzar con la seña dentro de la app. Queda registrada y se libera cuando se confirme la llegada.';
+    return 'Ya pueden avanzar con la seña dentro de la app y dejarlo confirmado. Queda registrada y se libera cuando se confirme la llegada.';
   }
 
-  return 'Ya pueden avanzar con la seña de esta reserva.';
+  return 'Ya pueden avanzar con la seña y dejarlo confirmado.';
 };
 
 export const getRequestNotAdvancedMessage = () => CHAT_SYSTEM_MESSAGE_COPY['request-not-advanced'];
 
 const getDirectAfterPaymentMessage = (depositStatus: ReservationDepositStatus | null) => {
   if (depositStatus === 'reported') {
-    return 'El huésped informó la seña. Falta confirmar la recepción.';
+    return 'El huésped informó la seña. Falta confirmar la recepción para dejar la reserva confirmada.';
   }
 
-  return 'La seña ya quedó confirmada. La reserva está registrada y pueden seguir por chat con los detalles finales.';
+  return 'La seña ya quedó confirmada. La reserva está registrada y pueden seguir por chat con la llegada.';
 };
 
 const getProtectedAfterPaymentMessage = (depositStatus: ReservationDepositStatus | null) => {

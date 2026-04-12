@@ -50,9 +50,9 @@ describe('chatSystemMessages', () => {
       'before-payment',
       'deposit-choice',
     ]);
-    expect(messages[2]?.content).toBe('Ya pueden avanzar con la seña. Podés resolverla acá para dejar todo claro entre ambos o coordinarla por fuera si preferís.');
+    expect(messages[2]?.content).toBe('Ya pueden avanzar con la seña y dejarlo confirmado. Podés resolverla acá para dejar todo claro entre ambos o coordinarla por fuera si preferís.');
     expect(messages[3]?.content).toBe('Antes de avanzar con la seña, confirmá que los datos coincidan con el anfitrión del aviso.');
-    expect(messages[4]?.content).toBe('Podés resolver la seña acá para dejar todo claro entre ambos. Si preferís, también podés coordinarla por fuera.');
+    expect(messages[4]?.content).toBe('Podés resolver la seña acá para dejar todo claro y confirmado entre ambos. Si preferís, también podés coordinarla por fuera.');
   });
 
   test('adds the external coordination message with a return path to protected deposit', () => {
@@ -115,8 +115,8 @@ describe('chatSystemMessages', () => {
       'direct-after-payment',
       'before-arrival',
     ]);
-    expect(messages[2]?.content).toBe('Ya pueden avanzar con la seña de esta reserva.');
-    expect(messages[3]?.content).toBe('La seña ya quedó confirmada. La reserva está registrada y pueden seguir por chat con los detalles finales.');
+    expect(messages[2]?.content).toBe('Ya pueden avanzar con la seña y dejarlo confirmado.');
+    expect(messages[3]?.content).toBe('La seña ya quedó confirmada. La reserva está registrada y pueden seguir por chat con la llegada.');
   });
 
   test('adds protected arrival and problem guidance when check-in day arrives', () => {

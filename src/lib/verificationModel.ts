@@ -329,9 +329,9 @@ export const buildPropertyVerificationProgress = (
   if (highReady) {
     return {
       level: 'high',
-      label: 'Nivel alto',
+      label: 'Confianza avanzada',
       summary: 'El aviso ya combina una base clara, identidad validada, video y respaldo avanzado.',
-      nextStep: 'La capa avanzada ya quedó lista. Solo mantené el material al día cuando el lugar cambie.',
+      nextStep: 'Solo mantene el material al dia para sostener visibilidad y confianza cuando el lugar cambie.',
       advancedChecks,
     };
   }
@@ -339,22 +339,22 @@ export const buildPropertyVerificationProgress = (
   if (mediumReady) {
     return {
       level: 'medium',
-      label: 'Nivel medio',
-      summary: 'Ya sumaste identidad validada y video del lugar como señales fuertes de confianza.',
+      label: 'Confianza reforzada',
+      summary: 'Ya sumaste identidad validada y video del lugar, dos señales fuertes para decidir mas rapido.',
       nextStep: advancedChecks[0]?.status === 'pending'
-        ? 'Si querés sumar una capa avanzada, podés cargar documentación privada para moderación interna.'
-        : 'La siguiente mejora fuerte es dejar preparada una revisión manual o presencial.',
+        ? 'Si queres sumar otra capa, podes cargar documentacion privada para moderacion interna.'
+        : 'La siguiente mejora es dejar preparada una revision manual o presencial.',
       advancedChecks,
     };
   }
 
   return {
     level: 'base',
-    label: 'Nivel base',
-    summary: 'El aviso ya puede publicarse con fotos y datos mínimos, sin frenar el alta por validaciones extra.',
+    label: 'Base publicada',
+    summary: 'El aviso ya puede publicarse con fotos y datos minimos. Ahora podes reforzarlo para generar mas confianza y recibir mas consultas.',
     nextStep: !isIdentityCheckComplete(input)
-      ? 'Validá la identidad del perfil para subir al nivel medio.'
-      : 'Subí un video del lugar para reforzar confianza sin complicar la publicación.',
+      ? 'Valida tu identidad para generar mas confianza.'
+      : 'Subi un video del lugar para reforzar confianza sin complicar la publicacion.',
     advancedChecks,
   };
 };

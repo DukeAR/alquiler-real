@@ -29,7 +29,7 @@ type PublishPayload = {
 };
 
 type PropertyUploadFormProps = {
-  onComplete: () => void;
+  onComplete: (propertyId?: string) => void;
 };
 
 type StepDefinition = {
@@ -304,6 +304,7 @@ export const PropertyUploadForm: React.FC<PropertyUploadFormProps> = ({ onComple
   const [idealForNote, setIdealForNote] = useState('');
   const [isPublishing, setIsPublishing] = useState(false);
   const [isPublished, setIsPublished] = useState(false);
+  const [publishedPropertyId, setPublishedPropertyId] = useState<string | null>(null);
   const [publishedPropertyTitle, setPublishedPropertyTitle] = useState('');
 
   const currentStep = WIZARD_STEPS[currentStepIndex];
@@ -363,24 +364,24 @@ export const PropertyUploadForm: React.FC<PropertyUploadFormProps> = ({ onComple
   const postPublishSuggestions = useMemo(() => {
     const suggestions = [
       {
-        title: 'Agregá más fotos para mejorar tu publicación',
-        description: 'Ya arrancaste con lo mínimo. Sumá cocina, exterior o detalles para que se entienda mejor el lugar.',
+        title: 'Recibí más consultas con mejores fotos',
+        description: 'Ya saliste al aire. Sumá cocina, exterior o detalles para que el lugar se entienda mejor en segundos.',
       },
       {
-        title: 'Completá tu perfil para generar más confianza',
-        description: 'Tu publicación ya está online. Ahora podés reforzar el perfil del anfitrión sin frenar consultas.',
+        title: 'Generá más confianza con identidad y video',
+        description: 'Desde el panel podés sumar esas comprobaciones sin volver a empezar la publicación.',
       },
     ];
 
     if (!generatedDescription) {
       suggestions.splice(1, 0, {
-        title: 'Completá la descripción guiada',
-        description: 'Con dos o tres frases sobre entorno y comodidad, la ficha queda más útil para decidir.',
+        title: 'Mejorá tu visibilidad con una descripcion corta',
+        description: 'Con dos o tres frases sobre entorno y comodidad, la ficha queda mas clara para decidir.',
       });
     } else if (!locationReference.trim()) {
       suggestions.splice(1, 0, {
-        title: 'Sumá barrio o referencia útil',
-        description: 'Una ubicación más clara ayuda a que te pregunten menos y entiendan mejor dónde está.',
+        title: 'Mejorá tu visibilidad con una ubicacion mas clara',
+        description: 'Sumá barrio, zona o una referencia simple para que te pregunten menos y entiendan mejor donde esta.',
       });
     }
 
@@ -454,17 +455,18 @@ export const PropertyUploadForm: React.FC<PropertyUploadFormProps> = ({ onComple
     setIsPublishing(true);
 
     try {
-      await apiJson('/api/properties', {
+      const response = await apiJson<{ id?: string }>('/api/properties', {
         method: 'POST',
         body: JSON.stringify(publishPayload),
         includeCredentials: true,
       });
 
+      setPublishedPropertyId(typeof response?.id === 'string' ? response.id : null);
       setPublishedPropertyTitle(publishPayload.title);
       setIsPublished(true);
-      showToast('Publicación creada', 'Tu propiedad ya quedó publicada. Podés seguir mejorándola sin frenarte ahora.', 'success');
+      showToast('Publicacion creada', 'Tu publicacion ya esta activa. Desde el panel podes mejorarla para generar mas confianza y recibir mas consultas.', 'success');
     } catch (error) {
-      showToast('Publicación', error instanceof Error ? error.message : 'No pudimos crear la publicación.', 'error');
+      showToast('Publicacion', error instanceof Error ? error.message : 'No pudimos crear la publicacion.', 'error');
     } finally {
       setIsPublishing(false);
     }
@@ -481,15 +483,15 @@ export const PropertyUploadForm: React.FC<PropertyUploadFormProps> = ({ onComple
           <div className="space-y-6">
             <Badge variant="success" size="md">
               <Icons.CheckCircle2 className="h-4 w-4" />
-              Publicación creada
+              Ya esta activa
             </Badge>
 
             <div className="space-y-2">
               <h2 className="text-3xl font-semibold tracking-tight text-slate-900">
-                {publishedPropertyTitle || 'Tu propiedad'} ya está publicada.
+                Tu publicacion ya esta activa
               </h2>
               <p className="max-w-2xl text-sm leading-7 text-slate-600">
-                La base ya quedó online. Ahora podés reforzarla con pequeños ajustes sin frenar el alta inicial.
+                {publishedPropertyTitle || 'Tu propiedad'} ya quedo visible. Podes mejorarla para generar mas confianza y recibir mas consultas.
               </p>
             </div>
 
@@ -502,9 +504,9 @@ export const PropertyUploadForm: React.FC<PropertyUploadFormProps> = ({ onComple
               ))}
             </div>
 
-            <Button type="button" onClick={onComplete}>
+            <Button type="button" onClick={() => onComplete(publishedPropertyId ?? undefined)}>
               <Icons.LayoutDashboard className="h-4 w-4" />
-              Ir al panel
+              Mejorar publicacion
             </Button>
           </div>
         </Card>
@@ -527,9 +529,9 @@ export const PropertyUploadForm: React.FC<PropertyUploadFormProps> = ({ onComple
                 Alta guiada
               </Badge>
               <div>
-                <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Publicá en 5 a 10 minutos</h1>
+                <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Publica tu propiedad en pocos pasos</h1>
                 <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-600">
-                  Te pedimos solo lo necesario para que la publicación salga rápido, se entienda bien y dé confianza desde el primer vistazo.
+                  Te pedimos solo lo justo para activarla rapido. Despues la mejoras desde el panel para generar mas confianza y recibir mas consultas.
                 </p>
               </div>
             </div>
@@ -927,7 +929,7 @@ export const PropertyUploadForm: React.FC<PropertyUploadFormProps> = ({ onComple
 
               {!isLastStep ? (
                 <Button type="button" onClick={goNext}>
-                  Siguiente paso
+                  {currentStepIndex === 0 ? 'Empezar' : 'Siguiente paso'}
                   <Icons.ArrowRight className="h-4 w-4" />
                 </Button>
               ) : (

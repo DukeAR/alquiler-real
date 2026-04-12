@@ -55,6 +55,13 @@ type CompactReservationStatus = {
   tone: CompactReservationStatusTone;
 };
 
+const compactReservationStatusToneClasses: Record<CompactReservationStatusTone, string> = {
+  neutral: 'border-slate-200 bg-white text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300',
+  brand: 'border-brand/15 bg-brand/8 text-brand dark:border-brand/20 dark:bg-brand/10 dark:text-brand-light',
+  success: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-900/20 dark:text-emerald-300',
+  warning: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/30 dark:bg-amber-900/20 dark:text-amber-300',
+};
+
 const normalizeSafetyText = (value: string) => value
   .normalize('NFD')
   .replace(/[\u0300-\u036f]/g, '')
@@ -125,8 +132,8 @@ type HostClosingChip = {
 
 const buildHostClosingChips = (requestContext: ReservationRequestContext | null) => {
   const advanceWithDepositMessage = requestContext?.mode === 'protected'
-    ? 'Si te parece bien, podemos seguir con la seña. Podés dejarla registrada acá o coordinarla por fuera. Si te cierra, lo podemos dejar confirmado.'
-    : 'Si te parece bien, podemos avanzar con la seña. Si te cierra, lo podemos dejar confirmado.';
+    ? 'Podemos avanzar con la seña y dejarlo confirmado. Podés dejarla registrada acá o coordinarla por fuera. Si te cierra, lo podemos dejar confirmado.'
+    : 'Podemos avanzar con la seña y dejarlo confirmado. Si te cierra, lo podemos dejar confirmado.';
 
   return [
     {
@@ -256,6 +263,44 @@ const getCompactReservationStatus = (
     default:
       return null;
   }
+};
+
+const getConversationListPreview = (
+  conversation: Conversation,
+  viewerRole: 'guest' | 'host',
+  initialConversationId?: string,
+  initialRequestContext?: ReservationRequestContext | null,
+) => {
+  const requestContext = getActiveRequestContext(conversation, initialConversationId, initialRequestContext);
+  const flowCopy = getReservationFlowCopy({
+    mode: requestContext?.mode,
+    depositType: requestContext?.depositType,
+    requestStatus: requestContext?.requestStatus,
+    bookingStatus: requestContext?.bookingStatus,
+    depositStatus: requestContext?.depositStatus,
+    cancellationActor: requestContext?.cancellationActor,
+    viewerRole,
+  });
+  const requestDeadline = flowCopy.stage === 'request-pending'
+    ? getRequestDeadline(requestContext?.requestCreatedAt)
+    : null;
+  const isExpiredPendingRequest = Boolean(
+    requestDeadline
+    && flowCopy.stage === 'request-pending'
+    && Date.now() > requestDeadline.getTime(),
+  );
+
+  return {
+    dateRange: requestContext ? formatCompactDateRange(requestContext.startDate, requestContext.endDate) : null,
+    guestsLabel: requestContext?.guests
+      ? `${requestContext.guests} ${requestContext.guests === 1 ? 'persona' : 'personas'}`
+      : null,
+    status: getCompactReservationStatus(flowCopy.stage, isExpiredPendingRequest) ?? {
+      key: 'chat-abierto',
+      label: 'Chat abierto',
+      tone: 'neutral' as const,
+    },
+  };
 };
 
 const getNightCount = (startDate?: string, endDate?: string) => {
@@ -581,8 +626,8 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
         successTitle ?? (acceptedMode === 'protected' ? 'Solicitud aceptada' : 'Propuesta aceptada'),
         successDescription ?? (
           acceptedMode === 'protected'
-            ? 'La solicitud ya quedó aceptada. Ahora el huésped puede definir la seña desde este chat.'
-            : 'La propuesta ya quedó aceptada. Ahora falta que el huésped informe la seña por chat.'
+            ? 'La solicitud ya quedo aceptada. Ahora el huesped puede definir la seña desde este chat y dejarlo confirmado.'
+            : 'La propuesta ya quedo aceptada. Ahora falta que el huesped informe la seña por chat para dejarlo confirmado.'
         ),
         'success',
       );
@@ -630,8 +675,8 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
         await acceptActiveRequest({
           successTitle: 'Cierre enviado',
           successDescription: activeConv.requestMode === 'protected'
-            ? 'El chat ya quedó listo para que el huésped defina la seña.'
-            : 'La propuesta quedó aceptada y el chat ya quedó listo para la seña.',
+            ? 'El chat ya quedo listo para definir la seña y dejarlo confirmado.'
+            : 'La propuesta quedo aceptada y el chat ya quedo listo para la seña.',
         });
       }
     } catch (err: any) {
@@ -1284,7 +1329,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
     const protectedClarityText = 'Estás usando la seña en la app para dejar el proceso registrado.';
     const keywordReminderText = 'Verificá que la cuenta esté a nombre del anfitrión antes de transferir.';
     const directProofReminderText = 'Guardá el comprobante de la seña por si necesitás revisarlo.';
-    const noAdvanceReactivationText = 'Cuando lo tengan definido, pueden avanzar con la seña para dejar todo confirmado.';
+    const noAdvanceReactivationText = 'Si retoman esto y les cierra, pueden avanzar con la seña y dejarlo confirmado.';
     const currentMessages = [...messages, ...fallbackSystemMessages];
     const existingSystemTexts = new Set(
       currentMessages
@@ -1431,7 +1476,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
     if (message.system_key === 'deposit-choice' && flowCopy?.stage === 'deposit-choice') {
       return {
         content: isHostConversation
-          ? 'El siguiente paso es que el huésped defina la seña.'
+          ? 'El siguiente paso es que el huésped defina la seña para dejarlo confirmado.'
           : 'Podés elegir si dejar la seña registrada acá o coordinarla por fuera.',
         emphasis: 'card',
         tone: 'brand',
@@ -1454,12 +1499,12 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
       const supplementaryContent = activeRequestContext?.mode === 'protected'
         ? canPayProtectedDeposit
           ? protectedDepositPreview
-            ? `Ya podés registrar la seña: ${currencyFormatter.format(protectedDepositPreview.depositAmount)} + fee ${currencyFormatter.format(protectedDepositPreview.serviceFee)} = ${currencyFormatter.format(protectedDepositPreview.totalCharge)}.`
-            : 'Ya podés dejar la seña registrada.'
-          : 'Ahora falta que el huésped registre la seña en la app.'
+            ? `Ya podés registrar la seña para dejarlo confirmado: ${currencyFormatter.format(protectedDepositPreview.depositAmount)} + fee ${currencyFormatter.format(protectedDepositPreview.serviceFee)} = ${currencyFormatter.format(protectedDepositPreview.totalCharge)}.`
+            : 'Ya podés dejar la seña registrada para dejarlo confirmado.'
+          : 'Ahora falta que el huésped registre la seña en la app para dejarlo confirmado.'
         : canReportDirectDeposit
-          ? 'Ya podés informar la seña.'
-          : 'Ahora falta que el huésped informe la seña.';
+          ? 'Ya podés informar la seña para dejarlo confirmado.'
+          : 'Ahora falta que el huésped informe la seña para dejarlo confirmado.';
 
       return {
         content,
@@ -1537,7 +1582,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
         content: 'La seña fue informada.',
         emphasis: 'card',
         tone: 'brand',
-        supplementaryContent: 'Falta confirmar la recepción.',
+        supplementaryContent: 'Falta confirmar la recepcion para dejar la reserva cerrada.',
         action: canConfirmDirectDeposit
           ? {
               kind: 'confirm-direct-deposit',
@@ -1640,31 +1685,62 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
             <div className="text-center py-12 text-slate-400 text-xs font-bold uppercase tracking-widest">Todavía no tenés conversaciones</div>
           ) : (
             conversations.map((c) => (
-              <button
-                key={c.id}
-                onClick={() => setActiveConv(c)}
-                className={cn(
-                  "flex w-full items-center gap-4 rounded-[24px] border border-transparent p-3 text-left transition-all sm:rounded-3xl sm:p-4",
-                  activeConv?.id === c.id 
-                    ? "border-brand/15 bg-brand/8 text-slate-900 shadow-[0_18px_36px_-32px_rgba(67,56,202,0.35)] dark:border-brand/20 dark:bg-brand/10 dark:text-white"
-                    : "hover:bg-slate-50 dark:hover:bg-slate-900"
-                )}
-              >
-                <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 overflow-hidden shrink-0">
-                  <img src={c.propertyImage} className="w-full h-full object-cover" />
-                </div>
-                <div className="min-w-0">
-                  <p className="font-bold truncate text-sm">
-                    {user?.id === c.tenant_id ? c.hostName : c.tenantName}
-                  </p>
-                  <p className={cn(
-                    "text-[10px] truncate uppercase font-black tracking-widest leading-tight",
-                    activeConv?.id === c.id ? "text-brand dark:text-brand-light" : "text-slate-400"
-                  )}>
-                    {c.propertyTitle}
-                  </p>
-                </div>
-              </button>
+              (() => {
+                const previewCounterpartyName = user?.id === c.tenant_id ? c.hostName : c.tenantName;
+                const preview = getConversationListPreview(
+                  c,
+                  user?.id === c.host_id ? 'host' : 'guest',
+                  initialConversationId,
+                  initialRequestContext,
+                );
+                const previewMeta = [preview.dateRange, preview.guestsLabel].filter(Boolean).join(' · ') || 'Sin fechas definidas';
+                const previewLabel = [
+                  `Abrir conversacion con ${previewCounterpartyName || 'esta persona'}`,
+                  preview.dateRange,
+                  preview.guestsLabel,
+                  preview.status.label,
+                ].filter(Boolean).join(' · ');
+
+                return (
+                  <button
+                    key={c.id}
+                    aria-label={previewLabel}
+                    onClick={() => setActiveConv(c)}
+                    className={cn(
+                      "flex w-full items-start gap-4 rounded-[24px] border border-transparent p-3 text-left transition-all sm:rounded-3xl sm:p-4",
+                      activeConv?.id === c.id
+                        ? "border-brand/15 bg-brand/8 text-slate-900 shadow-[0_18px_36px_-32px_rgba(67,56,202,0.35)] dark:border-brand/20 dark:bg-brand/10 dark:text-white"
+                        : "hover:bg-slate-50 dark:hover:bg-slate-900"
+                    )}
+                  >
+                    <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 overflow-hidden shrink-0">
+                      <img src={c.propertyImage} className="w-full h-full object-cover" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-bold truncate text-sm">
+                            {previewCounterpartyName}
+                          </p>
+                          <p className={cn(
+                            "text-[10px] truncate uppercase font-black tracking-widest leading-tight",
+                            activeConv?.id === c.id ? "text-brand dark:text-brand-light" : "text-slate-400"
+                          )}>
+                            {c.propertyTitle}
+                          </p>
+                        </div>
+                        <span className={cn(
+                          'shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]',
+                          compactReservationStatusToneClasses[preview.status.tone],
+                        )}>
+                          {preview.status.label}
+                        </span>
+                      </div>
+                      <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-300">{previewMeta}</p>
+                    </div>
+                  </button>
+                );
+              })()
             ))
           )}
         </div>

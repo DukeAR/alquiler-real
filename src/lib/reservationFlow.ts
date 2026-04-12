@@ -294,11 +294,11 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
         modelLabel,
         statusLabel: viewerRole === 'host' ? 'Seña por definir' : 'Elegir seña',
         description: viewerRole === 'host'
-          ? 'Ya la aceptaste. Ahora el huésped define si deja la seña registrada acá o si la coordina por fuera.'
-          : 'El anfitrión ya aceptó. Ahora definís si dejás la seña registrada acá o si la coordinás por fuera.',
+          ? 'Ya la aceptaste. Ahora el huesped define como dejar la seña para seguir.'
+          : 'El anfitrion ya acepto. Ahora definis como dejar la seña para seguir.',
         supportText: viewerRole === 'host'
-          ? 'Si la deja registrada acá, el fee aparece antes de pagar y la seña queda asentada.'
-          : 'Si la dejás registrada acá, ves el fee antes de pagar y la seña queda asentada hasta confirmar la llegada.',
+          ? 'Si la deja registrada aca, la seña queda asentada y el acuerdo se ve mas claro.'
+          : 'Si la dejas registrada aca, ves el fee antes de pagar y la seña queda asentada hasta confirmar la llegada.',
         nextActor: 'guest',
         nextActorLabel: 'Huésped',
         nextStepLabel: viewerRole === 'host' ? 'Esperar elección de seña' : 'Elegir cómo resolver la seña',
@@ -310,14 +310,14 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
         statusLabel: input.mode === 'protected' ? 'Solicitud aceptada' : 'Propuesta aceptada',
         description: input.mode === 'protected'
           ? viewerRole === 'host'
-            ? 'Ya la aceptaste. Ahora falta que el huésped registre la seña desde la app.'
-            : 'El anfitrión ya aceptó. Ahora falta registrar la seña desde la app.'
+            ? 'Ya la aceptaste. Ahora falta que el huesped registre la seña para dejarla confirmada.'
+            : 'El anfitrion ya acepto. Ahora falta registrar la seña para dejarla confirmada.'
           : viewerRole === 'host'
-            ? 'Ya la aceptaste. Esperá que el huésped confirme la seña por acá.'
-            : 'La propuesta ya fue aceptada. Confirmá por acá cuando hayas enviado la seña.',
+            ? 'Ya la aceptaste. Ahora el huesped puede informar la seña para dejarla confirmada.'
+            : 'La propuesta ya fue aceptada. Informa por aca cuando hayas enviado la seña para dejarla confirmada.',
         supportText: input.mode === 'protected'
           ? 'La reserva queda confirmada cuando la seña entra en custodia.'
-          : 'Cuando ambos confirman, la reserva queda registrada.',
+          : 'Cuando ambos confirman la seña, la reserva queda registrada.',
         nextActor: 'guest',
         nextActorLabel: 'Huésped',
         nextStepLabel: input.mode === 'protected'
@@ -334,11 +334,11 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
         modelLabel,
         statusLabel: 'Seña externa',
         description: viewerRole === 'host'
-          ? 'El huésped eligió coordinar la seña por fuera.'
+          ? 'El huesped eligio coordinar la seña por fuera.'
           : 'Elegiste coordinarla por fuera.',
         supportText: viewerRole === 'host'
-          ? 'La plataforma no cobra este paso. Si cambian de idea antes de informarla, el huésped puede dejarla registrada acá.'
-          : 'Coordinás la seña directo con el anfitrión. Si cambiás de idea antes de informarla, podés dejarla registrada acá.',
+          ? 'La plataforma no cobra este paso. Si cambian de idea antes de informarla, el huesped puede dejarla registrada aca.'
+          : 'Coordinas la seña directo con el anfitrion. Si cambias de idea antes de informarla, podes dejarla registrada aca.',
         nextActor: viewerRole === 'guest' ? 'guest' : 'none',
         nextActorLabel: viewerRole === 'guest' ? 'Huésped' : 'Sin acción pendiente',
         nextStepLabel: viewerRole === 'guest' ? 'Seguir por chat' : 'Seguir por chat si hace falta',

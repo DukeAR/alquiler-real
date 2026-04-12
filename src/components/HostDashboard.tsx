@@ -88,17 +88,16 @@ const toSafeCount = (value: unknown) => {
   return Number.isFinite(numericValue) ? Math.max(0, Math.round(numericValue)) : 0;
 };
 
-const formatDashboardPercentage = (value: unknown) => {
-  const numericValue = Number(value);
-  return Number.isFinite(numericValue) ? `${Math.round(numericValue)}%` : '—';
-};
-
 const scrollToSection = (sectionId: string) => {
   if (typeof document === 'undefined') {
     return;
   }
 
-  document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const section = document.getElementById(sectionId);
+
+  if (section && typeof section.scrollIntoView === 'function') {
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 };
 
 const getBookingFlow = (booking: any) => getReservationFlowCopy({
@@ -206,23 +205,6 @@ const getBookingSummaryItems = (booking: any) => {
   return summaryItems;
 };
 
-type DashboardMetricTileProps = {
-  label: string;
-  value: string;
-  helper: string;
-  accent?: 'brand' | 'neutral';
-};
-
-const DashboardMetricTile = ({ label, value, helper, accent = 'neutral' }: DashboardMetricTileProps) => (
-  <div className="rounded-[28px] border border-slate-200/80 bg-white/92 p-5 shadow-[0_18px_46px_-38px_rgba(15,23,42,0.3)] dark:border-slate-800 dark:bg-slate-900/90">
-    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">{label}</p>
-    <p className={cn('mt-3 text-3xl font-semibold tracking-tight', accent === 'brand' ? 'text-brand' : 'text-slate-950 dark:text-slate-50')}>
-      {value}
-    </p>
-    <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">{helper}</p>
-  </div>
-);
-
 type PriorityActionRowProps = {
   eyebrow: string;
   title: string;
@@ -314,6 +296,14 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
     }
   }, [setActiveMode, user?.activeMode]);
 
+  useEffect(() => {
+    if (!focusedPropertyId || showPublishingFlow || loading) {
+      return;
+    }
+
+    scrollToSection(PROPERTIES_SECTION_ID);
+  }, [focusedPropertyId, loading, showPublishingFlow]);
+
   const fetchData = async () => {
     setLoading(true);
     setLoadError(null);
@@ -321,8 +311,10 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
     try {
       const data = await apiJson<any>('/api/host/dashboard', { includeCredentials: true });
       setDashboardData(data);
+      return data;
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : 'No pudimos cargar el panel del anfitrión.');
+      return null;
     } finally {
       setLoading(false);
     }
@@ -687,39 +679,6 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
     };
   }, [hostProperties, nextArrivalFromProperties, pendingRequestBookings.length, recentBookings, upcomingArrivalBookings]);
 
-  const funnelOverview = useMemo(() => {
-    const funnelMetrics = dashboardData?.funnelMetrics ?? {};
-    const detailViews = toSafeCount(funnelMetrics.detailViews);
-    const availabilityClicks = toSafeCount(funnelMetrics.availabilityClicks);
-    const chatStarts = toSafeCount(funnelMetrics.chatStarts);
-    const chatsWithFirstMessage = toSafeCount(funnelMetrics.chatsWithFirstMessage);
-    const acceptedRequests = toSafeCount(funnelMetrics.acceptedRequests);
-    const depositsCompleted = toSafeCount(funnelMetrics.depositsCompleted);
-    const windowDays = toSafeCount(funnelMetrics.windowDays) || 30;
-
-    return {
-      windowDays,
-      availability: {
-        value: formatDashboardPercentage(funnelMetrics.availabilityClickRate),
-        helper: detailViews > 0
-          ? `${availabilityClicks} de ${detailViews} visitas abrieron disponibilidad.`
-          : `Todavía no hay visitas suficientes para medir este paso en los últimos ${windowDays} días.`,
-      },
-      chat: {
-        value: formatDashboardPercentage(funnelMetrics.firstMessageRate),
-        helper: chatStarts > 0
-          ? `${chatsWithFirstMessage} de ${chatStarts} aperturas de chat llegaron al primer mensaje.`
-          : `Todavía no hubo chats nuevos para medir este paso en los últimos ${windowDays} días.`,
-      },
-      deposit: {
-        value: formatDashboardPercentage(funnelMetrics.depositConversionRate),
-        helper: acceptedRequests > 0
-          ? `${depositsCompleted} de ${acceptedRequests} acuerdos avanzaron hasta la seña.`
-          : `Todavía no hubo acuerdos aceptados para medir este paso en los últimos ${windowDays} días.`,
-      },
-    };
-  }, [dashboardData?.funnelMetrics]);
-
   const priorityActions = useMemo(() => {
     const actions = [] as Array<{
       id: string;
@@ -735,9 +694,9 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
     if (dashboardOverview.pendingRequestsCount > 0) {
       actions.push({
         id: 'pending-requests',
-        eyebrow: 'Solicitudes',
-        title: formatCountLabel(dashboardOverview.pendingRequestsCount, 'solicitud pendiente', 'solicitudes pendientes'),
-        description: 'Resolverlas primero evita que el intercambio se enfríe y te ordena el resto del panel.',
+        eyebrow: 'Recibi mas consultas',
+        title: `Responde ${formatCountLabel(dashboardOverview.pendingRequestsCount, 'la solicitud pendiente', 'las solicitudes pendientes')}`,
+        description: 'Responder rapido evita que la conversacion se enfrie y te deja el panel mas ordenado.',
         actionLabel: 'Ver solicitudes',
         icon: <Icons.MessageSquare className="h-5 w-5" />,
         kind: 'requests',
@@ -749,13 +708,12 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
     if (propertyNeedingVerification) {
       actions.push({
         id: 'missing-verifications',
-        eyebrow: 'Verificación',
-        title: `Completar verificaciones de ${propertyNeedingVerification.title}`,
-        description: propertyNeedingVerification.verificationProgress?.nextStep
-          || (propertyNeedingVerification.pendingVerificationItems.length === 1
-            ? `Le falta ${propertyNeedingVerification.pendingVerificationItems[0]?.label?.toLowerCase() || 'una comprobación'} para quedar más claro.`
-            : `Le faltan ${propertyNeedingVerification.pendingVerificationItems.length} comprobaciones. Completar lo pendiente hace que el aviso quede más claro en segundos.`),
-        actionLabel: 'Revisar aviso',
+        eyebrow: 'Genera mas confianza',
+        title: `Mejora ${propertyNeedingVerification.title}`,
+        description: propertyNeedingVerification.pendingVerificationItems.length === 1
+          ? `Te falta ${propertyNeedingVerification.pendingVerificationItems[0]?.label?.toLowerCase() || 'una comprobacion'} para que el aviso quede mas claro.`
+          : `Te faltan ${propertyNeedingVerification.pendingVerificationItems.length} comprobaciones para que el aviso se entienda mejor y genere mas confianza.`,
+        actionLabel: 'Mejorar aviso',
         icon: <Icons.Shield className="h-5 w-5" />,
         kind: 'property',
         propertyId: propertyNeedingVerification.id,
@@ -768,9 +726,9 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
     if (pausedProperty) {
       actions.push({
         id: 'paused-property',
-        eyebrow: 'Estado del aviso',
-        title: `Revisar ${pausedProperty.title}`,
-        description: 'Hoy está pausado. Si querés volver a moverlo, repasá el aviso y activalo cuando lo veas listo.',
+        eyebrow: 'Mejora tu visibilidad',
+        title: `Volve a activar ${pausedProperty.title}`,
+        description: 'Hoy esta pausado. Cuando lo actives vuelve a mostrarse y puede recibir consultas de nuevo.',
         actionLabel: 'Revisar aviso',
         icon: <Icons.Home className="h-5 w-5" />,
         kind: 'property',
@@ -779,11 +737,11 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
     } else if (availabilityProperty) {
       actions.push({
         id: 'availability',
-        eyebrow: 'Disponibilidad',
-        title: `Revisar disponibilidad de ${availabilityProperty.title}`,
+        eyebrow: 'Mejora tu visibilidad',
+        title: `Revisa la disponibilidad de ${availabilityProperty.title}`,
         description: availabilityProperty.nextArrivalDate
-          ? `Tu próxima llegada para este aviso está marcada para el ${formatDashboardDate(availabilityProperty.nextArrivalDate)}.`
-          : 'Dejá claras las fechas disponibles para responder menos dudas por chat.',
+          ? `Tu proxima llegada para este aviso esta marcada para el ${formatDashboardDate(availabilityProperty.nextArrivalDate)}.`
+          : 'Deja claras las fechas disponibles para responder menos dudas y cerrar mas rapido.',
         actionLabel: 'Editar disponibilidad',
         icon: <Icons.Calendar className="h-5 w-5" />,
         kind: 'availability',
@@ -1045,7 +1003,13 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
             <Icons.ArrowLeft className="h-4 w-4" /> Cancelar
           </Button>
         </div>
-        <PropertyUploadForm onComplete={() => { closePublishingFlow(); void fetchData(); }} />
+        <PropertyUploadForm
+          onComplete={(publishedPropertyId) => {
+            closePublishingFlow();
+            setFocusedPropertyId(publishedPropertyId ?? null);
+            void fetchData();
+          }}
+        />
       </div>
     );
   }
@@ -1058,10 +1022,10 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
             eyebrow="Panel de anfitrión"
             tone="soft"
             visual={<Icons.LayoutDashboard className="h-10 w-10" />}
-            title="Todavía no publicaste propiedades"
-            description="Publicá rápido lo esencial y seguí mejorando el aviso con fotos, verificaciones y ajustes cuando quieras."
+            title="Publica tu propiedad en pocos pasos"
+            description="Arranca con lo esencial para activarla rapido. Despues podes mejorarla para generar mas confianza y recibir mas consultas."
             action={{
-              label: 'Publicá tu primera propiedad',
+              label: 'Empezar',
               onClick: openPublishingFlow,
             }}
             secondaryAction={{
@@ -1103,96 +1067,35 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
         <section className={dashboardSectionClass}>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="space-y-2">
-              <p className="app-eyebrow">Estado actual</p>
-              <h1 className="text-2xl font-semibold tracking-tight text-slate-950 dark:text-slate-50">Lo importante de hoy</h1>
+              <p className="app-eyebrow">Panel de anfitrion</p>
+              <h1 className="text-2xl font-semibold tracking-tight text-slate-950 dark:text-slate-50">Publica, responde y mejora sin complicarte</h1>
               <p className="max-w-3xl text-sm leading-7 text-slate-600 dark:text-slate-300">
-                En pocos segundos podés ver cómo están tus avisos, qué quedó pendiente y dónde conviene actuar primero.
+                Primero ves el estado de cada aviso, despues la actividad reciente y al final solo las sugerencias que hoy pueden mover mas consultas.
               </p>
+              <div className="flex flex-wrap gap-2 pt-1 text-xs">
+                <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                  {dashboardOverview.activePropertiesCount > 0
+                    ? formatCountLabel(dashboardOverview.activePropertiesCount, 'aviso activo', 'avisos activos')
+                    : 'Sin avisos activos'}
+                </span>
+                <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                  {dashboardOverview.pendingRequestsCount > 0
+                    ? formatCountLabel(dashboardOverview.pendingRequestsCount, 'solicitud pendiente', 'solicitudes pendientes')
+                    : 'Sin solicitudes pendientes'}
+                </span>
+                <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                  {dashboardOverview.nextArrival?.dateLabel
+                    ? `Proxima llegada ${dashboardOverview.nextArrival.dateLabel}`
+                    : 'Sin llegadas proximas'}
+                </span>
+              </div>
             </div>
             <Button type="button" onClick={openPublishingFlow} className="rounded-full">
               <>
                 <Icons.Home className="h-4 w-4" />
-                Publicar otra propiedad
+                Publicar propiedad
               </>
             </Button>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <DashboardMetricTile
-              label="Publicaciones activas"
-              value={String(dashboardOverview.activePropertiesCount)}
-              helper={dashboardOverview.activePropertiesCount > 0 ? 'Avisos visibles y recibiendo movimiento.' : 'Todavía no tenés avisos activos.'}
-              accent="brand"
-            />
-            <DashboardMetricTile
-              label="Solicitudes pendientes"
-              value={String(dashboardOverview.pendingRequestsCount)}
-              helper={dashboardOverview.pendingRequestsCount > 0 ? 'Requieren respuesta para no perder ritmo.' : 'No hay solicitudes esperando respuesta ahora.'}
-            />
-            <DashboardMetricTile
-              label="Reservas activas"
-              value={String(dashboardOverview.activeReservationsCount)}
-              helper={dashboardOverview.activeReservationsCount > 0 ? 'Reservas confirmadas o en curso.' : 'No hay reservas activas en este momento.'}
-            />
-            <DashboardMetricTile
-              label="Próxima llegada"
-              value={dashboardOverview.nextArrival?.dateLabel || 'Sin fecha'}
-              helper={dashboardOverview.nextArrival?.helper || 'No hay llegadas confirmadas por ahora.'}
-            />
-          </div>
-        </section>
-
-        <section className={dashboardSectionClass}>
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <Icons.Target className="h-5 w-5 text-brand" />
-              <h2 className="app-title-4 dark:text-white">Embudo reciente</h2>
-            </div>
-            <p className="app-body-sm app-text-muted">
-              Miramos dónde se frena el avance de tus avisos durante los últimos {funnelOverview.windowDays} días para detectar fricción antes de que se enfríe una reserva.
-            </p>
-          </div>
-
-          <div className="grid gap-3 xl:grid-cols-3">
-            <DashboardMetricTile
-              label="Ficha → disponibilidad"
-              value={funnelOverview.availability.value}
-              helper={funnelOverview.availability.helper}
-              accent="brand"
-            />
-            <DashboardMetricTile
-              label="Chat → primer mensaje"
-              value={funnelOverview.chat.value}
-              helper={funnelOverview.chat.helper}
-            />
-            <DashboardMetricTile
-              label="Acuerdo → seña"
-              value={funnelOverview.deposit.value}
-              helper={funnelOverview.deposit.helper}
-              accent="brand"
-            />
-          </div>
-        </section>
-
-        <section className={dashboardSectionClass}>
-          <div className="space-y-2">
-            <p className="app-eyebrow">Qué hacer ahora</p>
-            <h2 className="app-title-4 dark:text-white">Qué conviene hacer ahora</h2>
-            <p className="app-body-sm app-text-muted">Priorizamos solo lo que hoy mueve más tu panel. No hace falta resolver todo junto.</p>
-          </div>
-
-          <div className="space-y-3">
-            {priorityActions.map((action) => (
-              <PriorityActionRow
-                key={action.id}
-                eyebrow={action.eyebrow}
-                title={action.title}
-                description={action.description}
-                actionLabel={action.actionLabel}
-                icon={action.icon}
-                onAction={() => handlePriorityAction(action)}
-              />
-            ))}
           </div>
         </section>
 
@@ -1202,8 +1105,8 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
               <Icons.Home className="h-5 w-5 text-brand" />
               <h2 className="app-title-4 dark:text-white">Tus publicaciones</h2>
             </div>
-            <p className="app-body-sm app-text-muted">Mostramos qué está comprobado para que otros puedan decidir mejor sobre tu aviso.</p>
-            <p className="app-body-sm app-text-muted">Desde acá podés sumar información validada o revisar lo que ya quedó visible en cada aviso.</p>
+            <p className="app-body-sm app-text-muted">Primero ves si cada aviso esta activo y despues cuanto ya queda claro para quien consulta.</p>
+            <p className="app-body-sm app-text-muted">Desde aca podes mejorar la publicacion sin volverla mas pesada ni sacar el aviso del aire.</p>
           </div>
 
           <div className="overflow-hidden rounded-[var(--app-radius-card)] border border-slate-200/80 bg-white/94 dark:border-slate-800 dark:bg-slate-900/94">
@@ -1259,18 +1162,34 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
                           <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">{property.location}</p>
                         </div>
 
-                        <div className="flex flex-wrap gap-2 text-xs">
-                          <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                            {property.pendingRequestsCount > 0 ? formatCountLabel(property.pendingRequestsCount, 'solicitud pendiente', 'solicitudes pendientes') : 'Sin solicitudes pendientes'}
-                          </span>
-                          <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                            {property.activeReservationsCount > 0 ? formatCountLabel(property.activeReservationsCount, 'reserva activa', 'reservas activas') : 'Sin reservas activas'}
-                          </span>
-                          {property.nextArrivalDate ? (
-                            <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                              Próxima llegada {formatDashboardDate(property.nextArrivalDate)}
+                        <div className="rounded-[22px] border border-slate-200/80 bg-slate-50/90 p-4 dark:border-slate-800 dark:bg-slate-900/70">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">Estado del aviso</p>
+                          <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-50">
+                            {property.status === 'active' ? 'Tu publicacion ya esta activa' : 'Tu publicacion esta pausada'}
+                          </p>
+                          <p className="mt-1 text-sm leading-6 text-slate-500 dark:text-slate-400">
+                            {property.status === 'active'
+                              ? property.pendingRequestsCount > 0
+                                ? 'Tenes consultas esperando respuesta en este aviso.'
+                                : property.activeReservationsCount > 0
+                                  ? 'Ya hay reservas en marcha y el aviso sigue visible.'
+                                  : 'Esta listo para seguir recibiendo consultas.'
+                              : 'Revisalo y activalo cuando quieras volver a mostrarlo.'}
+                          </p>
+
+                          <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                            <span className="rounded-full bg-white px-3 py-1 text-slate-600 dark:bg-slate-950 dark:text-slate-300">
+                              {property.pendingRequestsCount > 0 ? formatCountLabel(property.pendingRequestsCount, 'solicitud pendiente', 'solicitudes pendientes') : 'Sin solicitudes pendientes'}
                             </span>
-                          ) : null}
+                            <span className="rounded-full bg-white px-3 py-1 text-slate-600 dark:bg-slate-950 dark:text-slate-300">
+                              {property.activeReservationsCount > 0 ? formatCountLabel(property.activeReservationsCount, 'reserva activa', 'reservas activas') : 'Sin reservas activas'}
+                            </span>
+                            {property.nextArrivalDate ? (
+                              <span className="rounded-full bg-white px-3 py-1 text-slate-600 dark:bg-slate-950 dark:text-slate-300">
+                                Proxima llegada {formatDashboardDate(property.nextArrivalDate)}
+                              </span>
+                            ) : null}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1278,11 +1197,11 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
                     <div className="space-y-2.5">
                       <VerificationDetailsBlock
                         summary={propertyVerificationSummary}
-                        title="Comprobaciones del aviso"
+                        title="Verificacion visible"
                         description={pendingLabels.length === 0
-                          ? `Este aviso ya muestra sus 5 comprobaciones visibles. ${property.verificationProgress?.summary || ''}`.trim()
-                          : property.verificationProgress?.nextStep || 'Todavía hay margen para sumar más contexto y confianza.'}
-                        badgeLabel={property.verificationProgress?.label}
+                          ? 'Este aviso ya muestra sus comprobaciones visibles clave para decidir mejor.'
+                          : property.verificationProgress?.nextStep || 'Todavia hay margen para sumar mas contexto y generar mas confianza.'}
+                        badgeLabel={property.verificationBadge.label}
                         tone={pendingLabels.length === 0 ? 'success' : property.verificationProgress?.level === 'medium' ? 'brand' : 'neutral'}
                         showDescriptions={false}
                         className="shadow-none"
@@ -1290,7 +1209,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
 
                       {pendingLabels.length > 0 ? (
                         <div className="rounded-[22px] border border-slate-200/80 bg-slate-50/90 p-4 dark:border-slate-800 dark:bg-slate-900/70">
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">Acciones para sumar información validada</p>
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">Mejorar publicacion</p>
                           <div className="mt-3 flex flex-wrap gap-2">
                             {showIdentityAction ? (
                               <Button
@@ -1369,7 +1288,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
                           </div>
 
                           <p className="mt-3 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                            {property.verificationProgress?.nextStep || 'Podés completar estas capas sin frenar la publicación del aviso.'}
+                            {property.verificationProgress?.nextStep || 'Podes completar estas capas sin sacar el aviso del aire.'}
                           </p>
                         </div>
                       ) : null}
@@ -1377,7 +1296,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
                       {showOnsiteAction ? (
                         <div className="rounded-[20px] border border-indigo-200/70 bg-indigo-50/70 p-3 dark:border-indigo-900/40 dark:bg-indigo-950/30">
                           <p className="text-[10px] font-black uppercase tracking-[0.14em] text-indigo-700 dark:text-indigo-300">Comprobación adicional</p>
-                          <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-100">Podés solicitar una verificación presencial para sumar otra comprobación visible en este aviso.</p>
+                          <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-100">Podes solicitar una verificacion presencial para sumar otra comprobacion visible y generar mas confianza.</p>
                           <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
                             {property.premiumOnsiteOffer.complimentaryReason
                               ? property.premiumOnsiteOffer.complimentaryReason
@@ -1451,15 +1370,15 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <Icons.UserCheck className="h-5 w-5 text-brand" />
-              <h2 className="app-title-4 dark:text-white">Solicitudes y reservas</h2>
+              <h2 className="app-title-4 dark:text-white">Actividad reciente</h2>
             </div>
-            <p className="app-body-sm app-text-muted">Las separamos por prioridad para que veas primero lo que requiere respuesta y después lo ya encaminado.</p>
+            <p className="app-body-sm app-text-muted">Consultas, reservas y proximas llegadas ordenadas por lo que conviene mirar primero.</p>
           </div>
 
           <div className="space-y-4">
             <BookingGroup
-              title="Solicitudes pendientes"
-              description="Lo que hoy requiere respuesta directa desde el panel."
+              title="Consultas por responder"
+              description="Lo que hoy necesita una respuesta directa para no perder ritmo."
               count={pendingRequestBookings.length}
               emptyText="No hay solicitudes pendientes ahora."
             >
@@ -1470,7 +1389,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
 
             <BookingGroup
               title="Próximas llegadas"
-              description="Reservas confirmadas que conviene tener presentes primero."
+              description="Reservas confirmadas que conviene tener presentes antes de la llegada."
               count={upcomingArrivalBookings.length}
               emptyText="No hay próximas llegadas confirmadas por ahora."
             >
@@ -1480,8 +1399,8 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
             </BookingGroup>
 
             <BookingGroup
-              title="Reservas aceptadas"
-              description="Reservas ya confirmadas, finalizadas o con seguimiento en curso."
+              title="Reservas en curso y cerradas"
+              description="Lo que ya esta encaminado, confirmado o necesita seguimiento despues."
               count={acceptedReservationBookings.length}
               emptyText="Todavía no hay reservas aceptadas para revisar."
             >
@@ -1494,6 +1413,34 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
           <p className="app-form-hint px-4 italic">
             * La ficha del huésped sigue dentro del flujo real de cada solicitud o reserva. Las evaluaciones se mantienen disponibles después de una estadía finalizada.
           </p>
+        </section>
+
+        <section className={dashboardSectionClass}>
+          <div className="space-y-2">
+            <p className="app-eyebrow">Sugerencias</p>
+            <h2 className="app-title-4 dark:text-white">Sugerencias para mover tus avisos</h2>
+            <p className="app-body-sm app-text-muted">Solo te mostramos lo que hoy puede ayudarte a recibir mas consultas, generar mas confianza o mejorar visibilidad.</p>
+          </div>
+
+          {priorityActions.length > 0 ? (
+            <div className="space-y-3">
+              {priorityActions.map((action) => (
+                <PriorityActionRow
+                  key={action.id}
+                  eyebrow={action.eyebrow}
+                  title={action.title}
+                  description={action.description}
+                  actionLabel={action.actionLabel}
+                  icon={action.icon}
+                  onAction={() => handlePriorityAction(action)}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-[28px] border border-slate-200/80 bg-white/92 p-5 text-sm leading-6 text-slate-500 shadow-[0_18px_46px_-38px_rgba(15,23,42,0.3)] dark:border-slate-800 dark:bg-slate-900/90 dark:text-slate-300">
+              Hoy no hay acciones urgentes. Tus avisos ya estan ordenados y podes seguir desde la actividad reciente cuando aparezca algo nuevo.
+            </div>
+          )}
         </section>
 
         {reviewingBooking && (

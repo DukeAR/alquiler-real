@@ -314,17 +314,19 @@ export const PropertyVerificationPanel = ({
       <div className="space-y-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-2">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Estudio de validacion</p>
-            <h2 className="text-2xl font-semibold tracking-tight text-slate-950">Subi confianza sin frenar la publicacion</h2>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Verificacion del aviso</p>
+            <h2 className="text-2xl font-semibold tracking-tight text-slate-950">Mejora la publicacion sin frenarla</h2>
             <p className="max-w-3xl text-sm leading-6 text-slate-600">{verificationProgress.summary} {verificationProgress.nextStep}</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Badge variant="neutral" size="sm" className="border-brand/15 bg-brand/8 text-brand-dark">
-              {verificationProgress.label}
-            </Badge>
-            <Badge variant="neutral" size="sm" className="border-slate-200/80 bg-slate-50 text-slate-600">
               {verificationBadge.label}
             </Badge>
+            {pendingItems.length === 0 ? (
+              <Badge variant="neutral" size="sm" className="border-emerald-200/80 bg-emerald-50 text-emerald-700">
+                Aviso claro
+              </Badge>
+            ) : null}
           </div>
         </div>
 
@@ -332,25 +334,25 @@ export const PropertyVerificationPanel = ({
           <VerificationMetricCard
             label="Comprobaciones visibles"
             value={`${verificationBadge.score} / ${verificationBadge.max}`}
-            helper="Esto es lo que ve cualquier persona en el aviso."
+            helper="Es lo que hoy ve cualquier persona cuando entra al aviso."
             tone={verificationBadge.score >= 4 ? 'success' : 'brand'}
           />
           <VerificationMetricCard
             label="Fotos reales"
             value={`${Math.min(photoCount, 4)} / 4`}
-            helper={photoCount >= 4 ? 'La parte visual ya quedo completa.' : 'Con 4 fotos reales esta comprobacion queda lista.'}
+            helper={photoCount >= 4 ? 'La parte visual ya ayuda a decidir rapido.' : 'Con 4 fotos reales el aviso se entiende mejor de entrada.'}
             tone={photoCount >= 4 ? 'success' : 'neutral'}
           />
           <VerificationMetricCard
             label="Video del lugar"
             value={videoCount > 0 ? 'Listo' : 'Pendiente'}
-            helper={videoCount > 0 ? 'Ya suma una senal fuerte de confianza.' : 'Un video corto alcanza para subir al nivel medio.'}
+            helper={videoCount > 0 ? 'Ya suma una senal fuerte de confianza.' : 'Un video corto ayuda a generar mas confianza.'}
             tone={videoCount > 0 ? 'success' : 'neutral'}
           />
           <VerificationMetricCard
             label="Documentacion interna"
             value={documentCount > 0 ? `${documentCount}` : 'Opcional'}
-            helper={documentCount > 0 ? `${documentsVerifiedCount} revisados hasta ahora.` : 'No hace falta para publicar, pero sirve para moderacion.'}
+            helper={documentCount > 0 ? `${documentsVerifiedCount} revisados hasta ahora.` : 'No hace falta para publicar. Queda privada y ayuda a moderacion.'}
             tone={documentCount > 0 ? 'brand' : 'neutral'}
           />
         </div>
@@ -364,7 +366,7 @@ export const PropertyVerificationPanel = ({
                 items: verificationItems,
               }}
               eyebrow="Comprobaciones visibles"
-              helper="Las 5 comprobaciones publicas se completan por partes y no frenan el alta del aviso."
+              helper="Las 5 comprobaciones visibles se completan por partes y ayudan a que el aviso se entienda mejor."
               tone={verificationBadge.score >= 4 ? 'success' : 'brand'}
             />
 
@@ -395,7 +397,7 @@ export const PropertyVerificationPanel = ({
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Acciones rapidas</p>
-                  <p className="mt-1 text-sm leading-6 text-slate-600">Sumas visibilidad publica con fotos y video. La documentacion queda privada para moderacion.</p>
+                  <p className="mt-1 text-sm leading-6 text-slate-600">Recibis mas consultas con fotos, video y datos claros. La documentacion queda privada para moderacion.</p>
                 </div>
               </div>
 
@@ -510,7 +512,7 @@ export const PropertyVerificationPanel = ({
                     <span>Video cargado</span>
                   </div>
                   <Badge variant="neutral" size="sm" className="border-white/15 bg-white/10 text-white">
-                    Nivel medio
+                      Senal fuerte
                   </Badge>
                 </div>
                 <video

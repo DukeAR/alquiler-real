@@ -336,7 +336,7 @@ describe('MyBookings', () => {
     );
 
     expect(await screen.findAllByText('Elegir seña')).not.toHaveLength(0);
-    expect(screen.getByText('El anfitrión ya aceptó. Ahora definís si dejás la seña registrada acá o si la coordinás por fuera.')).toBeInTheDocument();
+    expect(screen.getByText('El anfitrion ya acepto. Ahora definis como dejar la seña para seguir.')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Antes de elegir la seña' })).toBeInTheDocument();
     expect(screen.getByText('Cuándo no interviene')).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /Abrir chat/i }).length).toBeGreaterThan(0);
@@ -358,7 +358,7 @@ describe('MyBookings', () => {
     });
 
     expect(await screen.findAllByText('Solicitud aceptada')).not.toHaveLength(0);
-    expect(screen.getByText('El anfitrión ya aceptó. Ahora falta registrar la seña desde la app.')).toBeInTheDocument();
+    expect(screen.getByText('El anfitrion ya acepto. Ahora falta registrar la seña para dejarla confirmada.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Registrar seña/i })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Registrar seña/i }));

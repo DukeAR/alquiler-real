@@ -22,7 +22,7 @@ describe('PropertyUploadForm', () => {
   test('shows progressive steps and completion percentage', () => {
     render(<PropertyUploadForm onComplete={vi.fn()} />);
 
-    expect(screen.getByText('Publicá en 5 a 10 minutos')).toBeInTheDocument();
+    expect(screen.getByText('Publica tu propiedad en pocos pasos')).toBeInTheDocument();
     expect(screen.getByText('14%')).toBeInTheDocument();
     expect(screen.getByText('6 pasos más hasta publicar.')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Fotos' })).toBeInTheDocument();
@@ -47,7 +47,7 @@ describe('PropertyUploadForm', () => {
     fireEvent.change(screen.getByLabelText('Foto 4'), {
       target: { value: 'https://example.com/bath.jpg' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Siguiente paso' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Empezar' }));
 
     fireEvent.click(screen.getByRole('button', { name: /Santa Teresita/i }));
     fireEvent.click(screen.getByRole('button', { name: 'Siguiente paso' }));
@@ -97,17 +97,17 @@ describe('PropertyUploadForm', () => {
       propertyType: 'room',
     });
 
-    expect(await screen.findByText('Publicación creada')).toBeInTheDocument();
-    expect(screen.getByText(/ya está publicada/i)).toBeInTheDocument();
+    expect(await screen.findByText('Ya esta activa')).toBeInTheDocument();
+    expect(screen.getByText('Tu publicacion ya esta activa')).toBeInTheDocument();
     expect(showToastMock).toHaveBeenCalledWith(
-      'Publicación creada',
-      'Tu propiedad ya quedó publicada. Podés seguir mejorándola sin frenarte ahora.',
+      'Publicacion creada',
+      'Tu publicacion ya esta activa. Desde el panel podes mejorarla para generar mas confianza y recibir mas consultas.',
       'success',
     );
-    expect(screen.getByText('Agregá más fotos para mejorar tu publicación')).toBeInTheDocument();
-    expect(screen.getByText('Completá tu perfil para generar más confianza')).toBeInTheDocument();
+    expect(screen.getByText('Recibí más consultas con mejores fotos')).toBeInTheDocument();
+    expect(screen.getByText('Generá más confianza con identidad y video')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Ir al panel' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Mejorar publicacion' }));
     expect(onComplete).toHaveBeenCalledTimes(1);
   });
 
@@ -124,7 +124,7 @@ describe('PropertyUploadForm', () => {
       target: { value: 'https://example.com/room.jpg' },
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Siguiente paso' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Empezar' }));
 
     expect(showToastMock).toHaveBeenCalledWith(
       'Falta un paso',
