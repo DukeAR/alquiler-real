@@ -652,8 +652,8 @@ describe('SecureChat', () => {
     expect(
       await screen.findByText((_, node) => {
         // Robust matcher for split/multiline copy
-        const getText = (n) => Array.from(n.childNodes).map((c) => c.nodeType === 3 ? c.textContent : getText(c)).join('');
-        const text = getText(node).replace(/\s+/g, ' ');
+        const getText = (n: Node): string => Array.from(n.childNodes).map((c) => c.nodeType === 3 ? (c as Text).textContent : getText(c as Node)).join('');
+        const text = getText(node as Node).replace(/\s+/g, ' ');
         return text.includes('Elegí la opción que mejor les cierre') && text.includes('dentro de esta conversación');
       })
     ).toBeInTheDocument();
@@ -710,8 +710,8 @@ describe('SecureChat', () => {
     expect(
       await screen.findByText((_, node) => {
         const hasText = (n: Node): string =>
-          Array.from(n.childNodes).map((c) => (c.nodeType === 3 ? c.textContent : hasText(c))).join('');
-        const text = hasText(node as HTMLElement).replace(/\s+/g, ' ');
+          Array.from(n.childNodes).map((c) => (c.nodeType === 3 ? (c as Text).textContent : hasText(c as Node))).join('');
+        const text = hasText(node as Node).replace(/\s+/g, ' ');
         return text.includes('Elegí la opción que mejor les cierre') && text.includes('dentro de esta conversación');
       })
     ).toBeInTheDocument();

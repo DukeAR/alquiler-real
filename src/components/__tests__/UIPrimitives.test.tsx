@@ -54,9 +54,9 @@ describe('UI primitives', () => {
 
     expect(screen.getByLabelText('Email')).toHaveAttribute('aria-invalid', 'true');
     // Robust matcher for split/multiline helperText
-    expect(screen.getByText((content, node) => {
-      const getText = (n) => Array.from(n.childNodes).map((c) => c.nodeType === 3 ? c.textContent : getText(c)).join('');
-      return getText(node).replace(/\s+/g, ' ').includes('Usalo para ingresar o recuperar la cuenta.');
+    expect(screen.getByText((_, node) => {
+      const getText = (n: Node): string => Array.from(n.childNodes).map((c) => c.nodeType === 3 ? (c as Text).textContent : getText(c as Node)).join('');
+      return getText(node as Node).replace(/\s+/g, ' ').includes('Usalo para ingresar o recuperar la cuenta.');
     })).toBeInTheDocument();
     expect(screen.getByRole('alert')).toHaveTextContent('Revisá este dato.');
   });
