@@ -35,6 +35,14 @@ const getPropertyTypeLabel = (property: Property) => {
   return 'Alojamiento';
 };
 
+const getGuestCapacityLabel = (maxGuests?: number | null) => {
+  if (!maxGuests || maxGuests < 1) {
+    return null;
+  }
+
+  return `Hasta ${maxGuests} ${maxGuests === 1 ? 'huésped' : 'huéspedes'}`;
+};
+
 interface PropertyCardProps {
   property: Property;
   onClick?: () => void;
@@ -66,6 +74,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   };
   const shouldEmphasizeVerification = emphasizeVerification && !isFavoritesVariant;
   const propertyTypeLabel = getPropertyTypeLabel(property);
+  const guestCapacityLabel = getGuestCapacityLabel(Number(property.maxGuests) || null);
   const verificationTagLabel = !isFavoritesVariant && verificationBadge.score >= HIGH_VERIFICATION_HIGHLIGHT_MIN_SCORE
     ? verificationGuidanceLabel || 'Más comprobado'
     : null;
@@ -149,30 +158,38 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
       </div>
 
       <div className="flex flex-1 flex-col gap-4 p-4 sm:p-5 md:p-6">
-        <div className="space-y-2.5">
-          <p className="line-clamp-1 text-[12.5px] font-semibold leading-5 tracking-[0.01em] text-slate-500">
-            <span>{propertyTypeLabel}</span>
-            <span className="mx-1.5 text-slate-300"> {'·'} </span>
-            <span className="text-slate-600">{property.location}</span>
+        <div className="space-y-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+            {propertyTypeLabel}
           </p>
           <h3 className="line-clamp-2 text-[1.04rem] font-semibold leading-[1.35] tracking-[-0.02em] text-slate-950 transition-colors duration-150 group-hover:text-slate-950 sm:text-[1.08rem] md:text-[1.12rem]">{property.title}</h3>
+          <div className="flex flex-wrap gap-2.5 text-[12.5px] font-medium leading-5 text-slate-600">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200/80 bg-slate-50/85 px-3 py-1.5">
+              <Icons.MapPin className="h-3.5 w-3.5 text-slate-400" />
+              <span>{property.location}</span>
+            </span>
+            {guestCapacityLabel ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200/80 bg-slate-50/85 px-3 py-1.5">
+                <Icons.Users className="h-3.5 w-3.5 text-slate-400" />
+                <span>{guestCapacityLabel}</span>
+              </span>
+            ) : null}
+          </div>
         </div>
 
-        <div className="border-t border-slate-100 pt-4">
+        <div className="space-y-3">
           <p className="text-[1.55rem] font-black leading-none tracking-[-0.04em] text-slate-950 md:text-[1.75rem]">
             {formatCurrency(Number(property.price) || 0)}
             {' '}
             <span className="text-sm font-medium tracking-normal text-slate-500">por noche</span>
           </p>
-        </div>
 
-        <div className="border-t border-slate-100 pt-1">
           <VerificationMeter
             summary={verificationSummary}
             eyebrow="Comprobado"
             layout="inline"
             tone={shouldEmphasizeVerification ? 'success' : 'neutral'}
-            className="flex-1 px-1 py-2"
+            className="min-w-0 px-0 py-0"
             labelClassName={cn(
               'text-[13px] font-semibold leading-5 text-slate-900',
               shouldEmphasizeVerification && 'text-emerald-900',
@@ -183,7 +200,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           />
         </div>
 
-        <div className="mt-auto flex items-end justify-end gap-4 pt-2">
+        <div className="mt-auto flex items-end justify-end gap-4 pt-1">
           {onClick ? (
             <div className="inline-flex items-center gap-2 text-[13.5px] font-semibold tracking-[-0.01em] text-slate-700 transition-colors duration-150 group-hover:text-slate-950">
               <span>{isFavoritesVariant ? 'Abrir detalle' : 'Ver detalle'}</span>

@@ -132,8 +132,8 @@ type HostClosingChip = {
 
 const buildHostClosingChips = (requestContext: ReservationRequestContext | null) => {
   const advanceWithDepositMessage = requestContext?.mode === 'protected'
-    ? 'Podemos avanzar con la seña y dejarlo confirmado. Podés dejarla registrada acá o coordinarla por fuera. Si te cierra, lo podemos dejar confirmado.'
-    : 'Podemos avanzar con la seña y dejarlo confirmado. Si te cierra, lo podemos dejar confirmado.';
+    ? 'Podés avanzar con la seña cuando lo acuerden. Si te sirve, la podés dejar registrada acá o coordinarla por fuera.'
+    : 'Podés avanzar con la seña cuando lo acuerden. Si te cierra, después lo dejan confirmado.';
 
   return [
     {
@@ -191,7 +191,7 @@ const buildSuggestedFirstMessage = (_counterpartyName: string, requestContext: R
     messageParts.push(guestCount);
   }
 
-  return `${messageParts.join(' ')}. ¿Sigue disponible? Me interesa avanzar si está todo bien.`;
+  return `${messageParts.join(' ')} y me interesa avanzar si está todo bien.`;
 };
 
 const NOT_ADVANCE_REASON_OPTIONS = [
@@ -957,11 +957,11 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
   const hostResponseSignal = isTenantConversation ? getHostResponseSignal(activeConv?.hostInteractionHistory) : null;
   const hostHistoryLabels = isTenantConversation && activeConv?.hostInteractionHistory
     ? activeConv.hostInteractionHistory.publicSignals.map((signal) => {
-        if (signal.key === 'response-time' && hostResponseSignal) {
-          return `✔ ${hostResponseSignal.label} · ${hostResponseSignal.detail}`;
+        if (signal.key === 'response-time' && hostResponseSignal?.label) {
+          return hostResponseSignal.label;
         }
 
-        return `${signal.tone === 'positive' ? '✔' : '○'} ${signal.label}`;
+        return signal.label;
       })
     : [];
   const hostHistoryLine = getInteractionSummaryLine(hostHistoryLabels);
@@ -1060,10 +1060,10 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
   const compactReservationStatus = getCompactReservationStatus(flowCopy?.stage ?? null, isExpiredPendingRequest);
   const propertyVerificationHelper = activeRequestContext?.propertyVerificationLabel
     && Number(activeRequestContext.propertyVerificationScore || 0) >= 3
-    ? `Este aviso llega con ${activeRequestContext.propertyVerificationLabel.toLowerCase()}.`
+    ? `Aviso con ${activeRequestContext.propertyVerificationLabel.toLowerCase()}.`
     : null;
   const chatContextHelper = [
-    interactionContinuity?.detail ?? (isTenantConversation ? hostHistoryLine : null),
+    interactionContinuity?.label ?? (isTenantConversation ? hostHistoryLine : null),
     propertyVerificationHelper,
   ].filter(Boolean).join(' · ') || null;
   const requestHeading = isExpiredPendingRequest ? 'Solicitud vencida' : flowCopy?.statusLabel ?? null;
@@ -1324,12 +1324,12 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
   })();
   const derivedSafetyMessages: Message[] = (() => {
     const reminders: Message[] = [];
-    const saferChatStartText = 'Podés coordinar todo por acá. Evitá compartir datos sensibles o pagos por fuera hasta tener claro el acuerdo.';
+    const saferChatStartText = 'Podés coordinar todo por acá. Cuando lo acuerden, después pueden avanzar con la seña.';
     const beforeDepositReminderText = 'Antes de avanzar con la seña, confirmá que los datos coincidan con el anfitrión del aviso.';
-    const protectedClarityText = 'Estás usando la seña en la app para dejar el proceso registrado.';
+    const protectedClarityText = 'Si preferís dejar la seña en la app, queda registrada dentro de esta conversación.';
     const keywordReminderText = 'Verificá que la cuenta esté a nombre del anfitrión antes de transferir.';
     const directProofReminderText = 'Guardá el comprobante de la seña por si necesitás revisarlo.';
-    const noAdvanceReactivationText = 'Si retoman esto y les cierra, pueden avanzar con la seña y dejarlo confirmado.';
+    const noAdvanceReactivationText = 'Cuando lo tengan definido, pueden dejar la reserva confirmada.';
     const currentMessages = [...messages, ...fallbackSystemMessages];
     const existingSystemTexts = new Set(
       currentMessages
@@ -1499,12 +1499,12 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
       const supplementaryContent = activeRequestContext?.mode === 'protected'
         ? canPayProtectedDeposit
           ? protectedDepositPreview
-            ? `Ya podés registrar la seña para dejarlo confirmado: ${currencyFormatter.format(protectedDepositPreview.depositAmount)} + fee ${currencyFormatter.format(protectedDepositPreview.serviceFee)} = ${currencyFormatter.format(protectedDepositPreview.totalCharge)}.`
-            : 'Ya podés dejar la seña registrada para dejarlo confirmado.'
-          : 'Ahora falta que el huésped registre la seña en la app para dejarlo confirmado.'
+            ? `Cuando lo tengan definido, podés dejar la seña registrada acá: ${currencyFormatter.format(protectedDepositPreview.depositAmount)} + fee ${currencyFormatter.format(protectedDepositPreview.serviceFee)} = ${currencyFormatter.format(protectedDepositPreview.totalCharge)}.`
+            : 'Cuando lo tengan definido, podés dejar la seña registrada acá.'
+          : 'Cuando lo tengan definido, el huésped puede dejar la seña registrada en la app.'
         : canReportDirectDeposit
-          ? 'Ya podés informar la seña para dejarlo confirmado.'
-          : 'Ahora falta que el huésped informe la seña para dejarlo confirmado.';
+          ? 'Cuando la hayas enviado, avisalo por acá para dejarlo confirmado.'
+          : 'Cuando lo tengan definido, el huésped puede informar la seña por este chat.';
 
       return {
         content,
@@ -1582,7 +1582,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
         content: 'La seña fue informada.',
         emphasis: 'card',
         tone: 'brand',
-        supplementaryContent: 'Falta confirmar la recepcion para dejar la reserva cerrada.',
+        supplementaryContent: 'Solo falta confirmar la recepción para dejar la reserva cerrada.',
         action: canConfirmDirectDeposit
           ? {
               kind: 'confirm-direct-deposit',
@@ -1606,8 +1606,8 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
     if (message.system_key === 'protected-after-payment' && flowCopy?.stage === 'protected-deposit-held') {
       return {
         content: isTenantConversation
-          ? 'La seña ya quedó registrada y se libera cuando confirmás la llegada.'
-          : 'La seña ya quedó registrada y se libera cuando el huésped confirma la llegada.',
+          ? 'La seña ya quedó registrada. Ahora pueden coordinar la llegada por acá.'
+          : 'La seña ya quedó registrada. Ahora solo queda coordinar la llegada por acá.',
         emphasis: 'card',
         tone: 'brand',
       };

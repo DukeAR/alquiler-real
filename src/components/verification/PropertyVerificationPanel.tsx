@@ -13,6 +13,7 @@ import { Icons } from '../Icons';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
+import { VerificationDetailsBlock } from '../ui/VerificationDetailsBlock';
 import { VerificationMeter, VerificationSnippetList } from '../ui/VerificationMeter';
 
 type VerificationUploadKind = 'photo' | 'video' | 'document';
@@ -197,89 +198,46 @@ export const PropertyVerificationPanel = ({
   if (!ownerView) {
     return (
       <Card className={cn('rounded-[32px] border-slate-200/80 bg-white p-6 shadow-[0_28px_70px_-50px_rgba(15,23,42,0.25)] sm:p-7', className)}>
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(280px,0.82fr)]">
-          <div className="space-y-5">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="space-y-2">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Confianza del aviso</p>
-                <h2 className="text-2xl font-semibold tracking-tight text-slate-950">Que ya esta comprobado</h2>
-                <p className="max-w-2xl text-sm leading-6 text-slate-600">{verificationProgress.summary}</p>
-              </div>
-              <Badge variant="neutral" size="sm" className="border-emerald-200/80 bg-emerald-50/90 text-emerald-700">
-                {verificationProgress.label}
-              </Badge>
-            </div>
-
-            <VerificationMeter
-              summary={{
-                score: verificationBadge.score,
-                maxScore: verificationBadge.max,
-                items: verificationItems,
-              }}
-              eyebrow="Comprobaciones visibles"
-              helper="Mostramos solo senales visibles que ayudan a decidir rapido, sin exponer documentacion privada."
-              badgeLabel={verificationBadge.score >= 4 ? 'Mas comprobado' : undefined}
-              tone={verificationBadge.score >= 4 ? 'success' : 'neutral'}
-            />
-
-            <VerificationSnippetList
-              summary={{
-                score: verificationBadge.score,
-                maxScore: verificationBadge.max,
-                items: verificationItems,
-              }}
-              status="complete"
-              showDescriptions={false}
-              emptyText="Todavia no hay comprobaciones visibles en este aviso."
-            />
+        <div className="space-y-5">
+          <div className="space-y-2">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Confianza del aviso</p>
+            <h2 className="text-2xl font-semibold tracking-tight text-slate-950">Qué ya está comprobado</h2>
+            <p className="max-w-3xl text-sm leading-6 text-slate-600">{verificationProgress.summary}</p>
           </div>
 
-          <div className="space-y-4">
-            <div className="rounded-[24px] border border-slate-200/80 bg-slate-50/85 p-5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Senales visibles</p>
-              <div className="mt-4 grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
-                <VerificationMetricCard
-                  label="Fotos reales"
-                  value={`${Math.min(photoCount, 4)} / 4`}
-                  helper={photoCount >= 4 ? 'El aviso ya tiene respaldo visual suficiente.' : 'Hay fotos reales cargadas como prueba visual.'}
-                  tone={photoCount >= 4 ? 'success' : 'neutral'}
-                />
-                <VerificationMetricCard
-                  label="Video del lugar"
-                  value={videoCount > 0 ? 'Listo' : 'Pendiente'}
-                  helper={videoCount > 0 ? 'Hay un recorrido de video cargado.' : 'Todavia no hay video visible del lugar.'}
-                  tone={videoCount > 0 ? 'success' : 'neutral'}
-                />
-                <VerificationMetricCard
-                  label="Identidad del anfitrion"
-                  value={verificationItems.some((item) => item.key === 'identity' && item.status === 'complete') ? 'Validada' : 'En proceso'}
-                  helper="La identidad del perfil se valida por separado y refuerza el aviso."
-                  tone={verificationItems.some((item) => item.key === 'identity' && item.status === 'complete') ? 'success' : 'neutral'}
-                />
-              </div>
-            </div>
+          <VerificationDetailsBlock
+            summary={{
+              score: verificationBadge.score,
+              maxScore: verificationBadge.max,
+              items: verificationItems,
+            }}
+            title="Comprobaciones visibles"
+            description="Mostramos solo comprobaciones visibles que ayudan a decidir rápido."
+            badgeLabel={verificationBadge.score >= 4 ? 'Más comprobado' : undefined}
+            tone={verificationBadge.score >= 4 ? 'success' : 'neutral'}
+            showDescriptions={false}
+          />
 
-            {videoAsset ? (
-              <div className="overflow-hidden rounded-[24px] border border-slate-200/80 bg-slate-950 shadow-[0_24px_48px_-34px_rgba(15,23,42,0.45)]">
-                <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3 text-white/90">
-                  <div className="flex items-center gap-2 text-sm font-semibold">
-                    <Icons.Video className="h-4 w-4" />
-                    <span>Video del lugar</span>
-                  </div>
-                  <Badge variant="neutral" size="sm" className="border-white/15 bg-white/10 text-white">
-                    Respaldo fuerte
-                  </Badge>
+          {videoAsset ? (
+            <div className="overflow-hidden rounded-[24px] border border-slate-200/80 bg-slate-950 shadow-[0_24px_48px_-34px_rgba(15,23,42,0.45)]">
+              <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3 text-white/90">
+                <div className="flex items-center gap-2 text-sm font-semibold">
+                  <Icons.Video className="h-4 w-4" />
+                  <span>Video del lugar</span>
                 </div>
-                <video
-                  controls
-                  preload="metadata"
-                  src={videoAsset.url}
-                  poster={videoAsset.thumbnailUrl || undefined}
-                  className="aspect-video w-full bg-slate-950"
-                />
+                <Badge variant="neutral" size="sm" className="border-white/15 bg-white/10 text-white">
+                  Respaldo visual
+                </Badge>
               </div>
-            ) : null}
-          </div>
+              <video
+                controls
+                preload="metadata"
+                src={videoAsset.url}
+                poster={videoAsset.thumbnailUrl || undefined}
+                className="aspect-video w-full bg-slate-950"
+              />
+            </div>
+          ) : null}
         </div>
       </Card>
     );

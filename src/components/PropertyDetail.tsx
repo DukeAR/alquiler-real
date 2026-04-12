@@ -26,6 +26,7 @@ import { Card } from './ui/Card';
 import { NoticeBanner } from './ui/NoticeBanner';
 import { SectionTitle } from './ui/SectionTitle';
 import { TrustSignalsInline, getTrustSignalsFromInteractionHistory, getTrustSignalsFromItems, type TrustSignal } from './ui/TrustSignalsInline';
+import { VerificationMeter } from './ui/VerificationMeter';
 import { PropertyVerificationPanel } from './verification/PropertyVerificationPanel';
 
 const FALLBACK = 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=1200&q=80&auto=format&fit=crop';
@@ -402,17 +403,52 @@ export const PropertyDetailShell: React.FC<{
   const completedReservationsLabel = property.hostInteractionHistory?.completedReservationsCount
     ? `${property.hostInteractionHistory.completedReservationsCount} ${property.hostInteractionHistory.completedReservationsCount === 1 ? 'reserva cerrada' : 'reservas cerradas'}`
     : null;
-  const heroTrustSignals = getTrustSignalsFromItems(verificationDetails.items, { limit: 3, tone: 'success' });
-  const quickDecisionSignals = [
-    reviewCount > 0 ? `${reviewCount} ${reviewCount === 1 ? 'reseña real' : 'reseñas reales'}` : null,
-    completedReservationsLabel,
-    hostResponseSignal?.label ?? null,
-  ].filter((value): value is string => Boolean(value)).slice(0, 3);
-  const quickDecisionTrustSignals = quickDecisionSignals.map((label, index) => ({
-    key: `decision-${index + 1}`,
-    label,
-    tone: 'neutral' as const,
-  }));
+  const topDecisionTrustSignals = (() => {
+    const mergedSignals: TrustSignal[] = [];
+    const seenLabels = new Set<string>();
+    const pushSignals = (nextSignals: TrustSignal[]) => {
+      nextSignals.forEach((signal) => {
+        if (mergedSignals.length >= 3 || seenLabels.has(signal.label)) {
+          return;
+        }
+
+        mergedSignals.push(signal);
+        seenLabels.add(signal.label);
+      });
+    };
+
+    pushSignals(getTrustSignalsFromItems(verificationDetails.items, { limit: 2, tone: 'success' }));
+
+    const supportingSignals: TrustSignal[] = [];
+
+    if (reviewCount > 0) {
+      supportingSignals.push({
+        key: 'detail-reviews',
+        label: `${reviewCount} ${reviewCount === 1 ? 'reseña real' : 'reseñas reales'}`,
+        tone: 'neutral',
+      });
+    }
+
+    if (completedReservationsLabel) {
+      supportingSignals.push({
+        key: 'detail-completed-reservations',
+        label: completedReservationsLabel,
+        tone: 'neutral',
+      });
+    }
+
+    if (hostResponseSignal?.label) {
+      supportingSignals.push({
+        key: 'detail-host-response',
+        label: hostResponseSignal.label,
+        tone: 'neutral',
+      });
+    }
+
+    pushSignals(supportingSignals);
+
+    return mergedSignals;
+  })();
   const hostSinceLabel = property.hostSince ? `Miembro desde ${formatMonthYear(property.hostSince)}` : null;
   const visibleReviews = reviews.slice(0, 2);
   const hostTrustSignals = (() => {
@@ -1064,57 +1100,93 @@ export const PropertyDetailShell: React.FC<{
           aria-label="Contexto de la reserva"
           className="rounded-[30px] border border-slate-200/80 bg-white p-5 shadow-[0_30px_80px_-50px_rgba(15,23,42,0.28)] sm:p-6"
         >
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-            <div className="space-y-2">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Precio por noche</p>
-              <div className="flex items-end gap-2">
-                <span className="text-[2.8rem] font-black tracking-tight text-slate-950 sm:text-[3rem]">{nightly ? formatCurrency(nightly) : '—'}</span>
-                <span className="pb-1 text-sm font-medium text-slate-500">/ noche</span>
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(320px,0.92fr)]">
+            <div className="space-y-5">
+              <div className="space-y-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Decisión rápida</p>
+                <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
+                  <div className="flex items-end gap-2">
+                    <span className="text-[2.8rem] font-black tracking-tight text-slate-950 sm:text-[3rem]">{nightly ? formatCurrency(nightly) : '—'}</span>
+                    <span className="pb-1 text-sm font-medium text-slate-500">/ noche</span>
+                  </div>
+                  <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm font-medium text-slate-700">
+                    <Icons.MapPin className="h-4 w-4 text-slate-400" />
+                    <span>{property.location}</span>
+                  </div>
+                  {guestCapacity ? (
+                    <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm font-medium text-slate-700">
+                      <Icons.Users className="h-4 w-4 text-slate-400" />
+                      <span>{guestCapacity}</span>
+                    </div>
+                  ) : null}
+                </div>
+                <p className="max-w-xl text-sm leading-6 text-slate-500">{bookingEntryHelperText}</p>
               </div>
-              <p className="max-w-xl text-sm leading-6 text-slate-500">{bookingEntryHelperText}</p>
+
+              {hasSelectedDates || guestCount > 1 ? (
+                <div className="flex flex-wrap gap-3 border-t border-slate-200/70 pt-5">
+                  <div className="rounded-full border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm font-medium text-slate-700">
+                    {dateSelectionSummary}
+                  </div>
+                  <div className="rounded-full border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm font-medium text-slate-700">
+                    {guestCountLabel}
+                  </div>
+                  <div className="rounded-full border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm font-medium text-slate-700">
+                    {totalSummaryLabel}
+                  </div>
+                </div>
+              ) : null}
             </div>
 
-            <div className="flex flex-col items-start gap-2 lg:items-end">
-              <Button
-                type="button"
-                variant="primary"
-                size="lg"
-                onClick={handleOpenBookingEntry}
-                className="rounded-2xl px-6 shadow-[0_24px_46px_-28px_rgba(67,56,202,0.42)]"
+            <div className="space-y-4 rounded-[28px] border border-slate-200/80 bg-slate-50/80 p-4 shadow-[0_24px_60px_-44px_rgba(15,23,42,0.18)] sm:p-5">
+              <div className="space-y-2">
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="lg"
+                  onClick={handleOpenBookingEntry}
+                  className="w-full rounded-2xl px-6 shadow-[0_24px_46px_-28px_rgba(67,56,202,0.42)]"
+                >
+                  <>
+                    <Icons.Calendar className="h-4 w-4" />
+                    {bookingEntryCtaLabel}
+                  </>
+                </Button>
+                <p className="text-center text-xs font-medium text-slate-500">{bookingEntryCtaNote}</p>
+              </div>
+
+              <VerificationMeter
+                summary={{
+                  score: verificationDetails.score,
+                  maxScore: verificationDetails.max,
+                  items: verificationDetails.items,
+                }}
+                eyebrow="Comprobado"
+                layout="inline"
+                tone={verificationDetails.score >= 4 ? 'success' : 'neutral'}
+                className="px-0 py-0"
+                labelClassName={cn(
+                  'text-[13px] font-semibold leading-5 text-slate-900',
+                  verificationDetails.score >= 4 && 'text-emerald-900',
+                )}
+                visualClassName={cn(
+                  verificationDetails.score >= 4 ? 'text-emerald-700' : 'text-slate-500',
+                )}
+              />
+
+              <section
+                data-testid="property-verification-preview"
+                className="space-y-3 border-t border-slate-200/70 pt-4"
               >
-                <>
-                  <Icons.Calendar className="h-4 w-4" />
-                  {bookingEntryCtaLabel}
-                </>
-              </Button>
-              <p className="pl-1 text-xs font-medium text-slate-500 lg:pr-1">{bookingEntryCtaNote}</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Qué ayuda a confiar rápido</p>
+                <TrustSignalsInline
+                  signals={topDecisionTrustSignals}
+                  emptyText="Todavía no hay datos comprobados visibles en este aviso."
+                  compact
+                />
+              </section>
             </div>
           </div>
-
-          {hasSelectedDates || guestCount > 1 ? (
-            <div className="mt-5 flex flex-wrap gap-3 border-t border-slate-200/70 pt-5">
-              <div className="rounded-full border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm font-medium text-slate-700">
-                {dateSelectionSummary}
-              </div>
-              <div className="rounded-full border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm font-medium text-slate-700">
-                {guestCountLabel}
-              </div>
-              <div className="rounded-full border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm font-medium text-slate-700">
-                {totalSummaryLabel}
-              </div>
-            </div>
-          ) : null}
-
-          <section
-            data-testid="property-verification-preview"
-            className="mt-5 space-y-3 border-t border-slate-200/70 pt-5"
-          >
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Qué ya está comprobado</p>
-            <TrustSignalsInline
-              signals={heroTrustSignals}
-              emptyText="Todavía no hay datos comprobados visibles en este aviso."
-            />
-          </section>
         </section>
 
         <main className="space-y-6 md:space-y-8">
@@ -1122,8 +1194,8 @@ export const PropertyDetailShell: React.FC<{
             <div className="space-y-5">
               <SectionTitle
                 eyebrow="Lo esencial"
-                heading="Lo esencial de este lugar"
-                description="Lo mínimo para decidir rápido si este lugar te cierra."
+                heading="Lo esencial del lugar"
+                description="Lo básico para saber si querés seguir con este lugar."
               />
               <p className="max-w-3xl text-base leading-8 text-slate-600">
                 {property.description || 'Todavía no hay descripción disponible.'}
@@ -1136,13 +1208,6 @@ export const PropertyDetailShell: React.FC<{
                   </div>
                 ))}
               </div>
-
-              {quickDecisionSignals.length > 0 ? (
-                <div className="border-t border-slate-200/70 pt-5">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Qué ayuda a decidir más rápido</p>
-                  <TrustSignalsInline signals={quickDecisionTrustSignals} className="mt-3" compact />
-                </div>
-              ) : null}
             </div>
           </Card>
 

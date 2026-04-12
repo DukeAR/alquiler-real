@@ -436,7 +436,7 @@ describe('HostDashboard', () => {
 
     expect(await screen.findAllByText('Seña por definir')).not.toHaveLength(0);
     expect(screen.getByText('Ya la aceptaste. Ahora el huesped define como dejar la seña para seguir.')).toBeInTheDocument();
-    expect(screen.getByText('Si la deja registrada aca, la seña queda asentada y el acuerdo se ve mas claro.')).toBeInTheDocument();
+    expect(screen.getByText('Si la deja registrada aca, el acuerdo queda mas claro dentro del chat.')).toBeInTheDocument();
     expect(showToastMock).toHaveBeenCalledWith(
       'Solicitud aceptada',
       'La solicitud quedó aceptada. Ahora el huésped puede definir la seña desde el chat.',
@@ -805,7 +805,7 @@ describe('HostDashboard', () => {
 
     expect(await screen.findAllByText('Seña en custodia')).not.toHaveLength(0);
     expect(screen.getByText('La seña ya quedó registrada.')).toBeInTheDocument();
-    expect(screen.getByText('Queda en custodia hasta que el huésped confirme la llegada.')).toBeInTheDocument();
+    expect(screen.getByText('Ahora solo queda coordinar la llegada y esperar la confirmacion del huesped.')).toBeInTheDocument();
     expect(screen.getByText('Vas a poder ver el estado y el momento de liberación desde esta reserva.')).toBeInTheDocument();
   });
 

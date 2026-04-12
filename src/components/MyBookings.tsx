@@ -1192,16 +1192,16 @@ export const MyBookings = () => {
 
           {(bookingFlow.stage === 'reservation-confirmed' || (!booking.requestMode && booking.status === 'confirmed')) ? (
             <ReservationConfirmedState
-              eyebrow="Datos para el ingreso"
-              title="La reserva ya quedó ordenada"
-              description="La reserva y la seña ya quedaron registradas. Ya podés coordinar tranquilo la llegada por el chat."
+              eyebrow="Reserva confirmada"
+              title="Ya está todo ordenado"
+              description="La reserva y la seña ya quedaron registradas. Podés seguir coordinando la llegada por el chat."
               details={[
                 {
                   label: 'Código de ingreso',
                   value: booking.stay_code || 'Se confirma desde el chat',
                 },
               ]}
-              nextStep="Próximo paso: coordiná horario de llegada con el anfitrión."
+              nextStep="Próximo paso: coordiná horario y llegada con el anfitrión."
             />
           ) : null}
 

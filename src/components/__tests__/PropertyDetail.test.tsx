@@ -338,7 +338,7 @@ describe('PropertyDetail', () => {
     const desktopContext = getDesktopBookingContext();
     const mobileContext = getMobileBookingSummary();
 
-    expect(within(desktopContext).getByText('Precio por noche')).toBeDefined();
+    expect(within(desktopContext).getByText('Decisión rápida')).toBeDefined();
     expect(within(desktopContext).getByRole('button', { name: /consultar disponibilidad/i })).toBeDefined();
     expect(within(desktopContext).getByText('Elegí fechas para ver total y disponibilidad.')).toBeDefined();
     expect(within(mobileContext).getByText('1 huésped · Total al elegir fechas')).toBeDefined();
@@ -428,24 +428,22 @@ describe('PropertyDetail', () => {
 
     await waitForPropertyHeading();
 
-    expect(screen.getByText('Precio por noche')).toBeDefined();
-    expect(screen.getByText('Lo esencial de este lugar')).toBeDefined();
-    expect(screen.getByText('Lo mínimo para decidir rápido si este lugar te cierra.')).toBeDefined();
+    expect(screen.getByText('Decisión rápida')).toBeDefined();
+    expect(screen.getByText('Lo esencial del lugar')).toBeDefined();
+    expect(screen.getByText('Lo básico para saber si querés seguir con este lugar.')).toBeDefined();
     expect(screen.queryByText('Comodidades ya detalladas')).toBeNull();
-    expect(screen.getByText('Qué ya está comprobado')).toBeDefined();
+    expect(screen.getByText('Qué ayuda a confiar rápido')).toBeDefined();
     const verificationPreview = screen.getByTestId('property-verification-preview');
     expect(within(verificationPreview).getAllByRole('listitem')).toHaveLength(3);
     expect(within(verificationPreview).getByText('Ubicación')).toBeDefined();
     expect(within(verificationPreview).getByText('Video del lugar')).toBeDefined();
-    expect(within(verificationPreview).getByText('Identidad validada')).toBeDefined();
+    expect(within(verificationPreview).getByText('5 reseñas reales')).toBeDefined();
     expect(within(verificationPreview).queryByText('Datos básicos')).toBeNull();
     expect(within(verificationPreview).queryByText('Fotos reales')).toBeNull();
     expect(screen.getByText('Puede alojar hasta 4 huéspedes.')).toBeDefined();
     expect(screen.getByText('Tiene 3 dormitorios · 2 baños.')).toBeDefined();
     expect(screen.getByText('Comodidades clave: Wifi rápido · Cocina equipada · Entrada autónoma.')).toBeDefined();
     expect(screen.getByText('5 reseñas reales')).toBeDefined();
-    expect(screen.getByText('6 reservas cerradas')).toBeDefined();
-    expect(screen.getByText('Responde rápido')).toBeDefined();
     expect(screen.queryByText('Estas 5 comprobaciones muestran qué parte del aviso ya está validada y qué falta completar.')).toBeNull();
     expect(screen.queryByText('Acá ves reservas cerradas, consistencia del aviso y tiempos de respuesta.')).toBeNull();
     expect(screen.queryByText('Ya interactuaron antes sin inconvenientes')).toBeNull();
@@ -484,15 +482,15 @@ describe('PropertyDetail', () => {
     await waitForPropertyHeading();
 
     const verificationPreview = screen.getByTestId('property-verification-preview');
-    expect(screen.getByText('Qué ya está comprobado')).toBeDefined();
+    expect(screen.getByText('Qué ayuda a confiar rápido')).toBeDefined();
     expect(within(verificationPreview).getAllByRole('listitem')).toHaveLength(3);
     expect(within(verificationPreview).getByText('Datos básicos')).toBeDefined();
     expect(within(verificationPreview).getByText('Ubicación')).toBeDefined();
-    expect(within(verificationPreview).getByText('Video del lugar')).toBeDefined();
+    expect(within(verificationPreview).getByText('5 reseñas reales')).toBeDefined();
     expect(within(verificationPreview).queryByText('4 de 5 comprobaciones')).toBeNull();
     expect(screen.getByText('Confianza del aviso')).toBeDefined();
-    expect(screen.getByText('4 de 5 comprobaciones')).toBeDefined();
-    expect(screen.getByText('Mostramos solo senales visibles que ayudan a decidir rapido, sin exponer documentacion privada.')).toBeDefined();
+    expect(screen.getAllByText('4 de 5 comprobaciones').length).toBeGreaterThan(0);
+    expect(screen.getByText('Mostramos solo comprobaciones visibles que ayudan a decidir rápido.')).toBeDefined();
   });
 
   test('records the detail visit when the property reaches a high verification level', async () => {
@@ -532,16 +530,17 @@ describe('PropertyDetail', () => {
 
     await waitForPropertyHeading();
 
-    expect(screen.getByText('Qué ya está comprobado')).toBeDefined();
+    expect(screen.getByText('Qué ayuda a confiar rápido')).toBeDefined();
     const verificationPreview = screen.getByTestId('property-verification-preview');
-    expect(within(verificationPreview).getAllByRole('listitem')).toHaveLength(1);
+    expect(within(verificationPreview).getAllByRole('listitem')).toHaveLength(3);
     expect(within(verificationPreview).getByText('Ubicación')).toBeDefined();
     expect(within(verificationPreview).queryByText('Identidad validada')).toBeNull();
     expect(within(verificationPreview).queryByText('Video del lugar')).toBeNull();
+    expect(within(verificationPreview).getByText('5 reseñas reales')).toBeDefined();
+    expect(within(verificationPreview).getByText('6 reservas cerradas')).toBeDefined();
     expect(within(verificationPreview).queryByText('1 de 5 comprobaciones')).toBeNull();
     expect(screen.getByText('Confianza del aviso')).toBeDefined();
-    expect(screen.getByText('1 de 5 comprobaciones')).toBeDefined();
-    expect(screen.queryByText('Identidad validada')).toBeNull();
+    expect(screen.getAllByText('1 de 5 comprobaciones').length).toBeGreaterThan(0);
   });
 
   test('guides the booking flow and stops guest selection at capacity', async () => {
