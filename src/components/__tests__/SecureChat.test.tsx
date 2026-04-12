@@ -647,7 +647,16 @@ describe('SecureChat', () => {
 
     expect(await screen.findByText('Ya están de acuerdo.')).toBeInTheDocument();
     expect(screen.getByText('Cómo querés avanzar con la seña')).toBeInTheDocument();
-    expect(screen.getByText((content) => content.replace(/\s+/g, ' ').includes('Elegí la opción que mejor les cierre. Todo queda claro dentro de esta conversación.'))).toBeInTheDocument();
+    // Robust matcher for split/multiline copy
+    // Use async findByText and join all text nodes for robust matching
+    expect(
+      await screen.findByText((content, node) => {
+        const hasText = (n: Node): string =>
+          Array.from(n.childNodes).map((c) => (c.nodeType === 3 ? c.textContent : hasText(c))).join('');
+        const text = hasText(node as HTMLElement).replace(/\s+/g, ' ');
+        return text.includes('Elegí la opción que mejor les cierre') && text.includes('dentro de esta conversación');
+      })
+    ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Dejarla registrada acá/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Coordinarla por fuera/i })).toBeInTheDocument();
 
@@ -698,7 +707,14 @@ describe('SecureChat', () => {
     renderChat();
 
     expect(await screen.findByText('Cómo querés avanzar con la seña')).toBeInTheDocument();
-    expect(screen.getByText((content) => content.replace(/\s+/g, ' ').includes('Elegí la opción que mejor les cierre. Todo queda claro dentro de esta conversación.'))).toBeInTheDocument();
+    expect(
+      await screen.findByText((content, node) => {
+        const hasText = (n: Node): string =>
+          Array.from(n.childNodes).map((c) => (c.nodeType === 3 ? c.textContent : hasText(c))).join('');
+        const text = hasText(node as HTMLElement).replace(/\s+/g, ' ');
+        return text.includes('Elegí la opción que mejor les cierre') && text.includes('dentro de esta conversación');
+      })
+    ).toBeInTheDocument();
     expect(screen.getByText('Coordinarla por fuera (más manual)')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Coordinarla por fuera/i }));

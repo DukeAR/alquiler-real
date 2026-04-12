@@ -338,7 +338,7 @@ describe('MyBookings', () => {
     expect(await screen.findAllByText('Pendiente seña')).not.toHaveLength(0);
     expect(screen.getByText('Ya acordaron seguir. Ahora podés elegir cómo avanzar con la seña.')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Antes de elegir la seña' })).toBeInTheDocument();
-    expect(screen.getByText('Cuándo no interviene')).toBeInTheDocument();
+    expect(screen.getByText('La app no registra ese pago ni interviene sobre conflictos, devoluciones o incumplimientos vinculados a ese tramo externo.')).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /Abrir chat/i }).length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: /Coordinarla por fuera/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Dejarla registrada acá/i })).toBeInTheDocument();
@@ -358,7 +358,15 @@ describe('MyBookings', () => {
     });
 
     expect(await screen.findAllByText('Pendiente seña')).not.toHaveLength(0);
-    expect(screen.getByText('El anfitrión ya aceptó. Podés avanzar con la seña cuando lo acuerden.')).toBeInTheDocument();
+    // Robust matcher for split/multiline copy
+    expect(
+      await screen.findByText((content, node) => {
+        const hasText = (n: Node): string =>
+          Array.from(n.childNodes).map((c) => (c.nodeType === 3 ? c.textContent : hasText(c))).join('');
+        const text = hasText(node as HTMLElement).replace(/\s+/g, ' ');
+        return text.includes('El anfitrión ya aceptó') && text.includes('avanzar con la seña');
+      })
+    ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Registrar seña/i })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Registrar seña/i }));
@@ -427,8 +435,16 @@ describe('MyBookings', () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText('Seña por fuera')).toBeInTheDocument();
-    expect(screen.getByText('Quedó como coordinación por fuera. Si cambiás de idea antes de informarla, podés dejarla registrada desde esta conversación.')).toBeInTheDocument();
+    expect(await screen.findByText('Coordinación por fuera')).toBeInTheDocument();
+    // Robust matcher for split/multiline copy
+    expect(
+      await screen.findByText((content, node) => {
+        const hasText = (n: Node): string =>
+          Array.from(n.childNodes).map((c) => (c.nodeType === 3 ? c.textContent : hasText(c))).join('');
+        const text = hasText(node as HTMLElement).replace(/\s+/g, ' ');
+        return text.includes('Quedó como coordinación por fuera');
+      })
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Dejarla registrada acá/i }));
 
