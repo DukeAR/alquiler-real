@@ -29,6 +29,21 @@ export type ReservationFlowActor = 'guest' | 'host' | 'platform' | 'none';
 export type ReservationFlowViewerRole = 'guest' | 'host';
 export type ReservationFlowMilestoneKey = 'request' | 'accepted' | 'deposit' | 'confirmed';
 export type ReservationFlowMilestoneState = 'completed' | 'current' | 'upcoming';
+export type ReservationVisibleStatusKey =
+  | 'proposal-sent'
+  | 'in-conversation'
+  | 'pending-deposit'
+  | 'deposit-registered'
+  | 'confirmed'
+  | 'not-advanced'
+  | 'issue-reported';
+export type ReservationVisibleStatusTone = 'neutral' | 'brand' | 'success' | 'warning';
+
+export type ReservationVisibleStatus = {
+  key: ReservationVisibleStatusKey;
+  label: string;
+  tone: ReservationVisibleStatusTone;
+};
 
 type ReservationFlowInput = {
   mode?: ReservationRequestMode | null;
@@ -38,6 +53,11 @@ type ReservationFlowInput = {
   depositStatus?: ReservationDepositStatus | null;
   cancellationActor?: ReservationCancellationActor | null;
   viewerRole?: ReservationFlowViewerRole;
+};
+
+type ReservationVisibleStatusOptions = {
+  hasConversation?: boolean;
+  isExpiredPendingRequest?: boolean;
 };
 
 export type ReservationFlowCopy = {
@@ -236,6 +256,79 @@ export const getReservationFlowStage = ({
   return 'request-pending';
 };
 
+export const getReservationVisibleStatus = (
+  input: ReservationFlowInput,
+  options: ReservationVisibleStatusOptions = {},
+): ReservationVisibleStatus | null => {
+  const stage = getReservationFlowStage(input);
+
+  if (!stage || !input.mode) {
+    return null;
+  }
+
+  if (options.isExpiredPendingRequest) {
+    return {
+      key: 'not-advanced',
+      label: 'No avanzó',
+      tone: 'neutral',
+    };
+  }
+
+  switch (stage) {
+    case 'request-pending':
+      if (options.hasConversation) {
+        return {
+          key: 'in-conversation',
+          label: 'En conversación',
+          tone: 'brand',
+        };
+      }
+
+      return {
+        key: 'proposal-sent',
+        label: input.mode === 'protected' ? 'Solicitud enviada' : 'Propuesta enviada',
+        tone: 'brand',
+      };
+    case 'request-not-advanced':
+      return {
+        key: 'not-advanced',
+        label: 'No avanzó',
+        tone: 'neutral',
+      };
+    case 'deposit-choice':
+    case 'request-accepted':
+    case 'external-deposit-pending':
+      return {
+        key: 'pending-deposit',
+        label: 'Pendiente seña',
+        tone: 'brand',
+      };
+    case 'direct-deposit-reported':
+    case 'protected-deposit-held':
+      return {
+        key: 'deposit-registered',
+        label: 'Seña registrada',
+        tone: 'brand',
+      };
+    case 'reservation-confirmed':
+    case 'protected-deposit-released':
+      return {
+        key: 'confirmed',
+        label: 'Confirmada',
+        tone: 'success',
+      };
+    case 'protected-deposit-review':
+    case 'protected-no-show-pending':
+      return {
+        key: 'issue-reported',
+        label: 'Problema reportado',
+        tone: 'warning',
+      };
+    default:
+      return null;
+  }
+};
+
 export const getReservationFlowCopy = (input: ReservationFlowInput): ReservationFlowCopy => {
   const stage = getReservationFlowStage(input);
 
@@ -250,24 +343,25 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
 
   const modelLabel = getModelLabel(input.mode, input.depositType);
   const viewerRole = input.viewerRole ?? 'guest';
+  const visibleStatus = getReservationVisibleStatus(input);
 
   switch (stage) {
     case 'request-pending':
       return {
         stage,
         modelLabel,
-        statusLabel: getRequestStatusLabel(input.mode, viewerRole),
+        statusLabel: visibleStatus?.label ?? getRequestStatusLabel(input.mode, viewerRole),
         description: input.mode === 'protected'
           ? viewerRole === 'host'
-            ? 'Respondé esta solicitud dentro de las próximas 24 horas para que no se venza.'
-            : 'Tu solicitud ya quedó enviada. Cuando respondan, después pueden definir la seña.'
+            ? 'La solicitud ya quedó abierta en el chat. Cuando lo tengas claro, respondé por acá.'
+            : 'Tu solicitud ya quedó enviada. Si responden, siguen por acá sin salir del chat.'
           : viewerRole === 'host'
-            ? 'Revisá la propuesta y respondé por acá antes de que venza.'
-            : 'Tu propuesta ya quedó enviada. Cuando respondan, después pueden seguir con la seña.',
+            ? 'La propuesta ya quedó abierta en el chat. Cuando lo tengas claro, respondé por acá.'
+            : 'Tu propuesta ya quedó enviada. Si responden, siguen por acá sin salir del chat.',
         nextActor: 'host',
         nextActorLabel: 'Anfitrión',
         nextStepLabel: viewerRole === 'host'
-          ? input.mode === 'protected' ? 'Aceptar solicitud' : 'Aceptar propuesta'
+          ? 'Responder por chat'
           : 'Esperar respuesta',
         primaryActionLabel: viewerRole === 'host'
           ? input.mode === 'protected' ? 'Aceptar solicitud' : 'Aceptar propuesta'
@@ -277,7 +371,7 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
       return {
         stage,
         modelLabel,
-        statusLabel: 'No avanzó',
+        statusLabel: visibleStatus?.label ?? 'No avanzó',
         description: viewerRole === 'host'
           ? 'Marcaste que no podés avanzar con esta reserva por ahora.'
           : 'No se pudo avanzar con esta reserva.',
@@ -292,37 +386,37 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
       return {
         stage,
         modelLabel,
-        statusLabel: viewerRole === 'host' ? 'Seña por definir' : 'Elegir seña',
+        statusLabel: visibleStatus?.label ?? 'Pendiente seña',
         description: viewerRole === 'host'
-          ? 'Ya la aceptaste. Ahora el huesped define como dejar la seña para seguir.'
-          : 'El anfitrion ya acepto. Ahora podes elegir como dejar la seña para seguir.',
+          ? 'Ya acordaron seguir. Ahora el huésped define cómo resolver la seña.'
+          : 'Ya acordaron seguir. Ahora podés elegir cómo avanzar con la seña.',
         supportText: viewerRole === 'host'
-          ? 'Si la deja registrada aca, el acuerdo queda mas claro dentro del chat.'
-          : 'Si la dejas registrada aca, la seña queda asentada y despues siguen coordinando por chat.',
+          ? 'La opción que elija queda visible en el chat para que el cierre sea claro.'
+          : 'Si la dejás registrada acá, el acuerdo queda más claro y después siguen por chat.',
         nextActor: 'guest',
         nextActorLabel: 'Huésped',
-        nextStepLabel: viewerRole === 'host' ? 'Esperar elección de seña' : 'Elegir cómo resolver la seña',
+        nextStepLabel: viewerRole === 'host' ? 'Esperar elección de seña' : 'Elegir cómo avanzar con la seña',
       };
     case 'request-accepted':
       return {
         stage,
         modelLabel,
-        statusLabel: input.mode === 'protected' ? 'Solicitud aceptada' : 'Propuesta aceptada',
+        statusLabel: visibleStatus?.label ?? 'Pendiente seña',
         description: input.mode === 'protected'
           ? viewerRole === 'host'
-            ? 'Ya la aceptaste. Ahora el huesped puede avanzar con la seña cuando lo acuerden.'
-            : 'El anfitrion ya acepto. Podes avanzar con la seña cuando lo acuerden.'
+            ? 'Ya acordaron seguir. El huésped puede avanzar con la seña cuando lo acuerden.'
+            : 'El anfitrión ya aceptó. Podés avanzar con la seña cuando lo acuerden.'
           : viewerRole === 'host'
-            ? 'Ya la aceptaste. Ahora el huesped puede informar la seña cuando la tenga definida.'
-            : 'La propuesta ya fue aceptada. Cuando la envies, avisalo por aca para dejarla confirmada.',
+            ? 'Ya acordaron seguir. El huésped puede registrar la seña cuando la tenga definida.'
+            : 'La propuesta ya fue aceptada. Cuando registres la seña, esto queda listo para confirmar.',
         supportText: input.mode === 'protected'
-          ? 'Cuando dejen la seña registrada, la reserva queda confirmada.'
-          : 'Cuando ambos confirman la seña, la reserva queda registrada.',
+          ? 'Cuando dejen la seña registrada, pueden dejar la reserva confirmada.'
+          : 'Cuando la seña quede registrada, ya pueden cerrar la reserva.',
         nextActor: 'guest',
         nextActorLabel: 'Huésped',
         nextStepLabel: input.mode === 'protected'
-          ? viewerRole === 'host' ? 'Esperar registro de seña' : 'Registrar seña'
-          : viewerRole === 'host' ? 'Esperar que el huésped informe la seña' : 'Informar seña',
+          ? viewerRole === 'host' ? 'Esperar seña' : 'Resolver seña'
+          : viewerRole === 'host' ? 'Esperar seña' : 'Registrar seña',
         primaryActionLabel: viewerRole === 'guest'
           ? input.mode === 'protected' ? 'Registrar seña' : 'Informar seña'
           : undefined,
@@ -332,16 +426,16 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
       return {
         stage,
         modelLabel,
-        statusLabel: 'Seña externa',
+        statusLabel: visibleStatus?.label ?? 'Pendiente seña',
         description: viewerRole === 'host'
-          ? 'El huesped eligio coordinar la seña por fuera.'
-          : 'Elegiste coordinarla por fuera.',
+          ? 'Eligieron coordinar la seña por fuera.'
+          : 'Elegiste coordinar la seña por fuera.',
         supportText: viewerRole === 'host'
-          ? 'Si cambian de idea antes de informarla, el huesped puede dejarla registrada aca.'
-          : 'Coordinas la seña directo con el anfitrion. Si cambias de idea, podes dejarla registrada aca desde este chat.',
+          ? 'Si cambian de idea antes de informarla, el huésped puede dejarla registrada acá.'
+          : 'Coordinás la seña directo con el anfitrión. Si cambiás de idea, podés dejarla registrada acá desde este chat.',
         nextActor: viewerRole === 'guest' ? 'guest' : 'none',
         nextActorLabel: viewerRole === 'guest' ? 'Huésped' : 'Sin acción pendiente',
-        nextStepLabel: viewerRole === 'guest' ? 'Seguir por chat' : 'Seguir por chat si hace falta',
+        nextStepLabel: viewerRole === 'guest' ? 'Coordinar seña por chat' : 'Seguir por chat si hace falta',
         primaryActionLabel: viewerRole === 'guest' ? 'Informar seña' : undefined,
         directDepositHint: 'Revisá que el titular coincida con quien publica antes de transferir.',
       };
@@ -349,9 +443,9 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
       return {
         stage,
         modelLabel,
-        statusLabel: 'Seña informada',
-        description: 'La seña ya quedó informada en la conversación.',
-        supportText: 'Cuando el anfitrion confirme la recepcion, la reserva queda registrada.',
+        statusLabel: visibleStatus?.label ?? 'Seña registrada',
+        description: 'La seña ya quedó registrada en la conversación.',
+        supportText: 'Ahora el anfitrión tiene que confirmar la recepción para cerrar la reserva.',
         nextActor: 'host',
         nextActorLabel: 'Anfitrión',
         nextStepLabel: 'Confirmar recepción',
@@ -362,28 +456,28 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
       return {
         stage,
         modelLabel,
-        statusLabel: 'Reserva confirmada',
-        description: 'La reserva ya quedó confirmada.',
+        statusLabel: visibleStatus?.label ?? 'Confirmada',
+        description: 'Todo listo para esas fechas.',
         supportText: viewerRole === 'host'
-          ? 'Ya pueden seguir coordinando la llegada por chat.'
-          : 'Ya podés seguir coordinando la llegada por chat.',
+          ? 'Ya pueden coordinar la llegada por el chat.'
+          : 'Ya podés coordinar tranquilo la llegada por el chat.',
         nextActor: 'none',
         nextActorLabel: 'Sin acción pendiente',
-        nextStepLabel: 'Seguir por chat si hace falta',
+        nextStepLabel: 'Coordinar llegada por chat',
       };
     case 'protected-deposit-held':
       if (viewerRole === 'host') {
         return {
           stage,
           modelLabel,
-          statusLabel: 'Seña en custodia',
+          statusLabel: visibleStatus?.label ?? 'Seña registrada',
           description: 'La seña ya quedó registrada.',
-          supportText: 'Ahora solo queda coordinar la llegada y esperar la confirmacion del huesped.',
-          trackingHint: 'Vas a poder ver el estado y el momento de liberación desde esta reserva.',
+          supportText: 'Ahora pueden coordinar la llegada por el chat.',
+          trackingHint: 'Si hace falta intervención más adelante, también queda registrada desde esta reserva.',
           nextActor: 'none',
           nextActorLabel: 'Sin acción pendiente',
-          nextStepLabel: 'Coordinar llegada',
-          primaryActionLabel: 'Informar no show',
+          nextStepLabel: 'Coordinar llegada por chat',
+          primaryActionLabel: 'Reportar un problema',
           pendingActionHint: 'Informar no show se habilita el día del ingreso.',
         };
       }
@@ -391,24 +485,24 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
       return {
         stage,
         modelLabel,
-        statusLabel: 'Seña en custodia',
+        statusLabel: visibleStatus?.label ?? 'Seña registrada',
         description: 'La seña ya quedó registrada.',
-        supportText: 'Ahora solo queda coordinar y confirmar la llegada.',
-        trackingHint: 'Si surge un problema al llegar, podés reportarlo desde la app.',
+        supportText: 'Ahora ya podés coordinar la llegada por el chat.',
+        trackingHint: 'Si surge un problema al llegar, podés reportarlo desde acá.',
         nextActor: 'none',
         nextActorLabel: 'Sin acción pendiente',
-        nextStepLabel: 'Coordinar llegada',
+        nextStepLabel: 'Coordinar llegada por chat',
         primaryActionLabel: 'Confirmar llegada',
-        secondaryActionLabel: 'Reportar problema',
+        secondaryActionLabel: 'Reportar un problema',
         pendingActionHint: 'Confirmar llegada o reportar un problema se habilitan el día del ingreso.',
       };
     case 'protected-deposit-review':
       return {
         stage,
         modelLabel,
-        statusLabel: 'Seña en revisión',
-        description: 'Quedó reportado un problema al llegar y la seña pasó a revisión.',
-        supportText: 'La plataforma revisa lo que pasó antes de definir cómo sigue la seña.',
+        statusLabel: visibleStatus?.label ?? 'Problema reportado',
+        description: 'Quedó reportado un problema en esta reserva.',
+        supportText: 'La plataforma está revisando qué pasó antes de definir cómo sigue.',
         nextActor: 'platform',
         nextActorLabel: 'Plataforma',
         nextStepLabel: 'Esperar revisión',
@@ -417,9 +511,9 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
       return {
         stage,
         modelLabel,
-        statusLabel: 'Llegada en revisión',
-        description: 'La seña quedó en pausa mientras se revisa el no show informado.',
-        supportText: 'La plataforma revisa qué pasó antes de decidir cómo sigue la seña.',
+        statusLabel: visibleStatus?.label ?? 'Problema reportado',
+        description: 'Quedó reportado un problema con la llegada.',
+        supportText: 'La plataforma está revisando qué pasó antes de decidir cómo sigue.',
         nextActor: 'platform',
         nextActorLabel: 'Plataforma',
         nextStepLabel: 'Esperar revisión',
@@ -428,11 +522,12 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
       return {
         stage,
         modelLabel,
-        statusLabel: 'Seña liberada',
-        description: 'La llegada ya quedó confirmada y la seña ya salió de custodia.',
+        statusLabel: visibleStatus?.label ?? 'Confirmada',
+        description: 'Todo listo para esas fechas.',
+        supportText: 'Ya podés coordinar tranquilo la llegada por el chat.',
         nextActor: 'none',
         nextActorLabel: 'Sin acción pendiente',
-        nextStepLabel: 'Seguir por chat si hace falta',
+        nextStepLabel: 'Coordinar llegada por chat',
       };
     case 'guest-cancelled':
       return {

@@ -434,9 +434,9 @@ describe('HostDashboard', () => {
       );
     });
 
-    expect(await screen.findAllByText('Seña por definir')).not.toHaveLength(0);
-    expect(screen.getByText('Ya la aceptaste. Ahora el huesped define como dejar la seña para seguir.')).toBeInTheDocument();
-    expect(screen.getByText('Si la deja registrada aca, el acuerdo queda mas claro dentro del chat.')).toBeInTheDocument();
+    expect(await screen.findAllByText('Pendiente seña')).not.toHaveLength(0);
+    expect(screen.getByText('Ya acordaron seguir. Ahora el huésped define cómo resolver la seña.')).toBeInTheDocument();
+    expect(screen.getByText('La opción que elija queda visible en el chat para que el cierre sea claro.')).toBeInTheDocument();
     expect(showToastMock).toHaveBeenCalledWith(
       'Solicitud aceptada',
       'La solicitud quedó aceptada. Ahora el huésped puede definir la seña desde el chat.',
@@ -689,7 +689,7 @@ describe('HostDashboard', () => {
 
     renderDashboard();
 
-    fireEvent.click(await screen.findByRole('button', { name: /Informar no show/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Reportar un problema/i }));
 
     await waitFor(() => {
       expect(apiJsonMock).toHaveBeenCalledWith(
@@ -698,9 +698,9 @@ describe('HostDashboard', () => {
       );
     });
 
-    expect(await screen.findAllByText('Llegada en revisión')).not.toHaveLength(0);
-    expect(screen.getByText('La seña quedó en pausa mientras se revisa el no show informado.')).toBeInTheDocument();
-    expect(screen.getByText('La plataforma revisa qué pasó antes de decidir cómo sigue la seña.')).toBeInTheDocument();
+    expect(await screen.findAllByText('Problema reportado')).not.toHaveLength(0);
+    expect(screen.getByText('Quedó reportado un problema con la llegada.')).toBeInTheDocument();
+    expect(screen.getByText('La plataforma está revisando qué pasó antes de decidir cómo sigue.')).toBeInTheDocument();
     expect(showToastMock).toHaveBeenCalledWith(
       'Llegada en revisión',
       'El no show quedó informado y la seña sigue en pausa mientras la plataforma revisa qué pasó.',
@@ -753,7 +753,7 @@ describe('HostDashboard', () => {
 
     renderDashboard();
 
-    expect(await screen.findAllByText('Seña en custodia')).not.toHaveLength(0);
+    expect(await screen.findAllByText('Seña registrada')).not.toHaveLength(0);
     expect(screen.getByText('Informar no show se habilita el día del ingreso.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Informar no show/i })).not.toBeInTheDocument();
   });
@@ -803,10 +803,10 @@ describe('HostDashboard', () => {
 
     renderDashboard();
 
-    expect(await screen.findAllByText('Seña en custodia')).not.toHaveLength(0);
+    expect(await screen.findAllByText('Seña registrada')).not.toHaveLength(0);
     expect(screen.getByText('La seña ya quedó registrada.')).toBeInTheDocument();
-    expect(screen.getByText('Ahora solo queda coordinar la llegada y esperar la confirmacion del huesped.')).toBeInTheDocument();
-    expect(screen.getByText('Vas a poder ver el estado y el momento de liberación desde esta reserva.')).toBeInTheDocument();
+    expect(screen.getByText('Ahora pueden coordinar la llegada por el chat.')).toBeInTheDocument();
+    expect(screen.getByText('Si hace falta intervención más adelante, también queda registrada desde esta reserva.')).toBeInTheDocument();
   });
 
   test('lets the host cancel a protected reservation and shows the automatic refund state', async () => {

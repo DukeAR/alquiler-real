@@ -256,8 +256,8 @@ describe('MyBookings', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Aceptar condiciones/i }));
 
-    expect(screen.getByText(/Podés seguir coordinando la llegada por el chat/i)).toBeInTheDocument();
-    expect(screen.getByText('Próximo paso: coordiná horario y llegada con el anfitrión.')).toBeInTheDocument();
+    expect(screen.getByText(/Ya podés coordinar tranquilo la llegada por el chat/i)).toBeInTheDocument();
+    expect(screen.getByText('Próximo paso: coordiná horario y llegada con el anfitrión por el chat.')).toBeInTheDocument();
 
     await waitFor(() => {
       expect(acceptContractMock).toHaveBeenCalledWith('booking-1');
@@ -335,8 +335,8 @@ describe('MyBookings', () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findAllByText('Elegir seña')).not.toHaveLength(0);
-    expect(screen.getByText('El anfitrion ya acepto. Ahora podes elegir como dejar la seña para seguir.')).toBeInTheDocument();
+    expect(await screen.findAllByText('Pendiente seña')).not.toHaveLength(0);
+    expect(screen.getByText('Ya acordaron seguir. Ahora podés elegir cómo avanzar con la seña.')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Antes de elegir la seña' })).toBeInTheDocument();
     expect(screen.getByText('Cuándo no interviene')).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /Abrir chat/i }).length).toBeGreaterThan(0);
@@ -357,8 +357,8 @@ describe('MyBookings', () => {
       expect(selectProtectedDepositMock).toHaveBeenCalledWith('booking-protected-1');
     });
 
-    expect(await screen.findAllByText('Solicitud aceptada')).not.toHaveLength(0);
-    expect(screen.getByText('El anfitrion ya acepto. Podes avanzar con la seña cuando lo acuerden.')).toBeInTheDocument();
+    expect(await screen.findAllByText('Pendiente seña')).not.toHaveLength(0);
+    expect(screen.getByText('El anfitrión ya aceptó. Podés avanzar con la seña cuando lo acuerden.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Registrar seña/i })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Registrar seña/i }));
@@ -367,8 +367,8 @@ describe('MyBookings', () => {
       expect(payProtectedDepositMock).toHaveBeenCalledWith('booking-protected-1');
     });
 
-    expect(await screen.findAllByText('Seña en custodia')).not.toHaveLength(0);
-    expect(screen.getAllByText('Ahora solo queda coordinar y confirmar la llegada.')).not.toHaveLength(0);
+    expect(await screen.findAllByText('Seña registrada')).not.toHaveLength(0);
+    expect(screen.getAllByText('Ahora ya podés coordinar la llegada por el chat.')).not.toHaveLength(0);
     expect(showToastMock).toHaveBeenCalledWith(
       'Seña en la app',
       'La seña quedó lista para registrarse acá. Vas a ver el fee antes de pagar.',
@@ -526,8 +526,8 @@ describe('MyBookings', () => {
       expect(confirmArrivalMock).toHaveBeenCalledWith('booking-protected-2');
     });
 
-    expect(await screen.findAllByText('Seña liberada')).not.toHaveLength(0);
-    expect(screen.getAllByText('La llegada ya quedó confirmada y la seña ya salió de custodia.')).not.toHaveLength(0);
+    expect(await screen.findAllByText('Confirmada')).not.toHaveLength(0);
+    expect(screen.getAllByText('Todo listo para esas fechas.')).not.toHaveLength(0);
   });
 
   test('lets the guest report an arrival problem while the protected deposit is in custody', async () => {
@@ -573,15 +573,15 @@ describe('MyBookings', () => {
       </MemoryRouter>,
     );
 
-    fireEvent.click(await screen.findByRole('button', { name: /Reportar problema/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Reportar un problema/i }));
 
     await waitFor(() => {
       expect(reportArrivalProblemMock).toHaveBeenCalledWith('booking-protected-3');
     });
 
-    expect(await screen.findAllByText('Seña en revisión')).not.toHaveLength(0);
-    expect(screen.getAllByText('Quedó reportado un problema al llegar y la seña pasó a revisión.')).not.toHaveLength(0);
-    expect(screen.getByText('La plataforma revisa lo que pasó antes de definir cómo sigue la seña.')).toBeInTheDocument();
+    expect(await screen.findAllByText('Problema reportado')).not.toHaveLength(0);
+    expect(screen.getAllByText('Quedó reportado un problema en esta reserva.')).not.toHaveLength(0);
+    expect(screen.getByText('La plataforma está revisando qué pasó antes de definir cómo sigue.')).toBeInTheDocument();
     expect(showToastMock).toHaveBeenCalledWith(
       'Seña en revisión',
       'El problema quedó informado y la seña pasó a revisión.',
@@ -614,7 +614,7 @@ describe('MyBookings', () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findAllByText('Seña en custodia')).not.toHaveLength(0);
+    expect(await screen.findAllByText('Seña registrada')).not.toHaveLength(0);
     expect(screen.getByText('Confirmar llegada o reportar un problema se habilitan el día del ingreso.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Confirmar llegada/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Reportar problema/i })).not.toBeInTheDocument();

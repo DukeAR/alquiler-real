@@ -1017,12 +1017,14 @@ export const MyBookings = () => {
                   {bookingFlow.stage === 'deposit-choice' ? (
                     <div className="w-full lg:max-w-[38rem]">
                       <DepositChoiceBlock
+                        title="Cómo querés avanzar con la seña"
+                        description="Elegí la opción que mejor les cierre. Todo queda claro dentro de la conversación y la reserva."
                         options={[
                           {
                             key: 'protected',
-                            eyebrow: 'Seña en la app',
+                            eyebrow: '1. Resolverla acá con claridad',
                             title: 'Dejarla registrada acá',
-                            description: 'La seña ya queda asentada y se libera cuando confirmás la llegada.',
+                            description: 'La seña queda registrada en la app y el acuerdo sigue claro hasta la llegada.',
                             icon: <Icons.ShieldCheck className="h-5 w-5" />,
                             tone: 'brand',
                             priceLines: protectedDepositPriceLines,
@@ -1036,7 +1038,7 @@ export const MyBookings = () => {
                           },
                           {
                             key: 'external',
-                            eyebrow: 'Seña por fuera',
+                            eyebrow: '2. Coordinarla por fuera',
                             title: 'Coordinarla por fuera (más manual)',
                             description: 'Coordinás la seña directo con el anfitrión.',
                             icon: <Icons.MessageSquare className="h-5 w-5" />,
@@ -1150,10 +1152,12 @@ export const MyBookings = () => {
               {bookingFlow.stage === 'request-accepted' && protectedDepositPricing ? (
                 <DepositChoiceBlock
                   className="mt-4"
+                  title="Cómo querés avanzar con la seña"
+                  description="Si prefieren resolverla acá, queda registrada y después siguen por chat con la llegada."
                   options={[
                     {
                       key: 'pay-protected-deposit',
-                      eyebrow: 'Seña en la app',
+                      eyebrow: 'Resolverla acá con claridad',
                       title: 'Registrarla ahora',
                       description: 'La seña ya queda registrada y se libera cuando confirmás la llegada.',
                       icon: <Icons.ShieldCheck className="h-5 w-5" />,
@@ -1193,15 +1197,15 @@ export const MyBookings = () => {
           {(bookingFlow.stage === 'reservation-confirmed' || (!booking.requestMode && booking.status === 'confirmed')) ? (
             <ReservationConfirmedState
               eyebrow="Reserva confirmada"
-              title="Ya está todo ordenado"
-              description="La reserva y la seña ya quedaron registradas. Podés seguir coordinando la llegada por el chat."
+              title="Todo listo para esas fechas"
+              description="Ya podés coordinar tranquilo la llegada por el chat."
               details={[
                 {
                   label: 'Código de ingreso',
                   value: booking.stay_code || 'Se confirma desde el chat',
                 },
               ]}
-              nextStep="Próximo paso: coordiná horario y llegada con el anfitrión."
+              nextStep="Próximo paso: coordiná horario y llegada con el anfitrión por el chat."
             />
           ) : null}
 
