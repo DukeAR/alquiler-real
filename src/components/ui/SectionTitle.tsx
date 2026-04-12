@@ -36,7 +36,7 @@ export const SectionTitle: React.FC<SectionTitleProps> = ({
   const resolvedVisualLevel = visualLevel ?? as;
 
   return (
-    <div className={cn('space-y-3', className)} {...props}>
+    <div className={cn('space-y-3', className)} {...props} style={{ fontFamily: 'var(--font-ui)', lineHeight: 'var(--line-height-title)' }}>
       {eyebrow ? <p className={cn('app-eyebrow', eyebrowClassName)}>{eyebrow}</p> : null}
       <Heading className={cn(headingClassByTag[resolvedVisualLevel], 'dark:text-slate-50', headingClassName)}>{heading}</Heading>
       {description ? <p className={cn('app-body-sm max-w-prose app-text-muted dark:text-slate-400', descriptionClassName)}>{description}</p> : null}

@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Icons } from './Icons';
 import { showToast } from '../lib/toast';
 import { LoadingState } from './LoadingState';
 import { cn } from '../lib/utils';
 import { 
-  acceptConversationRequest, confirmArrival, confirmDirectDeposit, fetchConversations, fetchMessages, notAdvanceConversationRequest, payProtectedDeposit, reportArrivalProblem, reportDirectDeposit, selectExternalDeposit, selectProtectedDeposit, sendMessage, 
+  acceptConversationRequest, confirmArrival, confirmDirectDeposit, confirmProtectedDepositPayment, fetchConversations, fetchMessages, notAdvanceConversationRequest, payProtectedDeposit, reportArrivalProblem, reportDirectDeposit, selectExternalDeposit, selectProtectedDeposit, sendMessage,
   Conversation, Message 
 } from '../services/geminiService';
 import { useAuth } from '../hooks/useAuth';
@@ -337,7 +337,8 @@ const getEffectiveDepositType = (input: {
   }
 
   if (
-    input.depositStatus === 'held'
+    input.depositStatus === 'checkout_pending'
+    || input.depositStatus === 'held'
     || input.depositStatus === 'review'
     || input.depositStatus === 'pending_confirmation'
     || input.depositStatus === 'released'
@@ -433,6 +434,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
 }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConv, setActiveConv] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -449,6 +451,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
   const scrollRef = useRef<HTMLDivElement>(null);
   const trackedGuestChatOpenIdsRef = useRef(new Set<string>());
   const autoLoadedSuggestionIdsRef = useRef(new Set<string>());
+  const handledDepositCheckoutRef = useRef<string | null>(null);
   const [loadedMessagesConversationId, setLoadedMessagesConversationId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -697,6 +700,24 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
     ));
   };
 
+  const clearDepositCheckoutSearch = () => {
+    const nextSearchParams = new URLSearchParams(location.search);
+
+    nextSearchParams.delete('depositCheckout');
+    nextSearchParams.delete('bookingId');
+    nextSearchParams.delete('payment_id');
+    nextSearchParams.delete('payment_type');
+    nextSearchParams.delete('collection_id');
+    nextSearchParams.delete('collection_status');
+    nextSearchParams.delete('status');
+    nextSearchParams.delete('external_reference');
+    nextSearchParams.delete('merchant_order_id');
+    nextSearchParams.delete('preference_id');
+
+    const nextSearch = nextSearchParams.toString();
+    navigate({ pathname: location.pathname, search: nextSearch ? `?${nextSearch}` : '' }, { replace: true });
+  };
+
   const handleSelectExternalDeposit = async (bookingId: string) => {
     if (!activeConv) {
       return;
@@ -795,23 +816,88 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
     setProcessingFlowAction('pay-protected-deposit');
 
     try {
-      const booking = await payProtectedDeposit(bookingId);
+      const checkoutSession = await payProtectedDeposit(bookingId, `/chat/${activeConv.id}`);
       applyBookingUpdate({
-        id: booking.id,
-        status: booking.status,
-        depositType: booking.depositType,
-        depositStatus: booking.depositStatus,
-        protectedDepositPricing: booking.protectedDepositPricing,
-        depositPaymentReference: booking.depositPaymentReference,
+        id: checkoutSession.booking.id,
+        status: checkoutSession.booking.status,
+        depositType: checkoutSession.booking.depositType,
+        depositStatus: checkoutSession.booking.depositStatus,
+        protectedDepositPricing: checkoutSession.booking.protectedDepositPricing,
+        depositPaymentReference: checkoutSession.booking.depositPaymentReference,
       });
-      await loadMessages(activeConv.id);
-      showToast('Seña en custodia', 'La seña ya quedó registrada hasta que confirmes la llegada.', 'success');
+      showToast('Pago de seña', 'Vas a Mercado Pago para dejar la seña registrada. Cuando se confirme, volvés a este chat.', 'info');
+      window.location.assign(checkoutSession.checkoutUrl);
     } catch (err) {
-      showToast('Seña', err instanceof Error ? err.message : 'No pudimos registrar el pago de la seña.', 'error');
+      showToast('Seña', err instanceof Error ? err.message : 'No pudimos abrir el pago de la seña.', 'error');
     } finally {
       setProcessingFlowAction(null);
     }
   };
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const checkoutResult = searchParams.get('depositCheckout');
+    const bookingId = searchParams.get('bookingId');
+    const paymentId = searchParams.get('payment_id');
+    const checkoutToken = `${checkoutResult || ''}:${bookingId || ''}:${paymentId || ''}:${location.pathname}`;
+
+    if (!checkoutResult || !bookingId) {
+      handledDepositCheckoutRef.current = null;
+      return;
+    }
+
+    if (handledDepositCheckoutRef.current === checkoutToken) {
+      return;
+    }
+
+    handledDepositCheckoutRef.current = checkoutToken;
+
+    const handleCheckoutReturn = async () => {
+      try {
+        if (checkoutResult === 'failure') {
+          showToast('Pago no confirmado', 'La seña no quedó registrada. Si todavía quieren cerrarlo, podés volver a abrir el pago desde este chat.', 'warning');
+          clearDepositCheckoutSearch();
+          return;
+        }
+
+        if (!paymentId) {
+          showToast('Pago pendiente', 'Todavía estamos esperando la confirmación de Mercado Pago para esta seña.', 'info');
+          clearDepositCheckoutSearch();
+          return;
+        }
+
+        const confirmation = await confirmProtectedDepositPayment(bookingId, paymentId);
+
+        applyBookingUpdate({
+          id: confirmation.booking.id,
+          status: confirmation.booking.status,
+          depositType: confirmation.booking.depositType,
+          depositStatus: confirmation.booking.depositStatus,
+          protectedDepositPricing: confirmation.booking.protectedDepositPricing,
+          depositPaymentReference: confirmation.booking.depositPaymentReference,
+          cancellationActor: confirmation.booking.cancellationActor,
+        });
+
+        await loadConversations();
+
+        if (activeConv?.id) {
+          await loadMessages(activeConv.id);
+        }
+
+        if (confirmation.confirmed) {
+          showToast('Seña registrada', 'La seña quedó registrada y ya pueden seguir por este chat.', 'success');
+        } else {
+          showToast('Pago pendiente', 'Mercado Pago todavía no terminó de confirmar la seña. Si hace falta, podés reabrir el pago desde este chat.', 'info');
+        }
+      } catch (error) {
+        showToast('Seña', error instanceof Error ? error.message : 'No pudimos confirmar la seña registrada.', 'error');
+      } finally {
+        clearDepositCheckoutSearch();
+      }
+    };
+
+    void handleCheckoutReturn();
+  }, [activeConv?.id, location.pathname, location.search, navigate]);
 
   const handleConfirmArrival = async (bookingId: string) => {
     if (!activeConv) {
@@ -948,6 +1034,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
       flowCopy?.stage === 'request-pending'
       || flowCopy?.stage === 'deposit-choice'
       || flowCopy?.stage === 'request-accepted'
+      || flowCopy?.stage === 'protected-checkout-pending'
       || flowCopy?.stage === 'external-deposit-pending'
     )
     && !isRequestExpired,
@@ -978,7 +1065,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
     isTenantConversation
     && activeRequestContext?.bookingId
     && activeRequestContext.depositType === 'protected'
-    && flowCopy?.stage === 'request-accepted',
+    && flowCopy?.stage === 'protected-checkout-pending',
   );
   const arrivalActionsAvailable = isBookingCheckInReached(activeRequestContext?.startDate);
   const canConfirmArrival = Boolean(isTenantConversation && activeRequestContext?.depositType === 'protected' && flowCopy?.stage === 'protected-deposit-held' && activeRequestContext.bookingId && arrivalActionsAvailable);
@@ -1057,6 +1144,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
         ? 'request-not-advanced'
         : flowCopy?.stage === 'deposit-choice'
           || flowCopy?.stage === 'request-accepted'
+          || flowCopy?.stage === 'protected-checkout-pending'
           ? 'request-accepted'
       : flowCopy?.stage === 'external-deposit-pending'
         ? 'external-deposit'
@@ -1206,6 +1294,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
       && (
         flowCopy?.stage === 'request-accepted'
         || flowCopy?.stage === 'deposit-choice'
+        || flowCopy?.stage === 'protected-checkout-pending'
         || flowCopy?.stage === 'external-deposit-pending'
       )
     ) {

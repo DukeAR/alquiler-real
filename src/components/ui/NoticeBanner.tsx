@@ -28,24 +28,25 @@ export interface NoticeBannerProps extends React.HTMLAttributes<HTMLDivElement> 
 export const NoticeBanner: React.FC<NoticeBannerProps> = ({
   className,
   tone = 'info',
-  heading,
-  description,
-  icon,
-  ...props
-}) => {
   return (
     <div
-      role={tone === 'error' || tone === 'warning' ? 'alert' : 'status'}
-      className={cn(
-        'flex items-start gap-3 rounded-[24px] border p-4 shadow-[0_14px_30px_-24px_rgba(15,23,42,0.16)] md:p-5',
-        toneClasses[tone],
-        className,
+      className={clsx(
+        "flex items-center gap-3 px-4 py-3 rounded-[var(--radius-card)] border",
+        {
+          'bg-[var(--color-primary-soft)] border-[var(--color-primary-accent)] text-[var(--color-primary-accent)]': variant === 'info',
+          'bg-[var(--color-success)] border-[var(--color-success)] text-white': variant === 'success',
+          'bg-[var(--color-danger)] border-[var(--color-danger)] text-white': variant === 'danger',
+          'bg-[var(--color-warning)] border-[var(--color-warning)] text-white': variant === 'warning',
+        },
+        className
       )}
+      style={{ fontFamily: 'var(--font-ui)' }}
       {...props}
     >
-      <div className="mt-0.5 shrink-0">{icon ?? toneIcons[tone]}</div>
-      <div className="space-y-1">
-        <p className="text-[0.95rem] font-semibold leading-6 tracking-[-0.01em]">{heading}</p>
+      {icon && <span className="shrink-0">{icon}</span>}
+      <span>{children}</span>
+    </div>
+  );
         {description ? <p className="app-body-sm leading-6 text-current/80">{description}</p> : null}
       </div>
     </div>

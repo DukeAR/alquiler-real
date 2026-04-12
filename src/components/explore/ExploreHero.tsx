@@ -22,7 +22,7 @@ export const ExploreHero = ({
   onLocationSelect,
 }: ExploreHeroProps) => {
   return (
-    <section className="relative overflow-hidden rounded-[26px] bg-slate-950 px-4 py-8 shadow-[0_18px_44px_-34px_rgba(15,23,42,0.26)] sm:px-6 sm:py-12 md:rounded-[30px] md:px-10 md:py-18 lg:px-14 lg:py-20">
+    <section className="w-full py-16 md:py-24 bg-[var(--color-primary-soft)]" style={{ fontFamily: 'var(--font-ui)' }}>
       <div className="absolute inset-0">
         <img
           src="https://images.unsplash.com/photo-1500375592092-40eb2168fd21?auto=format&fit=crop&w=1800&q=80"
@@ -84,6 +84,8 @@ export const ExploreHero = ({
         </div>
       </div>
     </section>
+    </section>
+  );
   );
 };
 

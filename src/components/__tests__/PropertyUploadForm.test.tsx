@@ -105,7 +105,7 @@ describe('PropertyUploadForm', () => {
       'success',
     );
     expect(screen.getByText('Recibí más consultas con mejores fotos')).toBeInTheDocument();
-    expect(screen.getByText('Generá más confianza con identidad y video')).toBeInTheDocument();
+    expect(screen.getByText('Hacé más claro el aviso con identidad y video')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Mejorar publicacion' }));
     expect(onComplete).toHaveBeenCalledTimes(1);

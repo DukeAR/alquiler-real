@@ -45,6 +45,7 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
   successLabel?: React.ReactNode;
 }
 
+
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   (
     {
@@ -52,8 +53,6 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       variant = 'primary',
       size = 'md',
       fullWidth = false,
-      type = 'button',
-      disabled,
       loading = false,
       loadingLabel,
       success = false,
@@ -61,29 +60,13 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       children,
       ...props
     },
-    ref,
+    ref
   ) => {
-    const isInactive = Boolean(disabled || loading || success);
-
-    const content = loading ? (
-      <span className="inline-flex items-center gap-2" aria-live="polite">
-        <Icons.Loader2 className={cn(iconSizeClasses[size], 'animate-spin')} aria-hidden="true" />
-        <span>{loadingLabel ?? children}</span>
-      </span>
-    ) : success ? (
-      <span className="inline-flex items-center gap-2" aria-live="polite">
-        <Icons.Check className={iconSizeClasses[size]} aria-hidden="true" />
-        <span>{successLabel ?? children}</span>
-      </span>
-    ) : (
-      children
-    );
-
     return (
       <button
         ref={ref}
-        type={type}
-        disabled={isInactive}
+        type={props.type || 'button'}
+        disabled={props.disabled || loading}
         aria-busy={loading || undefined}
         data-loading={loading ? 'true' : undefined}
         data-success={success ? 'true' : undefined}
@@ -96,14 +79,18 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           fullWidth && 'w-full',
           className,
         )}
+        style={{ fontFamily: 'var(--font-ui)' }}
         {...props}
       >
-        {content}
+        {loading
+          ? loadingLabel || <span className="loader mr-2" />
+          : success
+          ? successLabel || <span className="inline-block align-middle mr-2">✓</span>
+          : null}
+        {children}
       </button>
     );
-  },
+  }
 );
 
 Button.displayName = 'Button';
-
-export default Button;

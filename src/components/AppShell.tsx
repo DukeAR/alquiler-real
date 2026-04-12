@@ -1,6 +1,7 @@
 import React, { Suspense } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Icons } from './Icons';
+import { Logo } from './Logo';
 import { NotificationToast } from './NotificationToast';
 import { AIAssistant } from './AIAssistant';
 import { NotificationsMenu } from './NotificationsMenu';
@@ -12,31 +13,31 @@ import { useSocket } from '../hooks/useSocket';
 import { cn } from '../lib/utils';
 import { showToast } from '../lib/toast';
 import { getResolvedAuthViewState } from '../lib/authViewState';
-
-type AppShellProps = {
-  children: React.ReactNode;
-};
-
-type NavAction = {
-  label: string;
-  shortLabel: string;
-  path?: string;
-  icon: React.ComponentType<{ className?: string }>;
-  protected?: boolean;
-  onClick?: () => void;
-  badge?: number;
-  badgeLabel?: (count: number) => string;
-};
-
-const matchesPath = (pathname: string, target: string) => {
-  if (target === '/') return pathname === '/' || pathname.startsWith('/explore');
-  return pathname === target || pathname.startsWith(`${target}/`);
-};
-
-const getNavAriaLabel = (action: NavAction) => {
-  if (!action.badge) {
-    return action.label;
-  }
+  return (
+    <div className="min-h-screen flex flex-col bg-[var(--color-bg)]" style={{ fontFamily: 'var(--font-ui)' }}>
+      <header className="border-b border-[var(--color-border)] bg-white/95 backdrop-blur-md z-30 sticky top-0">
+        <div className="container mx-auto flex items-center justify-between h-16 px-4">
+          <div className="flex items-center gap-3">
+            <Logo height={36} />
+            <span className="font-bold text-2xl text-[var(--color-primary)] tracking-tight" style={{ letterSpacing: '-0.5px' }}>Alquiler Real</span>
+          </div>
+          <nav className="flex items-center gap-4">
+            {navLinks.map((link) => (
+              <NavLink key={link.href} href={link.href} className="text-[var(--color-text)] hover:text-[var(--color-primary-accent)] font-medium px-2 py-1 rounded-md transition-colors">
+                {link.label}
+              </NavLink>
+            ))}
+          </nav>
+          <div className="flex items-center gap-2">
+            {right}
+          </div>
+        </div>
+      </header>
+      <main className="flex-1 container mx-auto px-4 py-10 w-full">
+        {children}
+      </main>
+    </div>
+  );
 
   if (action.badgeLabel) {
     return `${action.label}, ${action.badgeLabel(action.badge)}`;
@@ -95,8 +96,8 @@ const DesktopNavButton = ({ action, active, onSelect }: { action: NavAction; act
     aria-label={getNavAriaLabel(action)}
     aria-current={active ? 'page' : undefined}
     className={cn(
-      'app-nav-link relative',
-      active && 'app-nav-link-active'
+      'nav-link relative',
+      active && 'nav-link-active'
     )}
   >
     <action.icon className="h-4 w-4" />
@@ -266,7 +267,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                   <button
                     type="button"
                     onClick={() => navigate('/my-bookings')}
-                    className="app-icon-button hidden md:inline-flex"
+                    className="icon-btn hidden md:inline-flex"
                     aria-label="Mis reservas"
                   >
                     <Icons.Calendar className="h-5 w-5" />
@@ -288,17 +289,17 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                 </>
               ) : isUnauthenticated ? (
                 <>
-                  <button type="button" onClick={() => openLoginModal()} className="app-button-secondary hidden md:inline-flex">
+                  <button type="button" onClick={() => openLoginModal()} className="btn btn-secondary hidden md:inline-flex">
                     <Icons.User className="h-4 w-4" />
                     Ingresá
                   </button>
-                  <button type="button" onClick={() => navigate('/register')} className="app-button-primary px-4 sm:px-5">
+                  <button type="button" onClick={() => navigate('/register')} className="btn px-4 sm:px-5">
                     <Icons.ArrowRight className="h-4 w-4" />
                     Creá tu cuenta
                   </button>
                 </>
               ) : hasSessionError ? (
-                <button type="button" onClick={() => void refresh()} className="app-button-secondary hidden md:inline-flex">
+                <button type="button" onClick={() => void refresh()} className="btn btn-secondary hidden md:inline-flex">
                   <Icons.AlertTriangle className="h-4 w-4" />
                   Reintentar sesión
                 </button>

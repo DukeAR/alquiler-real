@@ -14,27 +14,27 @@ export interface FormFieldProps extends React.HTMLAttributes<HTMLDivElement> {
 export const FormField: React.FC<FormFieldProps> = ({
   className,
   label,
-  hint,
-  helperText,
-  error,
-  htmlFor,
-  helperTextId,
-  errorId,
-  children,
-  ...props
-}) => {
-  const LabelTag = htmlFor ? 'label' : 'div';
-  const hasHeader = Boolean(label) || Boolean(hint);
-
   return (
-    <div className={cn('space-y-2.5', className)} {...props}>
-      {hasHeader ? (
-        <div className="flex flex-col gap-1.5 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
-          {label ? (
-            <LabelTag htmlFor={htmlFor} className={cn('app-form-label', htmlFor && 'cursor-pointer')}>
-              {label}
-            </LabelTag>
-          ) : <div />}
+    <div className={clsx("mb-4", className)} style={{ fontFamily: 'var(--font-ui)' }}>
+      {label && (
+        <label htmlFor={htmlFor} className="block text-sm font-medium text-[var(--color-primary)] mb-1">
+          {label}
+          {hint && <span className="ml-2 text-xs text-[var(--color-text-soft)]">{hint}</span>}
+        </label>
+      )}
+      {children}
+      {helperText && !error && (
+        <p id={helperTextId} className="mt-1 text-xs text-[var(--color-text-soft)]">
+          {helperText}
+        </p>
+      )}
+      {error && (
+        <p id={errorId} className="mt-1 text-xs text-[var(--color-danger)]">
+          {error}
+        </p>
+      )}
+    </div>
+  );
           {hint ? <p className="app-form-hint sm:text-right">{hint}</p> : null}
         </div>
       ) : null}

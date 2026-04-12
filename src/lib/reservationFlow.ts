@@ -12,6 +12,7 @@ export type ReservationFlowStage =
   | 'request-not-advanced'
   | 'deposit-choice'
   | 'request-accepted'
+  | 'protected-checkout-pending'
   | 'external-deposit-pending'
   | 'direct-deposit-reported'
   | 'reservation-confirmed'
@@ -123,6 +124,10 @@ const getDepositMilestoneLabel = (
     return 'Seña confirmada';
   }
 
+  if (stage === 'protected-checkout-pending') {
+    return 'Seña por registrar';
+  }
+
   if (stage === 'protected-deposit-review') {
     return 'Seña en revisión';
   }
@@ -144,6 +149,7 @@ const getMilestoneIndex = (stage: ReservationFlowStageWithIssues | null) => {
     case 'deposit-choice':
     case 'external-deposit-pending':
     case 'direct-deposit-reported':
+    case 'protected-checkout-pending':
     case 'protected-deposit-held':
     case 'protected-deposit-review':
     case 'protected-no-show-pending':
@@ -237,12 +243,20 @@ export const getReservationFlowStage = ({
     return 'protected-deposit-released';
   }
 
+  if (depositStatus === 'checkout_pending') {
+    return 'protected-checkout-pending';
+  }
+
   if (depositStatus === 'held') {
     return 'protected-deposit-held';
   }
 
   if (requestAccepted && depositType === 'external') {
     return 'external-deposit-pending';
+  }
+
+  if (requestAccepted && depositType === 'protected') {
+    return 'protected-checkout-pending';
   }
 
   if (requestAccepted && !depositType) {
@@ -297,6 +311,7 @@ export const getReservationVisibleStatus = (
       };
     case 'deposit-choice':
     case 'request-accepted':
+    case 'protected-checkout-pending':
     case 'external-deposit-pending':
       return {
         key: 'pending-deposit',
@@ -421,6 +436,25 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
           ? input.mode === 'protected' ? 'Registrar seña' : 'Informar seña'
           : undefined,
         directDepositHint: input.mode === 'direct' ? 'Revisá que el titular coincida con quien publica antes de transferir.' : undefined,
+      };
+    case 'protected-checkout-pending':
+      return {
+        stage,
+        modelLabel,
+        statusLabel: visibleStatus?.label ?? 'Pendiente seña',
+        description: viewerRole === 'host'
+          ? 'Ya eligieron dejar la seña en la app. Falta que el huésped complete el pago para que quede registrada.'
+          : 'Ya elegiste dejar la seña en la app. Falta completar el pago para que quede registrada.',
+        supportText: viewerRole === 'host'
+          ? 'Cuando se confirme el pago, la seña queda registrada y todo queda claro entre ambas partes.'
+          : 'La seña queda registrada dentro de la app y todo queda claro entre ambas partes.',
+        nextActor: 'guest',
+        nextActorLabel: 'Huésped',
+        nextStepLabel: viewerRole === 'host' ? 'Esperar pago de seña' : 'Pagar seña',
+        primaryActionLabel: viewerRole === 'guest' ? 'Pagar seña' : undefined,
+        trackingHint: viewerRole === 'guest'
+          ? 'Si el pago no se confirma ahora, podés volver a abrirlo desde esta reserva.'
+          : 'Cuando el pago se confirme, la reserva sigue por chat con la seña registrada.',
       };
     case 'external-deposit-pending':
       return {

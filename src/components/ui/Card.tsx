@@ -12,9 +12,9 @@ const paddingClasses: Record<CardPadding, string> = {
 };
 
 const variantClasses: Record<CardVariant, string> = {
-  default: 'app-card dark:border-slate-800 dark:bg-slate-900',
-  muted: 'app-card app-card-muted dark:border-slate-800 dark:bg-slate-800/60',
-  elevated: 'app-card app-card-elevated dark:border-slate-800 dark:bg-slate-900',
+  default: 'bg-[var(--color-surface)] border border-[var(--color-border)] shadow-md rounded-[var(--radius-card)]',
+  muted: 'bg-[var(--color-surface-alt)] border border-[var(--color-border)] shadow-sm rounded-[var(--radius-card)]',
+  elevated: 'bg-[var(--color-surface)] border border-[var(--color-border)] shadow-lg rounded-[var(--radius-card)]',
 };
 
 export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -23,7 +23,7 @@ export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 export const Card = React.forwardRef<HTMLDivElement, CardProps>(
-  ({ className, padding = 'md', variant = 'default', ...props }, ref) => {
+  ({ className, padding = 'lg', variant = 'default', ...props }, ref) => {
     return (
       <div
         ref={ref}
@@ -33,6 +33,7 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
           'transition-[background-color,border-color,box-shadow,transform] duration-200 ease-out',
           className,
         )}
+        style={{ fontFamily: 'var(--font-ui)' }}
         {...props}
       />
     );

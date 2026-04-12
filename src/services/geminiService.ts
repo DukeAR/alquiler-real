@@ -197,12 +197,31 @@ export async function selectProtectedDeposit(bookingId: string): Promise<Booking
   return response.booking;
 }
 
-export async function payProtectedDeposit(bookingId: string): Promise<Booking> {
-  const response = await apiJson<{ booking: Booking }>(`/api/bookings/${bookingId}/pay-deposit`, {
-    method: 'POST'
-  });
+export type ProtectedDepositCheckoutSession = {
+  booking: Booking;
+  checkoutUrl: string;
+  preferenceId?: string | null;
+};
 
-  return response.booking;
+export type ProtectedDepositPaymentConfirmation = {
+  booking: Booking;
+  confirmed: boolean;
+  paymentStatus?: string | null;
+  paymentStatusDetail?: string | null;
+};
+
+export async function payProtectedDeposit(bookingId: string, returnPath: string): Promise<ProtectedDepositCheckoutSession> {
+  return apiJson<ProtectedDepositCheckoutSession>(`/api/bookings/${bookingId}/pay-deposit`, {
+    method: 'POST',
+    body: JSON.stringify({ returnPath })
+  });
+}
+
+export async function confirmProtectedDepositPayment(bookingId: string, paymentId: string): Promise<ProtectedDepositPaymentConfirmation> {
+  return apiJson<ProtectedDepositPaymentConfirmation>(`/api/bookings/${bookingId}/confirm-deposit-payment`, {
+    method: 'POST',
+    body: JSON.stringify({ paymentId })
+  });
 }
 
 export async function confirmArrival(bookingId: string): Promise<Booking> {

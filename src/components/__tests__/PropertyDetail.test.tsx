@@ -488,7 +488,7 @@ describe('PropertyDetail', () => {
     expect(within(verificationPreview).getByText('Ubicación')).toBeDefined();
     expect(within(verificationPreview).getByText('5 reseñas reales')).toBeDefined();
     expect(within(verificationPreview).queryByText('4 de 5 comprobaciones')).toBeNull();
-    expect(screen.getByText('Confianza del aviso')).toBeDefined();
+    expect(screen.getByText('Qué ayuda a revisar rápido')).toBeDefined();
     expect(screen.getAllByText('4 de 5 comprobaciones').length).toBeGreaterThan(0);
     expect(screen.getByText('Mostramos solo comprobaciones visibles que ayudan a decidir rápido.')).toBeDefined();
   });
@@ -539,7 +539,7 @@ describe('PropertyDetail', () => {
     expect(within(verificationPreview).getByText('5 reseñas reales')).toBeDefined();
     expect(within(verificationPreview).getByText('6 reservas cerradas')).toBeDefined();
     expect(within(verificationPreview).queryByText('1 de 5 comprobaciones')).toBeNull();
-    expect(screen.getByText('Confianza del aviso')).toBeDefined();
+    expect(screen.getByText('Qué ayuda a revisar rápido')).toBeDefined();
     expect(screen.getAllByText('1 de 5 comprobaciones').length).toBeGreaterThan(0);
   });
 

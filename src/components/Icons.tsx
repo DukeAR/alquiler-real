@@ -78,4 +78,5 @@ export const Icons = {
   LayoutGrid,
   BedDouble,
   Bath
+// Asegurar que todos los íconos usen color actualColor para heredar el color del texto/paleta
 };

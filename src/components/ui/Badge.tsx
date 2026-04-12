@@ -23,18 +23,18 @@ export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   size?: BadgeSize;
 }
 
-export const Badge: React.FC<BadgeProps> = ({ className, variant = 'neutral', size = 'sm', ...props }) => {
+export const Badge: React.FC<BadgeProps> = ({ className, variant = 'neutral', size = 'sm', children, ...props }) => {
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-full border font-semibold leading-none tracking-[0.015em]',
+        'inline-block font-semibold rounded-[var(--radius-badge)] border',
         variantClasses[variant],
         sizeClasses[size],
-        className,
+        className
       )}
+      style={{ fontFamily: 'var(--font-ui)' }}
       {...props}
-    />
+    >
+      {children}
+    </span>
   );
-};
-
-export default Badge;

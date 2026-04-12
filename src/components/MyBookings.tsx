@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { apiJson } from '../lib/apiConfig';
 import {
   formatBookingDateOnly,
@@ -26,6 +26,7 @@ import { useUserReservations } from '../hooks/useUserReservations';
 import {
   acceptContract,
   cancelBooking,
+  confirmProtectedDepositPayment,
   confirmArrival,
   payProtectedDeposit,
   reportArrivalProblem,
@@ -313,7 +314,7 @@ const getBookingStatusVariant = (booking: Booking): 'neutral' | 'brand' | 'succe
     return 'warning';
   }
 
-  if (flow.stage === 'request-accepted' || flow.stage === 'protected-deposit-held') {
+  if (flow.stage === 'request-accepted' || flow.stage === 'protected-checkout-pending' || flow.stage === 'protected-deposit-held') {
     return 'brand';
   }
 
@@ -361,7 +362,7 @@ const getBookingGroupKey = (booking: Booking): BookingGroupKey => {
     return 'closed';
   }
 
-  if (flow.stage === 'request-pending' || flow.stage === 'request-accepted' || flow.stage === 'direct-deposit-reported') {
+  if (flow.stage === 'request-pending' || flow.stage === 'request-accepted' || flow.stage === 'protected-checkout-pending' || flow.stage === 'direct-deposit-reported') {
     return 'requests';
   }
 
@@ -396,6 +397,7 @@ const getHighlightedStayDescription = (booking: Booking) => {
 
 export const MyBookings = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, setActiveMode } = useAuth();
   const {
     reservations: bookings,
@@ -417,6 +419,7 @@ export const MyBookings = () => {
     action: 'select-external-deposit' | 'select-protected-deposit' | 'pay-deposit' | 'confirm-arrival' | 'report-arrival-problem';
   } | null>(null);
   const [reviewingBooking, setReviewingBooking] = useState<Booking | null>(null);
+  const [handledDepositCheckoutToken, setHandledDepositCheckoutToken] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -528,6 +531,24 @@ export const MyBookings = () => {
     )));
   };
 
+  const clearDepositCheckoutSearch = () => {
+    const nextSearchParams = new URLSearchParams(location.search);
+
+    nextSearchParams.delete('depositCheckout');
+    nextSearchParams.delete('bookingId');
+    nextSearchParams.delete('payment_id');
+    nextSearchParams.delete('payment_type');
+    nextSearchParams.delete('collection_id');
+    nextSearchParams.delete('collection_status');
+    nextSearchParams.delete('status');
+    nextSearchParams.delete('external_reference');
+    nextSearchParams.delete('merchant_order_id');
+    nextSearchParams.delete('preference_id');
+
+    const nextSearch = nextSearchParams.toString();
+    navigate({ pathname: location.pathname, search: nextSearch ? `?${nextSearch}` : '' }, { replace: true });
+  };
+
   const handleAcceptContract = async (bookingId: string) => {
     setAccepting(true);
 
@@ -551,7 +572,8 @@ export const MyBookings = () => {
 
   const handleCancelBooking = async (booking: Booking) => {
     const cancellationDeadlineLabel = getCancellationDeadlineLabel(booking);
-    const usesProtectedDeposit = booking.depositType === 'protected' || (booking.requestMode === 'protected' && booking.depositStatus === 'held');
+    const usesProtectedDeposit = booking.depositType === 'protected'
+      || (booking.requestMode === 'protected' && (booking.depositStatus === 'checkout_pending' || booking.depositStatus === 'held'));
     const confirmMessage = usesProtectedDeposit
       ? cancellationDeadlineLabel
         ? `¿Querés cancelar esta reserva? Podés hacerlo hasta el ${cancellationDeadlineLabel}. La devolución depende del momento de la cancelación y del estado de la reserva. Si la seña ya estaba en custodia, puede quedar en revisión.`
@@ -583,15 +605,68 @@ export const MyBookings = () => {
     setProcessingBookingAction({ bookingId, action: 'pay-deposit' });
 
     try {
-      const nextBooking = await payProtectedDeposit(bookingId);
-      updateBookingState(nextBooking);
-      showToast('Seña en custodia', 'La seña ya quedó registrada en la plataforma hasta que confirmes la llegada.', 'success');
+      const checkoutSession = await payProtectedDeposit(bookingId, '/my-bookings');
+      updateBookingState(checkoutSession.booking);
+      showToast('Pago de seña', 'Vas a Mercado Pago para dejar la seña registrada. Cuando se confirme, volvés a esta reserva.', 'info');
+      window.location.assign(checkoutSession.checkoutUrl);
     } catch (error) {
-      showToast('Seña', error instanceof Error ? error.message : 'No pudimos registrar el pago de la seña.', 'error');
+      showToast('Seña', error instanceof Error ? error.message : 'No pudimos abrir el pago de la seña.', 'error');
     } finally {
       setProcessingBookingAction(null);
     }
   };
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const checkoutResult = searchParams.get('depositCheckout');
+    const bookingId = searchParams.get('bookingId');
+    const paymentId = searchParams.get('payment_id');
+    const checkoutToken = `${checkoutResult || ''}:${bookingId || ''}:${paymentId || ''}:${location.pathname}`;
+
+    if (!checkoutResult || !bookingId || loading) {
+      if (!checkoutResult || !bookingId) {
+        setHandledDepositCheckoutToken(null);
+      }
+      return;
+    }
+
+    if (handledDepositCheckoutToken === checkoutToken) {
+      return;
+    }
+
+    setHandledDepositCheckoutToken(checkoutToken);
+
+    const handleCheckoutReturn = async () => {
+      try {
+        if (checkoutResult === 'failure') {
+          showToast('Pago no confirmado', 'La seña no quedó registrada. Si todavía quieren cerrarlo, podés volver a abrir el pago desde esta reserva.', 'warning');
+          clearDepositCheckoutSearch();
+          return;
+        }
+
+        if (!paymentId) {
+          showToast('Pago pendiente', 'Todavía estamos esperando la confirmación de Mercado Pago para esta seña.', 'info');
+          clearDepositCheckoutSearch();
+          return;
+        }
+
+        const confirmation = await confirmProtectedDepositPayment(bookingId, paymentId);
+        updateBookingState(confirmation.booking);
+
+        if (confirmation.confirmed) {
+          showToast('Seña registrada', 'La seña quedó registrada y la reserva sigue ordenada dentro de la app.', 'success');
+        } else {
+          showToast('Pago pendiente', 'Mercado Pago todavía no terminó de confirmar la seña. Si hace falta, podés reabrir el pago desde esta reserva.', 'info');
+        }
+      } catch (error) {
+        showToast('Seña', error instanceof Error ? error.message : 'No pudimos confirmar la seña registrada.', 'error');
+      } finally {
+        clearDepositCheckoutSearch();
+      }
+    };
+
+    void handleCheckoutReturn();
+  }, [handledDepositCheckoutToken, loading, location.pathname, location.search, navigate]);
 
   const handleSelectExternalDeposit = async (bookingId: string) => {
     setProcessingBookingAction({ bookingId, action: 'select-external-deposit' });
@@ -720,7 +795,7 @@ export const MyBookings = () => {
   const contractActionBooking = bookings.find((booking) => Boolean(booking.contractJson) && !booking.contractAccepted) ?? null;
   const depositActionBooking = bookings.find((booking) => {
     const stage = getBookingFlow(booking).stage;
-    return stage === 'deposit-choice' || stage === 'request-accepted';
+    return stage === 'deposit-choice' || stage === 'protected-checkout-pending' || stage === 'request-accepted';
   }) ?? null;
   const pendingResponseBooking = bookings.find((booking) => getBookingFlow(booking).stage === 'request-pending') ?? null;
 
@@ -752,7 +827,7 @@ export const MyBookings = () => {
       : `Pagá la seña de ${depositActionBooking.propertyTitle || 'esta reserva'}`,
     description: getBookingFlow(depositActionBooking).stage === 'deposit-choice'
       ? 'El anfitrión ya aceptó la solicitud. Ahora podés definir si dejás la seña registrada acá o si la coordinás por fuera.'
-      : 'El anfitrión ya aceptó la solicitud y elegiste resolver la seña en la app. Falta el pago para dejarla en custodia.',
+      : 'El anfitrión ya aceptó la solicitud y elegiste resolver la seña en la app. Falta el pago para que quede registrada.',
     actionLabel: 'Ver solicitud',
     icon: <Icons.ShieldCheck className="h-5 w-5" />,
     onAction: () => scrollToBooking(depositActionBooking.id),
@@ -834,7 +909,7 @@ export const MyBookings = () => {
     const bookingFlow = getBookingFlow(booking);
     const protectedDepositPricing = booking.protectedDepositPricing ?? getProtectedDepositPricingFromBooking(booking);
     const showReservationFlowPanel = Boolean(booking.requestMode && bookingFlow.stage && bookingFlow.stage !== 'reservation-confirmed');
-    const showBookingQuickGuide = bookingFlow.stage === 'deposit-choice' || bookingFlow.stage === 'external-deposit-pending' || bookingFlow.stage === 'request-accepted';
+    const showBookingQuickGuide = bookingFlow.stage === 'deposit-choice' || bookingFlow.stage === 'external-deposit-pending' || bookingFlow.stage === 'request-accepted' || bookingFlow.stage === 'protected-checkout-pending';
     const isSelectingExternalDeposit = processingBookingAction?.bookingId === booking.id && processingBookingAction.action === 'select-external-deposit';
     const isSelectingProtectedDeposit = processingBookingAction?.bookingId === booking.id && processingBookingAction.action === 'select-protected-deposit';
     const isPayingDeposit = processingBookingAction?.bookingId === booking.id && processingBookingAction.action === 'pay-deposit';
@@ -1103,13 +1178,13 @@ export const MyBookings = () => {
                     </div>
                   ) : null}
 
-                  {bookingFlow.stage === 'request-accepted' && !protectedDepositPricing ? (
+                  {bookingFlow.stage === 'protected-checkout-pending' && !protectedDepositPricing ? (
                     <Button
                       type="button"
                       size="sm"
                       onClick={() => void handlePayDeposit(booking.id)}
                       loading={isPayingDeposit}
-                      loadingLabel="Registrando pago..."
+                      loadingLabel="Abriendo pago..."
                       className="rounded-full"
                     >
                       <>
@@ -1154,17 +1229,17 @@ export const MyBookings = () => {
                 </div>
               </div>
 
-              {bookingFlow.stage === 'request-accepted' && protectedDepositPricing ? (
+              {bookingFlow.stage === 'protected-checkout-pending' && protectedDepositPricing ? (
                 <DepositChoiceBlock
                   className="mt-4"
                   title="Cómo querés avanzar con la seña"
-                  description="Si prefieren resolverla acá, la seña queda registrada y ese tramo puede revisarse según lo asentado dentro de la app."
+                  description="Si prefieren resolverla acá, la seña queda registrada y todo queda claro entre ambas partes dentro de la app."
                   options={[
                     {
                       key: 'pay-protected-deposit',
                       eyebrow: 'Resolverla acá con claridad',
-                      title: 'Registrarla ahora',
-                      description: 'La seña ya queda registrada y después puede liberarse o revisarse según el estado final de la reserva.',
+                      title: 'Pagarla ahora',
+                      description: 'La seña queda registrada en la app y después puede liberarse o revisarse según cómo cierre la reserva.',
                       icon: <Icons.ShieldCheck className="h-5 w-5" />,
                       tone: 'brand',
                       priceLines: protectedDepositPriceLines,
@@ -1172,7 +1247,7 @@ export const MyBookings = () => {
                         label: bookingFlow.primaryActionLabel,
                         onClick: () => void handlePayDeposit(booking.id),
                         loading: isPayingDeposit,
-                        loadingLabel: 'Registrando pago...',
+                        loadingLabel: 'Abriendo pago...',
                         icon: <Icons.ShieldCheck className="h-4 w-4" />,
                       },
                     },

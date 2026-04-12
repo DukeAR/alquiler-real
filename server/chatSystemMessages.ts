@@ -2,7 +2,7 @@ type BookingStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled';
 
 type ReservationDepositType = 'external' | 'protected';
 
-type ReservationDepositStatus = 'external_pending' | 'reported' | 'confirmed' | 'held' | 'review' | 'pending_confirmation' | 'released' | 'refunded';
+type ReservationDepositStatus = 'external_pending' | 'reported' | 'confirmed' | 'checkout_pending' | 'held' | 'review' | 'pending_confirmation' | 'released' | 'refunded';
 
 type ReservationRequestMode = 'direct' | 'protected';
 
@@ -87,7 +87,13 @@ const getEffectiveDepositType = (context: ChatSystemMessageContext, mode: Reserv
     return context.depositType;
   }
 
-  if (mode === 'protected' && context.depositStatus && PROTECTED_AFTER_PAYMENT_STATUSES.has(context.depositStatus)) {
+  if (
+    mode === 'protected'
+    && (
+      context.depositStatus === 'checkout_pending'
+      || (context.depositStatus ? PROTECTED_AFTER_PAYMENT_STATUSES.has(context.depositStatus) : false)
+    )
+  ) {
     return 'protected';
   }
 

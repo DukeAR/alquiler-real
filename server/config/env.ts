@@ -94,6 +94,7 @@ if (!sessionSecret) {
 }
 
 const frontendUrl = normalizeUrl(process.env.FRONTEND_URL);
+const backendPublicUrl = normalizeUrl(process.env.BACKEND_PUBLIC_URL || process.env.PUBLIC_BACKEND_URL);
 const corsAllowedOrigins = Array.from(new Set([
   ...localFrontendOrigins,
   ...parseOrigins(process.env.CORS_ALLOWED_ORIGINS),
@@ -110,12 +111,16 @@ export const serverEnv = {
   databaseSsl: parseBoolean(process.env.DATABASE_SSL, isProduction),
   sessionSecret,
   frontendUrl,
+  backendPublicUrl,
   corsAllowedOrigins,
   trustProxy: parseBoolean(process.env.TRUST_PROXY, isProduction),
   sessionCookieName: process.env.SESSION_COOKIE_NAME?.trim() || 'connect.sid',
   sessionCookieDomain: process.env.SESSION_COOKIE_DOMAIN?.trim() || undefined,
   sessionCookieSecure,
   sessionCookieSameSite: parseSameSite(process.env.SESSION_COOKIE_SAME_SITE, sessionCookieSecure ? 'none' : 'lax'),
+  mercadoPagoAccessToken: process.env.MERCADO_PAGO_ACCESS_TOKEN?.trim() || '',
+  mercadoPagoWebhookUrl: normalizeUrl(process.env.MERCADO_PAGO_WEBHOOK_URL)
+    || (backendPublicUrl ? `${backendPublicUrl}/api/payments/mercadopago/webhook` : ''),
   premiumDocumentaryPriceArs: parseNonNegativeInt(process.env.PREMIUM_DOCUMENTARY_PRICE_ARS, 18000),
   premiumOnsitePriceArs: parseNonNegativeInt(process.env.PREMIUM_ONSITE_PRICE_ARS, 42000),
   premiumDocumentaryFreeSlots: parseNonNegativeInt(process.env.PREMIUM_DOCUMENTARY_FREE_SLOTS, 20),

@@ -159,11 +159,9 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
 
       <div className="flex flex-1 flex-col gap-4 p-4 sm:p-5 md:p-6">
         <div className="space-y-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-            {propertyTypeLabel}
-          </p>
-          <h3 className="line-clamp-2 text-[1.04rem] font-semibold leading-[1.35] tracking-[-0.02em] text-slate-950 transition-colors duration-150 group-hover:text-slate-950 sm:text-[1.08rem] md:text-[1.12rem]">{property.title}</h3>
-          <div className="flex flex-wrap gap-2.5 text-[12.5px] font-medium leading-5 text-slate-600">
+          <p className="eyebrow">{propertyTypeLabel}</p>
+          <h3 className="section-title line-clamp-2 transition-colors duration-150 group-hover:text-slate-950">{property.title}</h3>
+          <div className="flex flex-wrap gap-2.5 body-sm text-muted">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200/80 bg-slate-50/85 px-3 py-1.5">
               <Icons.MapPin className="h-3.5 w-3.5 text-slate-400" />
               <span>{property.location}</span>

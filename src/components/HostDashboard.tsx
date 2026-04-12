@@ -27,7 +27,7 @@ interface HostDashboardProps {
   onBack: () => void;
 }
 
-const dashboardSectionClass = 'app-card space-y-6 p-6 md:p-8 dark:border-slate-800 dark:bg-slate-900';
+const dashboardSectionClass = 'card space-y-6 p-6 md:p-8 dark:border-slate-800 dark:bg-slate-900';
 const PROPERTIES_SECTION_ID = 'host-dashboard-properties';
 const REQUESTS_SECTION_ID = 'host-dashboard-requests';
 
@@ -125,7 +125,8 @@ const hasProtectedPlatformDeposit = (booking: {
 
   return booking.requestMode === 'protected'
     && (
-      booking.depositStatus === 'held'
+      booking.depositStatus === 'checkout_pending'
+      || booking.depositStatus === 'held'
       || booking.depositStatus === 'review'
       || booking.depositStatus === 'pending_confirmation'
       || booking.depositStatus === 'released'
@@ -166,7 +167,7 @@ const getBookingStatusClassName = (booking: any) => {
     return 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/30 dark:bg-amber-900/20 dark:text-amber-300';
   }
 
-  if (flow.stage === 'request-accepted' || flow.stage === 'protected-deposit-held') {
+  if (flow.stage === 'request-accepted' || flow.stage === 'protected-checkout-pending' || flow.stage === 'protected-deposit-held') {
     return 'border-brand/20 bg-brand/10 text-brand dark:border-brand/25 dark:bg-brand/15 dark:text-brand-light';
   }
 
@@ -221,7 +222,7 @@ const PriorityActionRow = ({ eyebrow, title, description, actionLabel, icon, onA
         {icon}
       </div>
       <div className="space-y-1.5">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">{eyebrow}</p>
+        <p className="eyebrow">{eyebrow}</p>
         <p className="text-base font-semibold text-slate-950 dark:text-slate-50">{title}</p>
         <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">{description}</p>
       </div>
@@ -244,7 +245,7 @@ type BookingGroupProps = {
 };
 
 const BookingGroup = ({ title, description, count, emptyText, children }: BookingGroupProps) => (
-  <div className="app-card overflow-hidden dark:border-slate-800 dark:bg-slate-900">
+  <div className="card overflow-hidden dark:border-slate-800 dark:bg-slate-900">
     <div className="border-b border-slate-100 bg-slate-50/70 px-5 py-4 dark:border-slate-800 dark:bg-slate-800/50 sm:px-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="space-y-1">
@@ -803,8 +804,8 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
               <Icons.User className="h-6 w-6 text-slate-400" />
             </div>
             <div className="space-y-2">
-              <p className="app-title-4 dark:text-white">{booking.userName || 'Huésped'}</p>
-              <p className="app-body-sm app-text-muted">{booking.propertyTitle}</p>
+              <p className="section-title dark:text-white">{booking.userName || 'Huésped'}</p>
+              <p className="body-sm text-muted">{booking.propertyTitle}</p>
               {bookingSummaryItems.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
                   {bookingSummaryItems.map((item) => (
@@ -897,7 +898,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
                 variant="secondary"
                 size="sm"
                 onClick={() => navigate(`/chat/${booking.conversationId}`)}
-                className="rounded-full"
+                className="btn-secondary rounded-full"
               >
                 <>
                   <Icons.MessageSquare className="h-4 w-4" />
@@ -956,7 +957,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
             {canReviewBooking ? (
               <button
                 onClick={() => setReviewingBooking(booking)}
-                className="app-button-base rounded-[var(--app-radius-control)] bg-brand px-4 py-2 text-sm text-white hover:-translate-y-px hover:bg-brand-dark hover:shadow-[var(--app-shadow-brand)]"
+                className="btn rounded-[var(--app-radius-control)] bg-brand px-4 py-2 text-sm text-white hover:-translate-y-px hover:bg-brand-dark hover:shadow-[var(--app-shadow-brand)]"
               >
                 Registrar cierre
               </button>
@@ -1045,7 +1046,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
         <div className="mx-auto flex min-h-16 max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">
           <button
             onClick={onBack}
-            className="app-button-base rounded-full px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 hover:text-brand dark:text-slate-400 dark:hover:bg-slate-800"
+            className="btn-secondary rounded-full px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 hover:text-brand dark:text-slate-400 dark:hover:bg-slate-800"
           >
             <Icons.ArrowLeft className="h-4 w-4" />
             Volver a explorar
@@ -1053,8 +1054,8 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
           <div className="flex items-center gap-3">
             <AccountModeSwitch compact />
             <div className="hidden text-right sm:block">
-              <p className="app-title-4 dark:text-white">Panel de anfitrión</p>
-              <p className="app-eyebrow">Estado actual y próximos pasos</p>
+              <p className="section-title dark:text-white">Panel de anfitrión</p>
+              <p className="eyebrow">Estado actual y próximos pasos</p>
             </div>
             <div className="flex h-10 w-10 items-center justify-center rounded-full border border-brand/20 bg-brand/10">
               <Icons.User className="h-5 w-5 text-brand" />
@@ -1067,23 +1068,23 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
         <section className={dashboardSectionClass}>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="space-y-2">
-              <p className="app-eyebrow">Panel de anfitrion</p>
-              <h1 className="text-2xl font-semibold tracking-tight text-slate-950 dark:text-slate-50">Publica, responde y mejora sin complicarte</h1>
-              <p className="max-w-3xl text-sm leading-7 text-slate-600 dark:text-slate-300">
+              <p className="eyebrow">Panel de anfitrion</p>
+              <h1 className="section-title text-2xl font-semibold tracking-tight text-slate-950 dark:text-slate-50">Publica, responde y mejora sin complicarte</h1>
+              <p className="max-w-3xl body-sm leading-7 text-slate-600 dark:text-slate-300">
                 Primero ves el estado de cada aviso, despues la actividad reciente y al final solo las sugerencias que hoy pueden mover mas consultas.
               </p>
               <div className="flex flex-wrap gap-2 pt-1 text-xs">
-                <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                <span className="badge">
                   {dashboardOverview.activePropertiesCount > 0
                     ? formatCountLabel(dashboardOverview.activePropertiesCount, 'aviso activo', 'avisos activos')
                     : 'Sin avisos activos'}
                 </span>
-                <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                <span className="badge">
                   {dashboardOverview.pendingRequestsCount > 0
                     ? formatCountLabel(dashboardOverview.pendingRequestsCount, 'solicitud pendiente', 'solicitudes pendientes')
                     : 'Sin solicitudes pendientes'}
                 </span>
-                <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                <span className="badge">
                   {dashboardOverview.nextArrival?.dateLabel
                     ? `Proxima llegada ${dashboardOverview.nextArrival.dateLabel}`
                     : 'Sin llegadas proximas'}
@@ -1103,10 +1104,10 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <Icons.Home className="h-5 w-5 text-brand" />
-              <h2 className="app-title-4 dark:text-white">Tus publicaciones</h2>
+              <h2 className="section-title dark:text-white">Tus publicaciones</h2>
             </div>
-            <p className="app-body-sm app-text-muted">Primero ves si cada aviso esta activo y despues cuanto ya queda claro para quien consulta.</p>
-            <p className="app-body-sm app-text-muted">Desde aca podes mejorar la publicacion sin volverla mas pesada ni sacar el aviso del aire.</p>
+            <p className="body-sm text-muted">Primero ves si cada aviso esta activo y despues cuanto ya queda claro para quien consulta.</p>
+            <p className="body-sm text-muted">Desde aca podes mejorar la publicacion sin volverla mas pesada ni sacar el aviso del aire.</p>
           </div>
 
           <div className="overflow-hidden rounded-[var(--app-radius-card)] border border-slate-200/80 bg-white/94 dark:border-slate-800 dark:bg-slate-900/94">
@@ -1163,7 +1164,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
                         </div>
 
                         <div className="rounded-[22px] border border-slate-200/80 bg-slate-50/90 p-4 dark:border-slate-800 dark:bg-slate-900/70">
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">Estado del aviso</p>
+                          <p className="eyebrow dark:text-slate-500">Estado del aviso</p>
                           <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-50">
                             {property.status === 'active' ? 'Tu publicacion ya esta activa' : 'Tu publicacion esta pausada'}
                           </p>
@@ -1178,14 +1179,14 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
                           </p>
 
                           <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                            <span className="rounded-full bg-white px-3 py-1 text-slate-600 dark:bg-slate-950 dark:text-slate-300">
+                            <span className="badge">
                               {property.pendingRequestsCount > 0 ? formatCountLabel(property.pendingRequestsCount, 'solicitud pendiente', 'solicitudes pendientes') : 'Sin solicitudes pendientes'}
                             </span>
-                            <span className="rounded-full bg-white px-3 py-1 text-slate-600 dark:bg-slate-950 dark:text-slate-300">
+                            <span className="badge">
                               {property.activeReservationsCount > 0 ? formatCountLabel(property.activeReservationsCount, 'reserva activa', 'reservas activas') : 'Sin reservas activas'}
                             </span>
                             {property.nextArrivalDate ? (
-                              <span className="rounded-full bg-white px-3 py-1 text-slate-600 dark:bg-slate-950 dark:text-slate-300">
+                              <span className="badge">
                                 Proxima llegada {formatDashboardDate(property.nextArrivalDate)}
                               </span>
                             ) : null}
@@ -1209,7 +1210,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
 
                       {pendingLabels.length > 0 ? (
                         <div className="rounded-[22px] border border-slate-200/80 bg-slate-50/90 p-4 dark:border-slate-800 dark:bg-slate-900/70">
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">Mejorar publicacion</p>
+                          <p className="eyebrow dark:text-slate-500">Mejorar publicacion</p>
                           <div className="mt-3 flex flex-wrap gap-2">
                             {showIdentityAction ? (
                               <Button
@@ -1295,7 +1296,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
 
                       {showOnsiteAction ? (
                         <div className="rounded-[20px] border border-indigo-200/70 bg-indigo-50/70 p-3 dark:border-indigo-900/40 dark:bg-indigo-950/30">
-                          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-indigo-700 dark:text-indigo-300">Comprobación adicional</p>
+                          <p className="eyebrow text-indigo-700 dark:text-indigo-300">Comprobación adicional</p>
                           <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-100">Podes solicitar una verificacion presencial para sumar otra comprobacion visible y generar mas confianza.</p>
                           <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
                             {property.premiumOnsiteOffer.complimentaryReason
@@ -1370,9 +1371,9 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <Icons.UserCheck className="h-5 w-5 text-brand" />
-              <h2 className="app-title-4 dark:text-white">Actividad reciente</h2>
+              <h2 className="section-title dark:text-white">Actividad reciente</h2>
             </div>
-            <p className="app-body-sm app-text-muted">Consultas, reservas y proximas llegadas ordenadas por lo que conviene mirar primero.</p>
+            <p className="body-sm text-muted">Consultas, reservas y proximas llegadas ordenadas por lo que conviene mirar primero.</p>
           </div>
 
           <div className="space-y-4">
@@ -1410,16 +1411,16 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
             </BookingGroup>
           </div>
 
-          <p className="app-form-hint px-4 italic">
+          <p className="form-hint px-4 italic">
             * La ficha del huésped sigue dentro del flujo real de cada solicitud o reserva. Las evaluaciones se mantienen disponibles después de una estadía finalizada.
           </p>
         </section>
 
         <section className={dashboardSectionClass}>
           <div className="space-y-2">
-            <p className="app-eyebrow">Sugerencias</p>
-            <h2 className="app-title-4 dark:text-white">Sugerencias para mover tus avisos</h2>
-            <p className="app-body-sm app-text-muted">Solo te mostramos lo que hoy puede ayudarte a recibir mas consultas, generar mas confianza o mejorar visibilidad.</p>
+            <p className="eyebrow">Sugerencias</p>
+            <h2 className="section-title dark:text-white">Sugerencias para mover tus avisos</h2>
+            <p className="body-sm text-muted">Solo te mostramos lo que hoy puede ayudarte a recibir mas consultas, generar mas confianza o mejorar visibilidad.</p>
           </div>
 
           {priorityActions.length > 0 ? (

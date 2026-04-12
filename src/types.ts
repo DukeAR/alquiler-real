@@ -215,7 +215,7 @@ export type ReservationDepositType = 'external' | 'protected';
 
 export type ReservationRequestStatus = 'pending' | 'accepted' | 'not_advanced';
 
-export type ReservationDepositStatus = 'external_pending' | 'reported' | 'confirmed' | 'held' | 'review' | 'pending_confirmation' | 'released' | 'refunded';
+export type ReservationDepositStatus = 'external_pending' | 'reported' | 'confirmed' | 'checkout_pending' | 'held' | 'review' | 'pending_confirmation' | 'released' | 'refunded';
 
 export type ReservationCancellationActor = 'guest' | 'host';
 

@@ -29,33 +29,31 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   return (
     <header
       className={cn(
-        'border-b border-slate-200 bg-white/80 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/80',
-        sticky && 'lg:sticky lg:top-0 lg:z-50',
-        className,
+        'flex items-center gap-4 py-4 px-2 sm:px-0',
+        className
       )}
+      style={{ fontFamily: 'var(--font-ui)' }}
       {...props}
     >
-      <div className={cn('flex items-start gap-4 px-4 py-4', contentClassName)}>
-        {onBack ? (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onBack}
-            aria-label={backLabel}
-            className="shrink-0 rounded-full text-slate-600 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-50"
-          >
-            <Icons.ArrowLeft className="h-5 w-5" />
-          </Button>
-        ) : null}
+      {onBack ? (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onBack}
+          aria-label={backLabel}
+          className="shrink-0 rounded-full text-slate-600 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-50"
+        >
+          <Icons.ArrowLeft className="h-5 w-5" />
+        </Button>
+      ) : null}
 
-        <div className="min-w-0 flex-1 space-y-1">
-          {eyebrow ? <p className="app-eyebrow">{eyebrow}</p> : null}
-          <h1 className="app-title-4 dark:text-slate-50">{heading}</h1>
-          {description ? <p className="app-body-sm app-text-muted dark:text-slate-400">{description}</p> : null}
-        </div>
-
-        {action ? <div className="shrink-0">{action}</div> : null}
+      <div className={cn('min-w-0 flex-1 space-y-1', contentClassName)}>
+        {eyebrow ? <p className="app-eyebrow">{eyebrow}</p> : null}
+        <h1 className="text-2xl font-bold text-[var(--color-primary)] leading-tight mb-1" style={{ lineHeight: 'var(--line-height-title)' }}>{heading}</h1>
+        {description ? <p className="text-[var(--color-text-soft)] text-base">{description}</p> : null}
       </div>
+
+      {action ? <div className="shrink-0">{action}</div> : null}
     </header>
   );
 };

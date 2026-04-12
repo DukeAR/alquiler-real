@@ -8,6 +8,7 @@ import multer from 'multer';
 import { serverEnv } from './config/env';
 import { db } from './config/db';
 import { initDB } from './updates';
+import { createMercadoPagoPreference, getMercadoPagoPaymentDetails, isMercadoPagoConfigured } from './mercadoPago';
 import { mapPropertyRecord } from './propertySerializer';
 import { buildGuestVerification } from './guestVerification';
 import { buildHostTrust } from './hostTrust';
@@ -5030,13 +5031,73 @@ const getHostBookingById = async (hostId: string, bookingId: string) => {
   return result.rows[0] ? attachBookingDerivedFields(result.rows[0]) : null;
 };
 
+const getBookingByDepositPaymentReference = async (depositPaymentReference: string) => {
+  const result = await db.query(
+    `SELECT b.id, b."propertyId", b."userId", b.status, b.date, b.stay_code, b.verified,
+            b.start_date as "startDate", b.end_date as "endDate", b.total_price as "totalPrice",
+            b.guests, b.contract_accepted as "contractAccepted", b.contract_json as "contractJson",
+            b.cancellation_actor as "cancellationActor",
+            p."hostId" as "hostId",
+            c.id as "conversationId",
+            COALESCE(c.deposit_status, b.deposit_status) as "depositStatus",
+            COALESCE(c.deposit_type, b.deposit_type) as "depositType",
+            COALESCE(c.deposit_amount_ars, b.deposit_amount_ars) as "depositAmountArs",
+            COALESCE(c.service_fee_ars, b.service_fee_ars) as "serviceFeeArs",
+            COALESCE(c.deposit_total_charge_ars, b.deposit_total_charge_ars) as "depositTotalChargeArs",
+            COALESCE(c.deposit_payment_reference, b.deposit_payment_reference) as "depositPaymentReference",
+            COALESCE(b.request_mode, CASE WHEN c.booking_id IS NOT NULL THEN 'protected' ELSE 'direct' END) as "requestMode",
+            EXISTS(
+              SELECT 1
+              FROM reviews r
+              WHERE r.booking_id = b.id
+                AND r.reviewer_id = b."userId"
+                AND r.type = 'guest_to_host'
+            ) as "guestReviewSubmitted",
+            EXISTS(
+              SELECT 1
+              FROM reviews r
+              WHERE r.booking_id = b.id
+                AND r.reviewer_id = p."hostId"
+                AND r.type = 'host_to_guest'
+            ) as "hostReviewSubmitted",
+                 p.title as "propertyTitle", p."imageUrl", p.location, host.name as "hostName"
+     FROM bookings b
+     LEFT JOIN properties p ON b."propertyId" = p.id
+               LEFT JOIN users host ON host.id = p."hostId"
+     LEFT JOIN conversations c ON c.booking_id = b.id
+     WHERE COALESCE(c.deposit_payment_reference, b.deposit_payment_reference) = $1
+     LIMIT 1`,
+    [depositPaymentReference],
+  );
+
+  return result.rows[0] ? attachBookingDerivedFields(result.rows[0]) : null;
+};
+
+const PROTECTED_DEPOSIT_CHECKOUT_PENDING_STATUS = 'checkout_pending';
+
 const isProtectedDepositInPlatform = (depositStatus?: string | null) => (
-  depositStatus === 'held' || depositStatus === 'review' || depositStatus === 'pending_confirmation'
+  depositStatus === PROTECTED_DEPOSIT_CHECKOUT_PENDING_STATUS
+  || depositStatus === 'held'
+  || depositStatus === 'review'
+  || depositStatus === 'pending_confirmation'
 );
 
 const EXTERNAL_DEPOSIT_STATUSES = new Set(['external_pending', 'reported', 'confirmed']);
 
-const PROTECTED_DEPOSIT_FLOW_STATUSES = new Set(['held', 'review', 'pending_confirmation', 'released', 'refunded']);
+const PROTECTED_DEPOSIT_FLOW_STATUSES = new Set([
+  PROTECTED_DEPOSIT_CHECKOUT_PENDING_STATUS,
+  'held',
+  'review',
+  'pending_confirmation',
+  'released',
+  'refunded',
+]);
+
+const PROTECTED_DEPOSIT_SETTLED_STATUSES = new Set(['held', 'review', 'pending_confirmation', 'released', 'refunded']);
+
+const isProtectedDepositSettled = (depositStatus?: string | null) => (
+  Boolean(depositStatus && PROTECTED_DEPOSIT_SETTLED_STATUSES.has(depositStatus))
+);
 
 const getEffectiveDepositTypeForRecord = (record: {
   depositType?: unknown;
@@ -5098,6 +5159,225 @@ const buildProtectedDepositPersistence = (record: {
 const buildDepositPaymentReference = (bookingId: string) => (
   `dep_${bookingId}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`
 );
+
+const DEFAULT_DEPOSIT_RETURN_PATH = '/my-bookings';
+
+const sanitizeRelativeReturnPath = (value: unknown, fallbackPath: string) => {
+  if (typeof value !== 'string') {
+    return fallbackPath;
+  }
+
+  const trimmedValue = value.trim();
+
+  if (!trimmedValue.startsWith('/') || trimmedValue.startsWith('//')) {
+    return fallbackPath;
+  }
+
+  return trimmedValue;
+};
+
+const getProtectedDepositReturnPath = (booking: { conversationId?: unknown }, requestedPath?: unknown) => {
+  const fallbackPath = typeof booking.conversationId === 'string' && booking.conversationId.trim()
+    ? `/chat/${booking.conversationId.trim()}`
+    : DEFAULT_DEPOSIT_RETURN_PATH;
+
+  return sanitizeRelativeReturnPath(requestedPath, fallbackPath);
+};
+
+const getFrontendBaseUrlFromRequest = (req: express.Request) => {
+  const requestOrigin = typeof req.get('origin') === 'string' ? req.get('origin')?.trim().replace(/\/+$/, '') : '';
+
+  if (requestOrigin && allowedOrigins.includes(requestOrigin)) {
+    return requestOrigin;
+  }
+
+  if (serverEnv.frontendUrl) {
+    return serverEnv.frontendUrl;
+  }
+
+  return allowedOrigins.find((origin) => /^https?:\/\//.test(origin)) ?? null;
+};
+
+const buildFrontendReturnUrl = (
+  req: express.Request,
+  relativePath: string,
+  queryParams: Record<string, string>,
+) => {
+  const frontendBaseUrl = getFrontendBaseUrlFromRequest(req);
+
+  if (!frontendBaseUrl) {
+    return null;
+  }
+
+  const targetUrl = new URL(relativePath, `${frontendBaseUrl}/`);
+
+  Object.entries(queryParams).forEach(([key, value]) => {
+    targetUrl.searchParams.set(key, value);
+  });
+
+  return targetUrl.toString();
+};
+
+const buildProtectedDepositReturnUrls = (
+  req: express.Request,
+  bookingId: string,
+  relativePath: string,
+) => {
+  const baseQueryParams = { bookingId };
+  const successUrl = buildFrontendReturnUrl(req, relativePath, { ...baseQueryParams, depositCheckout: 'success' });
+  const failureUrl = buildFrontendReturnUrl(req, relativePath, { ...baseQueryParams, depositCheckout: 'failure' });
+  const pendingUrl = buildFrontendReturnUrl(req, relativePath, { ...baseQueryParams, depositCheckout: 'pending' });
+
+  if (!successUrl || !failureUrl || !pendingUrl) {
+    return null;
+  }
+
+  return {
+    successUrl,
+    failureUrl,
+    pendingUrl,
+  };
+};
+
+type ProtectedDepositPersistence = NonNullable<ReturnType<typeof buildProtectedDepositPersistence>>;
+
+type ProtectedDepositBookingRecord = {
+  id: string;
+  userId: string;
+  propertyId?: string | null;
+  hostId?: string | null;
+  conversationId?: string | null;
+  requestMode?: string | null;
+  depositStatus?: string | null;
+  depositPaymentReference?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  totalPrice?: number | null;
+};
+
+const persistProtectedDepositState = async ({
+  bookingId,
+  userId,
+  depositStatus,
+  protectedDeposit,
+  depositPaymentReference,
+}: {
+  bookingId: string;
+  userId: string;
+  depositStatus: string;
+  protectedDeposit: ProtectedDepositPersistence;
+  depositPaymentReference: string;
+}) => {
+  await db.query(
+    `UPDATE bookings
+     SET deposit_type = 'protected',
+         deposit_status = $3,
+         deposit_amount_ars = $4,
+         service_fee_ars = $5,
+         deposit_total_charge_ars = $6,
+         deposit_payment_reference = $7
+     WHERE id = $1 AND "userId" = $2`,
+    [
+      bookingId,
+      userId,
+      depositStatus,
+      protectedDeposit.depositAmountArs,
+      protectedDeposit.serviceFeeArs,
+      protectedDeposit.depositTotalChargeArs,
+      depositPaymentReference,
+    ],
+  );
+
+  await syncConversationDepositState(bookingId, {
+    depositType: 'protected',
+    depositStatus,
+    protectedDepositPricing: protectedDeposit.pricing,
+    depositPaymentReference,
+  });
+};
+
+const finalizeProtectedDepositPayment = async (
+  booking: ProtectedDepositBookingRecord,
+  payment: {
+    status: string | null;
+    statusDetail: string | null;
+    externalReference: string | null;
+    transactionAmount: number | null;
+  },
+  request?: express.Request,
+) => {
+  if (!booking.depositPaymentReference) {
+    return {
+      confirmed: false as const,
+      reason: 'PAYMENT_REFERENCE_MISSING' as const,
+    };
+  }
+
+  if (payment.externalReference !== booking.depositPaymentReference) {
+    return {
+      confirmed: false as const,
+      reason: 'PAYMENT_REFERENCE_MISMATCH' as const,
+    };
+  }
+
+  if (payment.status !== 'approved') {
+    return {
+      confirmed: false as const,
+      reason: 'PAYMENT_NOT_APPROVED' as const,
+    };
+  }
+
+  const protectedDeposit = buildProtectedDepositPersistence(booking);
+
+  if (!protectedDeposit) {
+    return {
+      confirmed: false as const,
+      reason: 'PAYMENT_PRICING_INVALID' as const,
+    };
+  }
+
+  const normalizedTransactionAmount = typeof payment.transactionAmount === 'number'
+    ? Math.round(payment.transactionAmount)
+    : null;
+
+  if (
+    normalizedTransactionAmount === null
+    || Math.abs(normalizedTransactionAmount - protectedDeposit.depositTotalChargeArs) > 1
+  ) {
+    return {
+      confirmed: false as const,
+      reason: 'PAYMENT_AMOUNT_MISMATCH' as const,
+    };
+  }
+
+  await persistProtectedDepositState({
+    bookingId: booking.id,
+    userId: booking.userId,
+    depositStatus: 'held',
+    protectedDeposit,
+    depositPaymentReference: booking.depositPaymentReference,
+  });
+
+  const funnelMetadata = {
+    propertyId: booking.propertyId,
+    hostId: booking.hostId,
+    conversationId: booking.conversationId,
+    bookingId: booking.id,
+    requestMode: booking.requestMode,
+    depositType: 'protected' as const,
+    paymentProvider: 'mercado_pago',
+  };
+
+  if (request) {
+    await logFunnelActivity(request, FUNNEL_DEPOSIT_COMPLETED_ACTION, funnelMetadata);
+  } else {
+    await logActivity(booking.userId, FUNNEL_DEPOSIT_COMPLETED_ACTION, funnelMetadata);
+  }
+
+  return {
+    confirmed: true as const,
+  };
+};
 
 const syncConversationDepositState = async (
   bookingId: string,
@@ -6530,8 +6810,12 @@ app.post('/api/bookings/:id/pay-deposit', async (req, res) => {
       return sendBookingError(res, 422, 'BOOKING_NOT_ACCEPTED', 'Esperá a que el anfitrión acepte la solicitud antes de pagar la seña.');
     }
 
-    if (isProtectedDepositBooking(booking) && booking.depositStatus && !EXTERNAL_DEPOSIT_STATUSES.has(booking.depositStatus)) {
+    if (isProtectedDepositSettled(booking.depositStatus)) {
       return res.json({ booking });
+    }
+
+    if (!isMercadoPagoConfigured()) {
+      return sendBookingError(res, 503, 'MERCADO_PAGO_NOT_CONFIGURED', 'Todavía no está configurado el cobro de seña dentro de la app.');
     }
 
     const protectedDeposit = buildProtectedDepositPersistence(booking);
@@ -6541,39 +6825,164 @@ app.post('/api/bookings/:id/pay-deposit', async (req, res) => {
     }
 
     const depositPaymentReference = booking.depositPaymentReference || buildDepositPaymentReference(req.params.id);
+    const returnPath = getProtectedDepositReturnPath(booking, req.body?.returnPath);
+    const returnUrls = buildProtectedDepositReturnUrls(req, req.params.id, returnPath);
 
-    await db.query(
-      `UPDATE bookings
-       SET deposit_type = 'protected',
-           deposit_status = 'held',
-           deposit_amount_ars = $3,
-           service_fee_ars = $4,
-           deposit_total_charge_ars = $5,
-           deposit_payment_reference = $6
-       WHERE id = $1 AND "userId" = $2`,
-      [req.params.id, userId, protectedDeposit.depositAmountArs, protectedDeposit.serviceFeeArs, protectedDeposit.depositTotalChargeArs, depositPaymentReference],
-    );
+    if (!returnUrls) {
+      return sendBookingError(res, 503, 'PAYMENT_RETURN_URL_UNAVAILABLE', 'No pudimos preparar el regreso desde Mercado Pago para esta reserva.');
+    }
 
-    await syncConversationDepositState(req.params.id, {
-      depositType: 'protected',
-      depositStatus: 'held',
-      protectedDepositPricing: protectedDeposit.pricing,
+    const preference = await createMercadoPagoPreference({
+      externalReference: depositPaymentReference,
+      title: `Seña registrada · ${booking.propertyTitle || 'Reserva'}`,
+      description: `La seña queda registrada y todo queda claro entre ambas partes para ${booking.propertyTitle || 'esta reserva'}.`,
+      totalChargeArs: protectedDeposit.depositTotalChargeArs,
+      successUrl: returnUrls.successUrl,
+      failureUrl: returnUrls.failureUrl,
+      pendingUrl: returnUrls.pendingUrl,
+      notificationUrl: serverEnv.mercadoPagoWebhookUrl || null,
+      metadata: {
+        bookingId: req.params.id,
+        propertyId: booking.propertyId,
+        conversationId: booking.conversationId,
+      },
+    });
+
+    await persistProtectedDepositState({
+      bookingId: req.params.id,
+      userId,
+      depositStatus: PROTECTED_DEPOSIT_CHECKOUT_PENDING_STATUS,
+      protectedDeposit,
       depositPaymentReference,
     });
 
     const updatedBooking = await getUserBookingById(userId, req.params.id);
-    await logFunnelActivity(req, FUNNEL_DEPOSIT_COMPLETED_ACTION, {
-      propertyId: booking.propertyId,
-      hostId: booking.hostId,
-      conversationId: booking.conversationId,
-      bookingId: req.params.id,
-      requestMode: booking.requestMode,
-      depositType: 'protected',
+    return res.status(202).json({
+      booking: updatedBooking,
+      checkoutUrl: preference.checkoutUrl,
+      preferenceId: preference.preferenceId,
     });
-    return res.json({ booking: updatedBooking });
   } catch (err) {
     console.error('Error al marcar la seña protegida:', err);
-    return sendBookingError(res, 500, 'BOOKING_DEPOSIT_PAYMENT_FAILED', 'No pudimos registrar el pago de la seña. Intentá de nuevo.');
+    return sendBookingError(res, 500, 'BOOKING_DEPOSIT_PAYMENT_FAILED', 'No pudimos preparar el pago de la seña. Intentá de nuevo.');
+  }
+});
+
+app.post('/api/bookings/:id/confirm-deposit-payment', async (req, res) => {
+  const userId = req.session.userId;
+  if (!userId) {
+    return sendBookingError(res, 401, 'AUTH_REQUIRED', AUTH_REQUIRED_ERROR);
+  }
+
+  try {
+    const booking = await getUserBookingById(userId, req.params.id);
+
+    if (!booking) {
+      return sendBookingError(res, 404, 'BOOKING_NOT_FOUND', 'No encontramos esa reserva.');
+    }
+
+    if (booking.requestMode !== 'protected' || getEffectiveDepositTypeForRecord(booking) === 'external') {
+      return sendBookingError(res, 422, 'INVALID_PAYMENT_FLOW', 'Esta reserva no tiene una seña registrada dentro de la app.');
+    }
+
+    if (isProtectedDepositSettled(booking.depositStatus)) {
+      return res.json({
+        booking,
+        confirmed: true,
+        paymentStatus: 'approved',
+      });
+    }
+
+    if (!isMercadoPagoConfigured()) {
+      return sendBookingError(res, 503, 'MERCADO_PAGO_NOT_CONFIGURED', 'Todavía no está configurado el cobro de seña dentro de la app.');
+    }
+
+    const paymentId = req.body?.paymentId;
+
+    if (paymentId === undefined || paymentId === null || `${paymentId}`.trim().length === 0) {
+      return sendBookingError(res, 422, 'PAYMENT_ID_REQUIRED', 'Falta la confirmación de pago de Mercado Pago.');
+    }
+
+    const payment = await getMercadoPagoPaymentDetails(paymentId);
+    const finalizedPayment = await finalizeProtectedDepositPayment(booking, payment, req);
+
+    if (!finalizedPayment.confirmed) {
+      if (finalizedPayment.reason === 'PAYMENT_REFERENCE_MISMATCH') {
+        return sendBookingError(res, 422, 'PAYMENT_REFERENCE_MISMATCH', 'Ese pago no coincide con la seña de esta reserva.');
+      }
+
+      if (finalizedPayment.reason === 'PAYMENT_AMOUNT_MISMATCH') {
+        return sendBookingError(res, 422, 'PAYMENT_AMOUNT_MISMATCH', 'El importe de ese pago no coincide con la seña registrada para esta reserva.');
+      }
+
+      if (finalizedPayment.reason === 'PAYMENT_PRICING_INVALID' || finalizedPayment.reason === 'PAYMENT_REFERENCE_MISSING') {
+        return sendBookingError(res, 422, 'PAYMENT_CONFIRMATION_INVALID', 'No pudimos validar esta seña con la información actual de la reserva.');
+      }
+
+      const refreshedBooking = await getUserBookingById(userId, req.params.id);
+      return res.json({
+        booking: refreshedBooking,
+        confirmed: false,
+        paymentStatus: payment.status,
+        paymentStatusDetail: payment.statusDetail,
+      });
+    }
+
+    const updatedBooking = await getUserBookingById(userId, req.params.id);
+    return res.json({
+      booking: updatedBooking,
+      confirmed: true,
+      paymentStatus: payment.status,
+      paymentStatusDetail: payment.statusDetail,
+    });
+  } catch (err) {
+    console.error('Error al confirmar la seña protegida:', err);
+    return sendBookingError(res, 500, 'BOOKING_DEPOSIT_CONFIRMATION_FAILED', 'No pudimos confirmar la seña registrada. Intentá de nuevo.');
+  }
+});
+
+app.post('/api/payments/mercadopago/webhook', async (req, res) => {
+  const notificationType = typeof req.body?.type === 'string'
+    ? req.body.type
+    : typeof req.query?.type === 'string'
+      ? req.query.type
+      : typeof req.body?.topic === 'string'
+        ? req.body.topic
+        : null;
+  const paymentId = req.body?.data?.id ?? req.query?.['data.id'] ?? req.query?.id;
+
+  if (!isMercadoPagoConfigured() || notificationType !== 'payment' || paymentId === undefined || paymentId === null) {
+    return res.status(200).json({ received: true });
+  }
+
+  try {
+    const payment = await getMercadoPagoPaymentDetails(paymentId);
+
+    if (!payment.externalReference) {
+      return res.status(200).json({ received: true });
+    }
+
+    const booking = await getBookingByDepositPaymentReference(payment.externalReference);
+
+    if (!booking || isProtectedDepositSettled(booking.depositStatus)) {
+      return res.status(200).json({ received: true });
+    }
+
+    const finalizedPayment = await finalizeProtectedDepositPayment(booking, payment);
+
+    if (!finalizedPayment.confirmed) {
+      console.warn('Mercado Pago webhook recibido sin confirmación final:', {
+        paymentId,
+        bookingId: booking.id,
+        reason: finalizedPayment.reason,
+        paymentStatus: payment.status,
+      });
+    }
+
+    return res.status(200).json({ received: true });
+  } catch (err) {
+    console.error('Error al procesar webhook de Mercado Pago:', err);
+    return res.status(200).json({ received: true });
   }
 });
 
