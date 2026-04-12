@@ -38,27 +38,36 @@ export const ExploreFiltersBar = ({
 }: ExploreFiltersBarProps) => {
   return (
     <section>
-      <Card padding="none" className="app-surface border-slate-200/85 bg-white/94 p-3 shadow-[0_18px_38px_-28px_rgba(15,23,42,0.2)] backdrop-blur-xl sm:p-4 md:p-5">
-        <div className="flex flex-col gap-3 sm:gap-4 xl:flex-row xl:items-center xl:justify-between">
-          <div className="grid w-full grid-cols-2 items-center rounded-[18px] border border-slate-200/80 bg-slate-100/80 p-1 xl:w-fit">
+      <Card padding="none" className="app-surface border-slate-200/80 bg-white p-4 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.16)] sm:p-5 md:p-6">
+        <div className="flex flex-col gap-5 md:gap-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-2xl space-y-1.5">
+              <p className="app-eyebrow text-slate-500">Exploración</p>
+              <p className="text-sm leading-6 text-slate-600">
+                Ordená resultados y afiná la búsqueda sin perder contexto del listado.
+              </p>
+            </div>
+
+            <div className="grid w-full max-w-[18rem] grid-cols-2 items-center rounded-[var(--app-radius-control)] border border-slate-200 bg-slate-50 p-1">
             {(['grid', 'map'] as const).map((mode) => (
               <button
                 key={mode}
                 type="button"
                 onClick={() => onViewModeChange(mode)}
                 className={cn(
-                  'flex flex-1 items-center justify-center gap-2 rounded-[14px] px-3 py-2.5 text-[11px] font-semibold uppercase tracking-[0.12em] transition-[background-color,color,box-shadow,transform] duration-150 sm:px-3.5',
-                  viewMode === mode ? 'bg-white text-slate-900 shadow-[0_14px_24px_-18px_rgba(15,23,42,0.18)]' : 'text-slate-500 hover:bg-white/75 hover:text-slate-700',
+                  'flex flex-1 items-center justify-center gap-2 rounded-[calc(var(--app-radius-control)-4px)] px-3 py-2.5 text-[11px] font-semibold uppercase tracking-[0.12em] transition-[background-color,color,box-shadow,transform] duration-150 sm:px-3.5',
+                  viewMode === mode ? 'bg-white text-slate-900 shadow-[0_12px_24px_-18px_rgba(15,23,42,0.16)]' : 'text-slate-500 hover:bg-white/80 hover:text-slate-700',
                 )}
               >
                 {mode === 'grid' ? <Icons.LayoutGrid className="h-4 w-4" /> : <Icons.Map className="h-4 w-4" />}
                 {mode === 'grid' ? 'Alojamientos' : 'Mapa'}
               </button>
             ))}
+            </div>
           </div>
 
-          <div className="grid w-full gap-3 sm:grid-cols-2 xl:flex xl:flex-wrap xl:items-end">
-            <label className="flex min-w-0 w-full flex-col gap-1 sm:min-w-[188px] sm:w-auto xl:w-auto">
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)_minmax(0,1.35fr)_auto] xl:items-end">
+            <label className="flex min-w-0 flex-col gap-1.5">
               <span className="pl-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
                 Ordenar por
               </span>
@@ -66,7 +75,7 @@ export const ExploreFiltersBar = ({
                 aria-label="Ordenar por"
                 value={sortBy}
                 onChange={(event) => onSortChange(event.target.value as ExploreSort)}
-                className="app-control h-11 min-w-0 w-full rounded-[14px] bg-white px-4 text-[0.94rem] font-semibold tracking-[-0.01em] text-slate-700 outline-none shadow-none sm:min-w-[170px]"
+                className="app-control h-12 min-w-0 rounded-[var(--app-radius-control)] border-slate-200 bg-slate-50/70 px-4 text-[0.94rem] font-semibold tracking-[-0.01em] text-slate-700 outline-none shadow-none"
               >
                 <option value="verification">Más información comprobada</option>
                 <option value="rating">Mejor calificación</option>
@@ -74,7 +83,29 @@ export const ExploreFiltersBar = ({
               </select>
             </label>
 
-            <label className="flex min-h-11 min-w-0 w-full items-center gap-3 rounded-[16px] border border-slate-200/80 bg-white px-3.5 py-2.5 text-left shadow-none transition-colors duration-150 hover:border-slate-300/90 sm:col-span-2 xl:min-w-[250px] xl:w-auto">
+            <div className="grid min-w-0 grid-cols-2 gap-3">
+              <Input
+                type="number"
+                inputMode="numeric"
+                value={filters.minPrice}
+                onChange={(event) => onFiltersChange({ ...filters, minPrice: event.target.value })}
+                placeholder="Desde"
+                icon={<span className="text-xs font-medium">$</span>}
+                className="h-12 min-w-0 rounded-[var(--app-radius-control)] border-slate-200 bg-slate-50/70 py-2.5 pl-9 pr-3 text-[0.94rem] font-semibold tracking-[-0.01em] shadow-none"
+              />
+
+              <Input
+                type="number"
+                inputMode="numeric"
+                value={filters.maxPrice}
+                onChange={(event) => onFiltersChange({ ...filters, maxPrice: event.target.value })}
+                placeholder="Hasta"
+                icon={<span className="text-xs font-medium">$</span>}
+                className="h-12 min-w-0 rounded-[var(--app-radius-control)] border-slate-200 bg-slate-50/70 py-2.5 pl-9 pr-3 text-[0.94rem] font-semibold tracking-[-0.01em] shadow-none"
+              />
+            </div>
+
+            <label className="flex min-h-12 min-w-0 items-center gap-3 rounded-[var(--app-radius-control)] border border-slate-200 bg-slate-50/70 px-4 py-3 text-left transition-colors duration-150 hover:border-slate-300/90">
               <span className="relative inline-flex h-6 w-11 shrink-0 items-center">
                 <input
                   type="checkbox"
@@ -89,37 +120,13 @@ export const ExploreFiltersBar = ({
 
               <span className="min-w-0">
                 <span className="block text-[13px] font-semibold leading-5 text-slate-800">
-                  <span className="sm:hidden">Más info comprobada</span>
-                  <span className="hidden sm:inline">Solo con más información comprobada</span>
+                  Solo con más información comprobada
                 </span>
                 <span className="block text-[11.5px] leading-4 text-slate-500">
-                  <span className="sm:hidden">3+ comprobaciones</span>
-                  <span className="hidden sm:inline">3 o más comprobaciones visibles</span>
+                  3 o más comprobaciones visibles
                 </span>
               </span>
             </label>
-
-            <div className="grid min-w-0 grid-cols-2 gap-2 sm:w-full sm:col-span-2 xl:flex xl:w-auto xl:items-center">
-              <Input
-                type="number"
-                inputMode="numeric"
-                value={filters.minPrice}
-                onChange={(event) => onFiltersChange({ ...filters, minPrice: event.target.value })}
-                placeholder="Desde"
-                icon={<span className="text-xs font-medium">$</span>}
-                className="h-11 min-w-0 w-full rounded-[14px] border-slate-200 bg-white py-2.5 pl-9 pr-3 text-[0.94rem] font-semibold tracking-[-0.01em] shadow-none xl:w-28"
-              />
-
-              <Input
-                type="number"
-                inputMode="numeric"
-                value={filters.maxPrice}
-                onChange={(event) => onFiltersChange({ ...filters, maxPrice: event.target.value })}
-                placeholder="Hasta"
-                icon={<span className="text-xs font-medium">$</span>}
-                className="h-11 min-w-0 w-full rounded-[14px] border-slate-200 bg-white py-2.5 pl-9 pr-3 text-[0.94rem] font-semibold tracking-[-0.01em] shadow-none xl:w-28"
-              />
-            </div>
 
             {hasActiveFilters ? (
               <Button
@@ -127,7 +134,7 @@ export const ExploreFiltersBar = ({
                 onClick={onClear}
                 variant="ghost"
                 size="sm"
-                className="w-full rounded-[14px] px-3.5 text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 sm:col-span-2 sm:w-auto xl:w-auto"
+                className="h-12 w-full rounded-[var(--app-radius-control)] px-4 text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 xl:w-auto xl:justify-self-end"
               >
                 <Icons.X className="h-4 w-4" />
                 Limpiar filtros

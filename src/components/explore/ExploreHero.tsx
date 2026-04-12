@@ -11,7 +11,7 @@ type ExploreHeroProps = {
 };
 
 const trustLine = 'Revisá ubicación, quién publica y qué ya fue comprobado antes de reservar.';
-const compactTrustLine = 'Revisá qué ya fue comprobado antes de reservar.';
+const heroSubtitle = 'Elegí con información real antes de reservar.';
 
 export const ExploreHero = ({
   searchValue,
@@ -22,37 +22,52 @@ export const ExploreHero = ({
   onLocationSelect,
 }: ExploreHeroProps) => {
   return (
-    <section className="w-full py-16 md:py-24 bg-[var(--color-primary-soft)]" style={{ fontFamily: 'var(--font-ui)' }}>
-      <div className="absolute inset-0">
+    <section
+      className="relative overflow-hidden rounded-[var(--app-radius-display)] border border-slate-200/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.98)_0%,rgba(248,250,252,0.94)_42%,rgba(241,245,249,0.88)_100%)] px-5 py-6 shadow-[var(--app-shadow-soft)] sm:px-6 sm:py-8 md:px-8 md:py-10 lg:px-10 lg:py-12"
+      style={{ fontFamily: 'var(--font-ui)' }}
+    >
+      <div className="pointer-events-none absolute inset-y-0 right-0 w-full max-w-[42rem] overflow-hidden">
         <img
           src="https://images.unsplash.com/photo-1500375592092-40eb2168fd21?auto=format&fit=crop&w=1800&q=80"
           alt="Costa Atlántica argentina"
-          className="h-full w-full object-cover object-center opacity-65"
+          className="h-full w-full scale-[1.04] object-cover object-center opacity-30 saturate-[0.68] contrast-[0.86] blur-[2px]"
         />
-        <div className="absolute inset-0 bg-slate-950/52" />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,1)_0%,rgba(255,255,255,0.98)_28%,rgba(255,255,255,0.78)_58%,rgba(255,255,255,0.92)_100%)]" />
       </div>
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(165,180,252,0.18),transparent_38%),radial-gradient(circle_at_bottom_right,rgba(15,23,42,0.06),transparent_34%)]" />
 
-      <div className="relative mx-auto w-full max-w-6xl">
-        <div className="space-y-7 sm:space-y-10 md:space-y-12 lg:space-y-14">
-          <div className="space-y-3 sm:space-y-4 md:space-y-5">
-            <h1 className="font-display max-w-[19rem] text-balance text-[2.12rem] font-semibold leading-[1.02] tracking-[-0.035em] text-white sm:max-w-[30rem] sm:text-[2.78rem] md:max-w-[41rem] md:text-[4.15rem] lg:text-[4.45rem]">
+      <div className="relative z-10 flex flex-col gap-8 md:gap-10">
+        <div className="max-w-[42rem] space-y-4 md:space-y-5">
+          <p className="app-eyebrow text-brand">Elegir mejor</p>
+          <div className="space-y-3 md:space-y-4">
+            <h1 className="font-display max-w-[18rem] text-balance text-[2.35rem] font-semibold leading-[0.98] tracking-[-0.04em] text-slate-950 sm:max-w-[28rem] sm:text-[3.2rem] md:max-w-[36rem] md:text-[4.35rem] lg:max-w-[40rem] lg:text-[4.8rem]">
               Reservar es fácil.
               <br />
               Decidir bien no siempre.
             </h1>
-            <p className="max-w-[32rem] text-[0.94rem] leading-6 text-slate-100 sm:text-[0.98rem] sm:leading-7 md:max-w-[43rem] md:text-[1.08rem] md:leading-8">
-              Por eso mostramos ubicación, quién publica y qué parte del aviso ya está comprobada antes de que mandes un mensaje o pagues. La idea es que sepas con quién tratás y qué ya quedó claro desde el inicio.
+            <p className="max-w-[31rem] text-[1rem] leading-7 text-slate-600 sm:text-[1.02rem] md:max-w-[34rem] md:text-[1.1rem] md:leading-8">
+              {heroSubtitle}
             </p>
           </div>
-          <form
-            className="w-full max-w-[58rem] rounded-[22px] border border-white/75 bg-white/97 p-4 shadow-[0_24px_54px_-34px_rgba(15,23,42,0.26)] backdrop-blur-sm sm:p-5 md:rounded-[24px] md:p-6 lg:p-7"
-            onSubmit={(event) => {
-              event.preventDefault();
-              onSearchSubmit();
-            }}
-          >
-            <div className="flex flex-col gap-3 sm:gap-4 lg:flex-row lg:items-end lg:gap-5">
-              <div className="flex-1 space-y-2.5 sm:space-y-3">
+        </div>
+
+        <form
+          className="w-full max-w-[46rem] rounded-[var(--app-radius-card)] border border-slate-200/80 bg-white p-4 shadow-[0_28px_52px_-36px_rgba(15,23,42,0.24)] sm:p-5 md:p-6"
+          onSubmit={(event) => {
+            event.preventDefault();
+            onSearchSubmit();
+          }}
+        >
+          <div className="flex flex-col gap-4 md:gap-5">
+            <div className="space-y-1.5">
+              <p className="app-eyebrow text-slate-500">Buscador principal</p>
+              <p className="max-w-[36rem] text-sm leading-6 text-slate-600">
+                Buscá por zona o ciudad y revisá opciones con contexto real desde el primer vistazo.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:gap-4">
+              <div className="flex-1 space-y-2.5">
                 <label htmlFor="explore-destination" className="app-form-label block text-slate-500">
                   Zona o ciudad
                 </label>
@@ -70,18 +85,17 @@ export const ExploreHero = ({
               <Button
                 type="submit"
                 size="lg"
-                className="h-14 w-full rounded-[16px] bg-slate-950 px-5 text-[0.96rem] font-semibold tracking-[-0.01em] text-white shadow-[0_18px_36px_-28px_rgba(15,23,42,0.42)] hover:-translate-y-[1px] hover:bg-slate-900 hover:shadow-[0_22px_44px_-30px_rgba(15,23,42,0.48)] active:translate-y-0 active:scale-[0.995] sm:h-16 sm:px-6 sm:text-[0.98rem] lg:w-auto lg:min-w-[208px] lg:flex-none"
+                className="h-16 w-full px-6 text-[0.98rem] shadow-[var(--app-shadow-brand)] lg:min-w-[220px] lg:w-auto lg:flex-none"
               >
                 Ver alojamientos
               </Button>
             </div>
-          </form>
+          </div>
+        </form>
 
-          <p className="max-w-[48rem] text-[12.5px] font-semibold leading-5 tracking-[0.01em] text-slate-100 md:text-[14px] md:leading-6">
-            <span className="sm:hidden">{compactTrustLine}</span>
-            <span className="hidden sm:inline">{trustLine}</span>
-          </p>
-        </div>
+        <p className="max-w-[34rem] text-sm leading-6 text-slate-600 md:text-[0.95rem] md:leading-6">
+          {trustLine}
+        </p>
       </div>
     </section>
   );

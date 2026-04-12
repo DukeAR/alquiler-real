@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
 /* === UNIFIED DESIGN SYSTEM (2026) === */
 
 
@@ -257,7 +259,6 @@ h4, h5, h6 {
   min-height: 1em;
   animation: shimmer 1.2s infinite linear;
 }
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
 @theme {

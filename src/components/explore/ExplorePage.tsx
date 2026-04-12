@@ -188,49 +188,57 @@ export const ExplorePage = () => {
   };
 
   return (
-    <div className="pb-28">
-      <main className="app-page space-y-8 py-8 md:space-y-10 md:py-12">
-        <ExploreHero
-          searchValue={searchInput}
-          locationSuggestions={locationSuggestions}
-          onSearchChange={handleSearchChange}
-          onSearchSubmit={applySearch}
-          onSearchSubmitValue={applySearchValue}
-          onLocationSelect={handleLocationSelect}
-        />
+    <div className="bg-[linear-gradient(180deg,#eef2ff_0%,#f8fafc_18%,#ffffff_18%,#ffffff_100%)] pb-28">
+      <section className="relative">
+        <div className="app-page py-6 md:py-8 lg:py-10">
+          <div className="space-y-5 md:space-y-6">
+            <ExploreHero
+              searchValue={searchInput}
+              locationSuggestions={locationSuggestions}
+              onSearchChange={handleSearchChange}
+              onSearchSubmit={applySearch}
+              onSearchSubmitValue={applySearchValue}
+              onLocationSelect={handleLocationSelect}
+            />
 
-        <ExploreFiltersBar
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
-          filters={filters}
-          sortBy={sortBy}
-          onSortChange={setSortBy}
-          onFiltersChange={setFilters}
-          hasActiveFilters={hasActiveFilters}
-          onClear={clearAllFilters}
-        />
+            <ExploreFiltersBar
+              viewMode={viewMode}
+              onViewModeChange={setViewMode}
+              filters={filters}
+              sortBy={sortBy}
+              onSortChange={setSortBy}
+              onFiltersChange={setFilters}
+              hasActiveFilters={hasActiveFilters}
+              onClear={clearAllFilters}
+            />
+          </div>
+        </div>
+      </section>
 
-        <ExploreResultsSection
-          loading={loading}
-          loadError={loadError}
-          viewMode={viewMode}
-          sortBy={sortBy}
-          caresAboutVerification={verificationPreference.caresAboutVerification}
-          hasActiveFilters={hasActiveFilters}
-          searchQuery={searchQuery}
-          appliedFilterCount={appliedFilterCount}
-          filteredProperties={properties}
-          featuredProperties={featuredProperties}
-          listingProperties={listingProperties}
-          visibleProperties={visibleProperties}
-          hasMoreResults={hasMoreResults}
-          onLoadMore={() => setVisibleCount((current) => current + 9)}
-          onRetry={() => setRefreshToken((current) => current + 1)}
-          onClearFilters={clearAllFilters}
-          onFavoriteToggle={handleFavoriteToggle}
-          isFavorite={isFavorite}
-        />
-      </main>
+      <section className="bg-white pt-12 md:pt-16">
+        <div className="app-page">
+          <ExploreResultsSection
+            loading={loading}
+            loadError={loadError}
+            viewMode={viewMode}
+            sortBy={sortBy}
+            caresAboutVerification={verificationPreference.caresAboutVerification}
+            hasActiveFilters={hasActiveFilters}
+            searchQuery={searchQuery}
+            appliedFilterCount={appliedFilterCount}
+            filteredProperties={properties}
+            featuredProperties={featuredProperties}
+            listingProperties={listingProperties}
+            visibleProperties={visibleProperties}
+            hasMoreResults={hasMoreResults}
+            onLoadMore={() => setVisibleCount((current) => current + 9)}
+            onRetry={() => setRefreshToken((current) => current + 1)}
+            onClearFilters={clearAllFilters}
+            onFavoriteToggle={handleFavoriteToggle}
+            isFavorite={isFavorite}
+          />
+        </div>
+      </section>
     </div>
   );
 };
