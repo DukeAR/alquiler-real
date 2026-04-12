@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { apiFetch } from '../lib/apiConfig';
+import { VERIFICATION_PRIVACY_NOTICES } from '../lib/privacyPolicy';
 import { Icons } from './Icons';
 
 interface GeoLocationVerifyProps {
@@ -86,7 +87,7 @@ export const GeoLocationVerify: React.FC<GeoLocationVerifyProps> = ({ onVerified
           <div className="bg-brand/5 dark:bg-brand/10 p-4 rounded-2xl border border-brand/10 dark:border-brand/20">
             <p className="text-sm text-slate-700 dark:text-slate-200">
               <strong>¿Cómo funciona?</strong><br />
-              Vamos a tomar tu ubicación actual usando el GPS del dispositivo. Esa coordenada se guarda como señal de que estuviste en el lugar.
+              Vamos a tomar tu ubicación actual usando el GPS del dispositivo. Esa coordenada se guarda como respaldo de validación y no se muestra públicamente como dato exacto del aviso.
             </p>
           </div>
           <button
@@ -124,6 +125,9 @@ export const GeoLocationVerify: React.FC<GeoLocationVerifyProps> = ({ onVerified
                 <p className="font-mono font-bold text-slate-900 dark:text-white">{coords.lng.toFixed(6)}</p>
               </div>
             </div>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-600 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-300">
+            {VERIFICATION_PRIVACY_NOTICES.geolocation}
           </div>
           <button
             onClick={() => onVerified(coords)}

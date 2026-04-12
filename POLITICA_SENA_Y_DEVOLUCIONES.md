@@ -18,6 +18,7 @@ Esta propuesta deja una versión canónica de política para producto, FAQs y fu
 ### Principios de resolución
 
 - La devolución no depende de una única excepción. Depende del momento de la cancelación, del estado de la reserva y de si hubo un problema reportado al llegar.
+- La plataforma puede revisar solo lo asentado dentro del flujo interno. Si la seña o el pago fueron por fuera, esa resolución queda entre huésped y anfitrión.
 - Si el anfitrión cancela o la propiedad no está disponible de manera real para esa estadía, la seña se devuelve.
 - Si hay un problema reportado al llegar o un no show, la seña puede quedar en revisión o pendiente de confirmación antes de definirse.
 - Si en el futuro existe un cargo de servicio, se informa por separado y no se mezcla con la seña.
@@ -73,6 +74,8 @@ En las reservas protegidas, la seña solo será exigible una vez aceptada la sol
 En el modelo de acuerdo directo, la plataforma no actúa como intermediaria financiera ni administra la seña. En consecuencia, cualquier pago, devolución o compensación queda fuera de su intervención.
 
 En el modelo de reserva protegida, la plataforma administra la seña en custodia hasta la confirmación de llegada o hasta la resolución del estado final de la reserva.
+
+La revisión interna de la plataforma se limita a la información asentada dentro del flujo protegido y no implica devolución automática en todos los casos ni facultad de juez absoluto sobre cualquier disputa.
 
 ### 4.3 Criterios de devolución o retención
 

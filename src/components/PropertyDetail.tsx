@@ -28,6 +28,7 @@ import { SectionTitle } from './ui/SectionTitle';
 import { TrustSignalsInline, getTrustSignalsFromInteractionHistory, getTrustSignalsFromItems, type TrustSignal } from './ui/TrustSignalsInline';
 import { VerificationMeter } from './ui/VerificationMeter';
 import { PropertyVerificationPanel } from './verification/PropertyVerificationPanel';
+import { PLATFORM_PROPERTY_DISCLAIMER } from '../lib/platformTerms';
 
 const FALLBACK = 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=1200&q=80&auto=format&fit=crop';
 
@@ -1178,12 +1179,13 @@ export const PropertyDetailShell: React.FC<{
                 data-testid="property-verification-preview"
                 className="space-y-3 border-t border-slate-200/70 pt-4"
               >
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Qué ayuda a confiar rápido</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Qué ayuda a revisar rápido</p>
                 <TrustSignalsInline
                   signals={topDecisionTrustSignals}
                   emptyText="Todavía no hay datos comprobados visibles en este aviso."
                   compact
                 />
+                <p className="text-xs leading-5 text-slate-500">{PLATFORM_PROPERTY_DISCLAIMER}</p>
               </section>
             </div>
           </div>

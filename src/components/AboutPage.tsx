@@ -1,6 +1,7 @@
 import React from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
+import { PLATFORM_PROPERTY_DISCLAIMER } from '../lib/platformTerms';
 import { cn } from '../lib/utils';
 import { Icons } from './Icons';
 import { Button } from './ui/Button';
@@ -500,6 +501,9 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                       </p>
                       <p className="app-body text-slate-700 dark:text-slate-300">
                         La idea es que sepas qué estás viendo antes de escribir o reservar.
+                      </p>
+                      <p className="app-body text-slate-700 dark:text-slate-300">
+                        {PLATFORM_PROPERTY_DISCLAIMER}
                       </p>
                     </div>
                   </div>

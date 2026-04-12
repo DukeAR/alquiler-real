@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { apiJson } from '../lib/apiConfig';
 import { type Zone } from '../lib/constants';
 import { getPropertyListingQualityScore } from '../lib/propertyListingQuality';
+import { PLATFORM_PUBLISHING_RESPONSIBILITY_NOTE } from '../lib/platformTerms';
 import { showToast } from '../lib/toast';
 import { cn } from '../lib/utils';
 import { Icons } from './Icons';
@@ -368,8 +369,8 @@ export const PropertyUploadForm: React.FC<PropertyUploadFormProps> = ({ onComple
         description: 'Ya saliste al aire. Sumá cocina, exterior o detalles para que el lugar se entienda mejor en segundos.',
       },
       {
-        title: 'Generá más confianza con identidad y video',
-        description: 'Desde el panel podés sumar esas comprobaciones sin volver a empezar la publicación.',
+        title: 'Hacé más claro el aviso con identidad y video',
+        description: 'Desde el panel podés sumar esas comprobaciones para que el aviso tenga más trazabilidad sin volver a empezar la publicación.',
       },
     ];
 
@@ -464,7 +465,7 @@ export const PropertyUploadForm: React.FC<PropertyUploadFormProps> = ({ onComple
       setPublishedPropertyId(typeof response?.id === 'string' ? response.id : null);
       setPublishedPropertyTitle(publishPayload.title);
       setIsPublished(true);
-      showToast('Publicacion creada', 'Tu publicacion ya esta activa. Desde el panel podes mejorarla para generar mas confianza y recibir mas consultas.', 'success');
+      showToast('Publicacion creada', 'Tu publicacion ya esta activa. Desde el panel podes mejorarla para que se entienda mejor y reciba mas consultas.', 'success');
     } catch (error) {
       showToast('Publicacion', error instanceof Error ? error.message : 'No pudimos crear la publicacion.', 'error');
     } finally {
@@ -491,7 +492,7 @@ export const PropertyUploadForm: React.FC<PropertyUploadFormProps> = ({ onComple
                 Tu publicacion ya esta activa
               </h2>
               <p className="max-w-2xl text-sm leading-7 text-slate-600">
-                {publishedPropertyTitle || 'Tu propiedad'} ya quedo visible. Podes mejorarla para generar mas confianza y recibir mas consultas.
+                {publishedPropertyTitle || 'Tu propiedad'} ya quedo visible. Podes mejorarla para que se entienda mejor y reciba mas consultas.
               </p>
             </div>
 
@@ -531,7 +532,7 @@ export const PropertyUploadForm: React.FC<PropertyUploadFormProps> = ({ onComple
               <div>
                 <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Publica tu propiedad en pocos pasos</h1>
                 <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-600">
-                  Te pedimos solo lo justo para activarla rapido. Despues la mejoras desde el panel para generar mas confianza y recibir mas consultas.
+                  Te pedimos solo lo justo para activarla rapido. Despues la mejoras desde el panel para que el aviso sea mas claro y reciba mas consultas.
                 </p>
               </div>
             </div>
@@ -551,6 +552,10 @@ export const PropertyUploadForm: React.FC<PropertyUploadFormProps> = ({ onComple
                 {remainingSteps.length > 0 ? `${remainingSteps.length} pasos más hasta publicar.` : 'Último paso antes de publicar.'}
               </p>
             </div>
+          </div>
+
+          <div className="rounded-[24px] border border-slate-200/80 bg-slate-50/90 p-4 text-sm leading-6 text-slate-600">
+            {PLATFORM_PUBLISHING_RESPONSIBILITY_NOTE}
           </div>
 
           <div className="flex flex-wrap gap-2.5">

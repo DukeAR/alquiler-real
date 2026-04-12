@@ -8,6 +8,7 @@ import { Card } from './ui/Card';
 import { NoticeBanner } from './ui/NoticeBanner';
 import { SectionTitle } from './ui/SectionTitle';
 import { formatBookingDateOnly } from '../lib/bookingDates';
+import { PLATFORM_DIRECT_FLOW_NOTE, PLATFORM_PROTECTED_FLOW_NOTE, PLATFORM_PROPERTY_DISCLAIMER } from '../lib/platformTerms';
 
 type DecisionItemProps = {
   icon: React.ComponentType<{ className?: string }>;
@@ -120,7 +121,7 @@ const BookingConfirmationModal: React.FC<Props> = ({
   const activeNotice = submitNotice ?? {
     tone: 'info' as const,
     heading: 'Elegí cómo querés seguir con estas fechas',
-    description: 'Podés abrir un acuerdo directo por chat o dejar una solicitud en la app. En ambos casos después seguís por mensajes.',
+    description: 'Podés abrir un acuerdo directo por chat o dejar una solicitud en la app. La diferencia importante es qué queda registrado y hasta dónde puede ayudar la plataforma.',
   };
 
   useEffect(() => {
@@ -222,7 +223,7 @@ const BookingConfirmationModal: React.FC<Props> = ({
                   </Badge>
                   <p className="text-base font-semibold text-slate-950">Mandás una propuesta por chat</p>
                   <p className="text-sm leading-6 text-slate-600">
-                    Sirve si querés conversar primero. Las fechas no se bloquean y la plataforma no interviene en la seña.
+                    Sirve si querés conversar primero. Las fechas no se bloquean y {PLATFORM_DIRECT_FLOW_NOTE.toLowerCase()}
                   </p>
                 </div>
 
@@ -249,7 +250,7 @@ const BookingConfirmationModal: React.FC<Props> = ({
                   </Badge>
                   <p className="text-base font-semibold text-slate-950">La solicitud queda pendiente en la app</p>
                   <p className="text-sm leading-6 text-slate-600">
-                    Conviene si querés dejar fechas, huéspedes y total asentados desde ahora mientras esperás la respuesta del anfitrión y después avanzar con la seña dentro de la app.
+                    Conviene si querés dejar fechas, huéspedes y total asentados desde ahora mientras esperás la respuesta del anfitrión. {PLATFORM_PROTECTED_FLOW_NOTE}
                   </p>
                 </div>
 
@@ -270,6 +271,10 @@ const BookingConfirmationModal: React.FC<Props> = ({
 
           <div className="flex flex-col-reverse gap-3 sm:flex-row">
             <Button onClick={onClose} variant="secondary" size="lg" className="flex-1 rounded-2xl" disabled={isBusy}>Seguir revisando</Button>
+          </div>
+
+          <div className="rounded-[22px] border border-slate-200/80 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-600">
+            {PLATFORM_PROPERTY_DISCLAIMER}
           </div>
         </div>
       </Card>

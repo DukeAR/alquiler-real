@@ -20,11 +20,12 @@ type PlatformTermsQuickGuideProps = {
 };
 
 const sectionIcons: Record<PlatformTermsQuickGuideSectionId, React.ComponentType<{ className?: string }>> = {
-  properties: Icons.Home,
-  contact: Icons.MessageSquare,
-  deposit: Icons.FileText,
-  'platform-intervention': Icons.ShieldCheck,
-  'no-intervention': Icons.ShieldAlert,
+  'who-publishes': Icons.Home,
+  'platform-role': Icons.MessageSquare,
+  'inside-platform': Icons.ShieldCheck,
+  'outside-platform': Icons.ShieldAlert,
+  'conflict-review': Icons.FileText,
+  'data-and-validation': Icons.Lock,
 };
 
 export const PlatformTermsQuickGuide: React.FC<PlatformTermsQuickGuideProps> = ({
@@ -56,13 +57,22 @@ export const PlatformTermsQuickGuide: React.FC<PlatformTermsQuickGuideProps> = (
           />
 
           {showLink ? (
-            <Link
-              to="/terms"
-              className="inline-flex items-center gap-2 rounded-full border border-slate-200/90 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-[0_18px_35px_-28px_rgba(15,23,42,0.18)] transition-colors hover:border-slate-300 hover:text-slate-950 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:hover:border-slate-600 dark:hover:bg-slate-800"
-            >
-              <Icons.FileText className="h-4 w-4" />
-              Ver términos completos
-            </Link>
+            <div className="flex flex-wrap gap-2">
+              <Link
+                to="/terms"
+                className="inline-flex items-center gap-2 rounded-full border border-slate-200/90 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-[0_18px_35px_-28px_rgba(15,23,42,0.18)] transition-colors hover:border-slate-300 hover:text-slate-950 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:hover:border-slate-600 dark:hover:bg-slate-800"
+              >
+                <Icons.FileText className="h-4 w-4" />
+                Ver términos completos
+              </Link>
+              <Link
+                to="/privacy"
+                className="inline-flex items-center gap-2 rounded-full border border-slate-200/90 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-[0_18px_35px_-28px_rgba(15,23,42,0.18)] transition-colors hover:border-slate-300 hover:text-slate-950 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:hover:border-slate-600 dark:hover:bg-slate-800"
+              >
+                <Icons.Lock className="h-4 w-4" />
+                Ver privacidad
+              </Link>
+            </div>
           ) : null}
         </div>
 

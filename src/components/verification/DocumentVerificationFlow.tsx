@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { apiFetch, apiJson } from '../../lib/apiConfig';
+import { VERIFICATION_PRIVACY_NOTICES } from '../../lib/privacyPolicy';
 import { showToast } from '../../lib/toast';
 import { cn } from '../../lib/utils';
 import { Icons } from '../Icons';
@@ -422,6 +423,15 @@ export const DocumentVerificationFlow: React.FC<DocumentVerificationFlowProps> =
       </div>
 
       <div className="space-y-8 p-8">
+        <div className="rounded-[24px] border border-slate-200/80 bg-slate-50/90 p-4">
+          <div className="flex items-start gap-3">
+            <Icons.Lock className="mt-0.5 h-5 w-5 shrink-0 text-slate-500" />
+            <p className="text-sm leading-6 text-slate-600">
+              {mode === 'documentary' ? VERIFICATION_PRIVACY_NOTICES.documentary : VERIFICATION_PRIVACY_NOTICES.bookingSupport}
+            </p>
+          </div>
+        </div>
+
         <button
           type="button"
           onClick={() => void handleNext()}

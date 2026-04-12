@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { type ValidationData } from '../../hooks/useUserProfile';
 import { apiJson } from '../../lib/apiConfig';
+import { VERIFICATION_PRIVACY_NOTICES } from '../../lib/privacyPolicy';
 import { showToast } from '../../lib/toast';
 import { Icons } from '../Icons';
 
@@ -184,6 +185,13 @@ export const DocumentVerificationModal: React.FC<DocumentVerificationModalProps>
           <div className="flex items-start gap-3">
             <Icons.Info className="mt-0.5 h-5 w-5 flex-shrink-0 text-brand" />
             <p>{summary}</p>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-700 dark:border-slate-800 dark:bg-slate-800/40 dark:text-slate-200">
+          <div className="flex items-start gap-3">
+            <Icons.Lock className="mt-0.5 h-5 w-5 flex-shrink-0 text-slate-500" />
+            <p>{VERIFICATION_PRIVACY_NOTICES.documentary}</p>
           </div>
         </div>
 

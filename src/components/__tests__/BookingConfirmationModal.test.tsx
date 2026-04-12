@@ -34,6 +34,7 @@ describe('BookingConfirmationModal', () => {
     expect(screen.getByText('Elegí cómo querés avanzar con esta estadía')).toBeInTheDocument();
     expect(screen.getByText('Acuerdo directo')).toBeInTheDocument();
     expect(screen.getByText('Solicitud en la app')).toBeInTheDocument();
+    expect(screen.getByText(/La información del aviso la carga el anfitrión/i)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /enviar solicitud en la app/i }));
     expect(onStartProtected).toHaveBeenCalledTimes(1);

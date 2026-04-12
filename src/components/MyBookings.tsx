@@ -10,7 +10,12 @@ import {
   isBookingCheckInReached,
   parseBookingDateOnly,
 } from '../lib/bookingDates';
-import { BOOKING_CONTRACT_PLATFORM_TERMS, type BookingContractPlatformTerm } from '../lib/platformTerms';
+import {
+  BOOKING_CONTRACT_PLATFORM_TERMS,
+  PLATFORM_DIRECT_FLOW_NOTE,
+  PLATFORM_PROTECTED_FLOW_NOTE,
+  type BookingContractPlatformTerm,
+} from '../lib/platformTerms';
 import { getPropertyVerificationBadge, sortPropertiesByCatalogOrder } from '../lib/propertyVerification';
 import { getProtectedDepositPricingFromBooking } from '../lib/protectedDeposit';
 import { getReservationFlowCopy, getReservationNextActorDisplayLabel, getReservationNextStepDisplayLabel } from '../lib/reservationFlow';
@@ -1018,13 +1023,13 @@ export const MyBookings = () => {
                     <div className="w-full lg:max-w-[38rem]">
                       <DepositChoiceBlock
                         title="Cómo querés avanzar con la seña"
-                        description="Elegí la opción que mejor les cierre. Todo queda claro dentro de la conversación y la reserva."
+                        description="Elegí la opción que mejor les cierre. La diferencia importante es qué queda registrado en la app y hasta dónde puede ayudar la plataforma."
                         options={[
                           {
                             key: 'protected',
                             eyebrow: '1. Resolverla acá con claridad',
                             title: 'Dejarla registrada acá',
-                            description: 'La seña queda registrada en la app y el acuerdo sigue claro hasta la llegada.',
+                            description: PLATFORM_PROTECTED_FLOW_NOTE,
                             icon: <Icons.ShieldCheck className="h-5 w-5" />,
                             tone: 'brand',
                             priceLines: protectedDepositPriceLines,
@@ -1040,7 +1045,7 @@ export const MyBookings = () => {
                             key: 'external',
                             eyebrow: '2. Coordinarla por fuera',
                             title: 'Coordinarla por fuera (más manual)',
-                            description: 'Coordinás la seña directo con el anfitrión.',
+                            description: PLATFORM_DIRECT_FLOW_NOTE,
                             icon: <Icons.MessageSquare className="h-5 w-5" />,
                             tone: 'neutral',
                             helper: isReviewingExternalDepositChoice
@@ -1082,7 +1087,7 @@ export const MyBookings = () => {
                             key: 'switch-to-protected',
                             eyebrow: 'Coordinación por fuera',
                             title: 'Seguís coordinando por chat',
-                            description: 'Si cambiás de idea antes de informarla, podés dejar la seña registrada acá.',
+                            description: `Hoy siguen por fuera. ${PLATFORM_PROTECTED_FLOW_NOTE}`,
                             icon: <Icons.MessageSquare className="h-5 w-5" />,
                             tone: 'neutral',
                             action: {
@@ -1153,13 +1158,13 @@ export const MyBookings = () => {
                 <DepositChoiceBlock
                   className="mt-4"
                   title="Cómo querés avanzar con la seña"
-                  description="Si prefieren resolverla acá, queda registrada y después siguen por chat con la llegada."
+                  description="Si prefieren resolverla acá, la seña queda registrada y ese tramo puede revisarse según lo asentado dentro de la app."
                   options={[
                     {
                       key: 'pay-protected-deposit',
                       eyebrow: 'Resolverla acá con claridad',
                       title: 'Registrarla ahora',
-                      description: 'La seña ya queda registrada y se libera cuando confirmás la llegada.',
+                      description: 'La seña ya queda registrada y después puede liberarse o revisarse según el estado final de la reserva.',
                       icon: <Icons.ShieldCheck className="h-5 w-5" />,
                       tone: 'brand',
                       priceLines: protectedDepositPriceLines,

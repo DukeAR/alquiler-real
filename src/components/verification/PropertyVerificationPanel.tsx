@@ -6,6 +6,8 @@ import {
   getPropertyVerificationItems,
   getPropertyVerificationProgress,
 } from '../../lib/propertyVerification';
+import { VERIFICATION_PRIVACY_NOTICES } from '../../lib/privacyPolicy';
+import { PLATFORM_PROPERTY_DISCLAIMER, PLATFORM_PUBLISHING_RESPONSIBILITY_NOTE } from '../../lib/platformTerms';
 import { showToast } from '../../lib/toast';
 import { cn } from '../../lib/utils';
 import type { Property, VerificationAsset } from '../../types';
@@ -200,9 +202,9 @@ export const PropertyVerificationPanel = ({
       <Card className={cn('rounded-[32px] border-slate-200/80 bg-white p-6 shadow-[0_28px_70px_-50px_rgba(15,23,42,0.25)] sm:p-7', className)}>
         <div className="space-y-5">
           <div className="space-y-2">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Confianza del aviso</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Lectura del aviso</p>
             <h2 className="text-2xl font-semibold tracking-tight text-slate-950">Qué ya está comprobado</h2>
-            <p className="max-w-3xl text-sm leading-6 text-slate-600">{verificationProgress.summary}</p>
+            <p className="max-w-3xl text-sm leading-6 text-slate-600">{verificationProgress.summary} {PLATFORM_PROPERTY_DISCLAIMER}</p>
           </div>
 
           <VerificationDetailsBlock
@@ -217,6 +219,10 @@ export const PropertyVerificationPanel = ({
             tone={verificationBadge.score >= 4 ? 'success' : 'neutral'}
             showDescriptions={false}
           />
+
+          <div className="rounded-[22px] border border-slate-200/80 bg-slate-50/90 p-4 text-sm leading-6 text-slate-600">
+            {PLATFORM_PROPERTY_DISCLAIMER}
+          </div>
 
           {videoAsset ? (
             <div className="overflow-hidden rounded-[24px] border border-slate-200/80 bg-slate-950 shadow-[0_24px_48px_-34px_rgba(15,23,42,0.45)]">
@@ -288,6 +294,10 @@ export const PropertyVerificationPanel = ({
           </div>
         </div>
 
+        <div className="rounded-[24px] border border-slate-200/80 bg-slate-50/85 p-4 text-sm leading-6 text-slate-600">
+          {PLATFORM_PUBLISHING_RESPONSIBILITY_NOTE}
+        </div>
+
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           <VerificationMetricCard
             label="Comprobaciones visibles"
@@ -304,13 +314,13 @@ export const PropertyVerificationPanel = ({
           <VerificationMetricCard
             label="Video del lugar"
             value={videoCount > 0 ? 'Listo' : 'Pendiente'}
-            helper={videoCount > 0 ? 'Ya suma una senal fuerte de confianza.' : 'Un video corto ayuda a generar mas confianza.'}
+            helper={videoCount > 0 ? 'Ya suma un respaldo visual extra para el aviso.' : 'Un video corto ayuda a que el aviso se entienda mejor.'}
             tone={videoCount > 0 ? 'success' : 'neutral'}
           />
           <VerificationMetricCard
             label="Documentacion interna"
             value={documentCount > 0 ? `${documentCount}` : 'Opcional'}
-            helper={documentCount > 0 ? `${documentsVerifiedCount} revisados hasta ahora.` : 'No hace falta para publicar. Queda privada y ayuda a moderacion.'}
+            helper={documentCount > 0 ? `${documentsVerifiedCount} revisados hasta ahora.` : 'No hace falta para publicar. Queda privada y ayuda a moderacion o revision.'}
             tone={documentCount > 0 ? 'brand' : 'neutral'}
           />
         </div>
@@ -355,7 +365,7 @@ export const PropertyVerificationPanel = ({
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Acciones rapidas</p>
-                  <p className="mt-1 text-sm leading-6 text-slate-600">Recibis mas consultas con fotos, video y datos claros. La documentacion queda privada para moderacion.</p>
+                  <p className="mt-1 text-sm leading-6 text-slate-600">Fotos, video y datos claros ayudan a que el aviso se entienda mejor. La documentacion queda privada para moderacion o revision interna.</p>
                 </div>
               </div>
 
@@ -458,7 +468,7 @@ export const PropertyVerificationPanel = ({
             <AssetPreviewStrip
               title="Documentacion privada"
               assets={documentAssets}
-              emptyText="Los documentos quedan solo para revision interna. Nunca se muestran en el aviso publico."
+              emptyText={VERIFICATION_PRIVACY_NOTICES.propertyDocuments}
               icon={<Icons.Lock className="h-4 w-4 text-slate-500" />}
             />
 

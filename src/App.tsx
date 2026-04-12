@@ -21,6 +21,7 @@ const LazyFAQPage = lazy(() => import('./components/FAQPage').then((module) => (
 const LazyHostDashboard = lazy(() => import('./components/HostDashboard').then((module) => ({ default: module.HostDashboard })));
 const LazyHostProfileView = lazy(() => import('./components/HostProfileView').then((module) => ({ default: module.HostProfileView })));
 const LazyMyBookings = lazy(() => import('./components/MyBookings').then((module) => ({ default: module.MyBookings })));
+const LazyPrivacyPage = lazy(() => import('./components/PrivacyPage').then((module) => ({ default: module.PrivacyPage })));
 const LazyProfileViewNew = lazy(() => import('./components/ProfileViewNew.tsx'));
 const LazyPropertyDetail = lazy(() => import('./components/PropertyDetail'));
 const LazyRegister = lazy(() => import('./components/Register').then((module) => ({ default: module.Register })));
@@ -75,6 +76,7 @@ export default function App() {
               <Route path="/about" element={<AboutPageWrapper />} />
               <Route path="/faq" element={<FAQPageWrapper />} />
               <Route path="/terms" element={<TermsPageWrapper />} />
+              <Route path="/privacy" element={<PrivacyPageWrapper />} />
               <Route path="/host/:id" element={<HostProfileWrapper />} />
               <Route path="/login" element={<GuestOnly><LazyRegister key="login" mode="login" /></GuestOnly>} />
               <Route path="/register" element={<GuestOnly><LazyRegister key="register" mode="register" /></GuestOnly>} />
@@ -231,6 +233,11 @@ const FAQPageWrapper = () => {
 const TermsPageWrapper = () => {
   const navigate = useNavigate();
   return <LazyTermsPage onBack={() => navigate(-1)} />;
+};
+
+const PrivacyPageWrapper = () => {
+  const navigate = useNavigate();
+  return <LazyPrivacyPage onBack={() => navigate(-1)} />;
 };
 
 const DocumentVerificationFlowWrapper = () => {

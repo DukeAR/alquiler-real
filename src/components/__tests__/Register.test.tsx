@@ -63,6 +63,7 @@ describe('Register screen', () => {
     expect(screen.getByText('¿Ya tenés cuenta? Ingresá')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Qué tenés que saber antes de usar la app' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /términos y condiciones/i })).toHaveAttribute('href', '/terms');
+    expect(screen.getByRole('link', { name: /política de privacidad/i })).toHaveAttribute('href', '/privacy');
     expect(screen.getByRole('button', { name: /^Creá tu cuenta$/i })).toBeInTheDocument();
   });
 });

@@ -11,8 +11,7 @@ import {
 import { useAuth } from '../hooks/useAuth';
 import { type ReservationRequestContext } from '../types';
 import { formatBookingDateShort, getBookingDateOnlyValue, isBookingCheckInReached } from '../lib/bookingDates';
-import { formatGuestMemberSinceYear, resolveGuestRequestProfile } from '../lib/guestRequestProfile';
-import { getGuestPositiveCoordinationSignals, getHostResponseSignal } from '../lib/positiveIncentives';
+import { PLATFORM_DIRECT_FLOW_NOTE, PLATFORM_PROTECTED_FLOW_NOTE } from '../lib/platformTerms';
 import { getProtectedDepositPricingFromBooking } from '../lib/protectedDeposit';
 import { getReservationFlowCopy, getReservationVisibleStatus } from '../lib/reservationFlow';
 import { trackFrontendFunnelEvent } from '../lib/funnelTracking';
@@ -20,7 +19,6 @@ import { ChatContextBar } from './ui/ChatContextBar';
 import { DepositChoiceBlock } from './ui/DepositChoiceBlock';
 import { ReservationConfirmedState } from './ui/ReservationConfirmedState';
 import { SystemEventMessage } from './ui/SystemEventMessage';
-import { getTrustSignalsFromInteractionHistory, getTrustSignalsFromItems, type TrustSignal } from './ui/TrustSignalsInline';
 
 type InlineThreadNoticeTone = 'neutral' | 'warning' | 'brand';
 
@@ -108,17 +106,6 @@ const formatCompactDateRange = (startDate?: string, endDate?: string) => {
   }
 
   return `${startLabel}–${endLabel}`;
-};
-
-const getInteractionSummaryLine = (labels: string[]) => {
-  if (labels.length === 0) {
-    return null;
-  }
-
-  const visibleLabels = labels.slice(0, 3);
-  const remainingCount = Math.max(0, labels.length - visibleLabels.length);
-
-  return `${visibleLabels.join(' · ')}${remainingCount > 0 ? ` · +${remainingCount}` : ''}`;
 };
 
 type HostCloseIntent = 'advance-deposit' | 'confirm-reservation';
@@ -299,33 +286,6 @@ const parseTimestampValue = (value?: string | null) => {
 
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
-};
-
-const isSameLocalDay = (left: Date, right: Date) => (
-  left.getFullYear() === right.getFullYear()
-  && left.getMonth() === right.getMonth()
-  && left.getDate() === right.getDate()
-);
-
-const formatDeadlineLabel = (deadline: Date) => {
-  const now = new Date();
-  const tomorrow = new Date(now);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-
-  const timeLabel = deadline.toLocaleTimeString('es-AR', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-
-  if (isSameLocalDay(deadline, now)) {
-    return `hoy a las ${timeLabel}`;
-  }
-
-  if (isSameLocalDay(deadline, tomorrow)) {
-    return `mañana a las ${timeLabel}`;
-  }
-
-  return `${deadline.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })} a las ${timeLabel}`;
 };
 
 const getRequestDeadline = (requestCreatedAt?: string) => {
@@ -925,88 +885,6 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
       ? activeConv.hostName || 'Anfitrión'
       : activeConv.tenantName || 'Huésped'
     : 'Conversación';
-  const hostResponseSignal = isTenantConversation ? getHostResponseSignal(activeConv?.hostInteractionHistory) : null;
-  const hostHistoryLabels = isTenantConversation && activeConv?.hostInteractionHistory
-    ? activeConv.hostInteractionHistory.publicSignals.map((signal) => {
-        if (signal.key === 'response-time' && hostResponseSignal?.label) {
-          return hostResponseSignal.label;
-        }
-
-        return signal.label;
-      })
-    : [];
-  const hostHistoryLine = getInteractionSummaryLine(hostHistoryLabels);
-  const shouldShowGuestContext = Boolean(
-    isHostConversation
-    && activeConv
-    && activeConv.guestProfile,
-  );
-  const guestContextProfile = shouldShowGuestContext && activeConv
-    ? resolveGuestRequestProfile({
-        id: activeConv.tenant_id,
-        userName: activeConv.tenantName,
-        guestProfile: activeConv.guestProfile ?? null,
-      })
-    : null;
-  const guestPositiveSignals = guestContextProfile
-    ? getGuestPositiveCoordinationSignals(guestContextProfile)
-    : [];
-  const interactionContinuity = activeConv?.interactionContinuity ?? null;
-  const chatContextSignals = (() => {
-    const mergedSignals: TrustSignal[] = [];
-    const seenLabels = new Set<string>();
-    const pushSignals = (nextSignals: TrustSignal[]) => {
-      nextSignals.forEach((signal) => {
-        if (mergedSignals.length >= 3 || seenLabels.has(signal.label)) {
-          return;
-        }
-
-        mergedSignals.push(signal);
-        seenLabels.add(signal.label);
-      });
-    };
-
-    if (isTenantConversation) {
-      pushSignals(getTrustSignalsFromItems(Array.isArray(activeConv?.hostTrust?.items) ? activeConv.hostTrust.items : [], { limit: 3, tone: 'brand' }));
-      const hostChatSignals: TrustSignal[] = [];
-
-      if (hostResponseSignal?.label) {
-        hostChatSignals.push({ key: 'host-response', label: hostResponseSignal.label, tone: 'neutral' });
-      }
-
-      pushSignals(hostChatSignals);
-      pushSignals(getTrustSignalsFromInteractionHistory(activeConv?.hostInteractionHistory?.publicSignals ?? [], { limit: 2, tone: 'neutral' }));
-    }
-
-    if (isHostConversation && guestContextProfile) {
-      pushSignals(getTrustSignalsFromItems(guestContextProfile.verificationSummary.items ?? [], { limit: 2, tone: 'success' }));
-      const guestChatSignals: TrustSignal[] = [];
-
-      if (guestPositiveSignals[0]) {
-        guestChatSignals.push({ key: 'guest-positive', label: guestPositiveSignals[0], tone: 'neutral' });
-      }
-
-      if (guestContextProfile.dataAvailability.memberSince && guestContextProfile.memberSince.trim()) {
-        guestChatSignals.push({
-          key: 'guest-member-since',
-          label: `Usuario desde ${formatGuestMemberSinceYear(guestContextProfile.memberSince)}`,
-          tone: 'neutral',
-        });
-      }
-
-      pushSignals(guestChatSignals);
-    }
-
-    const continuitySignals: TrustSignal[] = [];
-
-    if (interactionContinuity?.label) {
-      continuitySignals.push({ key: 'interaction-continuity', label: interactionContinuity.label, tone: 'brand' });
-    }
-
-    pushSignals(continuitySignals);
-
-    return mergedSignals.slice(0, 3);
-  })();
   const hasAuthoredConversationMessage = Boolean(
     user && messages.some((message) => !message.is_system && message.sender_id === user.id),
   );
@@ -1027,46 +905,10 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
     : null;
   const isRequestExpired = Boolean(requestDeadline && Date.now() > requestDeadline.getTime());
   const isExpiredPendingRequest = Boolean(flowCopy?.stage === 'request-pending' && isRequestExpired);
-  const requestHeading = isExpiredPendingRequest ? 'Solicitud vencida' : flowCopy?.statusLabel ?? null;
-  const requestDescription = isExpiredPendingRequest
-    ? isTenantConversation
-      ? 'La solicitud venció porque no hubo respuesta dentro del plazo.'
-      : 'La solicitud venció porque no se respondió dentro del plazo.'
-    : flowCopy?.description ?? 'Dejá por acá fechas, montos y cambios importantes para que la conversación quede clara.';
-  const requestGuidance = isExpiredPendingRequest
-    ? isTenantConversation
-      ? 'Si todavía querés avanzar, mandá otro mensaje o abrí una nueva solicitud.'
-      : 'Si todavía quieren avanzar, el huésped tiene que abrir una nueva solicitud.'
-    : flowCopy?.supportText ?? null;
-  const requestCreatedAtDate = parseTimestampValue(activeRequestContext?.requestCreatedAt ?? activeConv?.requestCreatedAt);
   const counterpartyId = user && activeConv
     ? user.id === activeConv.tenant_id
       ? activeConv.host_id
       : activeConv.tenant_id
-    : null;
-  const hasCounterpartyReplyAfterRequest = Boolean(
-    requestCreatedAtDate
-    && counterpartyId
-    && messages.some((message) => {
-      if (message.is_system || message.sender_id !== counterpartyId) {
-        return false;
-      }
-
-      const messageCreatedAt = parseTimestampValue(message.created_at);
-      return Boolean(messageCreatedAt && messageCreatedAt.getTime() >= requestCreatedAtDate.getTime());
-    }),
-  );
-  const requestDeadlineMessage = flowCopy?.stage === 'request-pending' && requestDeadline
-    ? isTenantConversation
-      ? isRequestExpired
-        ? `El plazo de respuesta terminó ${formatDeadlineLabel(requestDeadline)}.`
-        : `El anfitrión tiene hasta ${formatDeadlineLabel(requestDeadline)} para responder.`
-      : isRequestExpired
-        ? `Esta solicitud venció ${formatDeadlineLabel(requestDeadline)}.`
-        : `Respondé antes de ${formatDeadlineLabel(requestDeadline)} para que no se venza.`
-    : null;
-  const noResponseMessage = isTenantConversation && flowCopy?.stage === 'request-pending' && isRequestExpired && !hasCounterpartyReplyAfterRequest
-    ? 'Todavía no hubo respuesta. Podés enviar otro mensaje o ver otras opciones.'
     : null;
   const canAcceptRequest = Boolean(isHostConversation && flowCopy?.stage === 'request-pending' && !isRequestExpired);
   const counterpartyHasConversationMessage = Boolean(
@@ -1803,14 +1645,14 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                         eyebrow="Seña"
                         title={showDepositChoiceComposer ? 'Cómo querés avanzar con la seña' : 'Cómo sigue la seña'}
                         description={showDepositChoiceComposer
-                          ? 'Elegí la opción que mejor les cierre. Todo queda claro dentro de esta conversación.'
+                          ? 'Elegí la opción que mejor les cierre. La diferencia importante es qué queda registrado dentro de la app.'
                           : 'La elección del huésped queda visible dentro de este chat.'}
                         options={[
                           {
                             key: 'protected',
                             eyebrow: '1. Resolverla acá con claridad',
                             title: showDepositChoiceComposer ? 'Dejarla registrada acá' : 'Registrada acá',
-                            description: 'La seña queda registrada en la app y el acuerdo sigue claro en el chat.',
+                            description: PLATFORM_PROTECTED_FLOW_NOTE,
                             icon: <Icons.ShieldCheck className="h-5 w-5" />,
                             tone: 'brand',
                             priceLines: protectedDepositPreview ? [
@@ -1832,7 +1674,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                             key: 'external',
                             eyebrow: '2. Coordinarla por fuera',
                             title: showDepositChoiceComposer ? 'Coordinarla por fuera (más manual)' : 'Por fuera (más manual)',
-                            description: 'Siguen por chat directo con el anfitrión.',
+                            description: PLATFORM_DIRECT_FLOW_NOTE,
                             icon: <Icons.MessageSquare className="h-5 w-5" />,
                             tone: 'neutral',
                             helper: showDepositChoiceComposer ? undefined : 'Esta elección también queda registrada en el chat.',

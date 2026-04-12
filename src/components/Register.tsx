@@ -347,7 +347,7 @@ export const Register = ({ mode = 'login' }: RegisterProps) => {
                         />
                         <span>
                             Acepto los <Link to="/terms" className="font-semibold text-brand underline-offset-4 hover:underline">términos y condiciones</Link> y la{' '}
-                            <strong className="text-brand">política de privacidad</strong>.
+                            <Link to="/privacy" className="font-semibold text-brand underline-offset-4 hover:underline">política de privacidad</Link>.
                         </span>
                     </label>
 

@@ -84,7 +84,7 @@ const supportCards: SupportCard[] = [
   {
     eyebrow: 'Acuerdo directo',
     title: 'La app no cobra ni retiene la seña',
-    description: 'Sirve para dejar contexto y seguir la conversación. El cobro y cualquier devolución se coordinan entre huésped y anfitrión.',
+    description: 'Sirve para dejar contexto y seguir la conversación. El cobro y cualquier devolución se coordinan entre huésped y anfitrión, fuera del alcance de la plataforma.',
     icon: Icons.MessageSquare,
     className: 'border-slate-200/85 bg-white/98 shadow-[0_18px_38px_-30px_rgba(15,23,42,0.18)] dark:border-slate-800 dark:bg-slate-900',
     iconWrapClassName: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200',
@@ -94,7 +94,7 @@ const supportCards: SupportCard[] = [
   {
     eyebrow: 'Seña en la app',
     title: 'La seña queda registrada',
-    description: 'Se paga después de la aceptación del anfitrión. En estadías de 1 a 3 noches equivale a 1 noche. Desde 4 noches, equivale a 2 noches.',
+    description: 'Se paga después de la aceptación del anfitrión. Si el flujo sigue acá, queda trazabilidad para revisar cancelaciones o problemas reportados según lo asentado.',
     icon: Icons.ShieldCheck,
     className: 'border-brand/15 bg-[radial-gradient(circle_at_top_right,rgba(67,56,202,0.12),transparent_42%),linear-gradient(180deg,rgba(255,255,255,0.99),rgba(248,250,252,0.98))] shadow-[0_18px_38px_-30px_rgba(15,23,42,0.18)] dark:border-brand/20 dark:bg-slate-900',
     iconWrapClassName: 'bg-brand/10 text-brand dark:bg-brand/15 dark:text-brand-light',
@@ -143,7 +143,7 @@ const faqGroups: FAQGroup[] = [
     items: [
       {
         question: '¿Cuándo puede devolverse la seña registrada en la app?',
-        answer: 'La devolución depende del momento de la cancelación y del estado de la reserva.',
+        answer: 'La devolución depende del momento de la cancelación, del estado de la reserva y de lo que haya quedado registrado dentro del flujo.',
         bullets: [
           'Si el anfitrión cancela o la propiedad no está realmente disponible, la seña se devuelve.',
           'Si hay un problema reportado al llegar o un no show, la seña puede quedar en revisión antes de definirse.',
@@ -168,6 +168,27 @@ const faqGroups: FAQGroup[] = [
         question: '¿Qué pasa con un cargo de servicio si existe?',
         answer: 'Siempre se informa por separado y no se mezcla con la seña. Si la reserva no puede concretarse por causa del anfitrión o por un problema sustancial del lugar, se devuelve. Si la cancelación o el no show dependen del huésped, puede quedar sujeto a revisión o no devolverse.',
         icon: Icons.FileText,
+      },
+    ],
+  },
+  {
+    eyebrow: 'Datos y privacidad',
+    description: 'Cómo se usan documentos, mensajes y datos de validación dentro del producto.',
+    items: [
+      {
+        question: '¿Qué hacen con los documentos o selfies que se cargan para validar?',
+        answer: 'Se usan como respaldo para validación, soporte o revisión interna. No se muestran públicamente como parte del perfil o del aviso.',
+        icon: Icons.Lock,
+      },
+      {
+        question: '¿La ubicación exacta o los documentos privados quedan visibles?',
+        answer: 'No. La app puede usar coordenadas, comprobantes o material sensible para validar o revisar un caso, pero esa parte no se expone como dato público del aviso.',
+        icon: Icons.MapPin,
+      },
+      {
+        question: '¿Cuándo pueden revisar mensajes o registros de la app?',
+        answer: 'Cuando hace falta sostener soporte, prevenir abuso o revisar un problema vinculado a una reserva o una seña que quedaron dentro del flujo interno.',
+        icon: Icons.ShieldCheck,
       },
     ],
   },
@@ -304,15 +325,24 @@ export const FAQPage: React.FC<FAQPageProps> = ({ onBack }) => {
         onBack={onBack}
         eyebrow="Ayuda"
         heading="Preguntas frecuentes"
-        description="Qué cambia entre acuerdo directo y dejar la seña en la app, cómo se calcula y cuándo puede revisarse o devolverse."
+        description="Qué cambia entre acuerdo directo y seña en la app, qué puede revisar la plataforma y cómo se usan los datos de validación dentro del producto."
         action={(
-          <Link
-            to="/terms"
-            className="inline-flex items-center gap-2 rounded-full border border-slate-200/90 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-[0_18px_35px_-28px_rgba(15,23,42,0.18)] transition-colors hover:border-slate-300 hover:text-slate-950 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-slate-600 dark:hover:bg-slate-800"
-          >
-            <Icons.FileText className="h-4 w-4" />
-            Ver términos
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              to="/terms"
+              className="inline-flex items-center gap-2 rounded-full border border-slate-200/90 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-[0_18px_35px_-28px_rgba(15,23,42,0.18)] transition-colors hover:border-slate-300 hover:text-slate-950 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-slate-600 dark:hover:bg-slate-800"
+            >
+              <Icons.FileText className="h-4 w-4" />
+              Ver términos
+            </Link>
+            <Link
+              to="/privacy"
+              className="inline-flex items-center gap-2 rounded-full border border-slate-200/90 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-[0_18px_35px_-28px_rgba(15,23,42,0.18)] transition-colors hover:border-slate-300 hover:text-slate-950 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-slate-600 dark:hover:bg-slate-800"
+            >
+              <Icons.Lock className="h-4 w-4" />
+              Ver privacidad
+            </Link>
+          </div>
         )}
         contentClassName="mx-auto w-full max-w-5xl"
       />
@@ -421,7 +451,7 @@ export const FAQPage: React.FC<FAQPageProps> = ({ onBack }) => {
         <PlatformTermsQuickGuide
           eyebrow="En 1 minuto"
           title="Qué hace Alquiler Real, qué deja registrado y qué no controla"
-          description="Cinco bloques cortos para entender qué depende del anfitrión, qué queda registrado y en qué casos la app puede revisar un caso."
+          description="Seis bloques cortos para entender qué depende del anfitrión, qué queda registrado y en qué casos la app puede revisar un caso."
         />
 
         <section className="space-y-6">
@@ -429,7 +459,7 @@ export const FAQPage: React.FC<FAQPageProps> = ({ onBack }) => {
             eyebrow="FAQ principal"
             as="h2"
             heading="Preguntas que conviene resolver antes de reservar o publicar"
-            description="Respuestas cortas sobre modelos de reserva, seña y devoluciones."
+            description="Respuestas cortas sobre modelos de reserva, seña, devoluciones y privacidad operativa."
             className="max-w-3xl"
           />
 
