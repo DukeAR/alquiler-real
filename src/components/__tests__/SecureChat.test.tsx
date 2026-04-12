@@ -647,7 +647,7 @@ describe('SecureChat', () => {
 
     expect(await screen.findByText('Ya están de acuerdo.')).toBeInTheDocument();
     expect(screen.getByText('Cómo querés avanzar con la seña')).toBeInTheDocument();
-    expect(screen.getByText('Elegí la opción que mejor les cierre. Todo queda claro dentro de esta conversación.')).toBeInTheDocument();
+    expect(screen.getByText((content) => content.replace(/\s+/g, ' ').includes('Elegí la opción que mejor les cierre. Todo queda claro dentro de esta conversación.'))).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Dejarla registrada acá/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Coordinarla por fuera/i })).toBeInTheDocument();
 
@@ -698,7 +698,7 @@ describe('SecureChat', () => {
     renderChat();
 
     expect(await screen.findByText('Cómo querés avanzar con la seña')).toBeInTheDocument();
-    expect(screen.getByText('Elegí la opción que mejor les cierre. Todo queda claro dentro de esta conversación.')).toBeInTheDocument();
+    expect(screen.getByText((content) => content.replace(/\s+/g, ' ').includes('Elegí la opción que mejor les cierre. Todo queda claro dentro de esta conversación.'))).toBeInTheDocument();
     expect(screen.getByText('Coordinarla por fuera (más manual)')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Coordinarla por fuera/i }));

@@ -101,7 +101,7 @@ describe('PropertyUploadForm', () => {
     expect(screen.getByText('Tu publicacion ya esta activa')).toBeInTheDocument();
     expect(showToastMock).toHaveBeenCalledWith(
       'Publicacion creada',
-      'Tu publicacion ya esta activa. Desde el panel podes mejorarla para generar mas confianza y recibir mas consultas.',
+      'Tu publicacion ya esta activa. Desde el panel podes mejorarla para que se entienda mejor y reciba mas consultas.',
       'success',
     );
     expect(screen.getByText('Recibí más consultas con mejores fotos')).toBeInTheDocument();

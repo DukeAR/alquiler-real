@@ -432,7 +432,7 @@ describe('PropertyDetail', () => {
     expect(screen.getByText('Lo esencial del lugar')).toBeDefined();
     expect(screen.getByText('Lo básico para saber si querés seguir con este lugar.')).toBeDefined();
     expect(screen.queryByText('Comodidades ya detalladas')).toBeNull();
-    expect(screen.getByText('Qué ayuda a confiar rápido')).toBeDefined();
+    expect(screen.getByText('Qué ayuda a revisar rápido')).toBeDefined();
     const verificationPreview = screen.getByTestId('property-verification-preview');
     expect(within(verificationPreview).getAllByRole('listitem')).toHaveLength(3);
     expect(within(verificationPreview).getByText('Ubicación')).toBeDefined();
@@ -482,7 +482,7 @@ describe('PropertyDetail', () => {
     await waitForPropertyHeading();
 
     const verificationPreview = screen.getByTestId('property-verification-preview');
-    expect(screen.getByText('Qué ayuda a confiar rápido')).toBeDefined();
+    expect(screen.getByText('Qué ayuda a revisar rápido')).toBeDefined();
     expect(within(verificationPreview).getAllByRole('listitem')).toHaveLength(3);
     expect(within(verificationPreview).getByText('Datos básicos')).toBeDefined();
     expect(within(verificationPreview).getByText('Ubicación')).toBeDefined();
@@ -530,7 +530,7 @@ describe('PropertyDetail', () => {
 
     await waitForPropertyHeading();
 
-    expect(screen.getByText('Qué ayuda a confiar rápido')).toBeDefined();
+    expect(screen.getByText('Qué ayuda a revisar rápido')).toBeDefined();
     const verificationPreview = screen.getByTestId('property-verification-preview');
     expect(within(verificationPreview).getAllByRole('listitem')).toHaveLength(3);
     expect(within(verificationPreview).getByText('Ubicación')).toBeDefined();
