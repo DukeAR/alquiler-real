@@ -11,12 +11,12 @@ type ExploreHeroProps = {
   onLocationSelect: (location: LocationSuggestion) => void;
 };
 
-const heroSubtitle = 'Elegí con información real antes de reservar.';
+const heroSubtitle = 'Elegí con información real antes de reservar. Mirá qué ya está comprobado antes de abrir una ficha.';
 const heroBackgroundImage = 'https://images.unsplash.com/photo-1500375592092-40eb2168fd21?auto=format&fit=crop&w=1800&q=80';
 const valueProofItems = [
-  'Ubicación',
-  'Anfitrión',
-  'Datos',
+  'Ubicación real',
+  'Anfitrión visible',
+  'Datos comprobados',
 ] as const;
 
 export const ExploreHero = ({
@@ -72,7 +72,7 @@ export const ExploreHero = ({
             <div className="space-y-2">
               <p className="app-eyebrow text-slate-500">Buscador principal</p>
               <p className="mx-auto max-w-[31rem] text-sm leading-6 text-slate-700">
-                Ingresá una zona y empezá por avisos con respaldo visible.
+                Ingresá una zona y empezá por avisos que ya muestran ubicación, anfitrión y datos comprobados.
               </p>
             </div>
 

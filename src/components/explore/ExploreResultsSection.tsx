@@ -114,40 +114,40 @@ export const ExploreResultsSection = ({
   const listingHeading = hasActiveFilters
     ? 'Resultados para revisar'
     : showFeaturedSection
-      ? 'Más opciones'
-      : 'Opciones para revisar';
+      ? 'Más para comparar'
+      : 'Opciones para comparar';
   const listingDescription = loading
     ? 'Estamos actualizando los avisos disponibles.'
     : hasActiveFilters
-      ? `${formatPropertyCount(listingProperties.length)} para revisar en esta búsqueda.`
+      ? `${formatPropertyCount(listingProperties.length)} para comparar en esta búsqueda.`
       : listingProperties.length > 0
         ? showFeaturedSection
-          ? `${formatPropertyCount(listingProperties.length)} para seguir comparando sin cambiar el criterio.`
-          : `${formatPropertyCount(listingProperties.length)} para revisar con este criterio.`
+          ? `${formatPropertyCount(listingProperties.length)} para seguir comparando sin perder este criterio.`
+          : `${formatPropertyCount(listingProperties.length)} para comparar con este criterio.`
         : 'No hay más propiedades para revisar por ahora.';
   const sortPresentation = getSortPresentation(sortBy);
   const featuredInsightCards = [
     {
       key: 'sort',
       icon: <Icons.Target className="h-4 w-4" />,
-      label: 'Orden inicial',
+      label: 'Qué priorizamos',
       value: sortPresentation.label,
       helper: sortPresentation.helper,
     },
     {
       key: 'confidence',
       icon: <Icons.ShieldCheck className="h-4 w-4" />,
-      label: 'Lectura rápida',
-      value: 'Confianza visible',
-      helper: 'Cada ficha ya resume ubicación, anfitrión o datos clave cuando existen validaciones visibles.',
+      label: 'Qué ya ves',
+      value: 'Precio, tamaño y respaldo',
+      helper: 'Cada ficha ya resume ubicación, capacidad y señales visibles sin obligarte a abrirla.',
     },
     {
       key: 'compare',
       icon: <Icons.LayoutGrid className="h-4 w-4" />,
-      label: 'Para comparar',
-      value: loading ? 'Actualizando' : `${featuredCount + visibleCount} visibles`,
+      label: 'Para seguir',
+      value: loading ? 'Actualizando' : `${featuredCount + visibleCount} para comparar`,
       helper: remainingResults > 0
-        ? `Quedan ${remainingResults} más para seguir abriendo sin cambiar el criterio.`
+        ? `Quedan ${remainingResults} más para seguir comparando con el mismo criterio.`
         : 'Ya estás viendo todo lo disponible con este criterio.',
     },
   ];
@@ -155,8 +155,8 @@ export const ExploreResultsSection = ({
     {
       key: 'results',
       icon: <Icons.Home className="h-4 w-4" />,
-      label: 'En pantalla',
-      value: `${visibleCount} visibles`,
+      label: 'Ya visibles',
+      value: `${visibleCount} para comparar`,
       helper: remainingResults > 0
         ? `Todavía quedan ${remainingResults} resultados para revisar.`
         : 'Ya abriste todo lo disponible en esta búsqueda.',
@@ -164,7 +164,7 @@ export const ExploreResultsSection = ({
     {
       key: 'criteria',
       icon: <Icons.SlidersHorizontal className="h-4 w-4" />,
-      label: 'Criterio activo',
+      label: 'Orden actual',
       value: sortPresentation.label,
       helper: hasActiveFilters
         ? `${appliedFilterCount} ${appliedFilterCount === 1 ? 'filtro activo' : 'filtros activos'} afinando esta lista.`
@@ -173,9 +173,9 @@ export const ExploreResultsSection = ({
     {
       key: 'trust',
       icon: <Icons.Sparkles className="h-4 w-4" />,
-      label: 'Qué ya ves',
-      value: 'Señales concretas',
-      helper: 'Las cards muestran respaldo visible sin obligarte a entrar a cada detalle para entender si inspira confianza.',
+      label: 'Qué resuelve la card',
+      value: 'Contexto antes de entrar',
+      helper: 'Precio, capacidad y respaldo visible ya aparecen acá para descartar o abrir más rápido.',
     },
   ];
 
@@ -366,10 +366,10 @@ export const ExploreResultsSection = ({
                 description={loading
                   ? 'Estamos ordenando las primeras opciones.'
                   : sortBy === 'price'
-                    ? 'Acá aparecen primero las más baratas y, si empatan, priorizamos las que muestran más información visible.'
+                    ? 'Acá ves primero las más baratas y, si empatan, las que más rápido dejan leer precio, tamaño y respaldo.'
                     : sortBy === 'rating'
-                      ? 'Acá aparecen primero las mejor valoradas y, si empatan, las que muestran más información visible.'
-                      : 'Acá aparecen primero las que muestran más información visible para decidir más rápido.'}
+                      ? 'Acá ves primero las mejor valoradas y, si empatan, las fichas que mejor muestran respaldo visible.'
+                      : 'Acá aparecen primero las que más rápido te dejan medir precio, capacidad y respaldo visible.'}
                 className="mt-4 max-w-2xl"
               />
 

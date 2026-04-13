@@ -1117,6 +1117,7 @@ describe('SecureChat', () => {
     expect(await screen.findByText(/Reserva confirmada/)).toBeInTheDocument();
     expect(screen.getByText('Estado: Confirmada')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Coordinar llegada/i })).toBeInTheDocument();
+    expect(screen.queryByText('Propuesta enviada')).not.toBeInTheDocument();
     expect(showToastMock).toHaveBeenCalledWith(
       'Reserva confirmada',
       'La reserva ya quedó confirmada. Ahora solo falta coordinar la llegada.',

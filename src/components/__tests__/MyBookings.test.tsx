@@ -204,7 +204,7 @@ describe('MyBookings', () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText('Tus próximos pasos, tus estadías y tus chats en un solo lugar.')).toBeInTheDocument();
+    expect(await screen.findByText('Tus reservas, tus chats y tu próximo paso en un solo lugar.')).toBeInTheDocument();
     expect(screen.getByText('Solicitudes pendientes')).toBeInTheDocument();
     expect(screen.getByText('Reservas activas')).toBeInTheDocument();
     expect(screen.getByText('Chats para retomar')).toBeInTheDocument();
@@ -409,7 +409,7 @@ describe('MyBookings', () => {
 
     expect(await screen.findAllByText('Pendiente seña')).not.toHaveLength(0);
     expect(
-      await screen.findByText(/Falta el pago para que quede registrada\./i)
+      await screen.findByText(/Falta el pago para dejarla registrada\./i)
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Pagar seña/i })).toBeInTheDocument();
 

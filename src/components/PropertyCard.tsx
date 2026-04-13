@@ -233,7 +233,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
                 'text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500',
                 shouldEmphasizeVerification && 'text-emerald-700',
               )}>
-                Lo que ya está validado
+                Lo que ya podés comprobar
               </p>
 
               <span className={cn(
@@ -243,6 +243,13 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
                 <Icons.ShieldCheck className="h-4 w-4" />
               </span>
             </div>
+
+            <p className={cn(
+              'text-sm font-semibold tracking-tight text-slate-950',
+              shouldEmphasizeVerification && 'text-emerald-900',
+            )}>
+              {verificationBadge.label}
+            </p>
 
             {verificationHighlights.length > 0 ? (
               <div className={cn('grid gap-2', verificationGridClassName)}>
@@ -279,8 +286,9 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           {onClick ? (
             <span
               aria-hidden="true"
-              className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200/90 bg-white text-slate-700 shadow-[0_12px_24px_-18px_rgba(15,23,42,0.18)] transition-[transform,border-color,color,box-shadow] duration-150 group-hover:translate-x-0.5 group-hover:border-slate-300 group-hover:text-slate-950 group-hover:shadow-[0_16px_28px_-22px_rgba(15,23,42,0.22)]"
+              className="inline-flex h-11 items-center gap-2 rounded-full border border-slate-200/90 bg-white px-4 text-slate-700 shadow-[0_12px_24px_-18px_rgba(15,23,42,0.18)] transition-[transform,border-color,color,box-shadow] duration-150 group-hover:translate-x-0.5 group-hover:border-slate-300 group-hover:text-slate-950 group-hover:shadow-[0_16px_28px_-22px_rgba(15,23,42,0.22)]"
             >
+              <span className="text-[11px] font-semibold uppercase tracking-[0.12em]">Abrir ficha</span>
               <Icons.ArrowRight className="h-4 w-4" />
             </span>
           ) : null}

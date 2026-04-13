@@ -98,9 +98,9 @@ describe('ExploreResultsSection', () => {
     renderSection();
 
     expect(screen.getByRole('heading', { name: 'Empezá por las más completas' })).toBeInTheDocument();
-    expect(screen.getByText('Acá aparecen primero las que muestran más información visible para decidir más rápido.')).toBeInTheDocument();
+    expect(screen.getByText('Acá aparecen primero las que más rápido te dejan medir precio, capacidad y respaldo visible.')).toBeInTheDocument();
     expect(screen.getByText('Más comprobado')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Más opciones' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Más para comparar' })).toBeInTheDocument();
     expect(screen.getByText('Casa frente al mar')).toBeInTheDocument();
     expect(screen.getByText('Departamento luminoso')).toBeInTheDocument();
     expect(screen.queryByText('Cabaña entre pinos')).toBeInTheDocument();

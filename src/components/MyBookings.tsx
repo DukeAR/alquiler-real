@@ -814,7 +814,7 @@ export const MyBookings = () => {
     id: `contract-${contractActionBooking.id}`,
     eyebrow: 'Antes de viajar',
     title: `Revisá las condiciones de ${contractActionBooking.propertyTitle || 'tu reserva'}`,
-    description: 'Te conviene dejar aceptadas las condiciones para tener todo el acuerdo ordenado dentro de la reserva.',
+    description: 'Dejá aceptadas las condiciones para que todo el acuerdo quede ordenado dentro de la reserva.',
     actionLabel: 'Abrir condiciones',
     icon: <Icons.FileText className="h-5 w-5" />,
     onAction: () => openContract(contractActionBooking),
@@ -827,8 +827,8 @@ export const MyBookings = () => {
       ? `Elegí cómo resolver la seña de ${depositActionBooking.propertyTitle || 'esta reserva'}`
       : `Pagá la seña de ${depositActionBooking.propertyTitle || 'esta reserva'}`,
     description: getBookingFlow(depositActionBooking).stage === 'deposit-choice'
-      ? 'El anfitrión ya aceptó la solicitud. Ahora podés definir si dejás la seña registrada acá o si la coordinás por fuera.'
-      : 'El anfitrión ya aceptó la solicitud y elegiste resolver la seña en la app. Falta el pago para que quede registrada.',
+      ? 'El anfitrión ya aceptó. Ahora definís si la seña queda registrada acá o si la coordinan por fuera.'
+      : 'Ya eligieron resolver la seña en la app. Falta el pago para dejarla registrada.',
     actionLabel: 'Ver solicitud',
     icon: <Icons.ShieldCheck className="h-5 w-5" />,
     onAction: () => scrollToBooking(depositActionBooking.id),
@@ -838,7 +838,7 @@ export const MyBookings = () => {
     id: `pending-${pendingResponseBooking.id}`,
     eyebrow: 'Seguimiento',
     title: `Retomá la solicitud de ${pendingResponseBooking.propertyTitle || 'esta propiedad'}`,
-    description: 'Todavía sigue en curso. Entrá a la reserva para ver el estado, la ventana de cancelación y el chat vinculado.',
+    description: 'Entrá a la reserva para ver el estado, la ventana de cancelación y el chat vinculado.',
     actionLabel: 'Ver solicitud',
     icon: <Icons.MessageSquare className="h-5 w-5" />,
     onAction: () => scrollToBooking(pendingResponseBooking.id),
@@ -864,7 +864,7 @@ export const MyBookings = () => {
     id: `saved-${usefulSavedProperties[0].id}`,
     eyebrow: 'Guardados útiles',
     title: `Volvé a ${usefulSavedProperties[0].title}`,
-    description: 'Lo dejamos arriba porque ya muestra más información validada y te sirve para comparar rápido con lo que ya reservaste.',
+    description: 'Ya muestra más información validada y te sirve para comparar rápido con lo que ya reservaste.',
     actionLabel: 'Ver guardado',
     icon: <Icons.Heart className="h-5 w-5" />,
     onAction: () => navigate(`/detail/${usefulSavedProperties[0].id}`),
@@ -874,7 +874,7 @@ export const MyBookings = () => {
     id: `conversation-${relevantConversations[0].id}`,
     eyebrow: 'Conversación activa',
     title: `Retomá el chat de ${relevantConversations[0].propertyTitle || 'esta propiedad'}`,
-    description: 'Quedó actividad reciente y te conviene seguir desde la conversación para no perder el contexto de la reserva.',
+    description: 'Quedó actividad reciente y conviene seguir desde la conversación para no perder el contexto.',
     actionLabel: 'Abrir chat',
     icon: <Icons.MessageSquare className="h-5 w-5" />,
     onAction: () => navigate(`/chat/${relevantConversations[0].id}`),
@@ -981,21 +981,17 @@ export const MyBookings = () => {
             <div className="min-w-[12rem] rounded-[24px] border border-slate-200/80 bg-slate-50/80 px-4 py-4 text-left dark:border-slate-700 dark:bg-slate-800/60 lg:text-right">
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Costo total</p>
               <p className="mt-2 text-2xl font-semibold tracking-tight text-brand">{formatCurrency(booking.totalPrice)}</p>
-              <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">Próximo paso: {getReservationNextStepDisplayLabel(bookingFlow)}</p>
+              <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">Etapa: {bookingFlow.statusLabel || getBookingStatusText(booking)}</p>
             </div>
           </div>
 
-          <div className="grid gap-3 md:grid-cols-3">
+          <div className="grid gap-3 md:grid-cols-2">
             <div className="rounded-[24px] border border-slate-200/80 bg-white/90 px-4 py-4 dark:border-slate-800 dark:bg-slate-950/30">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Estado actual</p>
-              <p className="mt-2 text-sm font-semibold text-slate-950 dark:text-slate-50">{bookingFlow.statusLabel || getBookingStatusText(booking)}</p>
-            </div>
-            <div className="rounded-[24px] border border-slate-200/80 bg-white/90 px-4 py-4 dark:border-slate-800 dark:bg-slate-950/30">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Actúa ahora</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Quién sigue</p>
               <p className="mt-2 text-sm font-semibold text-slate-950 dark:text-slate-50">{getReservationNextActorDisplayLabel(bookingFlow)}</p>
             </div>
             <div className="rounded-[24px] border border-slate-200/80 bg-white/90 px-4 py-4 dark:border-slate-800 dark:bg-slate-950/30">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Próximo paso</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Qué conviene hacer</p>
               <p className="mt-2 text-sm font-semibold text-slate-950 dark:text-slate-50">{getReservationNextStepDisplayLabel(bookingFlow)}</p>
             </div>
           </div>
@@ -1354,8 +1350,8 @@ export const MyBookings = () => {
               <div className="space-y-5">
                 <SectionTitle
                   eyebrow="Mis reservas"
-                  heading="Tus próximos pasos, tus estadías y tus chats en un solo lugar."
-                  description="El panel ahora prioriza lo que tenés abierto, lo que conviene resolver primero y lo que vale la pena retomar sin mezclar estados ni repetir información."
+                  heading="Tus reservas, tus chats y tu próximo paso en un solo lugar."
+                  description="Entrás y ya ves qué mover primero, qué chat retomar y qué guardado vale volver a mirar."
                   as="h1"
                   visualLevel="h2"
                   className="max-w-3xl"
@@ -1463,7 +1459,7 @@ export const MyBookings = () => {
             <SectionTitle
               eyebrow="Qué conviene hacer ahora"
               heading="Priorizamos lo que te mueve una reserva de verdad."
-              description="Estas acciones salen del estado real de tus reservas, tus chats y tus guardados para que no tengas que reconstruir el contexto cada vez que entrás."
+              description="Estas acciones salen del estado real de tus reservas, tus chats y tus guardados para ahorrarte reconstruir contexto cada vez que entrás."
               as="h2"
               visualLevel="h3"
               className="max-w-3xl"
@@ -1481,8 +1477,8 @@ export const MyBookings = () => {
           <div className="flex flex-wrap items-end justify-between gap-4">
             <SectionTitle
               eyebrow="Mis reservas"
-              heading="Cada reserva en el tramo donde realmente está."
-              description="Separamos solicitudes, reservas ya aceptadas, próximas estadías y cierres para que cada fila te diga propiedad, fechas, estado y siguiente paso sin repetir bloques ni métricas inútiles."
+              heading="Cada reserva, en su etapa real."
+              description="Cada fila te muestra propiedad, fechas, quién sigue y qué conviene hacer ahora sin repetir bloques inútiles."
               as="h2"
               visualLevel="h3"
               className="max-w-3xl"
@@ -1505,7 +1501,7 @@ export const MyBookings = () => {
             <div className="grid gap-4">
               <BookingGroup
                 title="Solicitudes enviadas"
-                description="Lo que todavía espera respuesta, pago de seña o confirmación dentro del flujo de reserva."
+                description="Esperan respuesta, una decisión sobre la seña o una confirmación dentro del flujo."
                 count={sortedRequestBookings.length}
                 emptyText="No hay solicitudes abiertas ahora."
               >
@@ -1514,7 +1510,7 @@ export const MyBookings = () => {
 
               <BookingGroup
                 title="Reservas aceptadas"
-                description="Reservas activas que ya están encaminadas, pero todavía no entraron en la ventana de ingreso."
+                description="Ya están encaminadas, pero todavía no entraron en tramo de llegada."
                 count={sortedAcceptedBookings.length}
                 emptyText="No hay reservas aceptadas fuera de la ventana de ingreso."
               >
@@ -1523,7 +1519,7 @@ export const MyBookings = () => {
 
               <BookingGroup
                 title="Próximas estadías"
-                description="Ingresos cercanos o estadías en curso que piden coordinación, confirmación o seguimiento fino."
+                description="Piden coordinación fina, confirmación o seguimiento del ingreso."
                 count={sortedUpcomingBookings.length}
                 emptyText="No hay ingresos cercanos para resolver ahora."
               >
@@ -1532,7 +1528,7 @@ export const MyBookings = () => {
 
               <BookingGroup
                 title="Finalizadas"
-                description="Reservas cerradas o canceladas que conviene dejar visibles para revisar el cierre y el historial."
+                description="Quedan visibles para revisar cierre, historial o cancelaciones."
                 count={sortedClosedBookings.length}
                 emptyText="Todavía no tenés reservas cerradas."
               >

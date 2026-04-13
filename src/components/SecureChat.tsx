@@ -1119,6 +1119,9 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
   const reservationProgressHint = isTenantConversation
     ? arrivalActionsHint ?? flowCopy?.trackingHint ?? null
     : flowCopy?.trackingHint ?? arrivalActionsHint ?? null;
+  const isReservationConfirmedStage = Boolean(
+    flowCopy?.stage === 'reservation-confirmed' || flowCopy?.stage === 'protected-deposit-released',
+  );
   const arrivalCoordinationDraft = isTenantConversation
     ? '¿Qué horario de llegada te queda mejor?'
     : 'Si querés, definimos ahora el horario de llegada.';
@@ -1130,6 +1133,23 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
     || canReportArrivalProblem
     || canCoordinateArrival,
   );
+  const chatContextHelper = isReservationConfirmedStage || canCoordinateArrival
+    ? 'La reserva ya está cerrada. Usá este chat para coordinar llegada, acceso y últimos detalles.'
+    : canConfirmArrival || canReportArrivalProblem
+      ? 'Hoy ya podés confirmar cómo salió el ingreso o avisar si hubo un problema.'
+      : canPayProtectedDeposit
+        ? 'Si quieren cerrarlo ahora, la seña queda registrada desde esta conversación.'
+        : showDepositChoiceBlock
+          ? 'Acá definen cómo sigue la seña y qué parte queda registrada dentro de la app.'
+          : canAcceptRequest
+            ? 'Ya tenés el contexto para decidir si avanzan o no con esta reserva.'
+            : flowCopy?.stage === 'request-pending'
+              ? isTenantConversation
+                ? 'Tu propuesta ya está enviada. Cuando respondan, el siguiente paso aparece acá.'
+                : null
+              : flowCopy?.stage === 'request-not-advanced'
+                ? 'La reserva no avanzó, pero el chat sigue abierto si quieren recoordinar.'
+                : reservationProgressHint;
 
   useEffect(() => {
     if (!activeConv || !suggestedFirstMessage || loadedMessagesConversationId !== activeConv.id) {
@@ -1261,10 +1281,31 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
   })();
   const threadMessages = sortThreadTimeline([...messages, ...fallbackSystemMessages, ...derivedSafetyMessages]);
   const inlineThreadNotices: InlineThreadNotice[] = [];
-  const showReservationConfirmedState = Boolean(
-    flowCopy?.stage === 'reservation-confirmed' || flowCopy?.stage === 'protected-deposit-released',
-  );
+  const showReservationConfirmedState = isReservationConfirmedStage;
   const getSystemMessagePresentation = (message: Message): ThreadSystemMessagePresentation => {
+    if (message.system_key === 'request-sent' && flowCopy?.stage && flowCopy.stage !== 'request-pending') {
+      return {
+        content: message.content,
+        emphasis: 'pill',
+        hidden: true,
+      };
+    }
+
+    if (
+      message.system_key === 'request-accepted'
+      && flowCopy?.stage
+      && flowCopy.stage !== 'request-accepted'
+      && flowCopy.stage !== 'deposit-choice'
+      && flowCopy.stage !== 'protected-checkout-pending'
+      && flowCopy.stage !== 'external-deposit-pending'
+    ) {
+      return {
+        content: message.content,
+        emphasis: 'pill',
+        hidden: true,
+      };
+    }
+
     if (
       flowCopy?.stage === 'request-not-advanced'
       && (
@@ -1595,6 +1636,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
 
             <ChatContextBar
               summary={contextSummaryLine}
+              helper={chatContextHelper}
               status={compactReservationStatus ? { label: compactReservationStatus.label, tone: compactReservationStatus.tone } : null}
             />
 
@@ -1717,6 +1759,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
                     eyebrow="Reserva confirmada"
                     title="Todo listo para esas fechas"
                     description="Ya podés coordinar tranquilo la llegada por el chat"
+                    nextStep="Seguí por este chat para coordinar horario, llegada y acceso."
                   />
                 ) : null}
               </div>

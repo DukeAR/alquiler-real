@@ -322,7 +322,7 @@ describe('PropertyDetail', () => {
 
     expect(within(desktopContext).getByRole('button', { name: /consultar disponibilidad/i })).toBeDefined();
     expect(within(desktopContext).getByText('No estás reservando todavía')).toBeDefined();
-    expect(within(desktopContext).getByText('Elegí fechas para ver total y disponibilidad.')).toBeDefined();
+    expect(within(desktopContext).getByText('Revisá precio, zona y respaldo visible. Si te cierra, elegí fechas.')).toBeDefined();
 
     fireEvent.click(within(desktopContext).getByRole('button', { name: /consultar disponibilidad/i }));
 
@@ -338,9 +338,9 @@ describe('PropertyDetail', () => {
     const desktopContext = getDesktopBookingContext();
     const mobileContext = getMobileBookingSummary();
 
-    expect(within(desktopContext).getByText('Decisión rápida')).toBeDefined();
+    expect(within(desktopContext).getByText('Lo primero para decidir')).toBeDefined();
     expect(within(desktopContext).getByRole('button', { name: /consultar disponibilidad/i })).toBeDefined();
-    expect(within(desktopContext).getByText('Elegí fechas para ver total y disponibilidad.')).toBeDefined();
+    expect(within(desktopContext).getByText('Revisá precio, zona y respaldo visible. Si te cierra, elegí fechas.')).toBeDefined();
     expect(within(mobileContext).getByText('1 huésped · Total al elegir fechas')).toBeDefined();
     expect(within(mobileContext).getByRole('button', { name: /consultar disponibilidad/i })).toBeDefined();
     expect(within(mobileContext).getByText('No estás reservando todavía')).toBeDefined();
@@ -356,7 +356,7 @@ describe('PropertyDetail', () => {
     expect(within(bookingFlow).getByText('Consultar disponibilidad')).toBeDefined();
     expect(within(bookingFlow).getByText(/3 noches · 1 huésped ·/i)).toBeDefined();
     expect(within(bookingFlow).getAllByText(new RegExp('360')).length).toBeGreaterThan(0);
-    expect(within(desktopContext).getByText('Tu selección queda guardada mientras seguís revisando este lugar.')).toBeDefined();
+    expect(within(desktopContext).getByText('Tu selección queda guardada mientras terminás de decidir si este lugar te cierra.')).toBeDefined();
     expect(within(desktopContext).getByText(/\d{1,2} \w{3} al \d{1,2} \w{3}/i)).toBeDefined();
     expect(within(desktopContext).getAllByText('1 huésped').length).toBeGreaterThan(0);
     expect(within(desktopContext).getAllByText(new RegExp('360')).length).toBeGreaterThan(0);
@@ -428,11 +428,11 @@ describe('PropertyDetail', () => {
 
     await waitForPropertyHeading();
 
-    expect(screen.getByText('Decisión rápida')).toBeDefined();
-    expect(screen.getByText('Lo esencial del lugar')).toBeDefined();
-    expect(screen.getByText('Lo básico para saber si querés seguir con este lugar.')).toBeDefined();
+    expect(screen.getByText('Lo primero para decidir')).toBeDefined();
+    expect(screen.getByText('Lo esencial para decidir si seguís')).toBeDefined();
+    expect(screen.getByText('Lo básico del lugar para saber si vale elegir fechas o abrir chat.')).toBeDefined();
     expect(screen.queryByText('Comodidades ya detalladas')).toBeNull();
-    expect(screen.getByText('Qué ayuda a revisar rápido')).toBeDefined();
+    expect(screen.getByText('Lo que hoy te deja confiar más rápido')).toBeDefined();
     const verificationPreview = screen.getByTestId('property-verification-preview');
     expect(within(verificationPreview).getAllByRole('listitem')).toHaveLength(3);
     expect(within(verificationPreview).getByText('Ubicación')).toBeDefined();
@@ -482,13 +482,13 @@ describe('PropertyDetail', () => {
     await waitForPropertyHeading();
 
     const verificationPreview = screen.getByTestId('property-verification-preview');
-    expect(screen.getByText('Qué ayuda a revisar rápido')).toBeDefined();
+    expect(screen.getByText('Lo que hoy te deja confiar más rápido')).toBeDefined();
     expect(within(verificationPreview).getAllByRole('listitem')).toHaveLength(3);
     expect(within(verificationPreview).getByText('Datos básicos')).toBeDefined();
     expect(within(verificationPreview).getByText('Ubicación')).toBeDefined();
     expect(within(verificationPreview).getByText('5 reseñas reales')).toBeDefined();
     expect(within(verificationPreview).queryByText('4 de 5 comprobaciones')).toBeNull();
-    expect(screen.getByText('Qué ayuda a revisar rápido')).toBeDefined();
+    expect(screen.getByText('Lo que hoy te deja confiar más rápido')).toBeDefined();
     expect(screen.getAllByText('4 de 5 comprobaciones').length).toBeGreaterThan(0);
     expect(screen.getByText('Mostramos solo comprobaciones visibles que ayudan a decidir rápido.')).toBeDefined();
   });
@@ -530,7 +530,7 @@ describe('PropertyDetail', () => {
 
     await waitForPropertyHeading();
 
-    expect(screen.getByText('Qué ayuda a revisar rápido')).toBeDefined();
+    expect(screen.getByText('Lo que hoy te deja confiar más rápido')).toBeDefined();
     const verificationPreview = screen.getByTestId('property-verification-preview');
     expect(within(verificationPreview).getAllByRole('listitem')).toHaveLength(3);
     expect(within(verificationPreview).getByText('Ubicación')).toBeDefined();
@@ -539,7 +539,7 @@ describe('PropertyDetail', () => {
     expect(within(verificationPreview).getByText('5 reseñas reales')).toBeDefined();
     expect(within(verificationPreview).getByText('6 reservas cerradas')).toBeDefined();
     expect(within(verificationPreview).queryByText('1 de 5 comprobaciones')).toBeNull();
-    expect(screen.getByText('Qué ayuda a revisar rápido')).toBeDefined();
+    expect(screen.getByText('Lo que hoy te deja confiar más rápido')).toBeDefined();
     expect(screen.getAllByText('1 de 5 comprobaciones').length).toBeGreaterThan(0);
   });
 

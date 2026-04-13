@@ -28,7 +28,6 @@ import { SectionTitle } from './ui/SectionTitle';
 import { TrustSignalsInline, getTrustSignalsFromInteractionHistory, getTrustSignalsFromItems, type TrustSignal } from './ui/TrustSignalsInline';
 import { VerificationMeter } from './ui/VerificationMeter';
 import { PropertyVerificationPanel } from './verification/PropertyVerificationPanel';
-import { PLATFORM_PROPERTY_DISCLAIMER } from '../lib/platformTerms';
 
 const FALLBACK = 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=1200&q=80&auto=format&fit=crop';
 
@@ -515,8 +514,8 @@ export const PropertyDetailShell: React.FC<{
   const bookingEntryCtaLabel = 'Consultar disponibilidad';
   const bookingEntryCtaNote = 'No estás reservando todavía';
   const bookingEntryHelperText = hasSelectedDates
-    ? 'Tu selección queda guardada mientras seguís revisando este lugar.'
-    : 'Elegí fechas para ver total y disponibilidad.';
+    ? 'Tu selección queda guardada mientras terminás de decidir si este lugar te cierra.'
+    : 'Revisá precio, zona y respaldo visible. Si te cierra, elegí fechas.';
   const mobilePrimaryActionLabel = bookingStep === 'dates'
     ? hasCompleteDates
       ? 'Seguir con huéspedes'
@@ -1104,7 +1103,7 @@ export const PropertyDetailShell: React.FC<{
           <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(320px,0.92fr)]">
             <div className="space-y-5">
               <div className="space-y-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Decisión rápida</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Lo primero para decidir</p>
                 <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
                   <div className="flex items-end gap-2">
                     <span className="text-[2.8rem] font-black tracking-tight text-slate-950 sm:text-[3rem]">{nightly ? formatCurrency(nightly) : '—'}</span>
@@ -1179,13 +1178,12 @@ export const PropertyDetailShell: React.FC<{
                 data-testid="property-verification-preview"
                 className="space-y-3 border-t border-slate-200/70 pt-4"
               >
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Qué ayuda a revisar rápido</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Lo que hoy te deja confiar más rápido</p>
                 <TrustSignalsInline
                   signals={topDecisionTrustSignals}
                   emptyText="Todavía no hay datos comprobados visibles en este aviso."
                   compact
                 />
-                <p className="text-xs leading-5 text-slate-500">{PLATFORM_PROPERTY_DISCLAIMER}</p>
               </section>
             </div>
           </div>
@@ -1196,8 +1194,8 @@ export const PropertyDetailShell: React.FC<{
             <div className="space-y-5">
               <SectionTitle
                 eyebrow="Lo esencial"
-                heading="Lo esencial del lugar"
-                description="Lo básico para saber si querés seguir con este lugar."
+                heading="Lo esencial para decidir si seguís"
+                description="Lo básico del lugar para saber si vale elegir fechas o abrir chat."
               />
               <p className="max-w-3xl text-base leading-8 text-slate-600">
                 {property.description || 'Todavía no hay descripción disponible.'}
@@ -1276,7 +1274,7 @@ export const PropertyDetailShell: React.FC<{
               <SectionTitle
                 eyebrow="Opiniones"
                 heading={reviewCount > 0 ? `${reviewCount} ${reviewCount === 1 ? 'opinión visible' : 'opiniones visibles'}` : 'Opiniones del lugar'}
-                description="Mostramos comentarios de estadías reales para dar contexto, no para prometer una experiencia sin problemas."
+                description="Comentarios de estadías reales que suman contexto antes de decidir."
               />
 
               {visibleReviews.length > 0 ? (
@@ -1331,7 +1329,7 @@ export const PropertyDetailShell: React.FC<{
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Reserva</p>
                     <h2 id="booking-flow-title" className="text-2xl font-semibold tracking-tight text-slate-950">Consultar disponibilidad</h2>
                     <p id="booking-flow-description" className="text-sm leading-6 text-slate-600">
-                      Elegí fechas y huéspedes sin salir de esta ficha. La seña se define después, si el anfitrión acepta.
+                      Elegí fechas y huéspedes desde esta ficha. La seña se define recién si el anfitrión acepta.
                     </p>
                   </div>
                   <Button
