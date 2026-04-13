@@ -16,12 +16,12 @@ describe('ExploreHero', () => {
     );
 
     expect(screen.getByRole('heading', { name: 'Reservar es fácil. Decidir bien no siempre.' })).toBeInTheDocument();
-    expect(screen.getByText('Información real para decidir mejor.')).toBeInTheDocument();
-    expect(screen.getByLabelText('Zona o ciudad')).toHaveAttribute('placeholder', '¿A dónde querés ir?');
-    expect(screen.getByText('Elegí con información real desde el primer vistazo.')).toBeInTheDocument();
+    expect(screen.getByText('Elegí con información real antes de reservar.')).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Destino' })).toHaveAttribute('placeholder', '¿A dónde querés ir?');
+    expect(screen.getByText('Ingresá una zona y empezá por avisos con respaldo visible.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Buscar alojamientos' })).toBeInTheDocument();
-    expect(screen.getByText('Ubicación verificada')).toBeInTheDocument();
-    expect(screen.getByText('Anfitrión identificado')).toBeInTheDocument();
-    expect(screen.getByText('Datos comprobados')).toBeInTheDocument();
+    expect(screen.getByText('Ubicación')).toBeInTheDocument();
+    expect(screen.getByText('Anfitrión')).toBeInTheDocument();
+    expect(screen.getByText('Datos')).toBeInTheDocument();
   });
 });

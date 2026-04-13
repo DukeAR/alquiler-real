@@ -5,6 +5,7 @@ import { cn, formatCurrency } from '../lib/utils';
 import { HIGH_VERIFICATION_HIGHLIGHT_MIN_SCORE, getPropertyVerificationBadge, getPropertyVerificationItems } from '../lib/propertyVerification';
 import { Property } from '../services/geminiService';
 import { Button } from './ui/Button';
+import { Badge } from './ui/Badge';
 import { Card } from './ui/Card';
 
 const normalizePropertyText = (value?: string) => (value ?? '')
@@ -52,14 +53,39 @@ const verificationHighlightPriority: Record<string, number> = {
 const verificationHighlightLabels: Record<string, string> = {
   location: 'Ubicación',
   identity: 'Anfitrión',
-  photos: 'Fotos',
-  video: 'Video',
+  photos: 'Datos',
+  video: 'Datos',
   basics: 'Datos',
 };
 
 const getVerificationHighlightLabel = (key: string, fallbackLabel: string) => (
   verificationHighlightLabels[key] || fallbackLabel
 );
+
+const getCompactVerificationHighlights = (property: Property) => {
+  const seenLabels = new Set<string>();
+
+  return getPropertyVerificationItems(property)
+    .filter((item) => item.status === 'complete')
+    .sort((left, right) => {
+      const leftPriority = verificationHighlightPriority[left.key] ?? Number.MAX_SAFE_INTEGER;
+      const rightPriority = verificationHighlightPriority[right.key] ?? Number.MAX_SAFE_INTEGER;
+
+      return leftPriority - rightPriority;
+    })
+    .reduce<Array<{ key: string; label: string }>>((accumulator, item) => {
+      const label = getVerificationHighlightLabel(item.key, item.label);
+
+      if (seenLabels.has(label)) {
+        return accumulator;
+      }
+
+      seenLabels.add(label);
+      accumulator.push({ key: item.key, label });
+      return accumulator;
+    }, [])
+    .slice(0, 3);
+};
 
 interface PropertyCardProps {
   property: Property;
@@ -93,19 +119,12 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   const verificationTagLabel = !isFavoritesVariant && verificationBadge.score >= HIGH_VERIFICATION_HIGHLIGHT_MIN_SCORE
     ? verificationGuidanceLabel || 'Más comprobado'
     : null;
-  const verificationHighlights = getPropertyVerificationItems(property)
-    .filter((item) => item.status === 'complete')
-    .sort((left, right) => {
-      const leftPriority = verificationHighlightPriority[left.key] ?? Number.MAX_SAFE_INTEGER;
-      const rightPriority = verificationHighlightPriority[right.key] ?? Number.MAX_SAFE_INTEGER;
-
-      return leftPriority - rightPriority;
-    })
-    .slice(0, 3)
-    .map((item) => ({
-      key: item.key,
-      label: getVerificationHighlightLabel(item.key, item.label),
-    }));
+  const verificationHighlights = getCompactVerificationHighlights(property);
+  const verificationGridClassName = verificationHighlights.length >= 3
+    ? 'grid-cols-3'
+    : verificationHighlights.length === 2
+      ? 'grid-cols-2'
+      : 'grid-cols-1';
 
   const handleFavoriteToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -137,8 +156,8 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
       onClick={onClick}
       onKeyDown={handleCardKeyDown}
       className={cn(
-        'group flex h-full flex-col overflow-hidden border-slate-200/80 bg-white/98 transition-[transform,box-shadow,border-color,background-color] duration-200 ease-out',
-        onClick && 'cursor-pointer hover:-translate-y-[2px] hover:border-slate-300/90 hover:shadow-[0_28px_48px_-34px_rgba(15,23,42,0.24)] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-brand/10',
+        'group flex h-full flex-col overflow-hidden border-[color:var(--app-surface-border)] bg-white shadow-[var(--app-shadow-subtle)] transition-[transform,box-shadow,border-color,background-color] duration-200 ease-out',
+        onClick && 'cursor-pointer hover:-translate-y-[3px] hover:border-[color:var(--app-surface-border-strong)] hover:shadow-[var(--app-shadow-raised)] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-brand/10',
         isFavoritesVariant && 'bg-white shadow-[var(--app-shadow-soft)]',
         className,
       )}
@@ -154,10 +173,10 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         
         <div className="absolute inset-x-0 top-0 flex items-start justify-between gap-3 p-4">
           {verificationTagLabel ? (
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/80 bg-white/96 px-3 py-1.5 text-[11px] font-semibold tracking-[0.01em] text-slate-800 shadow-[0_14px_26px_-22px_rgba(15,23,42,0.26)] backdrop-blur-sm">
+            <Badge variant="info" size="md" className="inline-flex items-center gap-1.5 border-white/75 bg-white/94 px-3 py-1.5 text-slate-800 shadow-[var(--app-shadow-subtle)] backdrop-blur-sm">
               <Icons.ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
               <span>{verificationTagLabel}</span>
-            </span>
+            </Badge>
           ) : (
             <span />
           )}
@@ -183,17 +202,17 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         </div>
       </div>
 
-      <div className="flex flex-1 flex-col gap-4 p-4 sm:p-5 md:p-6">
-        <div className="space-y-3">
+      <div className="flex flex-1 flex-col gap-5 p-5 sm:p-5 md:p-6">
+        <div className="space-y-3.5">
           <p className="eyebrow">{propertyTypeLabel}</p>
           <h3 className="section-title line-clamp-2 transition-colors duration-150 group-hover:text-slate-950">{property.title}</h3>
-          <div className="flex flex-wrap gap-2.5 body-sm text-muted">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200/80 bg-slate-50/85 px-3 py-1.5">
+          <div className="flex flex-wrap gap-2 body-sm text-muted">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200/80 bg-slate-50/90 px-3 py-1.5">
               <Icons.MapPin className="h-3.5 w-3.5 text-slate-400" />
               <span>{property.location}</span>
             </span>
             {guestCapacityLabel ? (
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200/80 bg-slate-50/85 px-3 py-1.5">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200/80 bg-slate-50/90 px-3 py-1.5">
                 <Icons.Users className="h-3.5 w-3.5 text-slate-400" />
                 <span>{guestCapacityLabel}</span>
               </span>
@@ -201,60 +220,68 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           </div>
         </div>
 
-        <div className="space-y-3">
-          <p className="text-[1.75rem] font-black leading-none tracking-[-0.045em] text-slate-950 md:text-[2rem]">
-            {formatCurrency(Number(property.price) || 0)}
-            {' '}
-            <span className="text-[12px] font-semibold uppercase tracking-[0.16em] text-slate-400">por noche</span>
-          </p>
-
-          <div
-            aria-label={verificationBadge.label}
-            className={cn(
-              'rounded-[calc(var(--app-radius-control)+2px)] border border-slate-200/85 bg-slate-50/85 p-3.5',
-              shouldEmphasizeVerification && 'border-emerald-200/80 bg-emerald-50/65',
-            )}
-          >
-            <div className="space-y-2.5">
+        <div
+          aria-label={verificationBadge.label}
+          className={cn(
+            'rounded-[calc(var(--app-radius-control)+2px)] border border-slate-200/85 bg-slate-50/72 p-3.5',
+            shouldEmphasizeVerification && 'border-emerald-200/80 bg-emerald-50/60',
+          )}
+        >
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
               <p className={cn(
                 'text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500',
                 shouldEmphasizeVerification && 'text-emerald-700',
               )}>
-                Validado en este aviso
+                Lo que ya está validado
               </p>
 
-              {verificationHighlights.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {verificationHighlights.map((item) => (
-                    <span
-                      key={item.key}
-                      className={cn(
-                        'inline-flex items-center gap-1.5 rounded-full border border-slate-200/90 bg-white px-3 py-1.5 text-[12px] font-semibold tracking-[-0.01em] text-slate-700',
-                        shouldEmphasizeVerification && 'border-emerald-200/90 text-emerald-800',
-                      )}
-                    >
-                      <Icons.Check className={cn(
-                        'h-3.5 w-3.5 text-emerald-600',
-                        shouldEmphasizeVerification && 'text-emerald-700',
-                      )} />
-                      <span>{item.label}</span>
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm leading-5 text-slate-600">Todavía sin validaciones visibles</p>
-              )}
+              <span className={cn(
+                'flex h-8 w-8 items-center justify-center rounded-full bg-white text-brand shadow-[0_10px_20px_-18px_rgba(15,23,42,0.22)]',
+                shouldEmphasizeVerification && 'text-emerald-700',
+              )}>
+                <Icons.ShieldCheck className="h-4 w-4" />
+              </span>
             </div>
+
+            {verificationHighlights.length > 0 ? (
+              <div className={cn('grid gap-2', verificationGridClassName)}>
+                {verificationHighlights.map((item) => (
+                  <span
+                    key={item.key}
+                    className={cn(
+                      'inline-flex min-h-10 items-center justify-center gap-1.5 rounded-[calc(var(--app-radius-control)-4px)] border border-slate-200/90 bg-white px-2.5 py-2 text-[12px] font-semibold tracking-[-0.01em] text-slate-700 shadow-[0_12px_20px_-20px_rgba(15,23,42,0.22)]',
+                      shouldEmphasizeVerification && 'border-emerald-200/90 text-emerald-800',
+                    )}
+                  >
+                    <Icons.Check className={cn(
+                      'h-3.5 w-3.5 text-emerald-600',
+                      shouldEmphasizeVerification && 'text-emerald-700',
+                    )} />
+                    <span>{item.label}</span>
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm leading-5 text-slate-600">Todavía sin validaciones visibles</p>
+            )}
           </div>
         </div>
 
-        <div className="mt-auto flex items-end justify-end pt-1">
+        <div className="mt-auto flex items-end justify-between gap-3 border-t border-slate-200/80 pt-4">
+          <div className="space-y-1.5">
+            <p className="text-[2rem] font-black leading-none tracking-[-0.045em] text-slate-950 md:text-[2.18rem]">
+              {formatCurrency(Number(property.price) || 0)}
+            </p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">por noche</p>
+          </div>
+
           {onClick ? (
             <span
               aria-hidden="true"
               className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200/90 bg-white text-slate-700 shadow-[0_12px_24px_-18px_rgba(15,23,42,0.18)] transition-[transform,border-color,color,box-shadow] duration-150 group-hover:translate-x-0.5 group-hover:border-slate-300 group-hover:text-slate-950 group-hover:shadow-[0_16px_28px_-22px_rgba(15,23,42,0.22)]"
             >
-                <Icons.ArrowRight className="h-4 w-4" />
+              <Icons.ArrowRight className="h-4 w-4" />
             </span>
           ) : null}
         </div>

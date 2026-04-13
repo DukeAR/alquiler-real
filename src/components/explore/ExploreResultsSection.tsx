@@ -139,7 +139,7 @@ export const ExploreResultsSection = ({
       icon: <Icons.ShieldCheck className="h-4 w-4" />,
       label: 'Lectura rápida',
       value: 'Confianza visible',
-      helper: 'Cada ficha ya resume ubicación, anfitrión o fotos cuando existen validaciones visibles.',
+      helper: 'Cada ficha ya resume ubicación, anfitrión o datos clave cuando existen validaciones visibles.',
     },
     {
       key: 'compare',

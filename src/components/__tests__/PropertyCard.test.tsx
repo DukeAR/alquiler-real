@@ -70,6 +70,8 @@ describe('PropertyCard', () => {
       />,
     );
 
+    const verificationBlock = screen.getByLabelText('4 de 5 comprobaciones');
+
     expect(screen.getByText('Casa frente al mar')).toBeInTheDocument();
     expect(screen.getByText('Casa')).toBeInTheDocument();
     expect(screen.getByText('Santa Teresita')).toBeInTheDocument();
@@ -79,11 +81,10 @@ describe('PropertyCard', () => {
     expect(screen.queryByText('4.8')).toBeNull();
     expect(screen.queryByText('12 reseñas')).toBeNull();
     expect(screen.getByText('Más comprobado')).toBeInTheDocument();
-    expect(screen.getByText('Validado en este aviso')).toBeInTheDocument();
-    expect(screen.getByText('Ubicación')).toBeInTheDocument();
-    expect(screen.getByText('Fotos')).toBeInTheDocument();
-    expect(screen.getByText('Anfitrión')).toBeInTheDocument();
-    expect(screen.getByLabelText('4 de 5 comprobaciones')).toBeInTheDocument();
+    expect(within(verificationBlock).getByText('Lo que ya está validado')).toBeInTheDocument();
+    expect(within(verificationBlock).getByText('Ubicación')).toBeInTheDocument();
+    expect(within(verificationBlock).getByText('Anfitrión')).toBeInTheDocument();
+    expect(within(verificationBlock).getByText('Datos')).toBeInTheDocument();
     expect(screen.queryByText('4 de 5 comprobaciones')).toBeNull();
     expect(screen.queryByText('✔✔✔✔○')).toBeNull();
     expect(screen.queryByText('Anfitrión con buen historial')).toBeNull();
@@ -106,11 +107,12 @@ describe('PropertyCard', () => {
       />,
     );
 
-    expect(screen.getByText('Ubicación')).toBeInTheDocument();
-    expect(screen.getByText('Anfitrión')).toBeInTheDocument();
-    expect(screen.getByText('Datos')).toBeInTheDocument();
-    expect(screen.queryByText('Fotos')).toBeNull();
-    expect(screen.getByLabelText('3 de 5 comprobaciones')).toBeInTheDocument();
+    const verificationBlock = screen.getByLabelText('3 de 5 comprobaciones');
+
+    expect(within(verificationBlock).getByText('Ubicación')).toBeInTheDocument();
+    expect(within(verificationBlock).getByText('Anfitrión')).toBeInTheDocument();
+    expect(within(verificationBlock).getByText('Datos')).toBeInTheDocument();
+    expect(within(verificationBlock).queryByText('Fotos')).toBeNull();
     expect(screen.queryByText('3 de 5 comprobaciones')).toBeNull();
     expect(screen.queryByText('Más comprobado')).toBeNull();
   });
@@ -147,7 +149,7 @@ describe('PropertyCard', () => {
     );
 
     expect(screen.getByText('Más comprobado')).toBeInTheDocument();
-    expect(screen.getByText('Fotos')).toBeInTheDocument();
+    expect(screen.getByText('Datos')).toBeInTheDocument();
   });
 
   test('makes the verification line slightly more visible without turning it into a heavy green block', () => {
@@ -161,17 +163,18 @@ describe('PropertyCard', () => {
     const verificationBlock = screen.getByLabelText('4 de 5 comprobaciones');
 
     expect(verificationBlock).toHaveClass('border-emerald-200/80');
-    expect(within(verificationBlock).getByText('Validado en este aviso')).toHaveClass('text-emerald-700');
+    expect(within(verificationBlock).getByText('Lo que ya está validado')).toHaveClass('text-emerald-700');
   });
 
   test('keeps the favorites variant free of Explore guidance labels', () => {
     render(<PropertyCard property={sampleProperty} variant="favorites" onClick={vi.fn()} />);
 
-    expect(screen.getByText('Validado en este aviso')).toBeInTheDocument();
-    expect(screen.getByText('Ubicación')).toBeInTheDocument();
-    expect(screen.getByText('Fotos')).toBeInTheDocument();
-    expect(screen.getByText('Anfitrión')).toBeInTheDocument();
-    expect(screen.getByLabelText('4 de 5 comprobaciones')).toBeInTheDocument();
+    const verificationBlock = screen.getByLabelText('4 de 5 comprobaciones');
+
+    expect(within(verificationBlock).getByText('Lo que ya está validado')).toBeInTheDocument();
+    expect(within(verificationBlock).getByText('Ubicación')).toBeInTheDocument();
+    expect(within(verificationBlock).getByText('Datos')).toBeInTheDocument();
+    expect(within(verificationBlock).getByText('Anfitrión')).toBeInTheDocument();
     expect(screen.queryByText('Más comprobado')).toBeNull();
     expect(screen.queryByText('Anfitrión con buen historial')).toBeNull();
     expect(screen.queryByText('Abrir detalle')).toBeNull();

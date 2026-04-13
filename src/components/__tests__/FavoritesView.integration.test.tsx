@@ -98,7 +98,7 @@ describe('FavoritesView integration', () => {
     expect(screen.getByLabelText('3 de 5 comprobaciones')).toBeInTheDocument();
     expect(screen.getAllByText('Ubicación')).toHaveLength(2);
     expect(screen.getAllByText('Anfitrión')).toHaveLength(2);
-    expect(screen.getByText('Fotos')).toBeInTheDocument();
+    expect(screen.getAllByText('Datos')).toHaveLength(2);
     expect(screen.queryByText('Mejor verificado')).toBeNull();
     expect(screen.queryByText('Alto nivel de verificación')).toBeNull();
     expect(screen.getAllByRole('button', { name: /Abrir detalle de/i })).toHaveLength(2);
