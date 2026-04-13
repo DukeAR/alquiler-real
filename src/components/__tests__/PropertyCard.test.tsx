@@ -70,8 +70,6 @@ describe('PropertyCard', () => {
       />,
     );
 
-    const verificationBlock = screen.getByLabelText('4 de 5 comprobaciones');
-
     expect(screen.getByText('Casa frente al mar')).toBeInTheDocument();
     expect(screen.getByText('Casa')).toBeInTheDocument();
     expect(screen.getByText('Santa Teresita')).toBeInTheDocument();
@@ -81,17 +79,16 @@ describe('PropertyCard', () => {
     expect(screen.queryByText('4.8')).toBeNull();
     expect(screen.queryByText('12 reseñas')).toBeNull();
     expect(screen.getByText('Más comprobado')).toBeInTheDocument();
-    expect(within(verificationBlock).getByText('Confianza visible')).toBeInTheDocument();
-    expect(within(verificationBlock).getByText('4 de 5 comprobaciones')).toBeInTheDocument();
-    const trustList = within(verificationBlock).getByRole('list', { name: 'Confianza visible' });
-    expect(within(trustList).getByText('Ubicación verificada')).toBeInTheDocument();
-    expect(within(trustList).getByText('Anfitrión identificado')).toBeInTheDocument();
-    expect(within(trustList).getByText('Datos comprobados')).toBeInTheDocument();
+    const trustLine = screen.getByTestId('property-card-trust-line');
+    expect(trustLine).toHaveTextContent('Ubicación verificada');
+    expect(within(trustLine).getByText(/^Anfitrión$/)).toBeInTheDocument();
+    expect(within(trustLine).getByText(/^Datos$/)).toBeInTheDocument();
+    expect(screen.queryByText('Confianza visible')).toBeNull();
     expect(screen.queryByText('✔✔✔✔○')).toBeNull();
     expect(screen.queryByText('Anfitrión con buen historial')).toBeNull();
     expect(screen.queryByText('12 reseñas reales')).toBeNull();
     expect(screen.queryByText('Anfitrión: Laura')).toBeNull();
-    expect(screen.getByText('Abrir ficha')).toBeInTheDocument();
+    expect(screen.queryByText('Abrir ficha')).toBeNull();
     expect(screen.queryByText('Ver detalle')).toBeNull();
     expect(screen.getByRole('button', { name: /Abrir detalle de Casa frente al mar/i })).toBeInTheDocument();
   });
@@ -111,11 +108,9 @@ describe('PropertyCard', () => {
 
     const verificationBlock = screen.getByLabelText('3 de 5 comprobaciones');
 
-    expect(within(verificationBlock).getByText('3 de 5 comprobaciones')).toBeInTheDocument();
-    const trustList = within(verificationBlock).getByRole('list', { name: 'Confianza visible' });
-    expect(within(trustList).getByText('Ubicación verificada')).toBeInTheDocument();
-    expect(within(trustList).getByText('Anfitrión identificado')).toBeInTheDocument();
-    expect(within(trustList).getByText('Datos comprobados')).toBeInTheDocument();
+    expect(verificationBlock).toHaveTextContent('Ubicación verificada');
+    expect(within(verificationBlock).getByText(/^Anfitrión$/)).toBeInTheDocument();
+    expect(within(verificationBlock).getByText(/^Datos$/)).toBeInTheDocument();
     expect(within(verificationBlock).queryByText('Fotos')).toBeNull();
     expect(screen.queryByText('Más comprobado')).toBeNull();
   });
@@ -141,7 +136,7 @@ describe('PropertyCard', () => {
     );
 
     expect(screen.queryByText('Anfitrión con buen historial')).toBeNull();
-    expect(screen.getByText('Anfitrión identificado')).toBeInTheDocument();
+    expect(screen.getByText(/^Anfitrión$/)).toBeInTheDocument();
   });
 
   test('shows the subtle high-verification badge automatically when the score reaches 4', () => {
@@ -152,7 +147,7 @@ describe('PropertyCard', () => {
     );
 
     expect(screen.getByText('Más comprobado')).toBeInTheDocument();
-    expect(screen.getByText('Datos comprobados')).toBeInTheDocument();
+    expect(screen.getByText(/^Datos$/)).toBeInTheDocument();
   });
 
   test('makes the verification line slightly more visible without turning it into a heavy green block', () => {
@@ -163,10 +158,9 @@ describe('PropertyCard', () => {
       />,
     );
 
-    const verificationBlock = screen.getByLabelText('4 de 5 comprobaciones');
+    const trustLine = screen.getByTestId('property-card-trust-line');
 
-    expect(verificationBlock).toHaveClass('border-emerald-200/80');
-    expect(within(verificationBlock).getByText('Confianza visible')).toHaveClass('text-emerald-700');
+    expect(trustLine).toHaveClass('text-emerald-800');
   });
 
   test('shows the featured badge and decision push line only when the card is highlighted as the best option', () => {
@@ -179,7 +173,7 @@ describe('PropertyCard', () => {
       />,
     );
 
-    expect(screen.getByText('Mejor opción para vos')).toBeInTheDocument();
+    expect(screen.getByText('Mejor opción')).toBeInTheDocument();
     expect(screen.getByText('Buena relación precio / información')).toBeInTheDocument();
     expect(screen.queryByText('Más comprobado')).toBeNull();
   });
@@ -189,16 +183,13 @@ describe('PropertyCard', () => {
 
     const verificationBlock = screen.getByLabelText('4 de 5 comprobaciones');
 
-    expect(within(verificationBlock).getByText('Confianza visible')).toBeInTheDocument();
-    expect(within(verificationBlock).getByText('4 de 5 comprobaciones')).toBeInTheDocument();
-    const trustList = within(verificationBlock).getByRole('list', { name: 'Confianza visible' });
-    expect(within(trustList).getByText('Ubicación verificada')).toBeInTheDocument();
-    expect(within(trustList).getByText('Datos comprobados')).toBeInTheDocument();
-    expect(within(trustList).getByText('Anfitrión identificado')).toBeInTheDocument();
+  expect(verificationBlock).toHaveTextContent('Ubicación verificada');
+  expect(within(verificationBlock).getByText(/^Datos$/)).toBeInTheDocument();
+  expect(within(verificationBlock).getByText(/^Anfitrión$/)).toBeInTheDocument();
     expect(screen.queryByText('Más comprobado')).toBeNull();
-    expect(screen.queryByText('Mejor opción para vos')).toBeNull();
+  expect(screen.queryByText('Mejor opción')).toBeNull();
     expect(screen.queryByText('Anfitrión con buen historial')).toBeNull();
-    expect(screen.getByText('Abrir ficha')).toBeInTheDocument();
+  expect(screen.queryByText('Abrir ficha')).toBeNull();
     expect(screen.queryByText('Abrir detalle')).toBeNull();
     expect(screen.queryByText('Ver detalle')).toBeNull();
     expect(screen.getByRole('button', { name: /Abrir detalle de Casa frente al mar/i })).toBeInTheDocument();

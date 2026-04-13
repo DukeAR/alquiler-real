@@ -20,7 +20,7 @@ vi.mock('../PropertyCard', () => ({
       <span>{property.title}</span>
       {verificationGuidanceLabel ? <span>{verificationGuidanceLabel}</span> : null}
       {emphasizeVerification ? <span>Verificación más visible</span> : null}
-      {decisionFeatured ? <span>Mejor opción para vos</span> : null}
+      {decisionFeatured ? <span>Mejor opción</span> : null}
       {decisionSupportLabel ? <span>{decisionSupportLabel}</span> : null}
     </div>
   ),
@@ -107,7 +107,7 @@ describe('ExploreResultsSection', () => {
     expect(screen.getByText('Acá aparecen primero las que más rápido te dejan medir precio, capacidad y respaldo visible.')).toBeInTheDocument();
     expect(screen.getByText('Más comprobado')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Más para comparar' })).toBeInTheDocument();
-    expect(screen.getAllByText('Mejor opción para vos')).toHaveLength(1);
+    expect(screen.getAllByText('Mejor opción')).toHaveLength(1);
     expect(screen.getByText(/Buena relación precio \/ información|De las más completas en este rango/)).toBeInTheDocument();
     expect(screen.getByText('Casa frente al mar')).toBeInTheDocument();
     expect(screen.getByText('Departamento luminoso')).toBeInTheDocument();

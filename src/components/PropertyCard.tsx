@@ -52,10 +52,10 @@ const verificationHighlightPriority: Record<string, number> = {
 
 const verificationHighlightLabels: Record<string, string> = {
   location: 'Ubicación verificada',
-  identity: 'Anfitrión identificado',
-  photos: 'Datos comprobados',
-  video: 'Datos comprobados',
-  basics: 'Datos comprobados',
+  identity: 'Anfitrión',
+  photos: 'Datos',
+  video: 'Datos',
+  basics: 'Datos',
 };
 
 const getVerificationHighlightLabel = (key: string, fallbackLabel: string) => (
@@ -125,9 +125,6 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
     ? verificationGuidanceLabel || 'Más comprobado'
     : null;
   const verificationHighlights = getCompactVerificationHighlights(property);
-  const verificationGridClassName = verificationHighlights.length >= 2
-      ? 'grid-cols-2'
-      : 'grid-cols-1';
 
   const handleFavoriteToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -161,7 +158,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
       className={cn(
         'group flex h-full flex-col overflow-hidden border-[color:var(--app-surface-border)] bg-white shadow-[var(--app-shadow-subtle)] transition-[transform,box-shadow,border-color,background-color] duration-200 ease-out',
         onClick && 'cursor-pointer hover:-translate-y-[3px] hover:border-[color:var(--app-surface-border-strong)] hover:shadow-[var(--app-shadow-raised)] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-brand/10',
-        isDecisionFeatured && 'border-brand/35 bg-[linear-gradient(180deg,rgba(255,255,255,1),rgba(248,250,252,0.98))] shadow-[0_24px_52px_-34px_rgba(67,56,202,0.32)]',
+        isDecisionFeatured && 'border-brand/20 shadow-[0_22px_42px_-32px_rgba(67,56,202,0.22)]',
         isFavoritesVariant && 'bg-white shadow-[var(--app-shadow-soft)]',
         className,
       )}
@@ -177,13 +174,11 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         
         <div className="absolute inset-x-0 top-0 flex items-start justify-between gap-3 p-4">
           {isDecisionFeatured ? (
-            <Badge variant="brand" size="md" className="inline-flex items-center gap-1.5 border-brand/10 bg-brand px-3 py-1.5 text-white shadow-[0_18px_34px_-24px_rgba(67,56,202,0.48)]">
-              <Icons.Sparkles className="h-3.5 w-3.5" />
-              <span>Mejor opción para vos</span>
+            <Badge variant="neutral" size="md" className="border-brand/15 bg-white/96 px-3 py-1.5 text-slate-950 shadow-[0_16px_30px_-24px_rgba(15,23,42,0.22)] backdrop-blur-sm">
+              <span>Mejor opción</span>
             </Badge>
           ) : verificationTagLabel ? (
-            <Badge variant="info" size="md" className="inline-flex items-center gap-1.5 border-white/75 bg-white/94 px-3 py-1.5 text-slate-800 shadow-[var(--app-shadow-subtle)] backdrop-blur-sm">
-              <Icons.ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
+            <Badge variant="neutral" size="md" className="border-white/75 bg-white/96 px-3 py-1.5 text-slate-900 shadow-[var(--app-shadow-subtle)] backdrop-blur-sm">
               <span>{verificationTagLabel}</span>
             </Badge>
           ) : (
@@ -211,111 +206,63 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         </div>
       </div>
 
-      <div className="flex flex-1 flex-col gap-5 p-5 sm:p-5 md:p-6">
-        <div className="space-y-3.5">
+      <div className="flex flex-1 flex-col gap-6 p-5 sm:p-5 md:p-6">
+        <div className="space-y-4">
           <p className="eyebrow">{propertyTypeLabel}</p>
           <h3 className="section-title line-clamp-2 transition-colors duration-150 group-hover:text-slate-950">{property.title}</h3>
-          <div className="flex flex-wrap gap-2 body-sm text-muted">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200/80 bg-slate-50/90 px-3 py-1.5">
+          <div className="flex flex-wrap items-center gap-y-1.5 text-sm leading-6 text-slate-600">
+            <span className="inline-flex items-center gap-1.5">
               <Icons.MapPin className="h-3.5 w-3.5 text-slate-400" />
               <span>{property.location}</span>
             </span>
             {guestCapacityLabel ? (
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200/80 bg-slate-50/90 px-3 py-1.5">
-                <Icons.Users className="h-3.5 w-3.5 text-slate-400" />
-                <span>{guestCapacityLabel}</span>
-              </span>
+              <>
+                <span aria-hidden="true" className="px-2 text-slate-300">·</span>
+                <span className="inline-flex items-center gap-1.5">
+                  <Icons.Users className="h-3.5 w-3.5 text-slate-400" />
+                  <span>{guestCapacityLabel}</span>
+                </span>
+              </>
             ) : null}
           </div>
         </div>
 
-        <div
-          aria-label={verificationBadge.label}
-          className={cn(
-            'rounded-[calc(var(--app-radius-control)+2px)] border border-slate-200/85 bg-slate-50/72 p-3.5',
-            shouldEmphasizeVerification && 'border-emerald-200/80 bg-emerald-50/60',
-            isDecisionFeatured && 'border-brand/15 bg-brand/5',
-          )}
-        >
-          <div className="space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <p className={cn(
-                'text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500',
-                shouldEmphasizeVerification && 'text-emerald-700',
-                isDecisionFeatured && 'text-brand',
-              )}>
-                Confianza visible
-              </p>
-
-              <span className={cn(
-                'inline-flex items-center gap-1.5 rounded-full border border-slate-200/90 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700 shadow-[0_10px_20px_-18px_rgba(15,23,42,0.22)]',
-                shouldEmphasizeVerification && 'border-emerald-200/90 text-emerald-800',
-                isDecisionFeatured && 'border-brand/15 text-brand',
-              )}>
-                <Icons.ShieldCheck className="h-3.5 w-3.5" />
-                <span>{verificationBadge.label}</span>
-              </span>
-            </div>
-
-            {verificationHighlights.length > 0 ? (
-              <ul aria-label="Confianza visible" className={cn('grid gap-2', verificationGridClassName)}>
-                {verificationHighlights.map((item, index) => (
-                  <li
-                    key={item.key}
-                    className={cn(
-                      'inline-flex min-h-[2.4rem] items-center gap-2 rounded-[calc(var(--app-radius-control)-4px)] border border-slate-200/90 bg-white px-2.5 py-2 text-[11px] font-semibold leading-4 tracking-[-0.01em] text-slate-700 shadow-[0_12px_20px_-20px_rgba(15,23,42,0.22)]',
-                      verificationHighlights.length === 3 && index === 2 && 'col-span-2',
-                      shouldEmphasizeVerification && 'border-emerald-200/90 text-emerald-800',
-                      isDecisionFeatured && 'border-brand/10 text-slate-800',
-                    )}
-                  >
-                    <span className={cn(
-                      'flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-700',
-                      isDecisionFeatured && 'bg-brand/10 text-brand',
-                    )}>
-                      <Icons.Check className="h-3 w-3" />
-                    </span>
-                    <span>{item.label}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm leading-5 text-slate-600">Todavía sin validaciones visibles</p>
-            )}
+        {verificationHighlights.length > 0 ? (
+          <div
+            data-testid="property-card-trust-line"
+            aria-label={verificationBadge.label}
+            className={cn('flex flex-wrap items-center gap-y-1.5 text-sm leading-6', shouldEmphasizeVerification && 'text-emerald-800')}
+          >
+            {verificationHighlights.map((item, index) => (
+              <React.Fragment key={item.key}>
+                {index > 0 ? <span aria-hidden="true" className="px-2 text-slate-300">·</span> : null}
+                <span className={cn('inline-flex items-center gap-1.5 font-medium text-slate-600', shouldEmphasizeVerification && 'text-emerald-800')}>
+                  <Icons.Check className={cn('h-3.5 w-3.5 shrink-0 text-emerald-600', shouldEmphasizeVerification && 'text-emerald-700')} />
+                  <span>{item.label}</span>
+                </span>
+              </React.Fragment>
+            ))}
           </div>
-        </div>
+        ) : (
+          <p data-testid="property-card-trust-line" aria-label={verificationBadge.label} className="text-sm leading-6 text-slate-600">Todavía sin validaciones visibles</p>
+        )}
 
         {!isFavoritesVariant && decisionSupportLabel ? (
           <p className={cn(
-            'rounded-[calc(var(--app-radius-control)+2px)] border px-3.5 py-2.5 text-sm font-semibold leading-5',
-            isDecisionFeatured
-              ? 'border-brand/15 bg-brand/5 text-slate-900'
-              : 'border-slate-200/85 bg-slate-50/80 text-slate-700',
+            'text-sm leading-6',
+            isDecisionFeatured ? 'font-medium text-slate-700' : 'text-slate-600',
           )}>
             {decisionSupportLabel}
           </p>
         ) : null}
 
-        <div className="mt-auto flex items-center justify-between gap-3 rounded-[24px] border border-slate-200/85 bg-slate-50/90 p-4 shadow-[0_16px_30px_-28px_rgba(15,23,42,0.22)]">
+        <div className="mt-auto border-t border-slate-200/70 pt-5">
           <div className="space-y-1">
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Por noche</p>
-            <p className="text-[2.2rem] font-black leading-none tracking-[-0.05em] text-slate-950 md:text-[2.38rem]">
+            <p className="text-[2.8rem] font-black leading-none tracking-[-0.06em] text-slate-950 md:text-[3rem]">
               {formatCurrency(Number(property.price) || 0)}
             </p>
           </div>
-
-          {onClick ? (
-            <span
-              aria-hidden="true"
-              className={cn(
-                'inline-flex h-11 items-center gap-2 rounded-full border border-slate-200/90 bg-white px-4 text-slate-900 shadow-[0_12px_24px_-18px_rgba(15,23,42,0.18)] transition-[transform,border-color,color,box-shadow] duration-150 group-hover:translate-x-0.5 group-hover:border-slate-300 group-hover:text-slate-950 group-hover:shadow-[0_16px_28px_-22px_rgba(15,23,42,0.22)]',
-                isDecisionFeatured && 'border-brand/15 text-slate-900',
-              )}
-            >
-              <span className="text-[11px] font-semibold uppercase tracking-[0.12em]">Abrir ficha</span>
-              <Icons.ArrowRight className="h-4 w-4" />
-            </span>
-          ) : null}
         </div>
       </div>
     </Card>
