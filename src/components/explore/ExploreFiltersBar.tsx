@@ -36,10 +36,10 @@ export const ExploreFiltersBar = ({
   onClear,
 }: ExploreFiltersBarProps) => {
   return (
-    <section className="border-t border-slate-300/60 pt-4 md:pt-5">
+    <section className="rounded-[var(--app-radius-card)] border border-slate-200/85 bg-white/94 p-4 shadow-[0_18px_38px_-34px_rgba(15,23,42,0.16)] sm:p-5">
       <div className="flex flex-col gap-3.5">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div className="grid w-full max-w-[18rem] grid-cols-2 items-center rounded-full border border-slate-200/80 bg-white/56 p-1">
+          <div className="grid w-full max-w-[18rem] grid-cols-2 items-center rounded-full border border-slate-200/80 bg-slate-100/85 p-1">
             {(['grid', 'map'] as const).map((mode) => (
               <button
                 key={mode}
@@ -49,7 +49,7 @@ export const ExploreFiltersBar = ({
                 className={cn(
                   'flex flex-1 items-center justify-center gap-2 rounded-full px-3 py-2.5 text-[11px] font-semibold uppercase tracking-[0.12em] transition-[background-color,color] duration-150',
                   viewMode === mode
-                    ? 'bg-white/92 text-slate-950'
+                    ? 'bg-white text-slate-950 shadow-[0_10px_20px_-18px_rgba(15,23,42,0.22)]'
                     : 'text-slate-700 hover:text-slate-950',
                 )}
               >
@@ -82,7 +82,7 @@ export const ExploreFiltersBar = ({
               aria-label="Ordenar por"
               value={sortBy}
               onChange={(event) => onSortChange(event.target.value as ExploreSort)}
-              className="app-control h-[3rem] min-w-0 rounded-[var(--app-radius-control)] border-[color:var(--app-surface-border)] bg-white/82 px-4 text-[0.94rem] font-semibold tracking-[-0.01em] text-slate-950 shadow-none"
+              className="app-control h-[3rem] min-w-0 rounded-[var(--app-radius-control)] border-[color:var(--app-surface-border)] bg-white px-4 text-[0.94rem] font-semibold tracking-[-0.01em] text-slate-950 shadow-none"
             >
               <option value="verification">Más información comprobada</option>
               <option value="rating">Mejor calificación</option>
@@ -102,7 +102,7 @@ export const ExploreFiltersBar = ({
                 onChange={(event) => onFiltersChange({ ...filters, minPrice: event.target.value })}
                 placeholder="Desde"
                 icon={<span className="text-xs font-medium">$</span>}
-                className="h-[3rem] min-w-0 rounded-[var(--app-radius-control)] border-[color:var(--app-surface-border)] bg-white/82 py-2.5 pl-9 pr-3 text-[0.94rem] font-semibold tracking-[-0.01em] text-slate-950 shadow-none placeholder:text-slate-500"
+                className="h-[3rem] min-w-0 rounded-[var(--app-radius-control)] border-[color:var(--app-surface-border)] bg-white py-2.5 pl-9 pr-3 text-[0.94rem] font-semibold tracking-[-0.01em] text-slate-950 shadow-none placeholder:text-slate-500"
               />
 
               <Input
@@ -112,7 +112,7 @@ export const ExploreFiltersBar = ({
                 onChange={(event) => onFiltersChange({ ...filters, maxPrice: event.target.value })}
                 placeholder="Hasta"
                 icon={<span className="text-xs font-medium">$</span>}
-                className="h-[3rem] min-w-0 rounded-[var(--app-radius-control)] border-[color:var(--app-surface-border)] bg-white/82 py-2.5 pl-9 pr-3 text-[0.94rem] font-semibold tracking-[-0.01em] text-slate-950 shadow-none placeholder:text-slate-500"
+                className="h-[3rem] min-w-0 rounded-[var(--app-radius-control)] border-[color:var(--app-surface-border)] bg-white py-2.5 pl-9 pr-3 text-[0.94rem] font-semibold tracking-[-0.01em] text-slate-950 shadow-none placeholder:text-slate-500"
               />
             </div>
           </div>
@@ -121,7 +121,7 @@ export const ExploreFiltersBar = ({
             'flex min-h-[3rem] min-w-0 items-center gap-3 rounded-[var(--app-radius-control)] border px-3.5 py-3 text-left transition-[border-color,background-color] duration-150',
             filters.verifiedOnly
               ? 'border-brand/20 bg-brand/6'
-              : 'border-[color:var(--app-surface-border)] bg-white/74',
+              : 'border-[color:var(--app-surface-border)] bg-white',
           )}>
             <span className={cn(
               'flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-brand',

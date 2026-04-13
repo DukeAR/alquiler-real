@@ -190,23 +190,23 @@ export const ExplorePage = () => {
   };
 
   return (
-    <div className="bg-[linear-gradient(180deg,#eef3f7_0%,#f7fafc_18%,#ffffff_34%,#ffffff_100%)] pb-14 md:pb-16">
+    <div className="bg-[linear-gradient(180deg,#eff4f8_0%,#f8fafc_18%,#ffffff_36%,#ffffff_100%)] pb-12 md:pb-14">
       <section className="relative overflow-hidden">
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
           <div
-            className="absolute inset-x-0 inset-y-[-10%] scale-[1.02] opacity-90"
+            className="absolute inset-x-0 inset-y-[-10%] scale-[1.02] opacity-95"
             style={{
               backgroundImage: `url(${heroBackgroundImage})`,
               backgroundSize: 'cover',
               backgroundPosition: 'center',
-              filter: 'blur(2px) saturate(0.9) contrast(0.98)',
+              filter: 'blur(2.5px) saturate(0.92) contrast(1)',
             }}
           />
-          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(248,250,252,0.95)_0%,rgba(248,250,252,0.92)_38%,rgba(248,250,252,0.72)_68%,rgba(248,250,252,0.82)_100%)]" />
-          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.16)_0%,rgba(248,250,252,0.36)_66%,rgba(255,255,255,0.72)_100%)]" />
+          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(248,250,252,0.9)_0%,rgba(248,250,252,0.84)_36%,rgba(248,250,252,0.58)_68%,rgba(248,250,252,0.72)_100%)]" />
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.12)_0%,rgba(248,250,252,0.22)_62%,rgba(255,255,255,0.54)_100%)]" />
         </div>
 
-        <div className="relative mx-auto flex w-full max-w-[74rem] flex-col gap-4 px-5 pb-5 pt-6 sm:px-6 md:gap-5 md:px-8 md:pb-6 md:pt-8 lg:pb-7 lg:pt-9">
+        <div className="relative mx-auto w-full max-w-[68.75rem] px-5 pb-7 pt-8 sm:px-6 md:px-8 md:pb-8 md:pt-10 lg:pb-9 lg:pt-12">
           <ExploreHero
             searchValue={searchInput}
             locationSuggestions={locationSuggestions}
@@ -215,21 +215,23 @@ export const ExplorePage = () => {
             onSearchSubmitValue={applySearchValue}
             onLocationSelect={handleLocationSelect}
           />
-
-          <ExploreFiltersBar
-            viewMode={viewMode}
-            onViewModeChange={setViewMode}
-            filters={filters}
-            sortBy={sortBy}
-            onSortChange={setSortBy}
-            onFiltersChange={setFilters}
-            hasActiveFilters={hasActiveFilters}
-            onClear={clearAllFilters}
-          />
         </div>
       </section>
 
-      <div className="mx-auto w-full max-w-[74rem] px-5 pt-4 sm:px-6 md:px-8 md:pt-5 lg:pt-6">
+      <div className="mx-auto w-full max-w-[68.75rem] px-5 sm:px-6 md:px-8">
+        <ExploreFiltersBar
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          filters={filters}
+          sortBy={sortBy}
+          onSortChange={setSortBy}
+          onFiltersChange={setFilters}
+          hasActiveFilters={hasActiveFilters}
+          onClear={clearAllFilters}
+        />
+      </div>
+
+      <div className="mx-auto w-full max-w-[68.75rem] px-5 pt-4 sm:px-6 md:px-8 md:pt-5">
         <ExploreResultsSection
           loading={loading}
           loadError={loadError}
