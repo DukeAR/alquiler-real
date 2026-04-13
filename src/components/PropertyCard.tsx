@@ -51,7 +51,7 @@ const verificationHighlightPriority: Record<string, number> = {
 };
 
 const verificationHighlightLabels: Record<string, string> = {
-  location: 'Ubicación verificada',
+  location: 'Ubicación',
   identity: 'Anfitrión',
   photos: 'Datos',
   video: 'Datos',

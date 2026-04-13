@@ -96,7 +96,7 @@ describe('FavoritesView integration', () => {
     ]);
     expect(screen.getByLabelText('4 de 5 comprobaciones')).toBeInTheDocument();
     expect(screen.getByLabelText('3 de 5 comprobaciones')).toBeInTheDocument();
-    expect(screen.getAllByText('Ubicación verificada')).toHaveLength(2);
+    expect(screen.getAllByText(/^Ubicación$/)).toHaveLength(2);
     expect(screen.getAllByText(/^Anfitrión$/)).toHaveLength(2);
     expect(screen.getAllByText(/^Datos$/)).toHaveLength(2);
     expect(screen.queryByText('Mejor verificado')).toBeNull();

@@ -104,7 +104,7 @@ describe('ExploreResultsSection', () => {
     renderSection();
 
     expect(screen.getByRole('heading', { name: 'Empezá por las más completas' })).toBeInTheDocument();
-    expect(screen.getByText('Precio, capacidad y respaldo en una sola lectura.')).toBeInTheDocument();
+    expect(screen.getByText('Precio, capacidad y respaldo en una sola mirada.')).toBeInTheDocument();
     expect(screen.getByText('Más comprobado')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Más para comparar' })).toBeInTheDocument();
     expect(screen.getAllByText('Mejor opción')).toHaveLength(1);
@@ -117,7 +117,6 @@ describe('ExploreResultsSection', () => {
   test('shows the subtle verification hint and emphasizes cards when the preference is active', () => {
     renderSection({ caresAboutVerification: true });
 
-    expect(screen.getByText('Estás priorizando avisos con más información comprobada')).toBeInTheDocument();
     expect(screen.getAllByText('Verificación más visible')).toHaveLength(3);
   });
 

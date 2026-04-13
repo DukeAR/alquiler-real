@@ -80,7 +80,7 @@ describe('PropertyCard', () => {
     expect(screen.queryByText('12 reseñas')).toBeNull();
     expect(screen.getByText('Más comprobado')).toBeInTheDocument();
     const trustLine = screen.getByTestId('property-card-trust-line');
-    expect(trustLine).toHaveTextContent('Ubicación verificada');
+    expect(trustLine).toHaveTextContent('Ubicación');
     expect(within(trustLine).getByText(/^Anfitrión$/)).toBeInTheDocument();
     expect(within(trustLine).getByText(/^Datos$/)).toBeInTheDocument();
     expect(screen.queryByText('Confianza visible')).toBeNull();
@@ -108,7 +108,7 @@ describe('PropertyCard', () => {
 
     const verificationBlock = screen.getByLabelText('3 de 5 comprobaciones');
 
-    expect(verificationBlock).toHaveTextContent('Ubicación verificada');
+  expect(verificationBlock).toHaveTextContent('Ubicación');
     expect(within(verificationBlock).getByText(/^Anfitrión$/)).toBeInTheDocument();
     expect(within(verificationBlock).getByText(/^Datos$/)).toBeInTheDocument();
     expect(within(verificationBlock).queryByText('Fotos')).toBeNull();
@@ -183,13 +183,13 @@ describe('PropertyCard', () => {
 
     const verificationBlock = screen.getByLabelText('4 de 5 comprobaciones');
 
-  expect(verificationBlock).toHaveTextContent('Ubicación verificada');
-  expect(within(verificationBlock).getByText(/^Datos$/)).toBeInTheDocument();
-  expect(within(verificationBlock).getByText(/^Anfitrión$/)).toBeInTheDocument();
+    expect(verificationBlock).toHaveTextContent('Ubicación');
+    expect(within(verificationBlock).getByText(/^Datos$/)).toBeInTheDocument();
+    expect(within(verificationBlock).getByText(/^Anfitrión$/)).toBeInTheDocument();
     expect(screen.queryByText('Más comprobado')).toBeNull();
-  expect(screen.queryByText('Mejor opción')).toBeNull();
+    expect(screen.queryByText('Mejor opción')).toBeNull();
     expect(screen.queryByText('Anfitrión con buen historial')).toBeNull();
-  expect(screen.queryByText('Abrir ficha')).toBeNull();
+    expect(screen.queryByText('Abrir ficha')).toBeNull();
     expect(screen.queryByText('Abrir detalle')).toBeNull();
     expect(screen.queryByText('Ver detalle')).toBeNull();
     expect(screen.getByRole('button', { name: /Abrir detalle de Casa frente al mar/i })).toBeInTheDocument();
