@@ -173,10 +173,10 @@ export const ExploreResultsSection = ({
   const showSummaryCard = viewMode === 'map' || hasActiveFilters || failedToLoadResults;
   const showFeaturedSection = showHomeBlocks && (loading || featuredProperties.length > 0);
   const showVerificationPreferenceHint = caresAboutVerification && !loading && hasAnyResults && !showHomeBlocks;
-  const sectionSpacingClass = 'space-y-8 md:space-y-10';
+  const sectionSpacingClass = showHomeBlocks ? 'space-y-5 md:space-y-6' : 'space-y-6 md:space-y-8';
   const listingSectionClass = showFeaturedSection
-    ? 'space-y-5 border-t border-slate-200/70 pt-6 md:space-y-6 md:pt-7'
-    : 'space-y-6 md:space-y-8';
+    ? 'space-y-4 border-t border-slate-200/60 pt-4 md:space-y-5 md:pt-5'
+    : 'space-y-5 md:space-y-6';
   const topResultIds = new Set(
     (showFeaturedSection ? featuredProperties : listingProperties)
       .slice(0, TOP_VERIFIED_RESULTS_COUNT)
@@ -247,7 +247,7 @@ export const ExploreResultsSection = ({
         : 'Volvé a revisar más tarde.';
 
   const summaryCard = (
-    <Card className="rounded-[var(--app-radius-card)] border-slate-200/80 bg-white p-5 shadow-[var(--app-shadow-subtle)] sm:p-6">
+    <Card className="rounded-[var(--app-radius-card)] border-slate-200/70 bg-white/72 p-4 shadow-none sm:p-5">
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
         <SectionTitle
           eyebrow={summaryEyebrow}
@@ -297,7 +297,7 @@ export const ExploreResultsSection = ({
   if (failedToLoadResults) {
     return (
       <section className="space-y-6 md:space-y-8">
-        <Card className="rounded-[var(--app-radius-card)] border-slate-200/80 bg-white p-6 shadow-[var(--app-shadow-soft)] sm:p-7">
+        <Card className="rounded-[var(--app-radius-card)] border-slate-200/70 bg-white/72 p-5 shadow-none sm:p-6">
           <NoticeBanner
             tone="error"
             heading="No pudimos cargar resultados ahora."
@@ -341,7 +341,7 @@ export const ExploreResultsSection = ({
       <section className="space-y-6 md:space-y-8">
         {summaryCard}
 
-        <div className="overflow-hidden rounded-[var(--app-radius-display)] border border-slate-200/80 bg-white shadow-[var(--app-shadow-soft)]">
+        <div className="overflow-hidden rounded-[var(--app-radius-display)] border border-slate-200/70 bg-white/72 shadow-none">
           <div className="flex flex-col gap-3 border-b border-slate-200/70 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Mapa de resultados</p>
@@ -392,8 +392,8 @@ export const ExploreResultsSection = ({
       ) : null}
 
       {showFeaturedSection ? (
-        <section className="space-y-4 md:space-y-5">
-          <div className="max-w-2xl space-y-1.5">
+        <section className="space-y-3.5 md:space-y-4">
+          <div className="max-w-2xl space-y-1">
             <h2 className="text-[1.38rem] font-semibold tracking-tight text-slate-950 md:text-[1.56rem]">
               {featuredHeading}
             </h2>
@@ -402,7 +402,7 @@ export const ExploreResultsSection = ({
             </p>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-7 xl:grid-cols-12">
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6 xl:grid-cols-12">
             {loading
               ? renderSkeletons(3)
               : featuredProperties.map((property, index) => (
@@ -431,11 +431,11 @@ export const ExploreResultsSection = ({
 
       {loading || hasActiveFilters || listingProperties.length > 0 || !hasAnyResults ? (
         <section className={listingSectionClass}>
-          <div className={cn('space-y-4', !showFeaturedSection && 'border-b border-slate-200/70 pb-5 md:space-y-6')}>
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className={cn('space-y-3.5', !showFeaturedSection && 'border-b border-slate-200/70 pb-5 md:space-y-5')}>
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
               <div className="max-w-2xl">
                 {showFeaturedSection ? (
-                  <div className="space-y-1.5">
+                  <div className="space-y-1">
                     <h2 className="text-[1.32rem] font-semibold tracking-tight text-slate-950 md:text-[1.48rem]">
                       {listingHeading}
                     </h2>
@@ -467,7 +467,7 @@ export const ExploreResultsSection = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-7 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6 lg:grid-cols-3">
             {loading ? (
               renderSkeletons()
             ) : listingProperties.length === 0 ? (
@@ -501,7 +501,7 @@ export const ExploreResultsSection = ({
           </div>
 
           {!loading && hasMoreResults ? (
-            <div className="flex flex-col items-center gap-4 pt-4 md:pt-6">
+            <div className="flex flex-col items-center gap-4 pt-3 md:pt-4">
               <p className="text-sm text-slate-500">Mostrando {visibleCount} de {listingProperties.length} propiedades.</p>
               <Button type="button" className="rounded-full px-6 md:px-8" onClick={onLoadMore}>
                 Ver más propiedades

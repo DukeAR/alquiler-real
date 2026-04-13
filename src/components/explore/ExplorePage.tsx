@@ -66,6 +66,8 @@ const buildLocationSuggestions = (items: Property[]): LocationSuggestion[] => {
   });
 };
 
+const heroBackgroundImage = 'https://images.unsplash.com/photo-1500375592092-40eb2168fd21?auto=format&fit=crop&w=1800&q=80';
+
 export const ExplorePage = () => {
   const { toggleFavorite, isFavorite } = useFavorites();
   const [properties, setProperties] = useState<Property[]>([]);
@@ -188,28 +190,46 @@ export const ExplorePage = () => {
   };
 
   return (
-    <div className="bg-[linear-gradient(180deg,#f1f5f9_0%,#f8fafc_18%,#ffffff_38%,#ffffff_100%)] pb-20">
-      <div className="app-page space-y-5 py-5 md:space-y-6 md:py-7 lg:space-y-7 lg:py-8">
-        <ExploreHero
-          searchValue={searchInput}
-          locationSuggestions={locationSuggestions}
-          onSearchChange={handleSearchChange}
-          onSearchSubmit={applySearch}
-          onSearchSubmitValue={applySearchValue}
-          onLocationSelect={handleLocationSelect}
-        />
+    <div className="bg-[linear-gradient(180deg,#eef3f7_0%,#f7fafc_18%,#ffffff_34%,#ffffff_100%)] pb-14 md:pb-16">
+      <section className="relative overflow-hidden">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div
+            className="absolute inset-x-0 inset-y-[-10%] scale-[1.02] opacity-90"
+            style={{
+              backgroundImage: `url(${heroBackgroundImage})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              filter: 'blur(2px) saturate(0.9) contrast(0.98)',
+            }}
+          />
+          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(248,250,252,0.95)_0%,rgba(248,250,252,0.92)_38%,rgba(248,250,252,0.72)_68%,rgba(248,250,252,0.82)_100%)]" />
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.16)_0%,rgba(248,250,252,0.36)_66%,rgba(255,255,255,0.72)_100%)]" />
+        </div>
 
-        <ExploreFiltersBar
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
-          filters={filters}
-          sortBy={sortBy}
-          onSortChange={setSortBy}
-          onFiltersChange={setFilters}
-          hasActiveFilters={hasActiveFilters}
-          onClear={clearAllFilters}
-        />
+        <div className="relative mx-auto flex w-full max-w-[74rem] flex-col gap-4 px-5 pb-5 pt-6 sm:px-6 md:gap-5 md:px-8 md:pb-6 md:pt-8 lg:pb-7 lg:pt-9">
+          <ExploreHero
+            searchValue={searchInput}
+            locationSuggestions={locationSuggestions}
+            onSearchChange={handleSearchChange}
+            onSearchSubmit={applySearch}
+            onSearchSubmitValue={applySearchValue}
+            onLocationSelect={handleLocationSelect}
+          />
 
+          <ExploreFiltersBar
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            filters={filters}
+            sortBy={sortBy}
+            onSortChange={setSortBy}
+            onFiltersChange={setFilters}
+            hasActiveFilters={hasActiveFilters}
+            onClear={clearAllFilters}
+          />
+        </div>
+      </section>
+
+      <div className="mx-auto w-full max-w-[74rem] px-5 pt-4 sm:px-6 md:px-8 md:pt-5 lg:pt-6">
         <ExploreResultsSection
           loading={loading}
           loadError={loadError}
