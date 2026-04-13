@@ -15,6 +15,7 @@ import {
   type PropertyCatalogSort,
 } from '../../lib/propertyVerification';
 import type { Property } from '../../services/geminiService';
+import { cn } from '../../lib/utils';
 
 const LazyPropertyMap = lazy(() => import('../PropertyMap').then((module) => ({ default: module.PropertyMap })));
 
@@ -26,6 +27,27 @@ const MapFallback = () => (
 
 const formatPropertyCount = (count: number) => `${count} ${count === 1 ? 'propiedad' : 'propiedades'}`;
 const renderSkeletons = (count = 6) => Array.from({ length: count }, (_, index) => <SkeletonCard key={`skeleton-${index}`} />);
+
+const getSortPresentation = (sortBy: PropertyCatalogSort) => {
+  if (sortBy === 'price') {
+    return {
+      label: 'Más convenientes',
+      helper: 'Primero ves las más bajas y, si empatan, las que muestran más respaldo visible.',
+    };
+  }
+
+  if (sortBy === 'rating') {
+    return {
+      label: 'Mejor valoradas',
+      helper: 'Primero ves reseñas más fuertes y, si empatan, las fichas más completas.',
+    };
+  }
+
+  return {
+    label: 'Más comprobadas',
+    helper: 'Primero ves las que ya muestran más señales concretas para decidir rápido.',
+  };
+};
 
 type ExploreResultsSectionProps = {
   loading: boolean;
@@ -103,6 +125,59 @@ export const ExploreResultsSection = ({
           ? `${formatPropertyCount(listingProperties.length)} para seguir comparando sin cambiar el criterio.`
           : `${formatPropertyCount(listingProperties.length)} para revisar con este criterio.`
         : 'No hay más propiedades para revisar por ahora.';
+  const sortPresentation = getSortPresentation(sortBy);
+  const featuredInsightCards = [
+    {
+      key: 'sort',
+      icon: <Icons.Target className="h-4 w-4" />,
+      label: 'Orden inicial',
+      value: sortPresentation.label,
+      helper: sortPresentation.helper,
+    },
+    {
+      key: 'confidence',
+      icon: <Icons.ShieldCheck className="h-4 w-4" />,
+      label: 'Lectura rápida',
+      value: 'Confianza visible',
+      helper: 'Cada ficha ya resume ubicación, anfitrión o fotos cuando existen validaciones visibles.',
+    },
+    {
+      key: 'compare',
+      icon: <Icons.LayoutGrid className="h-4 w-4" />,
+      label: 'Para comparar',
+      value: loading ? 'Actualizando' : `${featuredCount + visibleCount} visibles`,
+      helper: remainingResults > 0
+        ? `Quedan ${remainingResults} más para seguir abriendo sin cambiar el criterio.`
+        : 'Ya estás viendo todo lo disponible con este criterio.',
+    },
+  ];
+  const listingInsightCards = [
+    {
+      key: 'results',
+      icon: <Icons.Home className="h-4 w-4" />,
+      label: 'En pantalla',
+      value: `${visibleCount} visibles`,
+      helper: remainingResults > 0
+        ? `Todavía quedan ${remainingResults} resultados para revisar.`
+        : 'Ya abriste todo lo disponible en esta búsqueda.',
+    },
+    {
+      key: 'criteria',
+      icon: <Icons.SlidersHorizontal className="h-4 w-4" />,
+      label: 'Criterio activo',
+      value: sortPresentation.label,
+      helper: hasActiveFilters
+        ? `${appliedFilterCount} ${appliedFilterCount === 1 ? 'filtro activo' : 'filtros activos'} afinando esta lista.`
+        : 'Sin filtros extra: la comparación se apoya en el criterio principal.',
+    },
+    {
+      key: 'trust',
+      icon: <Icons.Sparkles className="h-4 w-4" />,
+      label: 'Qué ya ves',
+      value: 'Señales concretas',
+      helper: 'Las cards muestran respaldo visible sin obligarte a entrar a cada detalle para entender si inspira confianza.',
+    },
+  ];
 
   const summaryEyebrow = viewMode === 'map'
     ? 'Mapa'
@@ -174,7 +249,7 @@ export const ExploreResultsSection = ({
   );
 
   const verificationPreferenceHint = showVerificationPreferenceHint ? (
-    <p className="mt-3 inline-flex items-center gap-2 rounded-full border border-emerald-200/80 bg-emerald-50/80 px-3 py-1.5 text-[12.5px] font-medium leading-5 text-emerald-800">
+    <p className="inline-flex items-center gap-2 rounded-full border border-emerald-200/80 bg-emerald-50/80 px-3 py-1.5 text-[12.5px] font-medium leading-5 text-emerald-800">
       <Icons.ShieldCheck className="h-4 w-4" />
       <span>Estás priorizando avisos con más información comprobada</span>
     </p>
@@ -279,32 +354,62 @@ export const ExploreResultsSection = ({
 
       {showFeaturedSection ? (
         <section className="space-y-6 md:space-y-8">
-          <div className="max-w-2xl space-y-3">
-            <SectionTitle
-              heading={sortBy === 'price' ? 'Empezá por las más convenientes' : sortBy === 'rating' ? 'Empezá por las mejor valoradas' : 'Empezá por las más completas'}
-              description={loading
-                ? 'Estamos ordenando las primeras opciones.'
-                : sortBy === 'price'
-                  ? 'Acá aparecen primero las más baratas y, si empatan, priorizamos las que muestran más información visible.'
-                  : sortBy === 'rating'
-                    ? 'Acá aparecen primero las mejor valoradas y, si empatan, las que muestran más información visible.'
-                    : 'Acá aparecen primero las que muestran más información visible para decidir más rápido.'}
-              className="max-w-2xl"
-            />
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,0.95fr)] xl:items-start">
+            <Card className="overflow-hidden border-slate-200/80 bg-[radial-gradient(circle_at_top_right,rgba(79,70,229,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.94))] p-6 shadow-[0_28px_60px_-42px_rgba(15,23,42,0.28)] sm:p-7">
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="neutral" size="md">Selección inicial</Badge>
+                {!loading ? <Badge variant="info" size="md">{featuredCount} {featuredCount === 1 ? 'destacada' : 'destacadas'}</Badge> : null}
+              </div>
+
+              <SectionTitle
+                heading={sortBy === 'price' ? 'Empezá por las más convenientes' : sortBy === 'rating' ? 'Empezá por las mejor valoradas' : 'Empezá por las más completas'}
+                description={loading
+                  ? 'Estamos ordenando las primeras opciones.'
+                  : sortBy === 'price'
+                    ? 'Acá aparecen primero las más baratas y, si empatan, priorizamos las que muestran más información visible.'
+                    : sortBy === 'rating'
+                      ? 'Acá aparecen primero las mejor valoradas y, si empatan, las que muestran más información visible.'
+                      : 'Acá aparecen primero las que muestran más información visible para decidir más rápido.'}
+                className="mt-4 max-w-2xl"
+              />
+
+              {!loading && verificationPreferenceHint ? (
+                <div className="pt-4">
+                  {verificationPreferenceHint}
+                </div>
+              ) : null}
+            </Card>
+
             {!loading ? (
-              <>
-                {verificationPreferenceHint}
-              </>
+              <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
+                {featuredInsightCards.map((item) => (
+                  <div key={item.key} className="rounded-[28px] border border-slate-200/80 bg-white/96 p-4 shadow-[0_18px_42px_-36px_rgba(15,23,42,0.24)]">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">{item.label}</p>
+                      <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-brand/10 text-brand">
+                        {item.icon}
+                      </div>
+                    </div>
+                    <p className="mt-4 text-base font-semibold tracking-tight text-slate-950">{item.value}</p>
+                    <p className="mt-2 text-sm leading-6 text-slate-500">{item.helper}</p>
+                  </div>
+                ))}
+              </div>
             ) : null}
           </div>
 
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-7 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-7 xl:grid-cols-12">
             {loading
               ? renderSkeletons(3)
-              : featuredProperties.map((property) => (
+              : featuredProperties.map((property, index) => (
                   <PropertyCard
                     key={property.id}
                     property={property}
+                    className={cn(
+                      index === 0 && featuredProperties.length > 1 && 'md:col-span-2 xl:col-span-6',
+                      featuredProperties.length === 2 && index === 1 && 'xl:col-span-6',
+                      featuredProperties.length >= 3 && index > 0 && 'xl:col-span-3',
+                    )}
                     verificationGuidanceLabel={getPropertyVerificationGuidanceLabel(property, {
                       isTopResult: topResultIds.has(property.id),
                     })}
@@ -320,26 +425,45 @@ export const ExploreResultsSection = ({
 
       {loading || hasActiveFilters || listingProperties.length > 0 || !hasAnyResults ? (
         <section className={listingSectionClass}>
-          <div className="flex flex-col gap-4 border-b border-slate-200/70 pb-5 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-2xl">
-              <SectionTitle
-                heading={listingHeading}
-                description={listingDescription}
-                className="max-w-2xl"
-              />
-              {!loading && !showFeaturedSection ? (
-                <>
-                  {verificationPreferenceHint}
-                </>
+          <div className="space-y-5 border-b border-slate-200/70 pb-5 md:space-y-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+              <div className="max-w-2xl">
+                <SectionTitle
+                  heading={listingHeading}
+                  description={listingDescription}
+                  className="max-w-2xl"
+                />
+                {!loading && !showFeaturedSection ? (
+                  <>
+                    {verificationPreferenceHint}
+                  </>
+                ) : null}
+              </div>
+
+              {!loading && listingProperties.length > 0 ? (
+                <p className="text-sm text-slate-500">
+                  {remainingResults > 0
+                    ? `Mostrando ${visibleCount}. Quedan ${remainingResults} para revisar.`
+                    : `${visibleCount} visibles en esta búsqueda.`}
+                </p>
               ) : null}
             </div>
 
             {!loading && listingProperties.length > 0 ? (
-              <p className="text-sm text-slate-500">
-                {remainingResults > 0
-                  ? `Mostrando ${visibleCount}. Quedan ${remainingResults} para revisar.`
-                  : `${visibleCount} visibles en esta búsqueda.`}
-              </p>
+              <div className="grid gap-3 sm:grid-cols-3">
+                {listingInsightCards.map((item) => (
+                  <div key={item.key} className="rounded-[26px] border border-slate-200/80 bg-slate-50/75 px-4 py-4 shadow-[0_16px_34px_-34px_rgba(15,23,42,0.22)]">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">{item.label}</p>
+                      <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-white text-brand shadow-[0_16px_32px_-28px_rgba(79,70,229,0.35)]">
+                        {item.icon}
+                      </div>
+                    </div>
+                    <p className="mt-4 text-base font-semibold tracking-tight text-slate-950">{item.value}</p>
+                    <p className="mt-2 text-sm leading-6 text-slate-500">{item.helper}</p>
+                  </div>
+                ))}
+              </div>
             ) : null}
           </div>
 

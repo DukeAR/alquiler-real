@@ -69,6 +69,7 @@ interface PropertyCardProps {
   variant?: 'default' | 'favorites';
   verificationGuidanceLabel?: string | null;
   emphasizeVerification?: boolean;
+  className?: string;
 }
 
 export const PropertyCard: React.FC<PropertyCardProps> = ({ 
@@ -79,6 +80,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   variant = 'default',
   verificationGuidanceLabel = null,
   emphasizeVerification = false,
+  className,
 }) => {
   const auth = useAuth();
   const user = auth.user;
@@ -138,6 +140,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         'group flex h-full flex-col overflow-hidden border-slate-200/80 bg-white/98 transition-[transform,box-shadow,border-color,background-color] duration-200 ease-out',
         onClick && 'cursor-pointer hover:-translate-y-[2px] hover:border-slate-300/90 hover:shadow-[0_28px_48px_-34px_rgba(15,23,42,0.24)] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-brand/10',
         isFavoritesVariant && 'bg-white shadow-[var(--app-shadow-soft)]',
+        className,
       )}
     >
       <div className="relative aspect-[5/4] overflow-hidden bg-slate-100 lg:aspect-[4/3]">
