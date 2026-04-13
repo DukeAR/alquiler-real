@@ -191,7 +191,7 @@ export const ExplorePage = () => {
     <div className="bg-[linear-gradient(180deg,#eef2ff_0%,#f8fafc_18%,#ffffff_18%,#ffffff_100%)] pb-28">
       <section className="relative">
         <div className="app-page py-6 md:py-8 lg:py-10">
-          <div className="space-y-5 md:space-y-6">
+          <div className="space-y-8 md:space-y-10 lg:space-y-12">
             <ExploreHero
               searchValue={searchInput}
               locationSuggestions={locationSuggestions}

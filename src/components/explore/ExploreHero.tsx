@@ -1,3 +1,4 @@
+import { Icons } from '../Icons';
 import { LocationAutocomplete, type LocationSuggestion } from '../LocationAutocomplete';
 import { Button } from '../ui/Button';
 
@@ -10,9 +11,13 @@ type ExploreHeroProps = {
   onLocationSelect: (location: LocationSuggestion) => void;
 };
 
-const trustLine = 'Revisá ubicación, quién publica y qué ya fue comprobado antes de reservar.';
 const heroSubtitle = 'Elegí con información real antes de reservar.';
 const heroBackgroundImage = 'https://images.unsplash.com/photo-1500375592092-40eb2168fd21?auto=format&fit=crop&w=1800&q=80';
+const valueProofItems = [
+  'Ubicación verificada',
+  'Anfitrión identificado',
+  'Datos comprobados',
+] as const;
 
 export const ExploreHero = ({
   searchValue,
@@ -67,7 +72,7 @@ export const ExploreHero = ({
             <div className="space-y-1.5">
               <p className="app-eyebrow text-slate-500">Buscador principal</p>
               <p className="mx-auto max-w-[36rem] text-sm leading-6 text-slate-600">
-                Buscá por zona o ciudad y revisá opciones con contexto real desde el primer vistazo.
+                Elegí con información real desde el primer vistazo.
               </p>
             </div>
 
@@ -92,15 +97,20 @@ export const ExploreHero = ({
                 size="lg"
                 className="h-16 w-full px-6 text-[0.98rem] shadow-[var(--app-shadow-brand)] lg:min-w-[220px] lg:w-auto lg:flex-none"
               >
-                Ver alojamientos
+                Buscar alojamientos
               </Button>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 border-t border-slate-200/80 pt-3 text-[13px] text-slate-600 sm:gap-x-6 sm:pt-4 sm:text-[13.5px]">
+              {valueProofItems.map((item) => (
+                <span key={item} className="inline-flex items-center gap-2 font-medium leading-5">
+                  <Icons.CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+                  <span>{item}</span>
+                </span>
+              ))}
             </div>
           </div>
         </form>
-
-        <p className="max-w-[34rem] text-sm leading-6 text-slate-600 md:text-[0.95rem] md:leading-6">
-          {trustLine}
-        </p>
       </div>
     </section>
   );
