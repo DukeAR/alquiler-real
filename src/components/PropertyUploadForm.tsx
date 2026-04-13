@@ -795,7 +795,7 @@ export const PropertyUploadForm: React.FC<PropertyUploadFormProps> = ({ onComple
 
                 <Card variant="muted" padding="lg" className="space-y-3 border-slate-200/80 bg-white/90">
                   <p className="text-sm font-semibold text-slate-900">Vista rápida</p>
-                  <p className="text-3xl font-semibold tracking-tight text-brand">{formatCurrency(price)}</p>
+                  <p className="text-3xl font-semibold tracking-tight text-slate-950">{formatCurrency(price)}</p>
                   <p className="text-sm leading-6 text-slate-600">Esto es lo que se va a ver como precio base por noche.</p>
                 </Card>
               </div>
@@ -895,7 +895,7 @@ export const PropertyUploadForm: React.FC<PropertyUploadFormProps> = ({ onComple
                           {guests} {guests === 1 ? 'persona' : 'personas'}
                         </span>
                       </div>
-                      <p className="text-3xl font-semibold tracking-tight text-brand">{formatCurrency(price)}</p>
+                      <p className="text-3xl font-semibold tracking-tight text-slate-950">{formatCurrency(price)}</p>
                     </div>
 
                     <p className="text-sm leading-7 text-slate-600">

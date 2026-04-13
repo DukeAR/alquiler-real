@@ -57,8 +57,8 @@
   --color-warning: #F59E42;
   --color-danger: #D64545;
   --color-error: #D64545;
-  --color-text: #1C1C1C;
-  --color-text-soft: #4B4B4B;
+  --color-text: #0F172A;
+  --color-text-soft: #475569;
   --color-text-inverse: #fff;
 
   /* Interaction */
@@ -110,13 +110,13 @@
 }
 .btn-secondary {
   background: var(--color-surface-alt);
-  color: var(--color-primary);
+  color: var(--color-text);
   border: 1px solid var(--color-border);
   box-shadow: var(--shadow-xs);
 }
 .btn-secondary:hover, .btn-secondary:focus {
   background: var(--color-primary-soft);
-  color: var(--color-primary-hover);
+  color: var(--color-text);
   border-color: var(--color-primary);
 }
 
@@ -281,9 +281,11 @@ h4, h5, h6 {
   --app-surface-border: rgba(226, 232, 240, 0.96);
   --app-surface-border-strong: rgba(203, 213, 225, 1);
   --app-text-strong: #0f172a;
-  --app-text-body: #334155;
-  --app-text-muted: #64748b;
-  --app-text-subtle: #94a3b8;
+  --app-text-secondary: #475569;
+  --app-text-secondary-rgb: 71 85 105;
+  --app-text-body: var(--app-text-secondary);
+  --app-text-muted: var(--app-text-secondary);
+  --app-text-subtle: rgb(var(--app-text-secondary-rgb) / 0.72);
   --app-radius-control: 1rem;
   --app-radius-card: 1.5rem;
   --app-radius-display: 2rem;
@@ -538,8 +540,40 @@ body {
   color: var(--app-text-body);
 }
 
+.section-title {
+  color: var(--app-text-strong);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
 .app-text-muted {
   color: var(--app-text-muted);
+}
+
+.text-muted {
+  color: var(--app-text-muted);
+}
+
+.text-slate-950,
+.text-slate-900,
+.text-slate-800 {
+  color: var(--app-text-strong);
+}
+
+.text-slate-700,
+.text-slate-600,
+.text-slate-500,
+.text-slate-400 {
+  color: var(--app-text-muted);
+}
+
+button.text-slate-700,
+button.text-slate-600,
+a.text-slate-700,
+a.text-slate-600,
+[role='button'].text-slate-700,
+[role='button'].text-slate-600 {
+  color: var(--app-text-strong);
 }
 
 .app-form-label {
@@ -547,12 +581,12 @@ body {
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--app-text-subtle);
+  color: var(--app-text-muted);
 }
 
 .app-form-hint {
   font-size: 0.75rem;
-  color: var(--app-text-subtle);
+  color: var(--app-text-muted);
 }
 
 .app-form-error {
@@ -567,7 +601,7 @@ body {
   border-radius: 999px;
   border: 1px solid transparent;
   padding: 0.72rem 1rem;
-  color: var(--app-text-body);
+  color: var(--app-text-strong);
   font-size: 0.86rem;
   font-weight: 600;
   letter-spacing: -0.01em;

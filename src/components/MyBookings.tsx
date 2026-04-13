@@ -967,7 +967,7 @@ export const MyBookings = () => {
                     ) : null}
                     <span className="inline-flex items-center gap-1.5">
                       <Icons.Calendar className="h-4 w-4" />
-                      {formatDate(booking.startDate)} <span className="text-slate-300 dark:text-slate-600">→</span> {formatDate(booking.endDate)}
+                      {formatDate(booking.startDate)} <span className="text-slate-500 dark:text-slate-600">→</span> {formatDate(booking.endDate)}
                     </span>
                     <span className="inline-flex items-center gap-1.5">
                       <Icons.Users className="h-4 w-4" />
@@ -980,7 +980,7 @@ export const MyBookings = () => {
 
             <div className="min-w-[12rem] rounded-[24px] border border-slate-200/80 bg-slate-50/80 px-4 py-4 text-left dark:border-slate-700 dark:bg-slate-800/60 lg:text-right">
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Costo total</p>
-              <p className="mt-2 text-2xl font-semibold tracking-tight text-brand">{formatCurrency(booking.totalPrice)}</p>
+              <p className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">{formatCurrency(booking.totalPrice)}</p>
               <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">Etapa: {bookingFlow.statusLabel || getBookingStatusText(booking)}</p>
             </div>
           </div>

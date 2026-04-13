@@ -81,9 +81,9 @@ export const PropertyMap: React.FC<PropertyMapProps> = ({ properties, onProperty
                                 </div>
                                 <div className="space-y-1">
                                     <h3 className="font-bold text-slate-900 leading-tight m-0 text-base">{property.title}</h3>
-                                    <p className="text-sm font-black text-brand m-0">
+                                    <p className="text-sm font-black text-slate-950 m-0">
                                         {new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(property.price)}
-                                        <span className="text-slate-400 text-xs font-normal ml-1">/ noche</span>
+                                        <span className="text-slate-500 text-xs font-normal ml-1">/ noche</span>
                                     </p>
                                 </div>
                                 <button

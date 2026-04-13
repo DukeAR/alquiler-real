@@ -418,7 +418,7 @@ export const ExploreResultsSection = ({
                 <span>{formatPropertyCount(totalResults)}</span>
               </Badge>
               {hasActiveFilters ? (
-                <Button type="button" variant="ghost" size="sm" onClick={onClearFilters} className="rounded-xl px-3 text-sm text-brand hover:bg-brand/5 hover:text-brand">
+                <Button type="button" variant="ghost" size="sm" onClick={onClearFilters} className="rounded-xl px-3 text-sm text-slate-900 hover:bg-slate-100 hover:text-slate-950">
                   <Icons.X className="h-4 w-4" />
                   Limpiar filtros
                 </Button>

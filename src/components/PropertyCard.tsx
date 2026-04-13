@@ -308,8 +308,8 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
             <span
               aria-hidden="true"
               className={cn(
-                'inline-flex h-11 items-center gap-2 rounded-full border border-slate-200/90 bg-white px-4 text-slate-700 shadow-[0_12px_24px_-18px_rgba(15,23,42,0.18)] transition-[transform,border-color,color,box-shadow] duration-150 group-hover:translate-x-0.5 group-hover:border-slate-300 group-hover:text-slate-950 group-hover:shadow-[0_16px_28px_-22px_rgba(15,23,42,0.22)]',
-                isDecisionFeatured && 'border-brand/15 text-brand',
+                'inline-flex h-11 items-center gap-2 rounded-full border border-slate-200/90 bg-white px-4 text-slate-900 shadow-[0_12px_24px_-18px_rgba(15,23,42,0.18)] transition-[transform,border-color,color,box-shadow] duration-150 group-hover:translate-x-0.5 group-hover:border-slate-300 group-hover:text-slate-950 group-hover:shadow-[0_16px_28px_-22px_rgba(15,23,42,0.22)]',
+                isDecisionFeatured && 'border-brand/15 text-slate-900',
               )}
             >
               <span className="text-[11px] font-semibold uppercase tracking-[0.12em]">Abrir ficha</span>
