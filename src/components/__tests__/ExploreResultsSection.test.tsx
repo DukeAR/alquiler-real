@@ -104,7 +104,7 @@ describe('ExploreResultsSection', () => {
     renderSection();
 
     expect(screen.getByRole('heading', { name: 'Empezá por las más completas' })).toBeInTheDocument();
-    expect(screen.getByText('Acá aparecen primero las que más rápido te dejan medir precio, capacidad y respaldo visible.')).toBeInTheDocument();
+    expect(screen.getByText('Precio, capacidad y respaldo en una sola lectura.')).toBeInTheDocument();
     expect(screen.getByText('Más comprobado')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Más para comparar' })).toBeInTheDocument();
     expect(screen.getAllByText('Mejor opción')).toHaveLength(1);

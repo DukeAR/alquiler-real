@@ -452,28 +452,31 @@ export const ExploreResultsSection = ({
       ) : null}
 
       {showFeaturedSection ? (
-        <section className="space-y-6 md:space-y-8">
+        <section className="space-y-5 md:space-y-6">
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,0.95fr)] xl:items-start">
-            <Card className="overflow-hidden border-slate-200/80 bg-[radial-gradient(circle_at_top_right,rgba(79,70,229,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.94))] p-6 shadow-[0_28px_60px_-42px_rgba(15,23,42,0.28)] sm:p-7">
+            <Card className="overflow-hidden border-slate-200/85 bg-white p-4 shadow-[0_16px_34px_-28px_rgba(15,23,42,0.16)] sm:p-5">
               <div className="flex flex-wrap gap-2">
                 <Badge variant="neutral" size="md">Selección inicial</Badge>
                 {!loading ? <Badge variant="info" size="md">{featuredCount} {featuredCount === 1 ? 'destacada' : 'destacadas'}</Badge> : null}
               </div>
 
-              <SectionTitle
-                heading={sortBy === 'price' ? 'Empezá por las más convenientes' : sortBy === 'rating' ? 'Empezá por las mejor valoradas' : 'Empezá por las más completas'}
-                description={loading
-                  ? 'Estamos ordenando las primeras opciones.'
-                  : sortBy === 'price'
-                    ? 'Acá ves primero las más baratas y, si empatan, las que más rápido dejan leer precio, tamaño y respaldo.'
-                    : sortBy === 'rating'
-                      ? 'Acá ves primero las mejor valoradas y, si empatan, las fichas que mejor muestran respaldo visible.'
-                      : 'Acá aparecen primero las que más rápido te dejan medir precio, capacidad y respaldo visible.'}
-                className="mt-4 max-w-2xl"
-              />
+              <div className="mt-3 max-w-xl space-y-1.5">
+                <h2 className="text-[1.35rem] font-semibold tracking-tight text-slate-950 md:text-[1.5rem]">
+                  {sortBy === 'price' ? 'Empezá por las más convenientes' : sortBy === 'rating' ? 'Empezá por las mejor valoradas' : 'Empezá por las más completas'}
+                </h2>
+                <p className="text-sm leading-6 text-slate-600">
+                  {loading
+                    ? 'Estamos ordenando las primeras opciones.'
+                    : sortBy === 'price'
+                      ? 'Precio claro y buena lectura primero.'
+                      : sortBy === 'rating'
+                        ? 'Valoración alta y respaldo visible primero.'
+                        : 'Precio, capacidad y respaldo en una sola lectura.'}
+                </p>
+              </div>
 
               {!loading && verificationPreferenceHint ? (
-                <div className="pt-4">
+                <div className="pt-3">
                   {verificationPreferenceHint}
                 </div>
               ) : null}
