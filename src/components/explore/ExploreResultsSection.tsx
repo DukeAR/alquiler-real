@@ -10,10 +10,13 @@ import { Card } from '../ui/Card';
 import { NoticeBanner } from '../ui/NoticeBanner';
 import { SectionTitle } from '../ui/SectionTitle';
 import {
+  HIGH_VERIFICATION_HIGHLIGHT_MIN_SCORE,
   TOP_VERIFIED_RESULTS_COUNT,
   getPropertyVerificationGuidanceLabel,
+  getPropertyVerificationBadge,
   type PropertyCatalogSort,
 } from '../../lib/propertyVerification';
+import { getPropertyListingQualityScore } from '../../lib/propertyListingQuality';
 import type { Property } from '../../services/geminiService';
 import { cn } from '../../lib/utils';
 
@@ -27,6 +30,96 @@ const MapFallback = () => (
 
 const formatPropertyCount = (count: number) => `${count} ${count === 1 ? 'propiedad' : 'propiedades'}`;
 const renderSkeletons = (count = 6) => Array.from({ length: count }, (_, index) => <SkeletonCard key={`skeleton-${index}`} />);
+
+const getDecisionDataScore = (property: Property) => [
+  typeof property.location === 'string' && property.location.trim().length > 0,
+  typeof property.description === 'string' && property.description.trim().length >= 80,
+  Number(property.maxGuests) > 0,
+  Number(property.reviewsCount) > 0,
+  Number(property.price) > 0,
+].filter(Boolean).length;
+
+const getDecisionFeaturedProperty = (properties: Property[]) => {
+  const uniqueProperties = [...new Map(properties.map((property) => [property.id, property])).values()];
+
+  if (uniqueProperties.length === 0) {
+    return {
+      propertyId: null,
+      supportLabel: null,
+    };
+  }
+
+  const priceValues = uniqueProperties
+    .map((property) => Number(property.price) || 0)
+    .filter((price) => price > 0);
+  const minPrice = priceValues.length > 0 ? Math.min(...priceValues) : 0;
+  const maxPrice = priceValues.length > 0 ? Math.max(...priceValues) : 0;
+
+  const rankedProperties = uniqueProperties
+    .map((property) => {
+      const verificationScore = getPropertyVerificationBadge(property).score;
+      const qualityScore = getPropertyListingQualityScore(property);
+      const dataScore = getDecisionDataScore(property);
+      const price = Number(property.price) || 0;
+      const priceAdvantage = price > 0 && maxPrice > minPrice
+        ? (maxPrice - price) / (maxPrice - minPrice)
+        : price > 0
+          ? 0.5
+          : 0;
+      const valueScore = qualityScore + (dataScore * 10) + (priceAdvantage * 25);
+
+      return {
+        property,
+        verificationScore,
+        qualityScore,
+        dataScore,
+        price,
+        priceAdvantage,
+        valueScore,
+      };
+    })
+    .sort((left, right) => {
+      if (right.verificationScore !== left.verificationScore) {
+        return right.verificationScore - left.verificationScore;
+      }
+
+      if (right.valueScore !== left.valueScore) {
+        return right.valueScore - left.valueScore;
+      }
+
+      if (right.qualityScore !== left.qualityScore) {
+        return right.qualityScore - left.qualityScore;
+      }
+
+      if (left.price !== right.price) {
+        if (!left.price) return 1;
+        if (!right.price) return -1;
+        return left.price - right.price;
+      }
+
+      return String(left.property.title || '').localeCompare(String(right.property.title || ''), 'es');
+    });
+
+  const bestProperty = rankedProperties[0];
+
+  if (!bestProperty) {
+    return {
+      propertyId: null,
+      supportLabel: null,
+    };
+  }
+
+  const supportLabel = bestProperty.verificationScore >= HIGH_VERIFICATION_HIGHLIGHT_MIN_SCORE && bestProperty.priceAdvantage >= 0.35
+    ? 'Buena relación precio / información'
+    : bestProperty.verificationScore >= HIGH_VERIFICATION_HIGHLIGHT_MIN_SCORE || bestProperty.qualityScore >= 55
+      ? 'De las más completas en este rango'
+      : null;
+
+  return {
+    propertyId: bestProperty.property.id,
+    supportLabel,
+  };
+};
 
 const getSortPresentation = (sortBy: PropertyCatalogSort) => {
   if (sortBy === 'price') {
@@ -111,6 +204,12 @@ export const ExploreResultsSection = ({
       .slice(0, TOP_VERIFIED_RESULTS_COUNT)
       .map((property) => property.id),
   );
+  const decisionFeatureSource = showFeaturedSection
+    ? [...featuredProperties, ...visibleProperties]
+    : visibleProperties;
+  const decisionFeature = !loading
+    ? getDecisionFeaturedProperty(decisionFeatureSource)
+    : { propertyId: null, supportLabel: null };
   const listingHeading = hasActiveFilters
     ? 'Resultados para revisar'
     : showFeaturedSection
@@ -414,6 +513,8 @@ export const ExploreResultsSection = ({
                       isTopResult: topResultIds.has(property.id),
                     })}
                     emphasizeVerification={caresAboutVerification}
+                    decisionFeatured={decisionFeature.propertyId === property.id}
+                    decisionSupportLabel={decisionFeature.propertyId === property.id ? decisionFeature.supportLabel : null}
                     onClick={() => navigate(`/detail/${property.id}`)}
                     isFavorite={isFavorite(property.id)}
                     onFavoriteToggle={onFavoriteToggle}
@@ -490,6 +591,8 @@ export const ExploreResultsSection = ({
                     isTopResult: topResultIds.has(property.id),
                   })}
                   emphasizeVerification={caresAboutVerification}
+                  decisionFeatured={decisionFeature.propertyId === property.id}
+                  decisionSupportLabel={decisionFeature.propertyId === property.id ? decisionFeature.supportLabel : null}
                   onClick={() => navigate(`/detail/${property.id}`)}
                   isFavorite={isFavorite(property.id)}
                   onFavoriteToggle={onFavoriteToggle}

@@ -76,16 +76,17 @@ describe('PropertyCard', () => {
     expect(screen.getByText('Casa')).toBeInTheDocument();
     expect(screen.getByText('Santa Teresita')).toBeInTheDocument();
     expect(screen.getByText(/120\.000/)).toBeInTheDocument();
-    expect(screen.getByText('por noche')).toBeInTheDocument();
+    expect(screen.getByText('Por noche')).toBeInTheDocument();
     expect(screen.queryByText('Precio por noche')).toBeNull();
     expect(screen.queryByText('4.8')).toBeNull();
     expect(screen.queryByText('12 reseñas')).toBeNull();
     expect(screen.getByText('Más comprobado')).toBeInTheDocument();
-    expect(within(verificationBlock).getByText('Lo que ya podés comprobar')).toBeInTheDocument();
+    expect(within(verificationBlock).getByText('Confianza visible')).toBeInTheDocument();
     expect(within(verificationBlock).getByText('4 de 5 comprobaciones')).toBeInTheDocument();
-    expect(within(verificationBlock).getByText('Ubicación')).toBeInTheDocument();
-    expect(within(verificationBlock).getByText('Anfitrión')).toBeInTheDocument();
-    expect(within(verificationBlock).getByText('Datos')).toBeInTheDocument();
+    const trustList = within(verificationBlock).getByRole('list', { name: 'Confianza visible' });
+    expect(within(trustList).getByText('Ubicación verificada')).toBeInTheDocument();
+    expect(within(trustList).getByText('Anfitrión identificado')).toBeInTheDocument();
+    expect(within(trustList).getByText('Datos comprobados')).toBeInTheDocument();
     expect(screen.queryByText('✔✔✔✔○')).toBeNull();
     expect(screen.queryByText('Anfitrión con buen historial')).toBeNull();
     expect(screen.queryByText('12 reseñas reales')).toBeNull();
@@ -111,9 +112,10 @@ describe('PropertyCard', () => {
     const verificationBlock = screen.getByLabelText('3 de 5 comprobaciones');
 
     expect(within(verificationBlock).getByText('3 de 5 comprobaciones')).toBeInTheDocument();
-    expect(within(verificationBlock).getByText('Ubicación')).toBeInTheDocument();
-    expect(within(verificationBlock).getByText('Anfitrión')).toBeInTheDocument();
-    expect(within(verificationBlock).getByText('Datos')).toBeInTheDocument();
+    const trustList = within(verificationBlock).getByRole('list', { name: 'Confianza visible' });
+    expect(within(trustList).getByText('Ubicación verificada')).toBeInTheDocument();
+    expect(within(trustList).getByText('Anfitrión identificado')).toBeInTheDocument();
+    expect(within(trustList).getByText('Datos comprobados')).toBeInTheDocument();
     expect(within(verificationBlock).queryByText('Fotos')).toBeNull();
     expect(screen.queryByText('Más comprobado')).toBeNull();
   });
@@ -139,7 +141,7 @@ describe('PropertyCard', () => {
     );
 
     expect(screen.queryByText('Anfitrión con buen historial')).toBeNull();
-    expect(screen.getByText('Anfitrión')).toBeInTheDocument();
+    expect(screen.getByText('Anfitrión identificado')).toBeInTheDocument();
   });
 
   test('shows the subtle high-verification badge automatically when the score reaches 4', () => {
@@ -150,7 +152,7 @@ describe('PropertyCard', () => {
     );
 
     expect(screen.getByText('Más comprobado')).toBeInTheDocument();
-    expect(screen.getByText('Datos')).toBeInTheDocument();
+    expect(screen.getByText('Datos comprobados')).toBeInTheDocument();
   });
 
   test('makes the verification line slightly more visible without turning it into a heavy green block', () => {
@@ -164,7 +166,22 @@ describe('PropertyCard', () => {
     const verificationBlock = screen.getByLabelText('4 de 5 comprobaciones');
 
     expect(verificationBlock).toHaveClass('border-emerald-200/80');
-    expect(within(verificationBlock).getByText('Lo que ya podés comprobar')).toHaveClass('text-emerald-700');
+    expect(within(verificationBlock).getByText('Confianza visible')).toHaveClass('text-emerald-700');
+  });
+
+  test('shows the featured badge and decision push line only when the card is highlighted as the best option', () => {
+    render(
+      <PropertyCard
+        property={sampleProperty}
+        decisionFeatured
+        decisionSupportLabel="Buena relación precio / información"
+        onClick={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('Mejor opción para vos')).toBeInTheDocument();
+    expect(screen.getByText('Buena relación precio / información')).toBeInTheDocument();
+    expect(screen.queryByText('Más comprobado')).toBeNull();
   });
 
   test('keeps the favorites variant free of Explore guidance labels', () => {
@@ -172,12 +189,14 @@ describe('PropertyCard', () => {
 
     const verificationBlock = screen.getByLabelText('4 de 5 comprobaciones');
 
-    expect(within(verificationBlock).getByText('Lo que ya podés comprobar')).toBeInTheDocument();
+    expect(within(verificationBlock).getByText('Confianza visible')).toBeInTheDocument();
     expect(within(verificationBlock).getByText('4 de 5 comprobaciones')).toBeInTheDocument();
-    expect(within(verificationBlock).getByText('Ubicación')).toBeInTheDocument();
-    expect(within(verificationBlock).getByText('Datos')).toBeInTheDocument();
-    expect(within(verificationBlock).getByText('Anfitrión')).toBeInTheDocument();
+    const trustList = within(verificationBlock).getByRole('list', { name: 'Confianza visible' });
+    expect(within(trustList).getByText('Ubicación verificada')).toBeInTheDocument();
+    expect(within(trustList).getByText('Datos comprobados')).toBeInTheDocument();
+    expect(within(trustList).getByText('Anfitrión identificado')).toBeInTheDocument();
     expect(screen.queryByText('Más comprobado')).toBeNull();
+    expect(screen.queryByText('Mejor opción para vos')).toBeNull();
     expect(screen.queryByText('Anfitrión con buen historial')).toBeNull();
     expect(screen.getByText('Abrir ficha')).toBeInTheDocument();
     expect(screen.queryByText('Abrir detalle')).toBeNull();
