@@ -28,7 +28,7 @@ export const FormField: React.FC<FormFieldProps> = ({
       {label && (
         <label htmlFor={htmlFor} className="block text-sm font-medium text-[var(--color-primary)] mb-1">
           {label}
-          {hint && <span className="ml-2 text-xs text-[var(--color-text-soft)]">{hint}</span>}
+          {hint && <span aria-hidden="true" className="ml-2 text-xs text-[var(--color-text-soft)]">{hint}</span>}
         </label>
       )}
       {children}
@@ -38,7 +38,7 @@ export const FormField: React.FC<FormFieldProps> = ({
         </p>
       )}
       {error && (
-        <p id={errorId} className="mt-1 text-xs text-[var(--color-danger)]">
+          <p id={errorId} role="alert" className="mt-1 text-xs text-[var(--color-danger)]">
           {error}
         </p>
       )}

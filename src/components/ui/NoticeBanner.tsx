@@ -34,6 +34,9 @@ export const NoticeBanner: React.FC<NoticeBannerProps> = ({
   children,
   ...props
 }) => {
+  const defaultRole = tone === 'error' ? 'alert' : props.role;
+  const defaultAriaLive = tone === 'error' ? 'assertive' : props['aria-live'];
+
   return (
     <div
       className={cn(
@@ -41,6 +44,8 @@ export const NoticeBanner: React.FC<NoticeBannerProps> = ({
         toneClasses[tone],
         className
       )}
+      role={defaultRole}
+      aria-live={defaultAriaLive}
       style={{ fontFamily: 'var(--font-ui)' }}
       {...props}
     >

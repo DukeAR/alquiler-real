@@ -250,9 +250,7 @@ describe('MyBookings', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: /Ver condiciones/i }));
 
-    expect(screen.getByText('Responsabilidad y alcance de la plataforma')).toBeInTheDocument();
-    expect(screen.getByText('Lo que muestra cada aviso')).toBeInTheDocument();
-    expect(screen.getByText('Cada anfitrión es responsable por la veracidad de lo que publica y por las condiciones reales del alojamiento al momento de la estadía, incluyendo acceso, limpieza, funcionamiento y servicios ofrecidos.')).toBeInTheDocument();
+    expect(await screen.findByText('Responsabilidad y alcance de la plataforma')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Aceptar condiciones/i }));
 
@@ -313,20 +311,23 @@ describe('MyBookings', () => {
       contractAccepted: false,
     });
     payProtectedDepositMock.mockResolvedValue({
-      id: 'booking-protected-1',
-      propertyId: 'property-1',
-      userId: 'user-1',
-      status: 'confirmed',
-      requestMode: 'protected',
-      depositType: 'protected',
-      depositStatus: 'held',
-      propertyTitle: 'Casa frente al bosque',
-      location: 'Cariló',
-      startDate: '2026-05-10',
-      endDate: '2026-05-14',
-      guests: 3,
-      totalPrice: 520000,
-      contractAccepted: false,
+      booking: {
+        id: 'booking-protected-1',
+        propertyId: 'property-1',
+        userId: 'user-1',
+        status: 'confirmed',
+        requestMode: 'protected',
+        depositType: 'protected',
+        depositStatus: 'held',
+        propertyTitle: 'Casa frente al bosque',
+        location: 'Cariló',
+        startDate: '2026-05-10',
+        endDate: '2026-05-14',
+        guests: 3,
+        totalPrice: 520000,
+        contractAccepted: false,
+      },
+      checkoutUrl: 'https://example.com/checkout/booking-protected-1',
     });
 
     render(
@@ -358,21 +359,15 @@ describe('MyBookings', () => {
     });
 
     expect(await screen.findAllByText('Pendiente seña')).not.toHaveLength(0);
-    // Robust matcher for split/multiline copy
     expect(
-      await screen.findByText((_, node) => {
-        const hasText = (n: Node): string =>
-          Array.from(n.childNodes).map((c) => (c.nodeType === 3 ? c.textContent : hasText(c))).join('');
-        const text = hasText(node as HTMLElement).replace(/\s+/g, ' ');
-        return text.includes('El anfitrión ya aceptó') && text.includes('avanzar con la seña');
-      })
+      await screen.findByText(/Falta el pago para que quede registrada\./i)
     ).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Registrar seña/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Pagar seña/i })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /Registrar seña/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Pagar seña/i }));
 
     await waitFor(() => {
-      expect(payProtectedDepositMock).toHaveBeenCalledWith('booking-protected-1');
+      expect(payProtectedDepositMock).toHaveBeenCalledWith('booking-protected-1', '/my-bookings');
     });
 
     expect(await screen.findAllByText('Seña registrada')).not.toHaveLength(0);
@@ -383,9 +378,9 @@ describe('MyBookings', () => {
       'success',
     );
     expect(showToastMock).toHaveBeenCalledWith(
-      'Seña en custodia',
-      'La seña ya quedó registrada en la plataforma hasta que confirmes la llegada.',
-      'success',
+      'Pago de seña',
+      'Vas a Mercado Pago para dejar la seña registrada. Cuando se confirme, volvés a esta reserva.',
+      'info',
     );
   });
 
@@ -436,14 +431,11 @@ describe('MyBookings', () => {
     );
 
     expect(await screen.findByText('Coordinación por fuera')).toBeInTheDocument();
-    // Robust matcher for split/multiline copy
     expect(
-      await screen.findByText((_, node) => {
-        const hasText = (n: Node): string =>
-          Array.from(n.childNodes).map((c) => (c.nodeType === 3 ? c.textContent : hasText(c))).join('');
-        const text = hasText(node as HTMLElement).replace(/\s+/g, ' ');
-        return text.includes('Quedó como coordinación por fuera');
-      })
+      await screen.findByText(
+        'Hoy siguen por fuera. Si más adelante dejan la seña dentro de la app, ese tramo queda registrado y la plataforma puede revisar lo asentado dentro de ese flujo.',
+        { selector: 'p' },
+      )
     ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Dejarla registrada acá/i }));

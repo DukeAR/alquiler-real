@@ -33,7 +33,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
   }, ref) => {
     const generatedId = React.useId();
     const inputId = id ?? `input-${generatedId}`;
-    const helperTextId = helperText ? `${inputId}-helper` : undefined;
+    const helperTextId = helperText && !error ? `${inputId}-helper` : undefined;
     const errorId = error ? `${inputId}-error` : undefined;
     const describedBy = [ariaDescribedBy, helperTextId, errorId].filter(Boolean).join(' ') || undefined;
     const hasError = Boolean(error) || ariaInvalid === true || ariaInvalid === 'true';

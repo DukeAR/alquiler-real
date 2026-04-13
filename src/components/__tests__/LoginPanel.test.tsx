@@ -53,7 +53,7 @@ describe('LoginPanel', () => {
     );
 
     fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'ana@test.com' } });
-    fireEvent.change(screen.getByLabelText('Contraseña'), { target: { value: '123456' } });
+  fireEvent.change(screen.getByLabelText(/Contraseña/i), { target: { value: '123456' } });
     fireEvent.click(screen.getByRole('button', { name: /^Ingresá$/i }));
 
     expect(await screen.findByRole('button', { name: /Ingresando.../i })).toBeDisabled();

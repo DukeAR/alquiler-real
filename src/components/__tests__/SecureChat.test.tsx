@@ -636,26 +636,27 @@ describe('SecureChat', () => {
       depositStatus: null,
     });
     payProtectedDepositMock.mockResolvedValue({
-      id: 'booking-1',
-      status: 'confirmed',
-      requestMode: 'protected',
-      depositType: 'protected',
-      depositStatus: 'held',
+      booking: {
+        id: 'booking-1',
+        status: 'confirmed',
+        requestMode: 'protected',
+        depositType: 'protected',
+        depositStatus: 'held',
+        protectedDepositPricing: null,
+        depositPaymentReference: 'checkout-1',
+      },
+      checkoutUrl: 'https://example.com/checkout/booking-1',
     });
 
     renderChat();
 
     expect(await screen.findByText('Ya están de acuerdo.')).toBeInTheDocument();
     expect(screen.getByText('Cómo querés avanzar con la seña')).toBeInTheDocument();
-    // Robust matcher for split/multiline copy
-    // Use async findByText and join all text nodes for robust matching
     expect(
-      await screen.findByText((_, node) => {
-        // Robust matcher for split/multiline copy
-        const getText = (n: Node): string => Array.from(n.childNodes).map((c) => c.nodeType === 3 ? (c as Text).textContent : getText(c as Node)).join('');
-        const text = getText(node as Node).replace(/\s+/g, ' ');
-        return text.includes('Elegí la opción que mejor les cierre') && text.includes('dentro de esta conversación');
-      })
+      await screen.findByText(
+        'Elegí la opción que mejor les cierre. La diferencia importante es qué queda registrado dentro de la app.',
+        { selector: 'p' },
+      )
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Dejarla registrada acá/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Coordinarla por fuera/i })).toBeInTheDocument();
@@ -672,7 +673,7 @@ describe('SecureChat', () => {
     fireEvent.click(screen.getByRole('button', { name: /Pagar seña/i }));
 
     await waitFor(() => {
-      expect(payProtectedDepositMock).toHaveBeenCalledWith('booking-1');
+      expect(payProtectedDepositMock).toHaveBeenCalledWith('booking-1', '/chat/conv-1');
     });
 
     expect(await screen.findByText('Estado: Seña registrada')).toBeInTheDocument();
@@ -708,12 +709,10 @@ describe('SecureChat', () => {
 
     expect(await screen.findByText('Cómo querés avanzar con la seña')).toBeInTheDocument();
     expect(
-      await screen.findByText((_, node) => {
-        const hasText = (n: Node): string =>
-          Array.from(n.childNodes).map((c) => (c.nodeType === 3 ? (c as Text).textContent : hasText(c as Node))).join('');
-        const text = hasText(node as Node).replace(/\s+/g, ' ');
-        return text.includes('Elegí la opción que mejor les cierre') && text.includes('dentro de esta conversación');
-      })
+      await screen.findByText(
+        'Elegí la opción que mejor les cierre. La diferencia importante es qué queda registrado dentro de la app.',
+        { selector: 'p' },
+      )
     ).toBeInTheDocument();
     expect(screen.getByText('Coordinarla por fuera (más manual)')).toBeInTheDocument();
 

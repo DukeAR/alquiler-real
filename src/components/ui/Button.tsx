@@ -54,6 +54,13 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     },
     ref
   ) => {
+    const stateLabel = loading
+      ? loadingLabel
+      : success
+        ? successLabel
+        : null;
+    const hideChildrenFromA11y = Boolean(stateLabel);
+
     return (
       <button
         ref={ref}
@@ -75,11 +82,11 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         {...props}
       >
         {loading
-          ? loadingLabel || <span className="loader mr-2" />
+          ? stateLabel || <span aria-hidden="true" className="loader mr-2" />
           : success
-          ? successLabel || <span className="inline-block align-middle mr-2">✓</span>
+          ? stateLabel || <span aria-hidden="true" className="inline-block align-middle mr-2">✓</span>
           : null}
-        {children}
+        {hideChildrenFromA11y ? <span aria-hidden="true">{children}</span> : children}
       </button>
     );
   }

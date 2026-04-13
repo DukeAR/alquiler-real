@@ -177,8 +177,8 @@ describe('ProfileViewNew', () => {
     fireEvent.click(screen.getByRole('button', { name: /Editar preferencias/i }));
 
     expect(screen.getByRole('heading', { name: 'Qué querés ver primero' })).toBeInTheDocument();
-    expect(screen.getByLabelText('Zona preferida')).toBeInTheDocument();
-    expect(screen.getByLabelText('Presupuesto máximo')).toBeInTheDocument();
-    expect(screen.getByLabelText('Tipo de propiedad')).toBeInTheDocument();
+    expect(await screen.findByLabelText(/^Zona preferida/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Presupuesto máximo/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Tipo de propiedad/i)).toBeInTheDocument();
   });
 });
