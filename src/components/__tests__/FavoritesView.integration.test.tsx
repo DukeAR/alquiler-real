@@ -94,11 +94,13 @@ describe('FavoritesView integration', () => {
       'Casa frente al mar',
       'Departamento tranquilo',
     ]);
-    expect(screen.getByText('4 de 5 comprobaciones')).toBeInTheDocument();
-    expect(screen.getByText('3 de 5 comprobaciones')).toBeInTheDocument();
-    expect(screen.getByText('✔✔✔✔○')).toBeInTheDocument();
+    expect(screen.getByLabelText('4 de 5 comprobaciones')).toBeInTheDocument();
+    expect(screen.getByLabelText('3 de 5 comprobaciones')).toBeInTheDocument();
+    expect(screen.getAllByText('Ubicación')).toHaveLength(2);
+    expect(screen.getAllByText('Anfitrión')).toHaveLength(2);
+    expect(screen.getByText('Fotos')).toBeInTheDocument();
     expect(screen.queryByText('Mejor verificado')).toBeNull();
     expect(screen.queryByText('Alto nivel de verificación')).toBeNull();
-    expect(screen.getAllByText('Abrir detalle')).toHaveLength(2);
+    expect(screen.getAllByRole('button', { name: /Abrir detalle de/i })).toHaveLength(2);
   });
 });

@@ -2,12 +2,10 @@ import React from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { Icons } from './Icons';
 import { cn, formatCurrency } from '../lib/utils';
-import { HIGH_VERIFICATION_HIGHLIGHT_MIN_SCORE, getPropertyVerificationBadge } from '../lib/propertyVerification';
+import { HIGH_VERIFICATION_HIGHLIGHT_MIN_SCORE, getPropertyVerificationBadge, getPropertyVerificationItems } from '../lib/propertyVerification';
 import { Property } from '../services/geminiService';
-import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
-import { VerificationMeter } from './ui/VerificationMeter';
 
 const normalizePropertyText = (value?: string) => (value ?? '')
   .normalize('NFD')
@@ -43,6 +41,26 @@ const getGuestCapacityLabel = (maxGuests?: number | null) => {
   return `Hasta ${maxGuests} ${maxGuests === 1 ? 'huésped' : 'huéspedes'}`;
 };
 
+const verificationHighlightPriority: Record<string, number> = {
+  location: 0,
+  identity: 1,
+  photos: 2,
+  video: 3,
+  basics: 4,
+};
+
+const verificationHighlightLabels: Record<string, string> = {
+  location: 'Ubicación',
+  identity: 'Anfitrión',
+  photos: 'Fotos',
+  video: 'Video',
+  basics: 'Datos',
+};
+
+const getVerificationHighlightLabel = (key: string, fallbackLabel: string) => (
+  verificationHighlightLabels[key] || fallbackLabel
+);
+
 interface PropertyCardProps {
   property: Property;
   onClick?: () => void;
@@ -67,17 +85,25 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   const imageSrc = property.imageUrl || 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=900&q=80';
   const isFavoritesVariant = variant === 'favorites';
   const verificationBadge = getPropertyVerificationBadge(property);
-  const verificationSummary = {
-    score: verificationBadge.score,
-    maxScore: verificationBadge.max,
-    items: Array.isArray(property.verificationItems) ? property.verificationItems : [],
-  };
   const shouldEmphasizeVerification = emphasizeVerification && !isFavoritesVariant;
   const propertyTypeLabel = getPropertyTypeLabel(property);
   const guestCapacityLabel = getGuestCapacityLabel(Number(property.maxGuests) || null);
   const verificationTagLabel = !isFavoritesVariant && verificationBadge.score >= HIGH_VERIFICATION_HIGHLIGHT_MIN_SCORE
     ? verificationGuidanceLabel || 'Más comprobado'
     : null;
+  const verificationHighlights = getPropertyVerificationItems(property)
+    .filter((item) => item.status === 'complete')
+    .sort((left, right) => {
+      const leftPriority = verificationHighlightPriority[left.key] ?? Number.MAX_SAFE_INTEGER;
+      const rightPriority = verificationHighlightPriority[right.key] ?? Number.MAX_SAFE_INTEGER;
+
+      return leftPriority - rightPriority;
+    })
+    .slice(0, 3)
+    .map((item) => ({
+      key: item.key,
+      label: getVerificationHighlightLabel(item.key, item.label),
+    }));
 
   const handleFavoriteToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -125,13 +151,10 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         
         <div className="absolute inset-x-0 top-0 flex items-start justify-between gap-3 p-4">
           {verificationTagLabel ? (
-            <Badge
-              variant="neutral"
-              size="sm"
-              className="border-white/70 bg-white/94 text-slate-700 shadow-[0_14px_26px_-22px_rgba(15,23,42,0.26)] backdrop-blur-sm"
-            >
-              {verificationTagLabel}
-            </Badge>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/80 bg-white/96 px-3 py-1.5 text-[11px] font-semibold tracking-[0.01em] text-slate-800 shadow-[0_14px_26px_-22px_rgba(15,23,42,0.26)] backdrop-blur-sm">
+              <Icons.ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
+              <span>{verificationTagLabel}</span>
+            </span>
           ) : (
             <span />
           )}
@@ -176,36 +199,60 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         </div>
 
         <div className="space-y-3">
-          <p className="text-[1.55rem] font-black leading-none tracking-[-0.04em] text-slate-950 md:text-[1.75rem]">
+          <p className="text-[1.75rem] font-black leading-none tracking-[-0.045em] text-slate-950 md:text-[2rem]">
             {formatCurrency(Number(property.price) || 0)}
             {' '}
-            <span className="text-sm font-medium tracking-normal text-slate-500">por noche</span>
+            <span className="text-[12px] font-semibold uppercase tracking-[0.16em] text-slate-400">por noche</span>
           </p>
 
-          <VerificationMeter
-            summary={verificationSummary}
-            eyebrow="Comprobado"
-            layout="inline"
-            tone={shouldEmphasizeVerification ? 'success' : 'neutral'}
-            className="min-w-0 px-0 py-0"
-            labelClassName={cn(
-              'text-[13px] font-semibold leading-5 text-slate-900',
-              shouldEmphasizeVerification && 'text-emerald-900',
+          <div
+            aria-label={verificationBadge.label}
+            className={cn(
+              'rounded-[calc(var(--app-radius-control)+2px)] border border-slate-200/85 bg-slate-50/85 p-3.5',
+              shouldEmphasizeVerification && 'border-emerald-200/80 bg-emerald-50/65',
             )}
-            visualClassName={cn(
-              shouldEmphasizeVerification ? 'text-emerald-700' : 'text-slate-500',
-            )}
-          />
+          >
+            <div className="space-y-2.5">
+              <p className={cn(
+                'text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500',
+                shouldEmphasizeVerification && 'text-emerald-700',
+              )}>
+                Validado en este aviso
+              </p>
+
+              {verificationHighlights.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {verificationHighlights.map((item) => (
+                    <span
+                      key={item.key}
+                      className={cn(
+                        'inline-flex items-center gap-1.5 rounded-full border border-slate-200/90 bg-white px-3 py-1.5 text-[12px] font-semibold tracking-[-0.01em] text-slate-700',
+                        shouldEmphasizeVerification && 'border-emerald-200/90 text-emerald-800',
+                      )}
+                    >
+                      <Icons.Check className={cn(
+                        'h-3.5 w-3.5 text-emerald-600',
+                        shouldEmphasizeVerification && 'text-emerald-700',
+                      )} />
+                      <span>{item.label}</span>
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm leading-5 text-slate-600">Todavía sin validaciones visibles</p>
+              )}
+            </div>
+          </div>
         </div>
 
-        <div className="mt-auto flex items-end justify-end gap-4 pt-1">
+        <div className="mt-auto flex items-end justify-end pt-1">
           {onClick ? (
-            <div className="inline-flex items-center gap-2 text-[13.5px] font-semibold tracking-[-0.01em] text-slate-700 transition-colors duration-150 group-hover:text-slate-950">
-              <span>{isFavoritesVariant ? 'Abrir detalle' : 'Ver detalle'}</span>
-              <span className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200/90 bg-white text-slate-700 shadow-[0_12px_24px_-18px_rgba(15,23,42,0.18)] transition-[transform,border-color,color,box-shadow] duration-150 group-hover:translate-x-0.5 group-hover:border-slate-300 group-hover:text-slate-950 group-hover:shadow-[0_16px_28px_-22px_rgba(15,23,42,0.22)]">
+            <span
+              aria-hidden="true"
+              className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200/90 bg-white text-slate-700 shadow-[0_12px_24px_-18px_rgba(15,23,42,0.18)] transition-[transform,border-color,color,box-shadow] duration-150 group-hover:translate-x-0.5 group-hover:border-slate-300 group-hover:text-slate-950 group-hover:shadow-[0_16px_28px_-22px_rgba(15,23,42,0.22)]"
+            >
                 <Icons.ArrowRight className="h-4 w-4" />
-              </span>
-            </div>
+            </span>
           ) : null}
         </div>
       </div>

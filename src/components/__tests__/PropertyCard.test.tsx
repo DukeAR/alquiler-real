@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 const useAuthMock = vi.fn();
@@ -78,14 +78,19 @@ describe('PropertyCard', () => {
     expect(screen.queryByText('Precio por noche')).toBeNull();
     expect(screen.queryByText('4.8')).toBeNull();
     expect(screen.queryByText('12 reseñas')).toBeNull();
-    expect(screen.getByText('Comprobado')).toBeInTheDocument();
     expect(screen.getByText('Más comprobado')).toBeInTheDocument();
-    expect(screen.getByText('4 de 5 comprobaciones')).toBeInTheDocument();
-    expect(screen.getByText('✔✔✔✔○')).toBeInTheDocument();
+    expect(screen.getByText('Validado en este aviso')).toBeInTheDocument();
+    expect(screen.getByText('Ubicación')).toBeInTheDocument();
+    expect(screen.getByText('Fotos')).toBeInTheDocument();
+    expect(screen.getByText('Anfitrión')).toBeInTheDocument();
+    expect(screen.getByLabelText('4 de 5 comprobaciones')).toBeInTheDocument();
+    expect(screen.queryByText('4 de 5 comprobaciones')).toBeNull();
+    expect(screen.queryByText('✔✔✔✔○')).toBeNull();
     expect(screen.queryByText('Anfitrión con buen historial')).toBeNull();
     expect(screen.queryByText('12 reseñas reales')).toBeNull();
     expect(screen.queryByText('Anfitrión: Laura')).toBeNull();
-    expect(screen.getByText('Ver detalle')).toBeInTheDocument();
+    expect(screen.queryByText('Ver detalle')).toBeNull();
+    expect(screen.getByRole('button', { name: /Abrir detalle de Casa frente al mar/i })).toBeInTheDocument();
   });
 
   test('shows only the score when the real verification level is still low', () => {
@@ -101,8 +106,12 @@ describe('PropertyCard', () => {
       />,
     );
 
-    expect(screen.getByText('3 de 5 comprobaciones')).toBeInTheDocument();
-    expect(screen.getByText('✔✔✔○○')).toBeInTheDocument();
+    expect(screen.getByText('Ubicación')).toBeInTheDocument();
+    expect(screen.getByText('Anfitrión')).toBeInTheDocument();
+    expect(screen.getByText('Datos')).toBeInTheDocument();
+    expect(screen.queryByText('Fotos')).toBeNull();
+    expect(screen.getByLabelText('3 de 5 comprobaciones')).toBeInTheDocument();
+    expect(screen.queryByText('3 de 5 comprobaciones')).toBeNull();
     expect(screen.queryByText('Más comprobado')).toBeNull();
   });
 
@@ -127,6 +136,7 @@ describe('PropertyCard', () => {
     );
 
     expect(screen.queryByText('Anfitrión con buen historial')).toBeNull();
+    expect(screen.getByText('Anfitrión')).toBeInTheDocument();
   });
 
   test('shows the subtle high-verification badge automatically when the score reaches 4', () => {
@@ -137,7 +147,7 @@ describe('PropertyCard', () => {
     );
 
     expect(screen.getByText('Más comprobado')).toBeInTheDocument();
-    expect(screen.getByText('4 de 5 comprobaciones')).toBeInTheDocument();
+    expect(screen.getByText('Fotos')).toBeInTheDocument();
   });
 
   test('makes the verification line slightly more visible without turning it into a heavy green block', () => {
@@ -148,22 +158,25 @@ describe('PropertyCard', () => {
       />,
     );
 
-    const verificationBlock = screen.getByLabelText('4 de 5 comprobaciones').parentElement;
+    const verificationBlock = screen.getByLabelText('4 de 5 comprobaciones');
 
-    expect(verificationBlock).not.toHaveClass('bg-emerald-50/70');
-    expect(screen.getByLabelText('4 de 5 comprobaciones')).toHaveClass('text-emerald-700');
+    expect(verificationBlock).toHaveClass('border-emerald-200/80');
+    expect(within(verificationBlock).getByText('Validado en este aviso')).toHaveClass('text-emerald-700');
   });
 
   test('keeps the favorites variant free of Explore guidance labels', () => {
     render(<PropertyCard property={sampleProperty} variant="favorites" onClick={vi.fn()} />);
 
-    expect(screen.getByText('Comprobado')).toBeInTheDocument();
-    expect(screen.getByText('4 de 5 comprobaciones')).toBeInTheDocument();
-    expect(screen.getByText('✔✔✔✔○')).toBeInTheDocument();
+    expect(screen.getByText('Validado en este aviso')).toBeInTheDocument();
+    expect(screen.getByText('Ubicación')).toBeInTheDocument();
+    expect(screen.getByText('Fotos')).toBeInTheDocument();
+    expect(screen.getByText('Anfitrión')).toBeInTheDocument();
+    expect(screen.getByLabelText('4 de 5 comprobaciones')).toBeInTheDocument();
     expect(screen.queryByText('Más comprobado')).toBeNull();
     expect(screen.queryByText('Anfitrión con buen historial')).toBeNull();
-    expect(screen.getByText('Abrir detalle')).toBeInTheDocument();
+    expect(screen.queryByText('Abrir detalle')).toBeNull();
     expect(screen.queryByText('Ver detalle')).toBeNull();
+    expect(screen.getByRole('button', { name: /Abrir detalle de Casa frente al mar/i })).toBeInTheDocument();
   });
 
   test('supports keyboard navigation and favorite toggling', () => {
