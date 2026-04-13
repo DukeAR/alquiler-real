@@ -17,7 +17,7 @@
 - Result: pass
 - Notes: explicit script added to match the requested review contract.
 
-### `npm exec vitest run`
+### `npx vitest run`
 
 - Result: pass
 - Summary: `51` test files, `254` tests passed.
