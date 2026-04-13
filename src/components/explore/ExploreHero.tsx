@@ -62,7 +62,7 @@ export const ExploreHero = ({
         </div>
 
         <form
-          className="w-full rounded-[var(--app-radius-card)] border border-slate-200/80 bg-white/94 p-4 shadow-[0_28px_52px_-36px_rgba(15,23,42,0.24)] backdrop-blur-sm sm:p-5 md:p-6"
+          className="w-full rounded-[var(--app-radius-card)] border border-slate-200/90 bg-white/96 p-5 shadow-[0_32px_64px_-36px_rgba(15,23,42,0.28)] backdrop-blur-sm sm:p-6 md:p-7"
           onSubmit={(event) => {
             event.preventDefault();
             onSearchSubmit();
@@ -89,13 +89,14 @@ export const ExploreHero = ({
                   placeholder="¿A dónde querés ir?"
                   onSelect={onLocationSelect}
                   onSubmitValue={onSearchSubmitValue}
+                  inputClassName="min-h-[4.25rem] border-slate-300 bg-white py-4 pl-14 text-[1rem] text-slate-950 placeholder:text-slate-500 focus:border-brand/70 focus:shadow-[0_0_0_4px_rgba(67,56,202,0.16),0_20px_36px_-28px_rgba(67,56,202,0.3)] md:min-h-[4.5rem] md:pl-16"
                 />
               </div>
 
               <Button
                 type="submit"
                 size="lg"
-                className="h-16 w-full px-6 text-[0.98rem] shadow-[var(--app-shadow-brand)] lg:min-w-[220px] lg:w-auto lg:flex-none"
+                className="h-[4.5rem] w-full px-7 text-[1rem] font-bold shadow-[0_24px_46px_-26px_rgba(67,56,202,0.46)] hover:shadow-[0_28px_52px_-28px_rgba(67,56,202,0.52)] lg:min-w-[240px] lg:w-auto lg:flex-none"
               >
                 Buscar alojamientos
               </Button>

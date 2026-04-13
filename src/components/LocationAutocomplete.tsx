@@ -30,6 +30,7 @@ interface LocationAutocompleteProps {
   suggestions?: LocationSuggestion[];
   inputId?: string;
   ariaLabel?: string;
+  inputClassName?: string;
 }
 
 export const LocationAutocomplete = ({
@@ -41,6 +42,7 @@ export const LocationAutocomplete = ({
   suggestions: availableSuggestions = EMPTY_LOCATION_SUGGESTIONS,
   inputId,
   ariaLabel = 'Destino',
+  inputClassName,
 }: LocationAutocompleteProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [filteredSuggestions, setFilteredSuggestions] = useState<LocationSuggestion[]>([]);
@@ -180,7 +182,8 @@ export const LocationAutocomplete = ({
           className={cn(
             'min-h-16 rounded-[18px] border-slate-200/90 bg-white py-4 pl-14 text-[1rem] font-semibold tracking-[-0.01em] text-slate-900 shadow-none placeholder:text-slate-400 focus:border-brand/50 focus:shadow-[var(--app-focus-ring)] md:py-5 md:pl-16',
             value ? 'pr-14 md:pr-16' : 'pr-5 md:pr-6',
-            showSuggestions || showEmptyState ? 'rounded-b-[14px] border-b-transparent md:rounded-b-[16px]' : ''
+            showSuggestions || showEmptyState ? 'rounded-b-[14px] border-b-transparent md:rounded-b-[16px]' : '',
+            inputClassName,
           )}
         />
       </div>
