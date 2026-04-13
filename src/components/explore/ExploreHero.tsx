@@ -11,7 +11,7 @@ type ExploreHeroProps = {
   onLocationSelect: (location: LocationSuggestion) => void;
 };
 
-const heroSubtitle = 'Elegí con información real antes de reservar.';
+const heroSubtitle = 'Información real para decidir mejor.';
 const heroBackgroundImage = 'https://images.unsplash.com/photo-1500375592092-40eb2168fd21?auto=format&fit=crop&w=1800&q=80';
 const valueProofItems = [
   'Ubicación verificada',
@@ -46,16 +46,16 @@ export const ExploreHero = ({
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(165,180,252,0.16),transparent_38%),radial-gradient(circle_at_bottom_right,rgba(255,255,255,0.16),transparent_34%)]" />
       </div>
 
-      <div className="relative z-10 mx-auto flex w-full max-w-[45rem] flex-col items-center gap-8 text-center md:gap-10">
-        <div className="max-w-[42rem] space-y-4 md:space-y-5">
+      <div className="relative z-10 mx-auto flex w-full max-w-[45rem] flex-col items-center gap-10 text-center md:gap-12">
+        <div className="max-w-[39rem] space-y-4 md:space-y-5">
           <p className="app-eyebrow text-brand">Elegir mejor</p>
-          <div className="space-y-3 md:space-y-4">
-            <h1 className="font-display mx-auto max-w-[18rem] text-balance text-[2.35rem] font-semibold leading-[0.98] tracking-[-0.04em] text-slate-950 sm:max-w-[28rem] sm:text-[3.2rem] md:max-w-[36rem] md:text-[4.35rem] lg:max-w-[40rem] lg:text-[4.8rem]">
+          <div className="space-y-2.5 md:space-y-3">
+            <h1 className="font-display mx-auto max-w-[17rem] text-balance text-[2.65rem] font-semibold leading-[0.92] tracking-[-0.045em] text-slate-950 sm:max-w-[26rem] sm:text-[3.65rem] md:max-w-[31rem] md:text-[4.9rem] lg:max-w-[35rem] lg:text-[5.45rem]">
               Reservar es fácil.
               <br />
               Decidir bien no siempre.
             </h1>
-            <p className="mx-auto max-w-[31rem] text-[1rem] leading-7 text-slate-600 sm:text-[1.02rem] md:max-w-[34rem] md:text-[1.1rem] md:leading-8">
+            <p className="mx-auto max-w-[26rem] text-[1rem] font-medium leading-7 text-slate-700 sm:text-[1.03rem] md:max-w-[28rem] md:text-[1.12rem] md:leading-7">
               {heroSubtitle}
             </p>
           </div>
@@ -101,10 +101,10 @@ export const ExploreHero = ({
               </Button>
             </div>
 
-            <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 border-t border-slate-200/80 pt-3 text-[13px] text-slate-600 sm:gap-x-6 sm:pt-4 sm:text-[13.5px]">
+            <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2.5 border-t border-slate-200/80 pt-3 text-[12.5px] text-slate-600 sm:gap-x-6 sm:pt-4 sm:text-[13px]">
               {valueProofItems.map((item) => (
-                <span key={item} className="inline-flex items-center gap-2 font-medium leading-5">
-                  <Icons.CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+                <span key={item} className="inline-flex items-center gap-1.5 font-medium leading-5">
+                  <Icons.CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-600/75" />
                   <span>{item}</span>
                 </span>
               ))}
