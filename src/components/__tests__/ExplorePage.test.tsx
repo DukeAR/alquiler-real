@@ -61,7 +61,7 @@ describe('ExplorePage', () => {
       expect(apiJsonMock).toHaveBeenCalled();
     });
 
-    fireEvent.click(screen.getByRole('checkbox', { name: /Solo con más información comprobada/i }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /Solo con 3\+ comprobaciones/i }));
 
     await waitFor(() => {
       expect(
