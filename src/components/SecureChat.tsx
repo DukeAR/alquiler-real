@@ -11,6 +11,7 @@ import {
 import { useAuth } from '../hooks/useAuth';
 import { type ReservationRequestContext } from '../types';
 import { formatBookingDateShort, getBookingDateOnlyValue, isBookingCheckInReached } from '../lib/bookingDates';
+import { navigateToExternalUrl } from '../lib/browserNavigation';
 import { PLATFORM_DIRECT_FLOW_NOTE, PLATFORM_PROTECTED_FLOW_NOTE } from '../lib/platformTerms';
 import { getProtectedDepositPricingFromBooking } from '../lib/protectedDeposit';
 import { getReservationFlowCopy, getReservationVisibleStatus } from '../lib/reservationFlow';
@@ -298,10 +299,41 @@ const getRequestDeadline = (requestCreatedAt?: string) => {
   return new Date(requestCreatedAtDate.getTime() + REQUEST_RESPONSE_WINDOW_MS);
 };
 
+const inferConversationMode = (conversation: Conversation | null) => {
+  if (!conversation) {
+    return null;
+  }
+
+  if (conversation.requestMode === 'direct' || conversation.requestMode === 'protected') {
+    return conversation.requestMode;
+  }
+
+  const effectiveDepositType = getEffectiveDepositType({
+    depositType: conversation.depositType,
+    depositStatus: conversation.depositStatus,
+  });
+
+  if (effectiveDepositType === 'protected') {
+    return 'protected' as const;
+  }
+
+  if (effectiveDepositType === 'external') {
+    return 'direct' as const;
+  }
+
+  if (conversation.bookingStatus === 'confirmed' || conversation.bookingStatus === 'completed' || conversation.bookingStatus === 'pending') {
+    return 'direct' as const;
+  }
+
+  return null;
+};
+
 const getConversationRequestStatus = (conversation: Conversation | null) => {
   if (!conversation) {
     return 'pending' as const;
   }
+
+  const inferredMode = inferConversationMode(conversation);
 
   if (conversation.requestStatus === 'not_advanced') {
     return 'not_advanced' as const;
@@ -320,7 +352,7 @@ const getConversationRequestStatus = (conversation: Conversation | null) => {
     return 'not_advanced' as const;
   }
 
-  if ((conversation.requestMode === 'protected' || conversation.booking_id) && conversation.bookingStatus === 'confirmed') {
+  if (inferredMode === 'protected' && conversation.bookingStatus === 'confirmed') {
     return 'accepted' as const;
   }
 
@@ -371,11 +403,7 @@ const getActiveRequestContext = (
     return null;
   }
 
-  const requestMode = activeConversation.requestMode === 'direct' || activeConversation.requestMode === 'protected'
-    ? activeConversation.requestMode
-    : activeConversation.booking_id
-      ? 'protected'
-      : null;
+  const requestMode = inferConversationMode(activeConversation);
   const requestStatus = getConversationRequestStatus(activeConversation);
   const startDate = activeConversation.requestStartDate || activeConversation.startDate;
   const endDate = activeConversation.requestEndDate || activeConversation.endDate;
@@ -826,7 +854,7 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
         depositPaymentReference: checkoutSession.booking.depositPaymentReference,
       });
       showToast('Pago de seña', 'Vas a Mercado Pago para dejar la seña registrada. Cuando se confirme, volvés a este chat.', 'info');
-      window.location.assign(checkoutSession.checkoutUrl);
+      navigateToExternalUrl(checkoutSession.checkoutUrl);
     } catch (err) {
       showToast('Seña', err instanceof Error ? err.message : 'No pudimos abrir el pago de la seña.', 'error');
     } finally {

@@ -216,6 +216,55 @@ describe('MyBookings', () => {
     expect(await screen.findByText('Quedó pendiente coordinar el horario de llegada.')).toBeInTheDocument();
   });
 
+  test('keeps completed direct reservations out of pending requests and shows them as finalizadas', async () => {
+    mockDashboardApi({
+      bookings: [
+        {
+          id: 'booking-completed-direct',
+          propertyId: 'property-closed-1',
+          userId: 'user-1',
+          conversationId: 'conv-closed-1',
+          status: 'completed',
+          requestMode: 'direct',
+          propertyTitle: 'PH con patio y parrilla en calle tranquila',
+          location: 'Costa del Este',
+          startDate: getRelativeArgentinaDate(-28),
+          endDate: getRelativeArgentinaDate(-24),
+          guests: 2,
+          totalPrice: 188000,
+          contractAccepted: true,
+          guestReviewSubmitted: true,
+        },
+      ],
+      conversations: [
+        {
+          id: 'conv-closed-1',
+          property_id: 'property-closed-1',
+          tenant_id: 'user-1',
+          host_id: 'host-1',
+          hostName: 'Valeria',
+          propertyTitle: 'PH con patio y parrilla en calle tranquila',
+          last_message: 'Gracias por la estadía.',
+          bookingStatus: 'completed',
+          updated_at: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+        },
+      ],
+    });
+
+    render(
+      <MemoryRouter>
+        <MyBookings />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('No tenés solicitudes abiertas ahora.')).toBeInTheDocument();
+    expect(screen.getAllByText('Finalizada').length).toBeGreaterThan(0);
+    expect(screen.getByText('Revisar el cierre')).toBeInTheDocument();
+    expect(screen.queryByText('Propuesta enviada')).toBeNull();
+    expect(screen.queryByText('Esperar respuesta')).toBeNull();
+  });
+
   test('marks the agreement as accepted and emits success feedback', async () => {
     apiJsonMock.mockResolvedValue([
       {

@@ -10,6 +10,7 @@ import {
   isBookingCheckInReached,
   parseBookingDateOnly,
 } from '../lib/bookingDates';
+import { navigateToExternalUrl } from '../lib/browserNavigation';
 import {
   BOOKING_CONTRACT_PLATFORM_TERMS,
   PLATFORM_DIRECT_FLOW_NOTE,
@@ -608,7 +609,7 @@ export const MyBookings = () => {
       const checkoutSession = await payProtectedDeposit(bookingId, '/my-bookings');
       updateBookingState(checkoutSession.booking);
       showToast('Pago de seña', 'Vas a Mercado Pago para dejar la seña registrada. Cuando se confirme, volvés a esta reserva.', 'info');
-      window.location.assign(checkoutSession.checkoutUrl);
+      navigateToExternalUrl(checkoutSession.checkoutUrl);
     } catch (error) {
       showToast('Seña', error instanceof Error ? error.message : 'No pudimos abrir el pago de la seña.', 'error');
     } finally {

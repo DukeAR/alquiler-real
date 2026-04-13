@@ -248,7 +248,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const nextSession = await loadCurrentUser();
 
             if (nextSession.status === 'authenticated' && nextSession.user) {
-                console.log('DEBUG [AuthContext]: User data fetched:', nextSession.user);
                 setUser(nextSession.user);
                 setStatus('authenticated');
                 setSessionError(null);

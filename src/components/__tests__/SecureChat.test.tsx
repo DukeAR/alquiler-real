@@ -262,6 +262,30 @@ describe('SecureChat', () => {
     expect(await screen.findByText('Tu propuesta fue enviada por chat. El anfitrión puede responder por acá.')).toBeInTheDocument();
   });
 
+  test('does not infer a protected deposit step from booking_id alone when a direct booking is already confirmed', async () => {
+    useAuthMock.mockReturnValue({ user: { id: 'tenant-1' } });
+    fetchConversationsMock.mockResolvedValue([
+      {
+        ...baseConversation,
+        booking_id: 'booking-1',
+        bookingStatus: 'confirmed',
+        requestStartDate: getRelativeArgentinaDate(7),
+        requestEndDate: getRelativeArgentinaDate(11),
+        requestGuests: 2,
+        requestTotalPrice: 320000,
+      },
+    ]);
+    fetchMessagesMock.mockResolvedValue([]);
+
+    renderChat();
+
+    expect(await screen.findByText('Estado: Confirmada')).toBeInTheDocument();
+    expect(screen.getByText('Todo listo para esas fechas')).toBeInTheDocument();
+    expect(screen.queryByText('Estado: Pendiente seña')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Registrar seña/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Pagar seña/i })).not.toBeInTheDocument();
+  });
+
   test('shows a subtle account reminder when transfer keywords appear in the chat', async () => {
     useAuthMock.mockReturnValue({ user: { id: 'tenant-1' } });
     fetchConversationsMock.mockResolvedValue([

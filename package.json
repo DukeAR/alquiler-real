@@ -13,6 +13,7 @@
     "build:analyze": "cross-env ANALYZE=true vite build",
     "preview": "vite preview --host 0.0.0.0",
     "clean": "rm -rf dist",
+    "type-check": "npm run typecheck:app && npm run typecheck:server && npm run typecheck:tooling",
     "typecheck:app": "tsc --noEmit -p tsconfig.json",
     "typecheck:server": "tsc --noEmit -p tsconfig.server.json",
     "typecheck:tooling": "tsc --noEmit -p tsconfig.node.json",

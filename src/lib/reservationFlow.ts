@@ -209,6 +209,10 @@ export const getReservationFlowStage = ({
     return cancellationActor === 'host' ? 'host-cancelled' : 'guest-cancelled';
   }
 
+  if (bookingStatus === 'completed') {
+    return 'reservation-confirmed';
+  }
+
   const requestAccepted = requestStatus === 'accepted' || (mode === 'protected' && bookingStatus === 'confirmed');
 
   if (mode === 'direct') {
@@ -288,6 +292,14 @@ export const getReservationVisibleStatus = (
     };
   }
 
+  if (input.bookingStatus === 'completed') {
+    return {
+      key: 'confirmed',
+      label: 'Finalizada',
+      tone: 'success',
+    };
+  }
+
   switch (stage) {
     case 'request-pending':
       if (options.hasConversation) {
@@ -359,6 +371,21 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
   const modelLabel = getModelLabel(input.mode, input.depositType);
   const viewerRole = input.viewerRole ?? 'guest';
   const visibleStatus = getReservationVisibleStatus(input);
+
+  if (input.bookingStatus === 'completed') {
+    return {
+      stage,
+      modelLabel,
+      statusLabel: visibleStatus?.label ?? 'Finalizada',
+      description: 'La estadía ya terminó.',
+      supportText: viewerRole === 'guest'
+        ? 'Podés revisar el cierre, dejar una reseña o volver al chat si necesitás contexto de esa reserva.'
+        : 'La reserva ya quedó cerrada y sigue visible como historial por si necesitás revisar el cierre.',
+      nextActor: 'none',
+      nextActorLabel: 'Sin acción pendiente',
+      nextStepLabel: viewerRole === 'guest' ? 'Revisar el cierre' : 'Historial cerrado',
+    };
+  }
 
   switch (stage) {
     case 'request-pending':
