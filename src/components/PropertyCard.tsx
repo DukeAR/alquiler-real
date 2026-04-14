@@ -42,6 +42,14 @@ const getGuestCapacityLabel = (maxGuests?: number | null) => {
   return `Hasta ${maxGuests} ${maxGuests === 1 ? 'huésped' : 'huéspedes'}`;
 };
 
+const compactVerificationPriority: Record<string, number> = {
+  location: 0,
+  identity: 1,
+  data: 2,
+  photos: 3,
+  price: 4,
+};
+
 interface PropertyCardProps {
   property: Property;
   onClick?: () => void;
@@ -64,7 +72,6 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   verificationGuidanceLabel = null,
   emphasizeVerification = false,
   decisionFeatured = false,
-  decisionSupportLabel = null,
   className,
 }) => {
   const auth = useAuth();
@@ -79,6 +86,18 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   const verificationTagLabel = !isFavoritesVariant && !isDecisionFeatured && verificationDetails.score >= HIGH_VERIFICATION_HIGHLIGHT_MIN_SCORE
     ? verificationGuidanceLabel || 'Más comprobado'
     : null;
+  const compactVerificationSummaryLabel = `${verificationDetails.score}/${verificationDetails.max} verificado`;
+  const compactVerificationDetail = verificationDetails.items
+    .filter((item) => item.status === 'complete' && item.key !== 'price')
+    .sort((left, right) => {
+      const leftPriority = compactVerificationPriority[left.key] ?? Number.MAX_SAFE_INTEGER;
+      const rightPriority = compactVerificationPriority[right.key] ?? Number.MAX_SAFE_INTEGER;
+
+      return leftPriority - rightPriority;
+    })
+    .slice(0, 3)
+    .map((item) => item.label)
+    .join(' · ');
 
   const handleFavoriteToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -160,8 +179,8 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         </div>
       </div>
 
-      <div className="flex flex-1 flex-col gap-5 p-5 sm:p-5 md:p-6">
-        <div className="space-y-3.5">
+      <div className="flex flex-1 flex-col gap-4 p-5 sm:p-5 md:p-6">
+        <div className="space-y-3">
           <div className="space-y-3">
             <div className="space-y-1.5">
               <p className="eyebrow">{propertyTypeLabel}</p>
@@ -185,70 +204,28 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
                 </>
               ) : null}
             </div>
+
+            <div data-testid="property-card-verification" aria-label={verificationDetails.label} className="space-y-1">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] leading-5">
+                <span className={cn('font-semibold text-slate-700', shouldEmphasizeVerification && 'text-emerald-800')}>
+                  {compactVerificationSummaryLabel}
+                </span>
+                <span
+                  aria-hidden="true"
+                  className={cn('text-[11px] font-semibold tracking-[0.22em] text-slate-400', shouldEmphasizeVerification && 'text-emerald-700')}
+                >
+                  {verificationDetails.spacedVisual}
+                </span>
+              </div>
+
+              {compactVerificationDetail ? (
+                <p className={cn('text-[12.5px] leading-5 text-slate-500', shouldEmphasizeVerification && 'text-emerald-700')}>
+                  {compactVerificationDetail}
+                </p>
+              ) : null}
+            </div>
           </div>
         </div>
-
-        <section
-          data-testid="property-card-verification"
-          aria-label={verificationDetails.label}
-          className={cn(
-            'space-y-3 rounded-[24px] border border-slate-200/80 bg-slate-50/85 p-4',
-            shouldEmphasizeVerification && 'border-emerald-200/80 bg-emerald-50/75',
-          )}
-        >
-          <div className="flex items-end justify-between gap-3">
-            <div className="space-y-1.5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Verificación</p>
-              <div className="flex items-end gap-2">
-                <span className={cn(
-                  'text-[2.05rem] font-black leading-none tracking-[-0.06em] text-slate-950',
-                  (shouldEmphasizeVerification || verificationDetails.score >= HIGH_VERIFICATION_HIGHLIGHT_MIN_SCORE) && 'text-emerald-900',
-                )}>
-                  {verificationDetails.score}/{verificationDetails.max}
-                </span>
-                <span className="pb-1 text-[13px] font-medium text-slate-500">nivel visible</span>
-              </div>
-              <p className={cn('text-[13px] font-medium leading-5 text-slate-600', shouldEmphasizeVerification && 'text-emerald-800')}>
-                {verificationDetails.summaryLabel}
-              </p>
-            </div>
-            <span
-              aria-hidden="true"
-              className={cn(
-                'shrink-0 text-[12px] font-semibold tracking-[0.28em] text-slate-500',
-                (shouldEmphasizeVerification || verificationDetails.score >= HIGH_VERIFICATION_HIGHLIGHT_MIN_SCORE) && 'text-emerald-700',
-              )}
-            >
-              {verificationDetails.spacedVisual}
-            </span>
-          </div>
-
-          <ul className="grid gap-x-4 gap-y-2 sm:grid-cols-2">
-            {verificationDetails.items.map((item) => {
-              const complete = item.status === 'complete';
-
-              return (
-                <li key={item.key} className="flex items-center justify-between gap-3 text-[13px] leading-5">
-                  <span className={cn('font-medium', complete ? 'text-slate-700' : 'text-slate-500')}>
-                    {item.label}
-                  </span>
-                  <span className={cn('text-[13px] font-semibold', complete ? 'text-emerald-700' : 'text-slate-400')}>
-                    {complete ? '✔' : '✖'}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-
-        {!isFavoritesVariant && decisionSupportLabel ? (
-          <p className={cn(
-            'text-[13px] leading-5',
-            isDecisionFeatured ? 'font-medium text-slate-600' : 'text-slate-500',
-          )}>
-            {decisionSupportLabel}
-          </p>
-        ) : null}
 
         <div className="mt-auto space-y-1.5 pt-1">
           <div className="space-y-1">

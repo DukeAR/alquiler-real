@@ -96,11 +96,9 @@ describe('FavoritesView integration', () => {
     ]);
     expect(screen.getByLabelText('5 de 5 comprobaciones')).toBeInTheDocument();
     expect(screen.getByLabelText('4 de 5 comprobaciones')).toBeInTheDocument();
-    expect(screen.getAllByText(/^Ubicación$/)).toHaveLength(2);
-    expect(screen.getAllByText(/^Anfitrión$/)).toHaveLength(2);
-    expect(screen.getAllByText(/^Datos$/)).toHaveLength(2);
-    expect(screen.getAllByText(/^Fotos$/)).toHaveLength(2);
-    expect(screen.getAllByText(/^Precio$/)).toHaveLength(2);
+    expect(screen.getByText('5/5 verificado')).toBeInTheDocument();
+    expect(screen.getByText('4/5 verificado')).toBeInTheDocument();
+    expect(screen.getAllByText('Ubicación · Anfitrión · Datos')).toHaveLength(2);
     expect(screen.queryByText('Mejor verificado')).toBeNull();
     expect(screen.queryByText('Alto nivel de verificación')).toBeNull();
     expect(screen.getAllByRole('button', { name: /Abrir detalle de/i })).toHaveLength(2);

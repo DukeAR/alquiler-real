@@ -81,14 +81,12 @@ describe('PropertyCard', () => {
     expect(screen.getByText('Más comprobado')).toBeInTheDocument();
     const verificationBlock = screen.getByTestId('property-card-verification');
     expect(verificationBlock).toHaveAttribute('aria-label', '4 de 5 comprobaciones');
-    expect(within(verificationBlock).getByText('Ubicación')).toBeInTheDocument();
-    expect(within(verificationBlock).getByText('Anfitrión')).toBeInTheDocument();
-    expect(within(verificationBlock).getByText('Datos')).toBeInTheDocument();
-    expect(within(verificationBlock).getByText('Fotos')).toBeInTheDocument();
-    expect(within(verificationBlock).getByText('Precio')).toBeInTheDocument();
-    expect(within(verificationBlock).getAllByText('✔')).toHaveLength(4);
-    expect(within(verificationBlock).getByText('✖')).toBeInTheDocument();
-    expect(screen.getByText('● ● ● ● ○')).toBeInTheDocument();
+    expect(within(verificationBlock).getByText('4/5 verificado')).toBeInTheDocument();
+    expect(within(verificationBlock).getByText('● ● ● ● ○')).toBeInTheDocument();
+    expect(within(verificationBlock).getByText('Ubicación · Anfitrión · Datos')).toBeInTheDocument();
+    expect(within(verificationBlock).queryAllByRole('listitem')).toHaveLength(0);
+    expect(within(verificationBlock).queryByText(/^Fotos$/)).toBeNull();
+    expect(within(verificationBlock).queryByText(/^Precio$/)).toBeNull();
     expect(screen.queryByText('Confianza visible')).toBeNull();
     expect(screen.queryByText('Anfitrión con buen historial')).toBeNull();
     expect(screen.queryByText('12 reseñas reales')).toBeNull();
@@ -114,12 +112,11 @@ describe('PropertyCard', () => {
 
     const verificationBlock = screen.getByLabelText('3 de 5 comprobaciones');
 
-    expect(within(verificationBlock).getByText('Ubicación')).toBeInTheDocument();
-    expect(within(verificationBlock).getByText('Anfitrión')).toBeInTheDocument();
-    expect(within(verificationBlock).getByText('Datos')).toBeInTheDocument();
-    expect(within(verificationBlock).getByText('Fotos')).toBeInTheDocument();
-    expect(within(verificationBlock).getByText('Precio')).toBeInTheDocument();
-    expect(within(verificationBlock).getAllByText('✖')).toHaveLength(2);
+    expect(within(verificationBlock).getByText('3/5 verificado')).toBeInTheDocument();
+    expect(within(verificationBlock).getByText('● ● ● ○ ○')).toBeInTheDocument();
+    expect(within(verificationBlock).getByText('Ubicación · Datos')).toBeInTheDocument();
+    expect(within(verificationBlock).queryByText(/^Anfitrión$/)).toBeNull();
+    expect(within(verificationBlock).queryByText(/^Fotos$/)).toBeNull();
     expect(screen.queryByText('Más comprobado')).toBeNull();
   });
 
@@ -144,7 +141,7 @@ describe('PropertyCard', () => {
     );
 
     expect(screen.queryByText('Anfitrión con buen historial')).toBeNull();
-    expect(screen.getByText(/^Anfitrión$/)).toBeInTheDocument();
+    expect(screen.getByText('Ubicación · Anfitrión · Datos')).toBeInTheDocument();
   });
 
   test('shows the subtle high-verification badge automatically when the score reaches 4', () => {
@@ -155,7 +152,7 @@ describe('PropertyCard', () => {
     );
 
     expect(screen.getByText('Más comprobado')).toBeInTheDocument();
-    expect(screen.getByText(/^Datos$/)).toBeInTheDocument();
+    expect(screen.getByText('4/5 verificado')).toBeInTheDocument();
   });
 
   test('makes the verification line slightly more visible without turning it into a heavy green block', () => {
@@ -168,10 +165,10 @@ describe('PropertyCard', () => {
 
     const trustLine = screen.getByTestId('property-card-verification');
 
-    expect(trustLine).toHaveClass('border-emerald-200/80');
+    expect(within(trustLine).getByText('4/5 verificado')).toHaveClass('text-emerald-800');
   });
 
-  test('shows the featured badge and decision push line only when the card is highlighted as the best option', () => {
+  test('shows the featured badge without extra support copy when the card is highlighted as the most reliable option', () => {
     render(
       <PropertyCard
         property={sampleProperty}
@@ -182,7 +179,7 @@ describe('PropertyCard', () => {
     );
 
     expect(screen.getByText('Más confiable')).toBeInTheDocument();
-    expect(screen.getByText('Buena relación precio / información')).toBeInTheDocument();
+    expect(screen.queryByText('Buena relación precio / información')).toBeNull();
     expect(screen.queryByText('Más comprobado')).toBeNull();
   });
 
@@ -191,13 +188,10 @@ describe('PropertyCard', () => {
 
     const verificationBlock = screen.getByLabelText('4 de 5 comprobaciones');
 
-  expect(within(verificationBlock).getByText('Ubicación')).toBeInTheDocument();
-  expect(within(verificationBlock).getByText('Datos')).toBeInTheDocument();
-  expect(within(verificationBlock).getByText('Anfitrión')).toBeInTheDocument();
-  expect(within(verificationBlock).getByText('Fotos')).toBeInTheDocument();
-  expect(within(verificationBlock).getByText('Precio')).toBeInTheDocument();
+    expect(within(verificationBlock).getByText('4/5 verificado')).toBeInTheDocument();
+    expect(within(verificationBlock).getByText('Ubicación · Anfitrión · Datos')).toBeInTheDocument();
     expect(screen.queryByText('Más comprobado')).toBeNull();
-  expect(screen.queryByText('Más confiable')).toBeNull();
+    expect(screen.queryByText('Más confiable')).toBeNull();
     expect(screen.queryByText('Anfitrión con buen historial')).toBeNull();
     expect(screen.queryByText('Abrir ficha')).toBeNull();
     expect(screen.queryByText('Abrir detalle')).toBeNull();
