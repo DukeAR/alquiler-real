@@ -194,16 +194,16 @@ export const ExplorePage = () => {
       <section className="relative overflow-hidden">
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
           <div
-            className="absolute inset-x-0 inset-y-[-10%] scale-[1.02] opacity-95"
+            className="absolute inset-x-0 inset-y-[-8%] scale-[1.015] opacity-100"
             style={{
               backgroundImage: `url(${heroBackgroundImage})`,
               backgroundSize: 'cover',
               backgroundPosition: 'center',
-              filter: 'blur(2.5px) saturate(0.92) contrast(1)',
+              filter: 'blur(1.5px) saturate(0.98) contrast(1.02)',
             }}
           />
-          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(248,250,252,0.9)_0%,rgba(248,250,252,0.84)_36%,rgba(248,250,252,0.58)_68%,rgba(248,250,252,0.72)_100%)]" />
-          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.12)_0%,rgba(248,250,252,0.22)_62%,rgba(255,255,255,0.54)_100%)]" />
+          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(248,250,252,0.84)_0%,rgba(248,250,252,0.76)_36%,rgba(248,250,252,0.46)_68%,rgba(248,250,252,0.6)_100%)]" />
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.08)_0%,rgba(248,250,252,0.12)_62%,rgba(255,255,255,0.36)_100%)]" />
         </div>
 
         <div className="relative mx-auto w-full max-w-[68.75rem] px-5 pb-7 pt-8 sm:px-6 md:px-8 md:pb-8 md:pt-10 lg:pb-9 lg:pt-12">

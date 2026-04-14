@@ -51,11 +51,11 @@ const verificationHighlightPriority: Record<string, number> = {
 };
 
 const verificationHighlightLabels: Record<string, string> = {
-  location: 'Ubicación',
-  identity: 'Anfitrión',
-  photos: 'Datos',
-  video: 'Datos',
-  basics: 'Datos',
+  location: 'Ubicación verificada',
+  identity: 'Anfitrión identificado',
+  photos: 'Datos comprobados',
+  video: 'Datos comprobados',
+  basics: 'Datos comprobados',
 };
 
 const getVerificationHighlightLabel = (key: string, fallbackLabel: string) => (
@@ -158,7 +158,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
       className={cn(
         'group flex h-full flex-col overflow-hidden border-[color:var(--app-surface-border)] bg-white shadow-[var(--app-shadow-subtle)] transition-[transform,box-shadow,border-color,background-color] duration-200 ease-out',
         onClick && 'cursor-pointer hover:-translate-y-[3px] hover:border-[color:var(--app-surface-border-strong)] hover:shadow-[var(--app-shadow-raised)] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-brand/10',
-        isDecisionFeatured && 'border-brand/20 shadow-[0_22px_42px_-32px_rgba(67,56,202,0.22)]',
+        isDecisionFeatured && 'border-brand/35 shadow-[0_24px_46px_-34px_rgba(67,56,202,0.26)]',
         isFavoritesVariant && 'bg-white shadow-[var(--app-shadow-soft)]',
         className,
       )}
@@ -174,7 +174,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         
         <div className="absolute inset-x-0 top-0 flex items-start justify-between gap-3 p-4">
           {isDecisionFeatured ? (
-            <Badge variant="neutral" size="md" className="border-brand/15 bg-white/96 px-3 py-1.5 text-slate-950 shadow-[0_16px_30px_-24px_rgba(15,23,42,0.22)] backdrop-blur-sm">
+            <Badge variant="neutral" size="md" className="border-brand/25 bg-white/96 px-3 py-1.5 text-slate-950 shadow-[0_14px_26px_-20px_rgba(15,23,42,0.18)] backdrop-blur-sm">
               <span>Mejor opción</span>
             </Badge>
           ) : verificationTagLabel ? (
@@ -206,24 +206,31 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         </div>
       </div>
 
-      <div className="flex flex-1 flex-col gap-6 p-5 sm:p-5 md:p-6">
-        <div className="space-y-4">
-          <p className="eyebrow">{propertyTypeLabel}</p>
-          <h3 className="section-title line-clamp-2 transition-colors duration-150 group-hover:text-slate-950">{property.title}</h3>
-          <div className="flex flex-wrap items-center gap-y-1.5 text-sm leading-6 text-slate-600">
-            <span className="inline-flex items-center gap-1.5">
-              <Icons.MapPin className="h-3.5 w-3.5 text-slate-400" />
-              <span>{property.location}</span>
-            </span>
-            {guestCapacityLabel ? (
-              <>
-                <span aria-hidden="true" className="px-2 text-slate-300">·</span>
-                <span className="inline-flex items-center gap-1.5">
-                  <Icons.Users className="h-3.5 w-3.5 text-slate-400" />
-                  <span>{guestCapacityLabel}</span>
-                </span>
-              </>
-            ) : null}
+      <div className="flex flex-1 flex-col gap-5 p-5 sm:p-5 md:p-6">
+        <div className="space-y-3.5">
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <p className="eyebrow">{propertyTypeLabel}</p>
+              <h3 className="section-title line-clamp-2 text-[1.18rem] font-semibold leading-[1.18] transition-colors duration-150 group-hover:text-slate-950 md:text-[1.25rem]">
+                {property.title}
+              </h3>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-y-1.5 text-[0.95rem] leading-6 text-slate-600">
+              <span className="inline-flex items-center gap-1.5">
+                <Icons.MapPin className="h-3.5 w-3.5 text-slate-400" />
+                <span>{property.location}</span>
+              </span>
+              {guestCapacityLabel ? (
+                <>
+                  <span aria-hidden="true" className="px-2 text-slate-300">·</span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <Icons.Users className="h-3.5 w-3.5 text-slate-400" />
+                    <span>{guestCapacityLabel}</span>
+                  </span>
+                </>
+              ) : null}
+            </div>
           </div>
         </div>
 
@@ -231,13 +238,13 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           <div
             data-testid="property-card-trust-line"
             aria-label={verificationBadge.label}
-            className={cn('flex flex-wrap items-center gap-y-1.5 text-sm leading-6', shouldEmphasizeVerification && 'text-emerald-800')}
+            className={cn('flex flex-wrap items-center gap-y-1.5 text-[13px] leading-5', shouldEmphasizeVerification && 'text-emerald-800')}
           >
             {verificationHighlights.map((item, index) => (
               <React.Fragment key={item.key}>
                 {index > 0 ? <span aria-hidden="true" className="px-2 text-slate-300">·</span> : null}
-                <span className={cn('inline-flex items-center gap-1.5 font-medium text-slate-600', shouldEmphasizeVerification && 'text-emerald-800')}>
-                  <Icons.Check className={cn('h-3.5 w-3.5 shrink-0 text-emerald-600', shouldEmphasizeVerification && 'text-emerald-700')} />
+                <span className={cn('inline-flex items-center gap-1.5 font-medium text-slate-700', shouldEmphasizeVerification && 'text-emerald-800')}>
+                  <Icons.CheckCircle2 className={cn('h-3.5 w-3.5 shrink-0 text-emerald-600/80', shouldEmphasizeVerification && 'text-emerald-700')} />
                   <span>{item.label}</span>
                 </span>
               </React.Fragment>
@@ -249,17 +256,17 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
 
         {!isFavoritesVariant && decisionSupportLabel ? (
           <p className={cn(
-            'text-sm leading-6',
-            isDecisionFeatured ? 'font-medium text-slate-700' : 'text-slate-600',
+            'text-[13px] leading-5',
+            isDecisionFeatured ? 'font-medium text-slate-600' : 'text-slate-500',
           )}>
             {decisionSupportLabel}
           </p>
         ) : null}
 
-        <div className="mt-auto border-t border-slate-200/70 pt-5">
+        <div className="mt-auto space-y-1.5 pt-1">
           <div className="space-y-1">
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Por noche</p>
-            <p className="text-[2.8rem] font-black leading-none tracking-[-0.06em] text-slate-950 md:text-[3rem]">
+            <p className="text-[2.9rem] font-black leading-none tracking-[-0.06em] text-slate-950 md:text-[3.05rem]">
               {formatCurrency(Number(property.price) || 0)}
             </p>
           </div>

@@ -28,19 +28,19 @@ export const ExploreHero = ({
 }: ExploreHeroProps) => {
   return (
     <section className="mx-auto max-w-[68.75rem]" style={{ fontFamily: 'var(--font-ui)' }}>
-      <div className="rounded-[calc(var(--app-radius-display)+4px)] border border-white/80 bg-white px-5 py-6 shadow-[0_28px_60px_-40px_rgba(15,23,42,0.22)] sm:px-7 sm:py-8 md:px-10 md:py-9 lg:px-12 lg:py-10">
-        <div className="mx-auto max-w-[46rem] space-y-5 text-center md:space-y-6">
+      <div className="rounded-[calc(var(--app-radius-display)+4px)] border border-white/80 bg-white px-5 py-5 shadow-[0_24px_52px_-38px_rgba(15,23,42,0.2)] sm:px-7 sm:py-6 md:px-10 md:py-7 lg:px-12 lg:py-8">
+        <div className="mx-auto max-w-[46rem] space-y-4 text-center md:space-y-5">
           <div className="space-y-2.5 md:space-y-3">
             <h1 className="font-display mx-auto max-w-[10.5ch] text-balance text-[3rem] font-semibold leading-[0.92] tracking-[-0.06em] text-slate-950 sm:text-[4rem] md:text-[4.9rem] lg:text-[5.5rem]">
               Reservar es fácil. Decidir bien no siempre.
             </h1>
-            <p className="mx-auto max-w-[34rem] text-[1rem] font-semibold leading-6 text-slate-700 sm:text-[1.04rem] md:text-[1.08rem]">
+            <p className="mx-auto max-w-[34rem] text-[1rem] font-semibold leading-6 text-slate-800 sm:text-[1.04rem] md:text-[1.08rem]">
               {heroSubtitle}
             </p>
           </div>
 
           <form
-            className="space-y-4 md:space-y-5"
+            className="space-y-3.5 md:space-y-4"
             onSubmit={(event) => {
               event.preventDefault();
               onSearchSubmit();
