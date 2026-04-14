@@ -30,6 +30,45 @@ const MapFallback = () => (
 
 const formatPropertyCount = (count: number) => `${count} ${count === 1 ? 'propiedad' : 'propiedades'}`;
 const renderSkeletons = (count = 6) => Array.from({ length: count }, (_, index) => <SkeletonCard key={`skeleton-${index}`} />);
+const sectionMetadataBadgeClass = 'inline-flex items-center gap-1.5 rounded-full border-slate-200/80 bg-slate-50/90 px-3 py-1.5 text-[10.75px] font-medium text-slate-600';
+
+type SectionHeaderWithBadgeProps = {
+  eyebrow?: React.ReactNode;
+  heading?: React.ReactNode;
+  description?: React.ReactNode;
+  badge: React.ReactNode;
+  actions?: React.ReactNode;
+  className?: string;
+  headingClassName?: string;
+  descriptionClassName?: string;
+};
+
+const SectionHeaderWithBadge = ({
+  eyebrow,
+  heading,
+  description,
+  badge,
+  actions,
+  className,
+  headingClassName,
+  descriptionClassName,
+}: SectionHeaderWithBadgeProps) => (
+  <div className={cn('space-y-3', className)}>
+    <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+      <div className="min-w-0">
+        <div className="grid gap-1.5">
+          {eyebrow ? <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">{eyebrow}</p> : null}
+          {heading ? <h2 className={cn('app-title-2 text-slate-950', headingClassName)}>{heading}</h2> : null}
+        </div>
+      </div>
+
+      <div className="justify-self-end">{badge}</div>
+    </div>
+
+    {description ? <p className={cn('text-sm leading-6 text-slate-600', descriptionClassName)}>{description}</p> : null}
+    {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
+  </div>
+);
 
 const getDecisionDataScore = (property: Property) => [
   typeof property.location === 'string' && property.location.trim().length > 0,
@@ -246,7 +285,57 @@ export const ExploreResultsSection = ({
         ? `${formatPropertyCount(totalResults)} para revisar antes de reservar.`
         : 'Volvé a revisar más tarde.';
 
-  const summaryCard = (
+  const summaryCountBadge = (
+    <Badge variant="neutral" size="sm" className={sectionMetadataBadgeClass}>
+      <Icons.Home className="h-3.5 w-3.5" />
+      <span>{formatPropertyCount(totalResults)}</span>
+    </Badge>
+  );
+
+  const mapResultsCountBadge = (
+    <Badge variant="neutral" size="sm" className={sectionMetadataBadgeClass}>
+      <Icons.Target className="h-3.5 w-3.5" />
+      <span>{formatPropertyCount(totalResults)}</span>
+    </Badge>
+  );
+
+  const summaryMetaBadges = [
+    searchQuery ? (
+      <Badge key="search" variant="info" size="sm" className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10.75px] font-medium">
+        <Icons.MapPin className="h-3.5 w-3.5" />
+        <span>{searchQuery}</span>
+      </Badge>
+    ) : null,
+    appliedFilterCount > 0 ? (
+      <Badge key="filters" variant="brand" size="sm" className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10.75px] font-medium">
+        <Icons.SlidersHorizontal className="h-3.5 w-3.5" />
+        <span>{appliedFilterCount} {appliedFilterCount === 1 ? 'filtro activo' : 'filtros activos'}</span>
+      </Badge>
+    ) : null,
+  ].filter(Boolean);
+
+  const summaryCard = viewMode === 'map' ? (
+    <Card className="rounded-[var(--app-radius-card)] border-slate-200/75 bg-white/88 px-5 py-4 shadow-none sm:px-6 sm:py-4.5">
+      <SectionHeaderWithBadge
+        eyebrow={summaryEyebrow}
+        heading={summaryHeading}
+        description={summaryDescription}
+        badge={summaryCountBadge}
+        actions={summaryMetaBadges.length > 0 ? <>{summaryMetaBadges}</> : undefined}
+        className="max-w-none"
+        descriptionClassName="max-w-prose"
+      />
+
+      {showingStaleResults ? (
+        <NoticeBanner
+          className="mt-4"
+          tone="warning"
+          heading="Mostrando la última versión disponible"
+          description="Volvé a intentar en unos segundos si querés actualizar la información."
+        />
+      ) : null}
+    </Card>
+  ) : (
     <Card className="rounded-[var(--app-radius-card)] border-slate-200/70 bg-white/72 p-4 shadow-none sm:p-5">
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
         <SectionTitle
@@ -281,7 +370,7 @@ export const ExploreResultsSection = ({
           className="mt-4"
           tone="warning"
           heading="Mostrando la última versión disponible"
-            description="Volvé a intentar en unos segundos si querés actualizar la información."
+          description="Volvé a intentar en unos segundos si querés actualizar la información."
         />
       ) : null}
     </Card>
@@ -342,28 +431,20 @@ export const ExploreResultsSection = ({
         {summaryCard}
 
         <div className="overflow-hidden rounded-[var(--app-radius-display)] border border-slate-200/75 bg-white/88 shadow-[0_22px_48px_-38px_rgba(15,23,42,0.2)]">
-          <div className="flex flex-col gap-3 border-b border-slate-200/70 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-4.5">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Mapa de resultados</p>
-              <p className="mt-1 text-sm leading-6 text-slate-600">
-                {loading
-                  ? 'Estamos ubicando cada aviso en el mapa.'
-                  : 'Abrí cada pin para ver precio y qué parte del aviso ya fue comprobada.'}
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="neutral" className="gap-2">
-                <Icons.Target className="h-3.5 w-3.5" />
-                <span>{formatPropertyCount(totalResults)}</span>
-              </Badge>
-              {hasActiveFilters ? (
+          <div className="border-b border-slate-200/70 px-5 py-4 sm:px-6 sm:py-4.5">
+            <SectionHeaderWithBadge
+              eyebrow="Mapa de resultados"
+              description={loading
+                ? 'Estamos ubicando cada aviso en el mapa.'
+                : 'Abrí cada pin para ver precio y qué parte del aviso ya fue comprobada.'}
+              badge={mapResultsCountBadge}
+              actions={hasActiveFilters ? (
                 <Button type="button" variant="ghost" size="sm" onClick={onClearFilters} className="rounded-xl px-3 text-sm text-slate-900 hover:bg-slate-100 hover:text-slate-950">
                   <Icons.X className="h-4 w-4" />
                   Limpiar filtros
                 </Button>
-              ) : null}
-            </div>
+              ) : undefined}
+            />
           </div>
 
           <div className="h-[520px] overflow-hidden bg-slate-50 md:h-[560px]">
