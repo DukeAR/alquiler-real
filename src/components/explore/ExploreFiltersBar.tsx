@@ -36,10 +36,10 @@ export const ExploreFiltersBar = ({
   onClear,
 }: ExploreFiltersBarProps) => {
   return (
-    <section className="rounded-[var(--app-radius-card)] border border-slate-200/85 bg-white/96 p-4 shadow-[0_18px_38px_-34px_rgba(15,23,42,0.16)] sm:p-5 lg:p-6">
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div className="grid h-14 w-full max-w-[22rem] grid-cols-2 items-center rounded-[1.35rem] border border-slate-200/80 bg-slate-100/85 p-1">
+    <section className="rounded-[var(--app-radius-card)] border border-slate-200/85 bg-white/96 px-3.5 py-3 shadow-[0_18px_38px_-34px_rgba(15,23,42,0.16)] sm:px-4 sm:py-4 lg:px-5 lg:py-4.5">
+      <div className="flex flex-col gap-3.5">
+        <div className="flex flex-wrap items-center justify-between gap-2.5">
+          <div className="inline-flex h-11 w-fit items-center gap-1 rounded-[1rem] border border-slate-200/80 bg-slate-100/85 p-1">
             {(['grid', 'map'] as const).map((mode) => (
               <button
                 key={mode}
@@ -47,7 +47,7 @@ export const ExploreFiltersBar = ({
                 aria-pressed={viewMode === mode}
                 onClick={() => onViewModeChange(mode)}
                 className={cn(
-                  'flex h-full flex-1 items-center justify-center gap-2 rounded-[1rem] px-3 py-2.5 text-[11px] font-semibold uppercase tracking-[0.12em] transition-[background-color,color] duration-150',
+                  'flex h-full items-center justify-center gap-2 rounded-[0.8rem] px-4 py-2 text-[10.5px] font-semibold uppercase tracking-[0.1em] transition-[background-color,color] duration-150',
                   viewMode === mode
                     ? 'bg-white text-slate-950 shadow-[0_10px_20px_-18px_rgba(15,23,42,0.22)]'
                     : 'text-slate-700 hover:text-slate-950',
@@ -65,7 +65,7 @@ export const ExploreFiltersBar = ({
               onClick={onClear}
               variant="ghost"
               size="sm"
-              className="h-12 self-start rounded-[1rem] px-4 text-slate-900 md:self-auto"
+              className="h-10 self-start rounded-[0.9rem] px-3.5 text-[0.84rem] text-slate-900 md:self-auto"
             >
               <Icons.X className="h-4 w-4" />
               Limpiar filtros
@@ -73,73 +73,60 @@ export const ExploreFiltersBar = ({
           ) : null}
         </div>
 
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)_minmax(0,1fr)] xl:items-end">
-          <label className="flex min-w-0 flex-col gap-1.5">
-            <span className="pl-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">
-              Ordenar por
-            </span>
+        <div className="grid gap-2.5 sm:grid-cols-[minmax(0,1.35fr)_minmax(0,0.68fr)_minmax(0,0.68fr)_minmax(0,1.29fr)] sm:items-center">
+          <div className="min-w-0">
             <select
               aria-label="Ordenar por"
               value={sortBy}
               onChange={(event) => onSortChange(event.target.value as ExploreSort)}
-              className="app-control h-14 min-w-0 rounded-[var(--app-radius-control)] border-[color:var(--app-surface-border)] bg-white px-4 text-[0.94rem] font-semibold tracking-[-0.01em] text-slate-950 shadow-none"
+              className="app-control h-12 min-w-0 rounded-[var(--app-radius-control)] border-[color:var(--app-surface-border)] bg-white px-4 text-[0.9rem] font-semibold tracking-[-0.01em] text-slate-950 shadow-none"
             >
               <option value="verification">Más información comprobada</option>
               <option value="rating">Mejor calificación</option>
               <option value="price">Precio más bajo</option>
             </select>
-          </label>
-
-          <div className="flex min-w-0 flex-col gap-1.5 md:col-span-2 xl:col-span-1">
-            <span className="pl-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">
-              Precios
-            </span>
-            <div className="grid min-w-0 grid-cols-2 gap-3">
-              <Input
-                type="number"
-                inputMode="numeric"
-                value={filters.minPrice}
-                onChange={(event) => onFiltersChange({ ...filters, minPrice: event.target.value })}
-                placeholder="Desde"
-                icon={<span className="text-xs font-medium">$</span>}
-                className="h-14 min-w-0 rounded-[var(--app-radius-control)] border-[color:var(--app-surface-border)] bg-white py-2.5 pl-9 pr-3 text-[0.94rem] font-semibold tracking-[-0.01em] text-slate-950 shadow-none placeholder:text-slate-500"
-              />
-
-              <Input
-                type="number"
-                inputMode="numeric"
-                value={filters.maxPrice}
-                onChange={(event) => onFiltersChange({ ...filters, maxPrice: event.target.value })}
-                placeholder="Hasta"
-                icon={<span className="text-xs font-medium">$</span>}
-                className="h-14 min-w-0 rounded-[var(--app-radius-control)] border-[color:var(--app-surface-border)] bg-white py-2.5 pl-9 pr-3 text-[0.94rem] font-semibold tracking-[-0.01em] text-slate-950 shadow-none placeholder:text-slate-500"
-              />
-            </div>
           </div>
 
+          <Input
+            type="number"
+            inputMode="numeric"
+            aria-label="Precio desde"
+            value={filters.minPrice}
+            onChange={(event) => onFiltersChange({ ...filters, minPrice: event.target.value })}
+            placeholder="Desde"
+            icon={<span className="text-xs font-medium">$</span>}
+            className="h-12 min-w-0 rounded-[var(--app-radius-control)] border-[color:var(--app-surface-border)] bg-white py-0 pl-9 pr-3 text-[0.94rem] font-semibold tracking-[-0.01em] text-slate-950 shadow-none placeholder:text-slate-500"
+          />
+
+          <Input
+            type="number"
+            inputMode="numeric"
+            aria-label="Precio hasta"
+            value={filters.maxPrice}
+            onChange={(event) => onFiltersChange({ ...filters, maxPrice: event.target.value })}
+            placeholder="Hasta"
+            icon={<span className="text-xs font-medium">$</span>}
+            className="h-12 min-w-0 rounded-[var(--app-radius-control)] border-[color:var(--app-surface-border)] bg-white py-0 pl-9 pr-3 text-[0.94rem] font-semibold tracking-[-0.01em] text-slate-950 shadow-none placeholder:text-slate-500"
+          />
+
           <label className={cn(
-            'flex h-14 min-w-0 items-center gap-3 rounded-[1.15rem] border px-3.5 py-2.5 text-left transition-[border-color,background-color] duration-150 md:col-span-2 xl:col-span-1',
+            'flex h-12 min-w-0 items-center gap-2.5 rounded-[var(--app-radius-control)] border px-3 py-2 text-left transition-[border-color,background-color,box-shadow] duration-150',
             filters.verifiedOnly
-              ? 'border-brand/20 bg-brand/6'
+              ? 'border-brand/25 bg-white shadow-[0_10px_24px_-22px_rgba(67,56,202,0.32)]'
               : 'border-[color:var(--app-surface-border)] bg-white',
           )}>
-            <span className={cn(
-              'flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-brand',
-              filters.verifiedOnly ? 'bg-brand/12' : 'bg-brand/8',
-            )}>
-              <Icons.ShieldCheck className="h-4 w-4" />
-            </span>
+            <Icons.ShieldCheck className={cn('h-4 w-4 shrink-0', filters.verifiedOnly ? 'text-brand' : 'text-slate-400')} />
 
-            <span className="min-w-0 flex-1">
-              <span className="block text-[12.5px] font-semibold leading-4 text-slate-900">
+            <span className="min-w-0 flex-1 pr-2">
+              <span className="block overflow-hidden text-[11.5px] font-semibold leading-4 text-slate-900 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
                 Solo avisos con respaldo real
               </span>
-              <span className="block text-[10.5px] leading-[1.05rem] text-slate-600">
+              <span className="hidden text-[10.5px] leading-[1rem] text-slate-600 lg:block">
                 3 o más comprobaciones visibles
               </span>
             </span>
 
-            <span className="relative inline-flex h-7 w-12 shrink-0 items-center">
+            <span className="relative ml-auto inline-flex h-6 w-11 shrink-0 items-center">
               <input
                 type="checkbox"
                 aria-label="Solo avisos con respaldo real"
@@ -148,7 +135,7 @@ export const ExploreFiltersBar = ({
                 className="peer sr-only"
               />
               <span className="absolute inset-0 rounded-full bg-slate-300 transition-colors duration-150 peer-checked:bg-brand" />
-              <span className="absolute left-0.5 h-6 w-6 rounded-full bg-white transition-transform duration-150 peer-checked:translate-x-5" />
+              <span className="absolute left-0.5 h-5 w-5 rounded-full bg-white transition-transform duration-150 peer-checked:translate-x-5" />
             </span>
           </label>
         </div>
