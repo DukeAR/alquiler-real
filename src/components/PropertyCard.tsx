@@ -43,11 +43,11 @@ const getGuestCapacityLabel = (maxGuests?: number | null) => {
 };
 
 const compactVerificationPriority: Record<string, number> = {
-  location: 0,
-  identity: 1,
-  data: 2,
-  photos: 3,
-  price: 4,
+  identity: 0,
+  location: 1,
+  photos: 2,
+  geolocation: 3,
+  availability: 4,
 };
 
 interface PropertyCardProps {
@@ -88,7 +88,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
     : null;
   const compactVerificationSummaryLabel = `${verificationDetails.score}/${verificationDetails.max} verificado`;
   const compactVerificationDetail = verificationDetails.items
-    .filter((item) => item.status === 'complete' && item.key !== 'price')
+    .filter((item) => item.status === 'complete')
     .sort((left, right) => {
       const leftPriority = compactVerificationPriority[left.key] ?? Number.MAX_SAFE_INTEGER;
       const rightPriority = compactVerificationPriority[right.key] ?? Number.MAX_SAFE_INTEGER;

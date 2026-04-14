@@ -152,9 +152,10 @@ export const PropertyVerificationPanel = ({
   const documentAssets = Array.isArray(property.verificationMedia?.documents) ? property.verificationMedia.documents : [];
   const ownerView = property.isOwnedByViewer === true;
   const photoCount = Math.max(0, Number(property.verificationPhotoCount ?? photoAssets.length ?? 0));
+  const videoCount = Math.max(0, Number(property.verificationVideoCount ?? (videoAsset ? 1 : 0)));
   const documentCount = Math.max(0, Number(property.verificationDocumentCount ?? documentAssets.length ?? 0));
   const documentsVerifiedCount = Math.max(0, Number(property.verificationDocumentsReviewedCount ?? 0));
-  const priceValue = Math.max(0, Number(property.price ?? 0));
+  const hasRealMedia = photoCount > 0 || videoCount > 0 || property.materialVerified === true || videoAsset !== null || property.videoValidated === true;
 
   const uploadFiles = async (kind: VerificationUploadKind, fileList: FileList | null) => {
     if (!property.id || !fileList || fileList.length === 0) {
@@ -306,16 +307,16 @@ export const PropertyVerificationPanel = ({
             tone={verificationBadge.score >= 4 ? 'success' : 'brand'}
           />
           <VerificationMetricCard
-            label="Fotos reales"
-            value={`${Math.min(photoCount, 4)} / 4`}
-            helper={photoCount >= 4 ? 'La parte visual ya ayuda a decidir rapido.' : 'Con 4 fotos reales el aviso se entiende mejor de entrada.'}
-            tone={photoCount >= 4 ? 'success' : 'neutral'}
+            label="Material real"
+            value={hasRealMedia ? 'Listo' : 'Pendiente'}
+            helper={hasRealMedia ? 'Ya hay fotos o video reales visibles para quien revisa el aviso.' : 'Subí fotos o video reales para mostrar el lugar como es.'}
+            tone={hasRealMedia ? 'success' : 'neutral'}
           />
           <VerificationMetricCard
-            label="Precio visible"
-            value={priceValue > 0 ? 'Listo' : 'Pendiente'}
-            helper={priceValue > 0 ? 'El precio ya permite comparar este aviso con otras opciones.' : 'Publicar un precio claro ayuda a decidir más rápido.'}
-            tone={priceValue > 0 ? 'success' : 'neutral'}
+            label="Disponibilidad validada"
+            value={property.availabilityValidated ? 'Lista' : 'Pendiente'}
+            helper={property.availabilityValidated ? 'Ya hay calendario o reservas registradas dentro de la plataforma.' : 'Sumá bloqueos o reservas registradas para validar la disponibilidad.'}
+            tone={property.availabilityValidated ? 'success' : 'neutral'}
           />
           <VerificationMetricCard
             label="Documentacion interna"
@@ -365,7 +366,7 @@ export const PropertyVerificationPanel = ({
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Acciones rapidas</p>
-                  <p className="mt-1 text-sm leading-6 text-slate-600">Fotos, video y datos claros ayudan a que el aviso se entienda mejor. La documentacion queda privada para moderacion o revision interna.</p>
+                  <p className="mt-1 text-sm leading-6 text-slate-600">Fotos o video reales, ubicación precisa y calendario al día ayudan a que el aviso se entienda mejor. La documentación queda privada para moderación o revisión interna.</p>
                 </div>
               </div>
 

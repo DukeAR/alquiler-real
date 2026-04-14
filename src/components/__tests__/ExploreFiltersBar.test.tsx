@@ -11,7 +11,7 @@ const baseFilters: ExploreFilters = {
 };
 
 describe('ExploreFiltersBar', () => {
-  test('shows the more-information filter and toggles verifiedOnly', () => {
+  test('shows the real-verification filter and toggles verifiedOnly', () => {
     const onFiltersChange = vi.fn();
 
     render(
@@ -30,8 +30,8 @@ describe('ExploreFiltersBar', () => {
     const checkbox = screen.getByRole('checkbox', { name: /Solo avisos con respaldo real/i });
 
     expect(checkbox).not.toBeChecked();
-    expect(screen.getByText('3 o más comprobaciones visibles')).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: 'Más información comprobada' })).toBeInTheDocument();
+    expect(screen.getByText('3 o más comprobaciones reales')).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Mayor verificación' })).toBeInTheDocument();
 
     fireEvent.click(checkbox);
 

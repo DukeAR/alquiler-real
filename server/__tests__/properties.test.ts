@@ -136,8 +136,8 @@ describe('Properties endpoints', () => {
     const res = await request(app).get('/api/properties?verifiedOnly=true');
 
     expect(res.status).toBe(200);
-    expect(res.body).toHaveLength(3);
-    expect(res.body.map((property: any) => property.id)).toEqual(expect.arrayContaining(['prop-strong', 'prop-low-real', 'prop-legacy']));
+    expect(res.body).toHaveLength(2);
+    expect(res.body.map((property: any) => property.id)).toEqual(['prop-strong', 'prop-low-real']);
     expect(res.body[0]).toMatchObject({
       id: 'prop-strong',
       verificationScore: 4,
@@ -150,21 +150,7 @@ describe('Properties endpoints', () => {
     expect(res.body).toEqual(expect.arrayContaining([
       expect.objectContaining({
         id: 'prop-low-real',
-        verificationScore: 4,
-        hostTrustScore: 1,
-        hostTrust: expect.objectContaining({
-          score: 1,
-          level: 'low',
-        }),
-      }),
-      expect.objectContaining({
-        id: 'prop-legacy',
         verificationScore: 3,
-        hostTrustScore: 0,
-        hostTrust: expect.objectContaining({
-          score: 0,
-          level: 'low',
-        }),
       }),
     ]));
     expect(res.body[0].verificationItems).toEqual(expect.arrayContaining([
@@ -180,6 +166,7 @@ describe('Properties endpoints', () => {
       expect.objectContaining({ key: 'tenure', status: 'complete' }),
     ]));
     expect(res.body.every((property: any) => property.verificationScore >= 3)).toBe(true);
+    expect(res.body.find((property: any) => property.id === 'prop-legacy')).toBeUndefined();
     expect(queryMock).toHaveBeenCalledTimes(1);
     expect(queryMock.mock.calls[0][0]).not.toContain('p.is_verified_property = TRUE');
   });

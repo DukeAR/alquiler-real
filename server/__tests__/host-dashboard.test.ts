@@ -121,7 +121,7 @@ describe('Host dashboard endpoint', () => {
     expect(res.body.properties).toHaveLength(1);
     expect(res.body.properties[0]).toMatchObject({
       id: 'prop-1',
-      verificationScore: 5,
+      verificationScore: 4,
       pendingRequestsCount: 2,
       activeReservationsCount: 1,
       nextArrivalDate: '18/10/2026',
@@ -133,8 +133,8 @@ describe('Host dashboard endpoint', () => {
     expect(res.body.properties[0].verificationItems).toEqual(expect.arrayContaining([
       expect.objectContaining({ key: 'location', status: 'complete' }),
       expect.objectContaining({ key: 'identity', status: 'complete' }),
-      expect.objectContaining({ key: 'data', status: 'complete' }),
-      expect.objectContaining({ key: 'price', status: 'complete' }),
+      expect.objectContaining({ key: 'photos', status: 'complete' }),
+      expect.objectContaining({ key: 'availability', status: 'complete' }),
     ]));
     expect(res.body.funnelMetrics).toEqual({
       windowDays: 30,

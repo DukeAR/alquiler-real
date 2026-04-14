@@ -106,6 +106,7 @@ export interface Property {
   documentationVerified?: boolean;
   manualReviewReady?: boolean;
   manualReviewCompleted?: boolean;
+  availabilityValidated?: boolean;
   propertyRelationshipVerified?: boolean;
   hasPresencialVerification?: boolean;
   onsiteVerifiedAt?: string;

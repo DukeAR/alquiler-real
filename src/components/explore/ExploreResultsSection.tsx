@@ -209,9 +209,9 @@ export const ExploreResultsSection = ({
   const failedToLoadResults = Boolean(loadError) && !loading && !hasAnyResults;
   const showingStaleResults = Boolean(loadError) && !loading && hasAnyResults;
   const showHomeBlocks = !hasActiveFilters && viewMode === 'grid';
-  const showSummaryCard = viewMode === 'map' || hasActiveFilters || failedToLoadResults;
+  const showSummaryCard = viewMode === 'map' || failedToLoadResults || (hasActiveFilters && !hasAnyResults);
   const showFeaturedSection = showHomeBlocks && (loading || featuredProperties.length > 0);
-  const showVerificationPreferenceHint = caresAboutVerification && !loading && hasAnyResults && !showHomeBlocks;
+  const showListingHeader = !hasActiveFilters || loading || hasAnyResults;
   const sectionSpacingClass = showHomeBlocks ? 'space-y-5 md:space-y-6' : 'space-y-6 md:space-y-8';
   const listingSectionClass = showFeaturedSection
     ? 'space-y-4 border-t border-slate-200/60 pt-4 md:space-y-5 md:pt-5'
@@ -256,6 +256,8 @@ export const ExploreResultsSection = ({
   const homeListingDescription = loading
     ? 'Estamos preparando más opciones.'
     : 'Más opciones para seguir comparando rápido.';
+  const filteredResultsDescription = `${formatPropertyCount(totalResults)} para comparar en esta búsqueda.`;
+  const filteredVisibleResultsLabel = `${visibleCount} ${visibleCount === 1 ? 'visible' : 'visibles'} en esta búsqueda.`;
 
   const summaryEyebrow = viewMode === 'map'
     ? 'Mapa'
@@ -311,6 +313,27 @@ export const ExploreResultsSection = ({
         <Icons.SlidersHorizontal className="h-3.5 w-3.5" />
         <span>{appliedFilterCount} {appliedFilterCount === 1 ? 'filtro activo' : 'filtros activos'}</span>
       </Badge>
+    ) : null,
+  ].filter(Boolean);
+
+  const filteredResultsMeta = [
+    searchQuery ? (
+      <span key="search" className="inline-flex items-center gap-1.5">
+        <Icons.MapPin className="h-3.5 w-3.5 text-slate-400" />
+        <span>{searchQuery}</span>
+      </span>
+    ) : null,
+    caresAboutVerification ? (
+      <span key="verification" className="inline-flex items-center gap-1.5">
+        <Icons.ShieldCheck className="h-3.5 w-3.5 text-slate-400" />
+        <span>Priorizando mayor verificación</span>
+      </span>
+    ) : null,
+    appliedFilterCount > 0 ? (
+      <span key="filters" className="inline-flex items-center gap-1.5">
+        <Icons.SlidersHorizontal className="h-3.5 w-3.5 text-slate-400" />
+        <span>{appliedFilterCount} {appliedFilterCount === 1 ? 'filtro activo' : 'filtros activos'}</span>
+      </span>
     ) : null,
   ].filter(Boolean);
 
@@ -375,13 +398,6 @@ export const ExploreResultsSection = ({
       ) : null}
     </Card>
   );
-
-  const verificationPreferenceHint = showVerificationPreferenceHint ? (
-    <p className="inline-flex items-center gap-2 rounded-full border border-emerald-200/80 bg-emerald-50/80 px-3 py-1.5 text-[12.5px] font-medium leading-5 text-emerald-800">
-      <Icons.ShieldCheck className="h-4 w-4" />
-      <span>Estás priorizando avisos con más información comprobada</span>
-    </p>
-  ) : null;
 
   if (failedToLoadResults) {
     return (
@@ -512,41 +528,71 @@ export const ExploreResultsSection = ({
 
       {loading || hasActiveFilters || listingProperties.length > 0 || !hasAnyResults ? (
         <section className={listingSectionClass}>
-          <div className={cn('space-y-3.5', !showFeaturedSection && 'border-b border-slate-200/70 pb-5 md:space-y-5')}>
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-              <div className="max-w-2xl">
-                {showFeaturedSection ? (
-                  <div className="space-y-1">
-                    <h2 className="text-[1.32rem] font-semibold tracking-tight text-slate-950 md:text-[1.48rem]">
-                      {listingHeading}
-                    </h2>
-                    <p className="text-sm leading-6 text-slate-600">
-                      {homeListingDescription}
-                    </p>
-                  </div>
-                ) : (
-                  <SectionTitle
-                    heading={listingHeading}
-                    description={listingDescription}
-                    className="max-w-2xl"
-                  />
-                )}
-                {!loading && !showFeaturedSection ? (
-                  <>
-                    {verificationPreferenceHint}
-                  </>
-                ) : null}
-              </div>
+          {showListingHeader ? (
+            <div className={cn('space-y-3.5', !showFeaturedSection && 'border-b border-slate-200/70 pb-5 md:space-y-5')}>
+              {hasActiveFilters && !loading && hasAnyResults ? (
+                <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end md:gap-4">
+                  <div className="max-w-3xl space-y-2.5">
+                    <div className="space-y-1">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Resultados</p>
+                      <h2 className="app-title-2 text-slate-950">Resultados para revisar</h2>
+                    </div>
 
-              {!loading && listingProperties.length > 0 && !showFeaturedSection ? (
-                <p className="text-sm text-slate-500">
-                  {remainingResults > 0
-                    ? `Mostrando ${visibleCount}. Quedan ${remainingResults} para revisar.`
-                    : `${visibleCount} visibles en esta búsqueda.`}
-                </p>
-              ) : null}
+                    <div className="flex flex-col gap-2 text-sm leading-6 text-slate-600 md:flex-row md:flex-wrap md:items-center md:gap-x-3 md:gap-y-2">
+                      <p>{filteredResultsDescription}</p>
+
+                      {filteredResultsMeta.length > 0 ? (
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px] font-medium leading-5 text-slate-500">
+                          {filteredResultsMeta}
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  <p className="text-sm font-medium text-slate-500 md:justify-self-end md:text-right">
+                    {filteredVisibleResultsLabel}
+                  </p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+                  <div className="max-w-2xl">
+                    {showFeaturedSection ? (
+                      <div className="space-y-1">
+                        <h2 className="text-[1.32rem] font-semibold tracking-tight text-slate-950 md:text-[1.48rem]">
+                          {listingHeading}
+                        </h2>
+                        <p className="text-sm leading-6 text-slate-600">
+                          {homeListingDescription}
+                        </p>
+                      </div>
+                    ) : (
+                      <SectionTitle
+                        heading={listingHeading}
+                        description={listingDescription}
+                        className="max-w-2xl"
+                      />
+                    )}
+                  </div>
+
+                  {!loading && listingProperties.length > 0 && !showFeaturedSection ? (
+                    <p className="text-sm text-slate-500">
+                      {remainingResults > 0
+                        ? `Mostrando ${visibleCount}. Quedan ${remainingResults} para revisar.`
+                        : `${visibleCount} visibles en esta búsqueda.`}
+                    </p>
+                  ) : null}
+                </div>
+              )}
             </div>
-          </div>
+          ) : null}
+
+          {hasActiveFilters && showingStaleResults ? (
+            <NoticeBanner
+              tone="warning"
+              heading="Mostrando la última versión disponible"
+              description="Volvé a intentar en unos segundos si querés actualizar los resultados."
+            />
+          ) : null}
 
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6 lg:grid-cols-3">
             {loading ? (

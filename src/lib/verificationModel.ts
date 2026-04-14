@@ -13,7 +13,7 @@ export interface VerificationSummary<K extends string = string> {
   items: Array<VerificationItem<K>>;
 }
 
-export const PROPERTY_VERIFICATION_KEYS = ['location', 'identity', 'data', 'photos', 'price'] as const;
+export const PROPERTY_VERIFICATION_KEYS = ['identity', 'location', 'geolocation', 'photos', 'availability'] as const;
 
 export const PROPERTY_ADVANCED_CHECK_KEYS = ['documents', 'manualReview'] as const;
 
@@ -21,7 +21,7 @@ export type PropertyVerificationKey = typeof PROPERTY_VERIFICATION_KEYS[number];
 
 export type PropertyAdvancedVerificationKey = typeof PROPERTY_ADVANCED_CHECK_KEYS[number];
 
-export type LegacyPropertyVerificationKey = 'visual' | 'relationship' | 'material' | 'onsite' | 'history' | 'basics' | 'video';
+export type LegacyPropertyVerificationKey = 'visual' | 'relationship' | 'material' | 'onsite' | 'history' | 'basics' | 'video' | 'data' | 'price';
 
 export type PropertyVerificationItem = VerificationItem<PropertyVerificationKey | LegacyPropertyVerificationKey | string>;
 
@@ -62,6 +62,7 @@ export type PropertyVerificationSummaryInput = {
   documentationVerified?: boolean | number | string | null;
   manualReviewReady?: boolean | number | string | null;
   manualReviewCompleted?: boolean | number | string | null;
+  availabilityValidated?: boolean | number | string | null;
   lat?: number | string | null;
   lng?: number | string | null;
 };
@@ -95,11 +96,13 @@ const toSafeInteger = (value: unknown) => {
 };
 
 const toSafeNumber = (value: unknown) => {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
 };
-
-const hasText = (value: unknown) => typeof value === 'string' && value.trim().length > 0;
 
 const toStringArray = (value: unknown): string[] => {
   if (Array.isArray(value)) {
@@ -165,22 +168,23 @@ const hasListingCoordinates = (input: Pick<PropertyVerificationSummaryInput, 'la
   toSafeNumber(input.lat) !== null && toSafeNumber(input.lng) !== null
 );
 
-const isListingDataCheckComplete = (input: PropertyVerificationSummaryInput) => (
-  hasText(input.title)
-  && hasText(input.description)
-  && toSafeInteger(input.maxGuests) > 0
+const isLocationVerifiedCheckComplete = (input: PropertyVerificationSummaryInput) => (
+  isTruthyFlag(input.locationVerified)
 );
 
-const isLocationVisible = (input: PropertyVerificationSummaryInput) => (
-  isTruthyFlag(input.locationVerified) || (hasText(input.location) && hasListingCoordinates(input))
+const isPreciseGeolocationCheckComplete = (input: PropertyVerificationSummaryInput) => (
+  isLocationVerifiedCheckComplete(input) && hasListingCoordinates(input)
 );
 
-const isRealPhotoCheckComplete = (input: PropertyVerificationSummaryInput) => (
-  isTruthyFlag(input.materialVerified) || toSafeInteger(input.verificationPhotoCount) >= 4
+const isRealMediaCheckComplete = (input: PropertyVerificationSummaryInput) => (
+  isTruthyFlag(input.materialVerified)
+  || isTruthyFlag(input.videoValidated)
+  || toSafeInteger(input.verificationPhotoCount) > 0
+  || toSafeInteger(input.verificationVideoCount) > 0
 );
 
-const isPriceCheckComplete = (input: PropertyVerificationSummaryInput) => (
-  toSafeNumber(input.price) !== null && (toSafeNumber(input.price) ?? 0) > 0
+const isAvailabilityValidatedCheckComplete = (input: PropertyVerificationSummaryInput) => (
+  isTruthyFlag(input.availabilityValidated)
 );
 
 const isIdentityCheckComplete = (input: PropertyVerificationSummaryInput) => isTruthyFlag(input.identityValidated);
@@ -210,90 +214,90 @@ export const buildPropertyVerificationItem = (input: {
 }): VerificationItem<PropertyVerificationKey> => {
   const status: VerificationItemStatus = input.complete ? 'complete' : 'pending';
 
-  if (input.key === 'location') {
-    return {
-      key: 'location',
-      label: 'Ubicación',
-      status,
-      description: input.complete
-        ? 'La ubicación aproximada ya quedó comprobada para ubicar el lugar con más claridad.'
-        : 'Todavía falta confirmar mejor la ubicación aproximada del lugar.',
-    };
-  }
-
   if (input.key === 'identity') {
     return {
       key: 'identity',
-      label: 'Anfitrión',
+      label: 'Anfitrión confirmado',
       status,
       description: input.complete
-        ? 'La identidad del anfitrión ya quedó validada y suma una señal fuerte de confianza.'
-        : 'Todavía falta validar la identidad del anfitrión para sumar más confianza.',
+        ? 'La identidad del anfitrión ya fue confirmada dentro de la plataforma.'
+        : 'Todavía falta confirmar la identidad del anfitrión.',
     };
   }
 
-  if (input.key === 'data') {
+  if (input.key === 'location') {
     return {
-      key: 'data',
-      label: 'Datos',
+      key: 'location',
+      label: 'Ubicación verificada',
       status,
       description: input.complete
-        ? 'El aviso ya muestra descripción y capacidad suficientes para entenderse rápido.'
-        : 'Todavía faltan datos visibles para que el aviso se entienda de entrada.',
+        ? 'La zona del alojamiento ya fue verificada dentro de la plataforma.'
+        : 'Todavía falta verificar la ubicación del alojamiento.',
+    };
+  }
+
+  if (input.key === 'geolocation') {
+    return {
+      key: 'geolocation',
+      label: 'Geolocalización precisa',
+      status,
+      description: input.complete
+        ? 'El aviso ya cuenta con coordenadas precisas para ubicar el lugar con más claridad.'
+        : 'Todavía falta validar una geolocalización precisa del lugar.',
     };
   }
 
   if (input.key === 'photos') {
     return {
       key: 'photos',
-      label: 'Fotos',
+      label: 'Fotos / video reales',
       status,
       description: input.complete
-        ? 'El aviso ya suma fotos reales que ayudan a comparar el lugar de entrada.'
-        : 'Todavía faltan fotos reales para comparar mejor este aviso.',
+        ? 'El aviso ya muestra fotos o video reales del alojamiento.'
+        : 'Todavía faltan fotos o video reales del alojamiento.',
     };
   }
 
-  if (input.key === 'price') {
+  if (input.key === 'availability') {
     return {
-      key: 'price',
-      label: 'Precio',
+      key: 'availability',
+      label: 'Disponibilidad validada',
       status,
       description: input.complete
-        ? 'El precio por noche ya está visible y permite comparar este aviso con otras opciones.'
-        : 'Todavía falta publicar un precio claro para poder comparar este aviso.',
+        ? 'La disponibilidad ya muestra calendario o reservas registradas dentro de la plataforma.'
+        : 'Todavía falta validar la disponibilidad con calendario o reservas registradas.',
     };
   }
 
   return {
-    key: 'data',
-    label: 'Datos',
+    key: 'availability',
+    label: 'Disponibilidad validada',
     status,
     description: input.complete
-      ? 'El aviso ya muestra descripción y capacidad suficientes para entenderse rápido.'
-      : 'Todavía faltan datos visibles para que el aviso se entienda de entrada.',
+      ? 'La disponibilidad ya muestra calendario o reservas registradas dentro de la plataforma.'
+      : 'Todavía falta validar la disponibilidad con calendario o reservas registradas.',
   };
 };
 
 const getPropertyVerificationNextStep = (input: PropertyVerificationSummaryInput) => {
-  if (!isLocationVisible(input)) {
-    return 'Confirma mejor la ubicación aproximada del lugar.';
-  }
-
-  if (!isListingDataCheckComplete(input)) {
-    return 'Completa los datos visibles para que el aviso se entienda rápido.';
-  }
-
-  if (!isPriceCheckComplete(input)) {
-    return 'Publica un precio claro por noche para que el aviso se pueda comparar.';
-  }
-
   if (!isIdentityCheckComplete(input)) {
-    return 'Valida tu identidad para sumar una comprobación visible.';
+    return 'Confirmá la identidad del anfitrión.';
   }
 
-  if (!isRealPhotoCheckComplete(input)) {
-    return 'Subi fotos reales para que el aviso se compare mejor de entrada.';
+  if (!isLocationVerifiedCheckComplete(input)) {
+    return 'Validá la ubicación del alojamiento.';
+  }
+
+  if (!isPreciseGeolocationCheckComplete(input)) {
+    return 'Sumá una geolocalización precisa del lugar.';
+  }
+
+  if (!isRealMediaCheckComplete(input)) {
+    return 'Subí fotos o video reales del alojamiento.';
+  }
+
+  if (!isAvailabilityValidatedCheckComplete(input)) {
+    return 'Actualizá el calendario para validar la disponibilidad.';
   }
 
   return 'Suma documentación privada o una revisión manual para reforzar todavía más la confianza.';
@@ -303,11 +307,11 @@ export const buildPropertyVerificationSummary = (
   input: PropertyVerificationSummaryInput,
 ): PropertyVerificationSummary => {
   return buildVerificationSummary<PropertyVerificationKey>([
-    buildPropertyVerificationItem({ key: 'location', complete: isLocationVisible(input) }),
     buildPropertyVerificationItem({ key: 'identity', complete: isIdentityCheckComplete(input) }),
-    buildPropertyVerificationItem({ key: 'data', complete: isListingDataCheckComplete(input) }),
-    buildPropertyVerificationItem({ key: 'photos', complete: isRealPhotoCheckComplete(input) }),
-    buildPropertyVerificationItem({ key: 'price', complete: isPriceCheckComplete(input) }),
+    buildPropertyVerificationItem({ key: 'location', complete: isLocationVerifiedCheckComplete(input) }),
+    buildPropertyVerificationItem({ key: 'geolocation', complete: isPreciseGeolocationCheckComplete(input) }),
+    buildPropertyVerificationItem({ key: 'photos', complete: isRealMediaCheckComplete(input) }),
+    buildPropertyVerificationItem({ key: 'availability', complete: isAvailabilityValidatedCheckComplete(input) }),
   ]);
 };
 
@@ -335,15 +339,16 @@ export const buildPropertyAdvancedVerificationItems = (
 export const buildPropertyVerificationProgress = (
   input: PropertyVerificationSummaryInput,
 ): PropertyVerificationProgress => {
+  const verificationSummary = buildPropertyVerificationSummary(input);
   const advancedChecks = buildPropertyAdvancedVerificationItems(input);
-  const baseReady = isListingDataCheckComplete(input) && isLocationVisible(input) && isPriceCheckComplete(input);
-  const mediumReady = baseReady && isIdentityCheckComplete(input) && isRealPhotoCheckComplete(input);
-  const highReady = mediumReady && advancedChecks.every((item) => item.status === 'complete');
+  const allVisibleChecksReady = verificationSummary.score === verificationSummary.maxScore;
+  const mediumReady = verificationSummary.score >= 3;
+  const highReady = allVisibleChecksReady && advancedChecks.every((item) => item.status === 'complete');
 
   if (highReady) {
     return {
       level: 'high',
-      label: 'Confianza avanzada',
+      label: 'Verificación avanzada',
       summary: 'Ya completaste las 5 comprobaciones visibles y además sumaste respaldo avanzado para moderación.',
       nextStep: 'Solo mantene el material al dia para sostener visibilidad y confianza cuando el lugar cambie.',
       advancedChecks,
@@ -353,8 +358,10 @@ export const buildPropertyVerificationProgress = (
   if (mediumReady) {
     return {
       level: 'medium',
-      label: 'Comprobación completa',
-      summary: 'Ya completaste las 5 comprobaciones visibles: ubicación, anfitrión, datos, fotos y precio.',
+      label: allVisibleChecksReady ? 'Verificación completa' : 'Verificación en progreso',
+      summary: allVisibleChecksReady
+        ? 'Ya completaste las 5 comprobaciones visibles: anfitrión confirmado, ubicación verificada, geolocalización precisa, fotos o video reales y disponibilidad validada.'
+        : `Este aviso ya muestra ${verificationSummary.score} de 5 comprobaciones visibles reales.`,
       nextStep: advancedChecks[0]?.status === 'pending'
         ? 'Si queres sumar otra capa, podes cargar documentacion privada para moderacion interna.'
         : 'La siguiente mejora es dejar preparada una revision manual o presencial.',
@@ -364,8 +371,8 @@ export const buildPropertyVerificationProgress = (
 
   return {
     level: 'base',
-    label: 'Base publicada',
-    summary: 'El aviso ya esta publicado. Ahora podes completar ubicación, anfitrión, datos, fotos y precio para que se compare mejor.',
+    label: 'Verificación inicial',
+    summary: 'El aviso ya está publicado. Ahora podés completar anfitrión confirmado, ubicación verificada, geolocalización precisa, fotos o video reales y disponibilidad validada.',
     nextStep: getPropertyVerificationNextStep(input),
     advancedChecks,
   };

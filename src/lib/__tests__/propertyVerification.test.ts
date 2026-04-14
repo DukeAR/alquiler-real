@@ -33,11 +33,11 @@ describe('propertyVerification', () => {
     expect(property.verificationScore).toBe(4);
     expect(getPropertyVerificationScore(property)).toBe(4);
     expect(getPropertyVerificationItems(property).map((item) => item.label)).toEqual([
-      'Ubicación',
-      'Anfitrión',
-      'Datos',
-      'Fotos',
-      'Precio',
+      'Anfitrión confirmado',
+      'Ubicación verificada',
+      'Geolocalización precisa',
+      'Fotos / video reales',
+      'Disponibilidad validada',
     ]);
     expect(getPropertyVerificationBadge(property)).toEqual({
       score: 4,
@@ -59,11 +59,11 @@ describe('propertyVerification', () => {
 
     expect(details.summaryLabel).toBe('3 de 5 comprobaciones');
     expect(details.spacedVisual).toBe('● ● ● ○ ○');
-    expect(details.helperText).toBe('Comparás rápido qué ya está comprobado y qué falta para decidir con más contexto.');
+    expect(details.helperText).toBe('Comparás rápido qué ya está comprobado, qué falta y qué parte todavía asumís por confianza.');
     expect(details.items.map((item) => item.status)).toEqual(['complete', 'complete', 'pending', 'complete', 'pending']);
   });
 
-  test('does not infer data from legacy relationship flags alone', () => {
+  test('does not infer availability from legacy relationship flags alone', () => {
     const details = getPropertyVerificationDetails({
       identityValidated: true,
       locationVerified: true,
@@ -71,10 +71,10 @@ describe('propertyVerification', () => {
     });
 
     expect(details.summaryLabel).toBe('2 de 5 comprobaciones');
-    expect(details.items.find((item) => item.key === 'data')).toEqual({
-      key: 'data',
-      label: 'Datos',
-      description: 'Todavía faltan datos visibles para que el aviso se entienda de entrada.',
+    expect(details.items.find((item) => item.key === 'availability')).toEqual({
+      key: 'availability',
+      label: 'Disponibilidad validada',
+      description: 'Todavía falta validar la disponibilidad con calendario o reservas registradas.',
       status: 'pending',
     });
   });
@@ -87,7 +87,7 @@ describe('propertyVerification', () => {
   });
 
   test('derives the detail guidance message from the real verification score', () => {
-    expect(getPropertyVerificationGuidanceMessage({ verificationScore: 4 })).toBe('Este aviso muestra más información validada que la mayoría.');
+    expect(getPropertyVerificationGuidanceMessage({ verificationScore: 4 })).toBe('Este aviso muestra más comprobaciones reales que la mayoría.');
     expect(getPropertyVerificationGuidanceMessage({ verificationScore: 3 })).toBe('Este aviso ya tiene varias comprobaciones visibles.');
     expect(getPropertyVerificationGuidanceMessage({ verificationScore: 2 })).toBeNull();
   });

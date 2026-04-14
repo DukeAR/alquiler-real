@@ -69,8 +69,13 @@ type PropertyVerificationLike = {
   documentationVerified?: boolean;
   manualReviewReady?: boolean;
   manualReviewCompleted?: boolean;
+  availabilityValidated?: boolean;
   lat?: number | string | null;
   lng?: number | string | null;
+  coordinates?: {
+    lat?: number | string | null;
+    lng?: number | string | null;
+  } | null;
   isVerifiedProperty?: boolean;
   hasDigitalVerification?: boolean;
   hostPremiumDocumentaryVerified?: boolean;
@@ -112,11 +117,13 @@ export type PropertyCatalogSortContext = {
 const LEGACY_PROPERTY_KEY_ALIASES: Record<LegacyPropertyVerificationKey, PropertyVerificationKey> = {
   visual: 'photos',
   material: 'photos',
-  onsite: 'photos',
-  relationship: 'data',
-  history: 'data',
-  basics: 'data',
-  video: 'price',
+  onsite: 'availability',
+  relationship: 'availability',
+  history: 'availability',
+  basics: 'geolocation',
+  data: 'geolocation',
+  video: 'photos',
+  price: 'availability',
 };
 
 const PROPERTY_VERIFICATION_KEY_SET = new Set<string>(PROPERTY_VERIFICATION_KEYS);
@@ -155,6 +162,20 @@ const parsePositiveNumber = (value?: string | number | null) => {
   const numericValue = Number(value);
 
   if (!Number.isFinite(numericValue) || numericValue <= 0) {
+    return null;
+  }
+
+  return numericValue;
+};
+
+const parseFiniteNumber = (value?: string | number | null) => {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+
+  const numericValue = Number(value);
+
+  if (!Number.isFinite(numericValue)) {
     return null;
   }
 
@@ -279,11 +300,26 @@ const normalizePropertyVerificationItem = (item: PropertyVerificationItemInput, 
 
   return {
     key: item.key || `item-${index + 1}`,
-    label: item.label || item.title || 'Verificación',
+    label: item.label || item.title || 'Comprobación',
     description: item.description || '',
     status: normalizedStatus,
   };
 };
+
+const hasLegacyVerificationItems = (items: PropertyVerificationItemInput[]) => items.some((item) => {
+  const rawKey = typeof item.key === 'string' ? item.key : '';
+  const normalizedLabel = typeof item.label === 'string'
+    ? item.label.trim().toLowerCase()
+    : typeof item.title === 'string'
+      ? item.title.trim().toLowerCase()
+      : '';
+
+  return rawKey === 'data'
+    || rawKey === 'price'
+    || rawKey === 'basics'
+    || normalizedLabel === 'datos'
+    || normalizedLabel === 'precio';
+});
 
 const buildSummaryFromExplicitItems = (items: PropertyVerificationItemInput[]): PropertyVerificationSummary => {
   const normalizedItems = items.slice(0, VERIFICATION_SCORE_MAX).map(normalizePropertyVerificationItem);
@@ -308,16 +344,83 @@ const hasDerivedVerificationSignals = (property: PropertyVerificationLike) => (
   || typeof property.documentationVerified === 'boolean'
   || typeof property.manualReviewReady === 'boolean'
   || typeof property.manualReviewCompleted === 'boolean'
+  || typeof property.availabilityValidated === 'boolean'
+  || parseFiniteNumber(property.lat) !== null
+  || parseFiniteNumber(property.lng) !== null
+  || parseFiniteNumber(property.coordinates?.lat ?? null) !== null
+  || parseFiniteNumber(property.coordinates?.lng ?? null) !== null
 );
 
 export const getPropertyVerificationSummary = (property: PropertyVerificationLike): PropertyVerificationSummary => {
   const normalizedImages = normalizeVerificationImages(property.images);
+  const resolvedLat = parseFiniteNumber(property.lat) ?? parseFiniteNumber(property.coordinates?.lat ?? null);
+  const resolvedLng = parseFiniteNumber(property.lng) ?? parseFiniteNumber(property.coordinates?.lng ?? null);
 
   if (Array.isArray(property.verificationSummary?.items) && property.verificationSummary.items.length > 0) {
+    if (hasLegacyVerificationItems(property.verificationSummary.items) && hasDerivedVerificationSignals(property)) {
+      return buildPropertyVerificationSummary({
+        title: property.title,
+        location: property.location,
+        description: property.description,
+        price: property.price,
+        maxGuests: property.maxGuests,
+        propertyType: property.propertyType,
+        imageUrl: property.imageUrl,
+        images: normalizedImages,
+        verificationPhotoCount: property.verificationPhotoCount,
+        verificationVideoCount: property.verificationVideoCount,
+        verificationDocumentCount: property.verificationDocumentCount,
+        verificationDocumentsReviewedCount: property.verificationDocumentsReviewedCount,
+        identityValidated: property.identityValidated,
+        locationVerified: property.locationVerified,
+        materialVerified: property.materialVerified,
+        videoValidated: property.videoValidated,
+        hasPresencialVerification: property.hasPresencialVerification,
+        onsiteVerifiedAt: property.onsiteVerifiedAt,
+        documentationSubmitted: property.documentationSubmitted,
+        documentationVerified: property.documentationVerified || property.hostPremiumDocumentaryVerified,
+        manualReviewReady: property.manualReviewReady || Boolean(property.premiumOnsiteOffer),
+        manualReviewCompleted: property.manualReviewCompleted || property.hasPresencialVerification,
+        availabilityValidated: property.availabilityValidated,
+        lat: resolvedLat,
+        lng: resolvedLng,
+      });
+    }
+
     return buildSummaryFromExplicitItems(property.verificationSummary.items);
   }
 
   if (Array.isArray(property.verificationItems) && property.verificationItems.length > 0) {
+    if (hasLegacyVerificationItems(property.verificationItems) && hasDerivedVerificationSignals(property)) {
+      return buildPropertyVerificationSummary({
+        title: property.title,
+        location: property.location,
+        description: property.description,
+        price: property.price,
+        maxGuests: property.maxGuests,
+        propertyType: property.propertyType,
+        imageUrl: property.imageUrl,
+        images: normalizedImages,
+        verificationPhotoCount: property.verificationPhotoCount,
+        verificationVideoCount: property.verificationVideoCount,
+        verificationDocumentCount: property.verificationDocumentCount,
+        verificationDocumentsReviewedCount: property.verificationDocumentsReviewedCount,
+        identityValidated: property.identityValidated,
+        locationVerified: property.locationVerified,
+        materialVerified: property.materialVerified,
+        videoValidated: property.videoValidated,
+        hasPresencialVerification: property.hasPresencialVerification,
+        onsiteVerifiedAt: property.onsiteVerifiedAt,
+        documentationSubmitted: property.documentationSubmitted,
+        documentationVerified: property.documentationVerified || property.hostPremiumDocumentaryVerified,
+        manualReviewReady: property.manualReviewReady || Boolean(property.premiumOnsiteOffer),
+        manualReviewCompleted: property.manualReviewCompleted || property.hasPresencialVerification,
+        availabilityValidated: property.availabilityValidated,
+        lat: resolvedLat,
+        lng: resolvedLng,
+      });
+    }
+
     return buildSummaryFromExplicitItems(property.verificationItems);
   }
 
@@ -344,8 +447,9 @@ export const getPropertyVerificationSummary = (property: PropertyVerificationLik
     documentationVerified: property.documentationVerified || property.hostPremiumDocumentaryVerified,
     manualReviewReady: property.manualReviewReady || Boolean(property.premiumOnsiteOffer),
     manualReviewCompleted: property.manualReviewCompleted || property.hasPresencialVerification,
-    lat: property.lat,
-    lng: property.lng,
+    availabilityValidated: property.availabilityValidated,
+    lat: resolvedLat,
+    lng: resolvedLng,
   });
 };
 
@@ -383,8 +487,9 @@ export const getPropertyAdvancedVerificationItems = (property: PropertyVerificat
     documentationVerified: property.documentationVerified || property.hostPremiumDocumentaryVerified,
     manualReviewReady: property.manualReviewReady || Boolean(property.premiumOnsiteOffer),
     manualReviewCompleted: property.manualReviewCompleted || property.hasPresencialVerification,
-    lat: property.lat,
-    lng: property.lng,
+    availabilityValidated: property.availabilityValidated,
+    lat: parseFiniteNumber(property.lat) ?? parseFiniteNumber(property.coordinates?.lat ?? null),
+    lng: parseFiniteNumber(property.lng) ?? parseFiniteNumber(property.coordinates?.lng ?? null),
   });
 };
 
@@ -423,8 +528,9 @@ export const getPropertyVerificationProgress = (property: PropertyVerificationLi
     documentationVerified: property.documentationVerified || property.hostPremiumDocumentaryVerified,
     manualReviewReady: property.manualReviewReady || Boolean(property.premiumOnsiteOffer),
     manualReviewCompleted: property.manualReviewCompleted || property.hasPresencialVerification,
-    lat: property.lat,
-    lng: property.lng,
+    availabilityValidated: property.availabilityValidated,
+    lat: parseFiniteNumber(property.lat) ?? parseFiniteNumber(property.coordinates?.lat ?? null),
+    lng: parseFiniteNumber(property.lng) ?? parseFiniteNumber(property.coordinates?.lng ?? null),
   });
 };
 
@@ -463,7 +569,7 @@ export const getPropertyVerificationGuidanceMessage = (property: PropertyVerific
   const score = getPropertyVerificationScore(property);
 
   if (score >= HIGH_VERIFICATION_HIGHLIGHT_MIN_SCORE) {
-    return 'Este aviso muestra más información validada que la mayoría.';
+    return 'Este aviso muestra más comprobaciones reales que la mayoría.';
   }
 
   if (score >= REAL_VERIFICATION_FILTER_MIN_SCORE) {
@@ -514,7 +620,7 @@ export const getPropertyVerificationDetails = (property: PropertyVerificationLik
   return {
     ...badge,
     items: verificationSummary.items,
-    helperText: 'Comparás rápido qué ya está comprobado y qué falta para decidir con más contexto.',
+    helperText: 'Comparás rápido qué ya está comprobado, qué falta y qué parte todavía asumís por confianza.',
   };
 };
 

@@ -42,34 +42,34 @@ describe('mapPropertyRecord', () => {
     ]));
     expect(property.verificationItems).toEqual([
       {
-        key: 'location',
-        label: 'Ubicación',
-        description: 'La ubicación aproximada ya quedó comprobada para ubicar el lugar con más claridad.',
-        status: 'complete',
-      },
-      {
         key: 'identity',
-        label: 'Anfitrión',
-        description: 'La identidad del anfitrión ya quedó validada y suma una señal fuerte de confianza.',
+        label: 'Anfitrión confirmado',
+        description: 'La identidad del anfitrión ya fue confirmada dentro de la plataforma.',
         status: 'complete',
       },
       {
-        key: 'data',
-        label: 'Datos',
-        description: 'Todavía faltan datos visibles para que el aviso se entienda de entrada.',
-        status: 'pending',
+        key: 'location',
+        label: 'Ubicación verificada',
+        description: 'La zona del alojamiento ya fue verificada dentro de la plataforma.',
+        status: 'complete',
+      },
+      {
+        key: 'geolocation',
+        label: 'Geolocalización precisa',
+        description: 'El aviso ya cuenta con coordenadas precisas para ubicar el lugar con más claridad.',
+        status: 'complete',
       },
       {
         key: 'photos',
-        label: 'Fotos',
-        description: 'El aviso ya suma fotos reales que ayudan a comparar el lugar de entrada.',
+        label: 'Fotos / video reales',
+        description: 'El aviso ya muestra fotos o video reales del alojamiento.',
         status: 'complete',
       },
       {
-        key: 'price',
-        label: 'Precio',
-        description: 'El precio por noche ya está visible y permite comparar este aviso con otras opciones.',
-        status: 'complete',
+        key: 'availability',
+        label: 'Disponibilidad validada',
+        description: 'Todavía falta validar la disponibilidad con calendario o reservas registradas.',
+        status: 'pending',
       },
     ]);
     expect(property.verificationSummary).toEqual({
@@ -102,16 +102,16 @@ describe('mapPropertyRecord', () => {
     });
 
     expect(property.identityValidated).toBe(false);
-    expect(property.verificationScore).toBe(2);
+    expect(property.verificationScore).toBe(1);
     expect(property.hostTrustScore).toBe(0);
     expect(property.hostTrust).toMatchObject({
       score: 0,
       level: 'low',
     });
-    expect(property.verificationItems?.find((item) => item.key === 'data')).toEqual({
-      key: 'data',
-      label: 'Datos',
-      description: 'Todavía faltan datos visibles para que el aviso se entienda de entrada.',
+    expect(property.verificationItems?.find((item) => item.key === 'identity')).toEqual({
+      key: 'identity',
+      label: 'Anfitrión confirmado',
+      description: 'Todavía falta confirmar la identidad del anfitrión.',
       status: 'pending',
     });
   });

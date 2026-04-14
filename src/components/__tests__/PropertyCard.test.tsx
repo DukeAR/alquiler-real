@@ -83,10 +83,10 @@ describe('PropertyCard', () => {
     expect(verificationBlock).toHaveAttribute('aria-label', '4 de 5 comprobaciones');
     expect(within(verificationBlock).getByText('4/5 verificado')).toBeInTheDocument();
     expect(within(verificationBlock).getByText('● ● ● ● ○')).toBeInTheDocument();
-    expect(within(verificationBlock).getByText('Ubicación · Anfitrión · Datos')).toBeInTheDocument();
+    expect(within(verificationBlock).getByText('Anfitrión confirmado · Ubicación verificada · Fotos / video reales')).toBeInTheDocument();
     expect(within(verificationBlock).queryAllByRole('listitem')).toHaveLength(0);
-    expect(within(verificationBlock).queryByText(/^Fotos$/)).toBeNull();
-    expect(within(verificationBlock).queryByText(/^Precio$/)).toBeNull();
+    expect(within(verificationBlock).queryByText(/^Geolocalización precisa$/)).toBeNull();
+    expect(within(verificationBlock).queryByText(/^Disponibilidad validada$/)).toBeNull();
     expect(screen.queryByText('Confianza visible')).toBeNull();
     expect(screen.queryByText('Anfitrión con buen historial')).toBeNull();
     expect(screen.queryByText('12 reseñas reales')).toBeNull();
@@ -110,13 +110,13 @@ describe('PropertyCard', () => {
       />,
     );
 
-    const verificationBlock = screen.getByLabelText('3 de 5 comprobaciones');
+    const verificationBlock = screen.getByLabelText('2 de 5 comprobaciones');
 
-    expect(within(verificationBlock).getByText('3/5 verificado')).toBeInTheDocument();
-    expect(within(verificationBlock).getByText('● ● ● ○ ○')).toBeInTheDocument();
-    expect(within(verificationBlock).getByText('Ubicación · Datos')).toBeInTheDocument();
-    expect(within(verificationBlock).queryByText(/^Anfitrión$/)).toBeNull();
-    expect(within(verificationBlock).queryByText(/^Fotos$/)).toBeNull();
+    expect(within(verificationBlock).getByText('2/5 verificado')).toBeInTheDocument();
+    expect(within(verificationBlock).getByText('● ● ○ ○ ○')).toBeInTheDocument();
+    expect(within(verificationBlock).getByText('Ubicación verificada · Geolocalización precisa')).toBeInTheDocument();
+    expect(within(verificationBlock).queryByText(/^Anfitrión confirmado$/)).toBeNull();
+    expect(within(verificationBlock).queryByText(/^Fotos \/ video reales$/)).toBeNull();
     expect(screen.queryByText('Más comprobado')).toBeNull();
   });
 
@@ -141,7 +141,7 @@ describe('PropertyCard', () => {
     );
 
     expect(screen.queryByText('Anfitrión con buen historial')).toBeNull();
-    expect(screen.getByText('Ubicación · Anfitrión · Datos')).toBeInTheDocument();
+    expect(screen.getByText('Anfitrión confirmado · Ubicación verificada · Fotos / video reales')).toBeInTheDocument();
   });
 
   test('shows the subtle high-verification badge automatically when the score reaches 4', () => {
@@ -189,7 +189,7 @@ describe('PropertyCard', () => {
     const verificationBlock = screen.getByLabelText('4 de 5 comprobaciones');
 
     expect(within(verificationBlock).getByText('4/5 verificado')).toBeInTheDocument();
-    expect(within(verificationBlock).getByText('Ubicación · Anfitrión · Datos')).toBeInTheDocument();
+  expect(within(verificationBlock).getByText('Anfitrión confirmado · Ubicación verificada · Fotos / video reales')).toBeInTheDocument();
     expect(screen.queryByText('Más comprobado')).toBeNull();
     expect(screen.queryByText('Más confiable')).toBeNull();
     expect(screen.queryByText('Anfitrión con buen historial')).toBeNull();

@@ -940,6 +940,26 @@ const PROPERTY_VERIFICATION_FILE_SUMMARY_SELECT = `COALESCE(property_file_summar
   END as "manualReviewReady",
   CASE WHEN COALESCE(p."hasPresencialVerification", 0) = 1 THEN TRUE ELSE FALSE END as "manualReviewCompleted"`;
 
+const PROPERTY_AVAILABILITY_VALIDATED_SELECT = `CASE
+  WHEN EXISTS (
+    SELECT 1
+    FROM bookings availability_booking
+    WHERE availability_booking."propertyId" = p.id
+      AND availability_booking.status <> 'cancelled'
+      AND availability_booking.end_date >= CURRENT_DATE
+  ) THEN TRUE
+  WHEN COALESCE(
+    jsonb_array_length(
+      CASE
+        WHEN p.manual_blocked_dates IS NULL OR BTRIM(p.manual_blocked_dates) = '' THEN '[]'::jsonb
+        ELSE p.manual_blocked_dates::jsonb
+      END
+    ),
+    0
+  ) > 0 THEN TRUE
+  ELSE FALSE
+END as "availabilityValidated"`;
+
 const PROPERTY_VERIFICATION_FILE_SUMMARY_JOINS = `
       LEFT JOIN (
         SELECT property_id,
@@ -3539,6 +3559,7 @@ app.get('/api/host/dashboard', async (req, res) => {
                 COALESCE(booking_summary.pending_requests_count, 0)::int as "pendingRequestsCount",
                 COALESCE(booking_summary.active_reservations_count, 0)::int as "activeReservationsCount",
                 booking_summary.next_arrival_date as "nextArrivalDate",
+                ${PROPERTY_AVAILABILITY_VALIDATED_SELECT},
                 ${PROPERTY_VERIFICATION_FILE_SUMMARY_SELECT},
                 ${PROPERTY_HOST_TRUST_SELECT}
          FROM properties p
@@ -4076,6 +4097,7 @@ app.get('/api/properties', async (req, res) => {
         p."traceabilityLevel", p."maxGuests", p."hasPresencialVerification", p."onsiteVerifiedAt", p."hasDigitalVerification", p.lat, p.lng,
         p.beds, p.bedrooms, p.bathrooms, p.property_type as "propertyType",
         p.is_verified_property as "isVerifiedProperty",
+        ${PROPERTY_AVAILABILITY_VALIDATED_SELECT},
         ${PROPERTY_VERIFICATION_FILE_SUMMARY_SELECT},
         ${PROPERTY_HOST_TRUST_SELECT}
       FROM properties p
@@ -4201,7 +4223,8 @@ app.put('/api/properties/:id/availability', async (req, res) => {
 app.get('/api/properties/:id', async (req, res) => {
   try {
     const result = await db.query(
-      `SELECT p.*, COALESCE(p.lat, -36.3536) as lat, COALESCE(p.lng, -56.7196) as lng,
+      `SELECT p.*,
+              ${PROPERTY_AVAILABILITY_VALIDATED_SELECT},
               ${PROPERTY_VERIFICATION_FILE_SUMMARY_SELECT},
               ${PROPERTY_HOST_TRUST_SELECT}
        FROM properties p
@@ -7227,7 +7250,7 @@ app.get('/api/favorites', async (req, res) => {
   if (!userId) return res.status(401).json({ error: AUTH_REQUIRED_ERROR });
   try {
     const result = await db.query(
-      `SELECT p.*, ${PROPERTY_HOST_TRUST_SELECT}
+      `SELECT p.*, ${PROPERTY_AVAILABILITY_VALIDATED_SELECT}, ${PROPERTY_HOST_TRUST_SELECT}
        FROM favorites f
        JOIN properties p ON p.id = f.property_id
        ${PROPERTY_HOST_TRUST_JOINS}

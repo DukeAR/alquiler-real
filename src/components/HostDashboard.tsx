@@ -1115,9 +1115,9 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
               const pendingLabels = property.pendingVerificationItems.map((item: any) => item.label);
               const pendingKeys = new Set(property.pendingVerificationItems.map((item: any) => item.key));
               const showIdentityAction = pendingKeys.has('identity');
-              const showListingAction = pendingKeys.has('data') || pendingKeys.has('location');
+              const showListingAction = pendingKeys.has('location') || pendingKeys.has('geolocation') || pendingKeys.has('data');
               const showPhotoAction = pendingKeys.has('photos');
-              const showPriceAction = pendingKeys.has('price');
+              const showAvailabilityAction = pendingKeys.has('availability') || pendingKeys.has('price');
               const showDocumentsAction = property.verificationProgress?.level !== 'base'
                 && Array.isArray(property.verificationProgress?.advancedChecks)
                 && property.verificationProgress.advancedChecks.some((item: any) => item.key === 'documents' && item.status !== 'complete');
@@ -1237,7 +1237,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
                               >
                                 <>
                                   <Icons.MapPin className="h-4 w-4" />
-                                  Ordenar datos base
+                                  Ajustar ubicación
                                 </>
                               </Button>
                             ) : null}
@@ -1252,22 +1252,22 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
                               >
                                 <>
                                   <Icons.ImagePlus className="h-4 w-4" />
-                                  Subir fotos reales
+                                  Subir fotos o video real
                                 </>
                               </Button>
                             ) : null}
 
-                            {showPriceAction ? (
+                            {showAvailabilityAction ? (
                               <Button
                                 type="button"
                                 variant="secondary"
                                 size="sm"
-                                onClick={() => navigate(`/detail/${property.id}`)}
+                                onClick={() => setAvailabilityPropertyId((currentValue) => (currentValue === property.id ? null : property.id))}
                                 className="rounded-full"
                               >
                                 <>
-                                  <Icons.Info className="h-4 w-4" />
-                                  Definir precio
+                                  <Icons.Calendar className="h-4 w-4" />
+                                  Validar disponibilidad
                                 </>
                               </Button>
                             ) : null}

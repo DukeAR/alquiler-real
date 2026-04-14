@@ -108,7 +108,6 @@ describe('ExploreResultsSection', () => {
 
     expect(screen.getByRole('heading', { name: 'Empezá por las más completas' })).toBeInTheDocument();
     expect(screen.getByText('Precio, capacidad y respaldo en una sola mirada.')).toBeInTheDocument();
-    expect(screen.getByText('Más comprobado')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Más para comparar' })).toBeInTheDocument();
     expect(screen.getAllByText('Más confiable')).toHaveLength(1);
     expect(screen.queryByText(/Buena relación precio \/ información|De las más completas en este rango/)).toBeNull();
@@ -121,6 +120,26 @@ describe('ExploreResultsSection', () => {
     renderSection({ caresAboutVerification: true });
 
     expect(screen.getAllByText('Verificación más visible')).toHaveLength(3);
+  });
+
+  test('renders the filtered results header as editorial metadata without the old green hint', () => {
+    renderSection({
+      hasActiveFilters: true,
+      caresAboutVerification: true,
+      searchQuery: 'Villa Gesell',
+      appliedFilterCount: 2,
+      filteredProperties: sampleProperties,
+      featuredProperties: [],
+      listingProperties: sampleProperties,
+      visibleProperties: sampleProperties.slice(0, 2),
+    });
+
+    expect(screen.getAllByRole('heading', { name: 'Resultados para revisar' })).toHaveLength(1);
+    expect(screen.getByText('3 propiedades para comparar en esta búsqueda.')).toBeInTheDocument();
+    expect(screen.getByText('2 visibles en esta búsqueda.')).toBeInTheDocument();
+    expect(screen.getByText('Priorizando mayor verificación')).toBeInTheDocument();
+    expect(screen.getByText('Villa Gesell')).toBeInTheDocument();
+    expect(screen.queryByText('Estás priorizando avisos con más información comprobada')).toBeNull();
   });
 
   test('shows the filtered empty state and clears filters when requested', () => {

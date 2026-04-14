@@ -85,7 +85,7 @@ export const ExploreFiltersBar = ({
               onChange={(event) => onSortChange(event.target.value as ExploreSort)}
               className="app-control h-12 min-w-0 rounded-[var(--app-radius-control)] border-[color:var(--app-surface-border)] bg-white px-4 text-[0.92rem] font-semibold tracking-[-0.01em] text-slate-950 shadow-none"
             >
-              <option value="verification">Más información comprobada</option>
+              <option value="verification">Mayor verificación</option>
               <option value="rating">Mejor calificación</option>
               <option value="price">Precio más bajo</option>
             </select>
@@ -126,7 +126,7 @@ export const ExploreFiltersBar = ({
                 Solo avisos con respaldo real
               </span>
               <span className="hidden text-[10.5px] leading-[1rem] text-slate-600 lg:block">
-                3 o más comprobaciones visibles
+                3 o más comprobaciones reales
               </span>
             </span>
 

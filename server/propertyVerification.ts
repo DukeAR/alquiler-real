@@ -33,6 +33,7 @@ type PropertyVerificationSource = {
   documentationVerified?: boolean;
   manualReviewReady?: boolean;
   manualReviewCompleted?: boolean;
+  availabilityValidated?: boolean;
   lat?: number | string | null;
   lng?: number | string | null;
 };

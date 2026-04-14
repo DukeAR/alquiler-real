@@ -50,6 +50,9 @@ type PropertyQueryRow = Record<string, unknown> & {
   documentationVerified?: unknown;
   manualReviewReady?: unknown;
   manualReviewCompleted?: unknown;
+  availabilityValidated?: unknown;
+  activeReservationsCount?: unknown;
+  nextArrivalDate?: unknown;
   premiumVisibilityBoost?: unknown;
 };
 
@@ -58,6 +61,15 @@ const hasOwn = (value: object, key: string) => Object.prototype.hasOwnProperty.c
 const toSafeNumber = (value: unknown, fallback = 0) => {
   const numericValue = typeof value === 'number' ? value : Number(value);
   return Number.isFinite(numericValue) ? numericValue : fallback;
+};
+
+const toNullableNumber = (value: unknown) => {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+
+  const numericValue = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(numericValue) ? numericValue : null;
 };
 
 const toSafeInteger = (value: unknown, fallback = 0) => Math.round(toSafeNumber(value, fallback));
@@ -122,6 +134,8 @@ export const mapPropertyRecord = (row: PropertyQueryRow) => {
     internalVisibilityPenalty?: unknown;
     internal_visibility_penalty?: unknown;
   };
+  const resolvedLat = toNullableNumber(row.lat);
+  const resolvedLng = toNullableNumber(row.lng);
 
   const normalizedProperty = {
     ...safeRow,
@@ -146,6 +160,9 @@ export const mapPropertyRecord = (row: PropertyQueryRow) => {
     documentationVerified: toBoolean(row.documentationVerified) || toSafeInteger(row.verificationDocumentsReviewedCount) > 0,
     manualReviewReady: toBoolean(row.manualReviewReady),
     manualReviewCompleted: toBoolean(row.manualReviewCompleted) || toBoolean(row.hasPresencialVerification),
+    availabilityValidated: toBoolean(row.availabilityValidated)
+      || toSafeInteger(row.activeReservationsCount) > 0
+      || (typeof row.nextArrivalDate === 'string' && row.nextArrivalDate.trim().length > 0),
     isVerifiedProperty: toBoolean(row.isVerifiedProperty) || toBoolean(row.is_verified_property),
     hostSince: getResolvedHostSince(row),
     hostCompletedReservationsCount: toSafeInteger(row.hostCompletedReservationsCount),
@@ -172,11 +189,11 @@ export const mapPropertyRecord = (row: PropertyQueryRow) => {
       return normalizedImages.length > 0 ? normalizedImages : undefined;
     })(),
     coordinates: {
-      lat: toSafeNumber(row.lat, PROPERTY_COORDINATE_FALLBACK.lat),
-      lng: toSafeNumber(row.lng, PROPERTY_COORDINATE_FALLBACK.lng),
+      lat: resolvedLat ?? PROPERTY_COORDINATE_FALLBACK.lat,
+      lng: resolvedLng ?? PROPERTY_COORDINATE_FALLBACK.lng,
     },
-    lat: toSafeNumber(row.lat, PROPERTY_COORDINATE_FALLBACK.lat),
-    lng: toSafeNumber(row.lng, PROPERTY_COORDINATE_FALLBACK.lng),
+    lat: resolvedLat ?? undefined,
+    lng: resolvedLng ?? undefined,
     premiumVisibilityBoost: toSafeNumber(row.premiumVisibilityBoost, 0),
   };
 
