@@ -386,9 +386,26 @@ body {
   padding-inline: 1.25rem;
 }
 
+.app-page-explore {
+  width: 100%;
+  max-width: 68.75rem;
+  margin-inline: auto;
+  padding-inline: 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .app-page-explore {
+    padding-inline: 1.5rem;
+  }
+}
+
 @media (min-width: 768px) {
   .app-page {
     padding-inline: 1.75rem;
+  }
+
+  .app-page-explore {
+    padding-inline: 2rem;
   }
 }
 

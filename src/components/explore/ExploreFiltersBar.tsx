@@ -36,10 +36,10 @@ export const ExploreFiltersBar = ({
   onClear,
 }: ExploreFiltersBarProps) => {
   return (
-    <section className="rounded-[var(--app-radius-card)] border border-slate-200/85 bg-white/94 p-4 shadow-[0_18px_38px_-34px_rgba(15,23,42,0.16)] sm:p-5">
-      <div className="flex flex-col gap-3.5">
+    <section className="rounded-[var(--app-radius-card)] border border-slate-200/85 bg-white/96 p-4 shadow-[0_18px_38px_-34px_rgba(15,23,42,0.16)] sm:p-5 lg:p-6">
+      <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div className="grid w-full max-w-[18rem] grid-cols-2 items-center rounded-full border border-slate-200/80 bg-slate-100/85 p-1">
+          <div className="grid h-14 w-full max-w-[22rem] grid-cols-2 items-center rounded-[1.35rem] border border-slate-200/80 bg-slate-100/85 p-1">
             {(['grid', 'map'] as const).map((mode) => (
               <button
                 key={mode}
@@ -47,7 +47,7 @@ export const ExploreFiltersBar = ({
                 aria-pressed={viewMode === mode}
                 onClick={() => onViewModeChange(mode)}
                 className={cn(
-                  'flex flex-1 items-center justify-center gap-2 rounded-full px-3 py-2.5 text-[11px] font-semibold uppercase tracking-[0.12em] transition-[background-color,color] duration-150',
+                  'flex h-full flex-1 items-center justify-center gap-2 rounded-[1rem] px-3 py-2.5 text-[11px] font-semibold uppercase tracking-[0.12em] transition-[background-color,color] duration-150',
                   viewMode === mode
                     ? 'bg-white text-slate-950 shadow-[0_10px_20px_-18px_rgba(15,23,42,0.22)]'
                     : 'text-slate-700 hover:text-slate-950',
@@ -65,7 +65,7 @@ export const ExploreFiltersBar = ({
               onClick={onClear}
               variant="ghost"
               size="sm"
-              className="self-start rounded-full px-4 text-slate-900 md:self-auto"
+              className="h-12 self-start rounded-[1rem] px-4 text-slate-900 md:self-auto"
             >
               <Icons.X className="h-4 w-4" />
               Limpiar filtros
@@ -73,7 +73,7 @@ export const ExploreFiltersBar = ({
           ) : null}
         </div>
 
-        <div className="grid gap-3 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] xl:grid-cols-[minmax(0,0.84fr)_minmax(0,1fr)_minmax(0,1.12fr)] xl:items-stretch">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)_minmax(0,1fr)] xl:items-end">
           <label className="flex min-w-0 flex-col gap-1.5">
             <span className="pl-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">
               Ordenar por
@@ -82,7 +82,7 @@ export const ExploreFiltersBar = ({
               aria-label="Ordenar por"
               value={sortBy}
               onChange={(event) => onSortChange(event.target.value as ExploreSort)}
-              className="app-control h-[3rem] min-w-0 rounded-[var(--app-radius-control)] border-[color:var(--app-surface-border)] bg-white px-4 text-[0.94rem] font-semibold tracking-[-0.01em] text-slate-950 shadow-none"
+              className="app-control h-14 min-w-0 rounded-[var(--app-radius-control)] border-[color:var(--app-surface-border)] bg-white px-4 text-[0.94rem] font-semibold tracking-[-0.01em] text-slate-950 shadow-none"
             >
               <option value="verification">Más información comprobada</option>
               <option value="rating">Mejor calificación</option>
@@ -90,11 +90,11 @@ export const ExploreFiltersBar = ({
             </select>
           </label>
 
-          <div className="flex min-w-0 flex-col gap-1.5">
+          <div className="flex min-w-0 flex-col gap-1.5 md:col-span-2 xl:col-span-1">
             <span className="pl-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-600">
               Precios
             </span>
-            <div className="grid min-w-0 grid-cols-2 gap-2.5">
+            <div className="grid min-w-0 grid-cols-2 gap-3">
               <Input
                 type="number"
                 inputMode="numeric"
@@ -102,7 +102,7 @@ export const ExploreFiltersBar = ({
                 onChange={(event) => onFiltersChange({ ...filters, minPrice: event.target.value })}
                 placeholder="Desde"
                 icon={<span className="text-xs font-medium">$</span>}
-                className="h-[3rem] min-w-0 rounded-[var(--app-radius-control)] border-[color:var(--app-surface-border)] bg-white py-2.5 pl-9 pr-3 text-[0.94rem] font-semibold tracking-[-0.01em] text-slate-950 shadow-none placeholder:text-slate-500"
+                className="h-14 min-w-0 rounded-[var(--app-radius-control)] border-[color:var(--app-surface-border)] bg-white py-2.5 pl-9 pr-3 text-[0.94rem] font-semibold tracking-[-0.01em] text-slate-950 shadow-none placeholder:text-slate-500"
               />
 
               <Input
@@ -112,29 +112,29 @@ export const ExploreFiltersBar = ({
                 onChange={(event) => onFiltersChange({ ...filters, maxPrice: event.target.value })}
                 placeholder="Hasta"
                 icon={<span className="text-xs font-medium">$</span>}
-                className="h-[3rem] min-w-0 rounded-[var(--app-radius-control)] border-[color:var(--app-surface-border)] bg-white py-2.5 pl-9 pr-3 text-[0.94rem] font-semibold tracking-[-0.01em] text-slate-950 shadow-none placeholder:text-slate-500"
+                className="h-14 min-w-0 rounded-[var(--app-radius-control)] border-[color:var(--app-surface-border)] bg-white py-2.5 pl-9 pr-3 text-[0.94rem] font-semibold tracking-[-0.01em] text-slate-950 shadow-none placeholder:text-slate-500"
               />
             </div>
           </div>
 
           <label className={cn(
-            'flex min-h-[3rem] min-w-0 items-center gap-3 rounded-[var(--app-radius-control)] border px-3.5 py-3 text-left transition-[border-color,background-color] duration-150',
+            'flex h-14 min-w-0 items-center gap-3 rounded-[1.15rem] border px-3.5 py-2.5 text-left transition-[border-color,background-color] duration-150 md:col-span-2 xl:col-span-1',
             filters.verifiedOnly
               ? 'border-brand/20 bg-brand/6'
               : 'border-[color:var(--app-surface-border)] bg-white',
           )}>
             <span className={cn(
-              'flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-brand',
+              'flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-brand',
               filters.verifiedOnly ? 'bg-brand/12' : 'bg-brand/8',
             )}>
-              <Icons.ShieldCheck className="h-4.5 w-4.5" />
+              <Icons.ShieldCheck className="h-4 w-4" />
             </span>
 
             <span className="min-w-0 flex-1">
-              <span className="block text-[13px] font-semibold leading-5 text-slate-900">
+              <span className="block text-[12.5px] font-semibold leading-4 text-slate-900">
                 Solo avisos con respaldo real
               </span>
-              <span className="block text-[11.5px] leading-4 text-slate-600">
+              <span className="block text-[10.5px] leading-[1.05rem] text-slate-600">
                 3 o más comprobaciones visibles
               </span>
             </span>

@@ -186,6 +186,8 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   const showHeader = !hiddenHeaderPrefixes.some((prefix) => matchesPath(location.pathname, prefix));
   const showMobileNav = !hiddenMobileNavPrefixes.some((prefix) => matchesPath(location.pathname, prefix));
   const showAssistant = !hiddenAssistantPrefixes.some((prefix) => matchesPath(location.pathname, prefix));
+  const usesExploreLayoutWidth = location.pathname === '/' || matchesPath(location.pathname, '/explore');
+  const headerLayoutClass = usesExploreLayoutWidth ? 'app-page-explore' : 'app-page';
 
   const desktopActions: NavAction[] = [
     { label: 'Explorar', shortLabel: 'Explorar', path: '/', icon: Icons.Search },
@@ -221,7 +223,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
 
       {showHeader ? (
         <header className="app-header relative z-50">
-          <div className="app-page flex items-center justify-between gap-2 py-3 sm:gap-4 sm:py-4">
+          <div className={cn(headerLayoutClass, 'flex items-center justify-between gap-2 py-3 sm:gap-4 sm:py-4')}>
             <button type="button" onClick={() => navigate('/')} aria-label="Ir al inicio de Alquiler Real" className="flex min-w-0 items-center gap-2 rounded-full pr-1 transition-transform duration-200 hover:scale-[1.01] sm:gap-3 sm:pr-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-[0_18px_35px_-22px_rgba(15,23,42,0.85)] sm:h-11 sm:w-11">
                 <Icons.ShieldCheck className="h-6 w-6" />

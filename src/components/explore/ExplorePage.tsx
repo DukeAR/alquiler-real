@@ -191,23 +191,10 @@ export const ExplorePage = () => {
 
   return (
     <div className="bg-[linear-gradient(180deg,#eff4f8_0%,#f8fafc_18%,#ffffff_36%,#ffffff_100%)] pb-12 md:pb-14">
-      <section className="relative overflow-hidden">
-        <div className="pointer-events-none absolute inset-0 overflow-hidden">
-          <div
-            className="absolute inset-x-0 inset-y-[-8%] scale-[1.015] opacity-100"
-            style={{
-              backgroundImage: `url(${heroBackgroundImage})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              filter: 'blur(1.5px) saturate(0.98) contrast(1.02)',
-            }}
-          />
-          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(248,250,252,0.84)_0%,rgba(248,250,252,0.76)_36%,rgba(248,250,252,0.46)_68%,rgba(248,250,252,0.6)_100%)]" />
-          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.08)_0%,rgba(248,250,252,0.12)_62%,rgba(255,255,255,0.36)_100%)]" />
-        </div>
-
-        <div className="relative mx-auto w-full max-w-[68.75rem] px-5 pb-7 pt-8 sm:px-6 md:px-8 md:pb-8 md:pt-10 lg:pb-9 lg:pt-12">
+      <section className="pb-4 pt-8 md:pb-5 md:pt-10 lg:pt-12">
+        <div className="app-page-explore">
           <ExploreHero
+            backgroundImage={heroBackgroundImage}
             searchValue={searchInput}
             locationSuggestions={locationSuggestions}
             onSearchChange={handleSearchChange}
@@ -218,7 +205,7 @@ export const ExplorePage = () => {
         </div>
       </section>
 
-      <div className="mx-auto w-full max-w-[68.75rem] px-5 sm:px-6 md:px-8">
+      <div className="app-page-explore">
         <ExploreFiltersBar
           viewMode={viewMode}
           onViewModeChange={setViewMode}
@@ -231,7 +218,7 @@ export const ExplorePage = () => {
         />
       </div>
 
-      <div className="mx-auto w-full max-w-[68.75rem] px-5 pt-4 sm:px-6 md:px-8 md:pt-5">
+      <div className="app-page-explore pt-4 md:pt-5">
         <ExploreResultsSection
           loading={loading}
           loadError={loadError}
