@@ -26,26 +26,26 @@ describe('propertyVerification', () => {
       lng: -56.861,
       identityValidated: true,
       locationVerified: true,
-      verificationPhotoCount: 4,
+      verificationPhotoCount: 3,
       videoValidated: false,
     });
 
     expect(property.verificationScore).toBe(4);
     expect(getPropertyVerificationScore(property)).toBe(4);
     expect(getPropertyVerificationItems(property).map((item) => item.label)).toEqual([
-      'Datos básicos',
       'Ubicación',
-      'Fotos reales',
-      'Video del lugar',
-      'Identidad validada',
+      'Anfitrión',
+      'Datos',
+      'Fotos',
+      'Precio',
     ]);
     expect(getPropertyVerificationBadge(property)).toEqual({
       score: 4,
       max: 5,
       label: '4 de 5 comprobaciones',
       summaryLabel: '4 de 5 comprobaciones',
-      visual: '✔✔✔✔○',
-      spacedVisual: '✔ ✔ ✔ ✔ ○',
+      visual: '●●●●○',
+      spacedVisual: '● ● ● ● ○',
     });
   });
 
@@ -58,12 +58,12 @@ describe('propertyVerification', () => {
     });
 
     expect(details.summaryLabel).toBe('3 de 5 comprobaciones');
-    expect(details.spacedVisual).toBe('✔ ✔ ✔ ○ ○');
-    expect(details.helperText).toBe('Ves rápido qué ya está comprobado y qué suma confianza extra.');
-    expect(details.items.map((item) => item.status)).toEqual(['pending', 'complete', 'complete', 'pending', 'complete']);
+    expect(details.spacedVisual).toBe('● ● ● ○ ○');
+    expect(details.helperText).toBe('Comparás rápido qué ya está comprobado y qué falta para decidir con más contexto.');
+    expect(details.items.map((item) => item.status)).toEqual(['complete', 'complete', 'pending', 'complete', 'pending']);
   });
 
-  test('does not infer basics from legacy relationship flags alone', () => {
+  test('does not infer data from legacy relationship flags alone', () => {
     const details = getPropertyVerificationDetails({
       identityValidated: true,
       locationVerified: true,
@@ -71,10 +71,10 @@ describe('propertyVerification', () => {
     });
 
     expect(details.summaryLabel).toBe('2 de 5 comprobaciones');
-    expect(details.items[0]).toEqual({
-      key: 'basics',
-      label: 'Datos básicos',
-      description: 'Todavía faltan datos básicos para que el aviso se entienda mejor.',
+    expect(details.items.find((item) => item.key === 'data')).toEqual({
+      key: 'data',
+      label: 'Datos',
+      description: 'Todavía faltan datos visibles para que el aviso se entienda de entrada.',
       status: 'pending',
     });
   });

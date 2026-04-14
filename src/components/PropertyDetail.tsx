@@ -26,7 +26,6 @@ import { Card } from './ui/Card';
 import { NoticeBanner } from './ui/NoticeBanner';
 import { SectionTitle } from './ui/SectionTitle';
 import { TrustSignalsInline, getTrustSignalsFromInteractionHistory, getTrustSignalsFromItems, type TrustSignal } from './ui/TrustSignalsInline';
-import { VerificationMeter } from './ui/VerificationMeter';
 import { PropertyVerificationPanel } from './verification/PropertyVerificationPanel';
 
 const FALLBACK = 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=1200&q=80&auto=format&fit=crop';
@@ -403,52 +402,6 @@ export const PropertyDetailShell: React.FC<{
   const completedReservationsLabel = property.hostInteractionHistory?.completedReservationsCount
     ? `${property.hostInteractionHistory.completedReservationsCount} ${property.hostInteractionHistory.completedReservationsCount === 1 ? 'reserva cerrada' : 'reservas cerradas'}`
     : null;
-  const topDecisionTrustSignals = (() => {
-    const mergedSignals: TrustSignal[] = [];
-    const seenLabels = new Set<string>();
-    const pushSignals = (nextSignals: TrustSignal[]) => {
-      nextSignals.forEach((signal) => {
-        if (mergedSignals.length >= 3 || seenLabels.has(signal.label)) {
-          return;
-        }
-
-        mergedSignals.push(signal);
-        seenLabels.add(signal.label);
-      });
-    };
-
-    pushSignals(getTrustSignalsFromItems(verificationDetails.items, { limit: 2, tone: 'success' }));
-
-    const supportingSignals: TrustSignal[] = [];
-
-    if (reviewCount > 0) {
-      supportingSignals.push({
-        key: 'detail-reviews',
-        label: `${reviewCount} ${reviewCount === 1 ? 'reseña real' : 'reseñas reales'}`,
-        tone: 'neutral',
-      });
-    }
-
-    if (completedReservationsLabel) {
-      supportingSignals.push({
-        key: 'detail-completed-reservations',
-        label: completedReservationsLabel,
-        tone: 'neutral',
-      });
-    }
-
-    if (hostResponseSignal?.label) {
-      supportingSignals.push({
-        key: 'detail-host-response',
-        label: hostResponseSignal.label,
-        tone: 'neutral',
-      });
-    }
-
-    pushSignals(supportingSignals);
-
-    return mergedSignals;
-  })();
   const hostSinceLabel = property.hostSince ? `Miembro desde ${formatMonthYear(property.hostSince)}` : null;
   const visibleReviews = reviews.slice(0, 2);
   const hostTrustSignals = (() => {
@@ -1155,35 +1108,47 @@ export const PropertyDetailShell: React.FC<{
                 <p className="text-center text-xs font-medium text-slate-500">{bookingEntryCtaNote}</p>
               </div>
 
-              <VerificationMeter
-                summary={{
-                  score: verificationDetails.score,
-                  maxScore: verificationDetails.max,
-                  items: verificationDetails.items,
-                }}
-                eyebrow="Comprobado"
-                layout="inline"
-                tone={verificationDetails.score >= 4 ? 'success' : 'neutral'}
-                className="px-0 py-0"
-                labelClassName={cn(
-                  'text-[13px] font-semibold leading-5 text-slate-900',
-                  verificationDetails.score >= 4 && 'text-emerald-900',
-                )}
-                visualClassName={cn(
-                  verificationDetails.score >= 4 ? 'text-emerald-700' : 'text-slate-500',
-                )}
-              />
-
               <section
                 data-testid="property-verification-preview"
-                className="space-y-3 border-t border-slate-200/70 pt-4"
+                className="space-y-4 border-t border-slate-200/70 pt-4"
               >
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Lo que hoy te deja confiar más rápido</p>
-                <TrustSignalsInline
-                  signals={topDecisionTrustSignals}
-                  emptyText="Todavía no hay datos comprobados visibles en este aviso."
-                  compact
-                />
+                <div className="flex items-end justify-between gap-4">
+                  <div className="space-y-1.5">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Verificación visible</p>
+                    <p className="text-lg font-semibold leading-6 text-slate-950">
+                      Nivel de verificación: {verificationDetails.score}/{verificationDetails.max}
+                    </p>
+                    <p className="text-sm leading-6 text-slate-600">{verificationDetails.summaryLabel}</p>
+                  </div>
+                  <span
+                    aria-hidden="true"
+                    className={cn(
+                      'shrink-0 text-sm font-semibold tracking-[0.3em] text-slate-500',
+                      verificationDetails.score >= 4 ? 'text-emerald-700' : 'text-slate-500',
+                    )}
+                  >
+                    {verificationDetails.spacedVisual}
+                  </span>
+                </div>
+
+                <ul className="grid gap-x-4 gap-y-2 sm:grid-cols-2">
+                  {verificationDetails.items.map((item) => {
+                    const complete = item.status === 'complete';
+
+                    return (
+                      <li key={item.key} className="flex items-center justify-between gap-3 text-sm leading-6">
+                        <span className={cn('font-medium', complete ? 'text-slate-700' : 'text-slate-500')}>
+                          {item.label}
+                        </span>
+                        <span className={cn('text-sm font-semibold', complete ? 'text-emerald-700' : 'text-slate-400')}>
+                          {complete ? '✔' : '✖'}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+
+                <p className="text-xs leading-5 text-slate-500">{verificationDetails.helperText}</p>
               </section>
             </div>
           </div>

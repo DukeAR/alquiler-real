@@ -2,7 +2,7 @@ import React from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { Icons } from './Icons';
 import { cn, formatCurrency } from '../lib/utils';
-import { HIGH_VERIFICATION_HIGHLIGHT_MIN_SCORE, getPropertyVerificationBadge, getPropertyVerificationItems } from '../lib/propertyVerification';
+import { HIGH_VERIFICATION_HIGHLIGHT_MIN_SCORE, getPropertyVerificationDetails } from '../lib/propertyVerification';
 import { Property } from '../services/geminiService';
 import { Button } from './ui/Button';
 import { Badge } from './ui/Badge';
@@ -42,51 +42,6 @@ const getGuestCapacityLabel = (maxGuests?: number | null) => {
   return `Hasta ${maxGuests} ${maxGuests === 1 ? 'huésped' : 'huéspedes'}`;
 };
 
-const verificationHighlightPriority: Record<string, number> = {
-  location: 0,
-  identity: 1,
-  photos: 2,
-  video: 3,
-  basics: 4,
-};
-
-const verificationHighlightLabels: Record<string, string> = {
-  location: 'Ubicación verificada',
-  identity: 'Anfitrión identificado',
-  photos: 'Datos comprobados',
-  video: 'Datos comprobados',
-  basics: 'Datos comprobados',
-};
-
-const getVerificationHighlightLabel = (key: string, fallbackLabel: string) => (
-  verificationHighlightLabels[key] || fallbackLabel
-);
-
-const getCompactVerificationHighlights = (property: Property) => {
-  const seenLabels = new Set<string>();
-
-  return getPropertyVerificationItems(property)
-    .filter((item) => item.status === 'complete')
-    .sort((left, right) => {
-      const leftPriority = verificationHighlightPriority[left.key] ?? Number.MAX_SAFE_INTEGER;
-      const rightPriority = verificationHighlightPriority[right.key] ?? Number.MAX_SAFE_INTEGER;
-
-      return leftPriority - rightPriority;
-    })
-    .reduce<Array<{ key: string; label: string }>>((accumulator, item) => {
-      const label = getVerificationHighlightLabel(item.key, item.label);
-
-      if (seenLabels.has(label)) {
-        return accumulator;
-      }
-
-      seenLabels.add(label);
-      accumulator.push({ key: item.key, label });
-      return accumulator;
-    }, [])
-    .slice(0, 3);
-};
-
 interface PropertyCardProps {
   property: Property;
   onClick?: () => void;
@@ -117,14 +72,13 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   const imageSrc = property.imageUrl || 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=900&q=80';
   const isFavoritesVariant = variant === 'favorites';
   const isDecisionFeatured = decisionFeatured && !isFavoritesVariant;
-  const verificationBadge = getPropertyVerificationBadge(property);
+  const verificationDetails = getPropertyVerificationDetails(property);
   const shouldEmphasizeVerification = emphasizeVerification && !isFavoritesVariant;
   const propertyTypeLabel = getPropertyTypeLabel(property);
   const guestCapacityLabel = getGuestCapacityLabel(Number(property.maxGuests) || null);
-  const verificationTagLabel = !isFavoritesVariant && !isDecisionFeatured && verificationBadge.score >= HIGH_VERIFICATION_HIGHLIGHT_MIN_SCORE
+  const verificationTagLabel = !isFavoritesVariant && !isDecisionFeatured && verificationDetails.score >= HIGH_VERIFICATION_HIGHLIGHT_MIN_SCORE
     ? verificationGuidanceLabel || 'Más comprobado'
     : null;
-  const verificationHighlights = getCompactVerificationHighlights(property);
 
   const handleFavoriteToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -175,7 +129,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         <div className="absolute inset-x-0 top-0 flex items-start justify-between gap-3 p-4">
           {isDecisionFeatured ? (
             <Badge variant="neutral" size="md" className="border-brand/25 bg-white/96 px-3 py-1.5 text-slate-950 shadow-[0_14px_26px_-20px_rgba(15,23,42,0.18)] backdrop-blur-sm">
-              <span>Mejor opción</span>
+              <span>Más confiable</span>
             </Badge>
           ) : verificationTagLabel ? (
             <Badge variant="neutral" size="md" className="border-white/75 bg-white/96 px-3 py-1.5 text-slate-900 shadow-[var(--app-shadow-subtle)] backdrop-blur-sm">
@@ -234,25 +188,58 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           </div>
         </div>
 
-        {verificationHighlights.length > 0 ? (
-          <div
-            data-testid="property-card-trust-line"
-            aria-label={verificationBadge.label}
-            className={cn('flex flex-wrap items-center gap-y-1.5 text-[13px] leading-5', shouldEmphasizeVerification && 'text-emerald-800')}
-          >
-            {verificationHighlights.map((item, index) => (
-              <React.Fragment key={item.key}>
-                {index > 0 ? <span aria-hidden="true" className="px-2 text-slate-300">·</span> : null}
-                <span className={cn('inline-flex items-center gap-1.5 font-medium text-slate-700', shouldEmphasizeVerification && 'text-emerald-800')}>
-                  <Icons.CheckCircle2 className={cn('h-3.5 w-3.5 shrink-0 text-emerald-600/80', shouldEmphasizeVerification && 'text-emerald-700')} />
-                  <span>{item.label}</span>
+        <section
+          data-testid="property-card-verification"
+          aria-label={verificationDetails.label}
+          className={cn(
+            'space-y-3 rounded-[24px] border border-slate-200/80 bg-slate-50/85 p-4',
+            shouldEmphasizeVerification && 'border-emerald-200/80 bg-emerald-50/75',
+          )}
+        >
+          <div className="flex items-end justify-between gap-3">
+            <div className="space-y-1.5">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Verificación</p>
+              <div className="flex items-end gap-2">
+                <span className={cn(
+                  'text-[2.05rem] font-black leading-none tracking-[-0.06em] text-slate-950',
+                  (shouldEmphasizeVerification || verificationDetails.score >= HIGH_VERIFICATION_HIGHLIGHT_MIN_SCORE) && 'text-emerald-900',
+                )}>
+                  {verificationDetails.score}/{verificationDetails.max}
                 </span>
-              </React.Fragment>
-            ))}
+                <span className="pb-1 text-[13px] font-medium text-slate-500">nivel visible</span>
+              </div>
+              <p className={cn('text-[13px] font-medium leading-5 text-slate-600', shouldEmphasizeVerification && 'text-emerald-800')}>
+                {verificationDetails.summaryLabel}
+              </p>
+            </div>
+            <span
+              aria-hidden="true"
+              className={cn(
+                'shrink-0 text-[12px] font-semibold tracking-[0.28em] text-slate-500',
+                (shouldEmphasizeVerification || verificationDetails.score >= HIGH_VERIFICATION_HIGHLIGHT_MIN_SCORE) && 'text-emerald-700',
+              )}
+            >
+              {verificationDetails.spacedVisual}
+            </span>
           </div>
-        ) : (
-          <p data-testid="property-card-trust-line" aria-label={verificationBadge.label} className="text-sm leading-6 text-slate-600">Todavía sin validaciones visibles</p>
-        )}
+
+          <ul className="grid gap-x-4 gap-y-2 sm:grid-cols-2">
+            {verificationDetails.items.map((item) => {
+              const complete = item.status === 'complete';
+
+              return (
+                <li key={item.key} className="flex items-center justify-between gap-3 text-[13px] leading-5">
+                  <span className={cn('font-medium', complete ? 'text-slate-700' : 'text-slate-500')}>
+                    {item.label}
+                  </span>
+                  <span className={cn('text-[13px] font-semibold', complete ? 'text-emerald-700' : 'text-slate-400')}>
+                    {complete ? '✔' : '✖'}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
 
         {!isFavoritesVariant && decisionSupportLabel ? (
           <p className={cn(

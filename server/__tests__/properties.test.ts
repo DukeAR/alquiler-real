@@ -136,8 +136,8 @@ describe('Properties endpoints', () => {
     const res = await request(app).get('/api/properties?verifiedOnly=true');
 
     expect(res.status).toBe(200);
-    expect(res.body).toHaveLength(2);
-    expect(res.body.map((property: any) => property.id)).toEqual(['prop-strong', 'prop-low-real']);
+    expect(res.body).toHaveLength(3);
+    expect(res.body.map((property: any) => property.id)).toEqual(expect.arrayContaining(['prop-strong', 'prop-low-real', 'prop-legacy']));
     expect(res.body[0]).toMatchObject({
       id: 'prop-strong',
       verificationScore: 4,
@@ -147,15 +147,26 @@ describe('Properties endpoints', () => {
         level: 'high',
       },
     });
-    expect(res.body[1]).toMatchObject({
-      id: 'prop-low-real',
-      verificationScore: 3,
-      hostTrustScore: 1,
-      hostTrust: {
-        score: 1,
-        level: 'low',
-      },
-    });
+    expect(res.body).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        id: 'prop-low-real',
+        verificationScore: 4,
+        hostTrustScore: 1,
+        hostTrust: expect.objectContaining({
+          score: 1,
+          level: 'low',
+        }),
+      }),
+      expect.objectContaining({
+        id: 'prop-legacy',
+        verificationScore: 3,
+        hostTrustScore: 0,
+        hostTrust: expect.objectContaining({
+          score: 0,
+          level: 'low',
+        }),
+      }),
+    ]));
     expect(res.body[0].verificationItems).toEqual(expect.arrayContaining([
       expect.objectContaining({
         key: 'identity',
@@ -168,6 +179,7 @@ describe('Properties endpoints', () => {
       expect.objectContaining({ key: 'reviews', status: 'complete' }),
       expect.objectContaining({ key: 'tenure', status: 'complete' }),
     ]));
+    expect(res.body.every((property: any) => property.verificationScore >= 3)).toBe(true);
     expect(queryMock).toHaveBeenCalledTimes(1);
     expect(queryMock.mock.calls[0][0]).not.toContain('p.is_verified_property = TRUE');
   });
@@ -178,19 +190,19 @@ describe('Properties endpoints', () => {
         {
           id: 'prop-slower',
           title: 'Casa con respuesta lenta',
-          location: 'Pinamar',
-          price: '120000',
+          location: 'Santa Teresita',
+          price: '110000',
           hostId: 'host-1',
           hostName: 'Ana',
-          description: 'Más lenta para responder.',
-          imageUrl: 'https://example.com/slow.jpg',
-          rating: '4.8',
-          reviewsCount: '10',
+          description: 'Con patio y parrilla.',
+          imageUrl: 'https://example.com/slower.jpg',
+          rating: '4.6',
+          reviewsCount: '9',
           identityValidated: 0,
           hostIdentityValidated: 1,
           hostIdentityVerified: 0,
           locationVerified: 1,
-          videoValidated: 1,
+          videoValidated: 0,
           traceabilityLevel: 'medium',
           maxGuests: 4,
           hasPresencialVerification: 0,
@@ -198,15 +210,15 @@ describe('Properties endpoints', () => {
           hostCompletedReservationsCount: '5',
           hostGuestReviewsCount: '4',
           hostGuestFeedbackCount: '4',
-          hostGuestAgreementsKeptCount: '2',
+          hostGuestAgreementsKeptCount: '3',
           hostListingConsistentCount: '3',
-          hostGuestWouldInteractAgainCount: '2',
+          hostGuestWouldInteractAgainCount: '3',
           hostGuestIncidentsCount: '1',
-          hostAverageResponseTimeMinutes: '420',
+          hostAverageResponseTimeMinutes: '180',
           hostMemberSince: '2021-02-10T00:00:00.000Z',
           internalVisibilityPenalty: 0,
-          lat: '-37.1',
-          lng: '-56.8',
+          lat: '-37.0',
+          lng: '-56.7',
           bedrooms: 2,
           bathrooms: 1,
           propertyType: 'house',
@@ -258,6 +270,7 @@ describe('Properties endpoints', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.map((property: any) => property.id)).toEqual(['prop-faster', 'prop-slower']);
+    expect(res.body[0]).not.toHaveProperty('hostTrustInternalScore');
     expect(res.body[0]).not.toHaveProperty('internalVisibilityPenalty');
     expect(res.body[0]).not.toHaveProperty('hostVisibilityBoost');
   });

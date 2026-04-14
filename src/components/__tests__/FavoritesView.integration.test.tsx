@@ -94,11 +94,13 @@ describe('FavoritesView integration', () => {
       'Casa frente al mar',
       'Departamento tranquilo',
     ]);
+    expect(screen.getByLabelText('5 de 5 comprobaciones')).toBeInTheDocument();
     expect(screen.getByLabelText('4 de 5 comprobaciones')).toBeInTheDocument();
-    expect(screen.getByLabelText('3 de 5 comprobaciones')).toBeInTheDocument();
-    expect(screen.getAllByText(/^Ubicación verificada$/)).toHaveLength(2);
-    expect(screen.getAllByText(/^Anfitrión identificado$/)).toHaveLength(2);
-    expect(screen.getAllByText(/^Datos comprobados$/)).toHaveLength(2);
+    expect(screen.getAllByText(/^Ubicación$/)).toHaveLength(2);
+    expect(screen.getAllByText(/^Anfitrión$/)).toHaveLength(2);
+    expect(screen.getAllByText(/^Datos$/)).toHaveLength(2);
+    expect(screen.getAllByText(/^Fotos$/)).toHaveLength(2);
+    expect(screen.getAllByText(/^Precio$/)).toHaveLength(2);
     expect(screen.queryByText('Mejor verificado')).toBeNull();
     expect(screen.queryByText('Alto nivel de verificación')).toBeNull();
     expect(screen.getAllByRole('button', { name: /Abrir detalle de/i })).toHaveLength(2);

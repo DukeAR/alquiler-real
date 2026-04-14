@@ -112,9 +112,11 @@ export type PropertyCatalogSortContext = {
 const LEGACY_PROPERTY_KEY_ALIASES: Record<LegacyPropertyVerificationKey, PropertyVerificationKey> = {
   visual: 'photos',
   material: 'photos',
-  onsite: 'video',
-  relationship: 'basics',
-  history: 'basics',
+  onsite: 'photos',
+  relationship: 'data',
+  history: 'data',
+  basics: 'data',
+  video: 'price',
 };
 
 const PROPERTY_VERIFICATION_KEY_SET = new Set<string>(PROPERTY_VERIFICATION_KEYS);
@@ -492,7 +494,7 @@ export const getPropertyVerificationBadge = (property: PropertyVerificationLike)
       : typeof property.verificationScore === 'number' && !hasDerivedVerificationSignals(property)
         ? Math.min(clampVerificationScore(property.verificationScore), max)
         : Math.min(verificationSummary.score, max);
-  const visual = `${'✔'.repeat(score)}${'○'.repeat(max - score)}`;
+  const visual = `${'●'.repeat(score)}${'○'.repeat(max - score)}`;
   const compactLabel = `${score} de ${max} comprobaciones`;
 
   return {
@@ -512,7 +514,7 @@ export const getPropertyVerificationDetails = (property: PropertyVerificationLik
   return {
     ...badge,
     items: verificationSummary.items,
-    helperText: 'Ves rápido qué ya está comprobado y qué suma confianza extra.',
+    helperText: 'Comparás rápido qué ya está comprobado y qué falta para decidir con más contexto.',
   };
 };
 

@@ -1115,9 +1115,9 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
               const pendingLabels = property.pendingVerificationItems.map((item: any) => item.label);
               const pendingKeys = new Set(property.pendingVerificationItems.map((item: any) => item.key));
               const showIdentityAction = pendingKeys.has('identity');
-              const showListingAction = pendingKeys.has('basics') || pendingKeys.has('location');
+              const showListingAction = pendingKeys.has('data') || pendingKeys.has('location');
               const showPhotoAction = pendingKeys.has('photos');
-              const showVideoAction = pendingKeys.has('video');
+              const showPriceAction = pendingKeys.has('price');
               const showDocumentsAction = property.verificationProgress?.level !== 'base'
                 && Array.isArray(property.verificationProgress?.advancedChecks)
                 && property.verificationProgress.advancedChecks.some((item: any) => item.key === 'documents' && item.status !== 'complete');
@@ -1257,7 +1257,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
                               </Button>
                             ) : null}
 
-                            {showVideoAction ? (
+                            {showPriceAction ? (
                               <Button
                                 type="button"
                                 variant="secondary"
@@ -1266,8 +1266,8 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
                                 className="rounded-full"
                               >
                                 <>
-                                  <Icons.Video className="h-4 w-4" />
-                                  Cargar video
+                                  <Icons.Info className="h-4 w-4" />
+                                  Definir precio
                                 </>
                               </Button>
                             ) : null}

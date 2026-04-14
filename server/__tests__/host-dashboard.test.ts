@@ -131,9 +131,10 @@ describe('Host dashboard endpoint', () => {
       },
     });
     expect(res.body.properties[0].verificationItems).toEqual(expect.arrayContaining([
-      expect.objectContaining({ key: 'basics', status: 'complete' }),
+      expect.objectContaining({ key: 'location', status: 'complete' }),
       expect.objectContaining({ key: 'identity', status: 'complete' }),
-      expect.objectContaining({ key: 'video', status: 'complete' }),
+      expect.objectContaining({ key: 'data', status: 'complete' }),
+      expect.objectContaining({ key: 'price', status: 'complete' }),
     ]));
     expect(res.body.funnelMetrics).toEqual({
       windowDays: 30,

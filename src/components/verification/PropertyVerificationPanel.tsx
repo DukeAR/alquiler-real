@@ -152,9 +152,9 @@ export const PropertyVerificationPanel = ({
   const documentAssets = Array.isArray(property.verificationMedia?.documents) ? property.verificationMedia.documents : [];
   const ownerView = property.isOwnedByViewer === true;
   const photoCount = Math.max(0, Number(property.verificationPhotoCount ?? photoAssets.length ?? 0));
-  const videoCount = Math.max(0, Number(property.verificationVideoCount ?? (videoAsset ? 1 : 0)));
   const documentCount = Math.max(0, Number(property.verificationDocumentCount ?? documentAssets.length ?? 0));
   const documentsVerifiedCount = Math.max(0, Number(property.verificationDocumentsReviewedCount ?? 0));
+  const priceValue = Math.max(0, Number(property.price ?? 0));
 
   const uploadFiles = async (kind: VerificationUploadKind, fileList: FileList | null) => {
     if (!property.id || !fileList || fileList.length === 0) {
@@ -312,10 +312,10 @@ export const PropertyVerificationPanel = ({
             tone={photoCount >= 4 ? 'success' : 'neutral'}
           />
           <VerificationMetricCard
-            label="Video del lugar"
-            value={videoCount > 0 ? 'Listo' : 'Pendiente'}
-            helper={videoCount > 0 ? 'Ya suma un respaldo visual extra para el aviso.' : 'Un video corto ayuda a que el aviso se entienda mejor.'}
-            tone={videoCount > 0 ? 'success' : 'neutral'}
+            label="Precio visible"
+            value={priceValue > 0 ? 'Listo' : 'Pendiente'}
+            helper={priceValue > 0 ? 'El precio ya permite comparar este aviso con otras opciones.' : 'Publicar un precio claro ayuda a decidir más rápido.'}
+            tone={priceValue > 0 ? 'success' : 'neutral'}
           />
           <VerificationMetricCard
             label="Documentacion interna"

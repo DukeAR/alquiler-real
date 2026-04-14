@@ -13,7 +13,7 @@ export interface VerificationSummary<K extends string = string> {
   items: Array<VerificationItem<K>>;
 }
 
-export const PROPERTY_VERIFICATION_KEYS = ['basics', 'location', 'photos', 'video', 'identity'] as const;
+export const PROPERTY_VERIFICATION_KEYS = ['location', 'identity', 'data', 'photos', 'price'] as const;
 
 export const PROPERTY_ADVANCED_CHECK_KEYS = ['documents', 'manualReview'] as const;
 
@@ -21,7 +21,7 @@ export type PropertyVerificationKey = typeof PROPERTY_VERIFICATION_KEYS[number];
 
 export type PropertyAdvancedVerificationKey = typeof PROPERTY_ADVANCED_CHECK_KEYS[number];
 
-export type LegacyPropertyVerificationKey = 'visual' | 'relationship' | 'material' | 'onsite' | 'history';
+export type LegacyPropertyVerificationKey = 'visual' | 'relationship' | 'material' | 'onsite' | 'history' | 'basics' | 'video';
 
 export type PropertyVerificationItem = VerificationItem<PropertyVerificationKey | LegacyPropertyVerificationKey | string>;
 
@@ -165,23 +165,9 @@ const hasListingCoordinates = (input: Pick<PropertyVerificationSummaryInput, 'la
   toSafeNumber(input.lat) !== null && toSafeNumber(input.lng) !== null
 );
 
-const resolvePublishedPhotoCount = (input: Pick<PropertyVerificationSummaryInput, 'images' | 'imageUrl'>) => {
-  const galleryImages = toStringArray(input.images);
-
-  if (galleryImages.length > 0) {
-    return galleryImages.length;
-  }
-
-  return hasText(input.imageUrl) ? 1 : 0;
-};
-
-const isPropertyBasicsComplete = (input: PropertyVerificationSummaryInput) => (
+const isListingDataCheckComplete = (input: PropertyVerificationSummaryInput) => (
   hasText(input.title)
   && hasText(input.description)
-  && hasText(input.location)
-  && hasText(input.propertyType)
-  && toSafeNumber(input.price) !== null
-  && (toSafeNumber(input.price) ?? 0) > 0
   && toSafeInteger(input.maxGuests) > 0
 );
 
@@ -193,8 +179,8 @@ const isRealPhotoCheckComplete = (input: PropertyVerificationSummaryInput) => (
   isTruthyFlag(input.materialVerified) || toSafeInteger(input.verificationPhotoCount) >= 4
 );
 
-const isVideoCheckComplete = (input: PropertyVerificationSummaryInput) => (
-  isTruthyFlag(input.videoValidated) || toSafeInteger(input.verificationVideoCount) > 0
+const isPriceCheckComplete = (input: PropertyVerificationSummaryInput) => (
+  toSafeNumber(input.price) !== null && (toSafeNumber(input.price) ?? 0) > 0
 );
 
 const isIdentityCheckComplete = (input: PropertyVerificationSummaryInput) => isTruthyFlag(input.identityValidated);
@@ -223,18 +209,6 @@ export const buildPropertyVerificationItem = (input: {
   onsiteVerifiedAt?: string | Date | null;
 }): VerificationItem<PropertyVerificationKey> => {
   const status: VerificationItemStatus = input.complete ? 'complete' : 'pending';
-  const onsiteVerifiedAt = formatIsoDateLabel(toDateString(input.onsiteVerifiedAt));
-
-  if (input.key === 'basics') {
-    return {
-      key: 'basics',
-      label: 'Datos básicos',
-      status,
-      description: input.complete
-        ? 'El aviso ya tiene fotos, capacidad, precio y descripción para mostrarse con claridad.'
-        : 'Todavía faltan datos básicos para que el aviso se entienda mejor.',
-    };
-  }
 
   if (input.key === 'location') {
     return {
@@ -242,58 +216,98 @@ export const buildPropertyVerificationItem = (input: {
       label: 'Ubicación',
       status,
       description: input.complete
-        ? 'La zona del lugar ya está cargada y se puede ubicar dentro del mapa.'
-        : 'Todavía falta dejar más clara la ubicación aproximada del lugar.',
+        ? 'La ubicación aproximada ya quedó comprobada para ubicar el lugar con más claridad.'
+        : 'Todavía falta confirmar mejor la ubicación aproximada del lugar.',
+    };
+  }
+
+  if (input.key === 'identity') {
+    return {
+      key: 'identity',
+      label: 'Anfitrión',
+      status,
+      description: input.complete
+        ? 'La identidad del anfitrión ya quedó validada y suma una señal fuerte de confianza.'
+        : 'Todavía falta validar la identidad del anfitrión para sumar más confianza.',
+    };
+  }
+
+  if (input.key === 'data') {
+    return {
+      key: 'data',
+      label: 'Datos',
+      status,
+      description: input.complete
+        ? 'El aviso ya muestra descripción y capacidad suficientes para entenderse rápido.'
+        : 'Todavía faltan datos visibles para que el aviso se entienda de entrada.',
     };
   }
 
   if (input.key === 'photos') {
     return {
       key: 'photos',
-      label: 'Fotos reales',
+      label: 'Fotos',
       status,
       description: input.complete
-        ? 'El aviso ya suma fotos reales cargadas como respaldo visual del lugar.'
-        : 'Todavía faltan fotos reales cargadas como respaldo visual del lugar.',
+        ? 'El aviso ya suma fotos reales que ayudan a comparar el lugar de entrada.'
+        : 'Todavía faltan fotos reales para comparar mejor este aviso.',
     };
   }
 
-  if (input.key === 'video') {
+  if (input.key === 'price') {
     return {
-      key: 'video',
-      label: 'Video del lugar',
+      key: 'price',
+      label: 'Precio',
       status,
       description: input.complete
-        ? onsiteVerifiedAt
-          ? `El video del lugar ya quedó cargado y se actualizó el ${onsiteVerifiedAt}.`
-          : 'El aviso ya muestra un video del lugar como respaldo fuerte.'
-        : 'Todavía no hay un video del lugar cargado como respaldo fuerte.',
+        ? 'El precio por noche ya está visible y permite comparar este aviso con otras opciones.'
+        : 'Todavía falta publicar un precio claro para poder comparar este aviso.',
     };
   }
 
   return {
-    key: 'identity',
-    label: 'Identidad validada',
+    key: 'data',
+    label: 'Datos',
     status,
     description: input.complete
-      ? 'La identidad del anfitrión ya quedó validada.'
-      : 'Todavía falta validar la identidad del anfitrión para sumar más confianza.',
+      ? 'El aviso ya muestra descripción y capacidad suficientes para entenderse rápido.'
+      : 'Todavía faltan datos visibles para que el aviso se entienda de entrada.',
   };
+};
+
+const getPropertyVerificationNextStep = (input: PropertyVerificationSummaryInput) => {
+  if (!isLocationVisible(input)) {
+    return 'Confirma mejor la ubicación aproximada del lugar.';
+  }
+
+  if (!isListingDataCheckComplete(input)) {
+    return 'Completa los datos visibles para que el aviso se entienda rápido.';
+  }
+
+  if (!isPriceCheckComplete(input)) {
+    return 'Publica un precio claro por noche para que el aviso se pueda comparar.';
+  }
+
+  if (!isIdentityCheckComplete(input)) {
+    return 'Valida tu identidad para sumar una comprobación visible.';
+  }
+
+  if (!isRealPhotoCheckComplete(input)) {
+    return 'Subi fotos reales para que el aviso se compare mejor de entrada.';
+  }
+
+  return 'Suma documentación privada o una revisión manual para reforzar todavía más la confianza.';
 };
 
 export const buildPropertyVerificationSummary = (
   input: PropertyVerificationSummaryInput,
 ): PropertyVerificationSummary => {
   return buildVerificationSummary<PropertyVerificationKey>([
-    buildPropertyVerificationItem({ key: 'basics', complete: isPropertyBasicsComplete(input) }),
     buildPropertyVerificationItem({ key: 'location', complete: isLocationVisible(input) }),
-    buildPropertyVerificationItem({ key: 'photos', complete: isRealPhotoCheckComplete(input) }),
-    buildPropertyVerificationItem({
-      key: 'video',
-      complete: isVideoCheckComplete(input),
-      onsiteVerifiedAt: input.onsiteVerifiedAt,
-    }),
     buildPropertyVerificationItem({ key: 'identity', complete: isIdentityCheckComplete(input) }),
+    buildPropertyVerificationItem({ key: 'data', complete: isListingDataCheckComplete(input) }),
+    buildPropertyVerificationItem({ key: 'photos', complete: isRealPhotoCheckComplete(input) }),
+    buildPropertyVerificationItem({ key: 'price', complete: isPriceCheckComplete(input) }),
   ]);
 };
 
@@ -322,15 +336,15 @@ export const buildPropertyVerificationProgress = (
   input: PropertyVerificationSummaryInput,
 ): PropertyVerificationProgress => {
   const advancedChecks = buildPropertyAdvancedVerificationItems(input);
-  const baseReady = isPropertyBasicsComplete(input) && resolvePublishedPhotoCount(input) > 0 && hasText(input.location);
-  const mediumReady = baseReady && isIdentityCheckComplete(input) && isVideoCheckComplete(input);
+  const baseReady = isListingDataCheckComplete(input) && isLocationVisible(input) && isPriceCheckComplete(input);
+  const mediumReady = baseReady && isIdentityCheckComplete(input) && isRealPhotoCheckComplete(input);
   const highReady = mediumReady && advancedChecks.every((item) => item.status === 'complete');
 
   if (highReady) {
     return {
       level: 'high',
       label: 'Confianza avanzada',
-      summary: 'El aviso ya combina una base clara, identidad validada, video y respaldo avanzado.',
+      summary: 'Ya completaste las 5 comprobaciones visibles y además sumaste respaldo avanzado para moderación.',
       nextStep: 'Solo mantene el material al dia para sostener visibilidad y confianza cuando el lugar cambie.',
       advancedChecks,
     };
@@ -339,8 +353,8 @@ export const buildPropertyVerificationProgress = (
   if (mediumReady) {
     return {
       level: 'medium',
-      label: 'Confianza reforzada',
-      summary: 'Ya sumaste identidad validada y video del lugar, dos señales fuertes para decidir mas rapido.',
+      label: 'Comprobación completa',
+      summary: 'Ya completaste las 5 comprobaciones visibles: ubicación, anfitrión, datos, fotos y precio.',
       nextStep: advancedChecks[0]?.status === 'pending'
         ? 'Si queres sumar otra capa, podes cargar documentacion privada para moderacion interna.'
         : 'La siguiente mejora es dejar preparada una revision manual o presencial.',
@@ -351,10 +365,8 @@ export const buildPropertyVerificationProgress = (
   return {
     level: 'base',
     label: 'Base publicada',
-    summary: 'El aviso ya puede publicarse con fotos y datos minimos. Ahora podes reforzarlo para generar mas confianza y recibir mas consultas.',
-    nextStep: !isIdentityCheckComplete(input)
-      ? 'Valida tu identidad para generar mas confianza.'
-      : 'Subi un video del lugar para reforzar confianza sin complicar la publicacion.',
+    summary: 'El aviso ya esta publicado. Ahora podes completar ubicación, anfitrión, datos, fotos y precio para que se compare mejor.',
+    nextStep: getPropertyVerificationNextStep(input),
     advancedChecks,
   };
 };

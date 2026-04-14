@@ -61,7 +61,7 @@ export const getVerificationSummaryVisual = (
   options?: { spaced?: boolean },
 ) => {
   const { score, maxScore } = getVerificationSummaryScore(summary);
-  const visual = `${'✔'.repeat(score)}${'○'.repeat(Math.max(0, maxScore - score))}`;
+  const visual = `${'●'.repeat(score)}${'○'.repeat(Math.max(0, maxScore - score))}`;
 
   return options?.spaced ? visual.split('').join(' ') : visual;
 };
