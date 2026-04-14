@@ -338,21 +338,21 @@ export const ExploreResultsSection = ({
     }
 
     return (
-      <section className="space-y-6 md:space-y-8">
+      <section className="space-y-5 md:space-y-7">
         {summaryCard}
 
-        <div className="overflow-hidden rounded-[var(--app-radius-display)] border border-slate-200/70 bg-white/72 shadow-none">
-          <div className="flex flex-col gap-3 border-b border-slate-200/70 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <div className="overflow-hidden rounded-[var(--app-radius-display)] border border-slate-200/75 bg-white/88 shadow-[0_22px_48px_-38px_rgba(15,23,42,0.2)]">
+          <div className="flex flex-col gap-3 border-b border-slate-200/70 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-4.5">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Mapa de resultados</p>
-              <p className="mt-1 text-sm text-slate-600">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Mapa de resultados</p>
+              <p className="mt-1 text-sm leading-6 text-slate-600">
                 {loading
                   ? 'Estamos ubicando cada aviso en el mapa.'
                   : 'Abrí cada pin para ver precio y qué parte del aviso ya fue comprobada.'}
               </p>
             </div>
 
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Badge variant="neutral" className="gap-2">
                 <Icons.Target className="h-3.5 w-3.5" />
                 <span>{formatPropertyCount(totalResults)}</span>
@@ -366,7 +366,7 @@ export const ExploreResultsSection = ({
             </div>
           </div>
 
-          <div className="h-[640px] overflow-hidden bg-slate-50">
+          <div className="h-[520px] overflow-hidden bg-slate-50 md:h-[560px]">
             <Suspense fallback={<MapFallback />}>
               <LazyPropertyMap
                 properties={filteredProperties}

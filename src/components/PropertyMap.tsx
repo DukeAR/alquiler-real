@@ -1,9 +1,11 @@
 import * as React from 'react';
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import * as L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Property } from '../services/geminiService';
+import type { Property } from '../services/geminiService';
+import { getPropertyVerificationDetails } from '../lib/propertyVerification';
+import { formatCurrency } from '../lib/utils';
 
 
 
@@ -12,32 +14,78 @@ interface PropertyMapProps {
     onPropertyClick: (id: string) => void;
 }
 
+const hasValidCoordinates = (property: Property) => (
+    Number.isFinite(property.coordinates?.lat) && Number.isFinite(property.coordinates?.lng)
+);
+
+const buildMarkerIcon = (isHighlighted: boolean) => L.divIcon({
+    className: 'map-pin-icon',
+    html: `
+      <div class="map-pin${isHighlighted ? ' is-active' : ''}">
+        <span class="map-pin__icon" aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+        </span>
+      </div>
+    `,
+    iconSize: [36, 36],
+    iconAnchor: [18, 36],
+    popupAnchor: [0, -20],
+});
+
 // Map bounds updater component
 const MapUpdater: React.FC<{ properties: Property[] }> = ({ properties }) => {
     const map = useMap();
     useEffect(() => {
-        if (properties.length > 0) {
-            const bounds = L.latLngBounds(properties.map(p => [p.coordinates.lat, p.coordinates.lng]));
-            map.fitBounds(bounds, { padding: [50, 50] });
+        if (properties.length === 0) {
+            return;
         }
+
+        if (properties.length === 1) {
+            map.setView([properties[0].coordinates.lat, properties[0].coordinates.lng], 13, { animate: false });
+            return;
+        }
+
+        const bounds = L.latLngBounds(properties.map((property) => [property.coordinates.lat, property.coordinates.lng]));
+        map.fitBounds(bounds, {
+            padding: [40, 40],
+            maxZoom: 13,
+            animate: false,
+        });
     }, [properties, map]);
     return null;
 };
 
 export const PropertyMap: React.FC<PropertyMapProps> = ({ properties, onPropertyClick }) => {
-    // Custom Marker Icon
-    const customIcon = L.divIcon({
-        className: 'custom-div-icon',
-        html: `<div style="background-color: #2563eb; width: 32px; height: 32px; border-radius: 12px; display: flex; align-items: center; justify-content: center; border: 2.5px solid white; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4); transform: rotate(-45deg);"><div style="transform: rotate(45deg); display: flex;"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div></div>`,
-        iconSize: [32, 32],
-        iconAnchor: [16, 32],
-        popupAnchor: [0, -32]
-    });
+    const mappableProperties = properties.filter(hasValidCoordinates);
+    const markerRefs = useRef<Record<string, L.Marker | null>>({});
+    const [activePropertyId, setActivePropertyId] = useState<string | null>(null);
+    const [hoveredPropertyId, setHoveredPropertyId] = useState<string | null>(null);
 
     // Use a default center if no properties, otherwise first property
-    const defaultCenter: [number, number] = properties.length > 0
-        ? [properties[0].coordinates.lat, properties[0].coordinates.lng]
+    const defaultCenter: [number, number] = mappableProperties.length > 0
+        ? [mappableProperties[0].coordinates.lat, mappableProperties[0].coordinates.lng]
         : [-36.3536, -56.7196]; // Default to San Clemente approx
+
+    useEffect(() => {
+        if (!activePropertyId) {
+            return;
+        }
+
+        markerRefs.current[activePropertyId]?.openPopup();
+    }, [activePropertyId]);
+
+    useEffect(() => {
+        if (!activePropertyId) {
+            return;
+        }
+
+        if (!mappableProperties.some((property) => property.id === activePropertyId)) {
+            setActivePropertyId(null);
+        }
+    }, [activePropertyId, mappableProperties]);
 
     // Add click handler for the button inside the popup
     // We need to stop propagation to prevent Map from interfering
@@ -47,7 +95,7 @@ export const PropertyMap: React.FC<PropertyMapProps> = ({ properties, onProperty
     };
 
     return (
-        <div className="w-full h-[300px] md:h-[500px] rounded-[32px] overflow-hidden shadow-lg border border-slate-200 dark:border-slate-800 relative z-0">
+        <div className="relative z-0 h-full w-full overflow-hidden">
             <MapContainer
                 center={defaultCenter}
                 zoom={13}
@@ -58,53 +106,130 @@ export const PropertyMap: React.FC<PropertyMapProps> = ({ properties, onProperty
                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                     url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
                 />
-                <MapUpdater properties={properties} />
-                {properties.map(property => (
+                <MapUpdater properties={mappableProperties} />
+                {mappableProperties.map((property) => {
+                    const verification = getPropertyVerificationDetails(property);
+                    const isHighlighted = activePropertyId === property.id || hoveredPropertyId === property.id;
+
+                    return (
                     <Marker
                         key={property.id}
                         position={[property.coordinates.lat, property.coordinates.lng]}
-                        icon={customIcon}
+                        ref={(instance) => {
+                            markerRefs.current[property.id] = instance;
+                        }}
+                        icon={buildMarkerIcon(isHighlighted)}
+                        zIndexOffset={isHighlighted ? 240 : 0}
+                        eventHandlers={{
+                            click: () => setActivePropertyId(property.id),
+                            mouseover: () => setHoveredPropertyId(property.id),
+                            mouseout: () => setHoveredPropertyId((current) => current === property.id ? null : current),
+                            popupopen: () => setActivePropertyId(property.id),
+                            popupclose: () => setActivePropertyId((current) => current === property.id ? null : current),
+                        }}
                     >
-                        <Popup className="property-popup">
-                            <div className="flex flex-col gap-3 min-w-[200px] md:min-w-[220px]">
-                                <div className="relative h-32 w-full rounded-xl overflow-hidden shadow-sm">
+                        <Popup
+                            className="property-popup"
+                            closeButton={false}
+                            offset={[0, -6]}
+                            autoPan
+                            keepInView
+                            autoPanPadding={[28, 28]}
+                        >
+                            <div className="w-[18.5rem] p-3">
+                                <div className="flex flex-col gap-2.5">
+                                <div className="relative h-24 w-full overflow-hidden rounded-[1rem] bg-slate-100">
                                     <img
-                                        src={property.imageUrl}
+                                        src={property.imageUrl || property.images?.[0] || 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=1200&q=80&auto=format&fit=crop'}
                                         alt={property.title}
-                                        className="w-full h-full object-cover"
+                                        className="h-full w-full object-cover"
                                     />
-                                    {property.locationVerified && (
-                                        <div className="absolute top-2 right-2 bg-brand/90 backdrop-blur-sm px-2 py-1 rounded-lg border border-brand/20 shadow-sm text-[10px] font-bold text-white uppercase flex items-center gap-1">
-                                            Ubicación verificada
-                                        </div>
-                                    )}
                                 </div>
-                                <div className="space-y-1">
-                                    <h3 className="font-bold text-slate-900 leading-tight m-0 text-base">{property.title}</h3>
-                                    <p className="text-sm font-black text-slate-950 m-0">
-                                        {new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(property.price)}
-                                        <span className="text-slate-500 text-xs font-normal ml-1">/ noche</span>
+
+                                {verification.score > 0 ? (
+                                    <div className="inline-flex w-fit items-center gap-1.5 rounded-full border border-emerald-200/80 bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-emerald-700">
+                                        <span>{verification.summaryLabel}</span>
+                                        <span className="text-emerald-500">{verification.spacedVisual}</span>
+                                    </div>
+                                ) : null}
+
+                                <div className="space-y-1.5">
+                                    <h3 className="m-0 overflow-hidden text-[0.96rem] font-semibold leading-5 text-slate-950 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
+                                        {property.title}
+                                    </h3>
+                                    <p className="m-0 text-[0.95rem] font-bold text-slate-950">
+                                        {formatCurrency(Number(property.price) || 0)}
+                                        <span className="ml-1 text-[0.72rem] font-medium text-slate-500">/ noche</span>
                                     </p>
                                 </div>
+
                                 <button
                                     onClick={(e) => handleDetailClick(e, property.id)}
-                                    className="mt-1 w-full bg-brand text-white py-2.5 rounded-xl text-sm font-bold shadow-md shadow-brand/20 hover:scale-[1.02] active:scale-95 transition-all outline-none"
+                                    className="inline-flex h-9 w-full items-center justify-center rounded-[0.95rem] bg-brand px-3.5 text-sm font-semibold text-white shadow-[0_14px_26px_-18px_rgba(67,56,202,0.45)] transition-[transform,box-shadow,background-color] duration-150 hover:translate-y-[-1px] hover:bg-brand-dark hover:shadow-[0_16px_28px_-18px_rgba(67,56,202,0.45)] active:translate-y-0"
                                 >
                                     Ver detalle
                                 </button>
+                                </div>
                             </div>
                         </Popup>
                     </Marker>
-                ))}
+                    );
+                })}
             </MapContainer>
 
             <style>{`
-        .leaflet-container { z-index: 10 !important; font-family: inherit; }
-        .property-popup .leaflet-popup-content-wrapper { border-radius: 20px; padding: 0; box-shadow: 0 10px 40px -10px rgba(0,0,0,0.3); }
-        .property-popup .leaflet-popup-content { margin: 16px; width: auto !important; }
-        .property-popup .leaflet-popup-tip { box-shadow: 0 10px 40px -10px rgba(0,0,0,0.3); }
-        .leaflet-popup-close-button { top: 12px !important; right: 12px !important; background: white !important; border-radius: 50%; width: 24px !important; height: 24px !important; display: flex !important; align-items: center !important; justify-content: center !important; box-shadow: 0 2px 8px rgba(0,0,0,0.1); z-index: 10;}
-        .leaflet-popup-close-button span { margin: 0 !important; padding: 0 !important; font-size: 14px !important; color: #333 !important; }
+        .leaflet-container { z-index: 10 !important; font-family: inherit; background: #f8fafc; }
+        .map-pin-icon { background: transparent; border: 0; }
+        .map-pin {
+          display: flex;
+          height: 36px;
+          width: 36px;
+          align-items: center;
+          justify-content: center;
+          border-radius: 14px 14px 14px 5px;
+          border: 2px solid rgba(255, 255, 255, 0.96);
+          background: linear-gradient(180deg, #4338ca 0%, #3730a3 100%);
+          box-shadow: 0 16px 28px -18px rgba(67, 56, 202, 0.54);
+          color: white;
+          transform: rotate(-45deg);
+          transform-origin: center;
+          transition: transform 160ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 160ms cubic-bezier(0.22, 1, 0.36, 1), background-color 160ms cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .map-pin:hover,
+        .map-pin.is-active {
+          transform: rotate(-45deg) translateY(-2px) scale(1.04);
+          box-shadow: 0 22px 34px -20px rgba(67, 56, 202, 0.62);
+          background: linear-gradient(180deg, #4f46e5 0%, #3730a3 100%);
+        }
+        .map-pin__icon {
+          display: flex;
+          transform: rotate(45deg);
+        }
+        .property-popup.leaflet-popup {
+          margin-bottom: 12px;
+        }
+        .property-popup .leaflet-popup-content-wrapper {
+          border-radius: 22px;
+          padding: 0;
+          background: rgba(255, 255, 255, 0.98);
+          box-shadow: 0 24px 52px -32px rgba(15, 23, 42, 0.34);
+        }
+        .property-popup .leaflet-popup-content {
+          margin: 0;
+          width: 296px !important;
+        }
+        .property-popup .leaflet-popup-tip-container {
+          margin-top: -2px;
+        }
+        .property-popup .leaflet-popup-tip {
+          width: 16px;
+          height: 16px;
+          background: rgba(255, 255, 255, 0.98);
+          box-shadow: 0 18px 32px -26px rgba(15, 23, 42, 0.34);
+        }
+        .property-popup .leaflet-popup-close-button {
+          display: none;
+        }
       `}</style>
         </div>
     );

@@ -23,6 +23,12 @@ vi.mock('../PropertyCard', () => ({
   ),
 }));
 
+vi.mock('../PropertyMap', () => ({
+  PropertyMap: ({ properties }: { properties: Array<{ title: string }> }) => (
+    <div data-testid="property-map">{properties.length} propiedades en mapa</div>
+  ),
+}));
+
 import { ExploreResultsSection } from '../explore/ExploreResultsSection';
 
 const sampleProperties = [
@@ -155,5 +161,15 @@ describe('ExploreResultsSection', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /volver a intentar/i }));
     expect(onRetry).toHaveBeenCalledTimes(1);
+  });
+
+  test('renders the map block with the compact property map preview', async () => {
+    renderSection({ viewMode: 'map' });
+
+    const propertyMap = await screen.findByTestId('property-map');
+
+    expect(screen.getByText('Mapa de resultados')).toBeInTheDocument();
+    expect(screen.getByText('3 propiedades para revisar antes de reservar.')).toBeInTheDocument();
+    expect(propertyMap).toHaveTextContent('3 propiedades en mapa');
   });
 });
