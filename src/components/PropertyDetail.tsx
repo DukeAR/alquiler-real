@@ -955,7 +955,7 @@ export const PropertyDetailShell: React.FC<{
 
                 <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/82 via-slate-950/26 via-[48%] to-slate-950/06" />
 
-                <div className="absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-4 p-6 sm:p-8 lg:p-10">
+                <div className="absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-3 p-4 sm:gap-4 sm:p-8 lg:p-10">
                   <div className="flex flex-wrap items-center gap-2 text-white">
                     <span className="inline-flex items-center rounded-full border border-white/14 bg-slate-950/36 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/88 backdrop-blur-sm">
                       {propertyTypeLabel}
@@ -984,12 +984,12 @@ export const PropertyDetailShell: React.FC<{
                   ) : null}
                 </div>
 
-                <div className="absolute inset-x-0 bottom-0 z-10 flex items-end justify-between gap-6 p-6 sm:p-8 lg:p-10">
-                  <div className="max-w-[32rem] sm:max-w-[34rem] lg:max-w-[38rem] text-white">
-                    <h1 className="text-[1.95rem] font-semibold tracking-tight text-white sm:text-[2.45rem] lg:text-[2.8rem]">
+                <div className="absolute inset-x-0 bottom-0 z-10 flex flex-col gap-4 p-4 sm:flex-row sm:items-end sm:justify-between sm:gap-6 sm:p-8 lg:p-10">
+                  <div className="max-w-full text-white sm:max-w-[34rem] lg:max-w-[38rem]">
+                    <h1 className="max-w-[17rem] text-[1.55rem] font-semibold leading-[1.02] tracking-tight text-white sm:max-w-[34rem] sm:text-[2.45rem] sm:leading-[1.02] lg:max-w-[38rem] lg:text-[2.8rem]">
                       {property.title}
                     </h1>
-                    <div className="mt-3 inline-flex max-w-full items-center gap-2 text-sm font-medium text-white/86 sm:text-[0.95rem]">
+                    <div className="mt-2 inline-flex max-w-full items-center gap-2 text-[0.92rem] font-medium text-white/86 sm:mt-3 sm:text-[0.95rem]">
                       <Icons.MapPin className="h-4 w-4 shrink-0" />
                       <span className="truncate">{property.location}</span>
                     </div>
@@ -998,7 +998,7 @@ export const PropertyDetailShell: React.FC<{
                   <button
                     type="button"
                     onClick={openLightbox}
-                    className="inline-flex shrink-0 items-center gap-2 rounded-full border border-white/16 bg-slate-950/42 px-4 py-2.5 text-sm font-semibold text-white/92 backdrop-blur-sm transition-[background-color,border-color,color] duration-150 hover:border-white/28 hover:bg-slate-950/56 hover:text-white"
+                    className="inline-flex shrink-0 self-end items-center gap-2 rounded-full border border-white/16 bg-slate-950/42 px-3.5 py-2 text-[0.85rem] font-semibold text-white/92 backdrop-blur-sm transition-[background-color,border-color,color] duration-150 hover:border-white/28 hover:bg-slate-950/56 hover:text-white sm:self-auto sm:px-4 sm:py-2.5 sm:text-sm"
                   >
                     <Icons.Camera className="h-4 w-4" />
                     {hasMultipleImages ? (

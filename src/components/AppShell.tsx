@@ -256,14 +256,14 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
 
       {showHeader ? (
         <header className="app-header relative z-50">
-          <div className={cn(headerLayoutClass, 'flex items-center justify-between gap-3 py-3.5 sm:gap-6 sm:py-4.5')}>
+          <div className={cn(headerLayoutClass, 'flex items-center justify-between gap-2.5 py-3 sm:gap-6 sm:py-4.5')}>
             <button type="button" onClick={() => navigate('/')} aria-label="Ir al inicio de Alquiler Real" className="flex min-w-0 items-center gap-2 rounded-full pr-1 transition-transform duration-200 hover:scale-[1.01] sm:gap-3 sm:pr-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-[0_18px_35px_-22px_rgba(15,23,42,0.85)] sm:h-11 sm:w-11">
                 <Icons.ShieldCheck className="h-6 w-6" />
               </div>
               <div className="min-w-0 text-left">
                 <div className="hidden text-[10px] font-semibold uppercase tracking-[0.2em] text-brand sm:block">Información real</div>
-                <div className="font-display truncate text-lg font-semibold tracking-tight text-slate-900 sm:text-[1.2rem]">Alquiler Real</div>
+                <div className="font-display truncate text-[1rem] font-semibold tracking-tight text-slate-900 sm:text-[1.2rem]">Alquiler Real</div>
               </div>
             </button>
 
@@ -278,7 +278,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
               ))}
             </nav>
 
-            <div className="flex items-center gap-2 sm:gap-3.5">
+            <div className="flex shrink-0 items-center gap-2 sm:gap-3.5">
               {isAuthenticated && user ? <AccountModeSwitch className="hidden lg:inline-flex" compact /> : null}
 
               <NotificationsMenu
@@ -330,9 +330,9 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                   <button
                     type="button"
                     onClick={() => navigate('/register')}
-                    className="app-button-primary h-10 rounded-[0.95rem] px-4 text-[0.95rem] shadow-[0_18px_36px_-28px_rgba(79,70,229,0.78)] sm:h-11 sm:rounded-[1rem] sm:px-6"
+                    className="app-button-primary h-10 whitespace-nowrap rounded-[0.95rem] px-3 text-[0.88rem] shadow-[0_18px_36px_-28px_rgba(79,70,229,0.78)] sm:h-11 sm:rounded-[1rem] sm:px-6 sm:text-[0.95rem]"
                   >
-                    <Icons.ArrowRight className="h-4 w-4" />
+                    <Icons.ArrowRight className="hidden h-4 w-4 sm:block" />
                     Creá tu cuenta
                   </button>
                 </>
