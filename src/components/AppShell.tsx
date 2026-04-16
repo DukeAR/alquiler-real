@@ -1,5 +1,5 @@
 import React, { Suspense } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Icons } from './Icons';
 import { NotificationToast } from './NotificationToast';
 import { AIAssistant } from './AIAssistant';
@@ -84,25 +84,40 @@ const openLoginModal = async () => {
 
 const LazyLoginModal = React.lazy(() => import('./LoginModal'));
 
+const getDesktopNavItemClassName = (active: boolean) => cn(
+  'group relative inline-flex items-center gap-2 px-0 py-2 text-[0.92rem] font-semibold tracking-[-0.01em] text-slate-600 transition-[color] duration-150 hover:text-slate-950',
+  'after:absolute after:bottom-0 after:left-0 after:h-px after:w-full after:origin-left after:scale-x-0 after:bg-slate-300 after:transition-transform after:duration-150 hover:after:scale-x-100',
+  active && 'text-slate-950 after:scale-x-100 after:bg-brand',
+);
+
 const DesktopNavButton = ({ action, active, onSelect }: { action: NavAction; active: boolean; onSelect: (action: NavAction) => void; }) => (
-  <button
-    type="button"
-    onClick={() => onSelect(action)}
-    aria-label={getNavAriaLabel(action)}
-    aria-current={active ? 'page' : undefined}
-    className={cn(
-      'nav-link relative',
-      active && 'nav-link-active'
-    )}
-  >
-    <action.icon className="h-4 w-4" />
-    <span>{action.label}</span>
-    {action.badge ? (
-      <span aria-hidden="true" className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-black text-white">
-        {action.badge}
-      </span>
-    ) : null}
-  </button>
+  action.path && !action.onClick && !action.protected ? (
+    <Link
+      to={action.path}
+      aria-label={getNavAriaLabel(action)}
+      aria-current={active ? 'page' : undefined}
+      className={getDesktopNavItemClassName(active)}
+    >
+      <action.icon className={cn('h-4 w-4 transition-colors duration-150', active ? 'text-brand' : 'text-slate-400 group-hover:text-slate-500')} />
+      <span>{action.label}</span>
+    </Link>
+  ) : (
+    <button
+      type="button"
+      onClick={() => onSelect(action)}
+      aria-label={getNavAriaLabel(action)}
+      aria-current={active ? 'page' : undefined}
+      className={getDesktopNavItemClassName(active)}
+    >
+      <action.icon className={cn('h-4 w-4 transition-colors duration-150', active ? 'text-brand' : 'text-slate-400 group-hover:text-slate-500')} />
+      <span>{action.label}</span>
+      {action.badge ? (
+        <span aria-hidden="true" className="absolute -right-3 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-black text-white">
+          {action.badge}
+        </span>
+      ) : null}
+    </button>
+  )
 );
 
 const MobileNavButton = ({ action, active, onSelect }: { action: NavAction; active: boolean; onSelect: (action: NavAction) => void; }) => (
@@ -112,14 +127,31 @@ const MobileNavButton = ({ action, active, onSelect }: { action: NavAction; acti
     aria-label={getNavAriaLabel(action)}
     aria-current={active ? 'page' : undefined}
     className={cn(
-      'relative flex min-w-0 flex-1 flex-col items-center gap-1 rounded-[20px] border px-2.5 py-2.5 text-[11px] font-semibold tracking-[0.01em] transition-[background-color,border-color,color,box-shadow,transform] duration-150',
-      active ? 'border-slate-900 bg-slate-950 text-white shadow-[0_18px_32px_-24px_rgba(15,23,42,0.42)]' : 'border-transparent text-slate-500 hover:border-slate-200 hover:bg-white hover:text-slate-900'
+      'group relative flex min-w-0 flex-1 flex-col items-center gap-1.5 px-2 py-2.5 text-[11px] font-semibold tracking-[0.01em] transition-[color,transform] duration-150',
+      active ? 'text-slate-950' : 'text-slate-500 hover:text-slate-900'
     )}
   >
-    <action.icon className="h-5 w-5" />
+    <span
+      aria-hidden="true"
+      className={cn(
+        'flex h-10 w-10 items-center justify-center rounded-full transition-[background-color,color,box-shadow] duration-150',
+        active
+          ? 'bg-slate-100 text-slate-950 shadow-[0_14px_28px_-24px_rgba(15,23,42,0.32)]'
+          : 'text-slate-400 group-hover:bg-slate-50 group-hover:text-slate-700'
+      )}
+    >
+      <action.icon className="h-5 w-5" />
+    </span>
     <span className="truncate">{action.shortLabel}</span>
+    <span
+      aria-hidden="true"
+      className={cn(
+        'h-1 w-6 rounded-full transition-colors duration-150',
+        active ? 'bg-brand/75' : 'bg-transparent group-hover:bg-slate-200'
+      )}
+    />
     {action.badge ? (
-      <span aria-hidden="true" className="absolute right-4 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-black text-white">
+      <span aria-hidden="true" className="absolute right-[calc(50%-1.4rem)] top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-black text-white shadow-[0_8px_18px_-10px_rgba(239,68,68,0.7)]">
         {action.badge}
       </span>
     ) : null}
@@ -223,7 +255,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
 
       {showHeader ? (
         <header className="app-header relative z-50">
-          <div className={cn(headerLayoutClass, 'flex items-center justify-between gap-2 py-3 sm:gap-4 sm:py-4')}>
+          <div className={cn(headerLayoutClass, 'flex items-center justify-between gap-4 py-3.5 sm:gap-6 sm:py-4.5')}>
             <button type="button" onClick={() => navigate('/')} aria-label="Ir al inicio de Alquiler Real" className="flex min-w-0 items-center gap-2 rounded-full pr-1 transition-transform duration-200 hover:scale-[1.01] sm:gap-3 sm:pr-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-[0_18px_35px_-22px_rgba(15,23,42,0.85)] sm:h-11 sm:w-11">
                 <Icons.ShieldCheck className="h-6 w-6" />
@@ -234,7 +266,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
               </div>
             </button>
 
-            <nav aria-label="Navegación principal" className="hidden items-center gap-2 rounded-full border border-slate-200/80 bg-white/92 p-1.5 shadow-[0_20px_36px_-28px_rgba(15,23,42,0.24)] lg:flex">
+            <nav aria-label="Navegación principal" className="hidden items-center gap-6 lg:flex lg:flex-1 lg:justify-center xl:gap-8">
               {desktopActions.map((action) => (
                 <DesktopNavButton
                   key={action.label}
@@ -245,7 +277,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
               ))}
             </nav>
 
-            <div className="flex items-center gap-1.5 sm:gap-2">
+            <div className="flex items-center gap-2.5 sm:gap-3.5">
               {isAuthenticated && user ? <AccountModeSwitch className="hidden lg:inline-flex" compact /> : null}
 
               <NotificationsMenu
@@ -264,7 +296,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                   <button
                     type="button"
                     onClick={() => navigate('/my-bookings')}
-                    className="icon-btn hidden md:inline-flex"
+                    className="hidden h-10 w-10 items-center justify-center rounded-full text-slate-500 transition-[color,background-color] duration-150 hover:bg-slate-100/80 hover:text-slate-950 focus-visible:outline-none focus-visible:shadow-[var(--app-focus-ring)] md:inline-flex"
                     aria-label="Mis reservas"
                   >
                     <Icons.Calendar className="h-5 w-5" />
@@ -286,22 +318,34 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                 </>
               ) : isUnauthenticated ? (
                 <>
-                  <button type="button" onClick={() => openLoginModal()} className="btn btn-secondary hidden md:inline-flex">
+                  <button
+                    type="button"
+                    onClick={() => openLoginModal()}
+                    className="hidden items-center gap-2 px-0 py-2 text-[0.92rem] font-semibold tracking-[-0.01em] text-slate-600 transition-[color,text-decoration-color] duration-150 hover:text-slate-950 hover:underline hover:decoration-slate-300 hover:underline-offset-4 focus-visible:outline-none focus-visible:shadow-[var(--app-focus-ring)] md:inline-flex"
+                  >
                     <Icons.User className="h-4 w-4" />
                     Ingresá
                   </button>
-                  <button type="button" onClick={() => navigate('/register')} className="btn px-4 sm:px-5">
+                  <button
+                    type="button"
+                    onClick={() => navigate('/register')}
+                    className="app-button-primary h-11 rounded-[1rem] px-5 sm:px-6"
+                  >
                     <Icons.ArrowRight className="h-4 w-4" />
                     Creá tu cuenta
                   </button>
                 </>
               ) : hasSessionError ? (
-                <button type="button" onClick={() => void refresh()} className="btn btn-secondary hidden md:inline-flex">
+                <button
+                  type="button"
+                  onClick={() => void refresh()}
+                  className="hidden items-center gap-2 rounded-[0.95rem] border border-slate-200/85 bg-white/70 px-4 py-2.5 text-sm font-semibold text-slate-600 transition-[border-color,color,background-color] duration-150 hover:border-slate-300 hover:bg-white hover:text-slate-950 focus-visible:outline-none focus-visible:shadow-[var(--app-focus-ring)] md:inline-flex"
+                >
                   <Icons.AlertTriangle className="h-4 w-4" />
                   Reintentar sesión
                 </button>
               ) : (
-                <div role="status" aria-live="polite" className="hidden items-center gap-2 rounded-full border border-slate-200/90 bg-white/96 px-4 py-2 text-sm font-semibold text-slate-500 shadow-[0_18px_35px_-28px_rgba(15,23,42,0.24)] md:inline-flex">
+                <div role="status" aria-live="polite" className="hidden items-center gap-2 text-sm font-medium text-slate-500 md:inline-flex">
                   <Icons.Loader2 className="h-4 w-4 animate-spin" />
                   Verificando sesión...
                 </div>
@@ -315,7 +359,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
 
       {showMobileNav ? (
         <nav aria-label="Navegación principal" className="fixed inset-x-0 bottom-0 z-50 md:hidden">
-          <div className="mx-auto flex max-w-md items-center gap-2 rounded-t-[30px] border border-b-0 border-slate-200/90 bg-white px-4 pb-[calc(env(safe-area-inset-bottom)+0.8rem)] pt-3 shadow-[0_-18px_40px_-30px_rgba(15,23,42,0.28)] backdrop-blur-none">
+          <div className="mx-auto flex max-w-md items-center gap-1 rounded-t-[30px] border border-b-0 border-slate-200/85 bg-white/95 px-4 pb-[calc(env(safe-area-inset-bottom)+0.8rem)] pt-3 shadow-[0_-18px_40px_-30px_rgba(15,23,42,0.22)] backdrop-blur-xl">
             {mobileActions.map((action) => (
               <MobileNavButton
                 key={action.label}
