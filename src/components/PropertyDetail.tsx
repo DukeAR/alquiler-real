@@ -925,7 +925,7 @@ export const PropertyDetailShell: React.FC<{
       <button
         type="button"
         onClick={() => navigate(-1)}
-        className="mb-6 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-[0_14px_28px_-24px_rgba(15,23,42,0.45)] transition-colors hover:border-slate-300 hover:text-slate-900"
+        className="mb-6 inline-flex items-center gap-2 rounded-full px-1.5 py-2 text-sm font-semibold text-slate-600 transition-[color,transform] duration-150 hover:text-slate-950 focus-visible:outline-none focus-visible:shadow-[var(--app-focus-ring)] md:border md:border-slate-200/85 md:bg-white/92 md:px-4 md:shadow-[0_14px_28px_-24px_rgba(15,23,42,0.28)] md:hover:border-slate-300"
       >
         <Icons.ArrowLeft className="h-4 w-4" />
         <span>Volver</span>

@@ -255,7 +255,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
 
       {showHeader ? (
         <header className="app-header relative z-50">
-          <div className={cn(headerLayoutClass, 'flex items-center justify-between gap-4 py-3.5 sm:gap-6 sm:py-4.5')}>
+          <div className={cn(headerLayoutClass, 'flex items-center justify-between gap-3 py-3.5 sm:gap-6 sm:py-4.5')}>
             <button type="button" onClick={() => navigate('/')} aria-label="Ir al inicio de Alquiler Real" className="flex min-w-0 items-center gap-2 rounded-full pr-1 transition-transform duration-200 hover:scale-[1.01] sm:gap-3 sm:pr-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-[0_18px_35px_-22px_rgba(15,23,42,0.85)] sm:h-11 sm:w-11">
                 <Icons.ShieldCheck className="h-6 w-6" />
@@ -277,7 +277,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
               ))}
             </nav>
 
-            <div className="flex items-center gap-2.5 sm:gap-3.5">
+            <div className="flex items-center gap-2 sm:gap-3.5">
               {isAuthenticated && user ? <AccountModeSwitch className="hidden lg:inline-flex" compact /> : null}
 
               <NotificationsMenu
@@ -329,7 +329,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                   <button
                     type="button"
                     onClick={() => navigate('/register')}
-                    className="app-button-primary h-11 rounded-[1rem] px-5 sm:px-6"
+                    className="app-button-primary h-10 rounded-[0.95rem] px-4 text-[0.95rem] shadow-[0_18px_36px_-28px_rgba(79,70,229,0.78)] sm:h-11 sm:rounded-[1rem] sm:px-6"
                   >
                     <Icons.ArrowRight className="h-4 w-4" />
                     Creá tu cuenta
@@ -339,15 +339,15 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                 <button
                   type="button"
                   onClick={() => void refresh()}
-                  className="hidden items-center gap-2 rounded-[0.95rem] border border-slate-200/85 bg-white/70 px-4 py-2.5 text-sm font-semibold text-slate-600 transition-[border-color,color,background-color] duration-150 hover:border-slate-300 hover:bg-white hover:text-slate-950 focus-visible:outline-none focus-visible:shadow-[var(--app-focus-ring)] md:inline-flex"
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200/85 bg-white/88 text-slate-600 shadow-[0_16px_34px_-28px_rgba(15,23,42,0.24)] transition-[border-color,color,background-color,box-shadow] duration-150 hover:border-slate-300 hover:bg-white hover:text-slate-950 focus-visible:outline-none focus-visible:shadow-[var(--app-focus-ring)] md:h-auto md:w-auto md:gap-2 md:rounded-[0.95rem] md:bg-white/70 md:px-4 md:py-2.5 md:shadow-none"
                 >
                   <Icons.AlertTriangle className="h-4 w-4" />
-                  Reintentar sesión
+                  <span className="hidden md:inline">Reintentar sesión</span>
                 </button>
               ) : (
-                <div role="status" aria-live="polite" className="hidden items-center gap-2 text-sm font-medium text-slate-500 md:inline-flex">
+                <div role="status" aria-live="polite" className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200/80 bg-white/88 text-slate-500 shadow-[0_16px_34px_-28px_rgba(15,23,42,0.18)] md:h-auto md:w-auto md:gap-2 md:rounded-none md:border-transparent md:bg-transparent md:px-0 md:py-0 md:shadow-none">
                   <Icons.Loader2 className="h-4 w-4 animate-spin" />
-                  Verificando sesión...
+                  <span className="hidden md:inline">Verificando sesión...</span>
                 </div>
               )}
             </div>
