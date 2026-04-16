@@ -47,10 +47,10 @@ vi.mock('../ui/AccountModeSwitch', () => ({
   AccountModeSwitch: () => <div data-testid="account-mode-switch">Mode switch</div>,
 }));
 
-const renderShell = async () => {
+const renderShell = async (initialEntries: string[] = ['/']) => {
   await act(async () => {
     render(
-      <MemoryRouter>
+      <MemoryRouter initialEntries={initialEntries}>
         <AppShell>
           <div>Contenido</div>
         </AppShell>
@@ -87,9 +87,9 @@ describe('AppShell', () => {
     await renderShell();
 
     expect(screen.queryByRole('button', { name: 'Guardados' })).not.toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: 'Explorar' })).not.toHaveLength(0);
-    expect(screen.getByRole('button', { name: 'Cómo funciona' })).toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: 'Ayuda' })).not.toHaveLength(0);
+    expect(screen.getByRole('link', { name: 'Explorar' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Cómo funciona' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Ayuda' })).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'Ingresá' })).not.toHaveLength(0);
     expect(screen.getByRole('button', { name: 'Creá tu cuenta' })).toBeInTheDocument();
   });
@@ -171,5 +171,14 @@ describe('AppShell', () => {
     expect(screen.queryAllByRole('button', { name: 'Ingresá' })).toHaveLength(0);
     expect(screen.queryByRole('button', { name: 'Creá tu cuenta' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Reintentar sesión' })).toBeInTheDocument();
+  });
+
+  test('hides the mobile navigation on detail routes to avoid stacked fixed bars', async () => {
+    await renderShell(['/detail/p1']);
+
+    expect(screen.getByRole('link', { name: 'Explorar' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Ayuda' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Explorar' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Ayuda' })).not.toBeInTheDocument();
   });
 });

@@ -391,6 +391,9 @@ export const PropertyDetailShell: React.FC<{
   const guestCapacity = formatGuestCapacity(maxGuestsNumber);
   const hostName = getHostName(property);
   const propertyTypeLabel = getPropertyTypeLabel(property);
+  const hasMultipleImages = images.length > 1;
+  const photoCountLabel = hasMultipleImages ? `${mainIndex + 1} / ${images.length} fotos` : '1 foto';
+  const lightboxPhotoCountLabel = hasMultipleImages ? `${mainIndex + 1} / ${images.length}` : '1 foto';
   const decisionAmenityLabel = getDecisionAmenityLabel(property.amenities);
   const roomSummary = [
     bedsCount ? formatCountLabel(bedsCount, 'cama', 'camas') : null,
@@ -934,114 +937,102 @@ export const PropertyDetailShell: React.FC<{
       <div className="space-y-6 md:space-y-8">
         <section className="space-y-6 md:space-y-8">
           <Card padding="none" variant="elevated" className="overflow-hidden rounded-[32px] border-slate-200/80 bg-white shadow-[0_34px_80px_-50px_rgba(15,23,42,0.35)]">
-            <div className="grid gap-0 lg:grid-cols-[104px_minmax(0,1fr)]">
-              <div className="hidden lg:flex flex-col gap-3 border-r border-slate-200/70 bg-slate-50/80 p-4">
-                {images.map((src, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => setMainIndex(i)}
-                    onKeyDown={(e) => onKeyDownThumb(e, i)}
-                    aria-label={`Ver imagen ${i + 1}`}
-                    className={`overflow-hidden rounded-[22px] border transition-all duration-200 ${i === mainIndex ? 'border-brand shadow-[0_22px_48px_-34px_rgba(14,116,144,0.7)] ring-2 ring-brand/20' : 'border-slate-200 hover:border-slate-300 hover:shadow-[0_20px_42px_-34px_rgba(15,23,42,0.4)]'}`}
-                  >
-                    <img
-                      src={src || FALLBACK}
-                      alt={`${property.title} thumbnail ${i + 1}`}
-                      className="h-20 w-full object-cover"
-                      referrerPolicy="no-referrer"
-                    />
-                  </button>
-                ))}
-              </div>
-
-              <div className="min-w-0">
-                <div className="relative overflow-hidden bg-slate-100">
-                  <div className="absolute left-4 top-4 z-10">
-                    <Badge variant="neutral" size="md" className="border-white/80 bg-white/90 backdrop-blur">
-                      {mainIndex + 1} / {images.length} fotos
-                    </Badge>
-                  </div>
-                  {user ? (
-                    <div className="absolute right-4 top-4 z-10">
-                      <Button
-                        onClick={toggleFav}
-                        aria-pressed={isFav}
-                        aria-label={isFav ? 'Quitar de guardados' : 'Guardar en guardados'}
-                        variant="secondary"
-                        size="icon"
-                        className={cn(
-                          isFav ? 'border-brand bg-brand text-white hover:border-brand hover:bg-brand-dark hover:text-white' : 'border-white/80 bg-white/94 text-slate-700 hover:border-brand/30 hover:text-brand',
-                        )}
-                      >
-                        <Icons.Heart className="h-5 w-5" />
-                      </Button>
-                    </div>
-                  ) : null}
-                  <div className="absolute bottom-4 right-4 z-10 hidden sm:block">
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      onClick={openLightbox}
-                      className="border-white/20 bg-white/95 text-slate-900 hover:bg-white"
-                    >
-                      Ver todas las fotos
-                    </Button>
-                  </div>
-                  <div className="absolute inset-x-0 bottom-0 z-10 flex items-end justify-between gap-4 bg-gradient-to-t from-slate-950/80 via-slate-950/30 to-transparent p-4 text-white sm:p-5">
-                    <div className="max-w-2xl">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/70">{propertyTypeLabel}</p>
-                      <h1 className="mt-2 text-2xl font-semibold tracking-tight text-white sm:text-[2.1rem]">{property.title}</h1>
-                      <div className="mt-2 inline-flex items-center gap-2 text-sm font-medium text-white/90">
-                        <Icons.MapPin className="h-4 w-4" />
-                        <span>{property.location}</span>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={openLightbox}
-                      className="rounded-full border border-white/20 bg-white/10 px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-white backdrop-blur sm:hidden"
-                    >
-                      Expandir
-                    </button>
-                  </div>
-                  <div
-                    className="aspect-[5/4] sm:aspect-[16/11] lg:aspect-[16/10]"
-                    onTouchStart={onTouchStart}
-                    onTouchEnd={onTouchEnd}
-                  >
-                    <img
-                      src={images[mainIndex] || FALLBACK}
-                      alt={`${property.title} — imagen ${mainIndex + 1}`}
-                      className="h-full w-full cursor-zoom-in object-cover transition-transform duration-300 hover:scale-[1.015]"
-                      onClick={openLightbox}
-                      referrerPolicy="no-referrer"
-                    />
-                  </div>
+            <div className="min-w-0 overflow-hidden rounded-[32px]">
+              <div className="relative isolate overflow-hidden bg-slate-950">
+                <div
+                  className="aspect-[5/4] sm:aspect-[16/11] lg:aspect-[16/10]"
+                  onTouchStart={onTouchStart}
+                  onTouchEnd={onTouchEnd}
+                >
+                  <img
+                    src={images[mainIndex] || FALLBACK}
+                    alt={`${property.title} — imagen ${mainIndex + 1}`}
+                    className="h-full w-full cursor-zoom-in object-cover transition-transform duration-500 hover:scale-[1.02]"
+                    onClick={openLightbox}
+                    referrerPolicy="no-referrer"
+                  />
                 </div>
 
-                <div className="border-t border-slate-200/70 bg-white px-4 py-4 sm:px-5 lg:hidden">
-                  <div className="flex gap-3 overflow-x-auto no-scrollbar" role="list">
-                    {images.map((src, i) => (
-                      <button
-                        key={i}
-                        type="button"
-                        onClick={() => setMainIndex(i)}
-                        onKeyDown={(e) => onKeyDownThumb(e, i)}
-                        aria-label={`Ver imagen ${i + 1}`}
-                        className={`overflow-hidden rounded-[20px] border transition-all duration-200 ${i === mainIndex ? 'border-brand shadow-[0_22px_48px_-34px_rgba(14,116,144,0.7)] ring-2 ring-brand/20' : 'border-slate-200 hover:border-slate-300'}`}
-                        role="listitem"
-                      >
-                        <img
-                          src={src || FALLBACK}
-                          alt={`${property.title} thumbnail ${i + 1}`}
-                          className="h-24 w-32 object-cover sm:h-28 sm:w-40"
-                          referrerPolicy="no-referrer"
-                        />
-                      </button>
-                    ))}
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/82 via-slate-950/26 via-[48%] to-slate-950/06" />
+
+                <div className="absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-4 p-6 sm:p-8 lg:p-10">
+                  <div className="flex flex-wrap items-center gap-2 text-white">
+                    <span className="inline-flex items-center rounded-full border border-white/14 bg-slate-950/36 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/88 backdrop-blur-sm">
+                      {propertyTypeLabel}
+                    </span>
+                    {hasMultipleImages ? (
+                      <Badge variant="neutral" size="md" className="border-white/14 bg-slate-950/36 text-white/84 backdrop-blur-sm">
+                        {photoCountLabel}
+                      </Badge>
+                    ) : null}
                   </div>
+
+                  {user ? (
+                    <Button
+                      onClick={toggleFav}
+                      aria-pressed={isFav}
+                      aria-label={isFav ? 'Quitar de guardados' : 'Guardar en guardados'}
+                      variant="secondary"
+                      size="icon"
+                      className={cn(
+                        'border-white/14 bg-slate-950/36 text-white backdrop-blur-sm hover:border-white/24 hover:bg-slate-950/52 hover:text-white',
+                        isFav && 'border-brand bg-brand text-white hover:border-brand hover:bg-brand-dark hover:text-white',
+                      )}
+                    >
+                      <Icons.Heart className="h-5 w-5" />
+                    </Button>
+                  ) : null}
+                </div>
+
+                <div className="absolute inset-x-0 bottom-0 z-10 flex items-end justify-between gap-6 p-6 sm:p-8 lg:p-10">
+                  <div className="max-w-[32rem] sm:max-w-[34rem] lg:max-w-[38rem] text-white">
+                    <h1 className="text-[1.95rem] font-semibold tracking-tight text-white sm:text-[2.45rem] lg:text-[2.8rem]">
+                      {property.title}
+                    </h1>
+                    <div className="mt-3 inline-flex max-w-full items-center gap-2 text-sm font-medium text-white/86 sm:text-[0.95rem]">
+                      <Icons.MapPin className="h-4 w-4 shrink-0" />
+                      <span className="truncate">{property.location}</span>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={openLightbox}
+                    className="inline-flex shrink-0 items-center gap-2 rounded-full border border-white/16 bg-slate-950/42 px-4 py-2.5 text-sm font-semibold text-white/92 backdrop-blur-sm transition-[background-color,border-color,color] duration-150 hover:border-white/28 hover:bg-slate-950/56 hover:text-white"
+                  >
+                    <Icons.Camera className="h-4 w-4" />
+                    {hasMultipleImages ? (
+                      <>
+                        <span className="hidden sm:inline">Ver todas las fotos</span>
+                        <span className="sm:hidden">Expandir</span>
+                      </>
+                    ) : (
+                      <span>Ver foto</span>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <div className="border-t border-slate-200/70 bg-white px-4 py-4 sm:px-6 sm:py-5">
+                <div className="flex gap-3 overflow-x-auto no-scrollbar" role="list" aria-label="Galería de imágenes">
+                  {images.map((src, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setMainIndex(i)}
+                      onKeyDown={(e) => onKeyDownThumb(e, i)}
+                      aria-label={`Ver imagen ${i + 1}`}
+                      className={`overflow-hidden rounded-[20px] border transition-all duration-200 ${i === mainIndex ? 'border-brand shadow-[0_22px_48px_-34px_rgba(14,116,144,0.7)] ring-2 ring-brand/20' : 'border-slate-200 hover:border-slate-300 hover:shadow-[0_20px_42px_-34px_rgba(15,23,42,0.2)]'}`}
+                      role="listitem"
+                    >
+                      <img
+                        src={src || FALLBACK}
+                        alt={`${property.title} thumbnail ${i + 1}`}
+                        className="h-24 w-32 object-cover sm:h-24 sm:w-36 lg:h-24 lg:w-40"
+                        referrerPolicy="no-referrer"
+                      />
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>
@@ -1648,7 +1639,7 @@ export const PropertyDetailShell: React.FC<{
                 <p className="mt-1 text-sm text-white/85">{property.title}</p>
               </div>
               <Badge variant="neutral" size="md" className="border-white/15 bg-white/10 text-white">
-                {mainIndex + 1} / {images.length}
+                {lightboxPhotoCountLabel}
               </Badge>
             </div>
             <div className="flex items-center justify-center p-4 sm:p-8">

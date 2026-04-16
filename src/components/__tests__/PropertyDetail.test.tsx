@@ -274,6 +274,47 @@ describe('PropertyDetail', () => {
     await waitFor(() => expect(screen.getByAltText(/imagen 2/i)).toBeTruthy());
   });
 
+  test('uses singular photo copy when the property only has one image', async () => {
+    (apiJson as any).mockImplementation(async (url: string, options?: RequestInit) => {
+      if (url.endsWith('/reviews')) return [{ id: 'r1', reviewer_id: 'u1', rating: 5, comment: 'Buen lugar' }];
+      if (url === '/api/bookings') return [];
+      if (url === '/api/conversations' && options?.method === 'POST') {
+        return {
+          id: 'conv-1',
+          property_id: 'p1',
+          tenant_id: 'u1',
+          host_id: 'h1',
+          hostName: 'Mariana',
+          propertyTitle: 'Casa de prueba',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+      }
+      if (url === '/api/messages' && options?.method === 'POST') {
+        return {
+          id: 'msg-1',
+          conversation_id: 'conv-1',
+          sender_id: 'u1',
+          receiver_id: 'h1',
+          content: 'Hola',
+          created_at: new Date().toISOString(),
+        };
+      }
+
+      return {
+        ...sampleProperty,
+        images: ['https://example.com/1.jpg'],
+      };
+    });
+
+    renderPropertyDetail();
+
+    await waitForPropertyHeading();
+
+    expect(screen.queryByText('1 / 1 fotos')).toBeNull();
+    expect(screen.getByRole('button', { name: /ver foto/i })).toBeDefined();
+  });
+
   test('opens lightbox on main image click and closes with Escape', async () => {
     renderPropertyDetail();
 
@@ -497,7 +538,7 @@ describe('PropertyDetail', () => {
     expect(within(verificationPreview).getByText('Disponibilidad validada')).toBeDefined();
     expect(within(verificationPreview).queryByText('✖')).toBeNull();
     expect(screen.getAllByText('5 de 5 comprobaciones').length).toBeGreaterThan(0);
-    expect(screen.getByText('Mostramos solo comprobaciones visibles que ayudan a decidir rápido.')).toBeDefined();
+    expect(screen.getByText('Mostramos solo comprobaciones visibles que ayudan a decidir rápido y explican qué falta validar.')).toBeDefined();
   });
 
   test('records the detail visit when the property reaches a high verification level', async () => {

@@ -65,6 +65,7 @@ const hiddenMobileNavPrefixes = [
   '/verify',
   '/verification',
   '/chat',
+  '/detail',
   '/about',
   '/faq',
   '/terms',
