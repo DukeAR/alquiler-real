@@ -2,7 +2,7 @@ import React from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { Icons } from './Icons';
 import { cn, formatCurrency } from '../lib/utils';
-import { HIGH_VERIFICATION_HIGHLIGHT_MIN_SCORE, getPropertyVerificationDetails } from '../lib/propertyVerification';
+import { getPropertyVerificationDetails } from '../lib/propertyVerification';
 import { Property } from '../services/geminiService';
 import { Button } from './ui/Button';
 import { Badge } from './ui/Badge';
@@ -42,14 +42,6 @@ const getGuestCapacityLabel = (maxGuests?: number | null) => {
   return `Hasta ${maxGuests} ${maxGuests === 1 ? 'huésped' : 'huéspedes'}`;
 };
 
-const compactVerificationPriority: Record<string, number> = {
-  identity: 0,
-  location: 1,
-  photos: 2,
-  geolocation: 3,
-  availability: 4,
-};
-
 interface PropertyCardProps {
   property: Property;
   onClick?: () => void;
@@ -83,21 +75,9 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   const shouldEmphasizeVerification = emphasizeVerification && !isFavoritesVariant;
   const propertyTypeLabel = getPropertyTypeLabel(property);
   const guestCapacityLabel = getGuestCapacityLabel(Number(property.maxGuests) || null);
-  const verificationTagLabel = !isFavoritesVariant && !isDecisionFeatured && verificationDetails.score >= HIGH_VERIFICATION_HIGHLIGHT_MIN_SCORE
-    ? verificationGuidanceLabel || 'Más comprobado'
-    : null;
-  const compactVerificationSummaryLabel = `${verificationDetails.score}/${verificationDetails.max} verificado`;
-  const compactVerificationDetail = verificationDetails.items
-    .filter((item) => item.status === 'complete')
-    .sort((left, right) => {
-      const leftPriority = compactVerificationPriority[left.key] ?? Number.MAX_SAFE_INTEGER;
-      const rightPriority = compactVerificationPriority[right.key] ?? Number.MAX_SAFE_INTEGER;
-
-      return leftPriority - rightPriority;
-    })
-    .slice(0, 3)
-    .map((item) => item.label)
-    .join(' · ');
+  const verificationTagLabel = !isFavoritesVariant && !isDecisionFeatured ? verificationGuidanceLabel : null;
+  const compactVerificationSummaryLabel = verificationDetails.compactLabel;
+  const compactVerificationDetail = verificationDetails.compactSummary;
 
   const handleFavoriteToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -148,7 +128,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         <div className="absolute inset-x-0 top-0 flex items-start justify-between gap-3 p-4">
           {isDecisionFeatured ? (
             <Badge variant="neutral" size="md" className="border-brand/25 bg-white/96 px-3 py-1.5 text-slate-950 shadow-[0_14px_26px_-20px_rgba(15,23,42,0.18)] backdrop-blur-sm">
-              <span>Más confiable</span>
+              <span>Más verificado</span>
             </Badge>
           ) : verificationTagLabel ? (
             <Badge variant="neutral" size="md" className="border-white/75 bg-white/96 px-3 py-1.5 text-slate-900 shadow-[var(--app-shadow-subtle)] backdrop-blur-sm">
@@ -207,19 +187,19 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
 
             <div data-testid="property-card-verification" aria-label={verificationDetails.label} className="space-y-1">
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] leading-5">
-                <span className={cn('font-semibold text-slate-700', shouldEmphasizeVerification && 'text-emerald-800')}>
+                <span className={cn('font-semibold text-emerald-800', shouldEmphasizeVerification && 'text-emerald-900')}>
                   {compactVerificationSummaryLabel}
                 </span>
                 <span
                   aria-hidden="true"
-                  className={cn('text-[11px] font-semibold tracking-[0.22em] text-slate-400', shouldEmphasizeVerification && 'text-emerald-700')}
+                  className={cn('text-[11px] font-semibold tracking-[0.22em] text-emerald-700', shouldEmphasizeVerification && 'text-emerald-800')}
                 >
                   {verificationDetails.spacedVisual}
                 </span>
               </div>
 
               {compactVerificationDetail ? (
-                <p className={cn('text-[12.5px] leading-5 text-slate-500', shouldEmphasizeVerification && 'text-emerald-700')}>
+                <p className={cn('text-[12.5px] leading-5 text-emerald-700', shouldEmphasizeVerification && 'text-emerald-800')}>
                   {compactVerificationDetail}
                 </p>
               ) : null}
