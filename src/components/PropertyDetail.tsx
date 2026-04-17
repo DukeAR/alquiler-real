@@ -279,6 +279,82 @@ const getDecisionAmenityLabel = (amenities?: string[]) => {
   return selected.slice(0, 3).join(' · ');
 };
 
+type VerificationDecisionKey = 'identity' | 'location' | 'geolocation' | 'photos' | 'availability';
+
+type VerificationDecisionItem = {
+  key: VerificationDecisionKey | string;
+  label: string;
+  status: 'complete' | 'pending';
+};
+
+const VERIFICATION_LEVEL_LABELS: Record<number, string> = {
+  0: 'Muy baja',
+  1: 'Muy baja',
+  2: 'Baja',
+  3: 'Media',
+  4: 'Alta',
+  5: 'Muy alta',
+};
+
+const VERIFICATION_CONFIRMED_PRIORITY: VerificationDecisionKey[] = ['identity', 'location', 'availability'];
+
+const VERIFICATION_PENDING_PRIORITY: VerificationDecisionKey[] = ['photos', 'availability', 'identity', 'location', 'geolocation'];
+
+const VERIFICATION_DECISION_MESSAGES: Partial<Record<VerificationDecisionKey, string>> = {
+  photos: 'Falta validar fotos o video',
+  availability: 'Disponibilidad no confirmada recientemente',
+  identity: 'Falta confirmar el anfitrión',
+  location: 'Ubicación no validada todavía',
+  geolocation: 'Ubicación precisa no validada todavía',
+};
+
+const getVerificationLevelLabel = (score: number) => VERIFICATION_LEVEL_LABELS[Math.max(0, Math.min(5, Math.round(score)))] || 'Muy baja';
+
+const getVerificationLevelToneClass = (score: number) => {
+  if (score >= 4) {
+    return 'text-emerald-700';
+  }
+
+  if (score >= 3) {
+    return 'text-amber-700';
+  }
+
+  return 'text-rose-700';
+};
+
+const pickVerificationDecisionItems = (
+  items: VerificationDecisionItem[],
+  status: VerificationDecisionItem['status'],
+  priority: VerificationDecisionKey[],
+  limit: number,
+) => {
+  const selected: VerificationDecisionItem[] = [];
+  const seenKeys = new Set<string>();
+  const addItem = (item?: VerificationDecisionItem) => {
+    if (!item || item.status !== status || seenKeys.has(item.key)) {
+      return;
+    }
+
+    selected.push(item);
+    seenKeys.add(item.key);
+  };
+
+  priority.forEach((key) => addItem(items.find((item) => item.key === key)));
+  items.forEach((item) => addItem(item));
+
+  return selected.slice(0, limit);
+};
+
+const getVerificationDecisionMessage = (items: VerificationDecisionItem[]) => {
+  const primaryPendingItem = pickVerificationDecisionItems(items, 'pending', VERIFICATION_PENDING_PRIORITY, 1)[0];
+
+  if (!primaryPendingItem) {
+    return 'Podés avanzar con bajo riesgo';
+  }
+
+  return VERIFICATION_DECISION_MESSAGES[primaryPendingItem.key as VerificationDecisionKey] || `Falta validar ${primaryPendingItem.label.toLowerCase()}`;
+};
+
 const GuestCounterCard: React.FC<GuestCounterCardProps> = ({
   label,
   helper,
@@ -401,6 +477,20 @@ export const PropertyDetailShell: React.FC<{
     bathroomsCount ? formatCountLabel(bathroomsCount, 'baño', 'baños') : null,
   ].filter((value): value is string => Boolean(value));
   const verificationDetails = getPropertyVerificationDetails(property);
+  const verificationDecisionLevelLabel = getVerificationLevelLabel(verificationDetails.score);
+  const verificationDecisionMessage = getVerificationDecisionMessage(verificationDetails.items as VerificationDecisionItem[]);
+  const verificationConfirmedItems = pickVerificationDecisionItems(
+    verificationDetails.items as VerificationDecisionItem[],
+    'complete',
+    VERIFICATION_CONFIRMED_PRIORITY,
+    3,
+  );
+  const verificationPendingItems = pickVerificationDecisionItems(
+    verificationDetails.items as VerificationDecisionItem[],
+    'pending',
+    VERIFICATION_PENDING_PRIORITY,
+    3,
+  );
   const hostResponseSignal = getHostResponseSignal(property.hostInteractionHistory);
   const completedReservationsLabel = property.hostInteractionHistory?.completedReservationsCount
     ? `${property.hostInteractionHistory.completedReservationsCount} ${property.hostInteractionHistory.completedReservationsCount === 1 ? 'reserva cerrada' : 'reservas cerradas'}`
@@ -1103,43 +1193,68 @@ export const PropertyDetailShell: React.FC<{
                 data-testid="property-verification-preview"
                 className="space-y-4 border-t border-slate-200/70 pt-4"
               >
-                <div className="flex items-end justify-between gap-4">
-                  <div className="space-y-1.5">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Verificación visible</p>
-                    <p className="text-lg font-semibold leading-6 text-slate-950">
-                      Nivel de verificación: {verificationDetails.score}/{verificationDetails.max}
-                    </p>
-                    <p className="text-sm leading-6 text-slate-600">{verificationDetails.summaryLabel}</p>
-                  </div>
-                  <span
-                    aria-hidden="true"
-                    className={cn(
-                      'shrink-0 text-sm font-semibold tracking-[0.3em] text-slate-500',
-                      verificationDetails.score >= 4 ? 'text-emerald-700' : 'text-slate-500',
-                    )}
-                  >
-                    {verificationDetails.spacedVisual}
-                  </span>
+                <div className="space-y-1.5">
+                  <p className="text-base font-semibold leading-6 text-slate-950 sm:text-[1.05rem]">
+                    Confianza del aviso:{' '}
+                    <span className={cn('font-bold uppercase tracking-[0.08em]', getVerificationLevelToneClass(verificationDetails.score))}>
+                      {verificationDecisionLevelLabel}
+                    </span>
+                  </p>
+                  <p className="text-sm leading-6 text-slate-600">{verificationDetails.summaryLabel}</p>
                 </div>
 
-                <ul className="grid gap-x-4 gap-y-2 sm:grid-cols-2">
-                  {verificationDetails.items.map((item) => {
-                    const complete = item.status === 'complete';
+                <div
+                  aria-label={`${verificationDetails.summaryLabel}. Confianza ${verificationDecisionLevelLabel}.`}
+                  className="flex items-center gap-2.5"
+                  role="img"
+                >
+                  {Array.from({ length: verificationDetails.max }).map((_, index) => {
+                    const active = index < verificationDetails.score;
 
                     return (
-                      <li key={item.key} className="flex items-center justify-between gap-3 text-sm leading-6">
-                        <span className={cn('font-medium', complete ? 'text-slate-700' : 'text-slate-500')}>
-                          {item.label}
-                        </span>
-                        <span className={cn('text-sm font-semibold', complete ? 'text-emerald-700' : 'text-slate-400')}>
-                          {complete ? '✔' : '✖'}
-                        </span>
-                      </li>
+                      <span
+                        key={`verification-dot-${index + 1}`}
+                        aria-hidden="true"
+                        className={cn(
+                          'h-3.5 w-3.5 rounded-full transition-colors',
+                          active
+                            ? 'bg-emerald-500 shadow-[0_0_0_4px_rgba(16,185,129,0.12)]'
+                            : 'bg-slate-300',
+                        )}
+                      />
                     );
                   })}
-                </ul>
+                </div>
 
-                <p className="text-xs leading-5 text-slate-500">{verificationDetails.helperText}</p>
+                <p className="text-sm font-medium leading-6 text-slate-800">{verificationDecisionMessage}</p>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-2 rounded-[22px] border border-slate-200/80 bg-white/75 px-4 py-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Confirmado</p>
+                    <ul className="space-y-2">
+                      {verificationConfirmedItems.map((item) => (
+                        <li key={item.key} className="flex items-start gap-2.5 text-sm leading-6 text-slate-700">
+                          <span className="pt-0.5 font-semibold text-emerald-600">✔</span>
+                          <span className="font-medium">{item.label}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {verificationPendingItems.length > 0 ? (
+                    <div className="space-y-2 rounded-[22px] border border-slate-200/80 bg-white/75 px-4 py-3">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Pendiente</p>
+                      <ul className="space-y-2">
+                        {verificationPendingItems.map((item) => (
+                          <li key={item.key} className="flex items-start gap-2.5 text-sm leading-6 text-slate-600">
+                            <span className="pt-0.5 font-semibold text-amber-600">⚠</span>
+                            <span className="font-medium">{item.label}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+                </div>
               </section>
             </div>
           </div>
@@ -1167,11 +1282,13 @@ export const PropertyDetailShell: React.FC<{
             </div>
           </Card>
 
-          <PropertyVerificationPanel
-            property={property as AppProperty}
-            onRefresh={onRefresh}
-            onOpenIdentityVerification={onOpenIdentityVerification}
-          />
+          {property.isOwnedByViewer === true ? (
+            <PropertyVerificationPanel
+              property={property as AppProperty}
+              onRefresh={onRefresh}
+              onOpenIdentityVerification={onOpenIdentityVerification}
+            />
+          ) : null}
 
           <Card className="rounded-[32px] border-slate-200/80 bg-white p-6 shadow-[0_28px_70px_-50px_rgba(15,23,42,0.25)] sm:p-7">
             <div className="space-y-5">
