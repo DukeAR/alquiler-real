@@ -27,10 +27,10 @@ describe('ExploreFiltersBar', () => {
       />,
     );
 
-    const checkbox = screen.getByRole('checkbox', { name: /Solo avisos con respaldo real/i });
+    const checkbox = screen.getByRole('checkbox', { name: /Solo verificados presencialmente/i });
 
     expect(checkbox).not.toBeChecked();
-    expect(screen.getByText('3 o más comprobaciones reales')).toBeInTheDocument();
+    expect(screen.getByText('Mostrando solo avisos con verificación completa')).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'Más verificados primero' })).toBeInTheDocument();
 
     fireEvent.click(checkbox);

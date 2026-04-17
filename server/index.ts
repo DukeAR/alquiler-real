@@ -14,7 +14,6 @@ import { buildGuestVerification } from './guestVerification';
 import { buildHostTrust } from './hostTrust';
 import { buildGuestInteractionHistory, buildHostInteractionHistory } from './interactionHistory';
 import { evaluateInternalRisk, getInternalRiskDecision, type InternalRiskAction } from './internalRisk';
-import { REAL_VERIFICATION_FILTER_MIN_SCORE } from './propertyVerification';
 import { getChatSystemMessages, getRequestAcceptedMessage, getRequestNotAdvancedMessage, type ChatSystemMessageKey } from './chatSystemMessages';
 import { buildGuestProfileCompletion } from '../src/lib/guestVerification';
 import {
@@ -22,6 +21,7 @@ import {
   getGuestPositiveBookingProfile,
   getHostVisibilityBoost,
 } from '../src/lib/positiveIncentives';
+import { hasPropertyPresencialVerificationSeal as hasPresencialVerificationSeal } from '../src/lib/propertyVerification';
 import { getPropertyListingQualityScore } from '../src/lib/propertyListingQuality';
 import { BOOKING_CONTRACT_PLATFORM_TERMS } from '../src/lib/platformTerms';
 import { getProtectedDepositPricingFromBooking } from '../src/lib/protectedDeposit';
@@ -4137,7 +4137,7 @@ app.get('/api/properties', async (req, res) => {
           listingQualityScore: getPropertyListingQualityScore(mappedProperty),
         };
       })
-      .filter(({ property }) => verifiedOnly === 'true' ? property.verificationScore >= REAL_VERIFICATION_FILTER_MIN_SCORE : true)
+      .filter(({ property }) => verifiedOnly === 'true' ? hasPresencialVerificationSeal(property) : true)
       .sort((left, right) => (
         left.internalVisibilityPenalty - right.internalVisibilityPenalty
         || right.hostVisibilityBoost - left.hostVisibilityBoost

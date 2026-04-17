@@ -112,7 +112,7 @@ describe('ExploreResultsSection', () => {
     renderSection();
 
     expect(screen.getByRole('heading', { name: 'Empezá por los más verificados' })).toBeInTheDocument();
-    expect(screen.getByText('Primero ves los avisos con más comprobaciones reales. Si empatan, priorizamos ubicación verificada, anfitrión confirmado y disponibilidad validada.')).toBeInTheDocument();
+    expect(screen.getByText('Primero ves los avisos verificados presencialmente (5/5). Después ordenamos 4/5, 3/5 y así sucesivamente.')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Más para comparar' })).toBeInTheDocument();
     expect(screen.getAllByText('Más verificado')).toHaveLength(1);
     expect(screen.queryByText(/Buena relación precio \/ información|De las más completas en este rango/)).toBeNull();

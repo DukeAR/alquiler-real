@@ -6,6 +6,7 @@ import {
   getPropertyVerificationGuidanceMessage,
   getPropertyVerificationItems,
   getPropertyVerificationScore,
+  meetsRealVerificationFilter,
   sortPropertiesByCatalogOrder,
   withPropertyVerificationScore,
 } from '../propertyVerification';
@@ -145,6 +146,22 @@ describe('propertyVerification', () => {
     expect(fullyVerified.isFullyVerified).toBe(true);
     expect(maxWithoutPresencial.summaryLabel).toBe('Verificación parcial (5/5)');
     expect(maxWithoutPresencial.isFullyVerified).toBe(false);
+    expect(meetsRealVerificationFilter({
+      identityValidated: true,
+      locationVerified: true,
+      verificationPhotoCount: 3,
+      availabilityValidated: true,
+      coordinates: { lat: -36.7, lng: -56.7 },
+      hasPresencialVerification: true,
+    })).toBe(true);
+    expect(meetsRealVerificationFilter({
+      identityValidated: true,
+      locationVerified: true,
+      verificationPhotoCount: 3,
+      availabilityValidated: true,
+      coordinates: { lat: -36.7, lng: -56.7 },
+      hasPresencialVerification: false,
+    })).toBe(false);
   });
 
   test('prioritizes presencially verified properties before other verification levels', () => {

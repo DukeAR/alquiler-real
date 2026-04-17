@@ -123,17 +123,17 @@ export const ExploreFiltersBar = ({
 
             <span className="min-w-0 flex-1 pr-2">
               <span className="block overflow-hidden text-[0.98rem] font-semibold leading-[1.15rem] tracking-[-0.015em] text-slate-950 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
-                Solo avisos con respaldo real
+                Solo verificados presencialmente
               </span>
               <span className="hidden text-[10.5px] leading-[1rem] text-slate-600 lg:block">
-                3 o más comprobaciones reales
+                Mostrando solo avisos con verificación completa
               </span>
             </span>
 
             <span className="relative ml-auto inline-flex h-6 w-11 shrink-0 items-center">
               <input
                 type="checkbox"
-                aria-label="Solo avisos con respaldo real"
+                aria-label="Solo verificados presencialmente"
                 checked={filters.verifiedOnly}
                 onChange={(event) => onFiltersChange({ ...filters, verifiedOnly: event.target.checked })}
                 className="peer sr-only"

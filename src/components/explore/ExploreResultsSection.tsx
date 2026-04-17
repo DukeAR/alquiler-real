@@ -152,7 +152,7 @@ export const ExploreResultsSection = ({
       ? 'Precio claro y lectura rápida primero.'
       : sortBy === 'rating'
         ? 'Valoración alta y respaldo visible primero.'
-        : 'Primero ves los avisos con más comprobaciones reales. Si empatan, priorizamos ubicación verificada, anfitrión confirmado y disponibilidad validada.';
+        : 'Primero ves los avisos verificados presencialmente (5/5). Después ordenamos 4/5, 3/5 y así sucesivamente.';
   const listingHeading = hasActiveFilters
     ? 'Resultados para revisar'
     : showFeaturedSection
@@ -170,7 +170,7 @@ export const ExploreResultsSection = ({
   const homeListingDescription = loading
     ? 'Estamos preparando más opciones.'
     : sortBy === 'verification'
-      ? 'Más opciones para seguir comparando con el mismo nivel de comprobación visible.'
+      ? 'Más opciones con el mismo orden: primero presencial 5/5 y después 4/5, 3/5 y así sucesivamente.'
       : 'Más opciones para seguir comparando rápido.';
   const filteredResultsDescription = `${formatPropertyCount(totalResults)} para comparar en esta búsqueda.`;
   const filteredVisibleResultsLabel = `${visibleCount} ${visibleCount === 1 ? 'visible' : 'visibles'} en esta búsqueda.`;

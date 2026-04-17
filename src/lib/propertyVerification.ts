@@ -205,7 +205,7 @@ export const hasPropertyPresencialVerificationSeal = (property: PropertyVerifica
 
 export const getPropertyVerificationStateCopy = (
   score: number,
-  maxScore = VERIFICATION_SCORE_MAX,
+  maxScore: number = VERIFICATION_SCORE_MAX,
   options?: { hasPresencialVerificationSeal?: boolean },
 ) => {
   const safeMaxScore = Math.max(1, maxScore);
@@ -670,7 +670,7 @@ export const getPropertyVerificationScore = (property: PropertyVerificationLike)
 );
 
 export const meetsRealVerificationFilter = (property: PropertyVerificationLike) => (
-  getPropertyVerificationScore(property) >= REAL_VERIFICATION_FILTER_MIN_SCORE
+  hasPropertyPresencialVerificationSeal(property)
 );
 
 export const hasHighlightedVerificationLevel = (property: PropertyVerificationLike) => (

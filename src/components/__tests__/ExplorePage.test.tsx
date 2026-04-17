@@ -54,14 +54,14 @@ describe('ExplorePage', () => {
     });
   });
 
-  test('sends verifiedOnly=true when the more-information filter is enabled', async () => {
+  test('sends verifiedOnly=true when the presencial verification filter is enabled', async () => {
     render(<ExplorePage />);
 
     await waitFor(() => {
       expect(apiJsonMock).toHaveBeenCalled();
     });
 
-    fireEvent.click(screen.getByRole('checkbox', { name: /Solo avisos con respaldo real/i }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /Solo verificados presencialmente/i }));
 
     await waitFor(() => {
       expect(

@@ -124,9 +124,12 @@ export const ExplorePage = () => {
   const sortContext = { searchQuery, filters };
   const hasActiveFilters = Boolean(searchQuery || filters.minPrice || filters.maxPrice || filters.type || filters.verifiedOnly);
   const orderedProperties = sortPropertiesByCatalogOrder(properties, sortBy, sortContext);
+  const filteredProperties = filters.verifiedOnly
+    ? orderedProperties.filter((property) => meetsRealVerificationFilter(property))
+    : orderedProperties;
   const featuredProperties = hasActiveFilters
     ? []
-    : orderedProperties.slice(0, 3);
+    : filteredProperties.slice(0, 3);
   const featuredIds = new Set(featuredProperties.map((property) => property.id));
   const appliedFilterCount = [
     Boolean(searchQuery),
@@ -137,11 +140,8 @@ export const ExplorePage = () => {
     filters.verifiedOnly,
   ].filter(Boolean).length;
   const listingProperties = hasActiveFilters
-    ? orderedProperties
-    : orderedProperties.filter((property) => !featuredIds.has(property.id));
-  const filteredProperties = filters.verifiedOnly
-    ? orderedProperties.filter((property) => meetsRealVerificationFilter(property))
-    : orderedProperties;
+    ? filteredProperties
+    : filteredProperties.filter((property) => !featuredIds.has(property.id));
   const visibleProperties = listingProperties.slice(0, visibleCount);
   const hasMoreResults = visibleProperties.length < listingProperties.length;
 

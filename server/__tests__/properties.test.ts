@@ -34,12 +34,12 @@ describe('Properties endpoints', () => {
     queryMock.mockReset();
   });
 
-  test('GET /api/properties?verifiedOnly=true requires a real verification score of 3 or more and ignores the legacy flag', async () => {
+  test('GET /api/properties?verifiedOnly=true requires presencial verification with 5/5 and ignores the legacy flag', async () => {
     queryMock.mockResolvedValueOnce({
       rows: [
         {
-          id: 'prop-strong',
-          title: 'Casa con tres comprobaciones reales',
+          id: 'prop-onsite',
+          title: 'Casa con verificación presencial completa',
           location: 'Pinamar',
           price: '120000',
           hostId: 'host-1',
@@ -53,9 +53,10 @@ describe('Properties endpoints', () => {
           hostIdentityVerified: 0,
           locationVerified: 1,
           videoValidated: 1,
+          availabilityValidated: 1,
           traceabilityLevel: 'medium',
           maxGuests: 4,
-          hasPresencialVerification: 0,
+          hasPresencialVerification: 1,
           hasDigitalVerification: 0,
           hostCompletedReservationsCount: '5',
           hostGuestReviewsCount: '3',
@@ -69,8 +70,8 @@ describe('Properties endpoints', () => {
           hostProfileName: 'Ana',
         },
         {
-          id: 'prop-low-real',
-          title: 'Casa con dos comprobaciones reales',
+          id: 'prop-max-without-onsite',
+          title: 'Casa con 5/5 sin verificación presencial',
           location: 'Cariló',
           price: '110000',
           hostId: 'host-3',
@@ -83,7 +84,8 @@ describe('Properties endpoints', () => {
           hostIdentityValidated: 1,
           hostIdentityVerified: 0,
           locationVerified: 1,
-          videoValidated: 0,
+          videoValidated: 1,
+          availabilityValidated: 1,
           traceabilityLevel: 'medium',
           maxGuests: 4,
           hasPresencialVerification: 0,
@@ -100,8 +102,8 @@ describe('Properties endpoints', () => {
           hostProfileName: 'Clara',
         },
         {
-          id: 'prop-legacy',
-          title: 'Casa con flag legacy',
+          id: 'prop-strong',
+          title: 'Casa con cuatro comprobaciones reales',
           location: 'Villa Gesell',
           price: '99000',
           hostId: 'host-2',
@@ -111,17 +113,17 @@ describe('Properties endpoints', () => {
           rating: '4.7',
           reviewsCount: '8',
           identityValidated: 0,
-          hostIdentityValidated: 0,
+          hostIdentityValidated: 1,
           hostIdentityVerified: 0,
-          locationVerified: 0,
-          videoValidated: 0,
-          traceabilityLevel: 'low',
+          locationVerified: 1,
+          videoValidated: 1,
+          traceabilityLevel: 'medium',
           maxGuests: 3,
           hasPresencialVerification: 0,
           hasDigitalVerification: 0,
-          hostCompletedReservationsCount: '0',
-          hostGuestReviewsCount: '0',
-          hostMemberSince: '2026-02-01T00:00:00.000Z',
+          hostCompletedReservationsCount: '2',
+          hostGuestReviewsCount: '1',
+          hostMemberSince: '2024-02-01T00:00:00.000Z',
           lat: '-37.2',
           lng: '-56.9',
           bedrooms: 1,
@@ -136,23 +138,18 @@ describe('Properties endpoints', () => {
     const res = await request(app).get('/api/properties?verifiedOnly=true');
 
     expect(res.status).toBe(200);
-    expect(res.body).toHaveLength(2);
-    expect(res.body.map((property: any) => property.id)).toEqual(['prop-strong', 'prop-low-real']);
+    expect(res.body).toHaveLength(1);
+    expect(res.body.map((property: any) => property.id)).toEqual(['prop-onsite']);
     expect(res.body[0]).toMatchObject({
-      id: 'prop-strong',
-      verificationScore: 4,
+      id: 'prop-onsite',
+      verificationScore: 5,
+      hasPresencialVerification: true,
       hostTrustScore: 4,
       hostTrust: {
         score: 4,
         level: 'high',
       },
     });
-    expect(res.body).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        id: 'prop-low-real',
-        verificationScore: 3,
-      }),
-    ]));
     expect(res.body[0].verificationItems).toEqual(expect.arrayContaining([
       expect.objectContaining({
         key: 'identity',
@@ -165,8 +162,9 @@ describe('Properties endpoints', () => {
       expect.objectContaining({ key: 'reviews', status: 'complete' }),
       expect.objectContaining({ key: 'tenure', status: 'complete' }),
     ]));
-    expect(res.body.every((property: any) => property.verificationScore >= 3)).toBe(true);
-    expect(res.body.find((property: any) => property.id === 'prop-legacy')).toBeUndefined();
+    expect(res.body.every((property: any) => property.verificationScore === 5 && property.hasPresencialVerification === true)).toBe(true);
+    expect(res.body.find((property: any) => property.id === 'prop-max-without-onsite')).toBeUndefined();
+    expect(res.body.find((property: any) => property.id === 'prop-strong')).toBeUndefined();
     expect(queryMock).toHaveBeenCalledTimes(1);
     expect(queryMock.mock.calls[0][0]).not.toContain('p.is_verified_property = TRUE');
   });
