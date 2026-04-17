@@ -280,27 +280,39 @@ export const buildPropertyVerificationItem = (input: {
 };
 
 const getPropertyVerificationNextStep = (input: PropertyVerificationSummaryInput) => {
-  if (!isIdentityCheckComplete(input)) {
-    return 'Confirmá la identidad del anfitrión.';
-  }
-
-  if (!isLocationVerifiedCheckComplete(input)) {
-    return 'Validá la ubicación del alojamiento.';
-  }
-
-  if (!isPreciseGeolocationCheckComplete(input)) {
-    return 'Sumá una geolocalización precisa del lugar.';
-  }
-
   if (!isRealMediaCheckComplete(input)) {
-    return 'Subí fotos o video reales del alojamiento.';
+    return 'Falta validar fotos o video.';
   }
 
   if (!isAvailabilityValidatedCheckComplete(input)) {
-    return 'Actualizá el calendario para validar la disponibilidad.';
+    return 'Disponibilidad no confirmada recientemente.';
+  }
+
+  if (!isIdentityCheckComplete(input)) {
+    return 'Falta confirmar la identidad del anfitrión.';
+  }
+
+  if (!isLocationVerifiedCheckComplete(input)) {
+    return 'Falta validar la ubicación del alojamiento.';
+  }
+
+  if (!isPreciseGeolocationCheckComplete(input)) {
+    return 'Falta validar la ubicación precisa del lugar.';
   }
 
   return 'Suma documentación privada o una revisión manual para reforzar todavía más la confianza.';
+};
+
+const getPropertyVerificationDecisionSummary = (score: number) => {
+  if (score >= 4) {
+    return 'Listo para coordinar.';
+  }
+
+  if (score >= 3) {
+    return 'Podés avanzar, pero hay información a completar.';
+  }
+
+  return 'Todavía falta información clave para decidir.';
 };
 
 export const buildPropertyVerificationSummary = (
@@ -344,12 +356,13 @@ export const buildPropertyVerificationProgress = (
   const allVisibleChecksReady = verificationSummary.score === verificationSummary.maxScore;
   const mediumReady = verificationSummary.score >= 3;
   const highReady = allVisibleChecksReady && advancedChecks.every((item) => item.status === 'complete');
+  const decisionSummary = getPropertyVerificationDecisionSummary(verificationSummary.score);
 
   if (highReady) {
     return {
       level: 'high',
       label: 'Verificación avanzada',
-      summary: 'Ya completaste las 5 comprobaciones visibles y además sumaste respaldo avanzado para moderación.',
+      summary: decisionSummary,
       nextStep: 'Solo mantene el material al dia para sostener visibilidad y confianza cuando el lugar cambie.',
       advancedChecks,
     };
@@ -359,11 +372,9 @@ export const buildPropertyVerificationProgress = (
     return {
       level: 'medium',
       label: allVisibleChecksReady ? 'Verificación completa' : 'Verificación en progreso',
-      summary: allVisibleChecksReady
-        ? 'Ya completaste las 5 comprobaciones visibles: anfitrión confirmado, ubicación verificada, geolocalización precisa, fotos o video reales y disponibilidad validada.'
-        : `Este aviso ya muestra ${verificationSummary.score} de 5 comprobaciones visibles reales.`,
+      summary: decisionSummary,
       nextStep: advancedChecks[0]?.status === 'pending'
-        ? 'Si queres sumar otra capa, podes cargar documentacion privada para moderacion interna.'
+        ? getPropertyVerificationNextStep(input)
         : 'La siguiente mejora es dejar preparada una revision manual o presencial.',
       advancedChecks,
     };
@@ -372,7 +383,7 @@ export const buildPropertyVerificationProgress = (
   return {
     level: 'base',
     label: 'Verificación inicial',
-    summary: 'El aviso ya está publicado. Ahora podés completar anfitrión confirmado, ubicación verificada, geolocalización precisa, fotos o video reales y disponibilidad validada.',
+    summary: decisionSummary,
     nextStep: getPropertyVerificationNextStep(input),
     advancedChecks,
   };
