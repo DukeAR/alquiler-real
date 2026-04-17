@@ -211,6 +211,22 @@ const setWindowWidth = (width: number) => {
   window.dispatchEvent(new Event('resize'));
 };
 
+const setWindowScrollY = (value: number) => {
+  Object.defineProperty(window, 'scrollY', {
+    configurable: true,
+    writable: true,
+    value,
+  });
+
+  Object.defineProperty(window, 'pageYOffset', {
+    configurable: true,
+    writable: true,
+    value,
+  });
+
+  window.dispatchEvent(new Event('scroll'));
+};
+
 const formatIso = (date: Date) => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -261,6 +277,7 @@ const advanceToConfirmationStep = async () => {
 
 beforeEach(() => {
   clearVerificationPreferenceState();
+  setWindowScrollY(0);
   Object.defineProperty(globalThis, 'IntersectionObserver', {
     configurable: true,
     writable: true,
@@ -323,6 +340,7 @@ beforeEach(() => {
 afterEach(() => {
   clearVerificationPreferenceState();
   setWindowWidth(DEFAULT_WINDOW_WIDTH);
+  setWindowScrollY(0);
   Object.defineProperty(globalThis, 'IntersectionObserver', {
     configurable: true,
     writable: true,
@@ -533,6 +551,24 @@ describe('PropertyDetail', () => {
     expect(within(bookingFlow).getByRole('button', { name: /enviar solicitud/i })).toBeDefined();
   });
 
+  test('updates the sticky CTA copy after the user scrolls past the first viewport on mobile', async () => {
+    setWindowWidth(390);
+
+    renderPropertyDetail();
+
+    await waitForPropertyHeading();
+    await waitFor(() => expect(getStickyBookingBar()).toBeDefined());
+
+    expect(within(getStickyBookingBar()).getByRole('button', { name: /consultar disponibilidad/i })).toBeDefined();
+
+    await act(async () => {
+      setWindowScrollY(120);
+    });
+
+    await waitFor(() => expect(within(getStickyBookingBar()).getByRole('button', { name: /ver disponibilidad/i })).toBeDefined());
+    expect(within(getStickyBookingBar()).queryByRole('button', { name: /consultar disponibilidad/i })).toBeNull();
+  });
+
   test('shows and hides the sticky CTA on desktop based on the main CTA visibility', async () => {
     const observerInstances = installIntersectionObserverMock();
 
@@ -553,13 +589,78 @@ describe('PropertyDetail', () => {
 
     await waitFor(() => expect(getStickyBookingBar()).toBeDefined());
     expect(within(getStickyBookingBar()).getByText(/120/)).toBeDefined();
-    expect(within(getStickyBookingBar()).getByRole('button', { name: /consultar disponibilidad/i })).toBeDefined();
+    expect(within(getStickyBookingBar()).getByRole('button', { name: /ver disponibilidad/i })).toBeDefined();
 
     await act(async () => {
       stickyObserver?.trigger(primaryCta, true);
     });
 
     await waitFor(() => expect(queryStickyBookingBar()).toBeNull());
+  });
+
+  test('uses a stronger sticky CTA copy after deep scroll and verified content engagement', async () => {
+    const observerInstances = installIntersectionObserverMock();
+
+    (apiJson as any).mockImplementation(async (url: string, options?: RequestInit) => {
+      if (url.endsWith('/reviews')) return [{ id: 'r1', reviewer_id: 'u1', rating: 5, comment: 'Buen lugar' }];
+      if (url === '/api/bookings') return [];
+      if (url === '/api/conversations' && options?.method === 'POST') {
+        return {
+          id: 'conv-1',
+          property_id: 'p1',
+          tenant_id: 'u1',
+          host_id: 'h1',
+          hostName: 'Mariana',
+          propertyTitle: 'Casa de prueba',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+      }
+      if (url === '/api/messages' && options?.method === 'POST') {
+        return {
+          id: 'msg-1',
+          conversation_id: 'conv-1',
+          sender_id: 'u1',
+          receiver_id: 'h1',
+          content: 'Hola',
+          created_at: new Date().toISOString(),
+        };
+      }
+
+      return {
+        ...sampleProperty,
+        materialVerified: true,
+        availabilityValidated: true,
+        hasPresencialVerification: true,
+      };
+    });
+
+    renderPropertyDetail();
+
+    await waitForPropertyHeading();
+
+    const desktopContext = getDesktopBookingContext();
+    const primaryCta = within(desktopContext).getByRole('button', { name: /consultar disponibilidad/i });
+    const stickyObserver = observerInstances.find((instance) => instance.elements.has(primaryCta));
+
+    await act(async () => {
+      stickyObserver?.trigger(primaryCta, false);
+    });
+
+    await waitFor(() => expect(within(getStickyBookingBar()).getByRole('button', { name: /ver disponibilidad/i })).toBeDefined());
+
+    await act(async () => {
+      setWindowScrollY(1200);
+    });
+
+    await waitFor(() => expect(within(getStickyBookingBar()).getByRole('button', { name: /coordinar visita o fechas/i })).toBeDefined());
+    expect(within(getStickyBookingBar()).queryByRole('button', { name: /ver disponibilidad/i })).toBeNull();
+
+    await act(async () => {
+      fireEvent.pointerDown(screen.getByRole('heading', { name: /lo esencial del lugar/i }));
+    });
+
+    expect(within(getStickyBookingBar()).getByRole('button', { name: /coordinar visita o fechas/i })).toBeDefined();
   });
 
   test('preserves the current booking selection when the modal closes and reopens', async () => {

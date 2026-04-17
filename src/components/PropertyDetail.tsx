@@ -152,6 +152,22 @@ const getIsMobileBookingLayout = () => {
   return window.innerWidth < 1024;
 };
 
+const getStickyBookingIntroScrollThreshold = () => {
+  if (typeof window === 'undefined') {
+    return 64;
+  }
+
+  return Math.max(64, Math.round(window.innerHeight * 0.08));
+};
+
+const getStickyBookingDeepScrollThreshold = () => {
+  if (typeof window === 'undefined') {
+    return 960;
+  }
+
+  return Math.max(960, Math.round(window.innerHeight * 1.15));
+};
+
 const formatRequestDate = (value: string) => {
   const parsed = parseLocalIso(value);
   if (Number.isNaN(parsed.getTime())) {
@@ -386,6 +402,9 @@ export const PropertyDetailShell: React.FC<{
   const [availabilityRefreshToken, setAvailabilityRefreshToken] = useState(0);
   const [isMobileBookingLayout, setIsMobileBookingLayout] = useState(getIsMobileBookingLayout);
   const [isPrimaryBookingCtaVisible, setIsPrimaryBookingCtaVisible] = useState(true);
+  const [hasScrolledPastStickyIntro, setHasScrolledPastStickyIntro] = useState(false);
+  const [hasScrolledPastStickyDeepThreshold, setHasScrolledPastStickyDeepThreshold] = useState(false);
+  const [hasEngagedWithDecisionContent, setHasEngagedWithDecisionContent] = useState(false);
   const bookingStepPanelRef = useRef<HTMLDivElement | null>(null);
   const datePickerTriggerRef = useRef<HTMLButtonElement | null>(null);
   const pendingDatePickerOpenRef = useRef(false);
@@ -478,8 +497,22 @@ export const PropertyDetailShell: React.FC<{
     ? `${nightsSummaryLabel} · ${guestCountLabel} · ${formatCurrency(total)}`
     : `${guestCountLabel} · Total al elegir fechas`;
   const bookingEntryCtaLabel = 'Consultar disponibilidad';
+  const stickyBookingBrowseCtaLabel = 'Ver disponibilidad';
+  const stickyBookingCoordinationCtaLabel = verificationDetails.isFullyVerified
+    ? 'Coordinar visita o fechas'
+    : 'Coordinar fechas';
   const stickyBookingPriceLabel = nightly ? `${formatCurrency(nightly)} / noche` : '—';
   const shouldShowStickyBookingBar = !bookingFlowOpen && !isPrimaryBookingCtaVisible;
+  const hasPassedInitialStickyMoment = isMobileBookingLayout
+    ? hasScrolledPastStickyIntro
+    : !isPrimaryBookingCtaVisible;
+  const shouldUseAdvancedStickyBookingCta = hasPassedInitialStickyMoment
+    && (hasScrolledPastStickyDeepThreshold || hasEngagedWithDecisionContent);
+  const stickyBookingCtaLabel = !hasPassedInitialStickyMoment
+    ? bookingEntryCtaLabel
+    : shouldUseAdvancedStickyBookingCta
+      ? stickyBookingCoordinationCtaLabel
+      : stickyBookingBrowseCtaLabel;
   const mobilePrimaryActionLabel = bookingStep === 'dates'
     ? hasCompleteDates
       ? 'Seguir con huéspedes'
@@ -550,6 +583,26 @@ export const PropertyDetailShell: React.FC<{
       window.removeEventListener('resize', syncLayout);
     };
   }, []);
+
+  useEffect(() => {
+    const syncStickyBookingContext = () => {
+      const currentScroll = window.scrollY || window.pageYOffset || 0;
+
+      setHasScrolledPastStickyIntro(currentScroll > getStickyBookingIntroScrollThreshold());
+      setHasScrolledPastStickyDeepThreshold(currentScroll > getStickyBookingDeepScrollThreshold());
+    };
+
+    setHasEngagedWithDecisionContent(false);
+    syncStickyBookingContext();
+
+    window.addEventListener('scroll', syncStickyBookingContext, { passive: true });
+    window.addEventListener('resize', syncStickyBookingContext);
+
+    return () => {
+      window.removeEventListener('scroll', syncStickyBookingContext);
+      window.removeEventListener('resize', syncStickyBookingContext);
+    };
+  }, [property.id]);
 
   useEffect(() => {
     const primaryBookingCta = primaryBookingCtaRef.current;
@@ -641,6 +694,10 @@ export const PropertyDetailShell: React.FC<{
 
     return () => window.cancelAnimationFrame(frame);
   }, [bookingFlowOpen, bookingStep]);
+
+  const handleDecisionContentEngagement = () => {
+    setHasEngagedWithDecisionContent(true);
+  };
 
   const handleAdultsChange = (nextValue: number) => {
     setAdults(Math.max(1, nextValue));
@@ -1270,7 +1327,11 @@ export const PropertyDetailShell: React.FC<{
           </div>
         </section>
 
-        <main className="space-y-6 md:space-y-8">
+        <main
+          className="space-y-6 md:space-y-8"
+          onPointerDownCapture={handleDecisionContentEngagement}
+          onFocusCapture={handleDecisionContentEngagement}
+        >
           <Card data-motion-block className="app-card-hover app-motion-block rounded-[32px] border-slate-200/80 bg-white p-6 shadow-[0_28px_70px_-50px_rgba(15,23,42,0.25)] sm:p-7">
             <div className="space-y-5">
               <SectionTitle
@@ -1735,7 +1796,12 @@ export const PropertyDetailShell: React.FC<{
             >
               <>
                 <Icons.Calendar className="h-4 w-4" />
-                {bookingEntryCtaLabel}
+                <span
+                  key={stickyBookingCtaLabel}
+                  className="inline-flex animate-[booking-step-in_180ms_var(--app-interaction-ease)] motion-reduce:animate-none"
+                >
+                  {stickyBookingCtaLabel}
+                </span>
               </>
             </Button>
           </div>
