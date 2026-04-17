@@ -36,12 +36,12 @@ export const ExploreFiltersBar = ({
   onClear,
 }: ExploreFiltersBarProps) => {
   return (
-    <section className="rounded-[var(--app-radius-card)] border border-slate-200/85 bg-white/96 px-3.5 py-3 shadow-[0_18px_38px_-34px_rgba(15,23,42,0.16)] sm:px-4 sm:py-4 lg:px-5 lg:py-4.5">
+    <section className="rounded-[calc(var(--app-radius-card)+4px)] border border-slate-200 bg-white px-4 py-4 shadow-[0_24px_48px_-40px_rgba(15,23,42,0.18)] sm:px-5 sm:py-4.5 lg:px-6">
       <div className="flex flex-col gap-3.5">
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2.5">
           <span aria-hidden="true" className="block h-px" />
 
-          <div className="inline-flex h-10 w-fit items-center gap-1 justify-self-center rounded-[0.95rem] border border-slate-200/80 bg-slate-100/85 p-1">
+          <div className="inline-flex h-11 w-fit items-center gap-1 justify-self-center rounded-[1.05rem] border border-slate-200 bg-slate-100/90 p-1">
             {(['grid', 'map'] as const).map((mode) => (
               <button
                 key={mode}
@@ -49,9 +49,9 @@ export const ExploreFiltersBar = ({
                 aria-pressed={viewMode === mode}
                 onClick={() => onViewModeChange(mode)}
                 className={cn(
-                  'flex h-full items-center justify-center gap-2 rounded-[0.78rem] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.1em] transition-[background-color,color] duration-150',
+                  'flex h-full items-center justify-center gap-2 rounded-[0.9rem] px-5 py-2 text-[0.88rem] font-semibold uppercase tracking-[0.08em] transition-[background-color,color,box-shadow] duration-150',
                   viewMode === mode
-                    ? 'bg-white text-slate-950 shadow-[0_10px_20px_-18px_rgba(15,23,42,0.22)]'
+                    ? 'bg-white text-slate-950 shadow-[0_16px_28px_-24px_rgba(15,23,42,0.22)]'
                     : 'text-slate-700 hover:text-slate-950',
                 )}
               >
@@ -83,7 +83,7 @@ export const ExploreFiltersBar = ({
               aria-label="Ordenar por"
               value={sortBy}
               onChange={(event) => onSortChange(event.target.value as ExploreSort)}
-              className="app-control h-12 min-w-0 rounded-[var(--app-radius-control)] border-[color:var(--app-surface-border)] bg-white px-4 text-[0.92rem] font-semibold tracking-[-0.01em] text-slate-950 shadow-none"
+              className="app-control h-14 min-w-0 rounded-[1.15rem] border-slate-300/90 bg-white px-4 text-[1rem] font-semibold tracking-[-0.015em] text-slate-950 shadow-[0_14px_28px_-28px_rgba(15,23,42,0.14)]"
             >
               <option value="verification">Más verificados primero</option>
               <option value="rating">Mejor calificación</option>
@@ -98,8 +98,8 @@ export const ExploreFiltersBar = ({
             value={filters.minPrice}
             onChange={(event) => onFiltersChange({ ...filters, minPrice: event.target.value })}
             placeholder="Desde"
-            icon={<span className="text-xs font-medium">$</span>}
-            className="h-12 min-w-0 rounded-[var(--app-radius-control)] border-[color:var(--app-surface-border)] bg-white py-0 pl-9 pr-3 text-[0.94rem] font-semibold tracking-[-0.01em] text-slate-950 shadow-none placeholder:text-slate-500"
+            icon={<span className="text-sm font-semibold text-slate-700">$</span>}
+            className="h-14 min-w-0 rounded-[1.15rem] border-slate-300/90 bg-white py-0 pl-10 pr-4 text-[1rem] font-semibold tracking-[-0.015em] text-slate-950 shadow-[0_14px_28px_-28px_rgba(15,23,42,0.14)] placeholder:font-semibold placeholder:text-slate-700 placeholder:opacity-100"
           />
 
           <Input
@@ -109,20 +109,20 @@ export const ExploreFiltersBar = ({
             value={filters.maxPrice}
             onChange={(event) => onFiltersChange({ ...filters, maxPrice: event.target.value })}
             placeholder="Hasta"
-            icon={<span className="text-xs font-medium">$</span>}
-            className="h-12 min-w-0 rounded-[var(--app-radius-control)] border-[color:var(--app-surface-border)] bg-white py-0 pl-9 pr-3 text-[0.94rem] font-semibold tracking-[-0.01em] text-slate-950 shadow-none placeholder:text-slate-500"
+            icon={<span className="text-sm font-semibold text-slate-700">$</span>}
+            className="h-14 min-w-0 rounded-[1.15rem] border-slate-300/90 bg-white py-0 pl-10 pr-4 text-[1rem] font-semibold tracking-[-0.015em] text-slate-950 shadow-[0_14px_28px_-28px_rgba(15,23,42,0.14)] placeholder:font-semibold placeholder:text-slate-700 placeholder:opacity-100"
           />
 
           <label className={cn(
-            'flex h-12 min-w-0 items-center gap-2.5 rounded-[var(--app-radius-control)] border px-3 py-2 text-left transition-[border-color,background-color,box-shadow] duration-150',
+            'flex min-h-[3.5rem] min-w-0 items-center gap-2.5 rounded-[1.15rem] border px-4 py-2.5 text-left shadow-[0_14px_28px_-28px_rgba(15,23,42,0.14)] transition-[border-color,background-color,box-shadow] duration-150',
             filters.verifiedOnly
-                    ? 'border-brand/25 bg-white shadow-[0_10px_24px_-22px_rgba(67,56,202,0.32)]'
-                    : 'border-[color:var(--app-surface-border)] bg-white',
+                    ? 'border-brand/25 bg-white shadow-[0_14px_28px_-24px_rgba(67,56,202,0.28)]'
+                    : 'border-slate-300/90 bg-white',
           )}>
-            <Icons.ShieldCheck className={cn('h-4 w-4 shrink-0', filters.verifiedOnly ? 'text-brand' : 'text-slate-400')} />
+            <Icons.ShieldCheck className={cn('h-4.5 w-4.5 shrink-0', filters.verifiedOnly ? 'text-brand' : 'text-slate-600')} />
 
             <span className="min-w-0 flex-1 pr-2">
-              <span className="block overflow-hidden text-[11px] font-semibold leading-[1.05rem] text-slate-900 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
+              <span className="block overflow-hidden text-[0.98rem] font-semibold leading-[1.15rem] tracking-[-0.015em] text-slate-950 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
                 Solo avisos con respaldo real
               </span>
               <span className="hidden text-[10.5px] leading-[1rem] text-slate-600 lg:block">

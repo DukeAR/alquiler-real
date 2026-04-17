@@ -89,10 +89,10 @@ export const ExploreHero = ({
                 </Button>
               </div>
 
-              <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 border-t border-white/70 pt-4 text-[10.5px] text-slate-700 sm:gap-x-5 sm:text-[11px]">
+              <div className="flex flex-wrap items-center justify-center gap-x-3.5 gap-y-2.5 border-t border-white/70 pt-4 text-[0.84rem] text-slate-900 sm:gap-x-4.5 sm:text-[0.92rem]">
                 {valueProofItems.map((item) => (
-                  <span key={item} className="inline-flex items-center gap-1.5 font-semibold leading-5 text-slate-700">
-                    <Icons.CheckCircle2 className="h-3 w-3 shrink-0 text-emerald-700/85" />
+                  <span key={item} className="inline-flex items-center gap-2 rounded-full border border-white/55 bg-white/42 px-3 py-1.5 font-bold leading-none text-slate-900 shadow-[0_16px_26px_-24px_rgba(15,23,42,0.32)]">
+                    <Icons.CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-800" />
                     <span>{item}</span>
                   </span>
                 ))}
