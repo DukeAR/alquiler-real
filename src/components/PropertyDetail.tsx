@@ -355,6 +355,7 @@ export const PropertyDetailShell: React.FC<{
   const touchStartX = useRef<number | null>(null);
   const detailMotionRootRef = useRef<HTMLDivElement | null>(null);
   const heroSceneRef = useRef<HTMLDivElement | null>(null);
+  const primaryBookingCtaRef = useRef<HTMLButtonElement | null>(null);
 
   const onTouchStart = (e: React.TouchEvent) => { touchStartX.current = e.touches[0].clientX; };
   const onTouchEnd = (e: React.TouchEvent) => {
@@ -384,6 +385,7 @@ export const PropertyDetailShell: React.FC<{
   const [bookingSubmitNotice, setBookingSubmitNotice] = useState<BookingConfirmationNotice | null>(null);
   const [availabilityRefreshToken, setAvailabilityRefreshToken] = useState(0);
   const [isMobileBookingLayout, setIsMobileBookingLayout] = useState(getIsMobileBookingLayout);
+  const [isPrimaryBookingCtaVisible, setIsPrimaryBookingCtaVisible] = useState(true);
   const bookingStepPanelRef = useRef<HTMLDivElement | null>(null);
   const datePickerTriggerRef = useRef<HTMLButtonElement | null>(null);
   const pendingDatePickerOpenRef = useRef(false);
@@ -476,6 +478,8 @@ export const PropertyDetailShell: React.FC<{
     ? `${nightsSummaryLabel} · ${guestCountLabel} · ${formatCurrency(total)}`
     : `${guestCountLabel} · Total al elegir fechas`;
   const bookingEntryCtaLabel = 'Consultar disponibilidad';
+  const stickyBookingPriceLabel = nightly ? `${formatCurrency(nightly)} / noche` : '—';
+  const shouldShowStickyBookingBar = !bookingFlowOpen && !isPrimaryBookingCtaVisible;
   const mobilePrimaryActionLabel = bookingStep === 'dates'
     ? hasCompleteDates
       ? 'Seguir con huéspedes'
@@ -546,6 +550,38 @@ export const PropertyDetailShell: React.FC<{
       window.removeEventListener('resize', syncLayout);
     };
   }, []);
+
+  useEffect(() => {
+    const primaryBookingCta = primaryBookingCtaRef.current;
+
+    if (!primaryBookingCta) {
+      return;
+    }
+
+    if (typeof IntersectionObserver === 'undefined') {
+      setIsPrimaryBookingCtaVisible(!isMobileBookingLayout);
+      return;
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+      const [entry] = entries;
+
+      if (!entry) {
+        return;
+      }
+
+      setIsPrimaryBookingCtaVisible(entry.isIntersecting);
+    }, {
+      threshold: 0.2,
+      rootMargin: '0px 0px -8% 0px',
+    });
+
+    observer.observe(primaryBookingCta);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [isMobileBookingLayout, property.id]);
 
   useEffect(() => {
     if (!bookingFlowOpen) {
@@ -1182,6 +1218,7 @@ export const PropertyDetailShell: React.FC<{
             <div className="space-y-4 rounded-[28px] border border-slate-200/80 bg-slate-50/80 p-4 shadow-[0_24px_60px_-44px_rgba(15,23,42,0.18)] sm:p-5">
               <div className="space-y-3">
                 <Button
+                  ref={primaryBookingCtaRef}
                   type="button"
                   variant="primary"
                   size="lg"
@@ -1673,37 +1710,37 @@ export const PropertyDetailShell: React.FC<{
         </div>
       ) : null}
 
-      {!bookingFlowOpen ? (
-        <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] lg:hidden">
-          <section
-            role="region"
-            aria-label="Resumen móvil de la reserva"
-            className="pointer-events-auto mx-auto max-w-xl rounded-[24px] border border-slate-200/90 bg-white/96 px-4 py-3 shadow-[0_-18px_40px_-30px_rgba(15,23,42,0.28)] backdrop-blur"
-          >
-            <div className="space-y-2.5">
-              <div className="flex items-center justify-between gap-3">
-                <p className="min-w-0 truncate text-xs font-medium leading-5 text-slate-600">{mobileBookingSummary}</p>
-                <p className="shrink-0 text-sm font-bold text-slate-950">{nightly ? `${formatCurrency(nightly)} / noche` : '—'}</p>
-              </div>
-              <div className="space-y-2">
-                <Button
-                  type="button"
-                  variant="primary"
-                  size="lg"
-                  fullWidth
-                  onClick={handleOpenBookingEntry}
-                  className="min-h-[3.4rem] rounded-[22px] text-[0.95rem] font-extrabold shadow-[0_24px_46px_-28px_rgba(67,56,202,0.42)]"
-                >
-                  <>
-                    <Icons.Calendar className="h-4 w-4" />
-                    {bookingEntryCtaLabel}
-                  </>
-                </Button>
-              </div>
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:px-4 lg:px-6">
+        <section
+          role="region"
+          aria-label="Acceso rápido a disponibilidad"
+          aria-hidden={shouldShowStickyBookingBar ? undefined : true}
+          className={cn(
+            'pointer-events-auto mx-auto max-w-3xl rounded-[24px] border border-slate-200/90 bg-white/96 px-4 py-3 shadow-[0_-18px_40px_-30px_rgba(15,23,42,0.28)] backdrop-blur transition-[opacity,transform] duration-200 ease-out sm:px-5 sm:py-3.5',
+            shouldShowStickyBookingBar ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0 pointer-events-none',
+          )}
+        >
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <p className="text-[1.05rem] font-black tracking-[-0.03em] text-slate-950 sm:text-[1.12rem]">{stickyBookingPriceLabel}</p>
             </div>
-          </section>
-        </div>
-      ) : null}
+
+            <Button
+              type="button"
+              variant="primary"
+              size="lg"
+              fullWidth={isMobileBookingLayout}
+              onClick={handleOpenBookingEntry}
+              className="min-h-[3.35rem] rounded-[22px] px-5 text-[0.95rem] font-extrabold shadow-[0_24px_46px_-28px_rgba(67,56,202,0.42)] sm:w-auto sm:min-w-[240px]"
+            >
+              <>
+                <Icons.Calendar className="h-4 w-4" />
+                {bookingEntryCtaLabel}
+              </>
+            </Button>
+          </div>
+        </section>
+      </div>
 
       {lightboxOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 p-4 sm:p-6" role="dialog" aria-modal="true">

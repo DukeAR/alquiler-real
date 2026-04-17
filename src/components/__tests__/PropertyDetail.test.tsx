@@ -1,5 +1,5 @@
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation, useParams } from 'react-router-dom';
 import FavoritesProvider from '../../contexts/FavoritesContext';
 import { AuthProvider } from '../../contexts/AuthContext';
@@ -25,6 +25,8 @@ import {
   getVerificationPreferenceState,
 } from '../../lib/verificationPreference';
 import PropertyDetail from '../PropertyDetail';
+
+const originalIntersectionObserver = globalThis.IntersectionObserver;
 
 // Mock the modal system
 vi.mock('../../lib/modal', () => ({
@@ -128,11 +130,76 @@ const waitForPropertyHeading = () => waitFor(() => expect(screen.getByRole('head
 
 const getDesktopBookingContext = () => screen.getByRole('region', { name: /contexto de la reserva/i });
 
-const getMobileBookingSummary = () => screen.getByRole('region', { name: /resumen móvil de la reserva/i });
+const getStickyBookingBar = () => screen.getByRole('region', { name: /acceso rápido a disponibilidad/i });
+
+const queryStickyBookingBar = () => screen.queryByRole('region', { name: /acceso rápido a disponibilidad/i });
 
 const getBookingFlowDialog = () => screen.getByRole('dialog', { name: /consultar disponibilidad/i });
 
 const DEFAULT_WINDOW_WIDTH = window.innerWidth;
+
+const installIntersectionObserverMock = () => {
+  const instances: Array<{
+    callback: IntersectionObserverCallback;
+    elements: Set<Element>;
+    trigger: (target: Element, isIntersecting: boolean) => void;
+  }> = [];
+
+  class MockIntersectionObserver {
+    callback: IntersectionObserverCallback;
+    elements = new Set<Element>();
+
+    constructor(callback: IntersectionObserverCallback) {
+      this.callback = callback;
+      instances.push({
+        callback,
+        elements: this.elements,
+        trigger: (target: Element, isIntersecting: boolean) => {
+          callback([
+            {
+              target,
+              isIntersecting,
+              intersectionRatio: isIntersecting ? 1 : 0,
+            } as IntersectionObserverEntry,
+          ], this as unknown as IntersectionObserver);
+        },
+      });
+    }
+
+    observe = (target: Element) => {
+      this.elements.add(target);
+      this.callback([
+        {
+          target,
+          isIntersecting: true,
+          intersectionRatio: 1,
+        } as IntersectionObserverEntry,
+      ], this as unknown as IntersectionObserver);
+    };
+
+    disconnect = () => {};
+
+    unobserve = (target: Element) => {
+      this.elements.delete(target);
+    };
+
+    takeRecords = () => [];
+
+    root = null;
+
+    rootMargin = '0px';
+
+    thresholds = [0.2];
+  }
+
+  Object.defineProperty(globalThis, 'IntersectionObserver', {
+    configurable: true,
+    writable: true,
+    value: MockIntersectionObserver,
+  });
+
+  return instances;
+};
 
 const setWindowWidth = (width: number) => {
   Object.defineProperty(window, 'innerWidth', {
@@ -194,6 +261,11 @@ const advanceToConfirmationStep = async () => {
 
 beforeEach(() => {
   clearVerificationPreferenceState();
+  Object.defineProperty(globalThis, 'IntersectionObserver', {
+    configurable: true,
+    writable: true,
+    value: undefined,
+  });
 
   (apiJson as any).mockImplementation(async (url: string, options?: RequestInit) => {
     if (url.endsWith('/reviews')) return [{ id: 'r1', reviewer_id: 'u1', rating: 5, comment: 'Buen lugar' }];
@@ -251,6 +323,11 @@ beforeEach(() => {
 afterEach(() => {
   clearVerificationPreferenceState();
   setWindowWidth(DEFAULT_WINDOW_WIDTH);
+  Object.defineProperty(globalThis, 'IntersectionObserver', {
+    configurable: true,
+    writable: true,
+    value: originalIntersectionObserver,
+  });
   vi.restoreAllMocks();
 });
 
@@ -393,14 +470,10 @@ describe('PropertyDetail', () => {
     await waitForPropertyHeading();
 
     const desktopContext = getDesktopBookingContext();
-    const mobileContext = getMobileBookingSummary();
 
     expect(within(desktopContext).getByRole('button', { name: /consultar disponibilidad/i })).toBeDefined();
     expect(within(desktopContext).getByText('/ noche')).toBeDefined();
-    expect(within(mobileContext).getByText('1 huésped · Total al elegir fechas')).toBeDefined();
-    expect(within(mobileContext).getByRole('button', { name: /consultar disponibilidad/i })).toBeDefined();
-    expect(within(mobileContext).queryByText('No estás reservando todavía')).toBeNull();
-    expect(within(mobileContext).getByText(/120/)).toBeDefined();
+    expect(queryStickyBookingBar()).toBeNull();
 
     const checkInIso = isoPlusDays(2);
     const checkOutIso = isoPlusDays(5);
@@ -432,9 +505,12 @@ describe('PropertyDetail', () => {
 
     await waitForPropertyHeading();
 
-    const mobileContext = getMobileBookingSummary();
+    await waitFor(() => expect(getStickyBookingBar()).toBeDefined());
+
+    const mobileContext = getStickyBookingBar();
 
     expect(within(mobileContext).getByRole('button', { name: /consultar disponibilidad/i })).toBeDefined();
+    expect(within(mobileContext).getByText(/120/)).toBeDefined();
     expect(screen.queryByRole('button', { name: /^siguiente$/i })).toBeNull();
 
     const checkInIso = isoPlusDays(2);
@@ -455,6 +531,35 @@ describe('PropertyDetail', () => {
     fireEvent.click(within(bookingFlow).getByRole('button', { name: /seguir al resumen/i }));
     await waitFor(() => expect(screen.getByText('Revisá antes de enviarla')).toBeDefined());
     expect(within(bookingFlow).getByRole('button', { name: /enviar solicitud/i })).toBeDefined();
+  });
+
+  test('shows and hides the sticky CTA on desktop based on the main CTA visibility', async () => {
+    const observerInstances = installIntersectionObserverMock();
+
+    renderPropertyDetail();
+
+    await waitForPropertyHeading();
+
+    const desktopContext = getDesktopBookingContext();
+    const primaryCta = within(desktopContext).getByRole('button', { name: /consultar disponibilidad/i });
+    const stickyObserver = observerInstances.find((instance) => instance.elements.has(primaryCta));
+
+    expect(queryStickyBookingBar()).toBeNull();
+    expect(stickyObserver).toBeDefined();
+
+    await act(async () => {
+      stickyObserver?.trigger(primaryCta, false);
+    });
+
+    await waitFor(() => expect(getStickyBookingBar()).toBeDefined());
+    expect(within(getStickyBookingBar()).getByText(/120/)).toBeDefined();
+    expect(within(getStickyBookingBar()).getByRole('button', { name: /consultar disponibilidad/i })).toBeDefined();
+
+    await act(async () => {
+      stickyObserver?.trigger(primaryCta, true);
+    });
+
+    await waitFor(() => expect(queryStickyBookingBar()).toBeNull());
   });
 
   test('preserves the current booking selection when the modal closes and reopens', async () => {
