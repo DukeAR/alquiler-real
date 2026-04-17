@@ -35,10 +35,14 @@ export const ExploreHero = ({
           <div className="pointer-events-none absolute inset-0">
             <div
               className="absolute inset-0 scale-[1.03] bg-cover bg-center"
-              style={{ backgroundImage: `url(${backgroundImage})` }}
+              style={{
+                backgroundImage: `url(${backgroundImage})`,
+                filter: 'saturate(0.92) sepia(0.08) brightness(0.98)',
+              }}
             />
-            <div className="absolute inset-0 bg-[linear-gradient(94deg,rgba(255,255,255,0.97)_10%,rgba(248,250,252,0.92)_38%,rgba(248,250,252,0.58)_64%,rgba(248,250,252,0.22)_100%)]" />
-            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.26)_0%,rgba(255,255,255,0.06)_42%,rgba(255,255,255,0.3)_100%)]" />
+            <div className="absolute inset-0 bg-[linear-gradient(96deg,rgba(247,241,232,0.92)_8%,rgba(244,237,228,0.76)_34%,rgba(236,229,217,0.5)_62%,rgba(228,220,206,0.3)_100%)]" />
+            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,249,241,0.16)_0%,rgba(255,248,240,0.04)_42%,rgba(224,214,199,0.2)_100%)]" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_34%,rgba(226,204,179,0.22)_0%,rgba(226,204,179,0)_44%)]" />
           </div>
         ) : null}
 

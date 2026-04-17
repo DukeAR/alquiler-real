@@ -31,7 +31,7 @@ describe('ExploreFiltersBar', () => {
 
     expect(checkbox).not.toBeChecked();
     expect(screen.getByText('3 o más comprobaciones reales')).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: 'Mayor verificación' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Más verificados primero' })).toBeInTheDocument();
 
     fireEvent.click(checkbox);
 

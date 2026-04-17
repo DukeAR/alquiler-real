@@ -190,7 +190,7 @@ export const ExplorePage = () => {
   };
 
   return (
-    <div className="bg-[linear-gradient(180deg,#eff4f8_0%,#f8fafc_18%,#ffffff_36%,#ffffff_100%)] pb-12 md:pb-14">
+    <div className="bg-[linear-gradient(180deg,#efe6d9_0%,#f4ede2_18%,#faf5ed_38%,#f6efe5_100%)] pb-12 md:pb-14">
       <section className="pb-4 pt-8 md:pb-5 md:pt-10 lg:pt-12">
         <div className="app-page-explore">
           <ExploreHero
