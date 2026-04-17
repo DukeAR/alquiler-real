@@ -78,16 +78,11 @@ describe('PropertyCard', () => {
     expect(screen.queryByText('Precio por noche')).toBeNull();
     expect(screen.queryByText('4.8')).toBeNull();
     expect(screen.queryByText('12 reseñas')).toBeNull();
-    expect(screen.getByText('Más verificado')).toBeInTheDocument();
     const verificationBlock = screen.getByTestId('property-card-verification');
-    expect(verificationBlock).toHaveAttribute('aria-label', 'Verificación parcial (4/5)');
-    expect(within(verificationBlock).getByText('Verificación parcial')).toHaveClass('text-emerald-900');
-    expect(within(verificationBlock).getByText('(4/5)')).toHaveClass('text-emerald-700');
-    expect(within(verificationBlock).queryByText('Este aviso tiene información confirmada, pero hay puntos pendientes.')).toBeNull();
-    expect(within(verificationBlock).getAllByRole('listitem')).toHaveLength(3);
-    expect(within(verificationBlock).getByText(/^Anfitrión$/)).toBeInTheDocument();
-    expect(within(verificationBlock).getByText(/^Ubicación$/)).toBeInTheDocument();
-    expect(within(verificationBlock).getByText(/^Fotos \/ video$/)).toBeInTheDocument();
+    expect(verificationBlock).toHaveAttribute('aria-label', '4 datos comprobados');
+    expect(within(verificationBlock).getByText('4 datos comprobados')).toHaveClass('text-slate-500');
+    expect(within(verificationBlock).queryAllByRole('listitem')).toHaveLength(0);
+    expect(screen.queryByText('Más verificado')).toBeNull();
     expect(screen.queryByText('Confianza visible')).toBeNull();
     expect(screen.queryByText('Anfitrión con buen historial')).toBeNull();
     expect(screen.queryByText('12 reseñas reales')).toBeNull();
@@ -111,14 +106,10 @@ describe('PropertyCard', () => {
       />,
     );
 
-    const verificationBlock = screen.getByLabelText('Verificación parcial (2/5)');
+    const verificationBlock = screen.getByLabelText('2 datos comprobados');
 
-    expect(within(verificationBlock).getByText('Verificación parcial')).toBeInTheDocument();
-    expect(within(verificationBlock).getByText('(2/5)')).toBeInTheDocument();
-    expect(within(verificationBlock).queryByText('Este aviso tiene información confirmada, pero hay puntos pendientes.')).toBeNull();
-    expect(within(verificationBlock).getAllByRole('listitem')).toHaveLength(2);
-    expect(within(verificationBlock).getByText(/^Ubicación$/)).toBeInTheDocument();
-    expect(within(verificationBlock).getByText(/^Geolocalización$/)).toBeInTheDocument();
+    expect(within(verificationBlock).getByText('2 datos comprobados')).toBeInTheDocument();
+    expect(within(verificationBlock).queryAllByRole('listitem')).toHaveLength(0);
     expect(screen.queryByText('Más verificado')).toBeNull();
   });
 
@@ -143,7 +134,7 @@ describe('PropertyCard', () => {
     );
 
     expect(screen.queryByText('Anfitrión con buen historial')).toBeNull();
-    expect(screen.getByText('Verificación parcial')).toBeInTheDocument();
+    expect(screen.getByText('4 datos comprobados')).toBeInTheDocument();
   });
 
   test('keeps the badge hidden unless the ordering context marks the card as a real standout', () => {
@@ -154,7 +145,7 @@ describe('PropertyCard', () => {
     );
 
     expect(screen.queryByText('Más verificado')).toBeNull();
-    expect(screen.getByText('Verificación parcial')).toBeInTheDocument();
+    expect(screen.getByText('4 datos comprobados')).toBeInTheDocument();
   });
 
   test('shows the presencial badge on the image only for max score listings with onsite verification', () => {
@@ -168,12 +159,13 @@ describe('PropertyCard', () => {
       />,
     );
 
-    expect(screen.getAllByText('Verificado presencialmente').length).toBeGreaterThan(1);
-    expect(screen.getByText('(5/5)')).toBeInTheDocument();
+    expect(screen.getByText('Verificado presencialmente')).toBeInTheDocument();
+    expect(screen.queryByText('5 datos comprobados')).toBeNull();
+    expect(screen.queryByText('(5/5)')).toBeNull();
     expect(screen.queryByText('Más verificado')).toBeNull();
   });
 
-  test('deepens the green verification emphasis when the card is highlighted', () => {
+  test('keeps the standard verification summary subtle even when the card is highlighted', () => {
     render(
       <PropertyCard
         property={sampleProperty}
@@ -183,11 +175,10 @@ describe('PropertyCard', () => {
 
     const trustLine = screen.getByTestId('property-card-verification');
 
-    expect(within(trustLine).getByText('Verificación parcial')).toHaveClass('text-emerald-950');
-    expect(within(trustLine).getByText('(4/5)')).toHaveClass('text-emerald-700');
+    expect(within(trustLine).getByText('4 datos comprobados')).toHaveClass('text-slate-500');
   });
 
-  test('shows the featured badge without extra support copy when the card is highlighted as the most reliable option', () => {
+  test('keeps the featured card free of extra verification badges', () => {
     render(
       <PropertyCard
         property={sampleProperty}
@@ -197,18 +188,19 @@ describe('PropertyCard', () => {
       />,
     );
 
-    expect(screen.getByText('Más verificado')).toBeInTheDocument();
+    expect(screen.queryByText('Más verificado')).toBeNull();
     expect(screen.queryByText('Buena relación precio / información')).toBeNull();
     expect(screen.queryByText('Más comprobado')).toBeNull();
+    expect(screen.getByText('4 datos comprobados')).toBeInTheDocument();
   });
 
   test('keeps the favorites variant free of Explore guidance labels', () => {
     render(<PropertyCard property={sampleProperty} variant="favorites" onClick={vi.fn()} />);
 
-    const verificationBlock = screen.getByLabelText('Verificación parcial (4/5)');
+    const verificationBlock = screen.getByLabelText('4 datos comprobados');
 
-    expect(within(verificationBlock).getByText('Verificación parcial')).toBeInTheDocument();
-    expect(within(verificationBlock).getAllByRole('listitem')).toHaveLength(3);
+    expect(within(verificationBlock).getByText('4 datos comprobados')).toBeInTheDocument();
+    expect(within(verificationBlock).queryAllByRole('listitem')).toHaveLength(0);
     expect(screen.queryByText('Más verificado')).toBeNull();
     expect(screen.queryByText('Más confiable')).toBeNull();
     expect(screen.queryByText('Anfitrión con buen historial')).toBeNull();

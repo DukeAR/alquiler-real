@@ -5,10 +5,8 @@ import { cn, formatCurrency } from '../lib/utils';
 import { getPropertyVerificationDetails } from '../lib/propertyVerification';
 import { Property } from '../services/geminiService';
 import { Button } from './ui/Button';
-import { Badge } from './ui/Badge';
 import { Card } from './ui/Card';
 import { PresencialVerificationBadge } from './ui/PresencialVerificationBadge';
-import { VerificationSeal } from './ui/VerificationSeal';
 
 const normalizePropertyText = (value?: string) => (value ?? '')
   .normalize('NFD')
@@ -63,8 +61,6 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   isFavorite = false,
   onFavoriteToggle,
   variant = 'default',
-  verificationGuidanceLabel = null,
-  emphasizeVerification = false,
   decisionFeatured = false,
   className,
 }) => {
@@ -74,12 +70,10 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   const isFavoritesVariant = variant === 'favorites';
   const isDecisionFeatured = decisionFeatured && !isFavoritesVariant;
   const verificationDetails = getPropertyVerificationDetails(property);
-  const shouldEmphasizeVerification = emphasizeVerification && !isFavoritesVariant;
   const propertyTypeLabel = getPropertyTypeLabel(property);
   const guestCapacityLabel = getGuestCapacityLabel(Number(property.maxGuests) || null);
-  const verificationTagLabel = !isFavoritesVariant && !isDecisionFeatured ? verificationGuidanceLabel : null;
   const showPresencialBadge = verificationDetails.isFullyVerified;
-  const verificationHighlights = verificationDetails.compactItems.slice(0, 3);
+  const standardVerificationSummary = `${verificationDetails.score} ${verificationDetails.score === 1 ? 'dato comprobado' : 'datos comprobados'}`;
   const handleFavoriteToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
     const { user } = auth;
@@ -125,23 +119,15 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           referrerPolicy="no-referrer"
         />
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-slate-950/24 via-slate-950/8 to-transparent" />
-        
-        <div className="absolute inset-x-0 top-0 flex items-start justify-between gap-3 p-4">
-          {showPresencialBadge ? (
-            <PresencialVerificationBadge />
-          ) : isDecisionFeatured ? (
-            <Badge variant="neutral" size="md" className="border-brand/25 bg-white/96 px-3 py-1.5 text-slate-950 shadow-[0_14px_26px_-20px_rgba(15,23,42,0.18)] backdrop-blur-sm">
-              <span>Más verificado</span>
-            </Badge>
-          ) : verificationTagLabel ? (
-            <Badge variant="neutral" size="md" className="border-white/75 bg-white/96 px-3 py-1.5 text-slate-900 shadow-[var(--app-shadow-subtle)] backdrop-blur-sm">
-              <span>{verificationTagLabel}</span>
-            </Badge>
-          ) : (
-            <span />
-          )}
 
-          {user ? (
+        {showPresencialBadge ? (
+          <div className="absolute left-4 top-4">
+            <PresencialVerificationBadge className="border-emerald-200/80 bg-emerald-50/94 text-emerald-950 shadow-[0_14px_28px_-22px_rgba(5,150,105,0.22)]" />
+          </div>
+        ) : null}
+
+        {user ? (
+          <div className="absolute right-4 top-4">
             <Button
               type="button"
               variant="secondary"
@@ -158,13 +144,13 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
             >
               <Icons.Heart className={`h-4 w-4 ${isFavorite ? 'fill-current' : ''}`} />
             </Button>
-          ) : null}
-        </div>
+          </div>
+        ) : null}
       </div>
 
       <div className="flex flex-1 flex-col gap-4 p-5 sm:p-5 md:p-6">
-        <div className="space-y-4">
-          <div className="space-y-1.5">
+        <div className="space-y-3.5">
+          <div className="space-y-1.5 min-h-[4.5rem]">
             <p className="eyebrow">{propertyTypeLabel}</p>
             <h3 className="section-title line-clamp-2 text-[1.18rem] font-semibold leading-[1.18] tracking-[-0.02em] transition-colors duration-150 group-hover:text-slate-950 md:text-[1.25rem]">
               {property.title}
@@ -178,27 +164,15 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
             </p>
           </div>
 
-          <div data-testid="property-card-verification" aria-label={verificationDetails.label} className="space-y-2.5 rounded-[26px] border border-slate-200/80 bg-slate-50/80 px-4 py-4">
-            <VerificationSeal
-              score={verificationDetails.score}
-              maxScore={verificationDetails.max}
-              label={verificationDetails.compactLabel}
-              size="sm"
-              emphasized={shouldEmphasizeVerification}
-            />
-
-            {verificationHighlights.length > 0 ? (
-              <ul className="flex flex-wrap gap-2" aria-label="Comprobaciones visibles">
-                {verificationHighlights.map((item) => (
-                  <li
-                    key={item.key}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200/80 bg-emerald-50/80 px-3 py-1.5 text-[0.76rem] font-semibold text-emerald-900"
-                  >
-                    <span className="text-[0.72rem] text-emerald-700">✔</span>
-                    <span>{item.shortLabel}</span>
-                  </li>
-                ))}
-              </ul>
+          <div
+            data-testid="property-card-verification"
+            aria-label={showPresencialBadge ? 'Verificado presencialmente' : standardVerificationSummary}
+            className="min-h-[1.25rem]"
+          >
+            {!showPresencialBadge ? (
+              <p className="text-[0.82rem] font-medium leading-5 text-slate-500">
+                {standardVerificationSummary}
+              </p>
             ) : null}
           </div>
         </div>
