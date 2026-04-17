@@ -26,7 +26,6 @@ import { Card } from './ui/Card';
 import { NoticeBanner } from './ui/NoticeBanner';
 import { SectionTitle } from './ui/SectionTitle';
 import { TrustSignalsInline, getTrustSignalsFromInteractionHistory, getTrustSignalsFromItems, type TrustSignal } from './ui/TrustSignalsInline';
-import { VerificationSeal } from './ui/VerificationSeal';
 import { PropertyVerificationPanel } from './verification/PropertyVerificationPanel';
 import { VerificationInfoPanel } from './verification/VerificationInfoPanel';
 
@@ -297,8 +296,6 @@ const getDecisionAmenityLabel = (amenities?: string[]) => {
   return selected.slice(0, 3).join(' · ');
 };
 
-const getVerificationDecisionMessage = (score: number) => (score >= 4 ? 'Listo para coordinar' : null);
-
 const GuestCounterCard: React.FC<GuestCounterCardProps> = ({
   label,
   helper,
@@ -428,8 +425,8 @@ export const PropertyDetailShell: React.FC<{
     bathroomsCount ? formatCountLabel(bathroomsCount, 'baño', 'baños') : null,
   ].filter((value): value is string => Boolean(value));
   const verificationDetails = getPropertyVerificationDetails(property);
-  const verificationDecisionMessage = getVerificationDecisionMessage(verificationDetails.score);
-  const verificationPreviewItems = verificationDetails.compactItems.slice(0, 3);
+  const verificationPreviewMode = verificationDetails.previewMode;
+  const verificationPreviewItems = verificationDetails.detailItems;
   const hostResponseSignal = getHostResponseSignal(property.hostInteractionHistory);
   const completedReservationsLabel = property.hostInteractionHistory?.completedReservationsCount
     ? `${property.hostInteractionHistory.completedReservationsCount} ${property.hostInteractionHistory.completedReservationsCount === 1 ? 'reserva cerrada' : 'reservas cerradas'}`
@@ -1291,37 +1288,62 @@ export const PropertyDetailShell: React.FC<{
 
               <section
                 data-testid="property-verification-preview"
-                className="space-y-3 border-t border-slate-200/70 pt-4"
+                aria-label="Estado de verificación"
+                className="border-t border-slate-200/70 pt-4"
               >
-                <div className="flex flex-wrap items-start gap-3">
-                  <VerificationSeal
-                    score={verificationDetails.score}
-                    maxScore={verificationDetails.max}
-                    label={verificationDetails.compactLabel}
-                    size="md"
-                    ariaLabel={verificationDetails.summaryLabel}
-                  />
+                {verificationPreviewMode === 'premium' ? (
+                  <div className="rounded-[24px] border border-emerald-200/70 bg-emerald-50/65 p-4 sm:p-4.5">
+                    <div className="flex items-start gap-3">
+                      <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] border border-emerald-200/80 bg-white text-emerald-700 shadow-[0_16px_30px_-24px_rgba(15,23,42,0.2)]">
+                        <Icons.Shield className="h-5 w-5" />
+                      </span>
 
-                  {verificationDecisionMessage ? (
-                    <span className="inline-flex items-center rounded-full border border-emerald-200/80 bg-emerald-50/90 px-3.5 py-2 text-sm font-semibold text-emerald-900 shadow-[0_14px_28px_-24px_rgba(5,150,105,0.44)]">
-                      {verificationDecisionMessage}
-                    </span>
-                  ) : null}
-                </div>
+                      <div className="min-w-0 space-y-1.5">
+                        <p className="text-sm font-semibold tracking-[-0.01em] text-emerald-950">
+                          {verificationDetails.premiumTitle}
+                        </p>
+                        <p className="text-sm leading-6 text-slate-700">
+                          {verificationDetails.premiumDescription}
+                        </p>
+                        {verificationDetails.premiumSupportingText ? (
+                          <p className="text-sm leading-6 text-slate-600">
+                            {verificationDetails.premiumSupportingText}
+                          </p>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <ul className="space-y-2.5" aria-label="Comprobaciones de verificación">
+                    {verificationPreviewItems.map((item) => {
+                      const isComplete = item.status === 'complete';
 
-                {verificationPreviewItems.length > 0 ? (
-                  <ul className="flex flex-wrap gap-2" aria-label="Comprobaciones visibles">
-                    {verificationPreviewItems.map((item) => (
-                      <li
-                        key={item.key}
-                        className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200/80 bg-emerald-50/80 px-3 py-1.5 text-[0.8rem] font-semibold text-emerald-900"
-                      >
-                        <span className="text-[0.74rem] text-emerald-700">✔</span>
-                        <span>{item.label}</span>
-                      </li>
-                    ))}
+                      return (
+                        <li
+                          key={item.key}
+                          data-status={item.status}
+                          className="flex items-center gap-3 rounded-[18px] border border-slate-200/80 bg-white px-3.5 py-3"
+                        >
+                          <span
+                            className={cn(
+                              'inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border',
+                              isComplete
+                                ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                                : 'border-slate-200 bg-slate-100 text-slate-400',
+                            )}
+                            aria-hidden="true"
+                          >
+                            {isComplete ? <Icons.Check className="h-3.5 w-3.5" /> : <Icons.Circle className="h-2.5 w-2.5 fill-current" />}
+                          </span>
+
+                          <span className={cn('text-sm leading-6', isComplete ? 'font-semibold text-slate-900' : 'font-medium text-slate-500')}>
+                            {item.detailLabel}
+                          </span>
+                        </li>
+                      );
+                    })}
                   </ul>
-                ) : null}
+                )}
               </section>
             </div>
           </div>
@@ -1353,18 +1375,20 @@ export const PropertyDetailShell: React.FC<{
             </div>
           </Card>
 
-          <div data-motion-block className="app-motion-block">
-            <VerificationInfoPanel />
-          </div>
-
           {property.isOwnedByViewer === true ? (
-            <div data-motion-block className="app-motion-block">
-              <PropertyVerificationPanel
-                property={property as AppProperty}
-                onRefresh={onRefresh}
-                onOpenIdentityVerification={onOpenIdentityVerification}
-              />
-            </div>
+            <>
+              <div data-motion-block className="app-motion-block">
+                <VerificationInfoPanel />
+              </div>
+
+              <div data-motion-block className="app-motion-block">
+                <PropertyVerificationPanel
+                  property={property as AppProperty}
+                  onRefresh={onRefresh}
+                  onOpenIdentityVerification={onOpenIdentityVerification}
+                />
+              </div>
+            </>
           ) : null}
 
           <Card data-motion-block className="app-card-hover app-motion-block rounded-[32px] border-slate-200/80 bg-white p-6 shadow-[0_28px_70px_-50px_rgba(15,23,42,0.25)] sm:p-7">

@@ -145,6 +145,14 @@ const PROPERTY_VERIFICATION_DISPLAY_LABELS: Record<PropertyVerificationKey, stri
   availability: 'Disponibilidad validada',
 };
 
+const PROPERTY_VERIFICATION_DETAIL_LABELS: Record<PropertyVerificationKey, string> = {
+  identity: 'Anfitrión confirmado',
+  location: 'Ubicación verificada',
+  geolocation: 'Geolocalización precisa',
+  photos: 'Fotos reales',
+  availability: 'Disponibilidad validada',
+};
+
 const PROPERTY_VERIFICATION_COMPACT_PRIORITY: Record<PropertyVerificationKey, number> = {
   identity: 0,
   location: 1,
@@ -887,7 +895,15 @@ export const getPropertyVerificationBadge = (property: PropertyVerificationLike)
 export const getPropertyVerificationDetails = (property: PropertyVerificationLike) => {
   const verificationSummary = getPropertyVerificationSummary(property);
   const badge = getPropertyVerificationBadge({ ...property, verificationSummary });
-    const displayItems = getPropertyVerificationDisplayItems(verificationSummary.items);
+  const displayItems = getPropertyVerificationDisplayItems(verificationSummary.items);
+  const detailItems = displayItems.map((item) => {
+    const normalizedKey = normalizePropertyVerificationKey(typeof item.key === 'string' ? item.key : undefined);
+
+    return {
+      ...item,
+      detailLabel: normalizedKey ? PROPERTY_VERIFICATION_DETAIL_LABELS[normalizedKey] : item.label,
+    };
+  });
   const compactItems = verificationSummary.items
     .filter((item) => item.status === 'complete')
     .sort((left, right) => {
@@ -910,8 +926,13 @@ export const getPropertyVerificationDetails = (property: PropertyVerificationLik
   return {
     ...badge,
     items: displayItems,
+    detailItems,
     compactItems,
     compactSummary: compactItems.slice(0, 3).map((item) => item.shortLabel).join(' · '),
+    previewMode: badge.isFullyVerified ? 'premium' : 'standard',
+    premiumTitle: PRESENCIAL_VERIFICATION_LABEL,
+    premiumDescription: 'Esta propiedad fue validada en persona.',
+    premiumSupportingText: badge.isFullyVerified ? 'Incluye ubicación, anfitrión y datos confirmados.' : null,
     helperText: 'Ves las 5 comprobaciones reales, lo ya confirmado y lo que todavía falta validar.',
   };
 };
