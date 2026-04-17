@@ -4,21 +4,21 @@ import {
   getPropertyAdvancedVerificationItems,
   getPropertyVerificationBadge,
   getPropertyVerificationItems,
-  getPropertyVerificationProgress,
 } from '../../lib/propertyVerification';
 import { VERIFICATION_PRIVACY_NOTICES } from '../../lib/privacyPolicy';
-import { PLATFORM_PROPERTY_DISCLAIMER, PLATFORM_PUBLISHING_RESPONSIBILITY_NOTE } from '../../lib/platformTerms';
+import { PLATFORM_PROPERTY_DISCLAIMER } from '../../lib/platformTerms';
 import { showToast } from '../../lib/toast';
 import { cn } from '../../lib/utils';
 import type { Property, VerificationAsset } from '../../types';
+import HostAvailabilityPanel from '../HostAvailabilityPanel';
 import { Icons } from '../Icons';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { VerificationDetailsBlock } from '../ui/VerificationDetailsBlock';
-import { VerificationMeter, VerificationSnippetList } from '../ui/VerificationMeter';
+import { HostListingProgressPanel } from './HostListingProgressPanel';
 
-type VerificationUploadKind = 'photo' | 'video' | 'document';
+type VerificationUploadKind = 'video' | 'document';
 
 type PropertyVerificationPanelProps = {
   property: Property;
@@ -27,46 +27,10 @@ type PropertyVerificationPanelProps = {
   onOpenIdentityVerification?: () => void;
 };
 
-type VerificationMetricCardProps = {
-  label: string;
-  value: string;
-  helper: string;
-  tone?: 'neutral' | 'brand' | 'success';
-};
-
-const metricToneClasses = {
-  neutral: {
-    card: 'border-slate-200/80 bg-white/92',
-    value: 'text-slate-950',
-  },
-  brand: {
-    card: 'border-brand/15 bg-brand/8',
-    value: 'text-brand-dark',
-  },
-  success: {
-    card: 'border-emerald-200/80 bg-emerald-50/85',
-    value: 'text-emerald-800',
-  },
-} as const;
-
 const uploadAcceptMap: Record<VerificationUploadKind, string> = {
-  photo: 'image/*',
   video: 'video/*',
   document: 'application/pdf,image/*',
 };
-
-const VerificationMetricCard = ({
-  label,
-  value,
-  helper,
-  tone = 'neutral',
-}: VerificationMetricCardProps) => (
-  <div className={cn('rounded-[24px] border p-4 shadow-[0_18px_38px_-34px_rgba(15,23,42,0.2)]', metricToneClasses[tone].card)}>
-    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">{label}</p>
-    <p className={cn('mt-3 text-2xl font-semibold tracking-tight', metricToneClasses[tone].value)}>{value}</p>
-    <p className="mt-2 text-sm leading-6 text-slate-500">{helper}</p>
-  </div>
-);
 
 const AssetPreviewStrip = ({
   title,
@@ -138,24 +102,18 @@ export const PropertyVerificationPanel = ({
   onOpenIdentityVerification,
 }: PropertyVerificationPanelProps) => {
   const [uploadingKind, setUploadingKind] = useState<VerificationUploadKind | null>(null);
-  const photoInputRef = useRef<HTMLInputElement | null>(null);
+  const [availabilityExpanded, setAvailabilityExpanded] = useState(false);
   const videoInputRef = useRef<HTMLInputElement | null>(null);
   const documentInputRef = useRef<HTMLInputElement | null>(null);
 
   const verificationItems = getPropertyVerificationItems(property);
   const verificationBadge = getPropertyVerificationBadge({ ...property, verificationItems });
-  const verificationProgress = getPropertyVerificationProgress({ ...property, verificationItems });
   const advancedItems = getPropertyAdvancedVerificationItems(property);
   const pendingItems = verificationItems.filter((item) => item.status !== 'complete');
   const photoAssets = Array.isArray(property.verificationMedia?.photos) ? property.verificationMedia.photos : [];
   const videoAsset = property.verificationMedia?.video ?? null;
   const documentAssets = Array.isArray(property.verificationMedia?.documents) ? property.verificationMedia.documents : [];
   const ownerView = property.isOwnedByViewer === true;
-  const photoCount = Math.max(0, Number(property.verificationPhotoCount ?? photoAssets.length ?? 0));
-  const videoCount = Math.max(0, Number(property.verificationVideoCount ?? (videoAsset ? 1 : 0)));
-  const documentCount = Math.max(0, Number(property.verificationDocumentCount ?? documentAssets.length ?? 0));
-  const documentsVerifiedCount = Math.max(0, Number(property.verificationDocumentsReviewedCount ?? 0));
-  const hasRealMedia = photoCount > 0 || videoCount > 0 || property.materialVerified === true || videoAsset !== null || property.videoValidated === true;
 
   const uploadFiles = async (kind: VerificationUploadKind, fileList: FileList | null) => {
     if (!property.id || !fileList || fileList.length === 0) {
@@ -179,11 +137,7 @@ export const PropertyVerificationPanel = ({
 
       showToast(
         'Validacion del aviso',
-        kind === 'photo'
-          ? files.length === 1
-            ? 'La foto ya se sumo a las comprobaciones visibles.'
-            : 'Las fotos ya se sumaron a las comprobaciones visibles.'
-          : kind === 'video'
+        kind === 'video'
             ? 'El video ya quedo cargado como respaldo fuerte del aviso.'
             : 'La documentacion privada ya quedo cargada para revision interna.',
         'success',
@@ -192,7 +146,6 @@ export const PropertyVerificationPanel = ({
       showToast('Validacion del aviso', error?.message || 'No pudimos guardar estos archivos.', 'error');
     } finally {
       setUploadingKind(null);
-      if (photoInputRef.current) photoInputRef.current.value = '';
       if (videoInputRef.current) videoInputRef.current.value = '';
       if (documentInputRef.current) documentInputRef.current.value = '';
     }
@@ -258,14 +211,6 @@ export const PropertyVerificationPanel = ({
   return (
     <Card className={cn('rounded-[32px] border-slate-200/80 bg-white p-6 shadow-[0_28px_70px_-50px_rgba(15,23,42,0.25)] sm:p-7', className)}>
       <input
-        ref={photoInputRef}
-        type="file"
-        accept={uploadAcceptMap.photo}
-        multiple
-        className="hidden"
-        onChange={(event) => void uploadFiles('photo', event.target.files)}
-      />
-      <input
         ref={videoInputRef}
         type="file"
         accept={uploadAcceptMap.video}
@@ -282,114 +227,29 @@ export const PropertyVerificationPanel = ({
       />
 
       <div className="space-y-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="space-y-2">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Verificacion del aviso</p>
-            <h2 className="text-2xl font-semibold tracking-tight text-slate-950">Mejora la publicacion sin frenarla</h2>
-            <p className="max-w-3xl text-sm leading-6 text-slate-600">{verificationProgress.summary} {verificationProgress.nextStep}</p>
+        <HostListingProgressPanel
+          property={property}
+          onRefresh={onRefresh}
+          onOpenIdentityVerification={onOpenIdentityVerification}
+          onToggleAvailability={() => setAvailabilityExpanded((currentValue) => !currentValue)}
+          isAvailabilityOpen={availabilityExpanded}
+        />
+
+        {availabilityExpanded ? (
+          <div className="rounded-[26px] border border-slate-200/80 bg-slate-50/70 p-4">
+            <HostAvailabilityPanel propertyId={property.id} propertyTitle={property.title} />
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Badge variant="neutral" size="sm" className="border-brand/15 bg-brand/8 text-brand-dark">
-              {verificationBadge.label}
-            </Badge>
-            {pendingItems.length === 0 ? (
-              <Badge variant="neutral" size="sm" className="border-emerald-200/80 bg-emerald-50 text-emerald-700">
-                Aviso claro
-              </Badge>
-            ) : null}
-          </div>
-        </div>
+        ) : null}
 
-        <div className="rounded-[24px] border border-slate-200/80 bg-slate-50/85 p-4 text-sm leading-6 text-slate-600">
-          {PLATFORM_PUBLISHING_RESPONSIBILITY_NOTE}
-        </div>
-
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <VerificationMetricCard
-            label="Comprobaciones visibles"
-            value={`${verificationBadge.score} / ${verificationBadge.max}`}
-            helper="Es lo que hoy ve cualquier persona cuando entra al aviso."
-            tone={verificationBadge.score >= 4 ? 'success' : 'brand'}
-          />
-          <VerificationMetricCard
-            label="Material real"
-            value={hasRealMedia ? 'Listo' : 'Pendiente'}
-            helper={hasRealMedia ? 'Ya hay fotos o video reales visibles para quien revisa el aviso.' : 'Subí fotos o video reales para mostrar el lugar como es.'}
-            tone={hasRealMedia ? 'success' : 'neutral'}
-          />
-          <VerificationMetricCard
-            label="Disponibilidad validada"
-            value={property.availabilityValidated ? 'Lista' : 'Pendiente'}
-            helper={property.availabilityValidated ? 'Ya hay calendario o reservas registradas dentro de la plataforma.' : 'Sumá bloqueos o reservas registradas para validar la disponibilidad.'}
-            tone={property.availabilityValidated ? 'success' : 'neutral'}
-          />
-          <VerificationMetricCard
-            label="Documentacion interna"
-            value={documentCount > 0 ? `${documentCount}` : 'Opcional'}
-            helper={documentCount > 0 ? `${documentsVerifiedCount} revisados hasta ahora.` : 'No hace falta para publicar. Queda privada y ayuda a moderacion o revision.'}
-            tone={documentCount > 0 ? 'brand' : 'neutral'}
-          />
-        </div>
-
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)]">
           <div className="space-y-4">
-            <VerificationMeter
-              summary={{
-                score: verificationBadge.score,
-                maxScore: verificationBadge.max,
-                items: verificationItems,
-              }}
-              eyebrow="Comprobaciones visibles"
-              helper="Las 5 comprobaciones visibles se completan por partes y ayudan a que el aviso se entienda mejor."
-              tone={verificationBadge.score >= 4 ? 'success' : 'brand'}
-            />
-
-            <div className="grid gap-4 lg:grid-cols-2">
-              <div className="space-y-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Ya completado</p>
-                <VerificationSnippetList
-                  summary={{ score: verificationBadge.score, maxScore: verificationBadge.max, items: verificationItems }}
-                  status="complete"
-                  showDescriptions={false}
-                  emptyText="Todavia no hay comprobaciones completadas en este aviso."
-                />
-              </div>
-
-              <div className="space-y-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Siguiente paso sugerido</p>
-                <VerificationSnippetList
-                  summary={{ score: verificationBadge.score, maxScore: verificationBadge.max, items: verificationItems }}
-                  status="pending"
-                  limit={3}
-                  showDescriptions={false}
-                  emptyText="Las comprobaciones visibles ya quedaron completas."
-                />
-              </div>
-            </div>
-
             <div className="rounded-[24px] border border-slate-200/80 bg-slate-50/85 p-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Acciones rapidas</p>
-                  <p className="mt-1 text-sm leading-6 text-slate-600">Fotos o video reales, ubicación precisa y calendario al día ayudan a que el aviso se entienda mejor. La documentación queda privada para moderación o revisión interna.</p>
-                </div>
+              <div className="space-y-1">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Acciones complementarias</p>
+                <p className="text-sm leading-6 text-slate-600">Además del progreso visible, desde acá podés sumar video real y respaldo privado para revisión interna.</p>
               </div>
 
               <div className="mt-4 flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  className="rounded-full"
-                  onClick={() => photoInputRef.current?.click()}
-                  disabled={uploadingKind !== null}
-                >
-                  <>
-                    <Icons.ImagePlus className="h-4 w-4" />
-                    {uploadingKind === 'photo' ? 'Subiendo fotos...' : 'Subir fotos reales'}
-                  </>
-                </Button>
-
                 <Button
                   type="button"
                   variant="secondary"
@@ -417,24 +277,43 @@ export const PropertyVerificationPanel = ({
                     {uploadingKind === 'document' ? 'Guardando documentos...' : 'Cargar documentos privados'}
                   </>
                 </Button>
-
-                {pendingItems.some((item) => item.key === 'identity') && onOpenIdentityVerification ? (
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    className="rounded-full"
-                    onClick={onOpenIdentityVerification}
-                    disabled={uploadingKind !== null}
-                  >
-                    <>
-                      <Icons.ShieldCheck className="h-4 w-4" />
-                      Validar identidad
-                    </>
-                  </Button>
-                ) : null}
               </div>
             </div>
+
+            <AssetPreviewStrip
+              title="Fotos de comprobacion"
+              assets={photoAssets}
+              emptyText="Cuando cargues fotos reales desde aca, aparecen como respaldo visible del aviso."
+              icon={<Icons.ImagePlus className="h-4 w-4 text-brand" />}
+            />
+
+            <AssetPreviewStrip
+              title="Documentacion privada"
+              assets={documentAssets}
+              emptyText={VERIFICATION_PRIVACY_NOTICES.propertyDocuments}
+              icon={<Icons.Lock className="h-4 w-4 text-slate-500" />}
+            />
+
+            {videoAsset ? (
+              <div className="overflow-hidden rounded-[24px] border border-slate-200/80 bg-slate-950 shadow-[0_24px_48px_-34px_rgba(15,23,42,0.45)]">
+                <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3 text-white/90">
+                  <div className="flex items-center gap-2 text-sm font-semibold">
+                    <Icons.Video className="h-4 w-4" />
+                    <span>Video cargado</span>
+                  </div>
+                  <Badge variant="neutral" size="sm" className="border-white/15 bg-white/10 text-white">
+                    Senal fuerte
+                  </Badge>
+                </div>
+                <video
+                  controls
+                  preload="metadata"
+                  src={videoAsset.url}
+                  poster={videoAsset.thumbnailUrl || undefined}
+                  className="aspect-video w-full bg-slate-950"
+                />
+              </div>
+            ) : null}
           </div>
 
           <div className="space-y-4">
@@ -463,41 +342,6 @@ export const PropertyVerificationPanel = ({
                 ))}
               </ul>
             </div>
-
-            <AssetPreviewStrip
-              title="Fotos de comprobacion"
-              assets={photoAssets}
-              emptyText="Cuando cargues fotos reales desde aca, aparecen como respaldo visible del aviso."
-              icon={<Icons.ImagePlus className="h-4 w-4 text-brand" />}
-            />
-
-            <AssetPreviewStrip
-              title="Documentacion privada"
-              assets={documentAssets}
-              emptyText={VERIFICATION_PRIVACY_NOTICES.propertyDocuments}
-              icon={<Icons.Lock className="h-4 w-4 text-slate-500" />}
-            />
-
-            {videoAsset ? (
-              <div className="overflow-hidden rounded-[24px] border border-slate-200/80 bg-slate-950 shadow-[0_24px_48px_-34px_rgba(15,23,42,0.45)]">
-                <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3 text-white/90">
-                  <div className="flex items-center gap-2 text-sm font-semibold">
-                    <Icons.Video className="h-4 w-4" />
-                    <span>Video cargado</span>
-                  </div>
-                  <Badge variant="neutral" size="sm" className="border-white/15 bg-white/10 text-white">
-                      Senal fuerte
-                  </Badge>
-                </div>
-                <video
-                  controls
-                  preload="metadata"
-                  src={videoAsset.url}
-                  poster={videoAsset.thumbnailUrl || undefined}
-                  className="aspect-video w-full bg-slate-950"
-                />
-              </div>
-            ) : null}
           </div>
         </div>
       </div>

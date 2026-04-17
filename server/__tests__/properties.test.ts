@@ -423,4 +423,57 @@ describe('Properties endpoints', () => {
       'house',
     ]));
   });
+
+  test('PUT /api/properties/:id lets the host complete location data and persist the visible location flag', async () => {
+    queryMock.mockImplementation(async (text: string, params?: unknown[]) => {
+      if (text.includes('UPDATE properties SET') && text.includes('"locationVerified" = COALESCE($9, "locationVerified")')) {
+        expect(params).toEqual([
+          undefined,
+          'Pinamar norte',
+          undefined,
+          undefined,
+          undefined,
+          -37.223344,
+          -56.778899,
+          undefined,
+          1,
+          'prop-1',
+          'host-1',
+        ]);
+
+        return {
+          rows: [
+            {
+              id: 'prop-1',
+              location: 'Pinamar norte',
+              lat: -37.223344,
+              lng: -56.778899,
+              locationVerified: 1,
+            },
+          ],
+        };
+      }
+
+      throw new Error(`Unexpected query: ${text}`);
+    });
+
+    const res = await request(app)
+      .put('/api/properties/prop-1')
+      .set('x-test-user-id', 'host-1')
+      .send({
+        location: 'Pinamar norte',
+        lat: -37.223344,
+        lng: -56.778899,
+        locationVerified: true,
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      id: 'prop-1',
+      location: 'Pinamar norte',
+      lat: -37.223344,
+      lng: -56.778899,
+      locationVerified: 1,
+    });
+  });
 });

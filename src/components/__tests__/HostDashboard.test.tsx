@@ -176,11 +176,13 @@ describe('HostDashboard', () => {
     expect(screen.getByText('Actividad reciente')).toBeInTheDocument();
     expect(screen.getByText('Sugerencias para mover tus avisos')).toBeInTheDocument();
     expect(screen.getByText('Primero ves si cada aviso esta activo y despues cuanto ya queda claro para quien consulta.')).toBeInTheDocument();
-    expect(screen.getAllByText('4 de 5 comprobaciones').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Un video corto ayuda a generar mas confianza.').length).toBeGreaterThan(0);
+    expect(screen.getByText('Estado de tu aviso')).toBeInTheDocument();
+    expect(screen.getByText('4/5 completado — Nivel alto')).toBeInTheDocument();
+    expect(screen.getByText('Te falta confirmar disponibilidad para aparecer entre los primeros resultados.')).toBeInTheDocument();
+    expect(screen.getByText('Cómo impacta en tu publicación')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Solicitar verificación presencial/i })).toBeInTheDocument();
 
-    fireEvent.click((await screen.findAllByRole('button', { name: /Disponibilidad/i }))[1]!);
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar disponibilidad' }));
 
     expect(await screen.findByText('Calendario de publicación')).toBeInTheDocument();
     expect(screen.getByText('Bloqueado manualmente')).toBeInTheDocument();

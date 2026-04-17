@@ -4048,12 +4048,17 @@ app.post('/api/properties', async (req, res) => {
 
 app.put('/api/properties/:id', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: AUTH_REQUIRED_ERROR });
-  const { title, location, price, description, imageUrl, lat, lng, status } = req.body;
+  const { title, location, price, description, imageUrl, lat, lng, status, locationVerified } = req.body;
+  const normalizedLocationVerified = locationVerified === true || locationVerified === 1 || locationVerified === '1'
+    ? 1
+    : locationVerified === false || locationVerified === 0 || locationVerified === '0'
+      ? 0
+      : null;
   try {
     const result = await db.query(
-      `UPDATE properties SET title = COALESCE($1, title), location = COALESCE($2, location), price = COALESCE($3, price), description = COALESCE($4, description), "imageUrl" = COALESCE($5, "imageUrl"), lat = COALESCE($6, lat), lng = COALESCE($7, lng), status = COALESCE($8, status)
-       WHERE id = $9 AND "hostId" = $10 RETURNING *`,
-      [title, location, price, description, imageUrl, lat, lng, status, req.params.id, req.session.userId]
+      `UPDATE properties SET title = COALESCE($1, title), location = COALESCE($2, location), price = COALESCE($3, price), description = COALESCE($4, description), "imageUrl" = COALESCE($5, "imageUrl"), lat = COALESCE($6, lat), lng = COALESCE($7, lng), status = COALESCE($8, status), "locationVerified" = COALESCE($9, "locationVerified")
+       WHERE id = $10 AND "hostId" = $11 RETURNING *`,
+      [title, location, price, description, imageUrl, lat, lng, status, normalizedLocationVerified, req.params.id, req.session.userId]
     );
     if (result.rows.length === 0) return res.status(404).json({ error: 'No encontramos esa propiedad o no tenés permiso para editarla.' });
     res.json(result.rows[0]);

@@ -12,7 +12,6 @@ import { showToast } from '../lib/toast';
 import { cn } from '../lib/utils';
 import { AccountModeSwitch } from './ui/AccountModeSwitch';
 import { Button } from './ui/Button';
-import { VerificationDetailsBlock } from './ui/VerificationDetailsBlock';
 import { EmptyState } from './EmptyState';
 import { ErrorState } from './ErrorState';
 import GuestRequestProfileCard from './GuestRequestProfileCard';
@@ -21,6 +20,7 @@ import { Icons } from './Icons';
 import { LoadingState } from './LoadingState';
 import { PropertyUploadForm } from './PropertyUploadForm.tsx';
 import { ReviewModal } from './ReviewModal';
+import { HostListingProgressPanel } from './verification/HostListingProgressPanel';
 import { PremiumVerificationCheckoutModal } from './verification/PremiumVerificationCheckoutModal';
 
 interface HostDashboardProps {
@@ -1112,11 +1112,8 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
 
           <div className="overflow-hidden rounded-[var(--app-radius-card)] border border-slate-200/80 bg-white/94 dark:border-slate-800 dark:bg-slate-900/94">
             {hostProperties.map((property: any, index: number) => {
-              const pendingLabels = property.pendingVerificationItems.map((item: any) => item.label);
               const pendingKeys = new Set(property.pendingVerificationItems.map((item: any) => item.key));
               const showIdentityAction = pendingKeys.has('identity');
-              const showListingAction = pendingKeys.has('location') || pendingKeys.has('geolocation') || pendingKeys.has('data');
-              const showPhotoAction = pendingKeys.has('photos');
               const showAvailabilityAction = pendingKeys.has('availability') || pendingKeys.has('price');
               const showDocumentsAction = property.verificationProgress?.level !== 'base'
                 && Array.isArray(property.verificationProgress?.advancedChecks)
@@ -1125,11 +1122,6 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
                 && !property.premiumOnsiteOffer.completed
                 && Array.isArray(property.verificationProgress?.advancedChecks)
                 && property.verificationProgress.advancedChecks.some((item: any) => item.key === 'manualReview' && item.status !== 'complete');
-              const propertyVerificationSummary = {
-                score: property.verificationBadge.score,
-                maxScore: property.verificationBadge.max,
-                items: property.verificationItems,
-              };
 
               return (
                 <div key={property.id}>
@@ -1196,101 +1188,33 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
                     </div>
 
                     <div className="space-y-2.5">
-                      <VerificationDetailsBlock
-                        summary={propertyVerificationSummary}
-                        title="Verificacion visible"
-                        description={pendingLabels.length === 0
-                          ? 'Este aviso ya muestra sus comprobaciones visibles clave para decidir mejor.'
-                          : property.verificationProgress?.nextStep || 'Todavia hay margen para sumar mas contexto y generar mas confianza.'}
-                        badgeLabel={property.verificationBadge.label}
-                        tone={pendingLabels.length === 0 ? 'success' : property.verificationProgress?.level === 'medium' ? 'brand' : 'neutral'}
-                        showDescriptions={false}
-                        className="shadow-none"
+                      <HostListingProgressPanel
+                        property={property}
+                        onRefresh={fetchData}
+                        onOpenIdentityVerification={showIdentityAction ? () => navigate('/profile') : undefined}
+                        onToggleAvailability={showAvailabilityAction ? () => {
+                          setFocusedPropertyId(property.id);
+                          setAvailabilityPropertyId((currentValue) => (currentValue === property.id ? null : property.id));
+                        } : undefined}
+                        isAvailabilityOpen={availabilityPropertyId === property.id}
                       />
 
-                      {pendingLabels.length > 0 ? (
-                        <div className="rounded-[22px] border border-slate-200/80 bg-slate-50/90 p-4 dark:border-slate-800 dark:bg-slate-900/70">
-                          <p className="eyebrow dark:text-slate-500">Mejorar publicacion</p>
-                          <div className="mt-3 flex flex-wrap gap-2">
-                            {showIdentityAction ? (
-                              <Button
-                                type="button"
-                                variant="secondary"
-                                size="sm"
-                                onClick={() => navigate('/profile')}
-                                className="rounded-full"
-                              >
-                                <>
-                                  <Icons.ShieldCheck className="h-4 w-4" />
-                                  Validar identidad
-                                </>
-                              </Button>
-                            ) : null}
-
-                            {showListingAction ? (
-                              <Button
-                                type="button"
-                                variant="secondary"
-                                size="sm"
-                                onClick={() => navigate(`/detail/${property.id}`)}
-                                className="rounded-full"
-                              >
-                                <>
-                                  <Icons.MapPin className="h-4 w-4" />
-                                  Ajustar ubicación
-                                </>
-                              </Button>
-                            ) : null}
-
-                            {showPhotoAction ? (
-                              <Button
-                                type="button"
-                                variant="secondary"
-                                size="sm"
-                                onClick={() => navigate(`/detail/${property.id}`)}
-                                className="rounded-full"
-                              >
-                                <>
-                                  <Icons.ImagePlus className="h-4 w-4" />
-                                  Subir fotos o video real
-                                </>
-                              </Button>
-                            ) : null}
-
-                            {showAvailabilityAction ? (
-                              <Button
-                                type="button"
-                                variant="secondary"
-                                size="sm"
-                                onClick={() => setAvailabilityPropertyId((currentValue) => (currentValue === property.id ? null : property.id))}
-                                className="rounded-full"
-                              >
-                                <>
-                                  <Icons.Calendar className="h-4 w-4" />
-                                  Validar disponibilidad
-                                </>
-                              </Button>
-                            ) : null}
-
-                            {showDocumentsAction ? (
-                              <Button
-                                type="button"
-                                variant="secondary"
-                                size="sm"
-                                onClick={() => navigate(`/detail/${property.id}`)}
-                                className="rounded-full"
-                              >
-                                <>
-                                  <Icons.Lock className="h-4 w-4" />
-                                  Sumar documentos
-                                </>
-                              </Button>
-                            ) : null}
-                          </div>
-
-                          <p className="mt-3 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                            {property.verificationProgress?.nextStep || 'Podes completar estas capas sin sacar el aviso del aire.'}
-                          </p>
+                      {showDocumentsAction ? (
+                        <div className="rounded-[22px] border border-slate-200/80 bg-white/92 p-4 dark:border-slate-800 dark:bg-slate-900/80">
+                          <p className="eyebrow dark:text-slate-500">Respaldo privado</p>
+                          <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-100">Si querés sumar documentación interna, podés cargarla desde la ficha del aviso sin tocar el score visible.</p>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => navigate(`/detail/${property.id}`)}
+                            className="mt-3 rounded-full"
+                          >
+                            <>
+                              <Icons.Lock className="h-4 w-4" />
+                              Abrir respaldo privado
+                            </>
+                          </Button>
                         </div>
                       ) : null}
 
