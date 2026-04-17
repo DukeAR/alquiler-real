@@ -489,9 +489,9 @@ describe('PropertyDetail', () => {
     expect(screen.getByText('Lo básico del lugar para saber si vale elegir fechas o abrir chat.')).toBeDefined();
     expect(screen.queryByText('Comodidades ya detalladas')).toBeNull();
     const verificationPreview = screen.getByTestId('property-verification-preview');
-    expect(within(verificationPreview).getByText(/Confianza del aviso:/i)).toBeDefined();
-    expect(within(verificationPreview).getByText('Alta')).toBeDefined();
-    expect(within(verificationPreview).getByText('4 de 5 comprobaciones')).toBeDefined();
+    expect(within(verificationPreview).getByText('Sello de verificación')).toBeDefined();
+    expect(within(verificationPreview).getByText('Alta confianza')).toBeDefined();
+    expect(within(verificationPreview).getByText('(4/5)')).toBeDefined();
     expect(within(verificationPreview).getAllByText('Disponibilidad no confirmada recientemente')).toHaveLength(2);
     expect(within(verificationPreview).getByText('Confirmado')).toBeDefined();
     expect(within(verificationPreview).getByText('Pendiente')).toBeDefined();
@@ -545,15 +545,14 @@ describe('PropertyDetail', () => {
     await waitForPropertyHeading();
 
     const verificationPreview = screen.getByTestId('property-verification-preview');
-    expect(within(verificationPreview).getByText(/Confianza del aviso:/i)).toBeDefined();
-    expect(within(verificationPreview).getByText('Muy alta')).toBeDefined();
+    expect(within(verificationPreview).getByText('Muy alta confianza')).toBeDefined();
+    expect(within(verificationPreview).getByText('(5/5)')).toBeDefined();
     expect(within(verificationPreview).getByText('Listo para coordinar')).toBeDefined();
     expect(within(verificationPreview).queryByText('Pendiente')).toBeNull();
     expect(within(verificationPreview).getAllByRole('listitem')).toHaveLength(3);
     expect(within(verificationPreview).getByText('Anfitrión confirmado')).toBeDefined();
     expect(within(verificationPreview).getByText('Ubicación verificada')).toBeDefined();
     expect(within(verificationPreview).getByText('Disponibilidad validada')).toBeDefined();
-    expect(screen.getAllByText('5 de 5 comprobaciones').length).toBeGreaterThan(0);
     expect(screen.queryByText('Mostramos solo comprobaciones visibles que ayudan a decidir rápido y explican qué falta validar.')).toBeNull();
   });
 
@@ -576,7 +575,7 @@ describe('PropertyDetail', () => {
     await waitForPropertyHeading();
 
     const verificationPreview = screen.getByTestId('property-verification-preview');
-    expect(within(verificationPreview).getByText('Media')).toBeDefined();
+    expect(within(verificationPreview).getByText('Confianza media')).toBeDefined();
     expect(within(verificationPreview).getByText('Podés avanzar, pero hay información a completar')).toBeDefined();
   });
 
@@ -618,16 +617,14 @@ describe('PropertyDetail', () => {
     await waitForPropertyHeading();
 
     const verificationPreview = screen.getByTestId('property-verification-preview');
-    expect(within(verificationPreview).getByText(/Confianza del aviso:/i)).toBeDefined();
-    expect(within(verificationPreview).getByText('Baja')).toBeDefined();
-    expect(within(verificationPreview).getByText('2 de 5 comprobaciones')).toBeDefined();
+    expect(within(verificationPreview).getByText('Baja confianza')).toBeDefined();
+    expect(within(verificationPreview).getByText('(2/5)')).toBeDefined();
     expect(within(verificationPreview).getByText('Falta validar fotos o video')).toBeDefined();
     expect(within(verificationPreview).getAllByRole('listitem')).toHaveLength(5);
     expect(within(verificationPreview).getByText('Ubicación verificada')).toBeDefined();
     expect(within(verificationPreview).getByText('Geolocalización precisa')).toBeDefined();
     expect(within(verificationPreview).getByText('Faltan fotos reales o video del lugar')).toBeDefined();
     expect(within(verificationPreview).getByText('Disponibilidad no confirmada recientemente')).toBeDefined();
-    expect(screen.getAllByText('2 de 5 comprobaciones').length).toBeGreaterThan(0);
   });
 
   test('guides the booking flow and stops guest selection at capacity', async () => {

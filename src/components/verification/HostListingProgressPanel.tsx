@@ -3,10 +3,12 @@ import { apiJson } from '../../lib/apiConfig';
 import { getPropertyVerificationItems } from '../../lib/propertyVerification';
 import { showToast } from '../../lib/toast';
 import { cn } from '../../lib/utils';
+import { getVerificationIdentityLabel } from '../../lib/verificationPresentation';
 import type { Property } from '../../types';
 import { Icons } from '../Icons';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
+import { VerificationSeal } from '../ui/VerificationSeal';
 
 type HostProgressKey = 'identity' | 'location' | 'geolocation' | 'photos' | 'availability';
 
@@ -29,7 +31,6 @@ type OrderedProgressItem = {
 };
 
 const CHECK_ORDER: HostProgressKey[] = ['identity', 'location', 'geolocation', 'photos', 'availability'];
-const ACTION_PRIORITY: HostProgressKey[] = ['photos', 'availability', 'location', 'geolocation', 'identity'];
 
 const uploadAcceptMap: Record<VerificationUploadKind, string> = {
   photo: 'image/*',
@@ -49,18 +50,6 @@ const impactByKey: Record<HostProgressKey, string> = {
   geolocation: 'Ayuda a competir mejor cuando eligen entre avisos cercanos.',
   photos: 'Mejora la visibilidad y reduce dudas antes de abrir chat.',
   availability: 'Hace más probable que la consulta avance sin fricción.',
-};
-
-const getLevelLabel = (score: number) => {
-  if (score >= 4) {
-    return 'Nivel alto';
-  }
-
-  if (score >= 3) {
-    return 'Nivel medio';
-  }
-
-  return 'Nivel inicial';
 };
 
 const getTopMessage = (pendingKeys: Set<HostProgressKey>) => {
@@ -165,14 +154,13 @@ export const HostListingProgressPanel = ({
 
   const score = verificationItems.filter((item) => item.status === 'complete').length;
   const maxScore = verificationItems.length || CHECK_ORDER.length;
-  const progressLabel = `${score} de ${maxScore} comprobaciones`;
   const pendingKeys = new Set(
     verificationItems
       .filter((item) => item.status !== 'complete')
       .map((item) => item.key),
   );
   const topMessage = getTopMessage(pendingKeys);
-  const levelLabel = getLevelLabel(score);
+  const sealLabel = getVerificationIdentityLabel(score, maxScore, { includeCount: false });
   const locationActionDisabled = savingLocation || resolvingLocation;
 
   const uploadFiles = async (kind: VerificationUploadKind, fileList: FileList | null) => {
@@ -391,24 +379,19 @@ export const HostListingProgressPanel = ({
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-2">
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Estado de tu aviso</p>
-            <h3 className="text-2xl font-semibold tracking-tight text-slate-950">{score}/{maxScore} completado — {levelLabel}</h3>
+            <h3 className="text-2xl font-semibold tracking-tight text-slate-950">{getVerificationIdentityLabel(score, maxScore)}</h3>
             <p className="max-w-2xl text-sm leading-6 text-slate-600">{topMessage}</p>
           </div>
 
           <div className="rounded-[22px] border border-slate-200/80 bg-white/90 px-4 py-4 shadow-[0_16px_34px_-30px_rgba(15,23,42,0.18)]">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Comprobaciones visibles</p>
-            <div className="mt-3 flex items-center gap-2" aria-label={progressLabel}>
-              {Array.from({ length: maxScore }).map((_, index) => (
-                <span
-                  key={`progress-dot-${index}`}
-                  className={cn(
-                    'h-2.5 w-2.5 rounded-full transition-colors',
-                    index < score ? 'bg-emerald-500' : 'bg-slate-200',
-                  )}
-                />
-              ))}
-            </div>
-            <p className="mt-3 text-sm font-semibold text-slate-900">{progressLabel}</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Sello visible</p>
+            <VerificationSeal
+              score={score}
+              maxScore={maxScore}
+              label={sealLabel}
+              size="md"
+              className="mt-3"
+            />
           </div>
         </div>
 

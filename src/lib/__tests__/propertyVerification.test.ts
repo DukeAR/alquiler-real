@@ -42,11 +42,11 @@ describe('propertyVerification', () => {
     expect(getPropertyVerificationBadge(property)).toEqual({
       score: 4,
       max: 5,
-      label: '4 de 5 comprobaciones',
-      summaryLabel: '4 de 5 comprobaciones',
-      compactLabel: '4/5 verificado',
-      visual: '●●●●○',
-      spacedVisual: '● ● ● ● ○',
+      label: 'Alta confianza (4/5)',
+      summaryLabel: 'Alta confianza (4/5)',
+      compactLabel: 'Alta confianza',
+      countLabel: '4/5',
+      levelLabel: 'Alta',
     });
   });
 
@@ -58,8 +58,8 @@ describe('propertyVerification', () => {
       videoValidated: false,
     });
 
-    expect(details.summaryLabel).toBe('3 de 5 comprobaciones');
-    expect(details.spacedVisual).toBe('● ● ● ○ ○');
+    expect(details.summaryLabel).toBe('Confianza media (3/5)');
+    expect(details.compactLabel).toBe('Confianza media');
     expect(details.helperText).toBe('Ves las 5 comprobaciones reales, lo ya confirmado y lo que todavía falta validar.');
     expect(details.items.map((item) => item.status)).toEqual(['complete', 'complete', 'pending', 'complete', 'pending']);
   });
@@ -89,7 +89,7 @@ describe('propertyVerification', () => {
       propertyRelationshipVerified: true,
     });
 
-    expect(details.summaryLabel).toBe('2 de 5 comprobaciones');
+    expect(details.summaryLabel).toBe('Baja confianza (2/5)');
     expect(details.items.find((item) => item.key === 'availability')).toEqual({
       key: 'availability',
       label: 'Disponibilidad no confirmada recientemente',

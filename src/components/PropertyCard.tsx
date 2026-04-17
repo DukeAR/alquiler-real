@@ -7,6 +7,7 @@ import { Property } from '../services/geminiService';
 import { Button } from './ui/Button';
 import { Badge } from './ui/Badge';
 import { Card } from './ui/Card';
+import { VerificationSeal } from './ui/VerificationSeal';
 
 const normalizePropertyText = (value?: string) => (value ?? '')
   .normalize('NFD')
@@ -76,7 +77,6 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   const propertyTypeLabel = getPropertyTypeLabel(property);
   const guestCapacityLabel = getGuestCapacityLabel(Number(property.maxGuests) || null);
   const verificationTagLabel = !isFavoritesVariant && !isDecisionFeatured ? verificationGuidanceLabel : null;
-  const compactVerificationSummaryLabel = verificationDetails.compactLabel;
   const compactVerificationDetail = verificationDetails.compactSummary;
 
   const handleFavoriteToggle = (e: React.MouseEvent) => {
@@ -186,17 +186,13 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
             </div>
 
             <div data-testid="property-card-verification" aria-label={verificationDetails.label} className="space-y-1">
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] leading-5">
-                <span className={cn('font-semibold text-emerald-800', shouldEmphasizeVerification && 'text-emerald-900')}>
-                  {compactVerificationSummaryLabel}
-                </span>
-                <span
-                  aria-hidden="true"
-                  className={cn('text-[11px] font-semibold tracking-[0.22em] text-emerald-700', shouldEmphasizeVerification && 'text-emerald-800')}
-                >
-                  {verificationDetails.spacedVisual}
-                </span>
-              </div>
+              <VerificationSeal
+                score={verificationDetails.score}
+                maxScore={verificationDetails.max}
+                label={verificationDetails.compactLabel}
+                size="sm"
+                emphasized={shouldEmphasizeVerification}
+              />
 
               {compactVerificationDetail ? (
                 <p className={cn('text-[12.5px] leading-5 text-emerald-700', shouldEmphasizeVerification && 'text-emerald-800')}>

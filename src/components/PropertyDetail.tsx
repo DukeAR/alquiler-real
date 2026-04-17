@@ -7,6 +7,7 @@ import DateRangePicker from './DateRangePicker';
 import {
   getPropertyVerificationDetails,
 } from '../lib/propertyVerification';
+import { getVerificationIdentityLabel } from '../lib/verificationPresentation';
 import { getHostResponseSignal } from '../lib/positiveIncentives';
 import { showToast } from '../lib/toast';
 import { cn, formatCurrency } from '../lib/utils';
@@ -26,6 +27,7 @@ import { Card } from './ui/Card';
 import { NoticeBanner } from './ui/NoticeBanner';
 import { SectionTitle } from './ui/SectionTitle';
 import { TrustSignalsInline, getTrustSignalsFromInteractionHistory, getTrustSignalsFromItems, type TrustSignal } from './ui/TrustSignalsInline';
+import { VerificationSeal } from './ui/VerificationSeal';
 import { PropertyVerificationPanel } from './verification/PropertyVerificationPanel';
 import { VerificationInfoPanel } from './verification/VerificationInfoPanel';
 
@@ -288,15 +290,6 @@ type VerificationDecisionItem = {
   status: 'complete' | 'pending';
 };
 
-const VERIFICATION_LEVEL_LABELS: Record<number, string> = {
-  0: 'Muy baja',
-  1: 'Muy baja',
-  2: 'Baja',
-  3: 'Media',
-  4: 'Alta',
-  5: 'Muy alta',
-};
-
 const VERIFICATION_CONFIRMED_PRIORITY: VerificationDecisionKey[] = ['identity', 'location', 'availability'];
 
 const VERIFICATION_PENDING_PRIORITY: VerificationDecisionKey[] = ['photos', 'availability', 'identity', 'location', 'geolocation'];
@@ -307,20 +300,6 @@ const VERIFICATION_DECISION_MESSAGES: Partial<Record<VerificationDecisionKey, st
   identity: 'Falta confirmar el anfitrión',
   location: 'Ubicación no validada todavía',
   geolocation: 'Ubicación precisa no validada todavía',
-};
-
-const getVerificationLevelLabel = (score: number) => VERIFICATION_LEVEL_LABELS[Math.max(0, Math.min(5, Math.round(score)))] || 'Muy baja';
-
-const getVerificationLevelToneClass = (score: number) => {
-  if (score >= 4) {
-    return 'text-emerald-700';
-  }
-
-  if (score >= 3) {
-    return 'text-amber-700';
-  }
-
-  return 'text-rose-700';
 };
 
 const pickVerificationDecisionItems = (
@@ -490,7 +469,7 @@ export const PropertyDetailShell: React.FC<{
     bathroomsCount ? formatCountLabel(bathroomsCount, 'baño', 'baños') : null,
   ].filter((value): value is string => Boolean(value));
   const verificationDetails = getPropertyVerificationDetails(property);
-  const verificationDecisionLevelLabel = getVerificationLevelLabel(verificationDetails.score);
+  const verificationDecisionLevelLabel = getVerificationIdentityLabel(verificationDetails.score, verificationDetails.max, { includeCount: false });
   const verificationDecisionMessage = getVerificationDecisionMessage(
     verificationDetails.score,
     verificationDetails.items as VerificationDecisionItem[],
@@ -1209,37 +1188,15 @@ export const PropertyDetailShell: React.FC<{
                 data-testid="property-verification-preview"
                 className="space-y-4 border-t border-slate-200/70 pt-4"
               >
-                <div className="space-y-1.5">
-                  <p className="text-base font-semibold leading-6 text-slate-950 sm:text-[1.05rem]">
-                    Confianza del aviso:{' '}
-                    <span className={cn('font-bold uppercase tracking-[0.08em]', getVerificationLevelToneClass(verificationDetails.score))}>
-                      {verificationDecisionLevelLabel}
-                    </span>
-                  </p>
-                  <p className="text-sm leading-6 text-slate-600">{verificationDetails.summaryLabel}</p>
-                </div>
-
-                <div
-                  aria-label={`${verificationDetails.summaryLabel}. Confianza ${verificationDecisionLevelLabel}.`}
-                  className="flex items-center gap-2.5"
-                  role="img"
-                >
-                  {Array.from({ length: verificationDetails.max }).map((_, index) => {
-                    const active = index < verificationDetails.score;
-
-                    return (
-                      <span
-                        key={`verification-dot-${index + 1}`}
-                        aria-hidden="true"
-                        className={cn(
-                          'h-3.5 w-3.5 rounded-full transition-colors',
-                          active
-                            ? 'bg-emerald-500 shadow-[0_0_0_4px_rgba(16,185,129,0.12)]'
-                            : 'bg-slate-300',
-                        )}
-                      />
-                    );
-                  })}
+                <div className="space-y-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Sello de verificación</p>
+                  <VerificationSeal
+                    score={verificationDetails.score}
+                    maxScore={verificationDetails.max}
+                    label={verificationDecisionLevelLabel}
+                    size="lg"
+                    ariaLabel={verificationDetails.summaryLabel}
+                  />
                 </div>
 
                 <p className="text-sm font-medium leading-6 text-slate-800">{verificationDecisionMessage}</p>

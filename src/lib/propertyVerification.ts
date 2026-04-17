@@ -13,6 +13,7 @@ import {
   type PropertyVerificationProgress,
   type PropertyVerificationSummary,
 } from './verificationModel';
+import { getVerificationCountLabel, getVerificationIdentityLabel, getVerificationLevelLabel } from './verificationPresentation';
 
 export type {
   PropertyAdvancedVerificationItem,
@@ -774,17 +775,17 @@ export const getPropertyVerificationBadge = (property: PropertyVerificationLike)
       : typeof property.verificationScore === 'number' && !hasDerivedVerificationSignals(property)
         ? Math.min(clampVerificationScore(property.verificationScore), max)
         : Math.min(verificationSummary.score, max);
-  const visual = `${'●'.repeat(score)}${'○'.repeat(max - score)}`;
-  const compactLabel = `${score} de ${max} comprobaciones`;
+  const summaryLabel = getVerificationIdentityLabel(score, max);
+  const compactLabel = getVerificationIdentityLabel(score, max, { includeCount: false });
 
   return {
     score,
     max,
-    label: compactLabel,
-    summaryLabel: compactLabel,
-    compactLabel: `${score}/${max} verificado`,
-    visual,
-    spacedVisual: visual.split('').join(' '),
+    label: summaryLabel,
+    summaryLabel,
+    compactLabel,
+    countLabel: getVerificationCountLabel(score, max),
+    levelLabel: getVerificationLevelLabel(score, max),
   };
 };
 

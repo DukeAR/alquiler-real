@@ -6,6 +6,7 @@ import 'leaflet/dist/leaflet.css';
 import type { Property } from '../services/geminiService';
 import { getPropertyVerificationDetails } from '../lib/propertyVerification';
 import { formatCurrency } from '../lib/utils';
+import { VerificationSeal } from './ui/VerificationSeal';
 
 
 
@@ -147,10 +148,13 @@ export const PropertyMap: React.FC<PropertyMapProps> = ({ properties, onProperty
                                 </div>
 
                                 <div className="space-y-1">
-                                    <div className="inline-flex w-fit items-center gap-1.5 rounded-full border border-slate-200/85 bg-slate-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-700">
-                                        <span>{verification.compactLabel}</span>
-                                        <span className="text-slate-400">{verification.spacedVisual}</span>
-                                    </div>
+                                    <VerificationSeal
+                                        score={verification.score}
+                                        maxScore={verification.max}
+                                        label={verification.compactLabel}
+                                        size="sm"
+                                        className="w-fit"
+                                    />
                                     {verification.compactSummary ? (
                                         <p className="m-0 text-[12px] leading-5 text-slate-500">{verification.compactSummary}</p>
                                     ) : null}

@@ -1,7 +1,9 @@
 import type { ReactNode } from 'react';
 import { Icons } from '../Icons';
 import { cn } from '../../lib/utils';
+import { getVerificationLevelSummaryLabel } from '../../lib/verificationPresentation';
 import { Badge } from './Badge';
+import { VerificationSeal } from './VerificationSeal';
 
 export type VerificationSummaryItemLike = {
   key: string;
@@ -21,21 +23,15 @@ type VerificationLayout = 'stacked' | 'inline';
 type VerificationHighlightOrder = 'complete-first' | 'pending-first';
 type VerificationSummaryItemStatusFilter = 'complete' | 'pending' | 'all';
 
-const toneClasses: Record<VerificationTone, { label: string; helper: string; visual: string }> = {
+const toneClasses: Record<VerificationTone, { helper: string }> = {
   neutral: {
-    label: 'text-slate-950 dark:text-slate-50',
     helper: 'text-slate-500 dark:text-slate-400',
-    visual: 'text-slate-500 dark:text-slate-300',
   },
   brand: {
-    label: 'text-slate-950 dark:text-slate-50',
     helper: 'text-slate-600 dark:text-slate-300',
-    visual: 'text-brand dark:text-brand-light',
   },
   success: {
-    label: 'text-emerald-900 dark:text-emerald-200',
     helper: 'text-emerald-700 dark:text-emerald-300',
-    visual: 'text-emerald-700 dark:text-emerald-300',
   },
 };
 
@@ -53,17 +49,7 @@ export const getVerificationSummaryScore = (summary: VerificationSummaryLike) =>
 
 export const getVerificationSummaryLabel = (summary: VerificationSummaryLike) => {
   const { score, maxScore } = getVerificationSummaryScore(summary);
-  return `${score} de ${maxScore} comprobaciones`;
-};
-
-export const getVerificationSummaryVisual = (
-  summary: VerificationSummaryLike,
-  options?: { spaced?: boolean },
-) => {
-  const { score, maxScore } = getVerificationSummaryScore(summary);
-  const visual = `${'●'.repeat(score)}${'○'.repeat(Math.max(0, maxScore - score))}`;
-
-  return options?.spaced ? visual.split('').join(' ') : visual;
+  return getVerificationLevelSummaryLabel(score, maxScore);
 };
 
 export const getVerificationPendingCount = (summary: VerificationSummaryLike) => {
@@ -136,8 +122,9 @@ export const VerificationMeter = ({
   helperClassName,
   visualClassName,
 }: VerificationMeterProps) => {
+  const { score, maxScore } = getVerificationSummaryScore(summary);
   const label = getVerificationSummaryLabel(summary);
-  const visual = getVerificationSummaryVisual(summary);
+  const compactLabel = getVerificationLevelSummaryLabel(score, maxScore, { includeCount: false });
   const toneClass = toneClasses[tone];
 
   return (
@@ -158,29 +145,26 @@ export const VerificationMeter = ({
       ) : null}
 
       {layout === 'inline' ? (
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <p className={cn('text-sm font-semibold', toneClass.label, labelClassName)}>{label}</p>
-            {helper ? <p className={cn('mt-1 text-xs leading-5', toneClass.helper, helperClassName)}>{helper}</p> : null}
-          </div>
-          <span
-            aria-label={label}
-            className={cn('shrink-0 font-mono text-[11px] font-semibold tracking-[0.14em]', toneClass.visual, visualClassName)}
-          >
-            {visual}
-          </span>
+        <div className="space-y-2">
+          <VerificationSeal
+            score={score}
+            maxScore={maxScore}
+            label={compactLabel}
+            size="sm"
+            ariaLabel={label}
+          />
+          {helper ? <p className={cn('text-xs leading-5', toneClass.helper, helperClassName)}>{helper}</p> : null}
         </div>
       ) : (
         <>
-          <div className="flex items-end justify-between gap-3">
-            <p className={cn('text-base font-semibold', toneClass.label, labelClassName)}>{label}</p>
-            <span
-              aria-label={label}
-              className={cn('shrink-0 font-mono text-[12px] font-semibold tracking-[0.16em]', toneClass.visual, visualClassName)}
-            >
-              {visual}
-            </span>
-          </div>
+          <VerificationSeal
+            score={score}
+            maxScore={maxScore}
+            label={compactLabel}
+            size="md"
+            ariaLabel={label}
+            className={cn(labelClassName, visualClassName)}
+          />
           {helper ? <p className={cn('text-sm leading-6', toneClass.helper, helperClassName)}>{helper}</p> : null}
         </>
       )}

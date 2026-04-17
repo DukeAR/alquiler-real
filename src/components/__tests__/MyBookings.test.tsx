@@ -212,7 +212,7 @@ describe('MyBookings', () => {
     expect(screen.getAllByText('Guardados útiles')).not.toHaveLength(0);
     expect(screen.getAllByText('Conversaciones')).not.toHaveLength(0);
     expect(await screen.findByText('Loft con terraza')).toBeInTheDocument();
-    expect(await screen.findByText('3 de 5 comprobaciones')).toBeInTheDocument();
+    expect(await screen.findByText('Confianza media (3/5)')).toBeInTheDocument();
     expect(await screen.findByText('Quedó pendiente coordinar el horario de llegada.')).toBeInTheDocument();
   });
 

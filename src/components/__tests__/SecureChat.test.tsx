@@ -429,7 +429,7 @@ describe('SecureChat', () => {
     expect(screen.queryByText('Email verificado')).not.toBeInTheDocument();
     expect(screen.queryByText('Teléfono verificado')).not.toBeInTheDocument();
     expect(screen.queryByText('Perfil del huésped')).not.toBeInTheDocument();
-    expect(screen.queryByText('3 de 5 comprobaciones')).not.toBeInTheDocument();
+    expect(screen.queryByText('Nivel medio (3/5)')).not.toBeInTheDocument();
     expect(screen.queryByText('Historial en la plataforma')).not.toBeInTheDocument();
     expect(screen.queryByText('Cumple lo acordado')).not.toBeInTheDocument();
     expect(screen.queryByText('Comunicación clara')).not.toBeInTheDocument();
