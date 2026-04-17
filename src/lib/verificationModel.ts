@@ -250,32 +250,32 @@ export const buildPropertyVerificationItem = (input: {
   if (input.key === 'photos') {
     return {
       key: 'photos',
-      label: 'Fotos / video reales',
+      label: input.complete ? 'Fotos / video reales' : 'Faltan fotos reales o video del lugar',
       status,
       description: input.complete
         ? 'El aviso ya muestra fotos o video reales del alojamiento.'
-        : 'Todavía faltan fotos o video reales del alojamiento.',
+        : 'Sumar contenido real mejora la confianza.',
     };
   }
 
   if (input.key === 'availability') {
     return {
       key: 'availability',
-      label: 'Disponibilidad validada',
+      label: input.complete ? 'Disponibilidad validada' : 'Disponibilidad no confirmada recientemente',
       status,
       description: input.complete
         ? 'La disponibilidad ya muestra calendario o reservas registradas dentro de la plataforma.'
-        : 'Todavía falta validar la disponibilidad con calendario o reservas registradas.',
+        : 'Responder o confirmar fechas valida este punto.',
     };
   }
 
   return {
     key: 'availability',
-    label: 'Disponibilidad validada',
+    label: input.complete ? 'Disponibilidad validada' : 'Disponibilidad no confirmada recientemente',
     status,
     description: input.complete
       ? 'La disponibilidad ya muestra calendario o reservas registradas dentro de la plataforma.'
-      : 'Todavía falta validar la disponibilidad con calendario o reservas registradas.',
+      : 'Responder o confirmar fechas valida este punto.',
   };
 };
 

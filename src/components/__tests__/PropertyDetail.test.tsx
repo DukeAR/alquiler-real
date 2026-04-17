@@ -492,14 +492,13 @@ describe('PropertyDetail', () => {
     expect(within(verificationPreview).getByText(/Confianza del aviso:/i)).toBeDefined();
     expect(within(verificationPreview).getByText('Alta')).toBeDefined();
     expect(within(verificationPreview).getByText('4 de 5 comprobaciones')).toBeDefined();
-    expect(within(verificationPreview).getByText('Disponibilidad no confirmada recientemente')).toBeDefined();
+    expect(within(verificationPreview).getAllByText('Disponibilidad no confirmada recientemente')).toHaveLength(2);
     expect(within(verificationPreview).getByText('Confirmado')).toBeDefined();
     expect(within(verificationPreview).getByText('Pendiente')).toBeDefined();
     expect(within(verificationPreview).getAllByRole('listitem')).toHaveLength(4);
     expect(within(verificationPreview).getByText('Anfitrión confirmado')).toBeDefined();
     expect(within(verificationPreview).getByText('Ubicación verificada')).toBeDefined();
     expect(within(verificationPreview).getByText('Geolocalización precisa')).toBeDefined();
-    expect(within(verificationPreview).getByText('Disponibilidad validada')).toBeDefined();
     expect(screen.getByText('Puede alojar hasta 4 huéspedes.')).toBeDefined();
     expect(screen.getByText('Tiene 3 dormitorios · 2 baños.')).toBeDefined();
     expect(screen.getByText('Comodidades clave: Wifi rápido · Cocina equipada · Entrada autónoma.')).toBeDefined();
@@ -624,8 +623,8 @@ describe('PropertyDetail', () => {
     expect(within(verificationPreview).getAllByRole('listitem')).toHaveLength(5);
     expect(within(verificationPreview).getByText('Ubicación verificada')).toBeDefined();
     expect(within(verificationPreview).getByText('Geolocalización precisa')).toBeDefined();
-    expect(within(verificationPreview).getByText('Fotos / video reales')).toBeDefined();
-    expect(within(verificationPreview).getByText('Disponibilidad validada')).toBeDefined();
+    expect(within(verificationPreview).getByText('Faltan fotos reales o video del lugar')).toBeDefined();
+    expect(within(verificationPreview).getByText('Disponibilidad no confirmada recientemente')).toBeDefined();
     expect(screen.getAllByText('2 de 5 comprobaciones').length).toBeGreaterThan(0);
   });
 

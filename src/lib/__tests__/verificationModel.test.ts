@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { buildPropertyVerificationProgress } from '../verificationModel';
+import { buildPropertyVerificationProgress, buildPropertyVerificationSummary } from '../verificationModel';
 
 describe('buildPropertyVerificationProgress', () => {
   test('uses a ready-to-coordinate summary for listings with 4 visible checks', () => {
@@ -51,5 +51,27 @@ describe('buildPropertyVerificationProgress', () => {
     expect(progress.level).toBe('base');
     expect(progress.summary).toBe('Todavía falta información clave para decidir.');
     expect(progress.nextStep).toBe('Falta confirmar la identidad del anfitrión.');
+  });
+
+  test('uses actionable pending labels and descriptions for media and availability', () => {
+    const summary = buildPropertyVerificationSummary({
+      identityValidated: true,
+      locationVerified: true,
+      lat: -36.7,
+      lng: -56.7,
+    });
+
+    expect(summary.items.find((item) => item.key === 'photos')).toEqual({
+      key: 'photos',
+      label: 'Faltan fotos reales o video del lugar',
+      status: 'pending',
+      description: 'Sumar contenido real mejora la confianza.',
+    });
+    expect(summary.items.find((item) => item.key === 'availability')).toEqual({
+      key: 'availability',
+      label: 'Disponibilidad no confirmada recientemente',
+      status: 'pending',
+      description: 'Responder o confirmar fechas valida este punto.',
+    });
   });
 });
