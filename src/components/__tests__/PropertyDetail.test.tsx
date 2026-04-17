@@ -499,6 +499,8 @@ describe('PropertyDetail', () => {
     expect(within(verificationPreview).getByText('Anfitrión confirmado')).toBeDefined();
     expect(within(verificationPreview).getByText('Ubicación verificada')).toBeDefined();
     expect(within(verificationPreview).getByText('Geolocalización precisa')).toBeDefined();
+    expect(screen.getByText('Cómo se valida este aviso')).toBeDefined();
+    expect(screen.getByText('Los avisos más completos aparecen primero')).toBeDefined();
     expect(screen.getByText('Puede alojar hasta 4 huéspedes.')).toBeDefined();
     expect(screen.getByText('Tiene 3 dormitorios · 2 baños.')).toBeDefined();
     expect(screen.getByText('Comodidades clave: Wifi rápido · Cocina equipada · Entrada autónoma.')).toBeDefined();

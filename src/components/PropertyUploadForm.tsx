@@ -11,6 +11,7 @@ import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 import { Input } from './ui/Input';
 import { NoticeBanner } from './ui/NoticeBanner';
+import { VerificationInfoPanel } from './verification/VerificationInfoPanel';
 
 type PropertyType = 'apartment' | 'house' | 'room';
 type WizardStepId = 'photos' | 'location' | 'type' | 'capacity' | 'price' | 'description' | 'preview';
@@ -594,6 +595,8 @@ export const PropertyUploadForm: React.FC<PropertyUploadFormProps> = ({ onComple
           </div>
         </div>
       </Card>
+
+      <VerificationInfoPanel />
 
       <Card padding="lg" className="border-slate-200/80 bg-white/96 shadow-[0_24px_50px_-40px_rgba(15,23,42,0.3)]">
         <div className="space-y-6">

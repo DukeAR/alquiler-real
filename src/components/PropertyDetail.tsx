@@ -27,6 +27,7 @@ import { NoticeBanner } from './ui/NoticeBanner';
 import { SectionTitle } from './ui/SectionTitle';
 import { TrustSignalsInline, getTrustSignalsFromInteractionHistory, getTrustSignalsFromItems, type TrustSignal } from './ui/TrustSignalsInline';
 import { PropertyVerificationPanel } from './verification/PropertyVerificationPanel';
+import { VerificationInfoPanel } from './verification/VerificationInfoPanel';
 
 const FALLBACK = 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=1200&q=80&auto=format&fit=crop';
 
@@ -1274,6 +1275,8 @@ export const PropertyDetailShell: React.FC<{
             </div>
           </div>
         </section>
+
+        <VerificationInfoPanel />
 
         <main className="space-y-6 md:space-y-8">
           <Card className="rounded-[32px] border-slate-200/80 bg-white p-6 shadow-[0_28px_70px_-50px_rgba(15,23,42,0.25)] sm:p-7">
