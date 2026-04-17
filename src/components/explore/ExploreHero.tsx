@@ -37,13 +37,13 @@ export const ExploreHero = ({
               className="absolute inset-0 scale-[1.03] bg-cover bg-center"
               style={{
                 backgroundImage: `url(${backgroundImage})`,
-                filter: 'saturate(0.8) contrast(0.86) brightness(1.02)',
-                opacity: 0.82,
+                filter: 'saturate(0.94) contrast(0.94) brightness(0.99)',
+                opacity: 0.94,
               }}
             />
-            <div className="absolute inset-0 bg-[linear-gradient(96deg,rgba(255,255,255,0.975)_8%,rgba(252,253,255,0.9)_34%,rgba(245,248,251,0.74)_62%,rgba(238,242,246,0.52)_100%)]" />
-            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.18)_0%,rgba(255,255,255,0.08)_42%,rgba(246,248,251,0.14)_100%)]" />
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_34%,rgba(239,244,248,0.16)_0%,rgba(239,244,248,0)_44%)]" />
+            <div className="absolute inset-0 bg-[linear-gradient(96deg,rgba(255,255,255,0.93)_8%,rgba(251,253,255,0.78)_34%,rgba(242,246,250,0.5)_62%,rgba(232,239,245,0.26)_100%)]" />
+            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.12)_0%,rgba(255,255,255,0.04)_42%,rgba(244,247,251,0.08)_100%)]" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_34%,rgba(236,242,248,0.1)_0%,rgba(236,242,248,0)_44%)]" />
           </div>
         ) : null}
 
