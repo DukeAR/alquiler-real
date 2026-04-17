@@ -114,16 +114,34 @@ export type PropertyCatalogSortContext = {
   };
 };
 
-const LEGACY_PROPERTY_KEY_ALIASES: Record<LegacyPropertyVerificationKey, PropertyVerificationKey> = {
+const LEGACY_PROPERTY_KEY_ALIASES: Partial<Record<LegacyPropertyVerificationKey, PropertyVerificationKey>> = {
   visual: 'photos',
   material: 'photos',
-  onsite: 'availability',
-  relationship: 'availability',
-  history: 'availability',
-  basics: 'geolocation',
-  data: 'geolocation',
   video: 'photos',
-  price: 'availability',
+};
+
+const PROPERTY_VERIFICATION_LABEL_KEY_MAP: Record<string, PropertyVerificationKey> = {
+  'anfitrion confirmado': 'identity',
+  'ubicacion verificada': 'location',
+  'geolocalizacion precisa': 'geolocation',
+  'fotos / video reales': 'photos',
+  'disponibilidad validada': 'availability',
+};
+
+const PROPERTY_VERIFICATION_SHORT_LABELS: Record<PropertyVerificationKey, string> = {
+  identity: 'Anfitrión',
+  location: 'Ubicación',
+  geolocation: 'Geolocalización',
+  photos: 'Fotos / video',
+  availability: 'Disponibilidad',
+};
+
+const PROPERTY_VERIFICATION_COMPACT_PRIORITY: Record<PropertyVerificationKey, number> = {
+  identity: 0,
+  location: 1,
+  availability: 2,
+  photos: 3,
+  geolocation: 4,
 };
 
 const PROPERTY_VERIFICATION_KEY_SET = new Set<string>(PROPERTY_VERIFICATION_KEYS);
@@ -287,25 +305,6 @@ const getPropertyRelevanceScore = (property: PropertySortLike, context?: Propert
     + getTypeRelevanceScore(property, context.filters?.type);
 };
 
-const normalizePropertyVerificationItem = (item: PropertyVerificationItemInput, index: number): PropertyVerificationItem => {
-  const normalizedStatus = normalizeVerificationStatus(item.status);
-  const normalizedKey = normalizePropertyVerificationKey(typeof item.key === 'string' ? item.key : undefined);
-
-  if (normalizedKey) {
-    return buildPropertyVerificationItem({
-      key: normalizedKey,
-      complete: normalizedStatus === 'complete',
-    });
-  }
-
-  return {
-    key: item.key || `item-${index + 1}`,
-    label: item.label || item.title || 'Comprobación',
-    description: item.description || '',
-    status: normalizedStatus,
-  };
-};
-
 const hasLegacyVerificationItems = (items: PropertyVerificationItemInput[]) => items.some((item) => {
   const rawKey = typeof item.key === 'string' ? item.key : '';
   const normalizedLabel = typeof item.label === 'string'
@@ -317,16 +316,60 @@ const hasLegacyVerificationItems = (items: PropertyVerificationItemInput[]) => i
   return rawKey === 'data'
     || rawKey === 'price'
     || rawKey === 'basics'
+    || rawKey === 'relationship'
+    || rawKey === 'history'
+    || rawKey === 'onsite'
     || normalizedLabel === 'datos'
     || normalizedLabel === 'precio';
 });
 
+const getExplicitPropertyVerificationKey = (item: PropertyVerificationItemInput) => {
+  const normalizedKey = normalizePropertyVerificationKey(typeof item.key === 'string' ? item.key : undefined);
+
+  if (normalizedKey) {
+    return normalizedKey;
+  }
+
+  const normalizedLabel = normalizeCatalogText(
+    typeof item.label === 'string'
+      ? item.label
+      : typeof item.title === 'string'
+        ? item.title
+        : '',
+  );
+
+  return PROPERTY_VERIFICATION_LABEL_KEY_MAP[normalizedLabel] ?? null;
+};
+
 const buildSummaryFromExplicitItems = (items: PropertyVerificationItemInput[]): PropertyVerificationSummary => {
-  const normalizedItems = items.slice(0, VERIFICATION_SCORE_MAX).map(normalizePropertyVerificationItem);
+  const completedItems = items.reduce<Record<PropertyVerificationKey, boolean>>((accumulator, item) => {
+    const normalizedKey = getExplicitPropertyVerificationKey(item);
+
+    if (!normalizedKey) {
+      return accumulator;
+    }
+
+    if (normalizeVerificationStatus(item.status) === 'complete') {
+      accumulator[normalizedKey] = true;
+    }
+
+    return accumulator;
+  }, {
+    identity: false,
+    location: false,
+    geolocation: false,
+    photos: false,
+    availability: false,
+  });
+
+  const normalizedItems = PROPERTY_VERIFICATION_KEYS.map((key) => buildPropertyVerificationItem({
+    key,
+    complete: completedItems[key],
+  }));
 
   return {
     score: clampVerificationScore(normalizedItems.filter((item) => item.status === 'complete').length),
-    maxScore: normalizedItems.length || VERIFICATION_SCORE_MAX,
+    maxScore: VERIFICATION_SCORE_MAX,
     items: normalizedItems,
   };
 };
@@ -552,6 +595,137 @@ export const hasHighlightedVerificationLevel = (property: PropertyVerificationLi
   getPropertyVerificationScore(property) >= HIGH_VERIFICATION_HIGHLIGHT_MIN_SCORE
 );
 
+const getPropertyVerificationState = (property: PropertyVerificationLike) => {
+  const summary = getPropertyVerificationSummary(property);
+  const statusByKey = summary.items.reduce<Record<PropertyVerificationKey, boolean>>((accumulator, item) => {
+    const normalizedKey = normalizePropertyVerificationKey(typeof item.key === 'string' ? item.key : undefined);
+
+    if (normalizedKey) {
+      accumulator[normalizedKey] = item.status === 'complete';
+    }
+
+    return accumulator;
+  }, {
+    identity: false,
+    location: false,
+    geolocation: false,
+    photos: false,
+    availability: false,
+  });
+
+  return {
+    score: getPropertyVerificationScore(property),
+    statusByKey,
+  };
+};
+
+const getPropertyValuePerGuest = (property: Pick<PropertySortLike, 'price' | 'maxGuests'>) => {
+  const price = parsePositiveNumber(property.price);
+  const maxGuests = parsePositiveNumber(property.maxGuests);
+
+  if (!price || !maxGuests) {
+    return null;
+  }
+
+  return price / maxGuests;
+};
+
+const compareNullableAscending = (left: number | null, right: number | null) => {
+  if (left === null && right === null) {
+    return 0;
+  }
+
+  if (left === null) {
+    return 1;
+  }
+
+  if (right === null) {
+    return -1;
+  }
+
+  return left - right;
+};
+
+const comparePropertiesByVerificationSignals = (left: PropertySortLike, right: PropertySortLike) => {
+  const leftVerification = getPropertyVerificationState(left);
+  const rightVerification = getPropertyVerificationState(right);
+  const scoreDifference = rightVerification.score - leftVerification.score;
+
+  if (scoreDifference !== 0) {
+    return scoreDifference;
+  }
+
+  const locationDifference = Number(rightVerification.statusByKey.location) - Number(leftVerification.statusByKey.location);
+
+  if (locationDifference !== 0) {
+    return locationDifference;
+  }
+
+  const identityDifference = Number(rightVerification.statusByKey.identity) - Number(leftVerification.statusByKey.identity);
+
+  if (identityDifference !== 0) {
+    return identityDifference;
+  }
+
+  const availabilityDifference = Number(rightVerification.statusByKey.availability) - Number(leftVerification.statusByKey.availability);
+
+  if (availabilityDifference !== 0) {
+    return availabilityDifference;
+  }
+
+  return 0;
+};
+
+const comparePropertiesByVerificationCatalogOrder = (
+  left: PropertySortLike,
+  right: PropertySortLike,
+  context?: PropertyCatalogSortContext,
+) => {
+  const verificationDifference = comparePropertiesByVerificationSignals(left, right);
+
+  if (verificationDifference !== 0) {
+    return verificationDifference;
+  }
+
+  const valuePerGuestDifference = compareNullableAscending(getPropertyValuePerGuest(left), getPropertyValuePerGuest(right));
+
+  if (valuePerGuestDifference !== 0) {
+    return valuePerGuestDifference;
+  }
+
+  const relevanceDifference = getPropertyRelevanceScore(right, context) - getPropertyRelevanceScore(left, context);
+
+  if (relevanceDifference !== 0) {
+    return relevanceDifference;
+  }
+
+  const qualityDifference = getPropertyListingQualityScore(right) - getPropertyListingQualityScore(left);
+
+  if (qualityDifference !== 0) {
+    return qualityDifference;
+  }
+
+  const ratingDifference = Number(right.rating || 0) - Number(left.rating || 0);
+
+  if (ratingDifference !== 0) {
+    return ratingDifference;
+  }
+
+  const reviewsDifference = Number(right.reviewsCount || 0) - Number(left.reviewsCount || 0);
+
+  if (reviewsDifference !== 0) {
+    return reviewsDifference;
+  }
+
+  const priceDifference = Number(left.price || 0) - Number(right.price || 0);
+
+  if (priceDifference !== 0) {
+    return priceDifference;
+  }
+
+  return String(left.title || '').localeCompare(String(right.title || ''), 'es');
+};
+
 export const getPropertyVerificationGuidanceLabel = (
   property: PropertyVerificationLike,
   options?: { isTopResult?: boolean },
@@ -559,7 +733,7 @@ export const getPropertyVerificationGuidanceLabel = (
   const score = getPropertyVerificationScore(property);
 
   if (score >= HIGH_VERIFICATION_HIGHLIGHT_MIN_SCORE && options?.isTopResult) {
-    return 'Más comprobado';
+    return 'Más verificado';
   }
 
   return null;
@@ -608,6 +782,7 @@ export const getPropertyVerificationBadge = (property: PropertyVerificationLike)
     max,
     label: compactLabel,
     summaryLabel: compactLabel,
+    compactLabel: `${score}/${max} verificado`,
     visual,
     spacedVisual: visual.split('').join(' '),
   };
@@ -616,11 +791,31 @@ export const getPropertyVerificationBadge = (property: PropertyVerificationLike)
 export const getPropertyVerificationDetails = (property: PropertyVerificationLike) => {
   const verificationSummary = getPropertyVerificationSummary(property);
   const badge = getPropertyVerificationBadge({ ...property, verificationSummary });
+  const compactItems = verificationSummary.items
+    .filter((item) => item.status === 'complete')
+    .sort((left, right) => {
+      const leftKey = normalizePropertyVerificationKey(typeof left.key === 'string' ? left.key : undefined);
+      const rightKey = normalizePropertyVerificationKey(typeof right.key === 'string' ? right.key : undefined);
+      const leftPriority = leftKey ? PROPERTY_VERIFICATION_COMPACT_PRIORITY[leftKey] : Number.MAX_SAFE_INTEGER;
+      const rightPriority = rightKey ? PROPERTY_VERIFICATION_COMPACT_PRIORITY[rightKey] : Number.MAX_SAFE_INTEGER;
+
+      return leftPriority - rightPriority;
+    })
+    .map((item) => {
+      const normalizedKey = normalizePropertyVerificationKey(typeof item.key === 'string' ? item.key : undefined);
+
+      return {
+        ...item,
+        shortLabel: normalizedKey ? PROPERTY_VERIFICATION_SHORT_LABELS[normalizedKey] : item.label,
+      };
+    });
 
   return {
     ...badge,
     items: verificationSummary.items,
-    helperText: 'Comparás rápido qué ya está comprobado, qué falta y qué parte todavía asumís por confianza.',
+    compactItems,
+    compactSummary: compactItems.slice(0, 3).map((item) => item.shortLabel).join(' · '),
+    helperText: 'Ves las 5 comprobaciones reales, lo ya confirmado y lo que todavía falta validar.',
   };
 };
 
@@ -632,11 +827,8 @@ export const sortPropertiesByCatalogOrder = <T extends PropertySortLike>(
   const sortedItems = [...items];
 
   sortedItems.sort((left, right) => {
-    const verificationDifference = getPropertyVerificationScore(right) - getPropertyVerificationScore(left);
-    const qualityDifference = getPropertyListingQualityScore(right) - getPropertyListingQualityScore(left);
     const ratingDifference = Number(right.rating || 0) - Number(left.rating || 0);
     const reviewsDifference = Number(right.reviewsCount || 0) - Number(left.reviewsCount || 0);
-    const relevanceDifference = getPropertyRelevanceScore(right, context) - getPropertyRelevanceScore(left, context);
     const priceDifference = Number(left.price || 0) - Number(right.price || 0);
 
     if (sortBy === 'price') {
@@ -644,27 +836,7 @@ export const sortPropertiesByCatalogOrder = <T extends PropertySortLike>(
         return priceDifference;
       }
 
-      if (verificationDifference !== 0) {
-        return verificationDifference;
-      }
-
-      if (qualityDifference !== 0) {
-        return qualityDifference;
-      }
-
-      if (ratingDifference !== 0) {
-        return ratingDifference;
-      }
-
-      if (reviewsDifference !== 0) {
-        return reviewsDifference;
-      }
-
-      if (relevanceDifference !== 0) {
-        return relevanceDifference;
-      }
-
-      return String(left.title || '').localeCompare(String(right.title || ''), 'es');
+      return comparePropertiesByVerificationCatalogOrder(left, right, context);
     }
 
     if (sortBy === 'rating') {
@@ -676,50 +848,10 @@ export const sortPropertiesByCatalogOrder = <T extends PropertySortLike>(
         return reviewsDifference;
       }
 
-      if (verificationDifference !== 0) {
-        return verificationDifference;
-      }
-
-      if (qualityDifference !== 0) {
-        return qualityDifference;
-      }
-
-      if (relevanceDifference !== 0) {
-        return relevanceDifference;
-      }
-
-      if (priceDifference !== 0) {
-        return priceDifference;
-      }
-
-      return String(left.title || '').localeCompare(String(right.title || ''), 'es');
+      return comparePropertiesByVerificationCatalogOrder(left, right, context);
     }
 
-    if (verificationDifference !== 0) {
-      return verificationDifference;
-    }
-
-    if (qualityDifference !== 0) {
-      return qualityDifference;
-    }
-
-    if (ratingDifference !== 0) {
-      return ratingDifference;
-    }
-
-    if (reviewsDifference !== 0) {
-      return reviewsDifference;
-    }
-
-    if (relevanceDifference !== 0) {
-      return relevanceDifference;
-    }
-
-    if (priceDifference !== 0) {
-      return priceDifference;
-    }
-
-    return String(left.title || '').localeCompare(String(right.title || ''), 'es');
+    return comparePropertiesByVerificationCatalogOrder(left, right, context);
   });
 
   return sortedItems;

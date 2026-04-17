@@ -37,13 +37,14 @@ describe('propertyVerification', () => {
       'Ubicación verificada',
       'Geolocalización precisa',
       'Fotos / video reales',
-      'Disponibilidad validada',
+      'Disponibilidad no confirmada recientemente',
     ]);
     expect(getPropertyVerificationBadge(property)).toEqual({
       score: 4,
       max: 5,
       label: '4 de 5 comprobaciones',
       summaryLabel: '4 de 5 comprobaciones',
+      compactLabel: '4/5 verificado',
       visual: '●●●●○',
       spacedVisual: '● ● ● ● ○',
     });
@@ -59,8 +60,26 @@ describe('propertyVerification', () => {
 
     expect(details.summaryLabel).toBe('3 de 5 comprobaciones');
     expect(details.spacedVisual).toBe('● ● ● ○ ○');
-    expect(details.helperText).toBe('Comparás rápido qué ya está comprobado, qué falta y qué parte todavía asumís por confianza.');
+    expect(details.helperText).toBe('Ves las 5 comprobaciones reales, lo ya confirmado y lo que todavía falta validar.');
     expect(details.items.map((item) => item.status)).toEqual(['complete', 'complete', 'pending', 'complete', 'pending']);
+  });
+
+  test('ignores legacy price and generic data items when normalizing explicit verification arrays', () => {
+    const details = getPropertyVerificationDetails({
+      verificationItems: [
+        { key: 'identity', status: 'complete' },
+        { key: 'price', label: 'Precio', status: 'complete' },
+        { key: 'data', label: 'Datos', status: 'complete' },
+        { key: 'visual', status: 'complete' },
+      ],
+    });
+
+    expect(details.score).toBe(2);
+    expect(details.items).toHaveLength(5);
+    expect(details.items.find((item) => item.key === 'identity')?.status).toBe('complete');
+    expect(details.items.find((item) => item.key === 'photos')?.status).toBe('complete');
+    expect(details.items.find((item) => item.key === 'geolocation')?.status).toBe('pending');
+    expect(details.items.find((item) => item.key === 'availability')?.status).toBe('pending');
   });
 
   test('does not infer availability from legacy relationship flags alone', () => {
@@ -73,14 +92,14 @@ describe('propertyVerification', () => {
     expect(details.summaryLabel).toBe('2 de 5 comprobaciones');
     expect(details.items.find((item) => item.key === 'availability')).toEqual({
       key: 'availability',
-      label: 'Disponibilidad validada',
-      description: 'Todavía falta validar la disponibilidad con calendario o reservas registradas.',
+      label: 'Disponibilidad no confirmada recientemente',
+      description: 'Responder o confirmar fechas valida este punto.',
       status: 'pending',
     });
   });
 
   test('derives Explore guidance labels from the real verification score and top-result position', () => {
-    expect(getPropertyVerificationGuidanceLabel({ verificationScore: 4 }, { isTopResult: true })).toBe('Más comprobado');
+    expect(getPropertyVerificationGuidanceLabel({ verificationScore: 4 }, { isTopResult: true })).toBe('Más verificado');
     expect(getPropertyVerificationGuidanceLabel({ verificationScore: 4 }, { isTopResult: false })).toBeNull();
     expect(getPropertyVerificationGuidanceLabel({ verificationScore: 3 }, { isTopResult: false })).toBeNull();
     expect(getPropertyVerificationGuidanceLabel({ verificationScore: 2 }, { isTopResult: true })).toBeNull();
@@ -92,14 +111,41 @@ describe('propertyVerification', () => {
     expect(getPropertyVerificationGuidanceMessage({ verificationScore: 2 })).toBeNull();
   });
 
-  test('sorts first by verification score and then by rating', () => {
+  test('sorts first by verification score and then by verified location', () => {
     const sorted = sortPropertiesByCatalogOrder([
-      { id: 'p1', verificationScore: 3, rating: 4.9, price: 90_000 },
-      { id: 'p2', verificationScore: 5, rating: 4.2, price: 120_000 },
-      { id: 'p3', verificationScore: 5, rating: 4.8, price: 130_000 },
+      { id: 'p1', identityValidated: true, verificationPhotoCount: 2, availabilityValidated: true, price: 90_000 },
+      { id: 'p2', locationVerified: true, lat: -37.0, lng: -56.8, verificationPhotoCount: 2, price: 120_000 },
+      { id: 'p3', identityValidated: true, locationVerified: true, lat: -37.1, lng: -56.9, verificationPhotoCount: 2, price: 130_000 },
     ], 'verification');
 
     expect(sorted.map((property) => property.id)).toEqual(['p3', 'p2', 'p1']);
+  });
+
+  test('uses host confirmation after location when the score is tied', () => {
+    const sorted = sortPropertiesByCatalogOrder([
+      { id: 'p1', locationVerified: true, lat: -37.0, lng: -56.8, verificationPhotoCount: 2, price: 120_000 },
+      { id: 'p2', identityValidated: true, locationVerified: true, verificationPhotoCount: 2, price: 120_000 },
+    ], 'verification');
+
+    expect(sorted.map((property) => property.id)).toEqual(['p2', 'p1']);
+  });
+
+  test('uses validated availability after location and host when the score is tied', () => {
+    const sorted = sortPropertiesByCatalogOrder([
+      { id: 'p1', identityValidated: true, locationVerified: true, verificationPhotoCount: 2, price: 120_000 },
+      { id: 'p2', identityValidated: true, locationVerified: true, availabilityValidated: true, price: 120_000 },
+    ], 'verification');
+
+    expect(sorted.map((property) => property.id)).toEqual(['p2', 'p1']);
+  });
+
+  test('uses price per guest when the verification tie breakers are still equal', () => {
+    const sorted = sortPropertiesByCatalogOrder([
+      { id: 'p1', identityValidated: true, locationVerified: true, availabilityValidated: true, price: 100_000, maxGuests: 2 },
+      { id: 'p2', identityValidated: true, locationVerified: true, availabilityValidated: true, price: 120_000, maxGuests: 4 },
+    ], 'verification');
+
+    expect(sorted.map((property) => property.id)).toEqual(['p2', 'p1']);
   });
 
   test('sorts by price when selected and keeps verification as a tie breaker only for ties', () => {
@@ -112,14 +158,14 @@ describe('propertyVerification', () => {
     expect(sorted.map((property) => property.id)).toEqual(['p2', 'p1', 'p3']);
   });
 
-  test('uses search relevance after respaldo and reseñas when comparing similar results', () => {
+  test('uses search relevance before the remaining secondary signals when verification still ties', () => {
     const sorted = sortPropertiesByCatalogOrder([
       { id: 'p1', title: 'Casa con jardín', location: 'Pinamar norte', verificationScore: 4, rating: 4.7, reviewsCount: 8, price: 110_000 },
       { id: 'p2', title: 'Casa cerca del centro', location: 'Villa Gesell centro', verificationScore: 4, rating: 4.7, reviewsCount: 8, price: 105_000 },
       { id: 'p3', title: 'Departamento con balcón', location: 'Villa Gesell sur', verificationScore: 4, rating: 4.5, reviewsCount: 12, price: 99_000 },
     ], 'verification', { searchQuery: 'Villa Gesell' });
 
-    expect(sorted.map((property) => property.id)).toEqual(['p2', 'p1', 'p3']);
+    expect(sorted.map((property) => property.id)).toEqual(['p2', 'p3', 'p1']);
   });
 
   test('uses rating and reviews as tie breakers when verification scores are equal', () => {

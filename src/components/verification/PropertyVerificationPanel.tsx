@@ -204,8 +204,8 @@ export const PropertyVerificationPanel = ({
         <div className="space-y-5">
           <div className="space-y-2">
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Lectura del aviso</p>
-            <h2 className="text-2xl font-semibold tracking-tight text-slate-950">Qué ya está comprobado</h2>
-            <p className="max-w-3xl text-sm leading-6 text-slate-600">{verificationProgress.summary} {PLATFORM_PROPERTY_DISCLAIMER}</p>
+            <h2 className="text-2xl font-semibold tracking-tight text-slate-950">Nivel de verificación: {verificationBadge.score}/{verificationBadge.max}</h2>
+            <p className="max-w-3xl text-sm leading-6 text-slate-600">Estas son las 5 comprobaciones reales que usamos para ordenar el listado y mostrar qué parte del aviso ya está validada.</p>
           </div>
 
           <VerificationDetailsBlock
@@ -214,12 +214,17 @@ export const PropertyVerificationPanel = ({
               maxScore: verificationBadge.max,
               items: verificationItems,
             }}
-            title="Comprobaciones visibles"
-            description="Mostramos solo comprobaciones visibles que ayudan a decidir rápido."
-            badgeLabel={verificationBadge.score >= 4 ? 'Más comprobado' : undefined}
+            title="Comprobaciones reales"
+            description="Mostramos solo comprobaciones visibles que ayudan a decidir rápido y explican qué falta validar."
             tone={verificationBadge.score >= 4 ? 'success' : 'neutral'}
-            showDescriptions={false}
+            showDescriptions
           />
+
+          {pendingItems.length > 0 ? (
+            <p className="rounded-[22px] border border-slate-200/80 bg-slate-50/90 px-4 py-3 text-sm leading-6 text-slate-600">
+              Falta completar: {pendingItems.map((item) => item.label).join(' · ')}.
+            </p>
+          ) : null}
 
           <div className="rounded-[22px] border border-slate-200/80 bg-slate-50/90 p-4 text-sm leading-6 text-slate-600">
             {PLATFORM_PROPERTY_DISCLAIMER}

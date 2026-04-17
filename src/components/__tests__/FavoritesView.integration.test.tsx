@@ -98,8 +98,8 @@ describe('FavoritesView integration', () => {
     expect(screen.getByLabelText('3 de 5 comprobaciones')).toBeInTheDocument();
     expect(screen.getByText('4/5 verificado')).toBeInTheDocument();
     expect(screen.getByText('3/5 verificado')).toBeInTheDocument();
-    expect(screen.getByText('Anfitrión confirmado · Ubicación verificada · Fotos / video reales')).toBeInTheDocument();
-    expect(screen.getByText('Anfitrión confirmado · Ubicación verificada · Geolocalización precisa')).toBeInTheDocument();
+    expect(screen.getByText('Anfitrión · Ubicación · Fotos / video')).toBeInTheDocument();
+    expect(screen.getByText('Anfitrión · Ubicación · Geolocalización')).toBeInTheDocument();
     expect(screen.queryByText('Mejor verificado')).toBeNull();
     expect(screen.queryByText('Alto nivel de verificación')).toBeNull();
     expect(screen.getAllByRole('button', { name: /Abrir detalle de/i })).toHaveLength(2);

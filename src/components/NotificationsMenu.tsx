@@ -190,7 +190,10 @@ export const NotificationsMenu: React.FC<NotificationsMenuProps> = ({
         ref={buttonRef}
         type="button"
         onClick={handleToggle}
-        className="app-icon-button h-10 w-10 sm:h-11 sm:w-11"
+        className={cn(
+          'relative inline-flex h-10 w-10 items-center justify-center rounded-full text-slate-500 transition-[color,background-color] duration-150 hover:bg-slate-100/80 hover:text-slate-950 focus-visible:outline-none focus-visible:shadow-[var(--app-focus-ring)] sm:h-11 sm:w-11',
+          isOpen && 'text-slate-950',
+        )}
         aria-label={buttonLabel}
         aria-expanded={isOpen}
         aria-controls="app-notifications-panel"

@@ -13,14 +13,17 @@ vi.mock('../PropertyCard', () => ({
     verificationGuidanceLabel?: string | null;
     emphasizeVerification?: boolean;
     decisionFeatured?: boolean;
-  }) => (
-    <div>
-      <span>{property.title}</span>
-      {verificationGuidanceLabel ? <span>{verificationGuidanceLabel}</span> : null}
-      {emphasizeVerification ? <span>Verificación más visible</span> : null}
-      {decisionFeatured ? <span>Más confiable</span> : null}
-    </div>
-  ),
+  }) => {
+    const badgeLabel = decisionFeatured ? 'Más verificado' : verificationGuidanceLabel;
+
+    return (
+      <div>
+        <span>{property.title}</span>
+        {badgeLabel ? <span>{badgeLabel}</span> : null}
+        {emphasizeVerification ? <span>Verificación más visible</span> : null}
+      </div>
+    );
+  },
 }));
 
 vi.mock('../PropertyMap', () => ({
@@ -45,6 +48,7 @@ const sampleProperties = [
     identityValidated: true,
     locationVerified: true,
     videoValidated: true,
+    coordinates: { lat: -36.7, lng: -56.7 },
   },
   {
     id: 'p2',
@@ -58,6 +62,7 @@ const sampleProperties = [
     reviewsCount: 8,
     identityValidated: true,
     locationVerified: true,
+    coordinates: { lat: -37.0, lng: -56.8 },
   },
   {
     id: 'p3',
@@ -106,10 +111,10 @@ describe('ExploreResultsSection', () => {
   test('renders the decision-oriented hierarchy on the home results view', () => {
     renderSection();
 
-    expect(screen.getByRole('heading', { name: 'Empezá por las más completas' })).toBeInTheDocument();
-    expect(screen.getByText('Precio, capacidad y respaldo en una sola mirada.')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Empezá por los más verificados' })).toBeInTheDocument();
+    expect(screen.getByText('Primero ves los avisos con más comprobaciones reales. Si empatan, priorizamos ubicación verificada, anfitrión confirmado y disponibilidad validada.')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Más para comparar' })).toBeInTheDocument();
-    expect(screen.getAllByText('Más confiable')).toHaveLength(1);
+    expect(screen.getAllByText('Más verificado')).toHaveLength(1);
     expect(screen.queryByText(/Buena relación precio \/ información|De las más completas en este rango/)).toBeNull();
     expect(screen.getByText('Casa frente al mar')).toBeInTheDocument();
     expect(screen.getByText('Departamento luminoso')).toBeInTheDocument();
@@ -137,7 +142,8 @@ describe('ExploreResultsSection', () => {
     expect(screen.getAllByRole('heading', { name: 'Resultados para revisar' })).toHaveLength(1);
     expect(screen.getByText('3 propiedades para comparar en esta búsqueda.')).toBeInTheDocument();
     expect(screen.getByText('2 visibles en esta búsqueda.')).toBeInTheDocument();
-    expect(screen.getByText('Priorizando mayor verificación')).toBeInTheDocument();
+    expect(screen.getByText('Más verificados primero')).toBeInTheDocument();
+    expect(screen.getByText('Resaltando las comprobaciones reales')).toBeInTheDocument();
     expect(screen.getByText('Villa Gesell')).toBeInTheDocument();
     expect(screen.queryByText('Estás priorizando avisos con más información comprobada')).toBeNull();
   });

@@ -146,12 +146,15 @@ export const PropertyMap: React.FC<PropertyMapProps> = ({ properties, onProperty
                                     />
                                 </div>
 
-                                {verification.score > 0 ? (
-                                    <div className="inline-flex w-fit items-center gap-1.5 rounded-full border border-emerald-200/80 bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-emerald-700">
-                                        <span>{verification.summaryLabel}</span>
-                                        <span className="text-emerald-500">{verification.spacedVisual}</span>
+                                <div className="space-y-1">
+                                    <div className="inline-flex w-fit items-center gap-1.5 rounded-full border border-slate-200/85 bg-slate-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-700">
+                                        <span>{verification.compactLabel}</span>
+                                        <span className="text-slate-400">{verification.spacedVisual}</span>
                                     </div>
-                                ) : null}
+                                    {verification.compactSummary ? (
+                                        <p className="m-0 text-[12px] leading-5 text-slate-500">{verification.compactSummary}</p>
+                                    ) : null}
+                                </div>
 
                                 <div className="space-y-1.5">
                                     <h3 className="m-0 overflow-hidden text-[0.96rem] font-semibold leading-5 text-slate-950 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">

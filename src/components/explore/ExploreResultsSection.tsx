@@ -10,13 +10,9 @@ import { Card } from '../ui/Card';
 import { NoticeBanner } from '../ui/NoticeBanner';
 import { SectionTitle } from '../ui/SectionTitle';
 import {
-  HIGH_VERIFICATION_HIGHLIGHT_MIN_SCORE,
-  TOP_VERIFIED_RESULTS_COUNT,
   getPropertyVerificationGuidanceLabel,
-  getPropertyVerificationBadge,
   type PropertyCatalogSort,
 } from '../../lib/propertyVerification';
-import { getPropertyListingQualityScore } from '../../lib/propertyListingQuality';
 import type { Property } from '../../services/geminiService';
 import { cn } from '../../lib/utils';
 
@@ -70,94 +66,16 @@ const SectionHeaderWithBadge = ({
   </div>
 );
 
-const getDecisionDataScore = (property: Property) => [
-  typeof property.location === 'string' && property.location.trim().length > 0,
-  typeof property.description === 'string' && property.description.trim().length >= 80,
-  Number(property.maxGuests) > 0,
-  Number(property.reviewsCount) > 0,
-  Number(property.price) > 0,
-].filter(Boolean).length;
-
-const getDecisionFeaturedProperty = (properties: Property[]) => {
-  const uniqueProperties = [...new Map(properties.map((property) => [property.id, property])).values()];
-
-  if (uniqueProperties.length === 0) {
-    return {
-      propertyId: null,
-      supportLabel: null,
-    };
+const getActiveSortLabel = (sortBy: PropertyCatalogSort) => {
+  if (sortBy === 'price') {
+    return 'Precio más bajo primero';
   }
 
-  const priceValues = uniqueProperties
-    .map((property) => Number(property.price) || 0)
-    .filter((price) => price > 0);
-  const minPrice = priceValues.length > 0 ? Math.min(...priceValues) : 0;
-  const maxPrice = priceValues.length > 0 ? Math.max(...priceValues) : 0;
-
-  const rankedProperties = uniqueProperties
-    .map((property) => {
-      const verificationScore = getPropertyVerificationBadge(property).score;
-      const qualityScore = getPropertyListingQualityScore(property);
-      const dataScore = getDecisionDataScore(property);
-      const price = Number(property.price) || 0;
-      const priceAdvantage = price > 0 && maxPrice > minPrice
-        ? (maxPrice - price) / (maxPrice - minPrice)
-        : price > 0
-          ? 0.5
-          : 0;
-      const valueScore = qualityScore + (dataScore * 10) + (priceAdvantage * 25);
-
-      return {
-        property,
-        verificationScore,
-        qualityScore,
-        dataScore,
-        price,
-        priceAdvantage,
-        valueScore,
-      };
-    })
-    .sort((left, right) => {
-      if (right.verificationScore !== left.verificationScore) {
-        return right.verificationScore - left.verificationScore;
-      }
-
-      if (right.valueScore !== left.valueScore) {
-        return right.valueScore - left.valueScore;
-      }
-
-      if (right.qualityScore !== left.qualityScore) {
-        return right.qualityScore - left.qualityScore;
-      }
-
-      if (left.price !== right.price) {
-        if (!left.price) return 1;
-        if (!right.price) return -1;
-        return left.price - right.price;
-      }
-
-      return String(left.property.title || '').localeCompare(String(right.property.title || ''), 'es');
-    });
-
-  const bestProperty = rankedProperties[0];
-
-  if (!bestProperty) {
-    return {
-      propertyId: null,
-      supportLabel: null,
-    };
+  if (sortBy === 'rating') {
+    return 'Mejor calificación primero';
   }
 
-  const supportLabel = bestProperty.verificationScore >= HIGH_VERIFICATION_HIGHLIGHT_MIN_SCORE && bestProperty.priceAdvantage >= 0.35
-    ? 'Buena relación precio / información'
-    : bestProperty.verificationScore >= HIGH_VERIFICATION_HIGHLIGHT_MIN_SCORE || bestProperty.qualityScore >= 55
-      ? 'De las más completas en este rango'
-      : null;
-
-  return {
-    propertyId: bestProperty.property.id,
-    supportLabel,
-  };
+  return 'Más verificados primero';
 };
 
 type ExploreResultsSectionProps = {
@@ -216,29 +134,25 @@ export const ExploreResultsSection = ({
   const listingSectionClass = showFeaturedSection
     ? 'space-y-4 border-t border-slate-200/60 pt-4 md:space-y-5 md:pt-5'
     : 'space-y-5 md:space-y-6';
-  const topResultIds = new Set(
-    (showFeaturedSection ? featuredProperties : listingProperties)
-      .slice(0, TOP_VERIFIED_RESULTS_COUNT)
-      .map((property) => property.id),
-  );
-  const decisionFeatureSource = showFeaturedSection
-    ? [...featuredProperties, ...visibleProperties]
-    : visibleProperties;
-  const decisionFeature = !loading
-    ? getDecisionFeaturedProperty(decisionFeatureSource)
-    : { propertyId: null, supportLabel: null };
+  const firstVisibleResult = (showFeaturedSection ? featuredProperties : listingProperties)[0] ?? null;
+  const activeSortLabel = getActiveSortLabel(sortBy);
+  const highlightedVerificationResultId = !loading && sortBy === 'verification' && firstVisibleResult
+    ? getPropertyVerificationGuidanceLabel(firstVisibleResult, { isTopResult: true })
+      ? firstVisibleResult.id
+      : null
+    : null;
   const featuredHeading = sortBy === 'price'
     ? 'Empezá por las más convenientes'
     : sortBy === 'rating'
       ? 'Empezá por las mejor valoradas'
-      : 'Empezá por las más completas';
+      : 'Empezá por los más verificados';
   const featuredDescription = loading
     ? 'Estamos ordenando las primeras opciones.'
     : sortBy === 'price'
       ? 'Precio claro y lectura rápida primero.'
       : sortBy === 'rating'
         ? 'Valoración alta y respaldo visible primero.'
-        : 'Precio, capacidad y respaldo en una sola mirada.';
+        : 'Primero ves los avisos con más comprobaciones reales. Si empatan, priorizamos ubicación verificada, anfitrión confirmado y disponibilidad validada.';
   const listingHeading = hasActiveFilters
     ? 'Resultados para revisar'
     : showFeaturedSection
@@ -255,7 +169,9 @@ export const ExploreResultsSection = ({
         : 'No hay más propiedades para revisar por ahora.';
   const homeListingDescription = loading
     ? 'Estamos preparando más opciones.'
-    : 'Más opciones para seguir comparando rápido.';
+    : sortBy === 'verification'
+      ? 'Más opciones para seguir comparando con el mismo nivel de comprobación visible.'
+      : 'Más opciones para seguir comparando rápido.';
   const filteredResultsDescription = `${formatPropertyCount(totalResults)} para comparar en esta búsqueda.`;
   const filteredVisibleResultsLabel = `${visibleCount} ${visibleCount === 1 ? 'visible' : 'visibles'} en esta búsqueda.`;
 
@@ -323,10 +239,14 @@ export const ExploreResultsSection = ({
         <span>{searchQuery}</span>
       </span>
     ) : null,
-    caresAboutVerification ? (
-      <span key="verification" className="inline-flex items-center gap-1.5">
+    <span key="sort" className="inline-flex items-center gap-1.5">
+      <Icons.Target className="h-3.5 w-3.5 text-slate-400" />
+      <span>{activeSortLabel}</span>
+    </span>,
+    caresAboutVerification && sortBy === 'verification' ? (
+      <span key="preference" className="inline-flex items-center gap-1.5">
         <Icons.ShieldCheck className="h-3.5 w-3.5 text-slate-400" />
-        <span>Priorizando mayor verificación</span>
+        <span>Resaltando las comprobaciones reales</span>
       </span>
     ) : null,
     appliedFilterCount > 0 ? (
@@ -452,7 +372,7 @@ export const ExploreResultsSection = ({
               eyebrow="Mapa de resultados"
               description={loading
                 ? 'Estamos ubicando cada aviso en el mapa.'
-                : 'Abrí cada pin para ver precio y qué parte del aviso ya fue comprobada.'}
+                : 'Abrí cada pin para ver precio, score y comprobaciones reales del aviso.'}
               badge={mapResultsCountBadge}
               actions={hasActiveFilters ? (
                 <Button type="button" variant="ghost" size="sm" onClick={onClearFilters} className="rounded-xl px-3 text-sm text-slate-900 hover:bg-slate-100 hover:text-slate-950">
@@ -511,12 +431,14 @@ export const ExploreResultsSection = ({
                       featuredProperties.length === 2 && index === 1 && 'xl:col-span-6',
                       featuredProperties.length >= 3 && index > 0 && 'xl:col-span-3',
                     )}
-                    verificationGuidanceLabel={getPropertyVerificationGuidanceLabel(property, {
-                      isTopResult: topResultIds.has(property.id),
-                    })}
+                    verificationGuidanceLabel={sortBy === 'verification'
+                      ? getPropertyVerificationGuidanceLabel(property, {
+                          isTopResult: highlightedVerificationResultId === property.id,
+                        })
+                      : null}
                     emphasizeVerification={caresAboutVerification}
-                    decisionFeatured={decisionFeature.propertyId === property.id}
-                    decisionSupportLabel={decisionFeature.propertyId === property.id ? decisionFeature.supportLabel : null}
+                    decisionFeatured={highlightedVerificationResultId === property.id}
+                    decisionSupportLabel={null}
                     onClick={() => navigate(`/detail/${property.id}`)}
                     isFavorite={isFavorite(property.id)}
                     onFavoriteToggle={onFavoriteToggle}
@@ -613,12 +535,14 @@ export const ExploreResultsSection = ({
                 <PropertyCard
                   key={property.id}
                   property={property}
-                  verificationGuidanceLabel={getPropertyVerificationGuidanceLabel(property, {
-                    isTopResult: topResultIds.has(property.id),
-                  })}
+                  verificationGuidanceLabel={sortBy === 'verification'
+                    ? getPropertyVerificationGuidanceLabel(property, {
+                        isTopResult: highlightedVerificationResultId === property.id,
+                      })
+                    : null}
                   emphasizeVerification={caresAboutVerification}
-                  decisionFeatured={decisionFeature.propertyId === property.id}
-                  decisionSupportLabel={decisionFeature.propertyId === property.id ? decisionFeature.supportLabel : null}
+                  decisionFeatured={highlightedVerificationResultId === property.id}
+                  decisionSupportLabel={null}
                   onClick={() => navigate(`/detail/${property.id}`)}
                   isFavorite={isFavorite(property.id)}
                   onFavoriteToggle={onFavoriteToggle}

@@ -91,6 +91,7 @@ describe('ExplorePage', () => {
         identityValidated: true,
         locationVerified: true,
         videoValidated: true,
+        coordinates: { lat: -36.7, lng: -56.7 },
       },
     ]);
     useFavoritesMock.mockReturnValue({

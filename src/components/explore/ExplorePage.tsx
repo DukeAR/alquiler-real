@@ -122,14 +122,12 @@ export const ExplorePage = () => {
   }, [filters, searchQuery, sortBy]);
 
   const sortContext = { searchQuery, filters };
-
-  const featuredProperties = sortPropertiesByCatalogOrder(properties, 'verification', sortContext)
-    .filter((property) => meetsRealVerificationFilter(property))
-    .slice(0, 3);
-  const orderedProperties = sortPropertiesByCatalogOrder(properties, sortBy, sortContext);
-
-  const featuredIds = new Set(featuredProperties.map((property) => property.id));
   const hasActiveFilters = Boolean(searchQuery || filters.minPrice || filters.maxPrice || filters.type || filters.verifiedOnly);
+  const orderedProperties = sortPropertiesByCatalogOrder(properties, sortBy, sortContext);
+  const featuredProperties = hasActiveFilters
+    ? []
+    : orderedProperties.slice(0, 3);
+  const featuredIds = new Set(featuredProperties.map((property) => property.id));
   const appliedFilterCount = [
     Boolean(searchQuery),
     Boolean(filters.minPrice),
@@ -141,6 +139,9 @@ export const ExplorePage = () => {
   const listingProperties = hasActiveFilters
     ? orderedProperties
     : orderedProperties.filter((property) => !featuredIds.has(property.id));
+  const filteredProperties = filters.verifiedOnly
+    ? orderedProperties.filter((property) => meetsRealVerificationFilter(property))
+    : orderedProperties;
   const visibleProperties = listingProperties.slice(0, visibleCount);
   const hasMoreResults = visibleProperties.length < listingProperties.length;
 
@@ -228,7 +229,7 @@ export const ExplorePage = () => {
           hasActiveFilters={hasActiveFilters}
           searchQuery={searchQuery}
           appliedFilterCount={appliedFilterCount}
-          filteredProperties={properties}
+          filteredProperties={filteredProperties}
           featuredProperties={featuredProperties}
           listingProperties={listingProperties}
           visibleProperties={visibleProperties}

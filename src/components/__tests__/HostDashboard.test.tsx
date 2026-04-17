@@ -100,11 +100,11 @@ describe('HostDashboard', () => {
               imageUrl: 'https://example.com/property.jpg',
               verificationScore: 4,
               verificationItems: [
-                { key: 'basics', label: 'Datos básicos', description: 'El aviso ya se entiende con claridad.', status: 'complete' },
-                { key: 'location', label: 'Ubicación', description: 'La zona ya está cargada dentro del mapa.', status: 'complete' },
-                { key: 'photos', label: 'Fotos reales', description: 'Ya hay fotos reales del lugar.', status: 'complete' },
-                { key: 'identity', label: 'Identidad validada', description: 'La identidad del perfil ya quedó validada.', status: 'complete' },
-                { key: 'video', label: 'Video del lugar', description: 'Todavía no hay video cargado.', status: 'pending' },
+                { key: 'identity', label: 'Anfitrión confirmado', description: 'La identidad del anfitrión ya fue confirmada dentro de la plataforma.', status: 'complete' },
+                { key: 'location', label: 'Ubicación verificada', description: 'La zona del alojamiento ya fue verificada dentro de la plataforma.', status: 'complete' },
+                { key: 'geolocation', label: 'Geolocalización precisa', description: 'El aviso ya cuenta con coordenadas precisas para ubicar el lugar con más claridad.', status: 'complete' },
+                { key: 'photos', label: 'Fotos / video reales', description: 'El aviso ya muestra fotos o video reales del alojamiento.', status: 'complete' },
+                { key: 'availability', label: 'Disponibilidad validada', description: 'Todavía falta validar la disponibilidad con calendario o reservas registradas.', status: 'pending' },
               ],
               verificationProgress: {
                 level: 'medium',
