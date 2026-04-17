@@ -36,12 +36,12 @@ export const ExploreFiltersBar = ({
   onClear,
 }: ExploreFiltersBarProps) => {
   return (
-    <section className="rounded-[var(--app-radius-card)] border border-[rgba(220,210,194,0.88)] bg-[rgba(255,250,244,0.96)] px-3.5 py-3 shadow-[0_18px_38px_-34px_rgba(15,23,42,0.16)] sm:px-4 sm:py-4 lg:px-5 lg:py-4.5">
+    <section className="rounded-[var(--app-radius-card)] border border-slate-200/85 bg-white/96 px-3.5 py-3 shadow-[0_18px_38px_-34px_rgba(15,23,42,0.16)] sm:px-4 sm:py-4 lg:px-5 lg:py-4.5">
       <div className="flex flex-col gap-3.5">
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2.5">
           <span aria-hidden="true" className="block h-px" />
 
-          <div className="inline-flex h-10 w-fit items-center gap-1 justify-self-center rounded-[0.95rem] border border-[rgba(220,210,194,0.82)] bg-[rgba(239,231,220,0.82)] p-1">
+          <div className="inline-flex h-10 w-fit items-center gap-1 justify-self-center rounded-[0.95rem] border border-slate-200/80 bg-slate-100/85 p-1">
             {(['grid', 'map'] as const).map((mode) => (
               <button
                 key={mode}
@@ -51,7 +51,7 @@ export const ExploreFiltersBar = ({
                 className={cn(
                   'flex h-full items-center justify-center gap-2 rounded-[0.78rem] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.1em] transition-[background-color,color] duration-150',
                   viewMode === mode
-                    ? 'bg-[rgba(255,251,246,0.98)] text-slate-950 shadow-[0_10px_20px_-18px_rgba(15,23,42,0.22)]'
+                    ? 'bg-white text-slate-950 shadow-[0_10px_20px_-18px_rgba(15,23,42,0.22)]'
                     : 'text-slate-700 hover:text-slate-950',
                 )}
               >
@@ -83,7 +83,7 @@ export const ExploreFiltersBar = ({
               aria-label="Ordenar por"
               value={sortBy}
               onChange={(event) => onSortChange(event.target.value as ExploreSort)}
-              className="app-control h-12 min-w-0 rounded-[var(--app-radius-control)] border-[color:var(--app-surface-border)] bg-[rgba(255,251,246,1)] px-4 text-[0.92rem] font-semibold tracking-[-0.01em] text-slate-950 shadow-none"
+              className="app-control h-12 min-w-0 rounded-[var(--app-radius-control)] border-[color:var(--app-surface-border)] bg-white px-4 text-[0.92rem] font-semibold tracking-[-0.01em] text-slate-950 shadow-none"
             >
               <option value="verification">Más verificados primero</option>
               <option value="rating">Mejor calificación</option>
@@ -99,7 +99,7 @@ export const ExploreFiltersBar = ({
             onChange={(event) => onFiltersChange({ ...filters, minPrice: event.target.value })}
             placeholder="Desde"
             icon={<span className="text-xs font-medium">$</span>}
-            className="h-12 min-w-0 rounded-[var(--app-radius-control)] border-[color:var(--app-surface-border)] bg-[rgba(255,251,246,1)] py-0 pl-9 pr-3 text-[0.94rem] font-semibold tracking-[-0.01em] text-slate-950 shadow-none placeholder:text-slate-500"
+            className="h-12 min-w-0 rounded-[var(--app-radius-control)] border-[color:var(--app-surface-border)] bg-white py-0 pl-9 pr-3 text-[0.94rem] font-semibold tracking-[-0.01em] text-slate-950 shadow-none placeholder:text-slate-500"
           />
 
           <Input
@@ -110,14 +110,14 @@ export const ExploreFiltersBar = ({
             onChange={(event) => onFiltersChange({ ...filters, maxPrice: event.target.value })}
             placeholder="Hasta"
             icon={<span className="text-xs font-medium">$</span>}
-            className="h-12 min-w-0 rounded-[var(--app-radius-control)] border-[color:var(--app-surface-border)] bg-[rgba(255,251,246,1)] py-0 pl-9 pr-3 text-[0.94rem] font-semibold tracking-[-0.01em] text-slate-950 shadow-none placeholder:text-slate-500"
+            className="h-12 min-w-0 rounded-[var(--app-radius-control)] border-[color:var(--app-surface-border)] bg-white py-0 pl-9 pr-3 text-[0.94rem] font-semibold tracking-[-0.01em] text-slate-950 shadow-none placeholder:text-slate-500"
           />
 
           <label className={cn(
             'flex h-12 min-w-0 items-center gap-2.5 rounded-[var(--app-radius-control)] border px-3 py-2 text-left transition-[border-color,background-color,box-shadow] duration-150',
             filters.verifiedOnly
-                ? 'border-brand/25 bg-[rgba(255,250,244,1)] shadow-[0_10px_24px_-22px_rgba(67,56,202,0.32)]'
-                : 'border-[color:var(--app-surface-border)] bg-[rgba(255,251,246,1)]',
+                    ? 'border-brand/25 bg-white shadow-[0_10px_24px_-22px_rgba(67,56,202,0.32)]'
+                    : 'border-[color:var(--app-surface-border)] bg-white',
           )}>
             <Icons.ShieldCheck className={cn('h-4 w-4 shrink-0', filters.verifiedOnly ? 'text-brand' : 'text-slate-400')} />
 
@@ -138,7 +138,7 @@ export const ExploreFiltersBar = ({
                 onChange={(event) => onFiltersChange({ ...filters, verifiedOnly: event.target.checked })}
                 className="peer sr-only"
               />
-              <span className="absolute inset-0 rounded-full bg-[rgba(211,199,181,0.9)] transition-colors duration-150 peer-checked:bg-brand" />
+              <span className="absolute inset-0 rounded-full bg-slate-300 transition-colors duration-150 peer-checked:bg-brand" />
               <span className="absolute left-0.5 h-5 w-5 rounded-full bg-white transition-transform duration-150 peer-checked:translate-x-5" />
             </span>
           </label>
