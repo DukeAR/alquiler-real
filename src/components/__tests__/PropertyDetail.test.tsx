@@ -274,6 +274,20 @@ describe('PropertyDetail', () => {
     await waitFor(() => expect(screen.getByAltText(/imagen 2/i)).toBeTruthy());
   });
 
+  test('keeps the hero in the narrow mobile-safe layout', async () => {
+    renderPropertyDetail();
+
+    await waitForPropertyHeading();
+
+    const heading = screen.getByRole('heading', { name: 'Casa de prueba' });
+    const heroImage = screen.getByAltText(/imagen 1/i);
+
+    expect(heading.className).toContain('text-balance');
+    expect(heading.className).toContain('max-w-full');
+    expect(heroImage.parentElement?.className).toContain('min-h-[26rem]');
+    expect(heroImage.parentElement?.className).toContain('aspect-[9/10]');
+  });
+
   test('uses singular photo copy when the property only has one image', async () => {
     (apiJson as any).mockImplementation(async (url: string, options?: RequestInit) => {
       if (url.endsWith('/reviews')) return [{ id: 'r1', reviewer_id: 'u1', rating: 5, comment: 'Buen lugar' }];
