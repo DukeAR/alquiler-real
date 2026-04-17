@@ -354,6 +354,8 @@ export const PropertyDetailShell: React.FC<{
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [zoomed, setZoomed] = useState(false);
   const touchStartX = useRef<number | null>(null);
+  const detailMotionRootRef = useRef<HTMLDivElement | null>(null);
+  const heroSceneRef = useRef<HTMLDivElement | null>(null);
 
   const onTouchStart = (e: React.TouchEvent) => { touchStartX.current = e.touches[0].clientX; };
   const onTouchEnd = (e: React.TouchEvent) => {
@@ -929,13 +931,106 @@ export const PropertyDetailShell: React.FC<{
     return () => window.removeEventListener('keydown', onLightboxKey as any);
   }, [lightboxOpen, images.length, mainIndex]);
 
+  useEffect(() => {
+    const root = detailMotionRootRef.current;
+
+    if (!root) {
+      return;
+    }
+
+    const motionBlocks = Array.from(root.querySelectorAll<HTMLElement>('[data-motion-block]'));
+
+    if (motionBlocks.length === 0) {
+      return;
+    }
+
+    const prefersReducedMotion = typeof window.matchMedia === 'function'
+      && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (prefersReducedMotion || typeof IntersectionObserver === 'undefined') {
+      motionBlocks.forEach((block) => {
+        block.setAttribute('data-motion-visible', 'true');
+      });
+
+      return;
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) {
+          return;
+        }
+
+        (entry.target as HTMLElement).setAttribute('data-motion-visible', 'true');
+        observer.unobserve(entry.target);
+      });
+    }, {
+      threshold: 0.16,
+      rootMargin: '0px 0px -8% 0px',
+    });
+
+    motionBlocks.forEach((block) => {
+      observer.observe(block);
+    });
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [property.id, property.isOwnedByViewer, reviewCount]);
+
+  useEffect(() => {
+    const heroScene = heroSceneRef.current;
+
+    if (!heroScene) {
+      return;
+    }
+
+    const prefersReducedMotion = typeof window.matchMedia === 'function'
+      && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (prefersReducedMotion) {
+      heroScene.style.setProperty('--property-hero-parallax-y', '0px');
+      heroScene.style.setProperty('--property-hero-overlay-opacity', '1');
+      return;
+    }
+
+    let frameId = 0;
+
+    const updateParallax = () => {
+      const rect = heroScene.getBoundingClientRect();
+      const heroHeight = Math.max(rect.height, 1);
+      const scrolledDistance = Math.min(Math.max(-rect.top, 0), heroHeight);
+      const progress = Math.min(scrolledDistance / heroHeight, 1);
+      const parallaxOffset = Math.min(36, scrolledDistance * 0.2);
+      const overlayOpacity = Math.max(0.84, 1 - progress * 0.14);
+
+      heroScene.style.setProperty('--property-hero-parallax-y', `${parallaxOffset.toFixed(2)}px`);
+      heroScene.style.setProperty('--property-hero-overlay-opacity', overlayOpacity.toFixed(3));
+    };
+
+    const scheduleParallaxUpdate = () => {
+      window.cancelAnimationFrame(frameId);
+      frameId = window.requestAnimationFrame(updateParallax);
+    };
+
+    scheduleParallaxUpdate();
+    window.addEventListener('scroll', scheduleParallaxUpdate, { passive: true });
+    window.addEventListener('resize', scheduleParallaxUpdate);
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      window.removeEventListener('scroll', scheduleParallaxUpdate);
+      window.removeEventListener('resize', scheduleParallaxUpdate);
+    };
+  }, [property.id, images.length]);
+
   return (
-    <div className="app-page pb-[calc(env(safe-area-inset-bottom)+11rem)] lg:pb-16">
+    <div ref={detailMotionRootRef} className="app-page pb-[calc(env(safe-area-inset-bottom)+11rem)] lg:pb-16">
       <div className="space-y-6 md:space-y-8">
         <section data-property-detail-hero className="space-y-6 md:space-y-8">
           <Card padding="none" variant="elevated" className="overflow-hidden rounded-[32px] border-slate-200/80 bg-white shadow-[0_34px_80px_-50px_rgba(15,23,42,0.35)]">
             <div className="min-w-0 overflow-hidden rounded-[32px]">
-              <div className="group relative isolate overflow-hidden bg-slate-950">
+              <div ref={heroSceneRef} className="property-hero-scene group relative isolate overflow-hidden bg-slate-950">
                 <div
                   className="property-hero-image-reveal aspect-[9/10] min-h-[26rem] sm:min-h-0 sm:aspect-[16/11] lg:aspect-[16/10]"
                   onTouchStart={onTouchStart}
@@ -944,13 +1039,13 @@ export const PropertyDetailShell: React.FC<{
                   <img
                     src={images[mainIndex] || FALLBACK}
                     alt={`${property.title} — imagen ${mainIndex + 1}`}
-                    className="h-full w-full cursor-zoom-in object-cover transition-transform duration-300 ease-out md:group-hover:scale-[1.02]"
+                    className="property-hero-parallax-image h-full w-full cursor-zoom-in object-cover"
                     onClick={openLightbox}
                     referrerPolicy="no-referrer"
                   />
                 </div>
 
-                <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.05)_0%,rgba(0,0,0,0.14)_34%,rgba(0,0,0,0.3)_62%,rgba(0,0,0,0.55)_100%)]" />
+                <div className="property-hero-overlay pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.05)_0%,rgba(0,0,0,0.14)_34%,rgba(0,0,0,0.3)_62%,rgba(0,0,0,0.55)_100%)]" />
 
                 <div className="property-hero-copy-reveal absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-4 px-4 pb-4 pt-20 sm:gap-4 sm:px-6 sm:pb-6 sm:pt-24 lg:px-8 lg:pb-8 lg:pt-28">
                   <div className="flex min-w-0 flex-col items-start gap-3 sm:gap-4">
@@ -1050,7 +1145,8 @@ export const PropertyDetailShell: React.FC<{
         <section
           role="region"
           aria-label="Contexto de la reserva"
-          className="rounded-[30px] border border-slate-200/80 bg-white p-5 shadow-[0_30px_80px_-50px_rgba(15,23,42,0.28)] sm:p-6"
+          data-motion-block
+          className="app-card-hover app-motion-block rounded-[30px] border border-slate-200/80 bg-white p-5 shadow-[0_30px_80px_-50px_rgba(15,23,42,0.28)] sm:p-6"
         >
           <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(320px,0.92fr)]">
             <div className="space-y-5">
@@ -1136,10 +1232,12 @@ export const PropertyDetailShell: React.FC<{
           </div>
         </section>
 
-        <VerificationInfoPanel />
+        <div data-motion-block className="app-motion-block">
+          <VerificationInfoPanel />
+        </div>
 
         <main className="space-y-6 md:space-y-8">
-          <Card className="rounded-[32px] border-slate-200/80 bg-white p-6 shadow-[0_28px_70px_-50px_rgba(15,23,42,0.25)] sm:p-7">
+          <Card data-motion-block className="app-card-hover app-motion-block rounded-[32px] border-slate-200/80 bg-white p-6 shadow-[0_28px_70px_-50px_rgba(15,23,42,0.25)] sm:p-7">
             <div className="space-y-5">
               <SectionTitle
                 eyebrow="Lo esencial"
@@ -1161,14 +1259,16 @@ export const PropertyDetailShell: React.FC<{
           </Card>
 
           {property.isOwnedByViewer === true ? (
-            <PropertyVerificationPanel
-              property={property as AppProperty}
-              onRefresh={onRefresh}
-              onOpenIdentityVerification={onOpenIdentityVerification}
-            />
+            <div data-motion-block className="app-motion-block">
+              <PropertyVerificationPanel
+                property={property as AppProperty}
+                onRefresh={onRefresh}
+                onOpenIdentityVerification={onOpenIdentityVerification}
+              />
+            </div>
           ) : null}
 
-          <Card className="rounded-[32px] border-slate-200/80 bg-white p-6 shadow-[0_28px_70px_-50px_rgba(15,23,42,0.25)] sm:p-7">
+          <Card data-motion-block className="app-card-hover app-motion-block rounded-[32px] border-slate-200/80 bg-white p-6 shadow-[0_28px_70px_-50px_rgba(15,23,42,0.25)] sm:p-7">
             <div className="space-y-5">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex items-center gap-4">
@@ -1220,7 +1320,7 @@ export const PropertyDetailShell: React.FC<{
             </div>
           </Card>
 
-          <Card className="rounded-[32px] border-slate-200/80 bg-white p-6 shadow-[0_28px_70px_-50px_rgba(15,23,42,0.25)] sm:p-7">
+          <Card data-motion-block className="app-card-hover app-motion-block rounded-[32px] border-slate-200/80 bg-white p-6 shadow-[0_28px_70px_-50px_rgba(15,23,42,0.25)] sm:p-7">
             <div className="space-y-5">
               <SectionTitle
                 eyebrow="Opiniones"
@@ -1231,7 +1331,7 @@ export const PropertyDetailShell: React.FC<{
               {visibleReviews.length > 0 ? (
                 <ul className="grid gap-3 lg:grid-cols-2">
                   {visibleReviews.map((review) => (
-                    <li key={review.id} className="rounded-[24px] border border-slate-200/80 bg-slate-50/80 px-4 py-4 shadow-[0_16px_34px_-30px_rgba(15,23,42,0.18)]">
+                    <li key={review.id} className="app-card-hover rounded-[24px] border border-slate-200/80 bg-slate-50/80 px-4 py-4 shadow-[0_16px_34px_-30px_rgba(15,23,42,0.18)] transition-[transform,box-shadow,border-color] duration-200 ease-out">
                       <div className="flex items-start justify-between gap-4">
                         <div>
                           <p className="text-sm font-semibold text-slate-950">{review.userName || 'Huésped'}</p>

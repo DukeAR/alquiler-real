@@ -324,7 +324,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
           <div className={cn(headerLayoutClass, 'flex items-center justify-between gap-4 py-3.5 sm:gap-8 sm:py-5 lg:gap-10')}>
             <button type="button" onClick={() => navigate('/')} aria-label="Ir al inicio de Alquiler Real" className="flex min-w-0 items-center gap-3.5 rounded-2xl pr-0 transition-opacity duration-200 hover:opacity-95 focus-visible:outline-none focus-visible:shadow-[var(--app-focus-ring)] sm:gap-4.5">
               <div className={cn(
-                'flex h-9 w-9 items-center justify-center rounded-[1rem] border sm:h-10 sm:w-10',
+                'flex h-9 w-9 items-center justify-center rounded-[1rem] border transition-[border-color,background-color,color,box-shadow] duration-200 sm:h-10 sm:w-10',
                 headerOnHero
                   ? 'border-white/18 bg-white/8 text-white shadow-[0_18px_40px_-30px_rgba(0,0,0,0.42)] backdrop-blur-[10px]'
                   : 'border-slate-200/90 bg-slate-50 text-slate-500 shadow-[0_10px_24px_-22px_rgba(15,23,42,0.22)]',
@@ -332,10 +332,10 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                 <Icons.ShieldCheck className="h-[1.05rem] w-[1.05rem] sm:h-[1.15rem] sm:w-[1.15rem]" />
               </div>
               <div className="min-w-0 text-left">
-                <div className={cn('hidden text-[9px] font-semibold uppercase tracking-[0.18em] sm:block', headerOnHero ? 'text-white/62' : 'text-slate-400/80')}>Información real</div>
-                <div className={cn('font-display truncate text-[1.08rem] font-semibold leading-none tracking-[-0.03em] sm:text-[1.34rem]', headerOnHero ? 'text-white' : 'text-slate-950')}>
-                  <span className={headerOnHero ? 'text-white' : 'text-slate-950'}>Alquiler</span>{' '}
-                  <span className={headerOnHero ? 'text-white' : 'text-brand'}>Real</span>
+                <div className={cn('hidden text-[9px] font-semibold uppercase tracking-[0.18em] transition-colors duration-200 sm:block', headerOnHero ? 'text-white/62' : 'text-slate-400/80')}>Información real</div>
+                <div className={cn('font-display truncate text-[1.08rem] font-semibold leading-none tracking-[-0.03em] transition-colors duration-200 sm:text-[1.34rem]', headerOnHero ? 'text-white' : 'text-slate-950')}>
+                  <span className={cn('transition-colors duration-200', headerOnHero ? 'text-white' : 'text-slate-950')}>Alquiler</span>{' '}
+                  <span className={cn('transition-colors duration-200', headerOnHero ? 'text-white' : 'text-brand')}>Real</span>
                 </div>
               </div>
             </button>
