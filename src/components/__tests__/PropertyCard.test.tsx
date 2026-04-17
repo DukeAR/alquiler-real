@@ -83,10 +83,11 @@ describe('PropertyCard', () => {
     expect(verificationBlock).toHaveAttribute('aria-label', 'Verificación parcial (4/5)');
     expect(within(verificationBlock).getByText('Verificación parcial')).toHaveClass('text-emerald-900');
     expect(within(verificationBlock).getByText('(4/5)')).toHaveClass('text-emerald-700');
-    expect(within(verificationBlock).getByText('Este aviso tiene información confirmada, pero hay puntos pendientes.')).toBeInTheDocument();
-    expect(within(verificationBlock).getAllByRole('listitem')).toHaveLength(5);
-    expect(within(verificationBlock).getByText(/^Geolocalización precisa$/)).toBeInTheDocument();
-    expect(within(verificationBlock).getByText(/^Disponibilidad validada$/)).toBeInTheDocument();
+    expect(within(verificationBlock).queryByText('Este aviso tiene información confirmada, pero hay puntos pendientes.')).toBeNull();
+    expect(within(verificationBlock).getAllByRole('listitem')).toHaveLength(3);
+    expect(within(verificationBlock).getByText(/^Anfitrión$/)).toBeInTheDocument();
+    expect(within(verificationBlock).getByText(/^Ubicación$/)).toBeInTheDocument();
+    expect(within(verificationBlock).getByText(/^Fotos \/ video$/)).toBeInTheDocument();
     expect(screen.queryByText('Confianza visible')).toBeNull();
     expect(screen.queryByText('Anfitrión con buen historial')).toBeNull();
     expect(screen.queryByText('12 reseñas reales')).toBeNull();
@@ -114,10 +115,10 @@ describe('PropertyCard', () => {
 
     expect(within(verificationBlock).getByText('Verificación parcial')).toBeInTheDocument();
     expect(within(verificationBlock).getByText('(2/5)')).toBeInTheDocument();
-    expect(within(verificationBlock).getByText('Este aviso tiene información confirmada, pero hay puntos pendientes.')).toBeInTheDocument();
-    expect(within(verificationBlock).getAllByRole('listitem')).toHaveLength(5);
-    expect(within(verificationBlock).getByText(/^Anfitrión confirmado$/)).toBeInTheDocument();
-    expect(within(verificationBlock).getByText(/^Fotos \/ video reales$/)).toBeInTheDocument();
+    expect(within(verificationBlock).queryByText('Este aviso tiene información confirmada, pero hay puntos pendientes.')).toBeNull();
+    expect(within(verificationBlock).getAllByRole('listitem')).toHaveLength(2);
+    expect(within(verificationBlock).getByText(/^Ubicación$/)).toBeInTheDocument();
+    expect(within(verificationBlock).getByText(/^Geolocalización$/)).toBeInTheDocument();
     expect(screen.queryByText('Más verificado')).toBeNull();
   });
 
@@ -207,7 +208,7 @@ describe('PropertyCard', () => {
     const verificationBlock = screen.getByLabelText('Verificación parcial (4/5)');
 
     expect(within(verificationBlock).getByText('Verificación parcial')).toBeInTheDocument();
-    expect(within(verificationBlock).getAllByRole('listitem')).toHaveLength(5);
+    expect(within(verificationBlock).getAllByRole('listitem')).toHaveLength(3);
     expect(screen.queryByText('Más verificado')).toBeNull();
     expect(screen.queryByText('Más confiable')).toBeNull();
     expect(screen.queryByText('Anfitrión con buen historial')).toBeNull();

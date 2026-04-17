@@ -7,7 +7,6 @@ import type { Property } from '../services/geminiService';
 import { getPropertyVerificationDetails } from '../lib/propertyVerification';
 import { formatCurrency } from '../lib/utils';
 import { PresencialVerificationBadge } from './ui/PresencialVerificationBadge';
-import { PropertyVerificationChecklist } from './ui/PropertyVerificationChecklist';
 import { VerificationSeal } from './ui/VerificationSeal';
 
 
@@ -113,6 +112,7 @@ export const PropertyMap: React.FC<PropertyMapProps> = ({ properties, onProperty
                     const verification = getPropertyVerificationDetails(property);
                     const isHighlighted = activePropertyId === property.id || hoveredPropertyId === property.id;
                     const isPresencialVerified = verification.isFullyVerified;
+                    const verificationHighlights = verification.compactItems.slice(0, 2);
 
                     return (
                     <Marker
@@ -139,10 +139,10 @@ export const PropertyMap: React.FC<PropertyMapProps> = ({ properties, onProperty
                             keepInView
                             autoPanPadding={[28, 28]}
                         >
-                            <div className="w-[18.5rem] p-3">
-                                <div className="flex flex-col gap-2.5">
+                            <div className="w-[17rem] p-3">
+                                <div className="flex flex-col gap-3">
                                 {isPresencialVerified ? <PresencialVerificationBadge className="w-fit" /> : null}
-                                <div className="relative h-24 w-full overflow-hidden rounded-[1rem] bg-slate-100">
+                                <div className="relative h-20 w-full overflow-hidden rounded-[1rem] bg-slate-100">
                                     <img
                                         src={property.imageUrl || property.images?.[0] || 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=1200&q=80&auto=format&fit=crop'}
                                         alt={property.title}
@@ -150,28 +150,37 @@ export const PropertyMap: React.FC<PropertyMapProps> = ({ properties, onProperty
                                     />
                                 </div>
 
-                                <div className="space-y-1">
+                                <div className="space-y-2">
+                                    <h3 className="m-0 overflow-hidden text-[0.96rem] font-semibold leading-5 text-slate-950 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
+                                        {property.title}
+                                    </h3>
+                                    <p className="m-0 text-[1rem] font-black leading-none tracking-[-0.03em] text-slate-950">
+                                        {formatCurrency(Number(property.price) || 0)}
+                                        <span className="ml-1 text-[0.72rem] font-medium tracking-normal text-slate-500">/ noche</span>
+                                    </p>
                                     <VerificationSeal
                                         score={verification.score}
                                         maxScore={verification.max}
                                         label={verification.compactLabel}
-                                        description={verification.description}
                                         size="sm"
                                         ariaLabel={verification.summaryLabel}
                                         className="w-fit"
                                     />
-                                    <PropertyVerificationChecklist items={verification.items} size="sm" columns={1} />
                                 </div>
 
-                                <div className="space-y-1.5">
-                                    <h3 className="m-0 overflow-hidden text-[0.96rem] font-semibold leading-5 text-slate-950 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
-                                        {property.title}
-                                    </h3>
-                                    <p className="m-0 text-[0.95rem] font-bold text-slate-950">
-                                        {formatCurrency(Number(property.price) || 0)}
-                                        <span className="ml-1 text-[0.72rem] font-medium text-slate-500">/ noche</span>
-                                    </p>
-                                </div>
+                                {verificationHighlights.length > 0 ? (
+                                    <ul className="flex flex-wrap gap-1.5" aria-label="Comprobaciones visibles">
+                                        {verificationHighlights.map((item) => (
+                                            <li
+                                                key={item.key}
+                                                className="inline-flex items-center gap-1 rounded-full border border-emerald-200/80 bg-emerald-50/80 px-2.5 py-1 text-[0.7rem] font-semibold text-emerald-900"
+                                            >
+                                                <span className="text-[0.68rem] text-emerald-700">✔</span>
+                                                <span>{item.shortLabel}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                ) : null}
 
                                 <button
                                     onClick={(e) => handleDetailClick(e, property.id)}
@@ -235,7 +244,7 @@ export const PropertyMap: React.FC<PropertyMapProps> = ({ properties, onProperty
         }
         .property-popup .leaflet-popup-content {
           margin: 0;
-          width: 296px !important;
+                    width: 272px !important;
         }
         .property-popup .leaflet-popup-tip-container {
           margin-top: -2px;

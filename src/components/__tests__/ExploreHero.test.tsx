@@ -16,7 +16,7 @@ describe('ExploreHero', () => {
     );
 
     expect(screen.getByRole('heading', { name: 'Reservar es fácil. Decidir bien no siempre.' })).toBeInTheDocument();
-    expect(screen.getByText('Elegí mejor antes de reservar.')).toBeInTheDocument();
+    expect(screen.getByText('Compará precio, zona y verificación antes de reservar.')).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'Destino' })).toHaveAttribute('placeholder', '¿A dónde querés ir?');
     expect(screen.queryByText('Buscador principal')).toBeNull();
     expect(screen.getByRole('button', { name: 'Buscar alojamientos' })).toBeInTheDocument();

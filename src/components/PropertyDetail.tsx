@@ -24,7 +24,6 @@ import { Button } from './ui/Button';
 import { Badge } from './ui/Badge';
 import { Card } from './ui/Card';
 import { NoticeBanner } from './ui/NoticeBanner';
-import { PropertyVerificationChecklist } from './ui/PropertyVerificationChecklist';
 import { SectionTitle } from './ui/SectionTitle';
 import { TrustSignalsInline, getTrustSignalsFromInteractionHistory, getTrustSignalsFromItems, type TrustSignal } from './ui/TrustSignalsInline';
 import { VerificationSeal } from './ui/VerificationSeal';
@@ -409,6 +408,7 @@ export const PropertyDetailShell: React.FC<{
   ].filter((value): value is string => Boolean(value));
   const verificationDetails = getPropertyVerificationDetails(property);
   const verificationDecisionMessage = getVerificationDecisionMessage(verificationDetails.score);
+  const verificationPreviewItems = verificationDetails.compactItems.slice(0, 3);
   const hostResponseSignal = getHostResponseSignal(property.hostInteractionHistory);
   const completedReservationsLabel = property.hostInteractionHistory?.completedReservationsCount
     ? `${property.hostInteractionHistory.completedReservationsCount} ${property.hostInteractionHistory.completedReservationsCount === 1 ? 'reserva cerrada' : 'reservas cerradas'}`
@@ -478,8 +478,8 @@ export const PropertyDetailShell: React.FC<{
   const bookingEntryCtaLabel = 'Consultar disponibilidad';
   const bookingEntryCtaNote = 'No estás reservando todavía';
   const bookingEntryHelperText = hasSelectedDates
-    ? 'Tu selección queda guardada mientras terminás de decidir si este lugar te cierra.'
-    : 'Revisá precio, zona y respaldo visible. Si te cierra, elegí fechas.';
+    ? 'Tu selección queda guardada mientras terminás de decidir si querés consultarlo.'
+    : 'Mirá precio, zona y capacidad. Si te cierra, consultá disponibilidad.';
   const mobilePrimaryActionLabel = bookingStep === 'dates'
     ? hasCompleteDates
       ? 'Seguir con huéspedes'
@@ -1207,42 +1207,56 @@ export const PropertyDetailShell: React.FC<{
                 data-testid="property-verification-preview"
                 className="space-y-4 border-t border-slate-200/70 pt-4"
               >
-                <div className="space-y-2">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Sello de verificación</p>
-                  <VerificationSeal
-                    score={verificationDetails.score}
-                    maxScore={verificationDetails.max}
-                    label={verificationDetails.compactLabel}
-                    description={verificationDetails.description}
-                    size="lg"
-                    ariaLabel={verificationDetails.summaryLabel}
-                  />
-                </div>
+                <div className="space-y-3">
+                  <div className="flex flex-wrap items-start gap-3">
+                    <div className="space-y-2">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Lo ya verificado</p>
+                      <VerificationSeal
+                        score={verificationDetails.score}
+                        maxScore={verificationDetails.max}
+                        label={verificationDetails.compactLabel}
+                        description={verificationDetails.description}
+                        size="lg"
+                        ariaLabel={verificationDetails.summaryLabel}
+                      />
+                    </div>
 
-                <div className="space-y-2 rounded-[22px] border border-slate-200/80 bg-white/75 px-4 py-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Estado de las comprobaciones</p>
-                  <PropertyVerificationChecklist items={verificationDetails.items} size="md" columns={2} />
-                </div>
+                    {verificationDecisionMessage ? (
+                      <span className="inline-flex items-center rounded-full border border-emerald-200/80 bg-emerald-50/90 px-3.5 py-2 text-sm font-semibold text-emerald-900 shadow-[0_14px_28px_-24px_rgba(5,150,105,0.44)]">
+                        {verificationDecisionMessage}
+                      </span>
+                    ) : null}
+                  </div>
 
-                {verificationDecisionMessage ? (
-                  <p className="text-sm font-medium leading-6 text-slate-800">{verificationDecisionMessage}</p>
-                ) : null}
+                  {verificationPreviewItems.length > 0 ? (
+                    <div className="space-y-2 rounded-[22px] border border-slate-200/80 bg-white/75 px-4 py-4">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Comprobaciones visibles</p>
+                      <ul className="flex flex-wrap gap-2" aria-label="Comprobaciones visibles">
+                        {verificationPreviewItems.map((item) => (
+                          <li
+                            key={item.key}
+                            className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200/80 bg-emerald-50/80 px-3 py-1.5 text-[0.82rem] font-semibold text-emerald-900"
+                          >
+                            <span className="text-[0.74rem] text-emerald-700">✔</span>
+                            <span>{item.label}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+                </div>
               </section>
             </div>
           </div>
         </section>
-
-        <div data-motion-block className="app-motion-block">
-          <VerificationInfoPanel />
-        </div>
 
         <main className="space-y-6 md:space-y-8">
           <Card data-motion-block className="app-card-hover app-motion-block rounded-[32px] border-slate-200/80 bg-white p-6 shadow-[0_28px_70px_-50px_rgba(15,23,42,0.25)] sm:p-7">
             <div className="space-y-5">
               <SectionTitle
                 eyebrow="Lo esencial"
-                heading="Lo esencial para decidir si seguís"
-                description="Lo básico del lugar para saber si vale elegir fechas o abrir chat."
+                heading="Lo esencial del lugar"
+                description="Lo básico para decidir si querés elegir fechas o seguir con la consulta."
               />
               <p className="max-w-3xl text-base leading-8 text-slate-600">
                 {property.description || 'Todavía no hay descripción disponible.'}
@@ -1257,6 +1271,10 @@ export const PropertyDetailShell: React.FC<{
               </div>
             </div>
           </Card>
+
+          <div data-motion-block className="app-motion-block">
+            <VerificationInfoPanel />
+          </div>
 
           {property.isOwnedByViewer === true ? (
             <div data-motion-block className="app-motion-block">

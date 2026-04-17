@@ -372,7 +372,7 @@ export const ExploreResultsSection = ({
               eyebrow="Mapa de resultados"
               description={loading
                 ? 'Estamos ubicando cada aviso en el mapa.'
-                : 'Abrí cada pin para ver precio, score y comprobaciones reales del aviso.'}
+                : 'Abrí cada pin para ver título, precio, verificación y entrar al detalle.'}
               badge={mapResultsCountBadge}
               actions={hasActiveFilters ? (
                 <Button type="button" variant="ghost" size="sm" onClick={onClearFilters} className="rounded-xl px-3 text-sm text-slate-900 hover:bg-slate-100 hover:text-slate-950">
@@ -422,14 +422,14 @@ export const ExploreResultsSection = ({
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6 xl:grid-cols-12">
             {loading
               ? renderSkeletons(3)
-              : featuredProperties.map((property, index) => (
+              : featuredProperties.map((property) => (
                   <PropertyCard
                     key={property.id}
                     property={property}
                     className={cn(
-                      index === 0 && featuredProperties.length > 1 && 'md:col-span-2 xl:col-span-6',
-                      featuredProperties.length === 2 && index === 1 && 'xl:col-span-6',
-                      featuredProperties.length >= 3 && index > 0 && 'xl:col-span-3',
+                      featuredProperties.length === 1 && 'md:col-span-2 xl:col-span-8 xl:col-start-3',
+                      featuredProperties.length === 2 && 'xl:col-span-6',
+                      featuredProperties.length === 3 && 'xl:col-span-4',
                     )}
                     verificationGuidanceLabel={sortBy === 'verification'
                       ? getPropertyVerificationGuidanceLabel(property, {

@@ -378,7 +378,7 @@ describe('PropertyDetail', () => {
 
     expect(within(desktopContext).getByRole('button', { name: /consultar disponibilidad/i })).toBeDefined();
     expect(within(desktopContext).getByText('No estás reservando todavía')).toBeDefined();
-    expect(within(desktopContext).getByText('Revisá precio, zona y respaldo visible. Si te cierra, elegí fechas.')).toBeDefined();
+    expect(within(desktopContext).getByText('Mirá precio, zona y capacidad. Si te cierra, consultá disponibilidad.')).toBeDefined();
 
     fireEvent.click(within(desktopContext).getByRole('button', { name: /consultar disponibilidad/i }));
 
@@ -396,7 +396,7 @@ describe('PropertyDetail', () => {
 
     expect(within(desktopContext).getByText('Lo primero para decidir')).toBeDefined();
     expect(within(desktopContext).getByRole('button', { name: /consultar disponibilidad/i })).toBeDefined();
-    expect(within(desktopContext).getByText('Revisá precio, zona y respaldo visible. Si te cierra, elegí fechas.')).toBeDefined();
+    expect(within(desktopContext).getByText('Mirá precio, zona y capacidad. Si te cierra, consultá disponibilidad.')).toBeDefined();
     expect(within(mobileContext).getByText('1 huésped · Total al elegir fechas')).toBeDefined();
     expect(within(mobileContext).getByRole('button', { name: /consultar disponibilidad/i })).toBeDefined();
     expect(within(mobileContext).getByText('No estás reservando todavía')).toBeDefined();
@@ -412,7 +412,7 @@ describe('PropertyDetail', () => {
     expect(within(bookingFlow).getByText('Consultar disponibilidad')).toBeDefined();
     expect(within(bookingFlow).getByText(/3 noches · 1 huésped ·/i)).toBeDefined();
     expect(within(bookingFlow).getAllByText(new RegExp('360')).length).toBeGreaterThan(0);
-    expect(within(desktopContext).getByText('Tu selección queda guardada mientras terminás de decidir si este lugar te cierra.')).toBeDefined();
+    expect(within(desktopContext).getByText('Tu selección queda guardada mientras terminás de decidir si querés consultarlo.')).toBeDefined();
     expect(within(desktopContext).getByText(/\d{1,2} \w{3} al \d{1,2} \w{3}/i)).toBeDefined();
     expect(within(desktopContext).getAllByText('1 huésped').length).toBeGreaterThan(0);
     expect(within(desktopContext).getAllByText(new RegExp('360')).length).toBeGreaterThan(0);
@@ -485,22 +485,22 @@ describe('PropertyDetail', () => {
     await waitForPropertyHeading();
 
     expect(screen.getByText('Lo primero para decidir')).toBeDefined();
-    expect(screen.getByText('Lo esencial para decidir si seguís')).toBeDefined();
-    expect(screen.getByText('Lo básico del lugar para saber si vale elegir fechas o abrir chat.')).toBeDefined();
+    expect(screen.getByText('Lo esencial del lugar')).toBeDefined();
+    expect(screen.getByText('Lo básico para decidir si querés elegir fechas o seguir con la consulta.')).toBeDefined();
     expect(screen.queryByText('Comodidades ya detalladas')).toBeNull();
     const verificationPreview = screen.getByTestId('property-verification-preview');
-    expect(within(verificationPreview).getByText('Sello de verificación')).toBeDefined();
+    expect(within(verificationPreview).getByText('Lo ya verificado')).toBeDefined();
     expect(within(verificationPreview).getByText('Verificación parcial')).toBeDefined();
     expect(within(verificationPreview).getByText('(4/5)')).toBeDefined();
     expect(within(verificationPreview).getByText('Este aviso tiene información confirmada, pero hay puntos pendientes.')).toBeDefined();
     expect(within(verificationPreview).getByText('Listo para coordinar')).toBeDefined();
-    expect(within(verificationPreview).getAllByRole('listitem')).toHaveLength(5);
+    expect(within(verificationPreview).getAllByRole('listitem')).toHaveLength(3);
     expect(within(verificationPreview).getByText('Anfitrión confirmado')).toBeDefined();
     expect(within(verificationPreview).getByText('Ubicación verificada')).toBeDefined();
-    expect(within(verificationPreview).getByText('Geolocalización precisa')).toBeDefined();
-    expect(within(verificationPreview).getByText('Disponibilidad validada')).toBeDefined();
+    expect(within(verificationPreview).getByText('Fotos / video reales')).toBeDefined();
     expect(screen.getByText('Cómo se valida este aviso')).toBeDefined();
-    expect(screen.getByText('Los avisos más completos aparecen primero')).toBeDefined();
+    expect(screen.getByText('Más comprobaciones, menos dudas al decidir')).toBeDefined();
+    expect(screen.getByText('Los avisos más completos aparecen primero.')).toBeDefined();
     expect(screen.getByText('Puede alojar hasta 4 huéspedes.')).toBeDefined();
     expect(screen.getByText('Tiene 3 dormitorios · 2 baños.')).toBeDefined();
     expect(screen.getByText('Comodidades clave: Wifi rápido · Cocina equipada · Entrada autónoma.')).toBeDefined();
@@ -546,11 +546,11 @@ describe('PropertyDetail', () => {
     await waitForPropertyHeading();
 
     const verificationPreview = screen.getByTestId('property-verification-preview');
-  expect(within(verificationPreview).getByText('Verificado presencialmente')).toBeDefined();
+    expect(within(verificationPreview).getByText('Verificado presencialmente')).toBeDefined();
     expect(within(verificationPreview).getByText('(5/5)')).toBeDefined();
-  expect(within(verificationPreview).getByText('Este aviso fue validado con verificación presencial y cumple con todas las comprobaciones.')).toBeDefined();
+    expect(within(verificationPreview).getByText('Este aviso fue validado con verificación presencial y cumple con todas las comprobaciones.')).toBeDefined();
     expect(within(verificationPreview).getByText('Listo para coordinar')).toBeDefined();
-  expect(within(verificationPreview).getAllByRole('listitem')).toHaveLength(5);
+    expect(within(verificationPreview).getAllByRole('listitem')).toHaveLength(3);
     expect(within(verificationPreview).getByText('Anfitrión confirmado')).toBeDefined();
     expect(within(verificationPreview).getByText('Ubicación verificada')).toBeDefined();
     expect(within(verificationPreview).getByText('Disponibilidad validada')).toBeDefined();
@@ -622,11 +622,9 @@ describe('PropertyDetail', () => {
     expect(within(verificationPreview).getByText('Verificación parcial')).toBeDefined();
     expect(within(verificationPreview).getByText('(2/5)')).toBeDefined();
     expect(within(verificationPreview).getByText('Este aviso tiene información confirmada, pero hay puntos pendientes.')).toBeDefined();
-    expect(within(verificationPreview).getAllByRole('listitem')).toHaveLength(5);
+  expect(within(verificationPreview).getAllByRole('listitem')).toHaveLength(2);
     expect(within(verificationPreview).getByText('Ubicación verificada')).toBeDefined();
     expect(within(verificationPreview).getByText('Geolocalización precisa')).toBeDefined();
-    expect(within(verificationPreview).getByText('Fotos / video reales')).toBeDefined();
-    expect(within(verificationPreview).getByText('Disponibilidad validada')).toBeDefined();
     expect(within(verificationPreview).queryByText('Listo para coordinar')).toBeNull();
   });
 

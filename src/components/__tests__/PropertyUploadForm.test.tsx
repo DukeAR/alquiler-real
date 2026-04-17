@@ -24,7 +24,7 @@ describe('PropertyUploadForm', () => {
 
     expect(screen.getByText('Publica tu propiedad en pocos pasos')).toBeInTheDocument();
     expect(screen.getByText('Cómo se valida este aviso')).toBeInTheDocument();
-    expect(screen.getByText('Más comprobaciones = más claridad para decidir')).toBeInTheDocument();
+    expect(screen.getByText('Más comprobaciones, menos dudas al decidir')).toBeInTheDocument();
     expect(screen.getByText('14%')).toBeInTheDocument();
     expect(screen.getByText('6 pasos más hasta publicar.')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Fotos' })).toBeInTheDocument();

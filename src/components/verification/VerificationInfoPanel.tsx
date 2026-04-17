@@ -7,23 +7,23 @@ type VerificationInfoPanelProps = {
 const VERIFICATION_INFO_ITEMS = [
   {
     title: 'Anfitrión confirmado',
-    description: 'Validamos la identidad de quien publica para asegurar que hay una persona real detrás del aviso.',
+    description: 'Confirmamos la identidad de quien publica.',
   },
   {
     title: 'Ubicación verificada',
-    description: 'Confirmamos que la propiedad existe y corresponde a la dirección publicada.',
+    description: 'Verificamos que el inmueble exista en la dirección publicada.',
   },
   {
     title: 'Geolocalización precisa',
-    description: 'El punto en el mapa coincide con la ubicación real del inmueble.',
+    description: 'Chequeamos que el punto del mapa coincida con el lugar real.',
   },
   {
     title: 'Fotos y video reales',
-    description: 'El contenido visual muestra el lugar tal como es.',
+    description: 'Revisamos fotos o video del lugar real.',
   },
   {
     title: 'Disponibilidad validada',
-    description: 'El anfitrión responde y confirma disponibilidad reciente.',
+    description: 'Validamos disponibilidad reciente con el anfitrión.',
   },
 ] as const;
 
@@ -36,11 +36,11 @@ export const VerificationInfoPanel = ({ className }: VerificationInfoPanelProps)
       <div className="space-y-2">
         <h2 className="text-2xl font-semibold tracking-tight text-slate-950">Cómo se valida este aviso</h2>
         <p className="max-w-3xl text-sm leading-7 text-slate-600">
-          Estas comprobaciones muestran qué información ya fue confirmada y qué falta para decidir con claridad.
+          Estas 5 comprobaciones muestran qué ya está confirmado antes de decidir.
         </p>
       </div>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="mt-6 grid gap-3.5 sm:grid-cols-2">
         {VERIFICATION_INFO_ITEMS.map((item, index) => (
           <div
             key={item.title}
@@ -58,10 +58,9 @@ export const VerificationInfoPanel = ({ className }: VerificationInfoPanelProps)
       </div>
 
       <div className="mt-6 border-t border-slate-200/80 pt-5">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Qué cambia esto</p>
-        <div className="mt-3 space-y-2">
-          <p className="text-base font-semibold text-slate-900">Más comprobaciones = más claridad para decidir</p>
-          <p className="text-sm leading-6 text-slate-600">Los avisos más completos aparecen primero</p>
+        <div className="space-y-2">
+          <p className="text-base font-semibold text-slate-900">Más comprobaciones, menos dudas al decidir</p>
+          <p className="text-sm leading-6 text-slate-600">Los avisos más completos aparecen primero.</p>
         </div>
       </div>
     </section>

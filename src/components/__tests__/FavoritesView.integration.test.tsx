@@ -97,9 +97,9 @@ describe('FavoritesView integration', () => {
     expect(screen.getByLabelText('Verificación parcial (4/5)')).toBeInTheDocument();
     expect(screen.getByLabelText('Verificación parcial (3/5)')).toBeInTheDocument();
     expect(screen.getAllByText('Verificación parcial').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Este aviso tiene información confirmada, pero hay puntos pendientes.').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Disponibilidad validada').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Anfitrión confirmado').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Este aviso tiene información confirmada, pero hay puntos pendientes.')).toBeNull();
+    expect(screen.getAllByText('Anfitrión').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Ubicación').length).toBeGreaterThan(0);
     expect(screen.queryByText('Mejor verificado')).toBeNull();
     expect(screen.queryByText('Alto nivel de verificación')).toBeNull();
     expect(screen.getAllByRole('button', { name: /Abrir detalle de/i })).toHaveLength(2);

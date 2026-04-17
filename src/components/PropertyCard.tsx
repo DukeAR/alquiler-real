@@ -8,7 +8,6 @@ import { Button } from './ui/Button';
 import { Badge } from './ui/Badge';
 import { Card } from './ui/Card';
 import { PresencialVerificationBadge } from './ui/PresencialVerificationBadge';
-import { PropertyVerificationChecklist } from './ui/PropertyVerificationChecklist';
 import { VerificationSeal } from './ui/VerificationSeal';
 
 const normalizePropertyText = (value?: string) => (value ?? '')
@@ -80,6 +79,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   const guestCapacityLabel = getGuestCapacityLabel(Number(property.maxGuests) || null);
   const verificationTagLabel = !isFavoritesVariant && !isDecisionFeatured ? verificationGuidanceLabel : null;
   const showPresencialBadge = verificationDetails.isFullyVerified;
+  const verificationHighlights = verificationDetails.compactItems.slice(0, 3);
   const handleFavoriteToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
     const { user } = auth;
@@ -163,52 +163,57 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
       </div>
 
       <div className="flex flex-1 flex-col gap-4 p-5 sm:p-5 md:p-6">
-        <div className="space-y-3">
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <p className="eyebrow">{propertyTypeLabel}</p>
-              <h3 className="section-title line-clamp-2 text-[1.18rem] font-semibold leading-[1.18] transition-colors duration-150 group-hover:text-slate-950 md:text-[1.25rem]">
-                {property.title}
-              </h3>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-y-1.5 text-[0.95rem] leading-6 text-slate-600">
-              <span className="inline-flex items-center gap-1.5">
-                <Icons.MapPin className="h-3.5 w-3.5 text-slate-400" />
-                <span>{property.location}</span>
-              </span>
-              {guestCapacityLabel ? (
-                <>
-                  <span aria-hidden="true" className="px-2 text-slate-300">·</span>
-                  <span className="inline-flex items-center gap-1.5">
-                    <Icons.Users className="h-3.5 w-3.5 text-slate-400" />
-                    <span>{guestCapacityLabel}</span>
-                  </span>
-                </>
-              ) : null}
-            </div>
-
-            <div data-testid="property-card-verification" aria-label={verificationDetails.label} className="space-y-2.5">
-              <VerificationSeal
-                score={verificationDetails.score}
-                maxScore={verificationDetails.max}
-                label={verificationDetails.compactLabel}
-                description={verificationDetails.description}
-                size="sm"
-                emphasized={shouldEmphasizeVerification}
-              />
-              <PropertyVerificationChecklist items={verificationDetails.items} size="sm" columns={2} />
-            </div>
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <p className="eyebrow">{propertyTypeLabel}</p>
+            <h3 className="section-title line-clamp-2 text-[1.18rem] font-semibold leading-[1.18] tracking-[-0.02em] transition-colors duration-150 group-hover:text-slate-950 md:text-[1.25rem]">
+              {property.title}
+            </h3>
           </div>
-        </div>
 
-        <div className="mt-auto space-y-1.5 pt-1">
           <div className="space-y-1">
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Por noche</p>
-            <p className="text-[2.9rem] font-black leading-none tracking-[-0.06em] text-slate-950 md:text-[3.05rem]">
+            <p className="text-[2.85rem] font-black leading-none tracking-[-0.06em] text-slate-950 md:text-[2.95rem]">
               {formatCurrency(Number(property.price) || 0)}
             </p>
           </div>
+
+          <div data-testid="property-card-verification" aria-label={verificationDetails.label} className="space-y-2.5 rounded-[26px] border border-slate-200/80 bg-slate-50/80 px-4 py-4">
+            <VerificationSeal
+              score={verificationDetails.score}
+              maxScore={verificationDetails.max}
+              label={verificationDetails.compactLabel}
+              size="sm"
+              emphasized={shouldEmphasizeVerification}
+            />
+
+            {verificationHighlights.length > 0 ? (
+              <ul className="flex flex-wrap gap-2" aria-label="Comprobaciones visibles">
+                {verificationHighlights.map((item) => (
+                  <li
+                    key={item.key}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200/80 bg-emerald-50/80 px-3 py-1.5 text-[0.76rem] font-semibold text-emerald-900"
+                  >
+                    <span className="text-[0.72rem] text-emerald-700">✔</span>
+                    <span>{item.shortLabel}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-slate-200/70 pt-4 text-[0.83rem] font-medium leading-5 text-slate-500">
+          <span className="inline-flex items-center gap-1.5">
+            <Icons.MapPin className="h-3.5 w-3.5 text-slate-400" />
+            <span>{property.location}</span>
+          </span>
+          {guestCapacityLabel ? (
+            <span className="inline-flex items-center gap-1.5">
+              <Icons.Users className="h-3.5 w-3.5 text-slate-400" />
+              <span>{guestCapacityLabel}</span>
+            </span>
+          ) : null}
         </div>
       </div>
     </Card>
