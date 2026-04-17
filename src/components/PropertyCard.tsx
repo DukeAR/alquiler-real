@@ -7,6 +7,7 @@ import { Property } from '../services/geminiService';
 import { Button } from './ui/Button';
 import { Badge } from './ui/Badge';
 import { Card } from './ui/Card';
+import { PropertyVerificationChecklist } from './ui/PropertyVerificationChecklist';
 import { VerificationSeal } from './ui/VerificationSeal';
 
 const normalizePropertyText = (value?: string) => (value ?? '')
@@ -77,8 +78,6 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   const propertyTypeLabel = getPropertyTypeLabel(property);
   const guestCapacityLabel = getGuestCapacityLabel(Number(property.maxGuests) || null);
   const verificationTagLabel = !isFavoritesVariant && !isDecisionFeatured ? verificationGuidanceLabel : null;
-  const compactVerificationDetail = verificationDetails.compactSummary;
-
   const handleFavoriteToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
     const { user } = auth;
@@ -185,20 +184,16 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
               ) : null}
             </div>
 
-            <div data-testid="property-card-verification" aria-label={verificationDetails.label} className="space-y-1">
+            <div data-testid="property-card-verification" aria-label={verificationDetails.label} className="space-y-2.5">
               <VerificationSeal
                 score={verificationDetails.score}
                 maxScore={verificationDetails.max}
                 label={verificationDetails.compactLabel}
+                description={verificationDetails.description}
                 size="sm"
                 emphasized={shouldEmphasizeVerification}
               />
-
-              {compactVerificationDetail ? (
-                <p className={cn('text-[12.5px] leading-5 text-emerald-700', shouldEmphasizeVerification && 'text-emerald-800')}>
-                  {compactVerificationDetail}
-                </p>
-              ) : null}
+              <PropertyVerificationChecklist items={verificationDetails.items} size="sm" columns={2} />
             </div>
           </div>
         </div>

@@ -7,7 +7,6 @@ import DateRangePicker from './DateRangePicker';
 import {
   getPropertyVerificationDetails,
 } from '../lib/propertyVerification';
-import { getVerificationIdentityLabel } from '../lib/verificationPresentation';
 import { getHostResponseSignal } from '../lib/positiveIncentives';
 import { showToast } from '../lib/toast';
 import { cn, formatCurrency } from '../lib/utils';
@@ -25,6 +24,7 @@ import { Button } from './ui/Button';
 import { Badge } from './ui/Badge';
 import { Card } from './ui/Card';
 import { NoticeBanner } from './ui/NoticeBanner';
+import { PropertyVerificationChecklist } from './ui/PropertyVerificationChecklist';
 import { SectionTitle } from './ui/SectionTitle';
 import { TrustSignalsInline, getTrustSignalsFromInteractionHistory, getTrustSignalsFromItems, type TrustSignal } from './ui/TrustSignalsInline';
 import { VerificationSeal } from './ui/VerificationSeal';
@@ -282,70 +282,7 @@ const getDecisionAmenityLabel = (amenities?: string[]) => {
   return selected.slice(0, 3).join(' · ');
 };
 
-type VerificationDecisionKey = 'identity' | 'location' | 'geolocation' | 'photos' | 'availability';
-
-type VerificationDecisionItem = {
-  key: VerificationDecisionKey | string;
-  label: string;
-  status: 'complete' | 'pending';
-};
-
-const VERIFICATION_CONFIRMED_PRIORITY: VerificationDecisionKey[] = ['identity', 'location', 'availability'];
-
-const VERIFICATION_PENDING_PRIORITY: VerificationDecisionKey[] = ['photos', 'availability', 'identity', 'location', 'geolocation'];
-
-const VERIFICATION_DECISION_MESSAGES: Partial<Record<VerificationDecisionKey, string>> = {
-  photos: 'Falta validar fotos o video',
-  availability: 'Disponibilidad no confirmada recientemente',
-  identity: 'Falta confirmar el anfitrión',
-  location: 'Ubicación no validada todavía',
-  geolocation: 'Ubicación precisa no validada todavía',
-};
-
-const pickVerificationDecisionItems = (
-  items: VerificationDecisionItem[],
-  status: VerificationDecisionItem['status'],
-  priority: VerificationDecisionKey[],
-  limit: number,
-) => {
-  const selected: VerificationDecisionItem[] = [];
-  const seenKeys = new Set<string>();
-  const addItem = (item?: VerificationDecisionItem) => {
-    if (!item || item.status !== status || seenKeys.has(item.key)) {
-      return;
-    }
-
-    selected.push(item);
-    seenKeys.add(item.key);
-  };
-
-  priority.forEach((key) => addItem(items.find((item) => item.key === key)));
-  items.forEach((item) => addItem(item));
-
-  return selected.slice(0, limit);
-};
-
-const getVerificationDecisionMessage = (score: number, items: VerificationDecisionItem[]) => {
-  const primaryPendingItem = pickVerificationDecisionItems(items, 'pending', VERIFICATION_PENDING_PRIORITY, 1)[0];
-
-  if (primaryPendingItem?.key === 'photos' || primaryPendingItem?.key === 'availability') {
-    return VERIFICATION_DECISION_MESSAGES[primaryPendingItem.key];
-  }
-
-  if (score >= 4) {
-    return 'Listo para coordinar';
-  }
-
-  if (score >= 3) {
-    return 'Podés avanzar, pero hay información a completar';
-  }
-
-  if (!primaryPendingItem) {
-    return 'Listo para coordinar';
-  }
-
-  return VERIFICATION_DECISION_MESSAGES[primaryPendingItem.key as VerificationDecisionKey] || `Falta validar ${primaryPendingItem.label.toLowerCase()}`;
-};
+const getVerificationDecisionMessage = (score: number) => (score >= 4 ? 'Listo para coordinar' : null);
 
 const GuestCounterCard: React.FC<GuestCounterCardProps> = ({
   label,
@@ -469,23 +406,7 @@ export const PropertyDetailShell: React.FC<{
     bathroomsCount ? formatCountLabel(bathroomsCount, 'baño', 'baños') : null,
   ].filter((value): value is string => Boolean(value));
   const verificationDetails = getPropertyVerificationDetails(property);
-  const verificationDecisionLevelLabel = getVerificationIdentityLabel(verificationDetails.score, verificationDetails.max, { includeCount: false });
-  const verificationDecisionMessage = getVerificationDecisionMessage(
-    verificationDetails.score,
-    verificationDetails.items as VerificationDecisionItem[],
-  );
-  const verificationConfirmedItems = pickVerificationDecisionItems(
-    verificationDetails.items as VerificationDecisionItem[],
-    'complete',
-    VERIFICATION_CONFIRMED_PRIORITY,
-    3,
-  );
-  const verificationPendingItems = pickVerificationDecisionItems(
-    verificationDetails.items as VerificationDecisionItem[],
-    'pending',
-    VERIFICATION_PENDING_PRIORITY,
-    3,
-  );
+  const verificationDecisionMessage = getVerificationDecisionMessage(verificationDetails.score);
   const hostResponseSignal = getHostResponseSignal(property.hostInteractionHistory);
   const completedReservationsLabel = property.hostInteractionHistory?.completedReservationsCount
     ? `${property.hostInteractionHistory.completedReservationsCount} ${property.hostInteractionHistory.completedReservationsCount === 1 ? 'reserva cerrada' : 'reservas cerradas'}`
@@ -1193,41 +1114,21 @@ export const PropertyDetailShell: React.FC<{
                   <VerificationSeal
                     score={verificationDetails.score}
                     maxScore={verificationDetails.max}
-                    label={verificationDecisionLevelLabel}
+                    label={verificationDetails.compactLabel}
+                    description={verificationDetails.description}
                     size="lg"
                     ariaLabel={verificationDetails.summaryLabel}
                   />
                 </div>
 
-                <p className="text-sm font-medium leading-6 text-slate-800">{verificationDecisionMessage}</p>
-
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="space-y-2 rounded-[22px] border border-slate-200/80 bg-white/75 px-4 py-3">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Confirmado</p>
-                    <ul className="space-y-2">
-                      {verificationConfirmedItems.map((item) => (
-                        <li key={item.key} className="flex items-start gap-2.5 text-sm leading-6 text-slate-700">
-                          <span className="pt-0.5 font-semibold text-emerald-600">✔</span>
-                          <span className="font-medium">{item.label}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  {verificationPendingItems.length > 0 ? (
-                    <div className="space-y-2 rounded-[22px] border border-slate-200/80 bg-white/75 px-4 py-3">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Pendiente</p>
-                      <ul className="space-y-2">
-                        {verificationPendingItems.map((item) => (
-                          <li key={item.key} className="flex items-start gap-2.5 text-sm leading-6 text-slate-600">
-                            <span className="pt-0.5 font-semibold text-amber-600">⚠</span>
-                            <span className="font-medium">{item.label}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ) : null}
+                <div className="space-y-2 rounded-[22px] border border-slate-200/80 bg-white/75 px-4 py-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Estado de las comprobaciones</p>
+                  <PropertyVerificationChecklist items={verificationDetails.items} size="md" columns={2} />
                 </div>
+
+                {verificationDecisionMessage ? (
+                  <p className="text-sm font-medium leading-6 text-slate-800">{verificationDecisionMessage}</p>
+                ) : null}
               </section>
             </div>
           </div>

@@ -1,9 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { apiJson } from '../../lib/apiConfig';
-import { getPropertyVerificationItems } from '../../lib/propertyVerification';
+import { getPropertyVerificationBadge, getPropertyVerificationDisplayLabel, getPropertyVerificationItems } from '../../lib/propertyVerification';
 import { showToast } from '../../lib/toast';
 import { cn } from '../../lib/utils';
-import { getVerificationIdentityLabel } from '../../lib/verificationPresentation';
 import type { Property } from '../../types';
 import { Icons } from '../Icons';
 import { Button } from '../ui/Button';
@@ -34,14 +33,6 @@ const CHECK_ORDER: HostProgressKey[] = ['identity', 'location', 'geolocation', '
 
 const uploadAcceptMap: Record<VerificationUploadKind, string> = {
   photo: 'image/*',
-};
-
-const canonicalLabels: Record<HostProgressKey, string> = {
-  identity: 'Anfitrión confirmado',
-  location: 'Ubicación verificada',
-  geolocation: 'Geolocalización precisa',
-  photos: 'Fotos / video reales',
-  availability: 'Disponibilidad validada',
 };
 
 const impactByKey: Record<HostProgressKey, string> = {
@@ -143,7 +134,7 @@ export const HostListingProgressPanel = ({
 
         return {
           key,
-          label: canonicalLabels[key],
+          label: getPropertyVerificationDisplayLabel(key),
           description: item.description,
           status: item.status,
         } satisfies OrderedProgressItem;
@@ -152,15 +143,15 @@ export const HostListingProgressPanel = ({
       .sort((left, right) => CHECK_ORDER.indexOf(left.key) - CHECK_ORDER.indexOf(right.key))
   ), [property]);
 
-  const score = verificationItems.filter((item) => item.status === 'complete').length;
-  const maxScore = verificationItems.length || CHECK_ORDER.length;
+  const verificationBadge = getPropertyVerificationBadge({ ...property, verificationItems });
+  const score = verificationBadge.score;
+  const maxScore = verificationBadge.max;
   const pendingKeys = new Set(
     verificationItems
       .filter((item) => item.status !== 'complete')
       .map((item) => item.key),
   );
   const topMessage = getTopMessage(pendingKeys);
-  const sealLabel = getVerificationIdentityLabel(score, maxScore, { includeCount: false });
   const locationActionDisabled = savingLocation || resolvingLocation;
 
   const uploadFiles = async (kind: VerificationUploadKind, fileList: FileList | null) => {
@@ -379,7 +370,7 @@ export const HostListingProgressPanel = ({
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-2">
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Estado de tu aviso</p>
-            <h3 className="text-2xl font-semibold tracking-tight text-slate-950">{getVerificationIdentityLabel(score, maxScore)}</h3>
+            <h3 className="text-2xl font-semibold tracking-tight text-slate-950">{verificationBadge.summaryLabel}</h3>
             <p className="max-w-2xl text-sm leading-6 text-slate-600">{topMessage}</p>
           </div>
 
@@ -388,8 +379,10 @@ export const HostListingProgressPanel = ({
             <VerificationSeal
               score={score}
               maxScore={maxScore}
-              label={sealLabel}
+              label={verificationBadge.compactLabel}
+              description={verificationBadge.description}
               size="md"
+              ariaLabel={verificationBadge.summaryLabel}
               className="mt-3"
             />
           </div>
@@ -411,22 +404,22 @@ export const HostListingProgressPanel = ({
                   'flex h-11 w-11 items-center justify-center rounded-2xl border',
                   item.status === 'complete'
                     ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                    : 'border-slate-200 bg-slate-50 text-slate-500',
+                    : 'border-amber-200 bg-amber-50 text-amber-700',
                 )}
               >
-                {item.status === 'complete' ? <Icons.Check className="h-5 w-5" /> : <Icons.Circle className="h-4 w-4" />}
+                  {item.status === 'complete' ? <Icons.Check className="h-5 w-5" /> : <span className="text-base font-semibold">⚠</span>}
               </span>
 
               <div className="min-w-0 space-y-1.5">
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-sm font-semibold text-slate-950">{item.label}</p>
+                    <p className="text-sm font-semibold text-slate-950">{getPropertyVerificationDisplayLabel(item.key)}</p>
                   <span className={cn(
                     'rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]',
                     item.status === 'complete'
                       ? 'bg-emerald-50 text-emerald-700'
-                      : 'bg-slate-100 text-slate-500',
+                        : 'bg-amber-50 text-amber-700',
                   )}>
-                    {item.status === 'complete' ? 'Check' : 'Pendiente'}
+                      {item.status === 'complete' ? 'Completado' : 'Pendiente'}
                   </span>
                 </div>
                 <p className="text-sm leading-6 text-slate-600">{item.description}</p>

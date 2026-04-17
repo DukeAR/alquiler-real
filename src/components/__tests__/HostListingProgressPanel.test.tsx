@@ -62,8 +62,9 @@ describe('HostListingProgressPanel', () => {
     );
 
     expect(screen.getByText('Estado de tu aviso')).toBeInTheDocument();
-    expect(screen.getByText('Alta confianza')).toBeInTheDocument();
-    expect(screen.getAllByText('(4/5)').length).toBeGreaterThan(0);
+  expect(screen.getByText('Verificación parcial (4/5)')).toBeInTheDocument();
+  expect(screen.getAllByText('Verificación parcial').length).toBeGreaterThan(0);
+  expect(screen.getByText('Este aviso tiene información confirmada, pero hay puntos pendientes.')).toBeInTheDocument();
     expect(screen.getByText('Te falta confirmar disponibilidad para aparecer entre los primeros resultados.')).toBeInTheDocument();
     expect(screen.getByText('Cómo impacta en tu publicación')).toBeInTheDocument();
 

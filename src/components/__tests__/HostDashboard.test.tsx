@@ -177,8 +177,8 @@ describe('HostDashboard', () => {
     expect(screen.getByText('Sugerencias para mover tus avisos')).toBeInTheDocument();
     expect(screen.getByText('Primero ves si cada aviso esta activo y despues cuanto ya queda claro para quien consulta.')).toBeInTheDocument();
     expect(screen.getByText('Estado de tu aviso')).toBeInTheDocument();
-    expect(screen.getByText('Alta confianza')).toBeInTheDocument();
-    expect(screen.getAllByText('(4/5)').length).toBeGreaterThan(0);
+    expect(screen.getByText('Verificación parcial (4/5)')).toBeInTheDocument();
+    expect(screen.getAllByText('Verificación parcial').length).toBeGreaterThan(0);
     expect(screen.getByText('Te falta confirmar disponibilidad para aparecer entre los primeros resultados.')).toBeInTheDocument();
     expect(screen.getByText('Cómo impacta en tu publicación')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Solicitar verificación presencial/i })).toBeInTheDocument();

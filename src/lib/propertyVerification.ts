@@ -13,7 +13,7 @@ import {
   type PropertyVerificationProgress,
   type PropertyVerificationSummary,
 } from './verificationModel';
-import { getVerificationCountLabel, getVerificationIdentityLabel, getVerificationLevelLabel } from './verificationPresentation';
+import { getVerificationCountLabel } from './verificationPresentation';
 
 export type {
   PropertyAdvancedVerificationItem,
@@ -137,6 +137,14 @@ const PROPERTY_VERIFICATION_SHORT_LABELS: Record<PropertyVerificationKey, string
   availability: 'Disponibilidad',
 };
 
+const PROPERTY_VERIFICATION_DISPLAY_LABELS: Record<PropertyVerificationKey, string> = {
+  identity: 'Anfitrión confirmado',
+  location: 'Ubicación verificada',
+  geolocation: 'Geolocalización precisa',
+  photos: 'Fotos / video reales',
+  availability: 'Disponibilidad validada',
+};
+
 const PROPERTY_VERIFICATION_COMPACT_PRIORITY: Record<PropertyVerificationKey, number> = {
   identity: 0,
   location: 1,
@@ -169,6 +177,56 @@ const clampVerificationScore = (score: number) => {
   }
 
   return Math.max(0, Math.min(VERIFICATION_SCORE_MAX, Math.round(score)));
+};
+
+export const getPropertyVerificationDisplayLabel = (key?: string) => {
+  const normalizedKey = normalizePropertyVerificationKey(key);
+
+  return normalizedKey ? PROPERTY_VERIFICATION_DISPLAY_LABELS[normalizedKey] : 'Verificación pendiente';
+};
+
+export const getPropertyVerificationStateCopy = (score: number, maxScore = VERIFICATION_SCORE_MAX) => {
+  const safeMaxScore = Math.max(1, maxScore);
+  const safeScore = Math.max(0, Math.min(safeMaxScore, Math.round(score)));
+  const countLabel = getVerificationCountLabel(safeScore, safeMaxScore);
+  const fullyVerified = safeScore === safeMaxScore;
+  const title = fullyVerified ? 'Verificado presencialmente' : 'Verificación parcial';
+  const description = fullyVerified
+    ? 'Este aviso fue validado con verificación presencial y cumple con todas las comprobaciones.'
+    : 'Este aviso tiene información confirmada, pero hay puntos pendientes.';
+
+  return {
+    title,
+    description,
+    countLabel,
+    summaryLabel: `${title} (${countLabel})`,
+    isFullyVerified: fullyVerified,
+    isCoordinationReady: safeScore >= HIGH_VERIFICATION_HIGHLIGHT_MIN_SCORE,
+  };
+};
+
+const getPropertyVerificationDisplayItems = (items: PropertyVerificationItem[]) => {
+  const itemByKey = new Map<PropertyVerificationKey, PropertyVerificationItem>();
+
+  items.forEach((item) => {
+    const normalizedKey = normalizePropertyVerificationKey(typeof item.key === 'string' ? item.key : undefined);
+
+    if (!normalizedKey || itemByKey.has(normalizedKey)) {
+      return;
+    }
+
+    itemByKey.set(normalizedKey, item);
+  });
+
+  return PROPERTY_VERIFICATION_KEYS.map((key) => {
+    const sourceItem = itemByKey.get(key) || buildPropertyVerificationItem({ key, complete: false });
+
+    return {
+      ...sourceItem,
+      key,
+      label: PROPERTY_VERIFICATION_DISPLAY_LABELS[key],
+    };
+  });
 };
 
 const normalizeCatalogText = (value?: string | null) => (value ?? '')
@@ -775,23 +833,26 @@ export const getPropertyVerificationBadge = (property: PropertyVerificationLike)
       : typeof property.verificationScore === 'number' && !hasDerivedVerificationSignals(property)
         ? Math.min(clampVerificationScore(property.verificationScore), max)
         : Math.min(verificationSummary.score, max);
-  const summaryLabel = getVerificationIdentityLabel(score, max);
-  const compactLabel = getVerificationIdentityLabel(score, max, { includeCount: false });
+    const stateCopy = getPropertyVerificationStateCopy(score, max);
 
   return {
     score,
     max,
-    label: summaryLabel,
-    summaryLabel,
-    compactLabel,
-    countLabel: getVerificationCountLabel(score, max),
-    levelLabel: getVerificationLevelLabel(score, max),
+      label: stateCopy.summaryLabel,
+      summaryLabel: stateCopy.summaryLabel,
+      compactLabel: stateCopy.title,
+      countLabel: stateCopy.countLabel,
+      levelLabel: stateCopy.title,
+      description: stateCopy.description,
+      isFullyVerified: stateCopy.isFullyVerified,
+      isCoordinationReady: stateCopy.isCoordinationReady,
   };
 };
 
 export const getPropertyVerificationDetails = (property: PropertyVerificationLike) => {
   const verificationSummary = getPropertyVerificationSummary(property);
   const badge = getPropertyVerificationBadge({ ...property, verificationSummary });
+    const displayItems = getPropertyVerificationDisplayItems(verificationSummary.items);
   const compactItems = verificationSummary.items
     .filter((item) => item.status === 'complete')
     .sort((left, right) => {
@@ -813,7 +874,7 @@ export const getPropertyVerificationDetails = (property: PropertyVerificationLik
 
   return {
     ...badge,
-    items: verificationSummary.items,
+    items: displayItems,
     compactItems,
     compactSummary: compactItems.slice(0, 3).map((item) => item.shortLabel).join(' · '),
     helperText: 'Ves las 5 comprobaciones reales, lo ya confirmado y lo que todavía falta validar.',

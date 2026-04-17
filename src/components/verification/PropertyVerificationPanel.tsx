@@ -3,6 +3,7 @@ import { apiJson } from '../../lib/apiConfig';
 import {
   getPropertyAdvancedVerificationItems,
   getPropertyVerificationBadge,
+  getPropertyVerificationDetails,
   getPropertyVerificationItems,
 } from '../../lib/propertyVerification';
 import { VERIFICATION_PRIVACY_NOTICES } from '../../lib/privacyPolicy';
@@ -15,7 +16,8 @@ import { Icons } from '../Icons';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
-import { VerificationDetailsBlock } from '../ui/VerificationDetailsBlock';
+import { PropertyVerificationChecklist } from '../ui/PropertyVerificationChecklist';
+import { VerificationSeal } from '../ui/VerificationSeal';
 import { HostListingProgressPanel } from './HostListingProgressPanel';
 
 type VerificationUploadKind = 'video' | 'document';
@@ -108,6 +110,7 @@ export const PropertyVerificationPanel = ({
 
   const verificationItems = getPropertyVerificationItems(property);
   const verificationBadge = getPropertyVerificationBadge({ ...property, verificationItems });
+  const verificationDetails = getPropertyVerificationDetails({ ...property, verificationItems });
   const advancedItems = getPropertyAdvancedVerificationItems(property);
   const pendingItems = verificationItems.filter((item) => item.status !== 'complete');
   const photoAssets = Array.isArray(property.verificationMedia?.photos) ? property.verificationMedia.photos : [];
@@ -157,21 +160,21 @@ export const PropertyVerificationPanel = ({
         <div className="space-y-5">
           <div className="space-y-2">
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Lectura del aviso</p>
-            <h2 className="text-2xl font-semibold tracking-tight text-slate-950">Nivel de verificación: {verificationBadge.score}/{verificationBadge.max}</h2>
-            <p className="max-w-3xl text-sm leading-6 text-slate-600">Estas son las 5 comprobaciones reales que usamos para ordenar el listado y mostrar qué parte del aviso ya está validada.</p>
+            <h2 className="text-2xl font-semibold tracking-tight text-slate-950">{verificationBadge.summaryLabel}</h2>
+            <p className="max-w-3xl text-sm leading-6 text-slate-600">Estas son las 5 comprobaciones visibles que usamos para mostrar qué parte del aviso ya está validada y qué sigue pendiente.</p>
           </div>
 
-          <VerificationDetailsBlock
-            summary={{
-              score: verificationBadge.score,
-              maxScore: verificationBadge.max,
-              items: verificationItems,
-            }}
-            title="Comprobaciones reales"
-            description="Mostramos solo comprobaciones visibles que ayudan a decidir rápido y explican qué falta validar."
-            tone={verificationBadge.score >= 4 ? 'success' : 'neutral'}
-            showDescriptions
-          />
+          <div className="space-y-4 rounded-[24px] border border-slate-200/80 bg-slate-50/90 p-4">
+            <VerificationSeal
+              score={verificationDetails.score}
+              maxScore={verificationDetails.max}
+              label={verificationDetails.compactLabel}
+              description={verificationDetails.description}
+              size="md"
+              ariaLabel={verificationDetails.summaryLabel}
+            />
+            <PropertyVerificationChecklist items={verificationDetails.items} size="md" columns={2} />
+          </div>
 
           {pendingItems.length > 0 ? (
             <p className="rounded-[22px] border border-slate-200/80 bg-slate-50/90 px-4 py-3 text-sm leading-6 text-slate-600">

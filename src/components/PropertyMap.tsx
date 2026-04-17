@@ -6,6 +6,7 @@ import 'leaflet/dist/leaflet.css';
 import type { Property } from '../services/geminiService';
 import { getPropertyVerificationDetails } from '../lib/propertyVerification';
 import { formatCurrency } from '../lib/utils';
+import { PropertyVerificationChecklist } from './ui/PropertyVerificationChecklist';
 import { VerificationSeal } from './ui/VerificationSeal';
 
 
@@ -152,12 +153,12 @@ export const PropertyMap: React.FC<PropertyMapProps> = ({ properties, onProperty
                                         score={verification.score}
                                         maxScore={verification.max}
                                         label={verification.compactLabel}
+                                        description={verification.description}
                                         size="sm"
+                                        ariaLabel={verification.summaryLabel}
                                         className="w-fit"
                                     />
-                                    {verification.compactSummary ? (
-                                        <p className="m-0 text-[12px] leading-5 text-slate-500">{verification.compactSummary}</p>
-                                    ) : null}
+                                    <PropertyVerificationChecklist items={verification.items} size="sm" columns={1} />
                                 </div>
 
                                 <div className="space-y-1.5">

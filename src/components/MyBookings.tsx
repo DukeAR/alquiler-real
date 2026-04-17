@@ -17,7 +17,7 @@ import {
   PLATFORM_PROTECTED_FLOW_NOTE,
   type BookingContractPlatformTerm,
 } from '../lib/platformTerms';
-import { getPropertyVerificationBadge, sortPropertiesByCatalogOrder } from '../lib/propertyVerification';
+import { getPropertyVerificationDetails, sortPropertiesByCatalogOrder } from '../lib/propertyVerification';
 import { getProtectedDepositPricingFromBooking } from '../lib/protectedDeposit';
 import { getReservationFlowCopy, getReservationNextActorDisplayLabel, getReservationNextStepDisplayLabel } from '../lib/reservationFlow';
 import { showToast } from '../lib/toast';
@@ -42,6 +42,8 @@ import { LoadingState } from './LoadingState';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
+import { PropertyVerificationChecklist } from './ui/PropertyVerificationChecklist';
+import { VerificationSeal } from './ui/VerificationSeal';
 import { DepositChoiceBlock } from './ui/DepositChoiceBlock';
 import { PlatformTermsQuickGuide } from './ui/PlatformTermsQuickGuide';
 import { ReservationConfirmedState } from './ui/ReservationConfirmedState';
@@ -1565,7 +1567,7 @@ export const MyBookings = () => {
             ) : null}
 
             {!favoritesLoadError && usefulSavedProperties.length > 0 ? usefulSavedProperties.map((property, index) => {
-              const verificationBadge = getPropertyVerificationBadge(property);
+              const verificationDetails = getPropertyVerificationDetails(property);
 
               return (
                 <div key={property.id} className={cn('flex flex-col gap-4 px-5 py-5 sm:px-6 md:flex-row md:items-center md:justify-between', index > 0 && 'border-t border-slate-100 dark:border-slate-800')}>
@@ -1576,15 +1578,22 @@ export const MyBookings = () => {
                       className="h-20 w-28 rounded-[20px] object-cover"
                     />
                     <div className="space-y-2">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Badge variant="brand" size="md">{verificationBadge.summaryLabel}</Badge>
+                      <div className="flex flex-wrap items-start gap-3">
+                        <VerificationSeal
+                          score={verificationDetails.score}
+                          maxScore={verificationDetails.max}
+                          label={verificationDetails.compactLabel}
+                          description={verificationDetails.description}
+                          size="sm"
+                          ariaLabel={verificationDetails.summaryLabel}
+                        />
                         <Badge variant="neutral" size="md">{formatCurrency(property.price)}</Badge>
                       </div>
                       <div>
                         <h3 className="text-base font-semibold text-slate-950 dark:text-slate-50">{property.title}</h3>
                         <p className="text-sm text-slate-500 dark:text-slate-400">{property.location}</p>
                       </div>
-                      <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">{verificationBadge.label}. Te sirve para comparar rápido antes de volver a reservar.</p>
+                      <PropertyVerificationChecklist items={verificationDetails.items} size="sm" columns={2} />
                     </div>
                   </div>
 

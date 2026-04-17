@@ -94,12 +94,12 @@ describe('FavoritesView integration', () => {
       'Casa frente al mar',
       'Departamento tranquilo',
     ]);
-    expect(screen.getByLabelText('Alta confianza (4/5)')).toBeInTheDocument();
-    expect(screen.getByLabelText('Confianza media (3/5)')).toBeInTheDocument();
-    expect(screen.getByText('Alta confianza')).toBeInTheDocument();
-    expect(screen.getByText('Confianza media')).toBeInTheDocument();
-    expect(screen.getByText('Anfitrión · Ubicación · Fotos / video')).toBeInTheDocument();
-    expect(screen.getByText('Anfitrión · Ubicación · Geolocalización')).toBeInTheDocument();
+    expect(screen.getByLabelText('Verificación parcial (4/5)')).toBeInTheDocument();
+    expect(screen.getByLabelText('Verificación parcial (3/5)')).toBeInTheDocument();
+    expect(screen.getAllByText('Verificación parcial').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Este aviso tiene información confirmada, pero hay puntos pendientes.').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Disponibilidad validada').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Anfitrión confirmado').length).toBeGreaterThan(0);
     expect(screen.queryByText('Mejor verificado')).toBeNull();
     expect(screen.queryByText('Alto nivel de verificación')).toBeNull();
     expect(screen.getAllByRole('button', { name: /Abrir detalle de/i })).toHaveLength(2);
