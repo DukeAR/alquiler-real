@@ -938,30 +938,30 @@ export const PropertyDetailShell: React.FC<{
         <section className="space-y-6 md:space-y-8">
           <Card padding="none" variant="elevated" className="overflow-hidden rounded-[32px] border-slate-200/80 bg-white shadow-[0_34px_80px_-50px_rgba(15,23,42,0.35)]">
             <div className="min-w-0 overflow-hidden rounded-[32px]">
-              <div className="relative isolate overflow-hidden bg-slate-950">
+              <div className="group relative isolate overflow-hidden bg-slate-950">
                 <div
-                  className="aspect-[9/10] min-h-[26rem] sm:min-h-0 sm:aspect-[16/11] lg:aspect-[16/10]"
+                  className="property-hero-image-reveal aspect-[9/10] min-h-[26rem] sm:min-h-0 sm:aspect-[16/11] lg:aspect-[16/10]"
                   onTouchStart={onTouchStart}
                   onTouchEnd={onTouchEnd}
                 >
                   <img
                     src={images[mainIndex] || FALLBACK}
                     alt={`${property.title} — imagen ${mainIndex + 1}`}
-                    className="h-full w-full cursor-zoom-in object-cover transition-transform duration-500 hover:scale-[1.02]"
+                    className="h-full w-full cursor-zoom-in object-cover transition-transform duration-300 ease-out md:group-hover:scale-[1.02]"
                     onClick={openLightbox}
                     referrerPolicy="no-referrer"
                   />
                 </div>
 
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/82 via-slate-950/26 via-[48%] to-slate-950/06" />
+                <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.05)_0%,rgba(0,0,0,0.14)_34%,rgba(0,0,0,0.3)_62%,rgba(0,0,0,0.55)_100%)]" />
 
-                <div className="absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-2.5 p-3 sm:gap-4 sm:p-8 lg:p-10">
+                <div className="property-hero-copy-reveal absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-4 p-4 sm:gap-4 sm:p-8 lg:p-10">
                   <div className="flex flex-wrap items-center gap-2 text-white">
-                    <span className="inline-flex items-center rounded-full border border-white/14 bg-slate-950/36 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/88 backdrop-blur-sm">
+                    <span className="inline-flex items-center rounded-full border border-white/18 bg-black/28 px-3.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/90 backdrop-blur-[10px] shadow-[0_16px_24px_-18px_rgba(15,23,42,0.42)]">
                       {propertyTypeLabel}
                     </span>
                     {hasMultipleImages ? (
-                      <Badge variant="neutral" size="md" className="border-white/14 bg-slate-950/36 text-white/84 backdrop-blur-sm">
+                      <Badge variant="neutral" size="md" className="border-white/18 bg-black/28 text-white/88 backdrop-blur-[10px] shadow-[0_16px_24px_-18px_rgba(15,23,42,0.42)]">
                         {photoCountLabel}
                       </Badge>
                     ) : null}
@@ -975,8 +975,8 @@ export const PropertyDetailShell: React.FC<{
                       variant="secondary"
                       size="icon"
                       className={cn(
-                        'border-white/14 bg-slate-950/36 text-white backdrop-blur-sm hover:border-white/24 hover:bg-slate-950/52 hover:text-white',
-                        isFav && 'border-brand bg-brand text-white hover:border-brand hover:bg-brand-dark hover:text-white',
+                        'border-white/18 bg-black/28 text-white backdrop-blur-[10px] shadow-[0_16px_28px_-18px_rgba(15,23,42,0.48)] hover:border-white/26 hover:bg-black/42 hover:text-white',
+                        isFav && 'border-brand/85 bg-brand/92 text-white shadow-[0_18px_30px_-18px_rgba(67,56,202,0.6)] hover:border-brand hover:bg-brand-dark hover:text-white',
                       )}
                     >
                       <Icons.Heart className="h-5 w-5" />
@@ -984,12 +984,12 @@ export const PropertyDetailShell: React.FC<{
                   ) : null}
                 </div>
 
-                <div className="absolute inset-x-0 bottom-0 z-10 flex flex-col gap-3 p-3 sm:flex-row sm:items-end sm:justify-between sm:gap-6 sm:p-8 lg:p-10">
+                <div className="property-hero-copy-reveal absolute inset-x-0 bottom-0 z-10 flex flex-col gap-4 p-4 sm:flex-row sm:items-end sm:justify-between sm:gap-8 sm:p-8 lg:p-10">
                   <div className="max-w-full text-white sm:max-w-[34rem] lg:max-w-[38rem]">
-                    <h1 className="max-w-full text-balance text-[clamp(1.22rem,5.4vw,1.42rem)] font-semibold leading-[0.98] tracking-tight text-white sm:max-w-[34rem] sm:text-[2.45rem] sm:leading-[1.02] lg:max-w-[38rem] lg:text-[2.8rem]">
+                    <h1 className="max-w-full text-balance text-[clamp(1.24rem,5vw,1.56rem)] font-semibold leading-[1.08] tracking-[-0.035em] text-white line-clamp-2 sm:max-w-[30rem] sm:text-[2.32rem] sm:leading-[1.08] lg:max-w-[35rem] lg:text-[2.72rem] lg:leading-[1.08]">
                       {property.title}
                     </h1>
-                    <div className="mt-1.5 inline-flex max-w-full items-center gap-2 text-[0.85rem] font-medium text-white/84 sm:mt-3 sm:text-[0.95rem] sm:text-white/86">
+                    <div className="mt-2 inline-flex max-w-full items-center gap-2 text-[0.8rem] font-medium tracking-[-0.01em] text-white/90 sm:mt-3 sm:text-[0.9rem] sm:text-white/92">
                       <Icons.MapPin className="h-4 w-4 shrink-0" />
                       <span className="truncate">{property.location}</span>
                     </div>
@@ -998,7 +998,7 @@ export const PropertyDetailShell: React.FC<{
                   <button
                     type="button"
                     onClick={openLightbox}
-                    className="inline-flex shrink-0 self-end items-center gap-2 rounded-full border border-white/16 bg-slate-950/42 px-3 py-1.5 text-[0.8rem] font-semibold text-white/92 backdrop-blur-sm transition-[background-color,border-color,color] duration-150 hover:border-white/28 hover:bg-slate-950/56 hover:text-white sm:self-auto sm:px-4 sm:py-2.5 sm:text-sm"
+                    className="inline-flex shrink-0 self-end items-center gap-2 rounded-full border border-white/18 bg-black/35 px-3.5 py-2 text-[0.82rem] font-semibold text-white backdrop-blur-[10px] shadow-[0_18px_30px_-18px_rgba(15,23,42,0.55)] transition-[background-color,border-color,color,transform] duration-200 ease-out hover:border-white/26 hover:bg-black/48 hover:text-white sm:self-auto sm:px-4.5 sm:py-2.5 sm:text-sm md:hover:-translate-y-[1px]"
                   >
                     <Icons.Camera className="h-4 w-4" />
                     {hasMultipleImages ? (
