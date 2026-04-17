@@ -476,10 +476,6 @@ export const PropertyDetailShell: React.FC<{
     ? `${nightsSummaryLabel} · ${guestCountLabel} · ${formatCurrency(total)}`
     : `${guestCountLabel} · Total al elegir fechas`;
   const bookingEntryCtaLabel = 'Consultar disponibilidad';
-  const bookingEntryCtaNote = 'No estás reservando todavía';
-  const bookingEntryHelperText = hasSelectedDates
-    ? 'Tu selección queda guardada mientras terminás de decidir si querés consultarlo.'
-    : 'Mirá precio, zona y capacidad. Si te cierra, consultá disponibilidad.';
   const mobilePrimaryActionLabel = bookingStep === 'dates'
     ? hasCompleteDates
       ? 'Seguir con huéspedes'
@@ -1101,7 +1097,7 @@ export const PropertyDetailShell: React.FC<{
                   <button
                     type="button"
                     onClick={openLightbox}
-                    className="inline-flex shrink-0 self-end items-center gap-2 rounded-full border border-white/18 bg-black/35 px-3.5 py-2 text-[0.82rem] font-semibold text-white backdrop-blur-[10px] shadow-[0_18px_30px_-18px_rgba(15,23,42,0.55)] transition-[background-color,border-color,color,transform] duration-200 ease-out hover:border-white/26 hover:bg-black/48 hover:text-white sm:self-auto sm:px-4.5 sm:py-2.5 sm:text-sm md:hover:-translate-y-[1px]"
+                    className="inline-flex shrink-0 self-end items-center gap-2 rounded-full border border-white/14 bg-black/20 px-3 py-1.75 text-[0.76rem] font-medium text-white/82 backdrop-blur-[10px] shadow-[0_14px_24px_-22px_rgba(15,23,42,0.42)] transition-[background-color,border-color,color,transform] duration-200 ease-out hover:border-white/22 hover:bg-black/28 hover:text-white sm:self-auto sm:px-4 sm:py-2 sm:text-[0.82rem] md:hover:-translate-y-[1px]"
                   >
                     <Icons.Camera className="h-4 w-4" />
                     {hasMultipleImages ? (
@@ -1148,19 +1144,17 @@ export const PropertyDetailShell: React.FC<{
           data-motion-block
           className="app-card-hover app-motion-block rounded-[30px] border border-slate-200/80 bg-white p-5 shadow-[0_30px_80px_-50px_rgba(15,23,42,0.28)] sm:p-6"
         >
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(320px,0.92fr)]">
+          <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(320px,0.82fr)] xl:items-start">
             <div className="space-y-5">
-              <div className="space-y-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Lo primero para decidir</p>
-                <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
-                  <div className="flex items-end gap-2">
-                    <span className="text-[2.8rem] font-black tracking-tight text-slate-950 sm:text-[3rem]">{nightly ? formatCurrency(nightly) : '—'}</span>
-                    <span className="pb-1 text-sm font-medium text-slate-500">/ noche</span>
-                  </div>
-                  <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm font-medium text-slate-700">
-                    <Icons.MapPin className="h-4 w-4 text-slate-400" />
-                    <span>{property.location}</span>
-                  </div>
+              <div className="space-y-3.5">
+                <div className="flex flex-wrap items-end gap-x-3 gap-y-2 text-slate-950">
+                  <span className="text-[3rem] font-black leading-none tracking-[-0.08em] sm:text-[3.35rem]">
+                    {nightly ? formatCurrency(nightly) : '—'}
+                  </span>
+                  <span className="pb-1 text-base font-semibold text-slate-500">/ noche</span>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2.5">
                   {guestCapacity ? (
                     <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm font-medium text-slate-700">
                       <Icons.Users className="h-4 w-4 text-slate-400" />
@@ -1168,7 +1162,6 @@ export const PropertyDetailShell: React.FC<{
                     </div>
                   ) : null}
                 </div>
-                <p className="max-w-xl text-sm leading-6 text-slate-500">{bookingEntryHelperText}</p>
               </div>
 
               {hasSelectedDates || guestCount > 1 ? (
@@ -1187,64 +1180,54 @@ export const PropertyDetailShell: React.FC<{
             </div>
 
             <div className="space-y-4 rounded-[28px] border border-slate-200/80 bg-slate-50/80 p-4 shadow-[0_24px_60px_-44px_rgba(15,23,42,0.18)] sm:p-5">
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <Button
                   type="button"
                   variant="primary"
                   size="lg"
                   onClick={handleOpenBookingEntry}
-                  className="w-full rounded-2xl px-6 shadow-[0_24px_46px_-28px_rgba(67,56,202,0.42)]"
+                  className="min-h-[3.65rem] w-full rounded-[22px] px-6 text-[0.98rem] font-extrabold shadow-[0_28px_52px_-30px_rgba(67,56,202,0.48)]"
                 >
                   <>
                     <Icons.Calendar className="h-4 w-4" />
                     {bookingEntryCtaLabel}
                   </>
                 </Button>
-                <p className="text-center text-xs font-medium text-slate-500">{bookingEntryCtaNote}</p>
               </div>
 
               <section
                 data-testid="property-verification-preview"
-                className="space-y-4 border-t border-slate-200/70 pt-4"
+                className="space-y-3 border-t border-slate-200/70 pt-4"
               >
-                <div className="space-y-3">
-                  <div className="flex flex-wrap items-start gap-3">
-                    <div className="space-y-2">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Lo ya verificado</p>
-                      <VerificationSeal
-                        score={verificationDetails.score}
-                        maxScore={verificationDetails.max}
-                        label={verificationDetails.compactLabel}
-                        description={verificationDetails.description}
-                        size="lg"
-                        ariaLabel={verificationDetails.summaryLabel}
-                      />
-                    </div>
+                <div className="flex flex-wrap items-start gap-3">
+                  <VerificationSeal
+                    score={verificationDetails.score}
+                    maxScore={verificationDetails.max}
+                    label={verificationDetails.compactLabel}
+                    size="md"
+                    ariaLabel={verificationDetails.summaryLabel}
+                  />
 
-                    {verificationDecisionMessage ? (
-                      <span className="inline-flex items-center rounded-full border border-emerald-200/80 bg-emerald-50/90 px-3.5 py-2 text-sm font-semibold text-emerald-900 shadow-[0_14px_28px_-24px_rgba(5,150,105,0.44)]">
-                        {verificationDecisionMessage}
-                      </span>
-                    ) : null}
-                  </div>
-
-                  {verificationPreviewItems.length > 0 ? (
-                    <div className="space-y-2 rounded-[22px] border border-slate-200/80 bg-white/75 px-4 py-4">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Comprobaciones visibles</p>
-                      <ul className="flex flex-wrap gap-2" aria-label="Comprobaciones visibles">
-                        {verificationPreviewItems.map((item) => (
-                          <li
-                            key={item.key}
-                            className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200/80 bg-emerald-50/80 px-3 py-1.5 text-[0.82rem] font-semibold text-emerald-900"
-                          >
-                            <span className="text-[0.74rem] text-emerald-700">✔</span>
-                            <span>{item.label}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
+                  {verificationDecisionMessage ? (
+                    <span className="inline-flex items-center rounded-full border border-emerald-200/80 bg-emerald-50/90 px-3.5 py-2 text-sm font-semibold text-emerald-900 shadow-[0_14px_28px_-24px_rgba(5,150,105,0.44)]">
+                      {verificationDecisionMessage}
+                    </span>
                   ) : null}
                 </div>
+
+                {verificationPreviewItems.length > 0 ? (
+                  <ul className="flex flex-wrap gap-2" aria-label="Comprobaciones visibles">
+                    {verificationPreviewItems.map((item) => (
+                      <li
+                        key={item.key}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200/80 bg-emerald-50/80 px-3 py-1.5 text-[0.8rem] font-semibold text-emerald-900"
+                      >
+                        <span className="text-[0.74rem] text-emerald-700">✔</span>
+                        <span>{item.label}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
               </section>
             </div>
           </div>
@@ -1709,14 +1692,13 @@ export const PropertyDetailShell: React.FC<{
                   size="lg"
                   fullWidth
                   onClick={handleOpenBookingEntry}
-                  className="rounded-2xl shadow-[0_24px_46px_-28px_rgba(67,56,202,0.42)]"
+                  className="min-h-[3.4rem] rounded-[22px] text-[0.95rem] font-extrabold shadow-[0_24px_46px_-28px_rgba(67,56,202,0.42)]"
                 >
                   <>
                     <Icons.Calendar className="h-4 w-4" />
                     {bookingEntryCtaLabel}
                   </>
                 </Button>
-                <p className="text-center text-xs font-medium text-slate-500">{bookingEntryCtaNote}</p>
               </div>
             </div>
           </section>
