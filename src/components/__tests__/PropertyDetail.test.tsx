@@ -546,7 +546,7 @@ describe('PropertyDetail', () => {
     const verificationPreview = screen.getByTestId('property-verification-preview');
     expect(within(verificationPreview).getByText(/Confianza del aviso:/i)).toBeDefined();
     expect(within(verificationPreview).getByText('Muy alta')).toBeDefined();
-    expect(within(verificationPreview).getByText('Podés avanzar con bajo riesgo')).toBeDefined();
+    expect(within(verificationPreview).getByText('Listo para coordinar')).toBeDefined();
     expect(within(verificationPreview).queryByText('Pendiente')).toBeNull();
     expect(within(verificationPreview).getAllByRole('listitem')).toHaveLength(3);
     expect(within(verificationPreview).getByText('Anfitrión confirmado')).toBeDefined();
@@ -554,6 +554,29 @@ describe('PropertyDetail', () => {
     expect(within(verificationPreview).getByText('Disponibilidad validada')).toBeDefined();
     expect(screen.getAllByText('5 de 5 comprobaciones').length).toBeGreaterThan(0);
     expect(screen.queryByText('Mostramos solo comprobaciones visibles que ayudan a decidir rápido y explican qué falta validar.')).toBeNull();
+  });
+
+  test('uses a neutral action-oriented message for medium trust when key media and availability checks are already present', async () => {
+    (apiJson as any).mockImplementation(async (url: string) => {
+      if (url.endsWith('/reviews')) return [{ id: 'r1', reviewer_id: 'u1', rating: 5, comment: 'Buen lugar' }];
+      if (url === '/api/bookings') return [];
+
+      return {
+        ...sampleProperty,
+        identityValidated: true,
+        locationVerified: false,
+        materialVerified: true,
+        availabilityValidated: true,
+      };
+    });
+
+    renderPropertyDetail();
+
+    await waitForPropertyHeading();
+
+    const verificationPreview = screen.getByTestId('property-verification-preview');
+    expect(within(verificationPreview).getByText('Media')).toBeDefined();
+    expect(within(verificationPreview).getByText('Podés avanzar, pero hay información a completar')).toBeDefined();
   });
 
   test('records the detail visit when the property reaches a high verification level', async () => {

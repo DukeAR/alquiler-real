@@ -345,11 +345,23 @@ const pickVerificationDecisionItems = (
   return selected.slice(0, limit);
 };
 
-const getVerificationDecisionMessage = (items: VerificationDecisionItem[]) => {
+const getVerificationDecisionMessage = (score: number, items: VerificationDecisionItem[]) => {
   const primaryPendingItem = pickVerificationDecisionItems(items, 'pending', VERIFICATION_PENDING_PRIORITY, 1)[0];
 
+  if (primaryPendingItem?.key === 'photos' || primaryPendingItem?.key === 'availability') {
+    return VERIFICATION_DECISION_MESSAGES[primaryPendingItem.key];
+  }
+
+  if (score >= 4) {
+    return 'Listo para coordinar';
+  }
+
+  if (score >= 3) {
+    return 'Podés avanzar, pero hay información a completar';
+  }
+
   if (!primaryPendingItem) {
-    return 'Podés avanzar con bajo riesgo';
+    return 'Listo para coordinar';
   }
 
   return VERIFICATION_DECISION_MESSAGES[primaryPendingItem.key as VerificationDecisionKey] || `Falta validar ${primaryPendingItem.label.toLowerCase()}`;
@@ -478,7 +490,10 @@ export const PropertyDetailShell: React.FC<{
   ].filter((value): value is string => Boolean(value));
   const verificationDetails = getPropertyVerificationDetails(property);
   const verificationDecisionLevelLabel = getVerificationLevelLabel(verificationDetails.score);
-  const verificationDecisionMessage = getVerificationDecisionMessage(verificationDetails.items as VerificationDecisionItem[]);
+  const verificationDecisionMessage = getVerificationDecisionMessage(
+    verificationDetails.score,
+    verificationDetails.items as VerificationDecisionItem[],
+  );
   const verificationConfirmedItems = pickVerificationDecisionItems(
     verificationDetails.items as VerificationDecisionItem[],
     'complete',
