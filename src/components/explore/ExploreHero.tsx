@@ -41,7 +41,7 @@ export const ExploreHero = ({
                 opacity: 0.94,
               }}
             />
-            <div className="absolute inset-0 bg-[linear-gradient(96deg,rgba(255,255,255,0.93)_8%,rgba(251,253,255,0.78)_34%,rgba(242,246,250,0.5)_62%,rgba(232,239,245,0.26)_100%)]" />
+            <div className="absolute inset-0 bg-[linear-gradient(96deg,rgba(255,255,255,0.78)_8%,rgba(249,252,255,0.62)_34%,rgba(241,246,250,0.44)_62%,rgba(232,239,245,0.24)_100%)]" />
             <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.12)_0%,rgba(255,255,255,0.04)_42%,rgba(244,247,251,0.08)_100%)]" />
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_34%,rgba(236,242,248,0.1)_0%,rgba(236,242,248,0)_44%)]" />
           </div>
@@ -89,10 +89,10 @@ export const ExploreHero = ({
                 </Button>
               </div>
 
-              <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 border-t border-white/70 pt-4 text-[10.5px] text-slate-600 sm:gap-x-5 sm:text-[11px]">
+              <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 border-t border-white/70 pt-4 text-[10.5px] text-slate-700 sm:gap-x-5 sm:text-[11px]">
                 {valueProofItems.map((item) => (
-                  <span key={item} className="inline-flex items-center gap-1.5 font-medium leading-5">
-                    <Icons.CheckCircle2 className="h-3 w-3 shrink-0 text-emerald-600/70" />
+                  <span key={item} className="inline-flex items-center gap-1.5 font-semibold leading-5 text-slate-700">
+                    <Icons.CheckCircle2 className="h-3 w-3 shrink-0 text-emerald-700/85" />
                     <span>{item}</span>
                   </span>
                 ))}
