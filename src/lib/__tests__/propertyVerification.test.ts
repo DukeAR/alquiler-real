@@ -122,6 +122,66 @@ describe('propertyVerification', () => {
     expect(getPropertyVerificationGuidanceMessage({ verificationScore: 2 })).toBeNull();
   });
 
+  test('shows the presencial seal only when the score is 5/5 and onsite verification is truly present', () => {
+    const fullyVerified = getPropertyVerificationBadge({
+      identityValidated: true,
+      locationVerified: true,
+      verificationPhotoCount: 3,
+      availabilityValidated: true,
+      coordinates: { lat: -36.7, lng: -56.7 },
+      hasPresencialVerification: true,
+    });
+
+    const maxWithoutPresencial = getPropertyVerificationBadge({
+      identityValidated: true,
+      locationVerified: true,
+      verificationPhotoCount: 3,
+      availabilityValidated: true,
+      coordinates: { lat: -36.7, lng: -56.7 },
+      hasPresencialVerification: false,
+    });
+
+    expect(fullyVerified.summaryLabel).toBe('Verificado presencialmente (5/5)');
+    expect(fullyVerified.isFullyVerified).toBe(true);
+    expect(maxWithoutPresencial.summaryLabel).toBe('Verificación parcial (5/5)');
+    expect(maxWithoutPresencial.isFullyVerified).toBe(false);
+  });
+
+  test('prioritizes presencially verified properties before other verification levels', () => {
+    const sorted = sortPropertiesByCatalogOrder([
+      {
+        id: 'p1',
+        identityValidated: true,
+        locationVerified: true,
+        verificationPhotoCount: 3,
+        availabilityValidated: true,
+        coordinates: { lat: -36.71, lng: -56.71 },
+        hasPresencialVerification: false,
+        price: 120_000,
+      },
+      {
+        id: 'p2',
+        identityValidated: true,
+        locationVerified: true,
+        verificationPhotoCount: 3,
+        availabilityValidated: true,
+        coordinates: { lat: -36.7, lng: -56.7 },
+        hasPresencialVerification: true,
+        price: 125_000,
+      },
+      {
+        id: 'p3',
+        identityValidated: true,
+        locationVerified: true,
+        verificationPhotoCount: 2,
+        coordinates: { lat: -36.69, lng: -56.69 },
+        price: 110_000,
+      },
+    ], 'verification');
+
+    expect(sorted.map((property) => property.id)).toEqual(['p2', 'p1', 'p3']);
+  });
+
   test('sorts first by verification score and then by verified location', () => {
     const sorted = sortPropertiesByCatalogOrder([
       { id: 'p1', identityValidated: true, verificationPhotoCount: 2, availabilityValidated: true, price: 90_000 },

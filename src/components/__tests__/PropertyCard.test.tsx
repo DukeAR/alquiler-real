@@ -156,6 +156,22 @@ describe('PropertyCard', () => {
     expect(screen.getByText('Verificación parcial')).toBeInTheDocument();
   });
 
+  test('shows the presencial badge on the image only for max score listings with onsite verification', () => {
+    render(
+      <PropertyCard
+        property={{
+          ...sampleProperty,
+          availabilityValidated: true,
+        }}
+        verificationGuidanceLabel="Más verificado"
+      />,
+    );
+
+    expect(screen.getAllByText('Verificado presencialmente').length).toBeGreaterThan(1);
+    expect(screen.getByText('(5/5)')).toBeInTheDocument();
+    expect(screen.queryByText('Más verificado')).toBeNull();
+  });
+
   test('deepens the green verification emphasis when the card is highlighted', () => {
     render(
       <PropertyCard

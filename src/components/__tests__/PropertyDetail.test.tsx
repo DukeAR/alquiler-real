@@ -537,6 +537,7 @@ describe('PropertyDetail', () => {
         propertyType: 'house',
         materialVerified: true,
         availabilityValidated: true,
+        hasPresencialVerification: true,
       };
     });
 

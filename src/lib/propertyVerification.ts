@@ -185,13 +185,35 @@ export const getPropertyVerificationDisplayLabel = (key?: string) => {
   return normalizedKey ? PROPERTY_VERIFICATION_DISPLAY_LABELS[normalizedKey] : 'Verificación pendiente';
 };
 
-export const getPropertyVerificationStateCopy = (score: number, maxScore = VERIFICATION_SCORE_MAX) => {
+export const PRESENCIAL_VERIFICATION_LABEL = 'Verificado presencialmente';
+
+const hasPresencialVerificationEvidence = (property: Pick<PropertyVerificationLike, 'hasPresencialVerification' | 'onsiteVerifiedAt'>) => {
+  const rawFlag = (property as { hasPresencialVerification?: unknown }).hasPresencialVerification;
+
+  return rawFlag === true
+    || rawFlag === 1
+    || rawFlag === '1'
+    || rawFlag === 'true'
+    || rawFlag === 'TRUE'
+    || Boolean(property.onsiteVerifiedAt);
+};
+
+export const hasPropertyPresencialVerificationSeal = (property: PropertyVerificationLike) => (
+  getPropertyVerificationScore(property) === VERIFICATION_SCORE_MAX
+  && hasPresencialVerificationEvidence(property)
+);
+
+export const getPropertyVerificationStateCopy = (
+  score: number,
+  maxScore = VERIFICATION_SCORE_MAX,
+  options?: { hasPresencialVerificationSeal?: boolean },
+) => {
   const safeMaxScore = Math.max(1, maxScore);
   const safeScore = Math.max(0, Math.min(safeMaxScore, Math.round(score)));
   const countLabel = getVerificationCountLabel(safeScore, safeMaxScore);
-  const fullyVerified = safeScore === safeMaxScore;
-  const title = fullyVerified ? 'Verificado presencialmente' : 'Verificación parcial';
-  const description = fullyVerified
+  const hasPresencialVerificationSeal = safeScore === safeMaxScore && options?.hasPresencialVerificationSeal === true;
+  const title = hasPresencialVerificationSeal ? PRESENCIAL_VERIFICATION_LABEL : 'Verificación parcial';
+  const description = hasPresencialVerificationSeal
     ? 'Este aviso fue validado con verificación presencial y cumple con todas las comprobaciones.'
     : 'Este aviso tiene información confirmada, pero hay puntos pendientes.';
 
@@ -200,7 +222,8 @@ export const getPropertyVerificationStateCopy = (score: number, maxScore = VERIF
     description,
     countLabel,
     summaryLabel: `${title} (${countLabel})`,
-    isFullyVerified: fullyVerified,
+    isFullyVerified: hasPresencialVerificationSeal,
+    hasPresencialVerificationSeal,
     isCoordinationReady: safeScore >= HIGH_VERIFICATION_HIGHLIGHT_MIN_SCORE,
   };
 };
@@ -706,6 +729,12 @@ const compareNullableAscending = (left: number | null, right: number | null) => 
 };
 
 const comparePropertiesByVerificationSignals = (left: PropertySortLike, right: PropertySortLike) => {
+  const onsiteDifference = Number(hasPropertyPresencialVerificationSeal(right)) - Number(hasPropertyPresencialVerificationSeal(left));
+
+  if (onsiteDifference !== 0) {
+    return onsiteDifference;
+  }
+
   const leftVerification = getPropertyVerificationState(left);
   const rightVerification = getPropertyVerificationState(right);
   const scoreDifference = rightVerification.score - leftVerification.score;
@@ -789,6 +818,10 @@ export const getPropertyVerificationGuidanceLabel = (
   property: PropertyVerificationLike,
   options?: { isTopResult?: boolean },
 ) => {
+  if (hasPropertyPresencialVerificationSeal(property)) {
+    return PRESENCIAL_VERIFICATION_LABEL;
+  }
+
   const score = getPropertyVerificationScore(property);
 
   if (score >= HIGH_VERIFICATION_HIGHLIGHT_MIN_SCORE && options?.isTopResult) {
@@ -833,7 +866,9 @@ export const getPropertyVerificationBadge = (property: PropertyVerificationLike)
       : typeof property.verificationScore === 'number' && !hasDerivedVerificationSignals(property)
         ? Math.min(clampVerificationScore(property.verificationScore), max)
         : Math.min(verificationSummary.score, max);
-    const stateCopy = getPropertyVerificationStateCopy(score, max);
+    const stateCopy = getPropertyVerificationStateCopy(score, max, {
+      hasPresencialVerificationSeal: hasPropertyPresencialVerificationSeal({ ...property, verificationSummary }),
+    });
 
   return {
     score,

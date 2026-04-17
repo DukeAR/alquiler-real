@@ -7,6 +7,7 @@ import { Property } from '../services/geminiService';
 import { Button } from './ui/Button';
 import { Badge } from './ui/Badge';
 import { Card } from './ui/Card';
+import { PresencialVerificationBadge } from './ui/PresencialVerificationBadge';
 import { PropertyVerificationChecklist } from './ui/PropertyVerificationChecklist';
 import { VerificationSeal } from './ui/VerificationSeal';
 
@@ -78,6 +79,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   const propertyTypeLabel = getPropertyTypeLabel(property);
   const guestCapacityLabel = getGuestCapacityLabel(Number(property.maxGuests) || null);
   const verificationTagLabel = !isFavoritesVariant && !isDecisionFeatured ? verificationGuidanceLabel : null;
+  const showPresencialBadge = verificationDetails.isFullyVerified;
   const handleFavoriteToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
     const { user } = auth;
@@ -125,7 +127,9 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-slate-950/24 via-slate-950/8 to-transparent" />
         
         <div className="absolute inset-x-0 top-0 flex items-start justify-between gap-3 p-4">
-          {isDecisionFeatured ? (
+          {showPresencialBadge ? (
+            <PresencialVerificationBadge />
+          ) : isDecisionFeatured ? (
             <Badge variant="neutral" size="md" className="border-brand/25 bg-white/96 px-3 py-1.5 text-slate-950 shadow-[0_14px_26px_-20px_rgba(15,23,42,0.18)] backdrop-blur-sm">
               <span>Más verificado</span>
             </Badge>

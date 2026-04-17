@@ -6,6 +6,7 @@ import 'leaflet/dist/leaflet.css';
 import type { Property } from '../services/geminiService';
 import { getPropertyVerificationDetails } from '../lib/propertyVerification';
 import { formatCurrency } from '../lib/utils';
+import { PresencialVerificationBadge } from './ui/PresencialVerificationBadge';
 import { PropertyVerificationChecklist } from './ui/PropertyVerificationChecklist';
 import { VerificationSeal } from './ui/VerificationSeal';
 
@@ -20,15 +21,14 @@ const hasValidCoordinates = (property: Property) => (
     Number.isFinite(property.coordinates?.lat) && Number.isFinite(property.coordinates?.lng)
 );
 
-const buildMarkerIcon = (isHighlighted: boolean) => L.divIcon({
+const buildMarkerIcon = (isHighlighted: boolean, isPresencialVerified: boolean) => L.divIcon({
     className: 'map-pin-icon',
     html: `
-      <div class="map-pin${isHighlighted ? ' is-active' : ''}">
+            <div class="map-pin${isHighlighted ? ' is-active' : ''}${isPresencialVerified ? ' is-onsite' : ''}">
         <span class="map-pin__icon" aria-hidden="true">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-            <polyline points="9 22 9 12 15 12 15 22"/>
-          </svg>
+                    ${isPresencialVerified
+                        ? '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg>'
+                        : '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>'}
         </span>
       </div>
     `,
@@ -112,6 +112,7 @@ export const PropertyMap: React.FC<PropertyMapProps> = ({ properties, onProperty
                 {mappableProperties.map((property) => {
                     const verification = getPropertyVerificationDetails(property);
                     const isHighlighted = activePropertyId === property.id || hoveredPropertyId === property.id;
+                    const isPresencialVerified = verification.isFullyVerified;
 
                     return (
                     <Marker
@@ -120,7 +121,7 @@ export const PropertyMap: React.FC<PropertyMapProps> = ({ properties, onProperty
                         ref={(instance) => {
                             markerRefs.current[property.id] = instance;
                         }}
-                        icon={buildMarkerIcon(isHighlighted)}
+                        icon={buildMarkerIcon(isHighlighted, isPresencialVerified)}
                         zIndexOffset={isHighlighted ? 240 : 0}
                         eventHandlers={{
                             click: () => setActivePropertyId(property.id),
@@ -140,6 +141,7 @@ export const PropertyMap: React.FC<PropertyMapProps> = ({ properties, onProperty
                         >
                             <div className="w-[18.5rem] p-3">
                                 <div className="flex flex-col gap-2.5">
+                                {isPresencialVerified ? <PresencialVerificationBadge className="w-fit" /> : null}
                                 <div className="relative h-24 w-full overflow-hidden rounded-[1rem] bg-slate-100">
                                     <img
                                         src={property.imageUrl || property.images?.[0] || 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=1200&q=80&auto=format&fit=crop'}
@@ -209,6 +211,15 @@ export const PropertyMap: React.FC<PropertyMapProps> = ({ properties, onProperty
           box-shadow: 0 22px 34px -20px rgba(67, 56, 202, 0.62);
           background: linear-gradient(180deg, #4f46e5 0%, #3730a3 100%);
         }
+                .map-pin.is-onsite {
+                    background: linear-gradient(180deg, #10b981 0%, #047857 100%);
+                    box-shadow: 0 18px 30px -20px rgba(5, 150, 105, 0.58);
+                }
+                .map-pin.is-onsite:hover,
+                .map-pin.is-onsite.is-active {
+                    background: linear-gradient(180deg, #34d399 0%, #047857 100%);
+                    box-shadow: 0 24px 34px -20px rgba(5, 150, 105, 0.62);
+                }
         .map-pin__icon {
           display: flex;
           transform: rotate(45deg);
