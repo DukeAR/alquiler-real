@@ -14,6 +14,7 @@ type NotificationsMenuProps = {
   onRefresh: () => Promise<void>;
   onMarkAllAsRead: () => Promise<boolean>;
   onLoginRequired: () => Promise<void> | void;
+  inverted?: boolean;
 };
 
 const formatNotificationDate = (value: string) => {
@@ -39,6 +40,7 @@ export const NotificationsMenu: React.FC<NotificationsMenuProps> = ({
   onRefresh,
   onMarkAllAsRead,
   onLoginRequired,
+  inverted = false,
 }) => {
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
@@ -191,16 +193,19 @@ export const NotificationsMenu: React.FC<NotificationsMenuProps> = ({
         type="button"
         onClick={handleToggle}
         className={cn(
-          'relative inline-flex h-10 w-10 items-center justify-center rounded-full text-slate-500 transition-[color,background-color] duration-150 hover:bg-slate-100/80 hover:text-slate-950 focus-visible:outline-none focus-visible:shadow-[var(--app-focus-ring)] sm:h-11 sm:w-11',
-          isOpen && 'text-slate-950',
+          'relative inline-flex h-9 w-9 items-center justify-center rounded-xl transition-[color,background-color,box-shadow] duration-200 focus-visible:outline-none focus-visible:shadow-[var(--app-focus-ring)] sm:h-10 sm:w-10',
+          inverted
+            ? 'text-white/84 hover:bg-white/10 hover:text-white'
+            : 'text-slate-500 hover:bg-slate-100/70 hover:text-slate-900',
+          isOpen && (inverted ? 'bg-white/12 text-white' : 'bg-slate-100/75 text-slate-950'),
         )}
         aria-label={buttonLabel}
         aria-expanded={isOpen}
         aria-controls="app-notifications-panel"
       >
-        <Icons.Bell className="h-5 w-5" />
+        <Icons.Bell className="h-4.5 w-4.5" />
         {unreadCount > 0 ? (
-          <span aria-hidden="true" className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-black text-white">
+          <span aria-hidden="true" className="absolute -right-1 -top-1 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-black text-white">
             {unreadCount}
           </span>
         ) : null}

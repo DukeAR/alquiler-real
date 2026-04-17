@@ -47,12 +47,42 @@ vi.mock('../ui/AccountModeSwitch', () => ({
   AccountModeSwitch: () => <div data-testid="account-mode-switch">Mode switch</div>,
 }));
 
-const renderShell = async (initialEntries: string[] = ['/']) => {
+const createDomRect = (bottom: number) => ({
+  x: 0,
+  y: 0,
+  width: 100,
+  height: bottom,
+  top: 0,
+  right: 100,
+  bottom,
+  left: 0,
+  toJSON: () => ({}),
+});
+
+const DetailHeroMarker = ({ bottom = 640 }: { bottom?: number }) => (
+  <div
+    data-property-detail-hero
+    ref={(node) => {
+      if (!node) {
+        return;
+      }
+
+      Object.defineProperty(node, 'getBoundingClientRect', {
+        configurable: true,
+        value: () => createDomRect(bottom),
+      });
+    }}
+  >
+    Hero
+  </div>
+);
+
+const renderShell = async (initialEntries: string[] = ['/'], children: React.ReactNode = <div>Contenido</div>) => {
   await act(async () => {
     render(
       <MemoryRouter initialEntries={initialEntries}>
         <AppShell>
-          <div>Contenido</div>
+          {children}
         </AppShell>
       </MemoryRouter>,
     );
@@ -91,7 +121,7 @@ describe('AppShell', () => {
     expect(screen.getByRole('link', { name: 'Cómo funciona' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Ayuda' })).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'Ingresá' })).not.toHaveLength(0);
-    expect(screen.getByRole('button', { name: 'Creá tu cuenta' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Publicar propiedad' })).toBeInTheDocument();
   });
 
   test('shows Guardados when the user is authenticated', async () => {
@@ -113,7 +143,7 @@ describe('AppShell', () => {
     await renderShell();
 
     expect(screen.getAllByRole('button', { name: 'Guardados' })).not.toHaveLength(0);
-    expect(screen.queryByRole('button', { name: 'Creá tu cuenta' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Publicar propiedad' })).not.toBeInTheDocument();
     expect(screen.getByTestId('account-mode-switch')).toBeInTheDocument();
   });
 
@@ -154,7 +184,7 @@ describe('AppShell', () => {
     await renderShell();
 
     expect(screen.queryAllByRole('button', { name: 'Ingresá' })).toHaveLength(0);
-    expect(screen.queryByRole('button', { name: 'Creá tu cuenta' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Publicar propiedad' })).not.toBeInTheDocument();
     expect(screen.getByText('Verificando sesión...')).toBeInTheDocument();
   });
 
@@ -169,7 +199,7 @@ describe('AppShell', () => {
     await renderShell();
 
     expect(screen.queryAllByRole('button', { name: 'Ingresá' })).toHaveLength(0);
-    expect(screen.queryByRole('button', { name: 'Creá tu cuenta' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Publicar propiedad' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Reintentar sesión' })).toBeInTheDocument();
   });
 
@@ -180,5 +210,12 @@ describe('AppShell', () => {
     expect(screen.getByRole('link', { name: 'Ayuda' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Explorar' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Ayuda' })).not.toBeInTheDocument();
+  });
+
+  test('uses the transparent overlay header on property detail while the hero is visible', async () => {
+    await renderShell(['/detail/p1'], <DetailHeroMarker />);
+
+    expect(screen.getByRole('banner')).toHaveClass('app-header-detail');
+    expect(screen.getByRole('banner')).toHaveClass('app-header-on-hero');
   });
 });

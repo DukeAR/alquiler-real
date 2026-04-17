@@ -1,4 +1,4 @@
-import React, { Suspense } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Icons } from './Icons';
 import { NotificationToast } from './NotificationToast';
@@ -85,21 +85,29 @@ const openLoginModal = async () => {
 
 const LazyLoginModal = React.lazy(() => import('./LoginModal'));
 
-const getDesktopNavItemClassName = (active: boolean) => cn(
-  'group relative inline-flex items-center gap-2 px-0 py-2 text-[0.92rem] font-semibold tracking-[-0.01em] text-slate-600 transition-[color] duration-150 hover:text-slate-950',
-  'after:absolute after:bottom-0 after:left-0 after:h-px after:w-full after:origin-left after:scale-x-0 after:bg-slate-300 after:transition-transform after:duration-150 hover:after:scale-x-100',
-  active && 'text-slate-950 after:scale-x-100 after:bg-brand',
+const getDesktopNavItemClassName = (active: boolean, inverted = false) => cn(
+  'group relative inline-flex items-center gap-2 px-0 py-2 text-[0.92rem] font-semibold tracking-[-0.01em] transition-[color] duration-150',
+  'after:absolute after:bottom-0 after:left-0 after:h-px after:w-full after:origin-left after:scale-x-0 after:transition-transform after:duration-150 hover:after:scale-x-100',
+  inverted
+    ? 'text-white/78 hover:text-white after:bg-white/38'
+    : 'text-slate-600 hover:text-slate-950 after:bg-slate-300',
+  active && (inverted ? 'text-white after:scale-x-100 after:bg-white' : 'text-slate-950 after:scale-x-100 after:bg-brand'),
 );
 
-const DesktopNavButton = ({ action, active, onSelect }: { action: NavAction; active: boolean; onSelect: (action: NavAction) => void; }) => (
+const DesktopNavButton = ({ action, active, inverted = false, onSelect }: { action: NavAction; active: boolean; inverted?: boolean; onSelect: (action: NavAction) => void; }) => (
   action.path && !action.onClick && !action.protected ? (
     <Link
       to={action.path}
       aria-label={getNavAriaLabel(action)}
       aria-current={active ? 'page' : undefined}
-      className={getDesktopNavItemClassName(active)}
+      className={getDesktopNavItemClassName(active, inverted)}
     >
-      <action.icon className={cn('h-4 w-4 transition-colors duration-150', active ? 'text-brand' : 'text-slate-400 group-hover:text-slate-500')} />
+      <action.icon className={cn(
+        'h-4 w-4 transition-colors duration-150',
+        inverted
+          ? active ? 'text-white' : 'text-white/70 group-hover:text-white/92'
+          : active ? 'text-brand' : 'text-slate-400 group-hover:text-slate-500',
+      )} />
       <span>{action.label}</span>
     </Link>
   ) : (
@@ -108,9 +116,14 @@ const DesktopNavButton = ({ action, active, onSelect }: { action: NavAction; act
       onClick={() => onSelect(action)}
       aria-label={getNavAriaLabel(action)}
       aria-current={active ? 'page' : undefined}
-      className={getDesktopNavItemClassName(active)}
+      className={getDesktopNavItemClassName(active, inverted)}
     >
-      <action.icon className={cn('h-4 w-4 transition-colors duration-150', active ? 'text-brand' : 'text-slate-400 group-hover:text-slate-500')} />
+      <action.icon className={cn(
+        'h-4 w-4 transition-colors duration-150',
+        inverted
+          ? active ? 'text-white' : 'text-white/70 group-hover:text-white/92'
+          : active ? 'text-brand' : 'text-slate-400 group-hover:text-slate-500',
+      )} />
       <span>{action.label}</span>
       {action.badge ? (
         <span aria-hidden="true" className="absolute -right-3 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-black text-white">
@@ -216,11 +229,63 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
     navigate(action.path);
   };
 
+  const isPropertyDetailRoute = matchesPath(location.pathname, '/detail');
+  const [isPropertyHeroVisible, setIsPropertyHeroVisible] = useState(() => isPropertyDetailRoute);
+
+  useEffect(() => {
+    if (!isPropertyDetailRoute) {
+      setIsPropertyHeroVisible(false);
+      return;
+    }
+
+    let frameId = 0;
+    let resizeObserver: ResizeObserver | null = null;
+
+    const updateHeroVisibility = () => {
+      const heroElement = document.querySelector('[data-property-detail-hero]');
+      const headerElement = document.querySelector('.app-header');
+      const headerHeight = headerElement instanceof HTMLElement ? headerElement.offsetHeight : 0;
+
+      if (!(heroElement instanceof HTMLElement)) {
+        setIsPropertyHeroVisible(window.scrollY <= 24);
+        return;
+      }
+
+      const heroBounds = heroElement.getBoundingClientRect();
+      setIsPropertyHeroVisible(heroBounds.bottom > headerHeight + 24);
+    };
+
+    const scheduleUpdate = () => {
+      window.cancelAnimationFrame(frameId);
+      frameId = window.requestAnimationFrame(updateHeroVisibility);
+    };
+
+    scheduleUpdate();
+    window.addEventListener('scroll', scheduleUpdate, { passive: true });
+    window.addEventListener('resize', scheduleUpdate);
+
+    const heroElement = document.querySelector('[data-property-detail-hero]');
+    if (typeof ResizeObserver !== 'undefined' && heroElement instanceof HTMLElement) {
+      resizeObserver = new ResizeObserver(() => {
+        scheduleUpdate();
+      });
+      resizeObserver.observe(heroElement);
+    }
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      window.removeEventListener('scroll', scheduleUpdate);
+      window.removeEventListener('resize', scheduleUpdate);
+      resizeObserver?.disconnect();
+    };
+  }, [isPropertyDetailRoute, location.pathname]);
+
   const showHeader = !hiddenHeaderPrefixes.some((prefix) => matchesPath(location.pathname, prefix));
   const showMobileNav = !hiddenMobileNavPrefixes.some((prefix) => matchesPath(location.pathname, prefix));
   const showAssistant = !hiddenAssistantPrefixes.some((prefix) => matchesPath(location.pathname, prefix));
   const usesExploreLayoutWidth = location.pathname === '/' || matchesPath(location.pathname, '/explore');
   const headerLayoutClass = usesExploreLayoutWidth ? 'app-page-explore' : 'app-page';
+  const headerOnHero = isPropertyDetailRoute && isPropertyHeroVisible;
 
   const desktopActions: NavAction[] = [
     { label: 'Explorar', shortLabel: 'Explorar', path: '/', icon: Icons.Search },
@@ -255,30 +320,39 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
       </Suspense>
 
       {showHeader ? (
-        <header className="app-header relative z-50">
-          <div className={cn(headerLayoutClass, 'flex items-center justify-between gap-2.5 py-3 sm:gap-6 sm:py-4.5')}>
-            <button type="button" onClick={() => navigate('/')} aria-label="Ir al inicio de Alquiler Real" className="flex min-w-0 items-center gap-2 rounded-full pr-1 transition-transform duration-200 hover:scale-[1.01] sm:gap-3 sm:pr-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-[0_18px_35px_-22px_rgba(15,23,42,0.85)] sm:h-11 sm:w-11">
-                <Icons.ShieldCheck className="h-6 w-6" />
+        <header className={cn('app-header z-50', isPropertyDetailRoute ? 'app-header-detail' : 'relative', headerOnHero && 'app-header-on-hero')}>
+          <div className={cn(headerLayoutClass, 'flex items-center justify-between gap-4 py-3.5 sm:gap-8 sm:py-5 lg:gap-10')}>
+            <button type="button" onClick={() => navigate('/')} aria-label="Ir al inicio de Alquiler Real" className="flex min-w-0 items-center gap-3.5 rounded-2xl pr-0 transition-opacity duration-200 hover:opacity-95 focus-visible:outline-none focus-visible:shadow-[var(--app-focus-ring)] sm:gap-4.5">
+              <div className={cn(
+                'flex h-9 w-9 items-center justify-center rounded-[1rem] border sm:h-10 sm:w-10',
+                headerOnHero
+                  ? 'border-white/18 bg-white/8 text-white shadow-[0_18px_40px_-30px_rgba(0,0,0,0.42)] backdrop-blur-[10px]'
+                  : 'border-slate-200/90 bg-slate-50 text-slate-500 shadow-[0_10px_24px_-22px_rgba(15,23,42,0.22)]',
+              )}>
+                <Icons.ShieldCheck className="h-[1.05rem] w-[1.05rem] sm:h-[1.15rem] sm:w-[1.15rem]" />
               </div>
               <div className="min-w-0 text-left">
-                <div className="hidden text-[10px] font-semibold uppercase tracking-[0.2em] text-brand sm:block">Información real</div>
-                <div className="font-display truncate text-[1rem] font-semibold tracking-tight text-slate-900 sm:text-[1.2rem]">Alquiler Real</div>
+                <div className={cn('hidden text-[9px] font-semibold uppercase tracking-[0.18em] sm:block', headerOnHero ? 'text-white/62' : 'text-slate-400/80')}>Información real</div>
+                <div className={cn('font-display truncate text-[1.08rem] font-semibold leading-none tracking-[-0.03em] sm:text-[1.34rem]', headerOnHero ? 'text-white' : 'text-slate-950')}>
+                  <span className={headerOnHero ? 'text-white' : 'text-slate-950'}>Alquiler</span>{' '}
+                  <span className={headerOnHero ? 'text-white' : 'text-brand'}>Real</span>
+                </div>
               </div>
             </button>
 
-            <nav aria-label="Navegación principal" className="hidden items-center gap-6 lg:flex lg:flex-1 lg:justify-center xl:gap-8">
+            <nav aria-label="Navegación principal" className="hidden items-center gap-7 lg:flex lg:flex-1 lg:justify-center xl:gap-9">
               {desktopActions.map((action) => (
                 <DesktopNavButton
                   key={action.label}
                   action={action}
                   active={!!action.path && matchesPath(location.pathname, action.path)}
+                  inverted={headerOnHero}
                   onSelect={onSelect}
                 />
               ))}
             </nav>
 
-            <div className="flex shrink-0 items-center gap-2 sm:gap-3.5">
+            <div className="flex shrink-0 items-center gap-1.5 sm:gap-4 lg:gap-5">
               {isAuthenticated && user ? <AccountModeSwitch className="hidden lg:inline-flex" compact /> : null}
 
               <NotificationsMenu
@@ -290,6 +364,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                 onRefresh={notifications.loadNotifications}
                 onMarkAllAsRead={notifications.markAllAsRead}
                 onLoginRequired={openLoginModal}
+                inverted={headerOnHero}
               />
 
               {isAuthenticated && user ? (
@@ -297,22 +372,32 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                   <button
                     type="button"
                     onClick={() => navigate('/my-bookings')}
-                    className="hidden h-10 w-10 items-center justify-center rounded-full text-slate-500 transition-[color,background-color] duration-150 hover:bg-slate-100/80 hover:text-slate-950 focus-visible:outline-none focus-visible:shadow-[var(--app-focus-ring)] md:inline-flex"
+                    className={cn(
+                      'hidden h-9 w-9 items-center justify-center rounded-xl transition-[color,background-color,box-shadow] duration-200 focus-visible:outline-none focus-visible:shadow-[var(--app-focus-ring)] md:inline-flex sm:h-10 sm:w-10',
+                      headerOnHero
+                        ? 'text-white/84 hover:bg-white/10 hover:text-white'
+                        : 'text-slate-500 hover:bg-slate-100/70 hover:text-slate-900',
+                    )}
                     aria-label="Mis reservas"
                   >
-                    <Icons.Calendar className="h-5 w-5" />
+                    <Icons.Calendar className="h-4.5 w-4.5" />
                   </button>
                   <button
                     type="button"
                     onClick={() => navigate('/profile')}
-                    className="flex items-center gap-3 rounded-full border border-slate-200/90 bg-white/96 px-2 py-2 shadow-[0_18px_35px_-28px_rgba(15,23,42,0.24)] transition-[background-color,border-color,box-shadow,transform] duration-150 hover:border-slate-300 hover:bg-white hover:shadow-[0_22px_40px_-28px_rgba(15,23,42,0.24)]"
+                    className={cn(
+                      'flex items-center gap-3 rounded-full px-2 py-2 transition-[background-color,border-color,box-shadow,transform,color] duration-200',
+                      headerOnHero
+                        ? 'border border-white/18 bg-black/18 text-white shadow-[0_18px_35px_-28px_rgba(0,0,0,0.32)] backdrop-blur-[10px] hover:border-white/26 hover:bg-black/28 hover:shadow-[0_22px_40px_-28px_rgba(0,0,0,0.34)]'
+                        : 'border border-slate-200/90 bg-white/96 shadow-[0_18px_35px_-28px_rgba(15,23,42,0.24)] hover:border-slate-300 hover:bg-white hover:shadow-[0_22px_40px_-28px_rgba(15,23,42,0.24)]',
+                    )}
                     aria-label="Ir al perfil"
                   >
                     <div className="hidden text-right md:block">
-                      <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Cuenta</div>
-                      <div className="text-sm font-bold text-slate-900">{user.name}</div>
+                      <div className={cn('text-[10px] font-bold uppercase tracking-[0.16em]', headerOnHero ? 'text-white/62' : 'text-slate-400')}>Cuenta</div>
+                      <div className={cn('text-sm font-bold', headerOnHero ? 'text-white' : 'text-slate-900')}>{user.name}</div>
                     </div>
-                    <div className="h-10 w-10 overflow-hidden rounded-full bg-slate-100">
+                    <div className={cn('h-10 w-10 overflow-hidden rounded-full', headerOnHero ? 'bg-white/16' : 'bg-slate-100')}>
                       <img src={user.profilePhoto || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`} alt={user.name} className="h-full w-full object-cover" />
                     </div>
                   </button>
@@ -322,31 +407,46 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                   <button
                     type="button"
                     onClick={() => openLoginModal()}
-                    className="hidden items-center gap-2 px-0 py-2 text-[0.92rem] font-semibold tracking-[-0.01em] text-slate-600 transition-[color,text-decoration-color] duration-150 hover:text-slate-950 hover:underline hover:decoration-slate-300 hover:underline-offset-4 focus-visible:outline-none focus-visible:shadow-[var(--app-focus-ring)] md:inline-flex"
+                    className={cn(
+                      'hidden items-center px-0 py-2 text-[0.92rem] font-medium tracking-[-0.01em] transition-colors duration-200 focus-visible:outline-none focus-visible:shadow-[var(--app-focus-ring)] md:inline-flex',
+                      headerOnHero ? 'text-white/84 hover:text-white' : 'text-slate-600 hover:text-slate-950',
+                    )}
                   >
-                    <Icons.User className="h-4 w-4" />
                     Ingresá
                   </button>
                   <button
                     type="button"
                     onClick={() => navigate('/register')}
-                    className="app-button-primary h-10 whitespace-nowrap rounded-[0.95rem] px-3 text-[0.88rem] shadow-[0_18px_36px_-28px_rgba(79,70,229,0.78)] sm:h-11 sm:rounded-[1rem] sm:px-6 sm:text-[0.95rem]"
+                    className={cn(
+                      'app-button-primary h-10 whitespace-nowrap rounded-[1rem] px-4 text-[0.9rem] sm:h-11 sm:px-6 sm:text-[0.96rem]',
+                      headerOnHero ? 'shadow-[0_22px_42px_-26px_rgba(15,23,42,0.48)]' : 'shadow-[0_20px_38px_-26px_rgba(55,48,163,0.52)]',
+                    )}
                   >
+                    Publicar propiedad
                     <Icons.ArrowRight className="hidden h-4 w-4 sm:block" />
-                    Creá tu cuenta
                   </button>
                 </>
               ) : hasSessionError ? (
                 <button
                   type="button"
                   onClick={() => void refresh()}
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200/85 bg-white/88 text-slate-600 shadow-[0_16px_34px_-28px_rgba(15,23,42,0.24)] transition-[border-color,color,background-color,box-shadow] duration-150 hover:border-slate-300 hover:bg-white hover:text-slate-950 focus-visible:outline-none focus-visible:shadow-[var(--app-focus-ring)] md:h-auto md:w-auto md:gap-2 md:rounded-[0.95rem] md:bg-white/70 md:px-4 md:py-2.5 md:shadow-none"
+                  className={cn(
+                    'inline-flex h-10 w-10 items-center justify-center transition-[border-color,color,background-color,box-shadow] duration-200 focus-visible:outline-none focus-visible:shadow-[var(--app-focus-ring)] md:h-auto md:w-auto md:gap-2 md:px-4 md:py-2.5',
+                    headerOnHero
+                      ? 'rounded-full border border-white/18 bg-black/18 text-white shadow-[0_16px_34px_-28px_rgba(0,0,0,0.32)] backdrop-blur-[10px] hover:border-white/26 hover:bg-black/28 hover:text-white md:rounded-[0.95rem] md:shadow-[0_16px_34px_-28px_rgba(0,0,0,0.32)]'
+                      : 'rounded-full border border-slate-200/85 bg-white/88 text-slate-600 shadow-[0_16px_34px_-28px_rgba(15,23,42,0.24)] hover:border-slate-300 hover:bg-white hover:text-slate-950 md:rounded-[0.95rem] md:bg-white/70 md:shadow-none',
+                  )}
                 >
                   <Icons.AlertTriangle className="h-4 w-4" />
                   <span className="hidden md:inline">Reintentar sesión</span>
                 </button>
               ) : (
-                <div role="status" aria-live="polite" className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200/80 bg-white/88 text-slate-500 shadow-[0_16px_34px_-28px_rgba(15,23,42,0.18)] md:h-auto md:w-auto md:gap-2 md:rounded-none md:border-transparent md:bg-transparent md:px-0 md:py-0 md:shadow-none">
+                <div role="status" aria-live="polite" className={cn(
+                  'inline-flex h-10 w-10 items-center justify-center md:h-auto md:w-auto md:gap-2 md:px-0 md:py-0',
+                  headerOnHero
+                    ? 'rounded-full border border-white/16 bg-black/18 text-white/84 shadow-[0_16px_34px_-28px_rgba(0,0,0,0.28)] backdrop-blur-[10px] md:rounded-none md:border-transparent md:bg-transparent md:shadow-none'
+                    : 'rounded-full border border-slate-200/80 bg-white/88 text-slate-500 shadow-[0_16px_34px_-28px_rgba(15,23,42,0.18)] md:rounded-none md:border-transparent md:bg-transparent md:shadow-none',
+                )}>
                   <Icons.Loader2 className="h-4 w-4 animate-spin" />
                   <span className="hidden md:inline">Verificando sesión...</span>
                 </div>

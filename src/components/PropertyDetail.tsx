@@ -930,18 +930,9 @@ export const PropertyDetailShell: React.FC<{
   }, [lightboxOpen, images.length, mainIndex]);
 
   return (
-    <div className="mx-auto max-w-7xl px-4 pb-[calc(env(safe-area-inset-bottom)+11rem)] pt-6 md:px-6 lg:pb-16 lg:px-8">
-      <button
-        type="button"
-        onClick={() => navigate(-1)}
-        className="mb-6 inline-flex items-center gap-2 rounded-full px-1.5 py-2 text-sm font-semibold text-slate-600 transition-[color,transform] duration-150 hover:text-slate-950 focus-visible:outline-none focus-visible:shadow-[var(--app-focus-ring)] md:border md:border-slate-200/85 md:bg-white/92 md:px-4 md:shadow-[0_14px_28px_-24px_rgba(15,23,42,0.28)] md:hover:border-slate-300"
-      >
-        <Icons.ArrowLeft className="h-4 w-4" />
-        <span>Volver</span>
-      </button>
-
+    <div className="app-page pb-[calc(env(safe-area-inset-bottom)+11rem)] lg:pb-16">
       <div className="space-y-6 md:space-y-8">
-        <section className="space-y-6 md:space-y-8">
+        <section data-property-detail-hero className="space-y-6 md:space-y-8">
           <Card padding="none" variant="elevated" className="overflow-hidden rounded-[32px] border-slate-200/80 bg-white shadow-[0_34px_80px_-50px_rgba(15,23,42,0.35)]">
             <div className="min-w-0 overflow-hidden rounded-[32px]">
               <div className="group relative isolate overflow-hidden bg-slate-950">
@@ -961,16 +952,27 @@ export const PropertyDetailShell: React.FC<{
 
                 <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.05)_0%,rgba(0,0,0,0.14)_34%,rgba(0,0,0,0.3)_62%,rgba(0,0,0,0.55)_100%)]" />
 
-                <div className="property-hero-copy-reveal absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-4 p-4 sm:gap-4 sm:p-8 lg:p-10">
-                  <div className="flex flex-wrap items-center gap-2 text-white">
-                    <span className="inline-flex items-center rounded-full border border-white/18 bg-black/28 px-3.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/90 backdrop-blur-[10px] shadow-[0_16px_24px_-18px_rgba(15,23,42,0.42)]">
-                      {propertyTypeLabel}
-                    </span>
-                    {hasMultipleImages ? (
-                      <Badge variant="neutral" size="md" className="border-white/18 bg-black/28 text-white/88 backdrop-blur-[10px] shadow-[0_16px_24px_-18px_rgba(15,23,42,0.42)]">
-                        {photoCountLabel}
-                      </Badge>
-                    ) : null}
+                <div className="property-hero-copy-reveal absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-4 px-4 pb-4 pt-20 sm:gap-4 sm:px-6 sm:pb-6 sm:pt-24 lg:px-8 lg:pb-8 lg:pt-28">
+                  <div className="flex min-w-0 flex-col items-start gap-3 sm:gap-4">
+                    <button
+                      type="button"
+                      onClick={() => navigate(-1)}
+                      className="inline-flex items-center gap-2 rounded-full border border-white/18 bg-black/28 px-3.5 py-2 text-sm font-semibold text-white backdrop-blur-[10px] shadow-[0_18px_28px_-18px_rgba(15,23,42,0.52)] transition-[background-color,border-color,color,transform] duration-200 ease-out hover:border-white/28 hover:bg-black/38 hover:text-white focus-visible:outline-none focus-visible:shadow-[var(--app-focus-ring)] md:hover:-translate-y-[1px]"
+                    >
+                      <Icons.ArrowLeft className="h-4 w-4" />
+                      <span>Volver</span>
+                    </button>
+
+                    <div className="flex flex-wrap items-center gap-2 text-white">
+                      <span className="inline-flex items-center rounded-full border border-white/18 bg-black/28 px-3.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/90 backdrop-blur-[10px] shadow-[0_16px_24px_-18px_rgba(15,23,42,0.42)]">
+                        {propertyTypeLabel}
+                      </span>
+                      {hasMultipleImages ? (
+                        <Badge variant="neutral" size="md" className="border-white/18 bg-black/28 text-white/88 backdrop-blur-[10px] shadow-[0_16px_24px_-18px_rgba(15,23,42,0.42)]">
+                          {photoCountLabel}
+                        </Badge>
+                      ) : null}
+                    </div>
                   </div>
 
                   {user ? (
@@ -990,7 +992,7 @@ export const PropertyDetailShell: React.FC<{
                   ) : null}
                 </div>
 
-                <div className="property-hero-copy-reveal absolute inset-x-0 bottom-0 z-10 flex flex-col gap-4 p-4 sm:flex-row sm:items-end sm:justify-between sm:gap-8 sm:p-8 lg:p-10">
+                <div className="property-hero-copy-reveal absolute inset-x-0 bottom-0 z-10 flex flex-col gap-4 px-4 pb-4 pt-4 sm:flex-row sm:items-end sm:justify-between sm:gap-8 sm:px-6 sm:pb-6 lg:px-8 lg:pb-8">
                   <div className="max-w-full text-white sm:max-w-[34rem] lg:max-w-[38rem]">
                     <h1 className="max-w-full text-balance text-[clamp(1.24rem,5vw,1.56rem)] font-semibold leading-[1.08] tracking-[-0.035em] text-white line-clamp-2 sm:max-w-[30rem] sm:text-[2.32rem] sm:leading-[1.08] lg:max-w-[35rem] lg:text-[2.72rem] lg:leading-[1.08]">
                       {property.title}
