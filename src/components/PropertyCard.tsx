@@ -176,7 +176,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
               'min-h-[5.5rem]',
               isPremiumCard
                 ? 'flex flex-col justify-center gap-1.5 px-0 py-0'
-                : 'flex flex-col gap-3 px-0 py-0',
+                : 'flex flex-col gap-3.5 px-0 py-0',
             )}
           >
             {isPremiumCard ? (
@@ -199,23 +199,22 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
                   </p>
                 </div>
 
-                <ul className="space-y-2" aria-label="Checks de verificación">
+                <ul className="space-y-2.5 pb-1" aria-label="Checks de verificación">
                   {verificationState.checks.map((check) => (
                     <li
                       key={check.key}
                       data-status={check.complete ? 'complete' : 'pending'}
-                      className="flex items-center gap-2 text-[0.82rem] font-medium leading-[1.15rem]"
+                      className="flex items-start gap-2.5 text-[0.82rem] font-medium leading-[1.15rem]"
                     >
-                      {check.complete ? (
-                        <Icons.Check
-                          className="h-4 w-4 shrink-0 text-emerald-600"
-                          aria-hidden="true"
-                        />
-                      ) : (
-                        <span className="h-2 w-2 shrink-0 rounded-full bg-slate-300" aria-hidden="true" />
-                      )}
+                      <span className="mt-px flex h-4 w-4 shrink-0 items-center justify-center" aria-hidden="true">
+                        {check.complete ? (
+                          <Icons.Check className="h-4 w-4 text-emerald-600" />
+                        ) : (
+                          <span className="h-2.5 w-2.5 rounded-full bg-slate-300" />
+                        )}
+                      </span>
 
-                      <span className={cn('tracking-[-0.01em]', check.complete ? 'text-slate-700' : 'text-slate-400')}>
+                      <span className={cn('pt-px tracking-[-0.01em]', check.complete ? 'text-slate-700' : 'text-slate-400')}>
                         {check.label}
                       </span>
                     </li>
@@ -226,7 +225,10 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           </div>
         </div>
 
-        <div className="mt-auto flex items-end justify-between gap-4 border-t border-slate-200/70 pt-4">
+        <div className={cn(
+          'mt-auto flex items-end justify-between gap-4 border-t border-slate-200/70',
+          isPremiumCard ? 'pt-4' : 'pt-5',
+        )}>
           <div className={cn(
             'min-w-0 text-[0.83rem] font-medium leading-5 text-slate-500',
             isPremiumCard ? 'flex flex-wrap items-center gap-x-3 gap-y-1.5' : 'flex flex-col items-start gap-1.5 text-[0.84rem] text-slate-600',
