@@ -80,15 +80,19 @@ describe('PropertyCard', () => {
     expect(screen.queryByText('12 reseñas')).toBeNull();
     const verificationBlock = screen.getByTestId('property-card-verification');
     expect(verificationBlock).toHaveAttribute('aria-label', '4 datos comprobados');
-    expect(within(verificationBlock).getByText('4 datos comprobados')).toHaveClass('text-slate-500');
-    expect(within(verificationBlock).queryAllByRole('listitem')).toHaveLength(0);
+    expect(within(verificationBlock).getByText('4 datos comprobados')).toHaveClass('text-slate-600');
+    expect(within(verificationBlock).getByRole('list', { name: /datos verificados/i })).toBeInTheDocument();
+    expect(within(verificationBlock).getAllByRole('listitem')).toHaveLength(3);
+    expect(within(verificationBlock).getByText('Anfitrión confirmado')).toBeInTheDocument();
+    expect(within(verificationBlock).getByText('Ubicación verificada')).toBeInTheDocument();
+    expect(within(verificationBlock).getByText('Fotos reales')).toBeInTheDocument();
     expect(screen.queryByText('Más verificado')).toBeNull();
     expect(screen.queryByText('Confianza visible')).toBeNull();
     expect(screen.queryByText('Anfitrión con buen historial')).toBeNull();
     expect(screen.queryByText('12 reseñas reales')).toBeNull();
     expect(screen.queryByText('Anfitrión: Laura')).toBeNull();
     expect(screen.queryByText('Abrir ficha')).toBeNull();
-    expect(screen.queryByText('Ver detalle')).toBeNull();
+    expect(screen.getByText('Ver detalle')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Abrir detalle de Casa frente al mar/i })).toBeInTheDocument();
   });
 
@@ -109,7 +113,9 @@ describe('PropertyCard', () => {
     const verificationBlock = screen.getByLabelText('2 datos comprobados');
 
     expect(within(verificationBlock).getByText('2 datos comprobados')).toBeInTheDocument();
-    expect(within(verificationBlock).queryAllByRole('listitem')).toHaveLength(0);
+    expect(within(verificationBlock).getAllByRole('listitem')).toHaveLength(2);
+    expect(within(verificationBlock).getByText('Ubicación verificada')).toBeInTheDocument();
+    expect(within(verificationBlock).getByText('Geolocalización precisa')).toBeInTheDocument();
     expect(screen.queryByText('Más verificado')).toBeNull();
   });
 
@@ -135,6 +141,7 @@ describe('PropertyCard', () => {
 
     expect(screen.queryByText('Anfitrión con buen historial')).toBeNull();
     expect(screen.getByText('4 datos comprobados')).toBeInTheDocument();
+    expect(screen.getByText('Ver detalle')).toBeInTheDocument();
   });
 
   test('keeps the badge hidden unless the ordering context marks the card as a real standout', () => {
@@ -146,6 +153,7 @@ describe('PropertyCard', () => {
 
     expect(screen.queryByText('Más verificado')).toBeNull();
     expect(screen.getByText('4 datos comprobados')).toBeInTheDocument();
+    expect(screen.getByText('Ver detalle')).toBeInTheDocument();
   });
 
   test('shows the presencial badge on the image only for max score listings with onsite verification', () => {
@@ -167,6 +175,7 @@ describe('PropertyCard', () => {
     expect(screen.queryByText('5 datos comprobados')).toBeNull();
     expect(screen.queryByText('(5/5)')).toBeNull();
     expect(screen.queryByText('Más verificado')).toBeNull();
+    expect(screen.getByText('Ver detalle')).toBeInTheDocument();
   });
 
   test('keeps the standard verification summary subtle even when the card is highlighted', () => {
@@ -179,7 +188,7 @@ describe('PropertyCard', () => {
 
     const trustLine = screen.getByTestId('property-card-verification');
 
-    expect(within(trustLine).getByText('4 datos comprobados')).toHaveClass('text-slate-500');
+    expect(within(trustLine).getByText('4 datos comprobados')).toHaveClass('text-slate-600');
   });
 
   test('keeps the featured card free of extra verification badges', () => {
@@ -196,6 +205,7 @@ describe('PropertyCard', () => {
     expect(screen.queryByText('Buena relación precio / información')).toBeNull();
     expect(screen.queryByText('Más comprobado')).toBeNull();
     expect(screen.getByText('4 datos comprobados')).toBeInTheDocument();
+    expect(screen.getByText('Ver detalle')).toBeInTheDocument();
   });
 
   test('keeps the favorites variant free of Explore guidance labels', () => {
@@ -204,13 +214,13 @@ describe('PropertyCard', () => {
     const verificationBlock = screen.getByLabelText('4 datos comprobados');
 
     expect(within(verificationBlock).getByText('4 datos comprobados')).toBeInTheDocument();
-    expect(within(verificationBlock).queryAllByRole('listitem')).toHaveLength(0);
+    expect(within(verificationBlock).getAllByRole('listitem')).toHaveLength(3);
     expect(screen.queryByText('Más verificado')).toBeNull();
     expect(screen.queryByText('Más confiable')).toBeNull();
     expect(screen.queryByText('Anfitrión con buen historial')).toBeNull();
     expect(screen.queryByText('Abrir ficha')).toBeNull();
     expect(screen.queryByText('Abrir detalle')).toBeNull();
-    expect(screen.queryByText('Ver detalle')).toBeNull();
+    expect(screen.getByText('Ver detalle')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Abrir detalle de Casa frente al mar/i })).toBeInTheDocument();
   });
 

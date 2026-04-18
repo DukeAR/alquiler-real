@@ -96,9 +96,12 @@ describe('FavoritesView integration', () => {
     ]);
     expect(screen.getByText('4 datos comprobados')).toBeInTheDocument();
     expect(screen.getByText('3 datos comprobados')).toBeInTheDocument();
+    expect(screen.getAllByText('Anfitrión confirmado').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Ubicación verificada').length).toBeGreaterThan(0);
     expect(screen.queryByText('Verificación parcial')).toBeNull();
     expect(screen.queryByText('Mejor verificado')).toBeNull();
     expect(screen.queryByText('Alto nivel de verificación')).toBeNull();
+    expect(screen.getAllByText('Ver detalle')).toHaveLength(2);
     expect(screen.getAllByRole('button', { name: /Abrir detalle de/i })).toHaveLength(2);
   });
 });

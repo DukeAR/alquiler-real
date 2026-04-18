@@ -74,8 +74,13 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   const guestCapacityLabel = getGuestCapacityLabel(Number(property.maxGuests) || null);
   const showPresencialBadge = verificationDetails.isFullyVerified;
   const standardVerificationSummary = `${verificationDetails.score} ${verificationDetails.score === 1 ? 'dato comprobado' : 'datos comprobados'}`;
+  const standardVerificationItems = verificationDetails.compactItems.slice(0, 3).map((item) => ({
+    key: item.key,
+    label: item.key === 'photos' ? 'Fotos reales' : item.label,
+  }));
   const premiumVerificationTitle = 'Información verificada en persona';
   const premiumVerificationDescription = 'Ubicación, anfitrión y datos confirmados';
+  const propertyCardCtaLabel = 'Ver detalle';
   const handleFavoriteToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
     const { user } = auth;
@@ -108,6 +113,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
       className={cn(
         'group flex h-full flex-col overflow-hidden border-[color:var(--app-surface-border)] bg-white shadow-[var(--app-shadow-subtle)] transition-[transform,box-shadow,border-color,background-color] duration-200 ease-out',
         onClick && 'cursor-pointer hover:-translate-y-[3px] hover:border-[color:var(--app-surface-border-strong)] hover:shadow-[var(--app-shadow-raised)] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-brand/10',
+        showPresencialBadge && 'border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,1)_0%,rgba(248,250,252,0.94)_100%)] shadow-[0_26px_54px_-40px_rgba(15,23,42,0.22)]',
         isDecisionFeatured && 'border-brand/35 shadow-[0_24px_46px_-34px_rgba(67,56,202,0.26)]',
         isFavoritesVariant && 'bg-white shadow-[var(--app-shadow-soft)]',
         className,
@@ -124,7 +130,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
 
         {showPresencialBadge ? (
           <div className="absolute left-4 top-4">
-            <PresencialVerificationBadge className="border-emerald-200/80 bg-emerald-50/94 text-emerald-950 shadow-[0_14px_28px_-22px_rgba(5,150,105,0.22)]" />
+            <PresencialVerificationBadge className="border-emerald-200/90 bg-emerald-50/96 text-emerald-950 shadow-[0_10px_22px_-18px_rgba(15,23,42,0.14)]" />
           </div>
         ) : null}
 
@@ -150,16 +156,16 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         ) : null}
       </div>
 
-      <div className="flex flex-1 flex-col gap-4 p-5 sm:p-5 md:p-6">
-        <div className="space-y-3.5">
-          <div className="space-y-1.5 min-h-[4.5rem]">
-            <p className="eyebrow">{propertyTypeLabel}</p>
-            <h3 className="section-title line-clamp-2 text-[1.18rem] font-semibold leading-[1.18] tracking-[-0.02em] transition-colors duration-150 group-hover:text-slate-950 md:text-[1.25rem]">
+      <div className="flex flex-1 flex-col gap-5 p-5 sm:p-5 md:p-6">
+        <div className="space-y-4">
+          <div className="space-y-2 min-h-[5.15rem]">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">{propertyTypeLabel}</p>
+            <h3 className="line-clamp-3 text-[1.24rem] font-semibold leading-[1.12] tracking-[-0.03em] text-slate-950 transition-colors duration-150 group-hover:text-slate-950 md:text-[1.34rem]">
               {property.title}
             </h3>
           </div>
 
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Por noche</p>
             <p className="text-[2.85rem] font-black leading-none tracking-[-0.06em] text-slate-950 md:text-[2.95rem]">
               {formatCurrency(Number(property.price) || 0)}
@@ -169,7 +175,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           <div
             data-testid="property-card-verification"
             aria-label={showPresencialBadge ? premiumVerificationTitle : standardVerificationSummary}
-            className={cn('min-h-[2.8rem]', showPresencialBadge ? 'space-y-0.5' : 'flex items-start')}
+            className={cn('min-h-[5rem]', showPresencialBadge ? 'space-y-1' : 'space-y-2.5')}
           >
             {showPresencialBadge ? (
               <>
@@ -181,24 +187,48 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
                 </p>
               </>
             ) : (
-              <p className="text-[0.82rem] font-medium leading-5 text-slate-500">
-                {standardVerificationSummary}
-              </p>
+              <>
+                <p className="text-[0.82rem] font-medium leading-5 text-slate-600">
+                  {standardVerificationSummary}
+                </p>
+
+                {standardVerificationItems.length > 0 ? (
+                  <ul className="flex flex-wrap gap-x-3 gap-y-1.5" aria-label="Datos verificados">
+                    {standardVerificationItems.map((item) => (
+                      <li key={item.key} className="inline-flex items-center gap-1.5 text-[0.76rem] font-medium leading-5 text-slate-500">
+                        <Icons.CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                        <span>{item.label}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </>
             )}
           </div>
         </div>
 
-        <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-slate-200/70 pt-4 text-[0.83rem] font-medium leading-5 text-slate-500">
-          <span className="inline-flex items-center gap-1.5">
-            <Icons.MapPin className="h-3.5 w-3.5 text-slate-400" />
-            <span>{property.location}</span>
-          </span>
-          {guestCapacityLabel ? (
+        <div className="mt-auto flex items-end justify-between gap-3 border-t border-slate-200/70 pt-4">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5 text-[0.83rem] font-medium leading-5 text-slate-500">
             <span className="inline-flex items-center gap-1.5">
-              <Icons.Users className="h-3.5 w-3.5 text-slate-400" />
-              <span>{guestCapacityLabel}</span>
+              <Icons.MapPin className="h-3.5 w-3.5 text-slate-400" />
+              <span>{property.location}</span>
             </span>
-          ) : null}
+            {guestCapacityLabel ? (
+              <span className="inline-flex items-center gap-1.5">
+                <Icons.Users className="h-3.5 w-3.5 text-slate-400" />
+                <span>{guestCapacityLabel}</span>
+              </span>
+            ) : null}
+          </div>
+
+          <span
+            data-testid="property-card-cta"
+            aria-hidden="true"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-slate-200/80 bg-white/92 px-3 py-1.5 text-[0.76rem] font-semibold text-slate-600 shadow-[0_10px_20px_-18px_rgba(15,23,42,0.12)] transition-[border-color,color,background-color] duration-150 group-hover:border-slate-300 group-hover:bg-white group-hover:text-slate-900"
+          >
+            <span>{propertyCardCtaLabel}</span>
+            <Icons.ArrowRight className="h-3.5 w-3.5" />
+          </span>
         </div>
       </div>
     </Card>
