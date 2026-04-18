@@ -38,7 +38,7 @@ export const ExploreFiltersBar = ({
   const sharedControlClassName = 'explore-filter-control h-11 min-w-0 text-[0.93rem] font-semibold tracking-[-0.015em] text-slate-950';
 
   return (
-    <section className="rounded-[calc(var(--app-radius-card)+4px)] border border-slate-200 bg-white px-4 py-3 shadow-[0_24px_48px_-40px_rgba(15,23,42,0.18)] sm:px-5 sm:py-3.5 lg:px-6">
+    <section className="rounded-[calc(var(--app-radius-card)+4px)] border border-[rgba(15,23,42,0.06)] bg-white px-4 py-2.5 shadow-[0_10px_30px_rgba(15,23,42,0.06)] sm:px-5 sm:py-3 lg:px-6">
       <div className="flex flex-col gap-2.5">
         <div className="flex flex-col gap-2 sm:relative sm:min-h-[2.5rem] sm:items-center sm:justify-center">
           <div className="inline-flex h-10 w-fit items-center gap-1 self-center rounded-[1rem] border border-slate-200 bg-slate-100/90 p-1">
