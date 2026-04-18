@@ -117,6 +117,7 @@ describe('AppShell', () => {
     await renderShell();
 
     expect(screen.queryByRole('button', { name: 'Guardados' })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('notifications-menu')).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Explorar' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Cómo funciona' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Ayuda' })).toBeInTheDocument();
@@ -143,6 +144,7 @@ describe('AppShell', () => {
     await renderShell();
 
     expect(screen.getAllByRole('button', { name: 'Guardados' })).not.toHaveLength(0);
+    expect(screen.getByTestId('notifications-menu')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Publicar propiedad' })).not.toBeInTheDocument();
     expect(screen.getByTestId('account-mode-switch')).toBeInTheDocument();
   });

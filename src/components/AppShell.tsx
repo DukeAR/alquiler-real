@@ -402,17 +402,19 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
             <div className="flex shrink-0 items-center gap-1.5 sm:gap-4 lg:gap-5">
               {isAuthenticated && user ? <AccountModeSwitch className="hidden lg:inline-flex" compact /> : null}
 
-              <NotificationsMenu
-                status={notifications.status}
-                notifications={notifications.notifications}
-                unreadCount={notifications.unreadCount}
-                errorMessage={notifications.errorMessage}
-                isMarkingAllRead={notifications.isMarkingAllRead}
-                onRefresh={notifications.loadNotifications}
-                onMarkAllAsRead={notifications.markAllAsRead}
-                onLoginRequired={openLoginModal}
-                inverted={headerOnHero}
-              />
+              {isAuthenticated && user ? (
+                <NotificationsMenu
+                  status={notifications.status}
+                  notifications={notifications.notifications}
+                  unreadCount={notifications.unreadCount}
+                  errorMessage={notifications.errorMessage}
+                  isMarkingAllRead={notifications.isMarkingAllRead}
+                  onRefresh={notifications.loadNotifications}
+                  onMarkAllAsRead={notifications.markAllAsRead}
+                  onLoginRequired={openLoginModal}
+                  inverted={headerOnHero}
+                />
+              ) : null}
 
               {isAuthenticated && user ? (
                 <>
