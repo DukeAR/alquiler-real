@@ -937,6 +937,96 @@ export const getPropertyVerificationDetails = (property: PropertyVerificationLik
   };
 };
 
+type PropertyCardVerificationCheckKey = 'hostConfirmed' | 'locationVerified' | 'geolocationPrecise' | 'realMedia' | 'availabilityValidated';
+
+export type PropertyCardVerificationCheck = {
+  key: PropertyVerificationKey;
+  label: string;
+  complete: boolean;
+};
+
+export type PropertyCardVerificationState = {
+  model: 'premium' | 'standard';
+  presencialVerified: boolean;
+  verificationChecks: Record<PropertyCardVerificationCheckKey, boolean>;
+  count: number;
+  checks: PropertyCardVerificationCheck[];
+  badgeText: string | null;
+  summaryTitle: string;
+  summaryDescription: string | null;
+  countLabel: string | null;
+};
+
+const getPropertyCardVerificationCountLabel = (count: number) => `${count} ${count === 1 ? 'comprobación visible' : 'comprobaciones visibles'}`;
+
+export const getPropertyCardVerificationState = (property: PropertyVerificationLike): PropertyCardVerificationState => {
+  const verificationSummary = getPropertyVerificationSummary(property);
+  const checks = getPropertyVerificationDisplayItems(verificationSummary.items)
+    .map<PropertyCardVerificationCheck | null>((item) => {
+      const normalizedKey = normalizePropertyVerificationKey(typeof item.key === 'string' ? item.key : undefined);
+
+      if (!normalizedKey) {
+        return null;
+      }
+
+      return {
+        key: normalizedKey,
+        label: PROPERTY_VERIFICATION_DISPLAY_LABELS[normalizedKey],
+        complete: item.status === 'complete',
+      };
+    })
+    .filter((item): item is PropertyCardVerificationCheck => item !== null);
+
+  const rawCount = checks.filter((check) => check.complete).length;
+  const shouldUsePremiumModel = hasPresencialVerificationEvidence(property) || rawCount === VERIFICATION_SCORE_MAX;
+  const normalizedChecks = shouldUsePremiumModel
+    ? checks.map((check) => ({ ...check, complete: true }))
+    : checks;
+  const count = shouldUsePremiumModel ? VERIFICATION_SCORE_MAX : rawCount;
+  const verificationChecks = normalizedChecks.reduce<Record<PropertyCardVerificationCheckKey, boolean>>((accumulator, check) => {
+    if (check.key === 'identity') {
+      accumulator.hostConfirmed = check.complete;
+      return accumulator;
+    }
+
+    if (check.key === 'location') {
+      accumulator.locationVerified = check.complete;
+      return accumulator;
+    }
+
+    if (check.key === 'geolocation') {
+      accumulator.geolocationPrecise = check.complete;
+      return accumulator;
+    }
+
+    if (check.key === 'photos') {
+      accumulator.realMedia = check.complete;
+      return accumulator;
+    }
+
+    accumulator.availabilityValidated = check.complete;
+    return accumulator;
+  }, {
+    hostConfirmed: false,
+    locationVerified: false,
+    geolocationPrecise: false,
+    realMedia: false,
+    availabilityValidated: false,
+  });
+
+  return {
+    model: shouldUsePremiumModel ? 'premium' : 'standard',
+    presencialVerified: shouldUsePremiumModel,
+    verificationChecks,
+    count,
+    checks: normalizedChecks,
+    badgeText: shouldUsePremiumModel ? PRESENCIAL_VERIFICATION_LABEL : null,
+    summaryTitle: shouldUsePremiumModel ? 'Información verificada en persona' : 'Verificación visible',
+    summaryDescription: shouldUsePremiumModel ? 'Ubicación, anfitrión y datos confirmados' : null,
+    countLabel: shouldUsePremiumModel ? null : getPropertyCardVerificationCountLabel(count),
+  };
+};
+
 export const sortPropertiesByCatalogOrder = <T extends PropertySortLike>(
   items: T[],
   sortBy: PropertyCatalogSort,

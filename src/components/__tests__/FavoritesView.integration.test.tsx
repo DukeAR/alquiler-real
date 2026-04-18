@@ -45,6 +45,7 @@ const savedProperty = {
   verificationPhotoCount: 4,
   propertyRelationshipVerified: true,
   hasPresencialVerification: true,
+  availabilityValidated: true,
   isVerifiedProperty: true,
 };
 
@@ -59,6 +60,7 @@ const secondarySavedProperty = {
   propertyType: 'apartment',
   verificationPhotoCount: 0,
   propertyRelationshipVerified: false,
+  availabilityValidated: false,
   hasPresencialVerification: false,
   isSuperHost: false,
 };
@@ -94,11 +96,12 @@ describe('FavoritesView integration', () => {
       'Casa frente al mar',
       'Departamento tranquilo',
     ]);
-    expect(screen.getByText('4 datos comprobados')).toBeInTheDocument();
-    expect(screen.getByText('3 datos comprobados')).toBeInTheDocument();
+    expect(screen.getByText('Información verificada en persona')).toBeInTheDocument();
+    expect(screen.getByText('3 comprobaciones visibles')).toBeInTheDocument();
     expect(screen.getAllByText('Anfitrión confirmado').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Ubicación verificada').length).toBeGreaterThan(0);
     expect(screen.queryByText('Verificación parcial')).toBeNull();
+    expect(screen.queryByText('5 comprobaciones visibles')).toBeNull();
     expect(screen.queryByText('Mejor verificado')).toBeNull();
     expect(screen.queryByText('Alto nivel de verificación')).toBeNull();
     expect(screen.getAllByText('Ver detalle')).toHaveLength(2);

@@ -12,6 +12,7 @@ vi.mock('../../lib/modal', () => ({
 }));
 
 import { PropertyCard } from '../PropertyCard';
+import { getPropertyCardVerificationState } from '../../lib/propertyVerification';
 
 const highHostTrust = {
   score: 4,
@@ -48,12 +49,16 @@ const sampleProperty = {
   maxGuests: 5,
   propertyType: 'house',
   propertyRelationshipVerified: true,
-  hasPresencialVerification: true,
+  hasPresencialVerification: false,
   isVerifiedProperty: true,
   hostTrustScore: 4,
   hostTrust: highHostTrust,
   verificationPhotoCount: 3,
 };
+
+const getCompletedCheckItems = (container: HTMLElement) => within(container)
+  .getAllByRole('listitem')
+  .filter((item) => item.getAttribute('data-status') === 'complete');
 
 describe('PropertyCard', () => {
   beforeEach(() => {
@@ -61,7 +66,7 @@ describe('PropertyCard', () => {
     useAuthMock.mockReturnValue({ user: { id: 'u1' } });
   });
 
-  test('renders the real verification summary without turning it into a promotional sticker', () => {
+  test('renders the standard card model with visible verification evidence', () => {
     render(
       <PropertyCard
         property={sampleProperty}
@@ -79,13 +84,18 @@ describe('PropertyCard', () => {
     expect(screen.queryByText('4.8')).toBeNull();
     expect(screen.queryByText('12 reseñas')).toBeNull();
     const verificationBlock = screen.getByTestId('property-card-verification');
-    expect(verificationBlock).toHaveAttribute('aria-label', '4 datos comprobados');
-    expect(within(verificationBlock).getByText('4 datos comprobados')).toHaveClass('text-slate-600');
-    expect(within(verificationBlock).getByRole('list', { name: /datos verificados/i })).toBeInTheDocument();
-    expect(within(verificationBlock).getAllByRole('listitem')).toHaveLength(3);
+    expect(verificationBlock).toHaveAttribute('aria-label', '4 comprobaciones visibles');
+    expect(within(verificationBlock).getByText('Verificación visible')).toBeInTheDocument();
+    expect(within(verificationBlock).getByText('4 comprobaciones visibles')).toHaveClass('text-slate-600');
+    expect(within(verificationBlock).getByRole('list', { name: /checks de verificación/i })).toBeInTheDocument();
+    expect(within(verificationBlock).getAllByRole('listitem')).toHaveLength(5);
     expect(within(verificationBlock).getByText('Anfitrión confirmado')).toBeInTheDocument();
     expect(within(verificationBlock).getByText('Ubicación verificada')).toBeInTheDocument();
-    expect(within(verificationBlock).getByText('Fotos reales')).toBeInTheDocument();
+    expect(within(verificationBlock).getByText('Geolocalización precisa')).toBeInTheDocument();
+    expect(within(verificationBlock).getByText('Fotos / video reales')).toBeInTheDocument();
+    expect(within(verificationBlock).getByText('Disponibilidad validada')).toBeInTheDocument();
+    expect(getCompletedCheckItems(verificationBlock)).toHaveLength(4);
+    expect(screen.queryByText('Verificado presencialmente')).toBeNull();
     expect(screen.queryByText('Más verificado')).toBeNull();
     expect(screen.queryByText('Confianza visible')).toBeNull();
     expect(screen.queryByText('Anfitrión con buen historial')).toBeNull();
@@ -96,27 +106,47 @@ describe('PropertyCard', () => {
     expect(screen.getByRole('button', { name: /Abrir detalle de Casa frente al mar/i })).toBeInTheDocument();
   });
 
-  test('shows only the score when the real verification level is still low', () => {
+  test('uses the standard card model with exactly 3 visible checks', () => {
     render(
       <PropertyCard
         property={{
           ...sampleProperty,
-          identityValidated: false,
           verificationPhotoCount: 0,
-          propertyRelationshipVerified: false,
-          hasPresencialVerification: false,
-          isSuperHost: false,
         }}
       />,
     );
 
-    const verificationBlock = screen.getByLabelText('2 datos comprobados');
+    const verificationBlock = screen.getByLabelText('3 comprobaciones visibles');
 
-    expect(within(verificationBlock).getByText('2 datos comprobados')).toBeInTheDocument();
-    expect(within(verificationBlock).getAllByRole('listitem')).toHaveLength(2);
+    expect(within(verificationBlock).getByText('Verificación visible')).toBeInTheDocument();
+    expect(within(verificationBlock).getByText('3 comprobaciones visibles')).toBeInTheDocument();
+    expect(within(verificationBlock).getAllByRole('listitem')).toHaveLength(5);
+    expect(within(verificationBlock).getByText('Anfitrión confirmado')).toBeInTheDocument();
     expect(within(verificationBlock).getByText('Ubicación verificada')).toBeInTheDocument();
     expect(within(verificationBlock).getByText('Geolocalización precisa')).toBeInTheDocument();
+    expect(within(verificationBlock).getByText('Fotos / video reales')).toBeInTheDocument();
+    expect(within(verificationBlock).getByText('Disponibilidad validada')).toBeInTheDocument();
+    expect(getCompletedCheckItems(verificationBlock)).toHaveLength(3);
     expect(screen.queryByText('Más verificado')).toBeNull();
+  });
+
+  test('uses the standard card model with exactly 4 visible checks', () => {
+    render(
+      <PropertyCard
+        property={{
+          ...sampleProperty,
+          verificationPhotoCount: 0,
+          availabilityValidated: true,
+        }}
+      />,
+    );
+
+    const verificationBlock = screen.getByLabelText('4 comprobaciones visibles');
+
+    expect(within(verificationBlock).getByText('Verificación visible')).toBeInTheDocument();
+    expect(within(verificationBlock).getByText('4 comprobaciones visibles')).toBeInTheDocument();
+    expect(within(verificationBlock).getAllByRole('listitem')).toHaveLength(5);
+    expect(getCompletedCheckItems(verificationBlock)).toHaveLength(4);
   });
 
   test('keeps the card focused on verification even when the host trust level changes', () => {
@@ -140,7 +170,7 @@ describe('PropertyCard', () => {
     );
 
     expect(screen.queryByText('Anfitrión con buen historial')).toBeNull();
-    expect(screen.getByText('4 datos comprobados')).toBeInTheDocument();
+    expect(screen.getByText('4 comprobaciones visibles')).toBeInTheDocument();
     expect(screen.getByText('Ver detalle')).toBeInTheDocument();
   });
 
@@ -152,16 +182,17 @@ describe('PropertyCard', () => {
     );
 
     expect(screen.queryByText('Más verificado')).toBeNull();
-    expect(screen.getByText('4 datos comprobados')).toBeInTheDocument();
+    expect(screen.getByText('4 comprobaciones visibles')).toBeInTheDocument();
     expect(screen.getByText('Ver detalle')).toBeInTheDocument();
   });
 
-  test('shows the presencial badge on the image only for max score listings with onsite verification', () => {
+  test('uses the premium card model when presencial verification is present and all checks are complete', () => {
     render(
       <PropertyCard
         property={{
           ...sampleProperty,
           availabilityValidated: true,
+          hasPresencialVerification: true,
         }}
         verificationGuidanceLabel="Más verificado"
       />,
@@ -172,10 +203,30 @@ describe('PropertyCard', () => {
     expect(verificationBlock).toHaveAttribute('aria-label', 'Información verificada en persona');
     expect(within(verificationBlock).getByText('Información verificada en persona')).toBeInTheDocument();
     expect(within(verificationBlock).getByText('Ubicación, anfitrión y datos confirmados')).toBeInTheDocument();
-    expect(screen.queryByText('5 datos comprobados')).toBeNull();
+    expect(within(verificationBlock).queryByText('Verificación visible')).toBeNull();
+    expect(within(verificationBlock).queryByText('5 comprobaciones visibles')).toBeNull();
+    expect(within(verificationBlock).queryByRole('list')).toBeNull();
     expect(screen.queryByText('(5/5)')).toBeNull();
     expect(screen.queryByText('Más verificado')).toBeNull();
     expect(screen.getByText('Ver detalle')).toBeInTheDocument();
+  });
+
+  test('forces the premium card model when all five checks are complete even without presencial flag', () => {
+    render(
+      <PropertyCard
+        property={{
+          ...sampleProperty,
+          availabilityValidated: true,
+          hasPresencialVerification: false,
+        }}
+      />,
+    );
+
+    expect(screen.getByText('Verificado presencialmente')).toBeInTheDocument();
+    const verificationBlock = screen.getByTestId('property-card-verification');
+    expect(verificationBlock).toHaveAttribute('aria-label', 'Información verificada en persona');
+    expect(within(verificationBlock).queryByText('5 comprobaciones visibles')).toBeNull();
+    expect(within(verificationBlock).queryByRole('list')).toBeNull();
   });
 
   test('keeps the standard verification summary subtle even when the card is highlighted', () => {
@@ -188,7 +239,7 @@ describe('PropertyCard', () => {
 
     const trustLine = screen.getByTestId('property-card-verification');
 
-    expect(within(trustLine).getByText('4 datos comprobados')).toHaveClass('text-slate-600');
+    expect(within(trustLine).getByText('4 comprobaciones visibles')).toHaveClass('text-slate-600');
   });
 
   test('keeps the featured card free of extra verification badges', () => {
@@ -204,17 +255,17 @@ describe('PropertyCard', () => {
     expect(screen.queryByText('Más verificado')).toBeNull();
     expect(screen.queryByText('Buena relación precio / información')).toBeNull();
     expect(screen.queryByText('Más comprobado')).toBeNull();
-    expect(screen.getByText('4 datos comprobados')).toBeInTheDocument();
+    expect(screen.getByText('4 comprobaciones visibles')).toBeInTheDocument();
     expect(screen.getByText('Ver detalle')).toBeInTheDocument();
   });
 
   test('keeps the favorites variant free of Explore guidance labels', () => {
     render(<PropertyCard property={sampleProperty} variant="favorites" onClick={vi.fn()} />);
 
-    const verificationBlock = screen.getByLabelText('4 datos comprobados');
+    const verificationBlock = screen.getByLabelText('4 comprobaciones visibles');
 
-    expect(within(verificationBlock).getByText('4 datos comprobados')).toBeInTheDocument();
-    expect(within(verificationBlock).getAllByRole('listitem')).toHaveLength(3);
+    expect(within(verificationBlock).getByText('4 comprobaciones visibles')).toBeInTheDocument();
+    expect(within(verificationBlock).getAllByRole('listitem')).toHaveLength(5);
     expect(screen.queryByText('Más verificado')).toBeNull();
     expect(screen.queryByText('Más confiable')).toBeNull();
     expect(screen.queryByText('Anfitrión con buen historial')).toBeNull();
@@ -252,5 +303,40 @@ describe('PropertyCard', () => {
 
     expect(screen.queryByRole('button', { name: /Guardar propiedad/i })).toBeNull();
     expect(screen.queryByRole('button', { name: /Quitar de guardados/i })).toBeNull();
+  });
+
+  test('centralizes the card verification rules into a single coherent state', () => {
+    const standardState = getPropertyCardVerificationState(sampleProperty);
+
+    expect(standardState.model).toBe('standard');
+    expect(standardState.presencialVerified).toBe(false);
+    expect(standardState.count).toBe(4);
+    expect(standardState.countLabel).toBe('4 comprobaciones visibles');
+    expect(standardState.verificationChecks.hostConfirmed).toBe(true);
+    expect(standardState.verificationChecks.locationVerified).toBe(true);
+    expect(standardState.verificationChecks.geolocationPrecise).toBe(true);
+    expect(standardState.verificationChecks.realMedia).toBe(true);
+    expect(standardState.verificationChecks.availabilityValidated).toBe(false);
+
+    const premiumState = getPropertyCardVerificationState({
+      ...sampleProperty,
+      availabilityValidated: true,
+      hasPresencialVerification: true,
+    });
+
+    expect(premiumState.model).toBe('premium');
+    expect(premiumState.presencialVerified).toBe(true);
+    expect(premiumState.count).toBe(5);
+    expect(premiumState.checks.every((check) => check.complete)).toBe(true);
+
+    const forcedPremiumState = getPropertyCardVerificationState({
+      ...sampleProperty,
+      availabilityValidated: true,
+      hasPresencialVerification: false,
+    });
+
+    expect(forcedPremiumState.model).toBe('premium');
+    expect(forcedPremiumState.presencialVerified).toBe(true);
+    expect(forcedPremiumState.count).toBe(5);
   });
 });

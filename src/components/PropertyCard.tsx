@@ -2,7 +2,7 @@ import React from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { Icons } from './Icons';
 import { cn, formatCurrency } from '../lib/utils';
-import { getPropertyVerificationDetails } from '../lib/propertyVerification';
+import { getPropertyCardVerificationState } from '../lib/propertyVerification';
 import { Property } from '../services/geminiService';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
@@ -61,25 +61,16 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   isFavorite = false,
   onFavoriteToggle,
   variant = 'default',
-  decisionFeatured = false,
   className,
 }) => {
   const auth = useAuth();
   const user = auth.user;
   const imageSrc = property.imageUrl || 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=900&q=80';
   const isFavoritesVariant = variant === 'favorites';
-  const isDecisionFeatured = decisionFeatured && !isFavoritesVariant;
-  const verificationDetails = getPropertyVerificationDetails(property);
+  const verificationState = getPropertyCardVerificationState(property);
   const propertyTypeLabel = getPropertyTypeLabel(property);
   const guestCapacityLabel = getGuestCapacityLabel(Number(property.maxGuests) || null);
-  const showPresencialBadge = verificationDetails.isFullyVerified;
-  const standardVerificationSummary = `${verificationDetails.score} ${verificationDetails.score === 1 ? 'dato comprobado' : 'datos comprobados'}`;
-  const standardVerificationItems = verificationDetails.compactItems.slice(0, 3).map((item) => ({
-    key: item.key,
-    label: item.key === 'photos' ? 'Fotos reales' : item.label,
-  }));
-  const premiumVerificationTitle = 'Información verificada en persona';
-  const premiumVerificationDescription = 'Ubicación, anfitrión y datos confirmados';
+  const isPremiumCard = verificationState.model === 'premium';
   const propertyCardCtaLabel = 'Ver detalle';
   const handleFavoriteToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -113,8 +104,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
       className={cn(
         'group flex h-full flex-col overflow-hidden border-[color:var(--app-surface-border)] bg-white shadow-[var(--app-shadow-subtle)] transition-[transform,box-shadow,border-color,background-color] duration-200 ease-out',
         onClick && 'cursor-pointer hover:-translate-y-[3px] hover:border-[color:var(--app-surface-border-strong)] hover:shadow-[var(--app-shadow-raised)] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-brand/10',
-        showPresencialBadge && 'border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,1)_0%,rgba(248,250,252,0.94)_100%)] shadow-[0_26px_54px_-40px_rgba(15,23,42,0.22)]',
-        isDecisionFeatured && 'border-brand/35 shadow-[0_24px_46px_-34px_rgba(67,56,202,0.26)]',
+        isPremiumCard && 'border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,1)_0%,rgba(248,250,252,0.94)_100%)] shadow-[0_26px_54px_-40px_rgba(15,23,42,0.22)]',
         isFavoritesVariant && 'bg-white shadow-[var(--app-shadow-soft)]',
         className,
       )}
@@ -128,7 +118,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         />
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-slate-950/24 via-slate-950/8 to-transparent" />
 
-        {showPresencialBadge ? (
+        {isPremiumCard ? (
           <div className="absolute left-4 top-4">
             <PresencialVerificationBadge className="border-emerald-200/90 bg-emerald-50/96 text-emerald-950 shadow-[0_10px_22px_-18px_rgba(15,23,42,0.14)]" />
           </div>
@@ -174,34 +164,54 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
 
           <div
             data-testid="property-card-verification"
-            aria-label={showPresencialBadge ? premiumVerificationTitle : standardVerificationSummary}
-            className={cn('min-h-[5rem]', showPresencialBadge ? 'space-y-1' : 'space-y-2.5')}
+            aria-label={isPremiumCard ? verificationState.summaryTitle : verificationState.countLabel ?? verificationState.summaryTitle}
+            className={cn('min-h-[5rem]', isPremiumCard ? 'space-y-1' : 'space-y-2.5')}
           >
-            {showPresencialBadge ? (
+            {isPremiumCard ? (
               <>
                 <p className="text-[0.84rem] font-medium leading-5 text-slate-600">
-                  {premiumVerificationTitle}
+                  {verificationState.summaryTitle}
                 </p>
                 <p className="text-[0.76rem] leading-5 text-slate-500">
-                  {premiumVerificationDescription}
+                  {verificationState.summaryDescription}
                 </p>
               </>
             ) : (
               <>
-                <p className="text-[0.82rem] font-medium leading-5 text-slate-600">
-                  {standardVerificationSummary}
-                </p>
+                <div className="space-y-0.5">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                    {verificationState.summaryTitle}
+                  </p>
+                  <p className="text-[0.82rem] font-medium leading-5 text-slate-600">
+                    {verificationState.countLabel}
+                  </p>
+                </div>
 
-                {standardVerificationItems.length > 0 ? (
-                  <ul className="flex flex-wrap gap-x-3 gap-y-1.5" aria-label="Datos verificados">
-                    {standardVerificationItems.map((item) => (
-                      <li key={item.key} className="inline-flex items-center gap-1.5 text-[0.76rem] font-medium leading-5 text-slate-500">
-                        <Icons.CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-                        <span>{item.label}</span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
+                <ul className="space-y-1.5" aria-label="Checks de verificación">
+                  {verificationState.checks.map((check) => (
+                    <li
+                      key={check.key}
+                      data-status={check.complete ? 'complete' : 'pending'}
+                      className="flex items-center gap-2 text-[0.76rem] font-medium leading-5"
+                    >
+                      <span
+                        className={cn(
+                          'inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border',
+                          check.complete
+                            ? 'border-emerald-200 bg-emerald-50 text-emerald-600'
+                            : 'border-slate-200 bg-slate-100 text-slate-400',
+                        )}
+                        aria-hidden="true"
+                      >
+                        {check.complete ? <Icons.Check className="h-3 w-3" /> : <Icons.Circle className="h-2.5 w-2.5" />}
+                      </span>
+
+                      <span className={cn(check.complete ? 'text-slate-600' : 'text-slate-400')}>
+                        {check.label}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
               </>
             )}
           </div>
@@ -224,7 +234,12 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           <span
             data-testid="property-card-cta"
             aria-hidden="true"
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-slate-200/80 bg-white/92 px-3 py-1.5 text-[0.76rem] font-semibold text-slate-600 shadow-[0_10px_20px_-18px_rgba(15,23,42,0.12)] transition-[border-color,color,background-color] duration-150 group-hover:border-slate-300 group-hover:bg-white group-hover:text-slate-900"
+            className={cn(
+              'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-[0.76rem] font-semibold transition-[border-color,color,background-color,box-shadow] duration-150',
+              isPremiumCard
+                ? 'border-slate-200/90 bg-white/96 text-slate-700 shadow-[0_10px_20px_-18px_rgba(15,23,42,0.1)] group-hover:border-slate-300 group-hover:bg-white group-hover:text-slate-900'
+                : 'border-slate-200/80 bg-white/92 text-slate-600 shadow-[0_10px_20px_-18px_rgba(15,23,42,0.12)] group-hover:border-slate-300 group-hover:bg-white group-hover:text-slate-900',
+            )}
           >
             <span>{propertyCardCtaLabel}</span>
             <Icons.ArrowRight className="h-3.5 w-3.5" />
