@@ -74,6 +74,8 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   const guestCapacityLabel = getGuestCapacityLabel(Number(property.maxGuests) || null);
   const showPresencialBadge = verificationDetails.isFullyVerified;
   const standardVerificationSummary = `${verificationDetails.score} ${verificationDetails.score === 1 ? 'dato comprobado' : 'datos comprobados'}`;
+  const premiumVerificationTitle = 'Información verificada en persona';
+  const premiumVerificationDescription = 'Ubicación, anfitrión y datos confirmados';
   const handleFavoriteToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
     const { user } = auth;
@@ -166,14 +168,23 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
 
           <div
             data-testid="property-card-verification"
-            aria-label={showPresencialBadge ? 'Verificado presencialmente' : standardVerificationSummary}
-            className="min-h-[1.25rem]"
+            aria-label={showPresencialBadge ? premiumVerificationTitle : standardVerificationSummary}
+            className={cn('min-h-[2.8rem]', showPresencialBadge ? 'space-y-0.5' : 'flex items-start')}
           >
-            {!showPresencialBadge ? (
+            {showPresencialBadge ? (
+              <>
+                <p className="text-[0.84rem] font-medium leading-5 text-slate-600">
+                  {premiumVerificationTitle}
+                </p>
+                <p className="text-[0.76rem] leading-5 text-slate-500">
+                  {premiumVerificationDescription}
+                </p>
+              </>
+            ) : (
               <p className="text-[0.82rem] font-medium leading-5 text-slate-500">
                 {standardVerificationSummary}
               </p>
-            ) : null}
+            )}
           </div>
         </div>
 

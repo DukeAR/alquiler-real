@@ -160,6 +160,10 @@ describe('PropertyCard', () => {
     );
 
     expect(screen.getByText('Verificado presencialmente')).toBeInTheDocument();
+    const verificationBlock = screen.getByTestId('property-card-verification');
+    expect(verificationBlock).toHaveAttribute('aria-label', 'Información verificada en persona');
+    expect(within(verificationBlock).getByText('Información verificada en persona')).toBeInTheDocument();
+    expect(within(verificationBlock).getByText('Ubicación, anfitrión y datos confirmados')).toBeInTheDocument();
     expect(screen.queryByText('5 datos comprobados')).toBeNull();
     expect(screen.queryByText('(5/5)')).toBeNull();
     expect(screen.queryByText('Más verificado')).toBeNull();
