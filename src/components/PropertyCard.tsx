@@ -105,6 +105,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
       className={cn(
         'group flex h-full flex-col overflow-hidden border-[color:var(--app-surface-border)] bg-white shadow-[var(--app-shadow-subtle)] transition-[transform,box-shadow,border-color,background-color] duration-200 ease-out',
         onClick && 'cursor-pointer hover:-translate-y-[3px] hover:border-[color:var(--app-surface-border-strong)] hover:shadow-[var(--app-shadow-raised)] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-brand/10',
+        !isPremiumCard && 'border-slate-200/80 shadow-[0_28px_58px_-44px_rgba(15,23,42,0.18)]',
         isPremiumCard && 'border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,1)_0%,rgba(248,250,252,0.94)_100%)] shadow-[0_26px_54px_-40px_rgba(15,23,42,0.22)]',
         isFavoritesVariant && 'bg-white shadow-[var(--app-shadow-soft)]',
         className,
@@ -148,17 +149,22 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
       </div>
 
       <div className="flex h-full flex-1 flex-col p-5 sm:p-5 md:p-6">
-        <div className="space-y-4.5">
+        <div className={cn('space-y-4.5', !isPremiumCard && 'space-y-5')}>
           <div className="space-y-2.5">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">{propertyTypeLabel}</p>
-            <h3 className="min-h-[3.5rem] line-clamp-2 text-[1.2rem] font-semibold leading-[1.18] tracking-[-0.03em] text-slate-950 transition-colors duration-150 group-hover:text-slate-950 md:text-[1.24rem]">
+            <p className={cn('text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500', !isPremiumCard && 'text-[11px] tracking-[0.22em] text-slate-600')}>
+              {propertyTypeLabel}
+            </p>
+            <h3 className={cn(
+              'min-h-[3.5rem] line-clamp-2 text-[1.2rem] font-semibold leading-[1.18] tracking-[-0.03em] text-slate-950 transition-colors duration-150 group-hover:text-slate-950 md:text-[1.24rem]',
+              !isPremiumCard && 'min-h-[3.9rem] text-[1.22rem] leading-[1.12] tracking-[-0.04em] md:text-[1.28rem]',
+            )}>
               {property.title}
             </h3>
           </div>
 
-          <div className="space-y-1">
+          <div className={cn('space-y-1', !isPremiumCard && 'space-y-1.5')}>
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Por noche</p>
-            <p className="text-[1.75rem] font-bold leading-none tracking-[-0.5px] text-slate-950">
+            <p className={cn('text-[1.75rem] font-bold leading-none tracking-[-0.5px] text-slate-950', !isPremiumCard && 'text-[1.8rem] tracking-[-0.03em]')}>
               {formatCurrency(Number(property.price) || 0)}
             </p>
           </div>
@@ -170,7 +176,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
               'min-h-[5.5rem]',
               isPremiumCard
                 ? 'flex flex-col justify-center gap-1.5 px-0 py-0'
-                : 'flex flex-col gap-2.5 px-0 py-0',
+                : 'flex flex-col gap-3 px-0 py-0',
             )}
           >
             {isPremiumCard ? (
@@ -188,25 +194,25 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
                   <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
                     {verificationState.summaryTitle}
                   </p>
-                  <p className="text-[0.77rem] font-medium leading-4 text-slate-600">
+                  <p className="text-[0.82rem] font-medium leading-4 text-slate-600">
                     {verificationState.countLabel}
                   </p>
                 </div>
 
-                <ul className="space-y-1.5" aria-label="Checks de verificación">
+                <ul className="space-y-2" aria-label="Checks de verificación">
                   {verificationState.checks.map((check) => (
                     <li
                       key={check.key}
                       data-status={check.complete ? 'complete' : 'pending'}
-                      className="flex items-center gap-2 text-[0.74rem] font-medium leading-4"
+                      className="flex items-center gap-2 text-[0.82rem] font-medium leading-[1.15rem]"
                     >
                       {check.complete ? (
                         <Icons.Check
-                          className="h-3.5 w-3.5 shrink-0 text-emerald-600"
+                          className="h-4 w-4 shrink-0 text-emerald-600"
                           aria-hidden="true"
                         />
                       ) : (
-                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-slate-300" aria-hidden="true" />
+                        <span className="h-2 w-2 shrink-0 rounded-full bg-slate-300" aria-hidden="true" />
                       )}
 
                       <span className={cn('tracking-[-0.01em]', check.complete ? 'text-slate-700' : 'text-slate-400')}>
@@ -220,8 +226,11 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           </div>
         </div>
 
-        <div className="mt-auto flex items-center justify-between gap-3 border-t border-slate-200/70 pt-4">
-          <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5 text-[0.83rem] font-medium leading-5 text-slate-500">
+        <div className="mt-auto flex items-end justify-between gap-4 border-t border-slate-200/70 pt-4">
+          <div className={cn(
+            'min-w-0 text-[0.83rem] font-medium leading-5 text-slate-500',
+            isPremiumCard ? 'flex flex-wrap items-center gap-x-3 gap-y-1.5' : 'flex flex-col items-start gap-1.5 text-[0.84rem] text-slate-600',
+          )}>
             <span className="inline-flex items-center gap-1.5">
               <Icons.MapPin className="h-3.5 w-3.5 text-slate-400" />
               <span>{property.location}</span>
@@ -241,7 +250,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
               'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-[0.76rem] font-semibold transition-[border-color,color,background-color,box-shadow] duration-150',
               isPremiumCard
                 ? 'border-slate-200/90 bg-white/96 text-slate-700 shadow-[0_10px_20px_-18px_rgba(15,23,42,0.1)] group-hover:border-slate-300 group-hover:bg-white group-hover:text-slate-900'
-                : 'border-slate-200/80 bg-white/92 text-slate-600 shadow-[0_10px_20px_-18px_rgba(15,23,42,0.12)] group-hover:border-slate-300 group-hover:bg-white group-hover:text-slate-900',
+                : 'border-slate-200/90 bg-white text-emerald-700 shadow-[0_12px_22px_-18px_rgba(15,23,42,0.12)] group-hover:border-emerald-200 group-hover:bg-white group-hover:text-emerald-800',
             )}
           >
             <span>{propertyCardCtaLabel}</span>
