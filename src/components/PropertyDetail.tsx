@@ -26,6 +26,7 @@ import { Card } from './ui/Card';
 import { NoticeBanner } from './ui/NoticeBanner';
 import { SectionTitle } from './ui/SectionTitle';
 import { TrustSignalsInline, getTrustSignalsFromInteractionHistory, getTrustSignalsFromItems, type TrustSignal } from './ui/TrustSignalsInline';
+import { VerificationBadgePremium } from './ui/VerificationBadgePremium';
 import { PropertyVerificationPanel } from './verification/PropertyVerificationPanel';
 import { VerificationInfoPanel } from './verification/VerificationInfoPanel';
 
@@ -427,6 +428,7 @@ export const PropertyDetailShell: React.FC<{
   const verificationDetails = getPropertyVerificationDetails(property);
   const verificationPreviewMode = verificationDetails.previewMode;
   const verificationPreviewItems = verificationDetails.detailItems;
+  const showPremiumVerificationBadge = verificationDetails.isFullyVerified;
   const hostResponseSignal = getHostResponseSignal(property.hostInteractionHistory);
   const completedReservationsLabel = property.hostInteractionHistory?.completedReservationsCount
     ? `${property.hostInteractionHistory.completedReservationsCount} ${property.hostInteractionHistory.completedReservationsCount === 1 ? 'reserva cerrada' : 'reservas cerradas'}`
@@ -1135,6 +1137,13 @@ export const PropertyDetailShell: React.FC<{
 
                 <div className="property-hero-copy-reveal absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-4 px-4 pb-4 pt-20 sm:gap-4 sm:px-6 sm:pb-6 sm:pt-24 lg:px-8 lg:pb-8 lg:pt-28">
                   <div className="flex min-w-0 flex-col items-start gap-3 sm:gap-4">
+                    {showPremiumVerificationBadge ? (
+                      <VerificationBadgePremium
+                        size="md"
+                        className="border-emerald-200/70 bg-emerald-50/92 shadow-[0_18px_28px_-20px_rgba(5,150,105,0.34)] backdrop-blur-[10px]"
+                      />
+                    ) : null}
+
                     <button
                       type="button"
                       onClick={() => navigate(-1)}
@@ -1293,15 +1302,10 @@ export const PropertyDetailShell: React.FC<{
               >
                 {verificationPreviewMode === 'premium' ? (
                   <div className="rounded-[24px] border border-emerald-200/70 bg-emerald-50/65 p-4 sm:p-4.5">
-                    <div className="flex items-start gap-3">
-                      <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] border border-emerald-200/80 bg-white text-emerald-700 shadow-[0_16px_30px_-24px_rgba(15,23,42,0.2)]">
-                        <Icons.Shield className="h-5 w-5" />
-                      </span>
+                    <div className="space-y-3">
+                      <VerificationBadgePremium size="md" className="w-fit" />
 
                       <div className="min-w-0 space-y-1.5">
-                        <p className="text-sm font-semibold tracking-[-0.01em] text-emerald-950">
-                          {verificationDetails.premiumTitle}
-                        </p>
                         <p className="text-sm leading-6 text-slate-700">
                           {verificationDetails.premiumDescription}
                         </p>

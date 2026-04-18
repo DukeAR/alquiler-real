@@ -978,11 +978,14 @@ export const getPropertyCardVerificationState = (property: PropertyVerificationL
     .filter((item): item is PropertyCardVerificationCheck => item !== null);
 
   const rawCount = checks.filter((check) => check.complete).length;
-  const shouldUsePremiumModel = hasPresencialVerificationEvidence(property) || rawCount === VERIFICATION_SCORE_MAX;
-  const normalizedChecks = shouldUsePremiumModel
+  const presencialVerified = hasPropertyPresencialVerificationSeal({
+    ...property,
+    verificationSummary,
+  });
+  const normalizedChecks = presencialVerified
     ? checks.map((check) => ({ ...check, complete: true }))
     : checks;
-  const count = shouldUsePremiumModel ? VERIFICATION_SCORE_MAX : rawCount;
+  const count = presencialVerified ? VERIFICATION_SCORE_MAX : rawCount;
   const verificationChecks = normalizedChecks.reduce<Record<PropertyCardVerificationCheckKey, boolean>>((accumulator, check) => {
     if (check.key === 'identity') {
       accumulator.hostConfirmed = check.complete;
@@ -1015,15 +1018,15 @@ export const getPropertyCardVerificationState = (property: PropertyVerificationL
   });
 
   return {
-    model: shouldUsePremiumModel ? 'premium' : 'standard',
-    presencialVerified: shouldUsePremiumModel,
+    model: presencialVerified ? 'premium' : 'standard',
+    presencialVerified,
     verificationChecks,
     count,
     checks: normalizedChecks,
-    badgeText: shouldUsePremiumModel ? PRESENCIAL_VERIFICATION_LABEL : null,
-    summaryTitle: shouldUsePremiumModel ? 'Información verificada en persona' : 'Verificación visible',
-    summaryDescription: shouldUsePremiumModel ? 'Ubicación, anfitrión y datos confirmados' : null,
-    countLabel: shouldUsePremiumModel ? null : getPropertyCardVerificationCountLabel(count),
+    badgeText: presencialVerified ? PRESENCIAL_VERIFICATION_LABEL : null,
+    summaryTitle: presencialVerified ? 'Información verificada en persona' : 'Verificación visible',
+    summaryDescription: presencialVerified ? 'Ubicación, anfitrión y datos confirmados' : null,
+    countLabel: presencialVerified ? null : getPropertyCardVerificationCountLabel(count),
   };
 };
 

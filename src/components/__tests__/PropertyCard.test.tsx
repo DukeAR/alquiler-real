@@ -211,7 +211,7 @@ describe('PropertyCard', () => {
     expect(screen.getByText('Ver detalle')).toBeInTheDocument();
   });
 
-  test('forces the premium card model when all five checks are complete even without presencial flag', () => {
+  test('keeps the standard card model when five visible checks lack presencial verification', () => {
     render(
       <PropertyCard
         property={{
@@ -222,11 +222,11 @@ describe('PropertyCard', () => {
       />,
     );
 
-    expect(screen.getByText('Verificado presencialmente')).toBeInTheDocument();
-    const verificationBlock = screen.getByTestId('property-card-verification');
-    expect(verificationBlock).toHaveAttribute('aria-label', 'Información verificada en persona');
-    expect(within(verificationBlock).queryByText('5 comprobaciones visibles')).toBeNull();
-    expect(within(verificationBlock).queryByRole('list')).toBeNull();
+    expect(screen.queryByText('Verificado presencialmente')).toBeNull();
+    const verificationBlock = screen.getByLabelText('5 comprobaciones visibles');
+    expect(within(verificationBlock).getByText('Verificación visible')).toBeInTheDocument();
+    expect(within(verificationBlock).getByText('5 comprobaciones visibles')).toBeInTheDocument();
+    expect(within(verificationBlock).getAllByRole('listitem')).toHaveLength(5);
   });
 
   test('keeps the standard verification summary subtle even when the card is highlighted', () => {
@@ -329,14 +329,15 @@ describe('PropertyCard', () => {
     expect(premiumState.count).toBe(5);
     expect(premiumState.checks.every((check) => check.complete)).toBe(true);
 
-    const forcedPremiumState = getPropertyCardVerificationState({
+    const fullVisibleState = getPropertyCardVerificationState({
       ...sampleProperty,
       availabilityValidated: true,
       hasPresencialVerification: false,
     });
 
-    expect(forcedPremiumState.model).toBe('premium');
-    expect(forcedPremiumState.presencialVerified).toBe(true);
-    expect(forcedPremiumState.count).toBe(5);
+    expect(fullVisibleState.model).toBe('standard');
+    expect(fullVisibleState.presencialVerified).toBe(false);
+    expect(fullVisibleState.count).toBe(5);
+    expect(fullVisibleState.countLabel).toBe('5 comprobaciones visibles');
   });
 });

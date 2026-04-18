@@ -6,7 +6,7 @@ import { getPropertyCardVerificationState } from '../lib/propertyVerification';
 import { Property } from '../services/geminiService';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
-import { PresencialVerificationBadge } from './ui/PresencialVerificationBadge';
+import { VerificationBadgePremium } from './ui/VerificationBadgePremium';
 
 const normalizePropertyText = (value?: string) => (value ?? '')
   .normalize('NFD')
@@ -71,6 +71,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   const propertyTypeLabel = getPropertyTypeLabel(property);
   const guestCapacityLabel = getGuestCapacityLabel(Number(property.maxGuests) || null);
   const isPremiumCard = verificationState.model === 'premium';
+  const showPremiumBadge = verificationState.presencialVerified;
   const propertyCardCtaLabel = 'Ver detalle';
   const handleFavoriteToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -118,9 +119,9 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         />
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-slate-950/24 via-slate-950/8 to-transparent" />
 
-        {isPremiumCard ? (
+        {showPremiumBadge ? (
           <div className="absolute left-4 top-4">
-            <PresencialVerificationBadge className="border-emerald-200/90 bg-emerald-50/96 text-emerald-950 shadow-[0_10px_22px_-18px_rgba(15,23,42,0.14)]" />
+            <VerificationBadgePremium className="shadow-[0_10px_22px_-18px_rgba(5,150,105,0.3)]" />
           </div>
         ) : null}
 
@@ -192,18 +193,16 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
                     <li
                       key={check.key}
                       data-status={check.complete ? 'complete' : 'pending'}
-                      className="flex items-center gap-2 text-[0.76rem] font-medium leading-5"
+                      className="flex items-center gap-2.5 text-[0.76rem] font-medium leading-5"
                     >
                       <span
                         className={cn(
-                          'inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border',
-                          check.complete
-                            ? 'border-emerald-200 bg-emerald-50 text-emerald-600'
-                            : 'border-slate-200 bg-slate-100 text-slate-400',
+                          'shrink-0 text-[0.8rem] font-semibold leading-none',
+                          check.complete ? 'text-emerald-600' : 'text-slate-300',
                         )}
                         aria-hidden="true"
                       >
-                        {check.complete ? <Icons.Check className="h-3 w-3" /> : <Icons.Circle className="h-2.5 w-2.5" />}
+                        ✔
                       </span>
 
                       <span className={cn(check.complete ? 'text-slate-600' : 'text-slate-400')}>
