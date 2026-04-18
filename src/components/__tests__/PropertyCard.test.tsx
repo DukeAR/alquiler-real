@@ -60,6 +60,14 @@ const getCompletedCheckItems = (container: HTMLElement) => within(container)
   .getAllByRole('listitem')
   .filter((item) => item.getAttribute('data-status') === 'complete');
 
+const getVerificationListItem = (container: HTMLElement, label: string) => {
+  const item = within(container).getByText(label).closest('li');
+
+  expect(item).not.toBeNull();
+
+  return item as HTMLElement;
+};
+
 describe('PropertyCard', () => {
   beforeEach(() => {
     useAuthMock.mockReset();
@@ -85,6 +93,7 @@ describe('PropertyCard', () => {
     expect(screen.queryByText('12 reseñas')).toBeNull();
     const verificationBlock = screen.getByTestId('property-card-verification');
     expect(verificationBlock).toHaveAttribute('aria-label', '4 comprobaciones visibles');
+    expect(verificationBlock.className).not.toContain('border');
     expect(within(verificationBlock).getByText('Verificación visible')).toBeInTheDocument();
     expect(within(verificationBlock).getByText('4 comprobaciones visibles')).toHaveClass('text-slate-600');
     expect(within(verificationBlock).getByRole('list', { name: /checks de verificación/i })).toBeInTheDocument();
@@ -95,6 +104,12 @@ describe('PropertyCard', () => {
     expect(within(verificationBlock).getByText('Fotos / video reales')).toBeInTheDocument();
     expect(within(verificationBlock).getByText('Disponibilidad validada')).toBeInTheDocument();
     expect(getCompletedCheckItems(verificationBlock)).toHaveLength(4);
+    const completedItem = getVerificationListItem(verificationBlock, 'Anfitrión confirmado');
+    const pendingItem = getVerificationListItem(verificationBlock, 'Disponibilidad validada');
+    expect(within(completedItem).getByText('Anfitrión confirmado')).toHaveClass('text-slate-700');
+    expect(completedItem.querySelector('svg')).not.toBeNull();
+    expect(within(pendingItem).getByText('Disponibilidad validada')).toHaveClass('text-slate-400');
+    expect(pendingItem.querySelector('svg')).toBeNull();
     expect(screen.queryByText('Verificado presencialmente')).toBeNull();
     expect(screen.queryByText('Más verificado')).toBeNull();
     expect(screen.queryByText('Confianza visible')).toBeNull();

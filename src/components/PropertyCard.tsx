@@ -170,7 +170,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
               'min-h-[5.5rem]',
               isPremiumCard
                 ? 'flex flex-col justify-center gap-1.5 px-0 py-0'
-                : 'rounded-[20px] border border-slate-200/70 bg-slate-50/80 px-4 py-3 space-y-2.5',
+                : 'flex flex-col gap-2.5 px-0 py-0',
             )}
           >
             {isPremiumCard ? (
@@ -184,33 +184,32 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
               </>
             ) : (
               <>
-                <div className="flex items-baseline justify-between gap-3">
+                <div className="space-y-0.5">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
                     {verificationState.summaryTitle}
                   </p>
-                  <p className="whitespace-nowrap text-[0.74rem] font-medium leading-4 text-slate-600">
+                  <p className="text-[0.77rem] font-medium leading-4 text-slate-600">
                     {verificationState.countLabel}
                   </p>
                 </div>
 
-                <ul className="flex flex-wrap gap-x-3 gap-y-1.5" aria-label="Checks de verificación">
+                <ul className="space-y-1.5" aria-label="Checks de verificación">
                   {verificationState.checks.map((check) => (
                     <li
                       key={check.key}
                       data-status={check.complete ? 'complete' : 'pending'}
-                      className="inline-flex items-center gap-1.5 text-[0.72rem] font-medium leading-4"
+                      className="flex items-center gap-2 text-[0.74rem] font-medium leading-4"
                     >
-                      <span
-                        className={cn(
-                          'shrink-0 text-[0.76rem] font-semibold leading-none',
-                          check.complete ? 'text-emerald-600' : 'text-slate-300',
-                        )}
-                        aria-hidden="true"
-                      >
-                        ✔
-                      </span>
+                      {check.complete ? (
+                        <Icons.Check
+                          className="h-3.5 w-3.5 shrink-0 text-emerald-600"
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-slate-300" aria-hidden="true" />
+                      )}
 
-                      <span className={cn('tracking-[-0.01em]', check.complete ? 'text-slate-600' : 'text-slate-400')}>
+                      <span className={cn('tracking-[-0.01em]', check.complete ? 'text-slate-700' : 'text-slate-400')}>
                         {check.label}
                       </span>
                     </li>
