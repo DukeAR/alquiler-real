@@ -22,6 +22,8 @@ export type NavAction = {
   badge?: number | string;
   badgeLabel?: (count: number) => string;
   protected?: boolean;
+  desktopStyle?: 'default' | 'soft-pill';
+  desktopProminent?: boolean;
   onClick?: () => void;
 };
 
@@ -85,14 +87,69 @@ const openLoginModal = async () => {
 
 const LazyLoginModal = React.lazy(() => import('./LoginModal'));
 
-const getDesktopNavItemClassName = (active: boolean, inverted = false) => cn(
-  'group relative inline-flex items-center gap-2 px-0 py-2 text-[0.92rem] font-semibold tracking-[-0.01em] transition-[color] duration-150',
-  'after:absolute after:bottom-0 after:left-0 after:h-px after:w-full after:origin-left after:scale-x-0 after:transition-transform after:duration-150 hover:after:scale-x-100',
-  inverted
-    ? 'text-white/78 hover:text-white after:bg-white/38'
-    : 'text-slate-600 hover:text-slate-950 after:bg-slate-300',
-  active && (inverted ? 'text-white after:scale-x-100 after:bg-white' : 'text-slate-950 after:scale-x-100 after:bg-brand'),
-);
+const getDesktopNavItemClassName = (
+  active: boolean,
+  inverted = false,
+  style: NavAction['desktopStyle'] = 'default',
+  prominent = false,
+) => {
+  if (style === 'soft-pill') {
+    return cn(
+      'group relative inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2 text-[0.92rem] font-semibold tracking-[-0.01em] transition-[color,background-color,border-color,box-shadow] duration-150',
+      inverted
+        ? active
+          ? 'border-white/30 bg-white/20 text-white shadow-[0_18px_34px_-28px_rgba(0,0,0,0.34)] backdrop-blur-[10px]'
+          : prominent
+            ? 'border-white/24 bg-white/14 text-white shadow-[0_14px_28px_-28px_rgba(0,0,0,0.28)] backdrop-blur-[10px] hover:border-white/30 hover:bg-white/20 hover:text-white'
+            : 'border-white/18 bg-white/10 text-white/82 backdrop-blur-[10px] hover:border-white/24 hover:bg-white/16 hover:text-white'
+        : active
+          ? 'border-[rgba(15,23,42,0.12)] bg-white text-slate-950 shadow-[0_18px_34px_-28px_rgba(15,23,42,0.24)]'
+          : prominent
+            ? 'border-[rgba(15,23,42,0.1)] bg-[rgba(248,250,252,0.96)] text-slate-800 shadow-[0_14px_28px_-28px_rgba(15,23,42,0.18)] hover:border-[rgba(15,23,42,0.14)] hover:bg-white hover:text-slate-950'
+            : 'border-[rgba(15,23,42,0.08)] bg-[rgba(255,255,255,0.72)] text-slate-600 hover:border-[rgba(15,23,42,0.12)] hover:bg-[rgba(255,255,255,0.92)] hover:text-slate-950',
+    );
+  }
+
+  return cn(
+    'group relative inline-flex items-center gap-2 px-0 py-2 text-[0.92rem] font-semibold tracking-[-0.01em] transition-[color] duration-150',
+    'after:absolute after:bottom-0 after:left-0 after:h-px after:w-full after:origin-left after:scale-x-0 after:transition-transform after:duration-150 hover:after:scale-x-100',
+    inverted
+      ? 'text-white/78 hover:text-white after:bg-white/38'
+      : 'text-slate-600 hover:text-slate-950 after:bg-slate-300',
+    active && (inverted ? 'text-white after:scale-x-100 after:bg-white' : 'text-slate-950 after:scale-x-100 after:bg-brand'),
+  );
+};
+
+const getDesktopNavIconClassName = (
+  active: boolean,
+  inverted = false,
+  style: NavAction['desktopStyle'] = 'default',
+  prominent = false,
+) => {
+  if (style === 'soft-pill') {
+    return cn(
+      'h-4 w-4 transition-colors duration-150',
+      inverted
+        ? active
+          ? 'text-white'
+          : prominent
+            ? 'text-white/88 group-hover:text-white'
+            : 'text-white/70 group-hover:text-white/92'
+        : active
+          ? 'text-brand'
+          : prominent
+            ? 'text-brand/90 group-hover:text-brand'
+            : 'text-slate-400 group-hover:text-slate-600',
+    );
+  }
+
+  return cn(
+    'h-4 w-4 transition-colors duration-150',
+    inverted
+      ? active ? 'text-white' : 'text-white/70 group-hover:text-white/92'
+      : active ? 'text-brand' : 'text-slate-400 group-hover:text-slate-500',
+  );
+};
 
 const DesktopNavButton = ({ action, active, inverted = false, onSelect }: { action: NavAction; active: boolean; inverted?: boolean; onSelect: (action: NavAction) => void; }) => (
   action.path && !action.onClick && !action.protected ? (
@@ -100,14 +157,9 @@ const DesktopNavButton = ({ action, active, inverted = false, onSelect }: { acti
       to={action.path}
       aria-label={getNavAriaLabel(action)}
       aria-current={active ? 'page' : undefined}
-      className={getDesktopNavItemClassName(active, inverted)}
+      className={getDesktopNavItemClassName(active, inverted, action.desktopStyle, action.desktopProminent)}
     >
-      <action.icon className={cn(
-        'h-4 w-4 transition-colors duration-150',
-        inverted
-          ? active ? 'text-white' : 'text-white/70 group-hover:text-white/92'
-          : active ? 'text-brand' : 'text-slate-400 group-hover:text-slate-500',
-      )} />
+      <action.icon className={getDesktopNavIconClassName(active, inverted, action.desktopStyle, action.desktopProminent)} />
       <span>{action.label}</span>
     </Link>
   ) : (
@@ -116,14 +168,9 @@ const DesktopNavButton = ({ action, active, inverted = false, onSelect }: { acti
       onClick={() => onSelect(action)}
       aria-label={getNavAriaLabel(action)}
       aria-current={active ? 'page' : undefined}
-      className={getDesktopNavItemClassName(active, inverted)}
+      className={getDesktopNavItemClassName(active, inverted, action.desktopStyle, action.desktopProminent)}
     >
-      <action.icon className={cn(
-        'h-4 w-4 transition-colors duration-150',
-        inverted
-          ? active ? 'text-white' : 'text-white/70 group-hover:text-white/92'
-          : active ? 'text-brand' : 'text-slate-400 group-hover:text-slate-500',
-      )} />
+      <action.icon className={getDesktopNavIconClassName(active, inverted, action.desktopStyle, action.desktopProminent)} />
       <span>{action.label}</span>
       {action.badge ? (
         <span aria-hidden="true" className="absolute -right-3 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-black text-white">
@@ -288,10 +335,10 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   const headerOnHero = isPropertyDetailRoute && isPropertyHeroVisible;
 
   const desktopActions: NavAction[] = [
-    { label: 'Explorar', shortLabel: 'Explorar', path: '/', icon: Icons.Search },
+    { label: 'Explorar', shortLabel: 'Explorar', path: '/', icon: Icons.Search, desktopStyle: 'soft-pill', desktopProminent: true },
     ...(isAuthenticated ? [favoritesAction] : []),
-    { label: 'Cómo funciona', shortLabel: 'Cómo', path: '/about', icon: Icons.Info },
-    { label: 'Ayuda', shortLabel: 'Ayuda', path: '/faq', icon: Icons.Lightbulb }
+    { label: 'Cómo funciona', shortLabel: 'Cómo', path: '/about', icon: Icons.Info, desktopStyle: 'soft-pill' },
+    { label: 'Ayuda', shortLabel: 'Ayuda', path: '/faq', icon: Icons.Lightbulb, desktopStyle: 'soft-pill' }
   ];
 
   const mobileActions: NavAction[] = isAuthenticated
