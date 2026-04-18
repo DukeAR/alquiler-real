@@ -646,6 +646,25 @@ body {
   color: var(--app-text-subtle);
 }
 
+.app-control.explore-filter-control {
+  border-color: rgba(15, 23, 42, 0.08);
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: none;
+}
+
+.app-control.explore-filter-control:hover {
+  border-color: rgba(15, 23, 42, 0.16) !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.app-control.explore-filter-control:focus,
+.app-control.explore-filter-control:focus-visible {
+  border-color: #4338ca !important;
+  box-shadow: none !important;
+}
+
 .app-eyebrow {
   font-size: 0.6875rem;
   font-weight: 600;

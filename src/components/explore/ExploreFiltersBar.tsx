@@ -35,7 +35,7 @@ export const ExploreFiltersBar = ({
   hasActiveFilters,
   onClear,
 }: ExploreFiltersBarProps) => {
-  const sharedControlClassName = 'h-11 min-w-0 rounded-[0.95rem] border-slate-300/90 bg-white text-[0.93rem] font-semibold tracking-[-0.015em] text-slate-950 shadow-[0_10px_20px_-24px_rgba(15,23,42,0.16)]';
+  const sharedControlClassName = 'explore-filter-control h-11 min-w-0 text-[0.93rem] font-semibold tracking-[-0.015em] text-slate-950';
 
   return (
     <section className="rounded-[calc(var(--app-radius-card)+4px)] border border-slate-200 bg-white px-4 py-3 shadow-[0_24px_48px_-40px_rgba(15,23,42,0.18)] sm:px-5 sm:py-3.5 lg:px-6">
@@ -97,7 +97,7 @@ export const ExploreFiltersBar = ({
               value={filters.minPrice}
               onChange={(event) => onFiltersChange({ ...filters, minPrice: event.target.value })}
               placeholder="Desde"
-              icon={<span className="text-sm font-semibold text-slate-700">$</span>}
+              icon={<span className="text-sm font-semibold text-[#64748b]">$</span>}
               className={cn(sharedControlClassName, 'py-0 pl-10 pr-4 placeholder:font-semibold placeholder:text-slate-700 placeholder:opacity-100')}
             />
 
@@ -108,7 +108,7 @@ export const ExploreFiltersBar = ({
               value={filters.maxPrice}
               onChange={(event) => onFiltersChange({ ...filters, maxPrice: event.target.value })}
               placeholder="Hasta"
-              icon={<span className="text-sm font-semibold text-slate-700">$</span>}
+              icon={<span className="text-sm font-semibold text-[#64748b]">$</span>}
               className={cn(sharedControlClassName, 'py-0 pl-10 pr-4 placeholder:font-semibold placeholder:text-slate-700 placeholder:opacity-100')}
             />
           </div>
