@@ -98,15 +98,15 @@ const getDesktopNavItemClassName = (
       'group relative inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2 text-[0.92rem] font-semibold tracking-[-0.01em] transition-[color,background-color,border-color,box-shadow] duration-150',
       inverted
         ? active
-          ? 'border-white/30 bg-white/20 text-white shadow-[0_18px_34px_-28px_rgba(0,0,0,0.34)] backdrop-blur-[10px]'
+          ? 'border-white/28 bg-white/16 text-brand-light shadow-[0_18px_34px_-28px_rgba(0,0,0,0.34)] backdrop-blur-[10px]'
           : prominent
             ? 'border-white/24 bg-white/14 text-white shadow-[0_14px_28px_-28px_rgba(0,0,0,0.28)] backdrop-blur-[10px] hover:border-white/30 hover:bg-white/20 hover:text-white'
-            : 'border-white/18 bg-white/10 text-white/82 backdrop-blur-[10px] hover:border-white/24 hover:bg-white/16 hover:text-white'
+            : 'border-white/18 bg-white/10 text-white/84 backdrop-blur-[10px] hover:border-white/24 hover:bg-white/16 hover:text-white'
         : active
-          ? 'border-[rgba(15,23,42,0.12)] bg-white text-slate-950 shadow-[0_18px_34px_-28px_rgba(15,23,42,0.24)]'
+          ? 'border-brand/20 bg-brand/[0.06] text-brand shadow-[0_18px_34px_-28px_rgba(15,23,42,0.24)]'
           : prominent
-            ? 'border-[rgba(15,23,42,0.1)] bg-[rgba(248,250,252,0.96)] text-slate-800 shadow-[0_14px_28px_-28px_rgba(15,23,42,0.18)] hover:border-[rgba(15,23,42,0.14)] hover:bg-white hover:text-slate-950'
-            : 'border-[rgba(15,23,42,0.08)] bg-[rgba(255,255,255,0.72)] text-slate-600 hover:border-[rgba(15,23,42,0.12)] hover:bg-[rgba(255,255,255,0.92)] hover:text-slate-950',
+            ? 'border-[rgba(15,23,42,0.1)] bg-[rgba(248,250,252,0.96)] text-slate-900 shadow-[0_14px_28px_-28px_rgba(15,23,42,0.18)] hover:border-[rgba(15,23,42,0.14)] hover:bg-white hover:text-slate-950'
+            : 'border-[rgba(15,23,42,0.08)] bg-[rgba(255,255,255,0.72)] text-slate-900 hover:border-[rgba(15,23,42,0.12)] hover:bg-[rgba(255,255,255,0.92)] hover:text-slate-950',
     );
   }
 
@@ -131,15 +131,15 @@ const getDesktopNavIconClassName = (
       'h-4 w-4 transition-colors duration-150',
       inverted
         ? active
-          ? 'text-white'
+          ? 'text-brand-light'
           : prominent
-            ? 'text-white/88 group-hover:text-white'
-            : 'text-white/70 group-hover:text-white/92'
+            ? 'text-brand-light/95 group-hover:text-brand-light'
+            : 'text-brand-light/90 group-hover:text-brand-light'
         : active
           ? 'text-brand'
           : prominent
-            ? 'text-brand/90 group-hover:text-brand'
-            : 'text-slate-400 group-hover:text-slate-600',
+            ? 'text-brand group-hover:text-brand-dark'
+            : 'text-brand group-hover:text-brand-dark',
     );
   }
 
