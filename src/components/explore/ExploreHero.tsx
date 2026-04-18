@@ -37,15 +37,15 @@ export const ExploreHero = ({
               className="absolute inset-0 scale-[1.03] bg-cover bg-center"
               style={{
                 backgroundImage: `url(${backgroundImage})`,
-                filter: 'saturate(1.08) contrast(1.16) brightness(0.95)',
+                filter: 'saturate(1.12) contrast(1.18) brightness(1.01)',
                 opacity: 1,
               }}
             />
             <div
               className="absolute inset-0"
               style={{
-                background: 'linear-gradient(to bottom, rgba(255,255,255,0.64), rgba(255,255,255,0.38))',
-                backdropFilter: 'blur(2.5px)',
+                background: 'linear-gradient(rgba(0,0,0,0.15), rgba(0,0,0,0.25))',
+                backdropFilter: 'blur(1.2px)',
               }}
             />
           </div>
@@ -57,7 +57,7 @@ export const ExploreHero = ({
               <h1 className="font-display mx-auto max-w-[10.5ch] text-balance text-[3rem] font-semibold leading-[1.1] tracking-[-0.06em] text-[#0f172a] sm:text-[4rem] md:text-[4.9rem] lg:text-[5.5rem]">
                 Reservar es fácil. Decidir bien no siempre.
               </h1>
-              <p className="mx-auto max-w-[31rem] text-[0.98rem] font-medium leading-6 text-[#475569]/90 sm:text-[1.02rem] md:text-[1.05rem]">
+              <p className="mx-auto max-w-[31rem] text-[0.98rem] font-medium leading-6 text-[#334155] sm:text-[1.02rem] md:text-[1.05rem]">
                 {heroSubtitle}
               </p>
             </div>
