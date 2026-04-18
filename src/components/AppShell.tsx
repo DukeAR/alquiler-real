@@ -368,7 +368,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
 
       {showHeader ? (
         <header className={cn('app-header z-50', isPropertyDetailRoute ? 'app-header-detail' : 'relative', headerOnHero && 'app-header-on-hero')}>
-          <div className={cn(headerLayoutClass, 'flex items-center justify-between gap-4 py-3.5 sm:gap-7 sm:py-5 lg:gap-8')}>
+          <div className={cn(headerLayoutClass, 'flex items-center gap-4 py-3.5 sm:gap-7 sm:py-5 lg:gap-5 xl:gap-6')}>
             <button type="button" onClick={() => navigate('/')} aria-label="Ir al inicio de Alquiler Real" className="flex shrink-0 items-center gap-3.5 rounded-2xl pr-0 transition-opacity duration-200 hover:opacity-95 focus-visible:outline-none focus-visible:shadow-[var(--app-focus-ring)] sm:gap-4">
               <div className={cn(
                 'flex h-9 w-9 items-center justify-center rounded-[1rem] border transition-[border-color,background-color,color,box-shadow] duration-200 sm:h-10 sm:w-10',
@@ -387,7 +387,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
               </div>
             </button>
 
-            <nav aria-label="Navegación principal" className="hidden items-center gap-6 lg:flex lg:flex-1 lg:justify-center xl:gap-7">
+            <nav aria-label="Navegación principal" className="hidden items-center gap-5 lg:ml-auto lg:flex xl:gap-6">
               {desktopActions.map((action) => (
                 <DesktopNavButton
                   key={action.label}
@@ -399,7 +399,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
               ))}
             </nav>
 
-            <div className="flex shrink-0 items-center gap-1.5 sm:gap-4 lg:gap-5">
+            <div className="flex shrink-0 items-center gap-1.5 sm:gap-4 lg:gap-5 xl:gap-6">
               {isAuthenticated && user ? <AccountModeSwitch className="hidden lg:inline-flex" compact /> : null}
 
               {isAuthenticated && user ? (
