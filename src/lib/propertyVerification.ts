@@ -195,22 +195,6 @@ export const getPropertyVerificationDisplayLabel = (key?: string) => {
 
 export const PRESENCIAL_VERIFICATION_LABEL = 'Verificado presencialmente';
 
-const hasPresencialVerificationEvidence = (property: Pick<PropertyVerificationLike, 'hasPresencialVerification' | 'onsiteVerifiedAt'>) => {
-  const rawFlag = (property as { hasPresencialVerification?: unknown }).hasPresencialVerification;
-
-  return rawFlag === true
-    || rawFlag === 1
-    || rawFlag === '1'
-    || rawFlag === 'true'
-    || rawFlag === 'TRUE'
-    || Boolean(property.onsiteVerifiedAt);
-};
-
-export const hasPropertyPresencialVerificationSeal = (property: PropertyVerificationLike) => (
-  getPropertyVerificationScore(property) === VERIFICATION_SCORE_MAX
-  && hasPresencialVerificationEvidence(property)
-);
-
 export const getPropertyVerificationStateCopy = (
   score: number,
   maxScore: number = VERIFICATION_SCORE_MAX,
@@ -685,30 +669,6 @@ export const hasHighlightedVerificationLevel = (property: PropertyVerificationLi
   getPropertyVerificationScore(property) >= HIGH_VERIFICATION_HIGHLIGHT_MIN_SCORE
 );
 
-const getPropertyVerificationState = (property: PropertyVerificationLike) => {
-  const summary = getPropertyVerificationSummary(property);
-  const statusByKey = summary.items.reduce<Record<PropertyVerificationKey, boolean>>((accumulator, item) => {
-    const normalizedKey = normalizePropertyVerificationKey(typeof item.key === 'string' ? item.key : undefined);
-
-    if (normalizedKey) {
-      accumulator[normalizedKey] = item.status === 'complete';
-    }
-
-    return accumulator;
-  }, {
-    identity: false,
-    location: false,
-    geolocation: false,
-    photos: false,
-    availability: false,
-  });
-
-  return {
-    score: getPropertyVerificationScore(property),
-    statusByKey,
-  };
-};
-
 const getPropertyValuePerGuest = (property: Pick<PropertySortLike, 'price' | 'maxGuests'>) => {
   const price = parsePositiveNumber(property.price);
   const maxGuests = parsePositiveNumber(property.maxGuests);
@@ -737,33 +697,33 @@ const compareNullableAscending = (left: number | null, right: number | null) => 
 };
 
 const comparePropertiesByVerificationSignals = (left: PropertySortLike, right: PropertySortLike) => {
-  const onsiteDifference = Number(hasPropertyPresencialVerificationSeal(right)) - Number(hasPropertyPresencialVerificationSeal(left));
+  const leftVerification = getPropertyVerificationPresentationState(left);
+  const rightVerification = getPropertyVerificationPresentationState(right);
+  const onsiteDifference = Number(rightVerification.isFullyVerified) - Number(leftVerification.isFullyVerified);
 
   if (onsiteDifference !== 0) {
     return onsiteDifference;
   }
 
-  const leftVerification = getPropertyVerificationState(left);
-  const rightVerification = getPropertyVerificationState(right);
   const scoreDifference = rightVerification.score - leftVerification.score;
 
   if (scoreDifference !== 0) {
     return scoreDifference;
   }
 
-  const locationDifference = Number(rightVerification.statusByKey.location) - Number(leftVerification.statusByKey.location);
+  const locationDifference = Number(rightVerification.verificationChecks.locationVerified) - Number(leftVerification.verificationChecks.locationVerified);
 
   if (locationDifference !== 0) {
     return locationDifference;
   }
 
-  const identityDifference = Number(rightVerification.statusByKey.identity) - Number(leftVerification.statusByKey.identity);
+  const identityDifference = Number(rightVerification.verificationChecks.hostConfirmed) - Number(leftVerification.verificationChecks.hostConfirmed);
 
   if (identityDifference !== 0) {
     return identityDifference;
   }
 
-  const availabilityDifference = Number(rightVerification.statusByKey.availability) - Number(leftVerification.statusByKey.availability);
+  const availabilityDifference = Number(rightVerification.verificationChecks.availabilityValidated) - Number(leftVerification.verificationChecks.availabilityValidated);
 
   if (availabilityDifference !== 0) {
     return availabilityDifference;
@@ -826,13 +786,13 @@ export const getPropertyVerificationGuidanceLabel = (
   property: PropertyVerificationLike,
   options?: { isTopResult?: boolean },
 ) => {
-  if (hasPropertyPresencialVerificationSeal(property)) {
+  const verificationState = getPropertyVerificationPresentationState(property);
+
+  if (verificationState.isFullyVerified) {
     return PRESENCIAL_VERIFICATION_LABEL;
   }
 
-  const score = getPropertyVerificationScore(property);
-
-  if (score >= HIGH_VERIFICATION_HIGHLIGHT_MIN_SCORE && options?.isTopResult) {
+  if (verificationState.score >= HIGH_VERIFICATION_HIGHLIGHT_MIN_SCORE && options?.isTopResult) {
     return 'Más verificado';
   }
 
@@ -840,7 +800,7 @@ export const getPropertyVerificationGuidanceLabel = (
 };
 
 export const getPropertyVerificationGuidanceMessage = (property: PropertyVerificationLike) => {
-  const score = getPropertyVerificationScore(property);
+  const score = getPropertyVerificationPresentationState(property).score;
 
   if (score >= HIGH_VERIFICATION_HIGHLIGHT_MIN_SCORE) {
     return 'Este aviso muestra más comprobaciones reales que la mayoría.';
@@ -865,37 +825,25 @@ export const withPropertyVerificationScore = <T extends PropertyVerificationLike
 };
 
 export const getPropertyVerificationBadge = (property: PropertyVerificationLike) => {
-  const verificationSummary = getPropertyVerificationSummary(property);
-  const max = verificationSummary.maxScore || VERIFICATION_SCORE_MAX;
-  const score = Array.isArray(property.verificationSummary?.items) && property.verificationSummary.items.length > 0
-    ? Math.min(verificationSummary.score, max)
-    : Array.isArray(property.verificationItems) && property.verificationItems.length > 0
-      ? Math.min(verificationSummary.score, max)
-      : typeof property.verificationScore === 'number' && !hasDerivedVerificationSignals(property)
-        ? Math.min(clampVerificationScore(property.verificationScore), max)
-        : Math.min(verificationSummary.score, max);
-    const stateCopy = getPropertyVerificationStateCopy(score, max, {
-      hasPresencialVerificationSeal: hasPropertyPresencialVerificationSeal({ ...property, verificationSummary }),
-    });
+  const verificationState = getPropertyVerificationPresentationState(property);
 
   return {
-    score,
-    max,
-      label: stateCopy.summaryLabel,
-      summaryLabel: stateCopy.summaryLabel,
-      compactLabel: stateCopy.title,
-      countLabel: stateCopy.countLabel,
-      levelLabel: stateCopy.title,
-      description: stateCopy.description,
-      isFullyVerified: stateCopy.isFullyVerified,
-      isCoordinationReady: stateCopy.isCoordinationReady,
+    score: verificationState.score,
+    max: verificationState.max,
+    label: verificationState.label,
+    summaryLabel: verificationState.summaryLabel,
+    compactLabel: verificationState.compactLabel,
+    countLabel: verificationState.badgeCountLabel,
+    levelLabel: verificationState.levelLabel,
+    description: verificationState.description,
+    isFullyVerified: verificationState.isFullyVerified,
+    isCoordinationReady: verificationState.isCoordinationReady,
   };
 };
 
 export const getPropertyVerificationDetails = (property: PropertyVerificationLike) => {
-  const verificationSummary = getPropertyVerificationSummary(property);
-  const badge = getPropertyVerificationBadge({ ...property, verificationSummary });
-  const displayItems = getPropertyVerificationDisplayItems(verificationSummary.items);
+  const verificationState = getPropertyVerificationPresentationState(property);
+  const displayItems = getPropertyVerificationDisplayItems(verificationState.verificationSummary.items);
   const detailItems = displayItems.map((item) => {
     const normalizedKey = normalizePropertyVerificationKey(typeof item.key === 'string' ? item.key : undefined);
 
@@ -904,7 +852,7 @@ export const getPropertyVerificationDetails = (property: PropertyVerificationLik
       detailLabel: normalizedKey ? PROPERTY_VERIFICATION_DETAIL_LABELS[normalizedKey] : item.label,
     };
   });
-  const compactItems = verificationSummary.items
+  const compactItems = verificationState.verificationSummary.items
     .filter((item) => item.status === 'complete')
     .sort((left, right) => {
       const leftKey = normalizePropertyVerificationKey(typeof left.key === 'string' ? left.key : undefined);
@@ -924,15 +872,24 @@ export const getPropertyVerificationDetails = (property: PropertyVerificationLik
     });
 
   return {
-    ...badge,
+    score: verificationState.score,
+    max: verificationState.max,
+    label: verificationState.label,
+    summaryLabel: verificationState.summaryLabel,
+    compactLabel: verificationState.compactLabel,
+    countLabel: verificationState.badgeCountLabel,
+    levelLabel: verificationState.levelLabel,
+    description: verificationState.description,
+    isFullyVerified: verificationState.isFullyVerified,
+    isCoordinationReady: verificationState.isCoordinationReady,
     items: displayItems,
     detailItems,
     compactItems,
     compactSummary: compactItems.slice(0, 3).map((item) => item.shortLabel).join(' · '),
-    previewMode: badge.isFullyVerified ? 'premium' : 'standard',
+    previewMode: verificationState.model,
     premiumTitle: PRESENCIAL_VERIFICATION_LABEL,
     premiumDescription: 'Esta propiedad fue validada en persona.',
-    premiumSupportingText: badge.isFullyVerified ? 'Incluye ubicación, anfitrión y datos confirmados.' : null,
+    premiumSupportingText: verificationState.isFullyVerified ? 'Incluye ubicación, anfitrión y datos confirmados.' : null,
     helperText: 'Ves las 5 comprobaciones reales, lo ya confirmado y lo que todavía falta validar.',
   };
 };
@@ -959,9 +916,60 @@ export type PropertyCardVerificationState = {
 
 const getPropertyCardVerificationCountLabel = (count: number) => `${count} ${count === 1 ? 'comprobación visible' : 'comprobaciones visibles'}`;
 
-export const getPropertyCardVerificationState = (property: PropertyVerificationLike): PropertyCardVerificationState => {
+type PropertyVerificationPresentationState = PropertyCardVerificationState & {
+  verificationSummary: PropertyVerificationSummary;
+  score: number;
+  max: number;
+  label: string;
+  summaryLabel: string;
+  compactLabel: string;
+  levelLabel: string;
+  badgeCountLabel: string;
+  description: string;
+  isFullyVerified: boolean;
+  isCoordinationReady: boolean;
+};
+
+const buildPropertyCardVerificationChecks = (checks: PropertyCardVerificationCheck[]) => checks.reduce<Record<PropertyCardVerificationCheckKey, boolean>>((accumulator, check) => {
+  if (check.key === 'identity') {
+    accumulator.hostConfirmed = check.complete;
+    return accumulator;
+  }
+
+  if (check.key === 'location') {
+    accumulator.locationVerified = check.complete;
+    return accumulator;
+  }
+
+  if (check.key === 'geolocation') {
+    accumulator.geolocationPrecise = check.complete;
+    return accumulator;
+  }
+
+  if (check.key === 'photos') {
+    accumulator.realMedia = check.complete;
+    return accumulator;
+  }
+
+  accumulator.availabilityValidated = check.complete;
+  return accumulator;
+}, {
+  hostConfirmed: false,
+  locationVerified: false,
+  geolocationPrecise: false,
+  realMedia: false,
+  availabilityValidated: false,
+});
+
+const getPropertyVerificationPresentationState = (property: PropertyVerificationLike): PropertyVerificationPresentationState => {
   const verificationSummary = getPropertyVerificationSummary(property);
-  const checks = getPropertyVerificationDisplayItems(verificationSummary.items)
+  const fallbackScore = getPropertyVerificationScore(property);
+  const hasStructuredVerificationData = (
+    (Array.isArray(property.verificationSummary?.items) && property.verificationSummary.items.length > 0)
+    || (Array.isArray(property.verificationItems) && property.verificationItems.length > 0)
+    || hasDerivedVerificationSignals(property)
+  );
+  const checksFromSummary = getPropertyVerificationDisplayItems(verificationSummary.items)
     .map<PropertyCardVerificationCheck | null>((item) => {
       const normalizedKey = normalizePropertyVerificationKey(typeof item.key === 'string' ? item.key : undefined);
 
@@ -976,57 +984,59 @@ export const getPropertyCardVerificationState = (property: PropertyVerificationL
       };
     })
     .filter((item): item is PropertyCardVerificationCheck => item !== null);
-
-  const rawCount = checks.filter((check) => check.complete).length;
-  const presencialVerified = hasPropertyPresencialVerificationSeal({
-    ...property,
-    verificationSummary,
-  });
-  const normalizedChecks = presencialVerified
-    ? checks.map((check) => ({ ...check, complete: true }))
-    : checks;
-  const count = presencialVerified ? VERIFICATION_SCORE_MAX : rawCount;
-  const verificationChecks = normalizedChecks.reduce<Record<PropertyCardVerificationCheckKey, boolean>>((accumulator, check) => {
-    if (check.key === 'identity') {
-      accumulator.hostConfirmed = check.complete;
-      return accumulator;
-    }
-
-    if (check.key === 'location') {
-      accumulator.locationVerified = check.complete;
-      return accumulator;
-    }
-
-    if (check.key === 'geolocation') {
-      accumulator.geolocationPrecise = check.complete;
-      return accumulator;
-    }
-
-    if (check.key === 'photos') {
-      accumulator.realMedia = check.complete;
-      return accumulator;
-    }
-
-    accumulator.availabilityValidated = check.complete;
-    return accumulator;
-  }, {
-    hostConfirmed: false,
-    locationVerified: false,
-    geolocationPrecise: false,
-    realMedia: false,
-    availabilityValidated: false,
+  const checks = !hasStructuredVerificationData && fallbackScore > 0
+    ? checksFromSummary.map((check, index) => ({
+      ...check,
+      complete: index < fallbackScore,
+    }))
+    : checksFromSummary;
+  const count = checks.filter((check) => check.complete).length;
+  const isFullyVerified = count === VERIFICATION_SCORE_MAX;
+  const stateCopy = getPropertyVerificationStateCopy(count, VERIFICATION_SCORE_MAX, {
+    hasPresencialVerificationSeal: isFullyVerified,
   });
 
   return {
-    model: presencialVerified ? 'premium' : 'standard',
-    presencialVerified,
-    verificationChecks,
+    verificationSummary,
+    score: count,
+    max: VERIFICATION_SCORE_MAX,
+    model: isFullyVerified ? 'premium' : 'standard',
+    presencialVerified: isFullyVerified,
+    verificationChecks: buildPropertyCardVerificationChecks(checks),
     count,
-    checks: normalizedChecks,
-    badgeText: presencialVerified ? PRESENCIAL_VERIFICATION_LABEL : null,
-    summaryTitle: presencialVerified ? 'Información verificada en persona' : 'Verificación visible',
-    summaryDescription: presencialVerified ? 'Ubicación, anfitrión y datos confirmados' : null,
-    countLabel: presencialVerified ? null : getPropertyCardVerificationCountLabel(count),
+    checks,
+    badgeText: isFullyVerified ? PRESENCIAL_VERIFICATION_LABEL : null,
+    summaryTitle: isFullyVerified ? 'Información verificada en persona' : 'Verificación visible',
+    summaryDescription: isFullyVerified ? 'Ubicación, anfitrión y datos confirmados' : null,
+    countLabel: isFullyVerified ? null : getPropertyCardVerificationCountLabel(count),
+    label: stateCopy.summaryLabel,
+    summaryLabel: stateCopy.summaryLabel,
+    compactLabel: stateCopy.title,
+    levelLabel: stateCopy.title,
+    badgeCountLabel: stateCopy.countLabel,
+    description: stateCopy.description,
+    isFullyVerified: stateCopy.isFullyVerified,
+    isCoordinationReady: stateCopy.isCoordinationReady,
+  };
+};
+
+export const hasPropertyPresencialVerificationSeal = (property: PropertyVerificationLike) => (
+  getPropertyVerificationPresentationState(property).isFullyVerified
+);
+
+export const getPropertyCardVerificationState = (property: PropertyVerificationLike): PropertyCardVerificationState => {
+  const verificationState = getPropertyVerificationPresentationState(property);
+
+  return {
+    model: verificationState.model,
+    presencialVerified: verificationState.presencialVerified,
+    verificationChecks: verificationState.verificationChecks,
+    count: verificationState.count,
+    checks: verificationState.checks,
+    badgeText: verificationState.badgeText,
+    summaryTitle: verificationState.summaryTitle,
+    summaryDescription: verificationState.summaryDescription,
+    countLabel: verificationState.countLabel,
   };
 };
 

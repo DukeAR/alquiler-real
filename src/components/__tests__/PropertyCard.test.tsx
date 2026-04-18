@@ -201,13 +201,13 @@ describe('PropertyCard', () => {
     expect(screen.getByText('Ver detalle')).toBeInTheDocument();
   });
 
-  test('uses the premium card model when presencial verification is present and all checks are complete', () => {
+  test('uses the premium card model when all five visible checks are complete', () => {
     render(
       <PropertyCard
         property={{
           ...sampleProperty,
           availabilityValidated: true,
-          hasPresencialVerification: true,
+          hasPresencialVerification: false,
         }}
         verificationGuidanceLabel="Más verificado"
       />,
@@ -226,21 +226,21 @@ describe('PropertyCard', () => {
     expect(screen.getByText('Ver detalle')).toBeInTheDocument();
   });
 
-  test('keeps the standard card model when five visible checks lack presencial verification', () => {
+  test('keeps the standard card model when a premium flag arrives with fewer than five checks', () => {
     render(
       <PropertyCard
         property={{
           ...sampleProperty,
-          availabilityValidated: true,
-          hasPresencialVerification: false,
+          availabilityValidated: false,
+          hasPresencialVerification: true,
         }}
       />,
     );
 
     expect(screen.queryByText('Verificado presencialmente')).toBeNull();
-    const verificationBlock = screen.getByLabelText('5 comprobaciones visibles');
+    const verificationBlock = screen.getByLabelText('4 comprobaciones visibles');
     expect(within(verificationBlock).getByText('Verificación visible')).toBeInTheDocument();
-    expect(within(verificationBlock).getByText('5 comprobaciones visibles')).toBeInTheDocument();
+    expect(within(verificationBlock).getByText('4 comprobaciones visibles')).toBeInTheDocument();
     expect(within(verificationBlock).getAllByRole('listitem')).toHaveLength(5);
   });
 
@@ -350,9 +350,27 @@ describe('PropertyCard', () => {
       hasPresencialVerification: false,
     });
 
-    expect(fullVisibleState.model).toBe('standard');
-    expect(fullVisibleState.presencialVerified).toBe(false);
+    expect(fullVisibleState.model).toBe('premium');
+    expect(fullVisibleState.presencialVerified).toBe(true);
     expect(fullVisibleState.count).toBe(5);
-    expect(fullVisibleState.countLabel).toBe('5 comprobaciones visibles');
+    expect(fullVisibleState.countLabel).toBeNull();
+    expect(fullVisibleState.checks.every((check) => check.complete)).toBe(true);
+
+    const inconsistentPremiumState = getPropertyCardVerificationState({
+      ...sampleProperty,
+      availabilityValidated: false,
+      hasPresencialVerification: true,
+    });
+
+    expect(inconsistentPremiumState.model).toBe('standard');
+    expect(inconsistentPremiumState.presencialVerified).toBe(false);
+    expect(inconsistentPremiumState.count).toBe(4);
+    expect(inconsistentPremiumState.countLabel).toBe('4 comprobaciones visibles');
+
+    const numericFallbackState = getPropertyCardVerificationState({ verificationScore: 4 });
+
+    expect(numericFallbackState.model).toBe('standard');
+    expect(numericFallbackState.count).toBe(4);
+    expect(numericFallbackState.checks.filter((check) => check.complete)).toHaveLength(4);
   });
 });

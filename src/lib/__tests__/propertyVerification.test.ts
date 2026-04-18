@@ -123,48 +123,48 @@ describe('propertyVerification', () => {
     expect(getPropertyVerificationGuidanceMessage({ verificationScore: 2 })).toBeNull();
   });
 
-  test('shows the presencial seal only when the score is 5/5 and onsite verification is truly present', () => {
+  test('treats five complete checks as the premium verification state and rejects incomplete premium flags', () => {
     const fullyVerified = getPropertyVerificationBadge({
       identityValidated: true,
       locationVerified: true,
       verificationPhotoCount: 3,
       availabilityValidated: true,
       coordinates: { lat: -36.7, lng: -56.7 },
-      hasPresencialVerification: true,
+      hasPresencialVerification: false,
     });
 
-    const maxWithoutPresencial = getPropertyVerificationBadge({
+    const incompletePremiumFlag = getPropertyVerificationBadge({
       identityValidated: true,
       locationVerified: true,
       verificationPhotoCount: 3,
-      availabilityValidated: true,
+      availabilityValidated: false,
       coordinates: { lat: -36.7, lng: -56.7 },
-      hasPresencialVerification: false,
+      hasPresencialVerification: true,
     });
 
     expect(fullyVerified.summaryLabel).toBe('Verificado presencialmente (5/5)');
     expect(fullyVerified.isFullyVerified).toBe(true);
-    expect(maxWithoutPresencial.summaryLabel).toBe('Verificación parcial (5/5)');
-    expect(maxWithoutPresencial.isFullyVerified).toBe(false);
+    expect(incompletePremiumFlag.summaryLabel).toBe('Verificación parcial (4/5)');
+    expect(incompletePremiumFlag.isFullyVerified).toBe(false);
     expect(meetsRealVerificationFilter({
       identityValidated: true,
       locationVerified: true,
       verificationPhotoCount: 3,
       availabilityValidated: true,
       coordinates: { lat: -36.7, lng: -56.7 },
-      hasPresencialVerification: true,
+      hasPresencialVerification: false,
     })).toBe(true);
     expect(meetsRealVerificationFilter({
       identityValidated: true,
       locationVerified: true,
       verificationPhotoCount: 3,
-      availabilityValidated: true,
+      availabilityValidated: false,
       coordinates: { lat: -36.7, lng: -56.7 },
-      hasPresencialVerification: false,
+      hasPresencialVerification: true,
     })).toBe(false);
   });
 
-  test('prioritizes presencially verified properties before other verification levels', () => {
+  test('keeps 5/5 properties together above lower verification levels without a separate flag boost', () => {
     const sorted = sortPropertiesByCatalogOrder([
       {
         id: 'p1',
@@ -196,7 +196,7 @@ describe('propertyVerification', () => {
       },
     ], 'verification');
 
-    expect(sorted.map((property) => property.id)).toEqual(['p2', 'p1', 'p3']);
+    expect(sorted.map((property) => property.id)).toEqual(['p1', 'p2', 'p3']);
   });
 
   test('sorts first by verification score and then by verified location', () => {
