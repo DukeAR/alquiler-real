@@ -75,69 +75,98 @@ export const ExploreFiltersBar = ({
           ) : null}
         </div>
 
-        <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.76fr)_minmax(0,0.76fr)_minmax(19rem,1.18fr)] lg:items-stretch">
-          <div className="min-w-0">
-            <select
-              aria-label="Ordenar por"
-              value={sortBy}
-              onChange={(event) => onSortChange(event.target.value as ExploreSort)}
-              className={cn('app-control px-4', sharedControlClassName)}
+        <div className="grid gap-4 lg:grid-cols-[minmax(12.5rem,0.84fr)_minmax(18rem,1fr)_minmax(23rem,1.16fr)] lg:items-end lg:gap-x-6 xl:gap-x-8">
+          <div className="flex min-w-0 flex-col gap-2" role="group" aria-labelledby="explore-filters-sort-label">
+            <span
+              id="explore-filters-sort-label"
+              className="pl-1 text-[0.7rem] font-bold uppercase tracking-[0.14em] text-slate-500"
             >
-              <option value="verification">Más verificados primero</option>
-              <option value="rating">Mejor calificación</option>
-              <option value="price">Precio más bajo</option>
-            </select>
+              Ordenar por
+            </span>
+
+            <div className="min-w-0">
+              <select
+                aria-label="Ordenar por"
+                value={sortBy}
+                onChange={(event) => onSortChange(event.target.value as ExploreSort)}
+                className={cn('app-control px-4', sharedControlClassName)}
+              >
+                <option value="verification">Más verificados primero</option>
+                <option value="rating">Mejor calificación</option>
+                <option value="price">Precio más bajo</option>
+              </select>
+            </div>
           </div>
 
-          <Input
-            type="number"
-            inputMode="numeric"
-            aria-label="Precio desde"
-            value={filters.minPrice}
-            onChange={(event) => onFiltersChange({ ...filters, minPrice: event.target.value })}
-            placeholder="Desde"
-            icon={<span className="text-sm font-semibold text-slate-700">$</span>}
-            className={cn(sharedControlClassName, 'py-0 pl-10 pr-4 placeholder:font-semibold placeholder:text-slate-700 placeholder:opacity-100')}
-          />
-
-          <Input
-            type="number"
-            inputMode="numeric"
-            aria-label="Precio hasta"
-            value={filters.maxPrice}
-            onChange={(event) => onFiltersChange({ ...filters, maxPrice: event.target.value })}
-            placeholder="Hasta"
-            icon={<span className="text-sm font-semibold text-slate-700">$</span>}
-            className={cn(sharedControlClassName, 'py-0 pl-10 pr-4 placeholder:font-semibold placeholder:text-slate-700 placeholder:opacity-100')}
-          />
-
-          <label className={cn(
-            'flex h-12 min-w-0 items-center gap-3 rounded-[1rem] border px-4 text-left transition-[border-color,background-color,box-shadow] duration-150',
-            filters.verifiedOnly
-              ? 'border-brand/30 bg-brand/[0.04] shadow-[0_12px_24px_-26px_rgba(67,56,202,0.28)]'
-              : 'border-slate-300/90 bg-white shadow-[0_12px_24px_-28px_rgba(15,23,42,0.18)]',
-          )}>
-            <span className="min-w-0 flex-1 truncate pr-1 text-[0.86rem] font-semibold tracking-[-0.015em] text-slate-950">
-              <span className="block truncate">
-                Solo verificados presencialmente
-              </span>
-              <span className="sr-only">
-                Mostrando solo avisos con verificación completa
-              </span>
+          <div className="flex min-w-0 flex-col gap-2" role="group" aria-labelledby="explore-filters-price-label">
+            <span
+              id="explore-filters-price-label"
+              className="pl-1 text-[0.7rem] font-bold uppercase tracking-[0.14em] text-slate-500"
+            >
+              Precio
             </span>
 
-            <span className="relative ml-auto inline-flex h-6 w-11 shrink-0 items-center">
-              <input
-                type="checkbox"
-                aria-label="Solo verificados presencialmente"
-                checked={filters.verifiedOnly}
-                onChange={(event) => onFiltersChange({ ...filters, verifiedOnly: event.target.checked })}
-                className="peer sr-only"
+            <div className="grid grid-cols-2 gap-2.5">
+              <Input
+                type="number"
+                inputMode="numeric"
+                aria-label="Precio desde"
+                value={filters.minPrice}
+                onChange={(event) => onFiltersChange({ ...filters, minPrice: event.target.value })}
+                placeholder="Desde"
+                icon={<span className="text-sm font-semibold text-slate-700">$</span>}
+                className={cn(sharedControlClassName, 'py-0 pl-10 pr-4 placeholder:font-semibold placeholder:text-slate-700 placeholder:opacity-100')}
               />
-              <span className="absolute inset-0 rounded-full bg-slate-300 transition-colors duration-150 peer-checked:bg-brand" />
-              <span className="absolute left-0.5 h-5 w-5 rounded-full bg-white shadow-[0_2px_4px_rgba(15,23,42,0.12)] transition-transform duration-150 peer-checked:translate-x-5" />
+
+              <Input
+                type="number"
+                inputMode="numeric"
+                aria-label="Precio hasta"
+                value={filters.maxPrice}
+                onChange={(event) => onFiltersChange({ ...filters, maxPrice: event.target.value })}
+                placeholder="Hasta"
+                icon={<span className="text-sm font-semibold text-slate-700">$</span>}
+                className={cn(sharedControlClassName, 'py-0 pl-10 pr-4 placeholder:font-semibold placeholder:text-slate-700 placeholder:opacity-100')}
+              />
+            </div>
+          </div>
+
+          <div className="flex min-w-0 flex-col gap-2 lg:justify-self-end lg:w-full" role="group" aria-labelledby="explore-filters-verification-label">
+            <span
+              id="explore-filters-verification-label"
+              className="pl-1 text-[0.7rem] font-bold uppercase tracking-[0.14em] text-slate-500"
+            >
+              Verificación
             </span>
-          </label>
+
+            <label className={cn(
+              'flex h-12 min-w-0 items-center gap-3 rounded-[1rem] border px-4 text-left transition-[border-color,background-color,box-shadow] duration-150',
+              filters.verifiedOnly
+                ? 'border-brand/30 bg-brand/[0.04] shadow-[0_12px_24px_-26px_rgba(67,56,202,0.28)]'
+                : 'border-slate-300/90 bg-white shadow-[0_12px_24px_-28px_rgba(15,23,42,0.18)]',
+            )}>
+              <span className="min-w-0 flex-1 truncate pr-1 text-[0.86rem] font-semibold tracking-[-0.015em] text-slate-950">
+                <span className="block truncate">
+                  Solo verificados presencialmente
+                </span>
+                <span className="sr-only">
+                  Mostrando solo avisos con verificación completa
+                </span>
+              </span>
+
+              <span className="relative ml-auto inline-flex h-6 w-11 shrink-0 items-center">
+                <input
+                  type="checkbox"
+                  aria-label="Solo verificados presencialmente"
+                  checked={filters.verifiedOnly}
+                  onChange={(event) => onFiltersChange({ ...filters, verifiedOnly: event.target.checked })}
+                  className="peer sr-only"
+                />
+                <span className="absolute inset-0 rounded-full bg-slate-300 transition-colors duration-150 peer-checked:bg-brand" />
+                <span className="absolute left-0.5 h-5 w-5 rounded-full bg-white shadow-[0_2px_4px_rgba(15,23,42,0.12)] transition-transform duration-150 peer-checked:translate-x-5" />
+              </span>
+            </label>
+          </div>
         </div>
       </div>
     </section>

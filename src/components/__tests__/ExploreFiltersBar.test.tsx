@@ -30,6 +30,9 @@ describe('ExploreFiltersBar', () => {
     const checkbox = screen.getByRole('checkbox', { name: /Solo verificados presencialmente/i });
 
     expect(checkbox).not.toBeChecked();
+    expect(screen.getByText('Ordenar por')).toBeInTheDocument();
+    expect(screen.getByText('Precio')).toBeInTheDocument();
+    expect(screen.getByText('Verificación')).toBeInTheDocument();
     expect(screen.getByText('Mostrando solo avisos con verificación completa')).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'Más verificados primero' })).toBeInTheDocument();
 
