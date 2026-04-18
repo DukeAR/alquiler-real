@@ -457,8 +457,10 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                     type="button"
                     onClick={() => openLoginModal()}
                     className={cn(
-                      'hidden items-center px-0 py-2 text-[0.92rem] font-medium tracking-[-0.01em] transition-colors duration-200 focus-visible:outline-none focus-visible:shadow-[var(--app-focus-ring)] md:inline-flex',
-                      headerOnHero ? 'text-white/84 hover:text-white' : 'text-slate-600 hover:text-slate-950',
+                      'hidden shrink-0 items-center rounded-full border px-4 py-2 text-[0.92rem] font-semibold tracking-[-0.01em] transition-[color,background-color,border-color,box-shadow] duration-200 focus-visible:outline-none focus-visible:shadow-[var(--app-focus-ring)] md:inline-flex',
+                      headerOnHero
+                        ? 'border-white/18 bg-white/10 text-white/92 backdrop-blur-[10px] hover:border-white/24 hover:bg-white/16 hover:text-white'
+                        : 'border-[rgba(15,23,42,0.08)] bg-[rgba(255,255,255,0.72)] text-slate-900 hover:border-[rgba(15,23,42,0.12)] hover:bg-[rgba(255,255,255,0.92)] hover:text-slate-950',
                     )}
                   >
                     Ingresá
