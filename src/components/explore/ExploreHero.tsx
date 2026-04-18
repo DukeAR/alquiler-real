@@ -30,7 +30,7 @@ export const ExploreHero = ({
 }: ExploreHeroProps) => {
   return (
     <section style={{ fontFamily: 'var(--font-ui)' }}>
-      <div className="relative overflow-hidden rounded-[calc(var(--app-radius-display)+4px)] border border-white/75 bg-slate-950 shadow-[0_28px_60px_-40px_rgba(15,23,42,0.28)]">
+      <div className="relative overflow-hidden rounded-[calc(var(--app-radius-display)+4px)] border border-[rgba(15,23,42,0.08)] bg-slate-950 shadow-[0_20px_60px_rgba(15,23,42,0.12)]">
         {backgroundImage ? (
           <div className="pointer-events-none absolute inset-0">
             <div
@@ -41,19 +41,23 @@ export const ExploreHero = ({
                 opacity: 0.94,
               }}
             />
-            <div className="absolute inset-0 bg-[linear-gradient(96deg,rgba(255,255,255,0.78)_8%,rgba(249,252,255,0.62)_34%,rgba(241,246,250,0.44)_62%,rgba(232,239,245,0.24)_100%)]" />
-            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.12)_0%,rgba(255,255,255,0.04)_42%,rgba(244,247,251,0.08)_100%)]" />
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_34%,rgba(236,242,248,0.1)_0%,rgba(236,242,248,0)_44%)]" />
+            <div
+              className="absolute inset-0"
+              style={{
+                background: 'linear-gradient(to bottom, rgba(255,255,255,0.85), rgba(255,255,255,0.65))',
+                backdropFilter: 'blur(6px)',
+              }}
+            />
           </div>
         ) : null}
 
         <div className="relative px-5 py-5 sm:px-7 sm:py-6 md:px-10 md:py-7 lg:px-12 lg:py-8">
           <div className="mx-auto max-w-[45rem] space-y-3.5 text-center md:space-y-4.5">
             <div className="space-y-2 md:space-y-2.5">
-              <h1 className="font-display mx-auto max-w-[10.5ch] text-balance text-[3rem] font-semibold leading-[0.92] tracking-[-0.06em] text-slate-950 sm:text-[4rem] md:text-[4.9rem] lg:text-[5.5rem]">
+              <h1 className="font-display mx-auto max-w-[10.5ch] text-balance text-[3rem] font-semibold leading-[1.1] tracking-[-0.06em] text-[#0f172a] sm:text-[4rem] md:text-[4.9rem] lg:text-[5.5rem]">
                 Reservar es fácil. Decidir bien no siempre.
               </h1>
-              <p className="mx-auto max-w-[31rem] text-[0.98rem] font-medium leading-6 text-slate-700 sm:text-[1.02rem] md:text-[1.05rem]">
+              <p className="mx-auto max-w-[31rem] text-[0.98rem] font-medium leading-6 text-[#475569]/90 sm:text-[1.02rem] md:text-[1.05rem]">
                 {heroSubtitle}
               </p>
             </div>
@@ -76,7 +80,7 @@ export const ExploreHero = ({
                     onSelect={onLocationSelect}
                     onSubmitValue={onSearchSubmitValue}
                     ariaLabel="Destino"
-                    inputClassName="min-h-[3.5rem] rounded-[20px] border-slate-200/75 bg-white/92 py-3 pl-14 text-[1rem] font-semibold text-slate-950 placeholder:text-slate-500 shadow-[0_12px_26px_-24px_rgba(15,23,42,0.24)] focus:border-brand/30 focus:bg-white focus:shadow-[0_0_0_4px_rgba(67,56,202,0.1)] md:min-h-[3.75rem] md:pl-16 md:text-[1.05rem]"
+                    inputClassName="min-h-[3.5rem] rounded-[20px] border-[rgba(15,23,42,0.06)] bg-white/92 py-3 pl-14 text-[1rem] font-semibold text-slate-950 placeholder:text-slate-500 shadow-[0_10px_30px_rgba(15,23,42,0.10)] focus:border-brand/30 focus:bg-white focus:shadow-[0_0_0_4px_rgba(67,56,202,0.1)] md:min-h-[3.75rem] md:pl-16 md:text-[1.05rem]"
                   />
                 </div>
 
@@ -90,9 +94,9 @@ export const ExploreHero = ({
                 </Button>
               </div>
 
-              <div className="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-2 pt-1 text-[0.78rem] text-slate-700 sm:gap-x-3 sm:text-[0.84rem]">
+              <div className="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-2 pt-1 text-[0.78rem] text-[#334155] sm:gap-x-3 sm:text-[0.84rem]">
                 {valueProofItems.map((item) => (
-                  <span key={item} className="inline-flex items-center gap-1.5 rounded-full border border-white/40 bg-white/24 px-2.5 py-1.25 font-semibold leading-none text-slate-700 shadow-[0_12px_24px_-24px_rgba(15,23,42,0.24)] backdrop-blur-[2px]">
+                  <span key={item} className="inline-flex items-center gap-1.5 rounded-full border border-[rgba(15,23,42,0.06)] bg-[rgba(255,255,255,0.9)] px-2.5 py-1.25 font-semibold leading-none text-[#334155] shadow-[0_12px_24px_-24px_rgba(15,23,42,0.24)] backdrop-blur-[2px]">
                     <Icons.CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-700" />
                     <span>{item}</span>
                   </span>
