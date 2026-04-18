@@ -114,21 +114,21 @@ export const ExploreFiltersBar = ({
           </div>
 
           <label className={cn(
-            'flex h-11 min-w-0 items-center gap-3 rounded-[12px] border px-4 text-left transition-[border-color,background-color] duration-150 md:ml-auto md:min-w-[21rem] lg:min-w-[23rem] xl:min-w-[24rem]',
+            'flex h-11 min-w-0 items-center gap-3 rounded-[12px] border px-3.5 text-left transition-[border-color,background-color] duration-150 md:ml-2 md:min-w-[18.5rem] lg:ml-3 lg:min-w-[20rem] xl:min-w-[21rem]',
             filters.verifiedOnly
-              ? 'border-brand/18 bg-brand/[0.03]'
-              : 'border-[rgba(15,23,42,0.08)] bg-white',
+              ? 'border-brand/18 bg-brand/[0.04]'
+              : 'border-[rgba(15,23,42,0.06)] bg-[#f8fafc]',
           )}>
-            <span className="min-w-0 flex-1 pr-1">
-              <span className="block truncate text-[0.82rem] font-semibold tracking-[-0.015em] text-slate-900 leading-[1.05]">
+            <span className="min-w-0 flex-1 pr-2">
+              <span className="block truncate text-[0.8rem] font-semibold tracking-[-0.015em] text-slate-900 leading-[1.05]">
                 Solo verificados
               </span>
-              <span className="mt-0.5 block truncate text-[0.68rem] font-medium tracking-[-0.01em] text-slate-500 leading-[1.05]">
+              <span className="mt-0.5 block truncate text-[0.67rem] font-medium tracking-[-0.01em] text-slate-500 leading-[1.05]">
                 con validación completa
               </span>
             </span>
 
-            <span className="relative ml-auto inline-flex h-6 w-11 shrink-0 items-center">
+            <span className="relative ml-auto inline-flex h-6 w-11 shrink-0 items-center self-center">
               <input
                 type="checkbox"
                 aria-label="Solo verificados presencialmente"
