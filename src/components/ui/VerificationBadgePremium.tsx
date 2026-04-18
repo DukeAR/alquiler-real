@@ -10,13 +10,13 @@ type VerificationBadgePremiumProps = {
 };
 
 const sizeClasses: Record<VerificationBadgePremiumSize, string> = {
-  sm: 'gap-2 px-4 py-2 text-[11.5px]',
-  md: 'gap-2.5 px-4.5 py-2.5 text-[12.5px]',
+  sm: 'gap-1.5 px-3 py-1.5 text-[11px]',
+  md: 'gap-2 px-3.5 py-2 text-[12px]',
 };
 
 const iconClasses: Record<VerificationBadgePremiumSize, string> = {
-  sm: 'h-3.5 w-3.5',
-  md: 'h-4 w-4',
+  sm: 'h-3.25 w-3.25',
+  md: 'h-3.75 w-3.75',
 };
 
 export const VerificationBadgePremium = ({
@@ -26,7 +26,7 @@ export const VerificationBadgePremium = ({
   return (
     <div
       className={cn(
-        'inline-flex items-center rounded-full border border-emerald-200/90 bg-emerald-50/96 font-medium tracking-[-0.01em] text-emerald-950 shadow-[0_14px_28px_-22px_rgba(5,150,105,0.28)]',
+        'inline-flex items-center rounded-full border border-emerald-200/80 bg-emerald-50/92 font-medium tracking-[-0.01em] text-emerald-950 shadow-[0_10px_20px_-18px_rgba(5,150,105,0.22)]',
         sizeClasses[size],
         className,
       )}

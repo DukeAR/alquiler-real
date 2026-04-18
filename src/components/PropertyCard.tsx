@@ -110,7 +110,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         className,
       )}
     >
-      <div className="relative aspect-[5/4] overflow-hidden bg-slate-100 lg:aspect-[4/3]">
+      <div className="relative aspect-[4/3] overflow-hidden bg-slate-100">
         <img 
           src={imageSrc} 
           alt={property.title}
@@ -147,18 +147,18 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         ) : null}
       </div>
 
-      <div className="flex flex-1 flex-col gap-5 p-5 sm:p-5 md:p-6">
-        <div className="space-y-4">
-          <div className="space-y-2 min-h-[5.15rem]">
+      <div className="flex h-full flex-1 flex-col p-5 sm:p-5 md:p-6">
+        <div className="space-y-4.5">
+          <div className="space-y-2.5">
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">{propertyTypeLabel}</p>
-            <h3 className="line-clamp-3 text-[1.24rem] font-semibold leading-[1.12] tracking-[-0.03em] text-slate-950 transition-colors duration-150 group-hover:text-slate-950 md:text-[1.34rem]">
+            <h3 className="min-h-[3.5rem] line-clamp-2 text-[1.2rem] font-semibold leading-[1.18] tracking-[-0.03em] text-slate-950 transition-colors duration-150 group-hover:text-slate-950 md:text-[1.24rem]">
               {property.title}
             </h3>
           </div>
 
-          <div className="space-y-1.5">
+          <div className="space-y-1">
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Por noche</p>
-            <p className="text-[2.85rem] font-black leading-none tracking-[-0.06em] text-slate-950 md:text-[2.95rem]">
+            <p className="text-[1.75rem] font-bold leading-none tracking-[-0.5px] text-slate-950">
               {formatCurrency(Number(property.price) || 0)}
             </p>
           </div>
@@ -166,11 +166,14 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           <div
             data-testid="property-card-verification"
             aria-label={isPremiumCard ? verificationState.summaryTitle : verificationState.countLabel ?? verificationState.summaryTitle}
-            className={cn('min-h-[5rem]', isPremiumCard ? 'space-y-1' : 'space-y-2.5')}
+            className={cn(
+              'min-h-[5.5rem] rounded-[20px] border border-slate-200/70 bg-slate-50/80 px-4 py-3',
+              isPremiumCard ? 'flex flex-col justify-center gap-1.5' : 'space-y-2.5',
+            )}
           >
             {isPremiumCard ? (
               <>
-                <p className="text-[0.84rem] font-medium leading-5 text-slate-600">
+                <p className="text-[0.83rem] font-medium leading-5 text-slate-700">
                   {verificationState.summaryTitle}
                 </p>
                 <p className="text-[0.76rem] leading-5 text-slate-500">
@@ -179,25 +182,25 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
               </>
             ) : (
               <>
-                <div className="space-y-0.5">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                <div className="flex items-baseline justify-between gap-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
                     {verificationState.summaryTitle}
                   </p>
-                  <p className="text-[0.82rem] font-medium leading-5 text-slate-600">
+                  <p className="whitespace-nowrap text-[0.74rem] font-medium leading-4 text-slate-600">
                     {verificationState.countLabel}
                   </p>
                 </div>
 
-                <ul className="space-y-1.5" aria-label="Checks de verificación">
+                <ul className="flex flex-wrap gap-x-3 gap-y-1.5" aria-label="Checks de verificación">
                   {verificationState.checks.map((check) => (
                     <li
                       key={check.key}
                       data-status={check.complete ? 'complete' : 'pending'}
-                      className="flex items-center gap-2.5 text-[0.76rem] font-medium leading-5"
+                      className="inline-flex items-center gap-1.5 text-[0.72rem] font-medium leading-4"
                     >
                       <span
                         className={cn(
-                          'shrink-0 text-[0.8rem] font-semibold leading-none',
+                          'shrink-0 text-[0.76rem] font-semibold leading-none',
                           check.complete ? 'text-emerald-600' : 'text-slate-300',
                         )}
                         aria-hidden="true"
@@ -205,7 +208,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
                         ✔
                       </span>
 
-                      <span className={cn(check.complete ? 'text-slate-600' : 'text-slate-400')}>
+                      <span className={cn('tracking-[-0.01em]', check.complete ? 'text-slate-600' : 'text-slate-400')}>
                         {check.label}
                       </span>
                     </li>
@@ -216,7 +219,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           </div>
         </div>
 
-        <div className="mt-auto flex items-end justify-between gap-3 border-t border-slate-200/70 pt-4">
+        <div className="mt-auto flex items-center justify-between gap-3 border-t border-slate-200/70 pt-4">
           <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5 text-[0.83rem] font-medium leading-5 text-slate-500">
             <span className="inline-flex items-center gap-1.5">
               <Icons.MapPin className="h-3.5 w-3.5 text-slate-400" />
