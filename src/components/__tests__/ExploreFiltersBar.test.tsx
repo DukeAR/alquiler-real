@@ -33,7 +33,8 @@ describe('ExploreFiltersBar', () => {
     expect(screen.queryByText('Ordenar por')).not.toBeInTheDocument();
     expect(screen.queryByText('Precio')).not.toBeInTheDocument();
     expect(screen.queryByText('Verificación')).not.toBeInTheDocument();
-    expect(screen.getByText('Mostrando solo avisos con verificación completa')).toBeInTheDocument();
+    expect(screen.getByText('Solo verificados')).toBeInTheDocument();
+    expect(screen.getByText('con validación completa')).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'Más verificados primero' })).toBeInTheDocument();
 
     fireEvent.click(checkbox);

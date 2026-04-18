@@ -114,17 +114,17 @@ export const ExploreFiltersBar = ({
           </div>
 
           <label className={cn(
-            'flex h-11 min-w-0 items-center gap-3 rounded-[0.95rem] border px-4 text-left transition-[border-color,background-color,box-shadow] duration-150 md:ml-auto md:min-w-[21rem] lg:min-w-[23rem] xl:min-w-[24rem]',
+            'flex h-11 min-w-0 items-center gap-3 rounded-[12px] border px-4 text-left transition-[border-color,background-color] duration-150 md:ml-auto md:min-w-[21rem] lg:min-w-[23rem] xl:min-w-[24rem]',
             filters.verifiedOnly
-              ? 'border-brand/30 bg-brand/[0.04] shadow-[0_10px_20px_-22px_rgba(67,56,202,0.24)]'
-              : 'border-slate-300/90 bg-white shadow-[0_10px_20px_-24px_rgba(15,23,42,0.16)]',
+              ? 'border-brand/18 bg-brand/[0.03]'
+              : 'border-[rgba(15,23,42,0.08)] bg-white',
           )}>
-            <span className="min-w-0 flex-1 truncate pr-1 text-[0.85rem] font-semibold tracking-[-0.015em] text-slate-950">
-              <span className="block truncate">
-                Solo verificados presencialmente
+            <span className="min-w-0 flex-1 pr-1">
+              <span className="block truncate text-[0.82rem] font-semibold tracking-[-0.015em] text-slate-900 leading-[1.05]">
+                Solo verificados
               </span>
-              <span className="sr-only">
-                Mostrando solo avisos con verificación completa
+              <span className="mt-0.5 block truncate text-[0.68rem] font-medium tracking-[-0.01em] text-slate-500 leading-[1.05]">
+                con validación completa
               </span>
             </span>
 
@@ -136,7 +136,7 @@ export const ExploreFiltersBar = ({
                 onChange={(event) => onFiltersChange({ ...filters, verifiedOnly: event.target.checked })}
                 className="peer sr-only"
               />
-              <span className="absolute inset-0 rounded-full bg-slate-300 transition-colors duration-150 peer-checked:bg-brand" />
+              <span className="absolute inset-0 rounded-full bg-slate-200/90 transition-colors duration-150 peer-checked:bg-brand" />
               <span className="absolute left-0.5 h-5 w-5 rounded-full bg-white shadow-[0_2px_4px_rgba(15,23,42,0.12)] transition-transform duration-150 peer-checked:translate-x-5" />
             </span>
           </label>
