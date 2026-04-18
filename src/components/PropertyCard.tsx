@@ -225,14 +225,15 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           </div>
         </div>
 
-        <div className={cn(
-          'mt-auto flex items-end justify-between gap-4 border-t border-slate-200/70',
-          isPremiumCard ? 'pt-4' : 'pt-5',
-        )}>
+        <div className={cn('mt-auto', !isPremiumCard && 'pt-5')}>
           <div className={cn(
-            'min-w-0 text-[0.83rem] font-medium leading-5 text-slate-500',
-            isPremiumCard ? 'flex flex-wrap items-center gap-x-3 gap-y-1.5' : 'flex flex-col items-start gap-1.5 text-[0.84rem] text-slate-600',
+            'flex items-end justify-between gap-4 border-t border-slate-200/70',
+            isPremiumCard ? 'pt-4' : 'pt-5',
           )}>
+            <div className={cn(
+              'min-w-0 text-[0.83rem] font-medium leading-5 text-slate-500',
+              isPremiumCard ? 'flex flex-wrap items-center gap-x-3 gap-y-1.5' : 'flex flex-col items-start gap-1.5 text-[0.84rem] text-slate-600',
+            )}>
             <span className="inline-flex items-center gap-1.5">
               <Icons.MapPin className="h-3.5 w-3.5 text-slate-400" />
               <span>{property.location}</span>
@@ -243,21 +244,22 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
                 <span>{guestCapacityLabel}</span>
               </span>
             ) : null}
-          </div>
+            </div>
 
-          <span
-            data-testid="property-card-cta"
-            aria-hidden="true"
-            className={cn(
-              'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-[0.76rem] font-semibold transition-[border-color,color,background-color,box-shadow] duration-150',
-              isPremiumCard
-                ? 'border-slate-200/90 bg-white/96 text-slate-700 shadow-[0_10px_20px_-18px_rgba(15,23,42,0.1)] group-hover:border-slate-300 group-hover:bg-white group-hover:text-slate-900'
-                : 'border-slate-200/90 bg-white text-emerald-700 shadow-[0_12px_22px_-18px_rgba(15,23,42,0.12)] group-hover:border-emerald-200 group-hover:bg-white group-hover:text-emerald-800',
-            )}
-          >
-            <span>{propertyCardCtaLabel}</span>
-            <Icons.ArrowRight className="h-3.5 w-3.5" />
-          </span>
+            <span
+              data-testid="property-card-cta"
+              aria-hidden="true"
+              className={cn(
+                'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-[0.76rem] font-semibold transition-[border-color,color,background-color,box-shadow] duration-150',
+                isPremiumCard
+                  ? 'border-slate-200/90 bg-white/96 text-slate-700 shadow-[0_10px_20px_-18px_rgba(15,23,42,0.1)] group-hover:border-slate-300 group-hover:bg-white group-hover:text-slate-900'
+                  : 'border-slate-200/90 bg-white text-emerald-700 shadow-[0_12px_22px_-18px_rgba(15,23,42,0.12)] group-hover:border-emerald-200 group-hover:bg-white group-hover:text-emerald-800',
+              )}
+            >
+              <span>{propertyCardCtaLabel}</span>
+              <Icons.ArrowRight className="h-3.5 w-3.5" />
+            </span>
+          </div>
         </div>
       </div>
     </Card>
