@@ -37,15 +37,15 @@ export const ExploreHero = ({
               className="absolute inset-0 scale-[1.03] bg-cover bg-center"
               style={{
                 backgroundImage: `url(${backgroundImage})`,
-                filter: 'saturate(0.94) contrast(0.94) brightness(0.99)',
-                opacity: 0.94,
+                filter: 'saturate(1.08) contrast(1.16) brightness(0.95)',
+                opacity: 1,
               }}
             />
             <div
               className="absolute inset-0"
               style={{
-                background: 'linear-gradient(to bottom, rgba(255,255,255,0.85), rgba(255,255,255,0.65))',
-                backdropFilter: 'blur(6px)',
+                background: 'linear-gradient(to bottom, rgba(255,255,255,0.64), rgba(255,255,255,0.38))',
+                backdropFilter: 'blur(2.5px)',
               }}
             />
           </div>
