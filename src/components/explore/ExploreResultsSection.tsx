@@ -147,32 +147,30 @@ export const ExploreResultsSection = ({
       ? 'Empezá por las mejor valoradas'
       : 'Empezá por los más verificados';
   const featuredDescription = loading
-    ? 'Estamos ordenando las primeras opciones.'
+    ? 'Ordenando opciones.'
     : sortBy === 'price'
-      ? 'Precio claro y lectura rápida primero.'
+      ? 'Precio claro primero.'
       : sortBy === 'rating'
-        ? 'Valoración alta y respaldo visible primero.'
-        : 'Primero ves los avisos verificados presencialmente (5/5). Después ordenamos 4/5, 3/5 y así sucesivamente.';
+        ? 'Las mejor valoradas primero.'
+        : 'Primero ves los avisos con más respaldo.';
   const listingHeading = hasActiveFilters
     ? 'Resultados para revisar'
     : showFeaturedSection
       ? 'Más para comparar'
       : 'Opciones para comparar';
   const listingDescription = loading
-    ? 'Estamos actualizando los avisos disponibles.'
+    ? 'Actualizando resultados.'
     : hasActiveFilters
-      ? `${formatPropertyCount(listingProperties.length)} para comparar en esta búsqueda.`
+      ? `${formatPropertyCount(listingProperties.length)} en esta búsqueda.`
       : listingProperties.length > 0
         ? showFeaturedSection
-          ? `${formatPropertyCount(listingProperties.length)} para seguir comparando sin perder este criterio.`
-          : `${formatPropertyCount(listingProperties.length)} para comparar con este criterio.`
-        : 'No hay más propiedades para revisar por ahora.';
+          ? `${formatPropertyCount(listingProperties.length)} para seguir eligiendo.`
+          : `${formatPropertyCount(listingProperties.length)} para seguir mirando.`
+        : 'No hay más propiedades por ahora.';
   const homeListingDescription = loading
-    ? 'Estamos preparando más opciones.'
-    : sortBy === 'verification'
-      ? 'Más opciones con el mismo orden: primero presencial 5/5 y después 4/5, 3/5 y así sucesivamente.'
-      : 'Más opciones para seguir comparando rápido.';
-  const filteredResultsDescription = `${formatPropertyCount(totalResults)} para comparar en esta búsqueda.`;
+    ? 'Preparando más opciones.'
+    : 'Más opciones para seguir eligiendo.';
+  const filteredResultsDescription = `${formatPropertyCount(totalResults)} en esta búsqueda.`;
   const filteredVisibleResultsLabel = `${visibleCount} ${visibleCount === 1 ? 'visible' : 'visibles'} en esta búsqueda.`;
 
   const summaryEyebrow = viewMode === 'map'
@@ -192,15 +190,15 @@ export const ExploreResultsSection = ({
         : 'No hay propiedades disponibles ahora.';
 
   const summaryDescription = loading
-    ? 'Estamos actualizando los avisos disponibles.'
+    ? 'Actualizando resultados.'
     : failedToLoadResults
       ? 'Probá con otra zona o volvé a intentar en unos segundos.'
     : hasActiveFilters
       ? hasAnyResults
-        ? `${formatPropertyCount(totalResults)} para revisar en esta búsqueda.`
+        ? `${formatPropertyCount(totalResults)} en esta búsqueda.`
         : 'Probá con otra zona o limpiá los filtros.'
       : hasAnyResults
-        ? `${formatPropertyCount(totalResults)} para revisar antes de reservar.`
+        ? `${formatPropertyCount(totalResults)} para revisar.`
         : 'Volvé a revisar más tarde.';
 
   const summaryCountBadge = (
@@ -243,12 +241,6 @@ export const ExploreResultsSection = ({
       <Icons.Target className="h-3.5 w-3.5 text-slate-400" />
       <span>{activeSortLabel}</span>
     </span>,
-    caresAboutVerification && sortBy === 'verification' ? (
-      <span key="preference" className="inline-flex items-center gap-1.5">
-        <Icons.ShieldCheck className="h-3.5 w-3.5 text-slate-400" />
-        <span>Resaltando las comprobaciones reales</span>
-      </span>
-    ) : null,
     appliedFilterCount > 0 ? (
       <span key="filters" className="inline-flex items-center gap-1.5">
         <Icons.SlidersHorizontal className="h-3.5 w-3.5 text-slate-400" />

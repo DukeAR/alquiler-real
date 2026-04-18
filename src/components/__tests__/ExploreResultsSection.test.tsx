@@ -112,7 +112,7 @@ describe('ExploreResultsSection', () => {
     renderSection();
 
     expect(screen.getByRole('heading', { name: 'Empezá por los más verificados' })).toBeInTheDocument();
-    expect(screen.getByText('Primero ves los avisos verificados presencialmente (5/5). Después ordenamos 4/5, 3/5 y así sucesivamente.')).toBeInTheDocument();
+    expect(screen.getByText('Primero ves los avisos con más respaldo.')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Más para comparar' })).toBeInTheDocument();
     expect(screen.getAllByText('Más verificado')).toHaveLength(1);
     expect(screen.queryByText(/Buena relación precio \/ información|De las más completas en este rango/)).toBeNull();
@@ -140,10 +140,10 @@ describe('ExploreResultsSection', () => {
     });
 
     expect(screen.getAllByRole('heading', { name: 'Resultados para revisar' })).toHaveLength(1);
-    expect(screen.getByText('3 propiedades para comparar en esta búsqueda.')).toBeInTheDocument();
+    expect(screen.getByText('3 propiedades en esta búsqueda.')).toBeInTheDocument();
     expect(screen.getByText('2 visibles en esta búsqueda.')).toBeInTheDocument();
     expect(screen.getByText('Más verificados primero')).toBeInTheDocument();
-    expect(screen.getByText('Resaltando las comprobaciones reales')).toBeInTheDocument();
+    expect(screen.queryByText('Resaltando las comprobaciones reales')).toBeNull();
     expect(screen.getByText('Villa Gesell')).toBeInTheDocument();
     expect(screen.queryByText('Estás priorizando avisos con más información comprobada')).toBeNull();
   });
@@ -194,7 +194,7 @@ describe('ExploreResultsSection', () => {
     const propertyMap = await screen.findByTestId('property-map');
 
     expect(screen.getByText('Mapa de resultados')).toBeInTheDocument();
-    expect(screen.getByText('3 propiedades para revisar antes de reservar.')).toBeInTheDocument();
+    expect(screen.getByText('3 propiedades para revisar.')).toBeInTheDocument();
     expect(propertyMap).toHaveTextContent('3 propiedades en mapa');
   });
 });
