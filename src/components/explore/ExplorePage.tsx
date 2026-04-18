@@ -206,7 +206,7 @@ export const ExplorePage = () => {
         </div>
       </section>
 
-      <div className="app-page-explore">
+      <div className="app-page-explore relative z-10 -mt-4 md:-mt-5 lg:-mt-6">
         <ExploreFiltersBar
           viewMode={viewMode}
           onViewModeChange={setViewMode}
