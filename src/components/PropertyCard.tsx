@@ -167,16 +167,18 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
             data-testid="property-card-verification"
             aria-label={isPremiumCard ? verificationState.summaryTitle : verificationState.countLabel ?? verificationState.summaryTitle}
             className={cn(
-              'min-h-[5.5rem] rounded-[20px] border border-slate-200/70 bg-slate-50/80 px-4 py-3',
-              isPremiumCard ? 'flex flex-col justify-center gap-1.5' : 'space-y-2.5',
+              'min-h-[5.5rem]',
+              isPremiumCard
+                ? 'flex flex-col justify-center gap-1.5 px-0 py-0'
+                : 'rounded-[20px] border border-slate-200/70 bg-slate-50/80 px-4 py-3 space-y-2.5',
             )}
           >
             {isPremiumCard ? (
               <>
-                <p className="text-[0.83rem] font-medium leading-5 text-slate-700">
+                <p className="text-[0.84rem] font-medium leading-5 text-slate-700">
                   {verificationState.summaryTitle}
                 </p>
-                <p className="text-[0.76rem] leading-5 text-slate-500">
+                <p className="max-w-[18rem] text-[0.77rem] leading-5 text-slate-500">
                   {verificationState.summaryDescription}
                 </p>
               </>
