@@ -15,7 +15,7 @@ describe('ExploreHero', () => {
       />,
     );
 
-    expect(screen.getByRole('heading', { name: 'Reservar es fácil. Decidir bien no siempre.' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Donde la información importa\.\s*Elegí mejor antes de reservar\./ })).toBeInTheDocument();
     expect(screen.getByText('Compará precio, zona y verificación antes de reservar.')).toBeInTheDocument();
     expect(screen.getByText('Alquileres verificados en la Costa Atlántica Argentina')).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'Destino' })).toHaveAttribute('placeholder', '¿A dónde querés ir?');

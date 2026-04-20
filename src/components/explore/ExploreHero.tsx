@@ -54,8 +54,9 @@ export const ExploreHero = ({
         <div className="relative px-5 py-5 sm:px-7 sm:py-6 md:px-10 md:py-7 lg:px-12 lg:py-8">
           <div className="mx-auto flex max-w-[49rem] flex-col items-center text-center">
             <div className="flex max-w-[45rem] flex-col items-center text-center gap-2 md:gap-2.5">
-              <h1 className="font-display mx-auto max-w-[10.5ch] text-balance text-[3rem] font-semibold leading-[1.1] tracking-[-0.06em] text-[#0f172a] sm:text-[4rem] md:text-[4.9rem] lg:text-[5.5rem]">
-                Reservar es fácil. Decidir bien no siempre.
+              <h1 className="font-display mx-auto max-w-[12ch] text-balance text-[3rem] font-semibold leading-[1.14] tracking-[-0.06em] text-[#0f172a] sm:text-[4rem] md:text-[4.9rem] lg:text-[5.5rem]">
+                <span className="block">Donde la información importa.</span>
+                <span className="block">Elegí mejor antes de reservar.</span>
               </h1>
               <p className="mx-auto max-w-[31rem] text-[0.98rem] font-medium leading-6 text-[#334155] sm:text-[1.02rem] md:text-[1.05rem]">
                 {heroSubtitle}
