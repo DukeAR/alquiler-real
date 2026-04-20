@@ -30,7 +30,7 @@ export const ExploreHero = ({
 }: ExploreHeroProps) => {
   return (
     <section style={{ fontFamily: 'var(--font-ui)' }}>
-      <div className="relative overflow-hidden rounded-[calc(var(--app-radius-display)+4px)] border border-[rgba(15,23,42,0.08)] bg-slate-950 shadow-[0_20px_60px_rgba(15,23,42,0.12)]">
+      <div className="relative overflow-hidden rounded-[calc(var(--app-radius-display)+4px)] bg-slate-950 shadow-[0_8px_30px_rgba(0,0,0,0.08)]">
         {backgroundImage ? (
           <div className="pointer-events-none absolute inset-0">
             <div
