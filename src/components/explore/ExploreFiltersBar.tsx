@@ -75,7 +75,7 @@ export const ExploreFiltersBar = ({
           ) : null}
         </div>
 
-        <div className="flex flex-col gap-2.5 md:flex-row md:flex-wrap md:items-center md:gap-4 lg:flex-nowrap lg:gap-5 xl:gap-6">
+        <div className="flex flex-col gap-2.5 md:flex-row md:flex-wrap md:items-center md:gap-4 lg:flex-nowrap lg:items-center lg:gap-4 xl:gap-5">
           <div className="min-w-0 md:w-[17rem] md:flex-none lg:w-[18rem]">
             <select
               aria-label="Ordenar por"
@@ -114,21 +114,21 @@ export const ExploreFiltersBar = ({
           </div>
 
           <label className={cn(
-            'flex h-11 min-w-0 items-center gap-3 rounded-[12px] border px-3.5 text-left transition-[border-color,background-color] duration-150 md:ml-2 md:min-w-[18.5rem] lg:ml-3 lg:min-w-[20rem] xl:min-w-[21rem]',
+            'flex h-11 min-w-0 flex-none items-center justify-between gap-2.5 rounded-[12px] border px-3 text-left transition-[border-color,background-color] duration-150 md:w-[15.5rem] lg:w-[16.5rem] xl:w-[17rem]',
             filters.verifiedOnly
               ? 'border-brand/18 bg-brand/[0.04]'
               : 'border-[rgba(15,23,42,0.06)] bg-[#f8fafc]',
           )}>
-            <span className="min-w-0 flex-1 pr-2">
-              <span className="block truncate text-[0.8rem] font-semibold tracking-[-0.015em] text-slate-900 leading-[1.05]">
+            <span className="flex min-w-0 flex-1 flex-col justify-center pr-1.5">
+              <span className="block truncate text-[0.78rem] font-semibold tracking-[-0.015em] leading-[1.05] text-slate-900">
                 Solo verificados
               </span>
-              <span className="mt-0.5 block truncate text-[0.67rem] font-medium tracking-[-0.01em] text-slate-500 leading-[1.05]">
+              <span className="mt-0.5 block truncate text-[0.64rem] font-medium tracking-[-0.01em] leading-[1.05] text-slate-500">
                 con validación completa
               </span>
             </span>
 
-            <span className="relative ml-auto inline-flex h-6 w-11 shrink-0 items-center self-center">
+            <span className="relative inline-flex h-6 w-11 shrink-0 items-center self-center">
               <input
                 type="checkbox"
                 aria-label="Solo verificados presencialmente"

@@ -192,7 +192,7 @@ export const ExplorePage = () => {
 
   return (
     <div className="bg-[linear-gradient(180deg,#edf1f5_0%,#f3f5f8_20%,#f7f8fa_40%,#f5f7f9_100%)] pb-12 md:pb-14">
-      <section className="pb-4 pt-8 md:pb-5 md:pt-10 lg:pt-12">
+      <section className="pt-8 md:pt-10 lg:pt-12">
         <div className="app-page-explore">
           <ExploreHero
             backgroundImage={heroBackgroundImage}
@@ -206,7 +206,7 @@ export const ExplorePage = () => {
         </div>
       </section>
 
-      <div className="app-page-explore relative z-10 -mt-4 md:-mt-5 lg:-mt-6">
+      <div className="app-page-explore mt-6">
         <ExploreFiltersBar
           viewMode={viewMode}
           onViewModeChange={setViewMode}
