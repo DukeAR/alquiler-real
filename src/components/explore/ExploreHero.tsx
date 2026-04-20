@@ -60,9 +60,6 @@ export const ExploreHero = ({
               <p className="mx-auto max-w-[31rem] text-[0.98rem] font-medium leading-6 text-[#334155] sm:text-[1.02rem] md:text-[1.05rem]">
                 {heroSubtitle}
               </p>
-              <p className="mx-auto max-w-[34rem] text-[14px] font-normal leading-5 text-[#64748b]">
-                {heroLocationContext}
-              </p>
             </div>
 
             <form
@@ -96,6 +93,10 @@ export const ExploreHero = ({
                   <Icons.ArrowRight className="hidden h-4 w-4 sm:block" />
                 </Button>
               </div>
+
+              <p className="mx-auto max-w-[34rem] text-center text-[13px] font-normal leading-5 text-[#64748b]">
+                {heroLocationContext}
+              </p>
 
               <div className="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-2 pt-1 text-[0.78rem] text-[#334155] sm:gap-x-3 sm:text-[0.84rem]">
                 {valueProofItems.map((item) => (
