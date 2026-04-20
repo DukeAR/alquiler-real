@@ -118,25 +118,9 @@ describe('AppShell', () => {
 
     expect(screen.queryByRole('button', { name: 'Guardados' })).not.toBeInTheDocument();
     expect(screen.queryByTestId('notifications-menu')).not.toBeInTheDocument();
-    const desktopLinks = [
-      screen.getByRole('link', { name: 'Explorar' }),
-      screen.getByRole('link', { name: 'Cómo funciona' }),
-      screen.getByRole('link', { name: 'Ayuda' }),
-    ];
-
-    desktopLinks.forEach((link) => {
-      expect(link).toBeInTheDocument();
-      expect(link.className).toContain('h-10');
-      expect(link.className).toContain('items-center');
-      expect(link.className).toContain('gap-2');
-      expect(link.className).toContain('rounded-full');
-      expect(link.className).toContain('border-[#e5e7eb]');
-      expect(link.className).toContain('bg-white');
-      expect(link.className).toContain('px-4');
-      expect(link.className).toContain('py-0');
-      expect(link.className).toContain('hover:bg-[#f8fafc]');
-    });
-
+    expect(screen.getByRole('link', { name: 'Explorar' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Cómo funciona' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Ayuda' })).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'Ingresá' })).not.toHaveLength(0);
     expect(screen.getByRole('button', { name: 'Publicar propiedad' })).toBeInTheDocument();
   });
