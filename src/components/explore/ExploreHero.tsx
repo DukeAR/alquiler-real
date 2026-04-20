@@ -31,22 +31,21 @@ export const ExploreHero = ({
 }: ExploreHeroProps) => {
   return (
     <section style={{ fontFamily: 'var(--font-ui)' }}>
-      <div className="relative overflow-hidden rounded-[calc(var(--app-radius-display)+4px)] bg-slate-950 shadow-[0_8px_30px_rgba(0,0,0,0.08)]">
+      <div className="relative overflow-hidden rounded-[calc(var(--app-radius-display)+4px)] bg-slate-950 shadow-[0_20px_50px_rgba(0,0,0,0.08)]">
         {backgroundImage ? (
           <div className="pointer-events-none absolute inset-0">
             <div
               className="absolute inset-0 scale-[1.03] bg-cover bg-center"
               style={{
                 backgroundImage: `url(${backgroundImage})`,
-                filter: 'saturate(0.9) contrast(0.95) brightness(0.95)',
+                filter: 'brightness(0.92) contrast(0.98) saturate(0.95)',
                 opacity: 1,
               }}
             />
             <div
               className="absolute inset-0"
               style={{
-                background: 'linear-gradient(rgba(255,255,255,0.55), rgba(255,255,255,0.35))',
-                backdropFilter: 'blur(2px)',
+                background: 'linear-gradient(to bottom, rgba(255,255,255,0.65) 0%, rgba(255,255,255,0.45) 40%, rgba(255,255,255,0.25) 100%)',
               }}
             />
           </div>
