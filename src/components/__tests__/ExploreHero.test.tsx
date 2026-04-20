@@ -15,13 +15,26 @@ describe('ExploreHero', () => {
       />,
     );
 
-    expect(screen.getByRole('heading', { name: /Donde la información importa\.\s*Elegí mejor antes de reservar\./ })).toBeInTheDocument();
-    expect(screen.getByText('Compará precio, zona y verificación antes de reservar.')).toBeInTheDocument();
-    expect(screen.getByText('Alquileres verificados en la Costa Atlántica Argentina')).toBeInTheDocument();
-    expect(screen.getByRole('combobox', { name: 'Destino' })).toHaveAttribute('placeholder', '¿A dónde querés ir?');
+    const eyebrow = screen.getByText('COSTA ATLÁNTICA ARGENTINA');
+    const title = screen.getByRole('heading', { name: /Donde la información importa\.\s*Elegí mejor antes de reservar\./ });
+    const subtitle = screen.getByText('Compará precio, zona y verificación antes de reservar.');
+    const search = screen.getByRole('combobox', { name: 'Destino' });
+    const badge = screen.getByText('Ubicación real');
+
+    expect(eyebrow).toBeInTheDocument();
+    expect(title).toBeInTheDocument();
+    expect(subtitle).toBeInTheDocument();
+    expect(eyebrow.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
+    expect(title.compareDocumentPosition(subtitle) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
+    expect(subtitle.compareDocumentPosition(search) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
+    expect(search.compareDocumentPosition(badge) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
+
+    expect(screen.queryByText('Costa Atlántica Argentina')).toBeNull();
+    expect(screen.queryByText('Alquileres verificados en la Costa Atlántica Argentina')).toBeNull();
+    expect(search).toHaveAttribute('placeholder', '¿A dónde querés ir?');
     expect(screen.queryByText('Buscador principal')).toBeNull();
     expect(screen.getByRole('button', { name: 'Buscar alojamientos' })).toBeInTheDocument();
-    expect(screen.getByText('Ubicación real')).toBeInTheDocument();
+    expect(badge).toBeInTheDocument();
     expect(screen.getByText('Anfitrión visible')).toBeInTheDocument();
     expect(screen.getByText('Datos comprobados')).toBeInTheDocument();
   });
