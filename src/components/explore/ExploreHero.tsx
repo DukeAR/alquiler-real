@@ -52,8 +52,8 @@ export const ExploreHero = ({
         ) : null}
 
         <div className="relative px-5 py-5 sm:px-7 sm:py-6 md:px-10 md:py-7 lg:px-12 lg:py-8">
-          <div className="mx-auto max-w-[45rem] space-y-3.5 text-center md:space-y-4.5">
-            <div className="space-y-2 md:space-y-2.5">
+          <div className="mx-auto flex max-w-[49rem] flex-col items-center text-center">
+            <div className="flex max-w-[45rem] flex-col items-center text-center gap-2 md:gap-2.5">
               <h1 className="font-display mx-auto max-w-[10.5ch] text-balance text-[3rem] font-semibold leading-[1.1] tracking-[-0.06em] text-[#0f172a] sm:text-[4rem] md:text-[4.9rem] lg:text-[5.5rem]">
                 Reservar es fácil. Decidir bien no siempre.
               </h1>
@@ -63,13 +63,13 @@ export const ExploreHero = ({
             </div>
 
             <form
-              className="space-y-3 md:space-y-3.5"
+              className="mt-6 flex w-full flex-col items-center gap-3 md:gap-3.5"
               onSubmit={(event) => {
                 event.preventDefault();
                 onSearchSubmit();
               }}
             >
-              <div className="mx-auto flex max-w-[49rem] flex-col gap-2.5 sm:flex-row sm:items-stretch">
+              <div className="flex w-full max-w-[49rem] flex-col items-center gap-2.5 sm:flex-row sm:items-center sm:justify-center">
                 <div className="min-w-0 flex-1">
                   <LocationAutocomplete
                     inputId="explore-destination"
