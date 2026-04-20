@@ -13,6 +13,7 @@ type ExploreHeroProps = {
 };
 
 const heroSubtitle = 'Compará precio, zona y verificación antes de reservar.';
+const heroLocationContext = 'Alquileres verificados en la Costa Atlántica Argentina';
 const valueProofItems = [
   'Ubicación real',
   'Anfitrión visible',
@@ -59,6 +60,9 @@ export const ExploreHero = ({
               </h1>
               <p className="mx-auto max-w-[31rem] text-[0.98rem] font-medium leading-6 text-[#334155] sm:text-[1.02rem] md:text-[1.05rem]">
                 {heroSubtitle}
+              </p>
+              <p className="mx-auto max-w-[34rem] text-[14px] font-normal leading-5 text-[#64748b]">
+                {heroLocationContext}
               </p>
             </div>
 
