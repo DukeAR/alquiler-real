@@ -324,8 +324,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
     >
       <PageHeader
         onBack={onBack}
-        heading="Antes de reservar, sabé qué es real."
-        description="No todos los avisos muestran lo mismo. Acá ves qué está verificado y qué no."
+        heading="Cómo funciona"
         contentClassName="w-full max-w-[680px]"
       />
 
@@ -362,6 +361,16 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
               className="pt-2 md:pt-3"
             >
               <div className="flex w-full flex-col gap-4 md:gap-5">
+                <section className="w-full max-w-[720px] space-y-2 text-left">
+                  <p className="app-eyebrow">ANTES DE RESERVAR</p>
+                  <h2 className="text-[clamp(2.5rem,5.4vw,4.8rem)] font-semibold leading-[1.01] tracking-[-0.065em] text-slate-950 dark:text-slate-50">
+                    Antes de reservar, sabé qué es real.
+                  </h2>
+                  <p className="text-[1.02rem] leading-8 text-slate-700 dark:text-slate-300">
+                    No todos los avisos muestran lo mismo. Acá ves qué está verificado y qué no.
+                  </p>
+                </section>
+
                 <section className="w-full max-w-[860px]">
                   <Card padding="none" className="rounded-[30px] border-0 bg-white/95 p-8 shadow-[0_18px_38px_-34px_rgba(15,23,42,0.14)] dark:bg-slate-900/88 md:p-10 lg:p-12">
                     <div className="max-w-[720px] space-y-3 text-left">

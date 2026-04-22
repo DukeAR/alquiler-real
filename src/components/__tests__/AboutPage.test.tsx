@@ -13,7 +13,8 @@ describe('AboutPage', () => {
       </MemoryRouter>,
     );
 
-      expect(screen.queryByText('ANTES DE RESERVAR')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Cómo funciona' })).toBeInTheDocument();
+    expect(screen.getByText('ANTES DE RESERVAR')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Antes de reservar, sabé qué es real.' })).toBeInTheDocument();
     expect(screen.getByText('No todos los avisos muestran lo mismo. Acá ves qué está verificado y qué no.')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Alquilar hoy es una apuesta.' })).toBeInTheDocument();
@@ -46,6 +47,7 @@ describe('AboutPage', () => {
       expect(screen.getByRole('heading', { name: 'No solo publicás mejor. También elegís con más información.' })).toBeInTheDocument();
     });
     expect(screen.getByRole('heading', { name: 'Más contexto para decidir con criterio' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Antes de reservar, sabé qué es real.' })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Huéspedes' }));
 
@@ -53,6 +55,13 @@ describe('AboutPage', () => {
       expect(screen.getByRole('heading', { name: 'Qué mirar antes de reservar' })).toBeInTheDocument();
     });
     expect(screen.getByRole('heading', { name: 'Explorá sabiendo qué ya fue comprobado' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Antes de reservar, sabé qué es real.' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Proyecto' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Antes de reservar, sabé qué es real.' })).toBeInTheDocument();
+    });
 
     fireEvent.click(screen.getByRole('button', { name: 'Volver' }));
 
