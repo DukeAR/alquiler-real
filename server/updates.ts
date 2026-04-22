@@ -959,6 +959,12 @@ export const initDB = async () => {
 
   await db.query(`
     DO $$ BEGIN
+      BEGIN ALTER TABLE messages ADD COLUMN conversation_id TEXT REFERENCES conversations(id) ON DELETE CASCADE; EXCEPTION WHEN duplicate_column THEN NULL; END;
+    END $$;
+  `);
+
+  await db.query(`
+    DO $$ BEGIN
       BEGIN ALTER TABLE messages ADD COLUMN system_key TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
     END $$;
   `);

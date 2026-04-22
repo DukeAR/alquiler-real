@@ -24,7 +24,8 @@ const sendDevBackendUnavailableResponse = (res: ServerResponse<IncomingMessage>)
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
-  const remoteHmrHost = env.VITE_HMR_HOST || env.HMR_HOST;
+  const useRemoteHmr = env.VITE_REMOTE_HMR === 'true';
+  const remoteHmrHost = useRemoteHmr ? (env.VITE_HMR_HOST || env.HMR_HOST) : '';
   const hmrHost = remoteHmrHost || 'localhost';
   const hmrClientPort = Number(env.VITE_HMR_CLIENT_PORT || env.VITE_HMR_PORT || env.HMR_CLIENT_PORT || env.HMR_PORT || 3000);
   const hmrProtocol = (hmrHost === 'localhost' || hmrHost === '127.0.0.1' || hmrHost === '0.0.0.0') ? 'ws' : 'wss';

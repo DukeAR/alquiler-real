@@ -242,6 +242,7 @@ function spawnProc(cmd, args, envVars = {}) {
     console.log(`Using HMR host: ${host}`);
 
     const envForFrontend = {
+      VITE_REMOTE_HMR: 'true',
       VITE_HMR_HOST: host,
       VITE_HMR_PORT: '443',
       HMR_HOST: host,

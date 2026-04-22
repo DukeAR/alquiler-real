@@ -18,9 +18,8 @@ type AboutTab = 'official' | 'owners' | 'guests';
 type IconType = React.ComponentType<{ className?: string }>;
 
 type ScopeCard = {
-  eyebrow: string;
+  description?: string;
   title: string;
-  description: string;
   points: string[];
   icon: IconType;
   cardClassName: string;
@@ -31,13 +30,9 @@ type ScopeCard = {
 type VerificationLevel = {
   title: string;
   description: string;
-  bullets: string[];
   icon: IconType;
   cardClassName: string;
-  iconWrapClassName: string;
-  headingClassName: string;
-  bodyClassName: string;
-  pointClassName: string;
+  iconClassName: string;
 };
 
 type FutureCard = {
@@ -74,83 +69,65 @@ const aboutFeatureCardClass = 'space-y-3 rounded-[24px] border-slate-200/85 bg-w
 
 const projectScopeCards: ScopeCard[] = [
   {
-    eyebrow: 'Qué te mostramos',
-    title: 'Lo que podés revisar antes de reservar',
-    description: 'Lo primero que conviene mirar en un aviso antes de hablar o reservar.',
+    title: 'Qué ya está comprobado',
     points: [
-      'Quién publica cuando la identidad ya fue confirmada.',
-      'Si la ubicación coincide con el lugar.',
-      'Si hay fotos o video que muestren el estado real.',
-      'Qué reseñas dejaron otras personas que ya estuvieron.',
+      'Quién publica',
+      'Ubicación real',
+      'Fotos del lugar',
+      'Datos básicos verificados',
     ],
     icon: Icons.Target,
-    cardClassName: 'rounded-[26px] border-brand/15 bg-brand/[0.06] p-6 dark:border-brand/20 dark:bg-brand/10',
-    iconClassName: 'flex h-11 w-11 items-center justify-center rounded-[16px] bg-brand text-white',
-    pointClassName: 'text-slate-700 dark:text-slate-200',
+    cardClassName: 'rounded-[20px] border-0 bg-white/92 p-4 shadow-[0_10px_20px_-18px_rgba(15,23,42,0.08)] dark:bg-slate-900/66 md:p-5',
+    iconClassName: 'text-brand',
+    pointClassName: 'text-[0.84rem] leading-5 text-slate-700 dark:text-slate-200',
   },
   {
-    eyebrow: 'Qué revisar igual',
-    title: 'Lo básico que sigue importando',
-    description: 'Además de lo verificado, mirá lo esencial del aviso antes de avanzar.',
+    description: 'Esto no cambia',
+    title: 'Qué todavía evaluás vos',
     points: [
-      'Fotos, precio y reglas básicas del lugar.',
-      'Reseñas completas si ya hay estadías cerradas.',
-      'Las dudas concretas que quieras resolver antes de coordinar.',
+      'Precio',
+      'Reglas',
+      'Opiniones',
+      'Detalles del lugar',
     ],
     icon: Icons.Search,
-    cardClassName: 'rounded-[26px] border-slate-200/85 bg-white/92 p-6 dark:border-slate-800 dark:bg-slate-950',
-    iconClassName: 'flex h-11 w-11 items-center justify-center rounded-[16px] bg-slate-900 text-white dark:bg-slate-800',
-    pointClassName: 'text-slate-600 dark:text-slate-400',
+    cardClassName: 'rounded-[20px] border-0 bg-white/92 p-4 shadow-[0_10px_20px_-18px_rgba(15,23,42,0.08)] dark:bg-slate-950/66 md:p-5',
+    iconClassName: 'text-slate-900 dark:text-slate-100',
+    pointClassName: 'text-[0.84rem] leading-5 text-slate-600 dark:text-slate-400',
   },
 ];
 
 const verificationLevels: VerificationLevel[] = [
   {
     title: 'Verificación presencial',
-    description: 'Ya hubo una revisión en el lugar.',
-    bullets: [
-      'Quién publica quedó confirmado.',
-      'La ubicación coincide con el lugar.',
-      'Hay revisión hecha en persona.',
-    ],
+    description: 'Alguien fue al lugar y confirmó que existe.',
     icon: Icons.ShieldCheck,
-    cardClassName: 'rounded-[28px] border-emerald-200/80 bg-emerald-50/92 p-6 dark:border-emerald-900/30 dark:bg-emerald-900/20 md:p-7',
-    iconWrapClassName: 'flex h-12 w-12 items-center justify-center rounded-[18px] bg-emerald-500 text-white shadow-[0_18px_34px_-24px_rgba(16,185,129,0.38)]',
-    headingClassName: 'text-emerald-950 dark:text-emerald-200',
-    bodyClassName: 'text-emerald-800/85 dark:text-emerald-200/85',
-    pointClassName: 'text-emerald-800/90 dark:text-emerald-200/90',
+    cardClassName: 'rounded-[18px] border-0 bg-white/92 p-4 shadow-[0_10px_20px_-18px_rgba(15,23,42,0.08)] dark:bg-slate-900/66',
+    iconClassName: 'text-emerald-500',
   },
   {
     title: 'Verificación digital',
-    description: 'Hay una revisión online y material cargado por quien publica.',
-    bullets: [
-      'La identidad quedó confirmada online.',
-      'Hay material real para mirar.',
-      'Todavía no reemplaza una visita al lugar.',
-    ],
+    description: 'Información validada online.',
     icon: Icons.Shield,
-    cardClassName: 'rounded-[28px] border-brand/15 bg-brand/[0.06] p-6 dark:border-brand/20 dark:bg-brand/10 md:p-7',
-    iconWrapClassName: 'flex h-12 w-12 items-center justify-center rounded-[18px] bg-brand text-white shadow-[0_18px_34px_-24px_rgba(67,56,202,0.34)]',
-    headingClassName: 'text-slate-950 dark:text-slate-50',
-    bodyClassName: 'text-slate-700 dark:text-slate-300',
-    pointClassName: 'text-slate-700 dark:text-slate-200',
+    cardClassName: 'rounded-[18px] border-0 bg-white/92 p-4 shadow-[0_10px_20px_-18px_rgba(15,23,42,0.08)] dark:bg-slate-900/66',
+    iconClassName: 'text-brand',
   },
 ];
 
 const futureCards: FutureCard[] = [
   {
-    title: 'Más avisos que se entiendan rápido',
-    description: 'Queremos que cada vez más propiedades se puedan leer y evaluar sin vueltas.',
+    title: 'Más claridad en cada aviso',
+    description: 'Menos dudas antes de escribir o reservar',
     icon: Icons.Globe,
   },
   {
-    title: 'Más verificaciones visibles',
-    description: 'Si algo ya se comprobó, queremos que se vea rápido y sin rodeos.',
+    title: 'Más cosas verificadas',
+    description: 'Cada aviso muestra mejor qué es real',
     icon: Icons.Shield,
   },
   {
-    title: 'Menos vueltas para decidir',
-    description: 'La idea es que entiendas el aviso en segundos y llegues mejor a la conversación.',
+    title: 'Decidir más rápido',
+    description: 'Menos vueltas, más certeza',
     icon: Icons.Layers,
   },
 ];
@@ -253,27 +230,28 @@ const ScopeCardBlock = ({ card }: { card: ScopeCard }) => {
   const Icon = card.icon;
 
   return (
-    <Card padding="none" className={card.cardClassName}>
-      <div className="space-y-4">
-        <div className="flex items-center gap-3">
-          <div className={card.iconClassName}>
-            <Icon className="h-5 w-5" />
-          </div>
+    <Card padding="none" className={cn(card.cardClassName, 'h-full')}>
+      <div className="flex h-full flex-col gap-3.5">
+        <div className="flex items-start gap-2.5">
+          <Icon className={cn('mt-0.5 h-5 w-5 shrink-0', card.iconClassName)} />
 
-          <div className="space-y-1">
-            <p className="app-form-label text-slate-500 dark:text-slate-400">{card.eyebrow}</p>
-            <h3 className="text-[1.02rem] font-semibold leading-6 tracking-[-0.015em] text-slate-950 dark:text-slate-50">
+          <div className="space-y-0.5">
+            {card.description ? (
+              <p className="text-[0.78rem] font-medium leading-5 text-slate-500 dark:text-slate-400">
+                {card.description}
+              </p>
+            ) : null}
+
+            <h3 className="text-[0.95rem] font-semibold leading-5 tracking-[-0.015em] text-slate-950 dark:text-slate-50">
               {card.title}
             </h3>
           </div>
         </div>
 
-        <p className="app-body-sm leading-7 text-slate-600 dark:text-slate-400">{card.description}</p>
-
-        <ul className="space-y-3">
+        <ul className="space-y-1.5">
           {card.points.map((point) => (
-            <li key={point} className={cn('flex items-start gap-2.5 text-[0.9rem] leading-6', card.pointClassName)}>
-              <Icons.Check className="mt-1 h-4 w-4 shrink-0" />
+            <li key={point} className={cn('flex items-start gap-2', card.pointClassName)}>
+              <Icons.Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400 dark:text-slate-500" />
               <span>{point}</span>
             </li>
           ))}
@@ -287,33 +265,18 @@ const VerificationLevelCard = ({ level }: { level: VerificationLevel }) => {
   const Icon = level.icon;
 
   return (
-    <Card padding="none" className={level.cardClassName}>
-      <div className="space-y-5">
-        <div className="flex items-start gap-4">
-          <div className={level.iconWrapClassName}>
-            <Icon className="h-6 w-6" />
-          </div>
+    <div className={cn(level.cardClassName, 'flex h-full items-start gap-2.5')}>
+      <Icon className={cn('mt-0.5 h-4.5 w-4.5 shrink-0', level.iconClassName)} />
 
-          <div className="space-y-2">
-            <h3 className={cn('text-[1.12rem] font-semibold leading-6 tracking-[-0.02em]', level.headingClassName)}>
-              {level.title}
-            </h3>
-            <p className={cn('app-body-sm leading-7', level.bodyClassName)}>
-              {level.description}
-            </p>
-          </div>
-        </div>
-
-        <ul className="space-y-3">
-          {level.bullets.map((bullet) => (
-            <li key={bullet} className={cn('flex items-start gap-2.5 text-[0.9rem] leading-6', level.pointClassName)}>
-              <Icons.Check className="mt-1 h-4 w-4 shrink-0" />
-              <span>{bullet}</span>
-            </li>
-          ))}
-        </ul>
+      <div className="space-y-0.5">
+        <h3 className="text-[0.95rem] font-semibold leading-5 tracking-[-0.015em] text-slate-950 dark:text-slate-50">
+          {level.title}
+        </h3>
+        <p className="text-[0.92rem] leading-5 text-slate-600 dark:text-slate-300">
+          {level.description}
+        </p>
       </div>
-    </Card>
+    </div>
   );
 };
 
@@ -398,13 +361,12 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
     >
       <PageHeader
         onBack={onBack}
-        eyebrow="Antes de reservar"
-        heading="Sabé qué estás viendo antes de reservar"
-        description="Qué muestra la app, qué parte del aviso ya fue comprobada y qué conviene revisar antes de reservar."
-        contentClassName="mx-auto w-full max-w-5xl"
+        heading="Antes de reservar, sabé qué es real."
+        description="No todos los avisos muestran lo mismo. Acá ves qué está verificado y qué no."
+        contentClassName="w-full max-w-[680px]"
       />
 
-      <main className="mx-auto max-w-5xl px-6 py-8 space-y-10 md:space-y-12">
+      <main className="mx-auto max-w-5xl px-6 py-8 space-y-0">
         <div className="app-card app-card-muted rounded-[26px] p-1.5 dark:border-slate-800 dark:bg-slate-900" role="tablist" aria-label="Información sobre la plataforma">
           <div className="flex flex-col gap-1 sm:flex-row">
             {aboutTabs.map((tab) => (
@@ -434,139 +396,81 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="space-y-10"
+              className="pt-2 md:pt-3"
             >
-              <section className="space-y-5">
-                <SectionTitle
-                  as="h2"
-                  heading="Por qué existe Alquiler Real"
-                  className="max-w-3xl"
-                />
+              <div className="flex w-full flex-col gap-4 md:gap-5">
+                <section className="w-full max-w-[860px]">
+                  <div className="rounded-[30px] border-0 bg-white/92 p-8 shadow-[0_18px_38px_-34px_rgba(15,23,42,0.14)] dark:bg-slate-900/88 md:p-10 lg:p-12">
+                    <div className="max-w-[720px] space-y-3 text-left">
+                      <h2 className="text-[clamp(2.5rem,5.4vw,4.8rem)] font-semibold leading-[1.01] tracking-[-0.065em] text-slate-950 dark:text-slate-50">
+                        Alquilar hoy es una apuesta.
+                      </h2>
 
-                <div className="max-w-3xl space-y-4">
-                  <p className="app-body leading-8 text-slate-700 dark:text-slate-300">
-                    Alquiler Real nace de algo simple: muchas veces no está claro con quién estás hablando ni qué parte del aviso es real.
-                  </p>
-
-                  <p className="app-body leading-8 text-slate-700 dark:text-slate-300">
-                    Fotos que no representan el lugar, ubicaciones poco claras y condiciones que cambian después de hablar vuelven más difícil una decisión que debería ser bastante más simple.
-                  </p>
-
-                  <p className="app-body leading-8 text-slate-700 dark:text-slate-300">
-                    Reservar es cada vez más fácil.<br />
-                    Pero decidir bien sigue siendo difícil.
-                  </p>
-
-                  <p className="app-body leading-8 text-slate-700 dark:text-slate-300">
-                    Este proyecto no busca reemplazar tu decisión, sino mejorarla.
-                  </p>
-
-                  <p className="app-body leading-8 text-slate-700 dark:text-slate-300">
-                    Mostramos información que normalmente no está clara desde el inicio:<br />
-                    quién publica, dónde está realmente el lugar y qué parte del aviso fue comprobada.
-                  </p>
-
-                  <p className="app-body leading-8 text-slate-700 dark:text-slate-300">
-                    No reemplazamos el acuerdo entre huésped y anfitrión.<br />
-                    Si la operación va por fuera, no intervenimos en pagos ni devoluciones.<br />
-                    Si la seña se gestiona acá, queda registrada y sí podemos revisar lo reportado.
-                  </p>
-
-                  <p className="app-body leading-8 text-slate-700 dark:text-slate-300">
-                    Porque decidir mejor debería depender de información clara, no de adivinar.
-                  </p>
-                </div>
-              </section>
-
-              <section className="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)]">
-                <Card
-                  padding="none"
-                  variant="elevated"
-                  className="overflow-hidden border-slate-200/85 bg-[radial-gradient(circle_at_top_right,rgba(67,56,202,0.08),transparent_38%),linear-gradient(180deg,rgba(255,255,255,0.99),rgba(248,250,252,0.98))] p-7 shadow-[0_30px_62px_-46px_rgba(15,23,42,0.24)] dark:border-slate-800 dark:bg-slate-900 md:p-8"
-                >
-                  <div className="space-y-6">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-[18px] bg-brand/10 text-brand shadow-[0_16px_30px_-24px_rgba(67,56,202,0.36)] dark:bg-brand/15 dark:text-brand-light">
-                      <Icons.Target className="h-6 w-6" />
-                    </div>
-                    <SectionTitle
-                      eyebrow="Proyecto"
-                      as="h2"
-                      heading="Lo importante para revisar antes de reservar"
-                      description="Quién publica, dónde está el lugar, cómo se ve y qué dijeron otras personas, todo en la misma lectura."
-                      className="max-w-2xl"
-                    />
-                    <div className="space-y-4">
-                      <p className="app-body text-slate-700 dark:text-slate-300">
-                        Mostramos <strong>identidad confirmada, ubicación verificada, material real y reseñas</strong> cuando esa información está disponible.
-                      </p>
-                      <p className="app-body text-slate-700 dark:text-slate-300">
-                        La idea es que sepas qué estás viendo antes de escribir o reservar.
-                      </p>
-                      <p className="app-body text-slate-700 dark:text-slate-300">
-                        {PLATFORM_PROPERTY_DISCLAIMER}
-                      </p>
+                      <div className="space-y-2 text-[1.02rem] leading-8 text-slate-700 dark:text-slate-300">
+                        <p>No sabés si las fotos son reales.</p>
+                        <p>No sabés si la ubicación cierra.</p>
+                        <p>No sabés si lo que ves es lo que vas a encontrar.</p>
+                        <p className="pt-2">El problema no es reservar.</p>
+                        <p>Es no saber qué estás reservando.</p>
+                      </div>
                     </div>
                   </div>
-                </Card>
+                </section>
 
-                <div className="grid gap-5">
-                  {projectScopeCards.map((card) => (
-                    <ScopeCardBlock key={card.title} card={card} />
-                  ))}
-                </div>
-              </section>
+                <p className="max-w-[720px] text-[0.95rem] font-medium leading-6 text-slate-600 dark:text-slate-400">
+                  Por eso, mostramos lo importante desde el principio.
+                </p>
 
-              <section className="space-y-6">
-                <SectionTitle
-                  eyebrow="Cómo leer una propiedad"
-                  as="h2"
-                  heading="Qué puede aparecer como verificado"
-                  description="Cada aviso dice qué ya se comprobó y qué todavía falta."
-                />
-
-                <div className="grid gap-5 lg:grid-cols-2">
-                  {verificationLevels.map((level) => (
-                    <VerificationLevelCard key={level.title} level={level} />
-                  ))}
-                </div>
-
-                <Card padding="none" className="rounded-[24px] border-slate-200/85 bg-white/96 p-5 shadow-[0_16px_34px_-28px_rgba(15,23,42,0.14)] dark:border-slate-800 dark:bg-slate-900 md:p-6">
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                      <Icons.Info className="h-5 w-5" />
-                    </div>
-                    <div className="space-y-2">
-                      <h3 className="text-[1rem] font-semibold leading-6 tracking-[-0.015em] text-slate-950 dark:text-slate-50">Qué revisar además</h3>
-                      <p className="app-body-sm leading-7 text-slate-600 dark:text-slate-400">
-                        También conviene mirar fotos, precio, reglas y reseñas antes de avanzar.
-                      </p>
-                    </div>
+                <section className="w-full max-w-[860px]">
+                  <div className="grid gap-2.5 md:grid-cols-2 md:items-stretch">
+                    {projectScopeCards.map((card) => (
+                      <ScopeCardBlock key={card.title} card={card} />
+                    ))}
                   </div>
-                </Card>
-              </section>
+                </section>
 
-              <section className="space-y-6 border-t border-slate-200 pt-8 dark:border-slate-800">
-                <SectionTitle
-                  eyebrow="Próximo paso"
-                  as="h2"
-                  heading="En qué seguimos trabajando"
-                  description="Queremos que cada aviso se entienda rápido, sin promesas vacías ni relleno."
-                />
+                <section className="w-full max-w-[860px] space-y-2">
+                  <h2 className="text-[clamp(1.5rem,2.6vw,2rem)] font-semibold leading-[1.08] tracking-[-0.04em] text-slate-950 dark:text-slate-50">
+                    Qué significa que algo esté verificado
+                  </h2>
 
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                  {futureCards.map((item) => {
-                    const Icon = item.icon;
+                  <div className="grid gap-2.5 md:grid-cols-2 md:items-stretch">
+                    {verificationLevels.map((level) => (
+                      <VerificationLevelCard key={level.title} level={level} />
+                    ))}
+                  </div>
 
-                    return (
-                      <Card key={item.title} padding="lg" className={cn(aboutFeatureCardClass, 'app-card-muted')}>
-                        <Icon className="h-6 w-6 text-brand" />
-                        <h3 className="text-[1rem] font-semibold leading-6 tracking-[-0.015em] text-slate-950 dark:text-slate-50">{item.title}</h3>
-                        <p className="app-body-sm leading-7 text-slate-600 dark:text-slate-400">{item.description}</p>
-                      </Card>
-                    );
-                  })}
-                </div>
-              </section>
+                  <p className="max-w-[760px] text-[0.92rem] leading-6 text-slate-600 dark:text-slate-400">
+                    Aunque esté verificado, esto sigue importando: Fotos, precio, reglas y reseñas.
+                  </p>
+                </section>
+
+                <section className="w-full max-w-[860px] space-y-2">
+                  <h2 className="text-[clamp(1.5rem,2.6vw,2rem)] font-semibold leading-[1.08] tracking-[-0.04em] text-slate-950 dark:text-slate-50">
+                    Esto recién empieza
+                  </h2>
+
+                  <div className="grid gap-2.5 md:grid-cols-3">
+                    {futureCards.map((item) => {
+                      const Icon = item.icon;
+
+                      return (
+                        <Card key={item.title} padding="none" className={cn('h-full rounded-[20px] border-0 bg-white/92 p-4 shadow-[0_10px_20px_-18px_rgba(15,23,42,0.08)] dark:bg-slate-900/66', 'app-card-muted')}>
+                          <div className="space-y-2">
+                            <Icon className="h-4.5 w-4.5 text-brand" />
+                            <h3 className="text-[0.94rem] font-semibold leading-5 tracking-[-0.015em] text-slate-950 dark:text-slate-50">
+                              {item.title}
+                            </h3>
+                            <div className="text-[0.9rem] leading-5 text-slate-600 dark:text-slate-400">
+                              {item.description}
+                            </div>
+                          </div>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                </section>
+              </div>
             </motion.div>
           ) : null}
 
