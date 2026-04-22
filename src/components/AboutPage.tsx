@@ -396,11 +396,11 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
               className="pt-2 md:pt-3"
             >
               <div className="mx-auto flex w-full max-w-[940px] flex-col gap-4 md:gap-5">
-                <section className="relative overflow-hidden rounded-[34px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.98))] p-5 shadow-[0_30px_80px_-60px_rgba(15,23,42,0.24)] md:p-7">
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(46,125,91,0.12),transparent_32%),radial-gradient(circle_at_bottom_left,rgba(15,23,42,0.05),transparent_28%)]" />
+                <section className="relative overflow-hidden">
+                  <div className="absolute inset-0 hidden" />
 
-                  <div className="relative flex flex-col gap-4">
-                    <div className="space-y-4 text-left">
+                  <div className="relative flex flex-col gap-3">
+                    <div className="space-y-3 text-left">
                       <p className="inline-flex items-center rounded-full border border-emerald-200/80 bg-emerald-50 px-3 py-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-950/40 dark:text-emerald-300">
                         ANTES DE RESERVAR
                       </p>
@@ -419,16 +419,16 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                       </div>
                     </div>
 
-                    <div className="max-w-[720px] space-y-3 text-left text-[0.92rem] leading-6 text-slate-700 dark:text-slate-300">
-                      <h2 className="text-[1.8rem] font-semibold leading-[1.02] tracking-[-0.05em] text-slate-950 dark:text-slate-50">
+                    <div className="max-w-[680px] space-y-1.5 text-left text-[0.92rem] leading-6 text-slate-600 dark:text-slate-400">
+                      <h2 className="text-[1.7rem] font-semibold leading-[1.03] tracking-[-0.05em] text-slate-950 dark:text-slate-50">
                         Alquilar hoy es una apuesta.
                       </h2>
-                      <p>Ves fotos. Leés descripciones. Preguntás.</p>
+                      <p className="text-[0.96rem] font-medium leading-6 text-slate-800 dark:text-slate-200">Ves fotos. Leés descripciones. Preguntás.</p>
                       <p>Pero no sabés con certeza qué estás reservando.</p>
                       <p>La ubicación a veces no coincide. Las fotos pueden ser viejas. Y las condiciones cambian cuando empezás a hablar.</p>
-                      <p>El problema no es reservar.</p>
-                      <p>Es decidir sin saber.</p>
-                      <p>Alquiler Real existe para cambiar eso.</p>
+                      <p className="text-[0.98rem] font-semibold leading-5 text-slate-950 dark:text-slate-50">El problema no es reservar.</p>
+                      <p className="text-[0.98rem] font-semibold leading-5 text-slate-950 dark:text-slate-50">Es decidir sin saber.</p>
+                      <p className="font-medium text-slate-700 dark:text-slate-300">Alquiler Real existe para cambiar eso.</p>
                       <p>Mostrarte, desde el principio,</p>
                       <p>qué parte del aviso está realmente comprobada.</p>
                       <p>Y qué no.</p>
