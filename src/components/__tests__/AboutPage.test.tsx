@@ -13,8 +13,9 @@ describe('AboutPage', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.queryByText('Antes de reservar')).not.toBeInTheDocument();
+    expect(screen.getByText('ANTES DE RESERVAR')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Antes de reservar, sabé qué es real.' })).toBeInTheDocument();
+    expect(screen.getByText('No todos los avisos muestran lo mismo. Acá ves qué está verificado y qué no.')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Alquilar hoy es una apuesta.' })).toBeInTheDocument();
     expect(screen.getByText('No sabés si las fotos son reales.')).toBeInTheDocument();
     expect(screen.getByText('No sabés si la ubicación cierra.')).toBeInTheDocument();
@@ -23,12 +24,11 @@ describe('AboutPage', () => {
     expect(screen.getByRole('heading', { name: 'Qué ya está comprobado' })).toBeInTheDocument();
     expect(screen.getByText('Ubicación real')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Qué todavía evaluás vos' })).toBeInTheDocument();
-    expect(screen.getByText('Esto no cambia')).toBeInTheDocument();
     expect(screen.getByText('Por eso, mostramos lo importante desde el principio.')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Qué significa que algo esté verificado' })).toBeInTheDocument();
     expect(screen.getByText('Alguien fue al lugar y confirmó que existe.')).toBeInTheDocument();
     expect(screen.getByText('Información validada online.')).toBeInTheDocument();
-    expect(screen.getByText('Aunque esté verificado, esto sigue importando: Fotos, precio, reglas y reseñas.')).toBeInTheDocument();
+    expect(screen.getByText('Aunque esté verificado, siguen importando las fotos, el precio, las reglas y las reseñas.')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Esto recién empieza' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Más claridad en cada aviso' })).toBeInTheDocument();
     expect(screen.getByText('Menos dudas antes de escribir o reservar')).toBeInTheDocument();
@@ -38,6 +38,7 @@ describe('AboutPage', () => {
     expect(screen.getByText('Menos vueltas, más certeza')).toBeInTheDocument();
     expect(screen.queryByText('Qué revisar además')).not.toBeInTheDocument();
     expect(screen.queryByText('Lo que sigue siendo tu decisión')).not.toBeInTheDocument();
+    expect(screen.queryByText('Esto no cambia')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Anfitriones' }));
 

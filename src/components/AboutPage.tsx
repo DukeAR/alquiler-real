@@ -1,7 +1,6 @@
 import React from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
-import { PLATFORM_PROPERTY_DISCLAIMER } from '../lib/platformTerms';
 import { cn } from '../lib/utils';
 import { Icons } from './Icons';
 import { Button } from './ui/Button';
@@ -18,27 +17,21 @@ type AboutTab = 'official' | 'owners' | 'guests';
 type IconType = React.ComponentType<{ className?: string }>;
 
 type ScopeCard = {
-  description?: string;
   title: string;
   points: string[];
-  icon: IconType;
   cardClassName: string;
-  iconClassName: string;
   pointClassName: string;
 };
 
 type VerificationLevel = {
   title: string;
   description: string;
-  icon: IconType;
   cardClassName: string;
-  iconClassName: string;
 };
 
 type FutureCard = {
   title: string;
   description: string;
-  icon: IconType;
 };
 
 type RoleBenefit = {
@@ -76,13 +69,10 @@ const projectScopeCards: ScopeCard[] = [
       'Fotos del lugar',
       'Datos básicos verificados',
     ],
-    icon: Icons.Target,
     cardClassName: 'rounded-[20px] border-0 bg-white/92 p-4 shadow-[0_10px_20px_-18px_rgba(15,23,42,0.08)] dark:bg-slate-900/66 md:p-5',
-    iconClassName: 'text-brand',
     pointClassName: 'text-[0.84rem] leading-5 text-slate-700 dark:text-slate-200',
   },
   {
-    description: 'Esto no cambia',
     title: 'Qué todavía evaluás vos',
     points: [
       'Precio',
@@ -90,9 +80,7 @@ const projectScopeCards: ScopeCard[] = [
       'Opiniones',
       'Detalles del lugar',
     ],
-    icon: Icons.Search,
     cardClassName: 'rounded-[20px] border-0 bg-white/92 p-4 shadow-[0_10px_20px_-18px_rgba(15,23,42,0.08)] dark:bg-slate-950/66 md:p-5',
-    iconClassName: 'text-slate-900 dark:text-slate-100',
     pointClassName: 'text-[0.84rem] leading-5 text-slate-600 dark:text-slate-400',
   },
 ];
@@ -101,16 +89,12 @@ const verificationLevels: VerificationLevel[] = [
   {
     title: 'Verificación presencial',
     description: 'Alguien fue al lugar y confirmó que existe.',
-    icon: Icons.ShieldCheck,
     cardClassName: 'rounded-[18px] border-0 bg-white/92 p-4 shadow-[0_10px_20px_-18px_rgba(15,23,42,0.08)] dark:bg-slate-900/66',
-    iconClassName: 'text-emerald-500',
   },
   {
     title: 'Verificación digital',
     description: 'Información validada online.',
-    icon: Icons.Shield,
     cardClassName: 'rounded-[18px] border-0 bg-white/92 p-4 shadow-[0_10px_20px_-18px_rgba(15,23,42,0.08)] dark:bg-slate-900/66',
-    iconClassName: 'text-brand',
   },
 ];
 
@@ -118,17 +102,14 @@ const futureCards: FutureCard[] = [
   {
     title: 'Más claridad en cada aviso',
     description: 'Menos dudas antes de escribir o reservar',
-    icon: Icons.Globe,
   },
   {
     title: 'Más cosas verificadas',
     description: 'Cada aviso muestra mejor qué es real',
-    icon: Icons.Shield,
   },
   {
     title: 'Decidir más rápido',
     description: 'Menos vueltas, más certeza',
-    icon: Icons.Layers,
   },
 ];
 
@@ -227,26 +208,12 @@ const guestSteps: StepCard = {
 };
 
 const ScopeCardBlock = ({ card }: { card: ScopeCard }) => {
-  const Icon = card.icon;
-
   return (
     <Card padding="none" className={cn(card.cardClassName, 'h-full')}>
-      <div className="flex h-full flex-col gap-3.5">
-        <div className="flex items-start gap-2.5">
-          <Icon className={cn('mt-0.5 h-5 w-5 shrink-0', card.iconClassName)} />
-
-          <div className="space-y-0.5">
-            {card.description ? (
-              <p className="text-[0.78rem] font-medium leading-5 text-slate-500 dark:text-slate-400">
-                {card.description}
-              </p>
-            ) : null}
-
-            <h3 className="text-[0.95rem] font-semibold leading-5 tracking-[-0.015em] text-slate-950 dark:text-slate-50">
-              {card.title}
-            </h3>
-          </div>
-        </div>
+      <div className="flex h-full flex-col gap-3">
+        <h3 className="text-[0.95rem] font-semibold leading-5 tracking-[-0.015em] text-slate-950 dark:text-slate-50">
+          {card.title}
+        </h3>
 
         <ul className="space-y-1.5">
           {card.points.map((point) => (
@@ -262,13 +229,9 @@ const ScopeCardBlock = ({ card }: { card: ScopeCard }) => {
 };
 
 const VerificationLevelCard = ({ level }: { level: VerificationLevel }) => {
-  const Icon = level.icon;
-
   return (
-    <div className={cn(level.cardClassName, 'flex h-full items-start gap-2.5')}>
-      <Icon className={cn('mt-0.5 h-4.5 w-4.5 shrink-0', level.iconClassName)} />
-
-      <div className="space-y-0.5">
+    <Card padding="none" className={cn(level.cardClassName, 'h-full')}>
+      <div className="space-y-1.5">
         <h3 className="text-[0.95rem] font-semibold leading-5 tracking-[-0.015em] text-slate-950 dark:text-slate-50">
           {level.title}
         </h3>
@@ -276,7 +239,7 @@ const VerificationLevelCard = ({ level }: { level: VerificationLevel }) => {
           {level.description}
         </p>
       </div>
-    </div>
+    </Card>
   );
 };
 
@@ -361,6 +324,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
     >
       <PageHeader
         onBack={onBack}
+        eyebrow="ANTES DE RESERVAR"
         heading="Antes de reservar, sabé qué es real."
         description="No todos los avisos muestran lo mismo. Acá ves qué está verificado y qué no."
         contentClassName="w-full max-w-[680px]"
@@ -400,7 +364,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
             >
               <div className="flex w-full flex-col gap-4 md:gap-5">
                 <section className="w-full max-w-[860px]">
-                  <div className="rounded-[30px] border-0 bg-white/92 p-8 shadow-[0_18px_38px_-34px_rgba(15,23,42,0.14)] dark:bg-slate-900/88 md:p-10 lg:p-12">
+                  <Card padding="none" className="rounded-[30px] border-0 bg-white/95 p-8 shadow-[0_18px_38px_-34px_rgba(15,23,42,0.14)] dark:bg-slate-900/88 md:p-10 lg:p-12">
                     <div className="max-w-[720px] space-y-3 text-left">
                       <h2 className="text-[clamp(2.5rem,5.4vw,4.8rem)] font-semibold leading-[1.01] tracking-[-0.065em] text-slate-950 dark:text-slate-50">
                         Alquilar hoy es una apuesta.
@@ -414,7 +378,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                         <p>Es no saber qué estás reservando.</p>
                       </div>
                     </div>
-                  </div>
+                  </Card>
                 </section>
 
                 <p className="max-w-[720px] text-[0.95rem] font-medium leading-6 text-slate-600 dark:text-slate-400">
@@ -441,7 +405,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                   </div>
 
                   <p className="max-w-[760px] text-[0.92rem] leading-6 text-slate-600 dark:text-slate-400">
-                    Aunque esté verificado, esto sigue importando: Fotos, precio, reglas y reseñas.
+                    Aunque esté verificado, siguen importando las fotos, el precio, las reglas y las reseñas.
                   </p>
                 </section>
 
@@ -451,23 +415,18 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                   </h2>
 
                   <div className="grid gap-2.5 md:grid-cols-3">
-                    {futureCards.map((item) => {
-                      const Icon = item.icon;
-
-                      return (
-                        <Card key={item.title} padding="none" className={cn('h-full rounded-[20px] border-0 bg-white/92 p-4 shadow-[0_10px_20px_-18px_rgba(15,23,42,0.08)] dark:bg-slate-900/66', 'app-card-muted')}>
-                          <div className="space-y-2">
-                            <Icon className="h-4.5 w-4.5 text-brand" />
-                            <h3 className="text-[0.94rem] font-semibold leading-5 tracking-[-0.015em] text-slate-950 dark:text-slate-50">
-                              {item.title}
-                            </h3>
-                            <div className="text-[0.9rem] leading-5 text-slate-600 dark:text-slate-400">
-                              {item.description}
-                            </div>
+                    {futureCards.map((item) => (
+                      <Card key={item.title} padding="none" className={cn('h-full rounded-[20px] border-0 bg-white/92 p-4 shadow-[0_10px_20px_-18px_rgba(15,23,42,0.08)] dark:bg-slate-900/66', 'app-card-muted')}>
+                        <div className="space-y-2">
+                          <h3 className="text-[0.94rem] font-semibold leading-5 tracking-[-0.015em] text-slate-950 dark:text-slate-50">
+                            {item.title}
+                          </h3>
+                          <div className="text-[0.9rem] leading-5 text-slate-600 dark:text-slate-400">
+                            {item.description}
                           </div>
-                        </Card>
-                      );
-                    })}
+                        </div>
+                      </Card>
+                    ))}
                   </div>
                 </section>
               </div>
