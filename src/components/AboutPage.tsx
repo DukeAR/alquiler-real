@@ -358,7 +358,9 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
       <PageHeader
         onBack={onBack}
         heading="Cómo funciona"
-        contentClassName="w-full max-w-[680px]"
+        contentClassName="w-full max-w-[940px]"
+        headingClassName="text-[clamp(1.55rem,2vw,1.95rem)] font-semibold tracking-[-0.045em] leading-[1.05]"
+        className="mx-auto max-w-5xl items-start gap-3 px-6 py-3"
       />
 
       <main className="mx-auto max-w-5xl px-6 py-8 space-y-0">
@@ -403,15 +405,15 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                         ANTES DE RESERVAR
                       </p>
 
-                      <h2 className="max-w-[12ch] text-[clamp(2.35rem,4.9vw,5rem)] font-semibold leading-[0.96] tracking-[-0.07em] text-slate-950 dark:text-slate-50">
+                      <h2 className="max-w-[12ch] text-[clamp(2rem,4vw,3.6rem)] font-semibold leading-[0.98] tracking-[-0.065em] text-slate-950 dark:text-slate-50">
                         Antes de reservar, sabé qué es real.
                       </h2>
 
-                      <p className="max-w-[42ch] text-[1rem] leading-7 text-slate-700 dark:text-slate-300">
+                      <p className="max-w-[42ch] text-[0.95rem] leading-7 text-slate-700 dark:text-slate-300">
                         No todos los avisos muestran lo mismo. Acá ves qué está verificado y qué no.
                       </p>
 
-                      <div className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/80 px-3 py-2 text-[0.86rem] font-medium text-slate-600 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.12)] dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-300">
+                      <div className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/80 px-3 py-2 text-[0.82rem] font-medium text-slate-600 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.12)] dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-300">
                         <span className="h-2 w-2 rounded-full bg-emerald-500" />
                         Lo verificado se ve primero.
                       </div>
@@ -425,11 +427,11 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                           Problema real
                         </p>
 
-                        <h2 className="max-w-[10ch] text-[clamp(1.95rem,3.4vw,2.85rem)] font-semibold leading-[1] tracking-[-0.05em] text-white">
+                        <h2 className="max-w-[10ch] text-[clamp(1.75rem,3vw,2.4rem)] font-semibold leading-[1] tracking-[-0.05em] text-white">
                           Alquilar hoy es una apuesta.
                         </h2>
 
-                        <div className="space-y-3 text-[0.98rem] leading-7 text-slate-200">
+                        <div className="space-y-3 text-[0.92rem] leading-6 text-slate-200">
                           <p>No sabés si las fotos son reales.</p>
                           <p>No sabés si la ubicación cierra.</p>
                           <p>No sabés si lo que ves es lo que vas a encontrar.</p>
@@ -441,7 +443,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                   </div>
                 </section>
 
-                <p className="rounded-[18px] border border-emerald-200/60 bg-emerald-50/75 px-4 py-3 text-[0.92rem] font-medium leading-6 text-slate-700 shadow-[0_14px_32px_-28px_rgba(15,23,42,0.12)] dark:border-emerald-900/30 dark:bg-emerald-950/24 dark:text-slate-300">
+                <p className="rounded-[18px] border border-emerald-200/60 bg-emerald-50/75 px-4 py-3 text-[0.86rem] font-medium leading-6 text-slate-700 shadow-[0_14px_32px_-28px_rgba(15,23,42,0.12)] dark:border-emerald-900/30 dark:bg-emerald-950/24 dark:text-slate-300">
                   Por eso, mostramos lo importante desde el principio.
                 </p>
 
@@ -459,7 +461,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
 
                     <div className="space-y-1">
                       <p className="app-eyebrow">Verificación</p>
-                      <h2 className="text-[clamp(1.55rem,2.5vw,2rem)] font-semibold leading-[1.08] tracking-[-0.04em] text-slate-950 dark:text-slate-50">
+                      <h2 className="text-[clamp(1.4rem,2vw,1.8rem)] font-semibold leading-[1.08] tracking-[-0.04em] text-slate-950 dark:text-slate-50">
                         Qué significa que algo esté verificado
                       </h2>
                     </div>
@@ -495,10 +497,10 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                             0{index + 1}
                           </span>
                           <div className="space-y-1.5">
-                            <h3 className="text-[0.98rem] font-semibold leading-5 tracking-[-0.015em] text-slate-950 dark:text-slate-50">
+                            <h3 className="text-[0.92rem] font-semibold leading-5 tracking-[-0.015em] text-slate-950 dark:text-slate-50">
                               {item.title}
                             </h3>
-                            <div className="text-[0.9rem] leading-5 text-slate-600 dark:text-slate-400">
+                              <div className="text-[0.84rem] leading-5 text-slate-600 dark:text-slate-400">
                               {item.description}
                             </div>
                           </div>

@@ -12,6 +12,9 @@ export interface PageHeaderProps extends React.HTMLAttributes<HTMLElement> {
   sticky?: boolean;
   action?: React.ReactNode;
   contentClassName?: string;
+  headingClassName?: string;
+  eyebrowClassName?: string;
+  descriptionClassName?: string;
 }
 
 export const PageHeader: React.FC<PageHeaderProps> = ({
@@ -24,6 +27,9 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   backLabel = 'Volver',
   sticky = false,
   action,
+  headingClassName,
+  eyebrowClassName,
+  descriptionClassName,
   ...props
 }) => {
   return (
@@ -48,9 +54,17 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
       ) : null}
 
       <div className={cn('min-w-0 flex-1 space-y-1', contentClassName)}>
-        {eyebrow ? <p className="app-eyebrow">{eyebrow}</p> : null}
-        <h1 className="text-2xl font-bold text-[var(--color-primary)] leading-tight mb-1" style={{ lineHeight: 'var(--line-height-title)' }}>{heading}</h1>
-        {description ? <p className="text-[var(--color-text-soft)] text-base">{description}</p> : null}
+        {eyebrow ? <p className={cn('app-eyebrow', eyebrowClassName)}>{eyebrow}</p> : null}
+        <h1
+          className={cn(
+            'text-2xl font-bold text-[var(--color-primary)] leading-tight mb-1',
+            headingClassName,
+          )}
+          style={{ lineHeight: 'var(--line-height-title)' }}
+        >
+          {heading}
+        </h1>
+        {description ? <p className={cn('text-[var(--color-text-soft)] text-base', descriptionClassName)}>{description}</p> : null}
       </div>
 
       {action ? <div className="shrink-0">{action}</div> : null}
