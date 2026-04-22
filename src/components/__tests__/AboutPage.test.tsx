@@ -13,7 +13,7 @@ describe('AboutPage', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByText('ANTES DE RESERVAR')).toBeInTheDocument();
+      expect(screen.queryByText('ANTES DE RESERVAR')).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Antes de reservar, sabé qué es real.' })).toBeInTheDocument();
     expect(screen.getByText('No todos los avisos muestran lo mismo. Acá ves qué está verificado y qué no.')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Alquilar hoy es una apuesta.' })).toBeInTheDocument();

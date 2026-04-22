@@ -324,7 +324,6 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
     >
       <PageHeader
         onBack={onBack}
-        eyebrow="ANTES DE RESERVAR"
         heading="Antes de reservar, sabé qué es real."
         description="No todos los avisos muestran lo mismo. Acá ves qué está verificado y qué no."
         contentClassName="w-full max-w-[680px]"
