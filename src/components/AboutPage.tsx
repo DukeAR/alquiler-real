@@ -82,7 +82,7 @@ const projectScopeCards: ScopeCard[] = [
     iconClassName: 'text-emerald-500 dark:text-emerald-300',
   },
   {
-    title: 'Qué todavía evaluás vos',
+    title: 'Qué sigue dependiendo de vos',
     points: [
       'Precio',
       'Reglas',
@@ -99,7 +99,7 @@ const projectScopeCards: ScopeCard[] = [
 const verificationLevels: VerificationLevel[] = [
   {
     title: 'Verificación presencial',
-    description: 'Alguien fue al lugar y confirmó que existe.',
+    description: 'Alguien fue al lugar y confirmó que existe y coincide.',
     icon: Icons.Home,
     cardClassName: 'rounded-[24px] border border-emerald-200/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(243,250,246,0.95))] p-5 shadow-[0_20px_44px_-36px_rgba(15,23,42,0.18)] dark:border-emerald-900/30 dark:bg-slate-900/72',
     accentClassName: 'bg-emerald-400/85',
@@ -107,7 +107,7 @@ const verificationLevels: VerificationLevel[] = [
   },
   {
     title: 'Verificación digital',
-    description: 'Información validada online.',
+    description: 'Información cargada y validada por quien publica.',
     icon: Icons.Search,
     cardClassName: 'rounded-[24px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(247,249,250,0.96))] p-5 shadow-[0_20px_44px_-36px_rgba(15,23,42,0.18)] dark:border-slate-800 dark:bg-slate-900/72',
     accentClassName: 'bg-slate-400/80',
@@ -432,11 +432,11 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                         </h2>
 
                         <div className="space-y-3 text-[0.92rem] leading-6 text-slate-200">
-                          <p>No sabés si las fotos son reales.</p>
-                          <p>No sabés si la ubicación cierra.</p>
-                          <p>No sabés si lo que ves es lo que vas a encontrar.</p>
-                          <p className="pt-1 text-slate-100">El problema no es reservar.</p>
-                          <p>Es no saber qué estás reservando.</p>
+                          <p>Buscás, comparás, preguntás.</p>
+                          <p>Pero en el fondo, no sabés con certeza qué estás reservando.</p>
+                          <p>Las fotos pueden ser viejas. La ubicación no siempre coincide. Las condiciones cambian cuando empezás a hablar.</p>
+                          <p>Y lo más importante: muchas veces no sabés quién está del otro lado. El problema no es reservar. Es tener que decidir con información incompleta.</p>
+                          <p>Alquiler Real nace de algo simple: hacer visible qué parte del aviso está realmente comprobada. Sin promesas. Sin suposiciones. Información clara para decidir mejor.</p>
                         </div>
                       </div>
                     </div>
@@ -444,7 +444,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                 </section>
 
                 <p className="rounded-[18px] border border-emerald-200/60 bg-emerald-50/75 px-4 py-3 text-[0.86rem] font-medium leading-6 text-slate-700 shadow-[0_14px_32px_-28px_rgba(15,23,42,0.12)] dark:border-emerald-900/30 dark:bg-emerald-950/24 dark:text-slate-300">
-                  Por eso, mostramos lo importante desde el principio.
+                  Por eso, en cada publicación diferenciamos dos cosas:
                 </p>
 
                 <section className="grid gap-3 md:grid-cols-2 md:items-stretch">
@@ -474,7 +474,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                   </div>
 
                   <p className="mt-3 max-w-[760px] text-[0.92rem] leading-6 text-slate-600 dark:text-slate-400">
-                    Aunque esté verificado, siguen importando las fotos, el precio, las reglas y las reseñas.
+                    Aunque esté verificado, hay cosas que siguen siendo decisión tuya: precio, reglas y experiencias de otros.
                   </p>
                 </section>
 
