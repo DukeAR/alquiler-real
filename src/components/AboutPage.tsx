@@ -399,7 +399,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                 <section className="relative overflow-hidden rounded-[34px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.98))] p-5 shadow-[0_30px_80px_-60px_rgba(15,23,42,0.24)] md:p-7">
                   <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(46,125,91,0.12),transparent_32%),radial-gradient(circle_at_bottom_left,rgba(15,23,42,0.05),transparent_28%)]" />
 
-                  <div className="relative grid gap-4 lg:grid-cols-[minmax(0,1.04fr)_minmax(18rem,0.96fr)]">
+                  <div className="relative flex flex-col gap-4">
                     <div className="space-y-4 text-left">
                       <p className="inline-flex items-center rounded-full border border-emerald-200/80 bg-emerald-50 px-3 py-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-950/40 dark:text-emerald-300">
                         ANTES DE RESERVAR
@@ -419,26 +419,19 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                       </div>
                     </div>
 
-                    <div className="relative overflow-hidden rounded-[30px] border border-slate-900/10 bg-[linear-gradient(180deg,#0F172A,#111827)] p-6 text-slate-50 shadow-[0_28px_60px_-44px_rgba(15,23,42,0.55)]">
-                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(46,125,91,0.18),transparent_28%),linear-gradient(135deg,rgba(255,255,255,0.08),transparent_36%)]" />
-
-                      <div className="relative space-y-4 text-left">
-                        <p className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-slate-200">
-                          Problema real
-                        </p>
-
-                        <h2 className="max-w-[10ch] text-[clamp(1.75rem,3vw,2.4rem)] font-semibold leading-[1] tracking-[-0.05em] text-white">
-                          Alquilar hoy es una apuesta.
-                        </h2>
-
-                        <div className="space-y-3 text-[0.92rem] leading-6 text-slate-200">
-                          <p>Ves fotos. Leés descripciones. Preguntás.</p>
-                          <p>Pero no sabés con certeza qué estás reservando.</p>
-                          <p>La ubicación a veces no coincide. Las fotos pueden ser viejas. Y las condiciones cambian cuando empezás a hablar.</p>
-                          <p>El problema no es reservar. Es decidir sin saber.</p>
-                          <p>Alquiler Real existe para cambiar eso. Mostrarte, desde el principio, qué parte del aviso está realmente comprobada. Y qué no.</p>
-                        </div>
-                      </div>
+                    <div className="max-w-[720px] space-y-3 text-left text-[0.92rem] leading-6 text-slate-700 dark:text-slate-300">
+                      <h2 className="text-[1.8rem] font-semibold leading-[1.02] tracking-[-0.05em] text-slate-950 dark:text-slate-50">
+                        Alquilar hoy es una apuesta.
+                      </h2>
+                      <p>Ves fotos. Leés descripciones. Preguntás.</p>
+                      <p>Pero no sabés con certeza qué estás reservando.</p>
+                      <p>La ubicación a veces no coincide. Las fotos pueden ser viejas. Y las condiciones cambian cuando empezás a hablar.</p>
+                      <p>El problema no es reservar.</p>
+                      <p>Es decidir sin saber.</p>
+                      <p>Alquiler Real existe para cambiar eso.</p>
+                      <p>Mostrarte, desde el principio,</p>
+                      <p>qué parte del aviso está realmente comprobada.</p>
+                      <p>Y qué no.</p>
                     </div>
                   </div>
                 </section>

@@ -21,8 +21,12 @@ describe('AboutPage', () => {
     expect(screen.getByText('Ves fotos. Leés descripciones. Preguntás.')).toBeInTheDocument();
     expect(screen.getByText('Pero no sabés con certeza qué estás reservando.')).toBeInTheDocument();
     expect(screen.getByText('La ubicación a veces no coincide. Las fotos pueden ser viejas. Y las condiciones cambian cuando empezás a hablar.')).toBeInTheDocument();
-    expect(screen.getByText('El problema no es reservar. Es decidir sin saber.')).toBeInTheDocument();
-    expect(screen.getByText('Alquiler Real existe para cambiar eso. Mostrarte, desde el principio, qué parte del aviso está realmente comprobada. Y qué no.')).toBeInTheDocument();
+    expect(screen.getByText('El problema no es reservar.')).toBeInTheDocument();
+    expect(screen.getByText('Es decidir sin saber.')).toBeInTheDocument();
+    expect(screen.getByText('Alquiler Real existe para cambiar eso.')).toBeInTheDocument();
+    expect(screen.getByText('Mostrarte, desde el principio,')).toBeInTheDocument();
+    expect(screen.getByText('qué parte del aviso está realmente comprobada.')).toBeInTheDocument();
+    expect(screen.getByText('Y qué no.')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Qué ya está comprobado' })).toBeInTheDocument();
     expect(screen.getByText('Ubicación real')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Qué sigue dependiendo de vos' })).toBeInTheDocument();
