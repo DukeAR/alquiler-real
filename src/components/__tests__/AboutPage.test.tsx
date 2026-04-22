@@ -18,11 +18,11 @@ describe('AboutPage', () => {
     expect(screen.getByRole('heading', { name: 'Antes de reservar, sabé qué es real.' })).toBeInTheDocument();
     expect(screen.getByText('No todos los avisos muestran lo mismo. Acá ves qué está verificado y qué no.')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Alquilar hoy es una apuesta.' })).toBeInTheDocument();
-    expect(screen.getByText('Buscás, comparás, preguntás.')).toBeInTheDocument();
-    expect(screen.getByText('Pero en el fondo, no sabés con certeza qué estás reservando.')).toBeInTheDocument();
-    expect(screen.getByText('Las fotos pueden ser viejas. La ubicación no siempre coincide. Las condiciones cambian cuando empezás a hablar.')).toBeInTheDocument();
-    expect(screen.getByText('Y lo más importante: muchas veces no sabés quién está del otro lado. El problema no es reservar. Es tener que decidir con información incompleta.')).toBeInTheDocument();
-    expect(screen.getByText('Alquiler Real nace de algo simple: hacer visible qué parte del aviso está realmente comprobada. Sin promesas. Sin suposiciones. Información clara para decidir mejor.')).toBeInTheDocument();
+    expect(screen.getByText('Ves fotos. Leés descripciones. Preguntás.')).toBeInTheDocument();
+    expect(screen.getByText('Pero no sabés con certeza qué estás reservando.')).toBeInTheDocument();
+    expect(screen.getByText('La ubicación a veces no coincide. Las fotos pueden ser viejas. Y las condiciones cambian cuando empezás a hablar.')).toBeInTheDocument();
+    expect(screen.getByText('El problema no es reservar. Es decidir sin saber.')).toBeInTheDocument();
+    expect(screen.getByText('Alquiler Real existe para cambiar eso. Mostrarte, desde el principio, qué parte del aviso está realmente comprobada. Y qué no.')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Qué ya está comprobado' })).toBeInTheDocument();
     expect(screen.getByText('Ubicación real')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Qué sigue dependiendo de vos' })).toBeInTheDocument();

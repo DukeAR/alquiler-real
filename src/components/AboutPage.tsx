@@ -432,11 +432,11 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                         </h2>
 
                         <div className="space-y-3 text-[0.92rem] leading-6 text-slate-200">
-                          <p>Buscás, comparás, preguntás.</p>
-                          <p>Pero en el fondo, no sabés con certeza qué estás reservando.</p>
-                          <p>Las fotos pueden ser viejas. La ubicación no siempre coincide. Las condiciones cambian cuando empezás a hablar.</p>
-                          <p>Y lo más importante: muchas veces no sabés quién está del otro lado. El problema no es reservar. Es tener que decidir con información incompleta.</p>
-                          <p>Alquiler Real nace de algo simple: hacer visible qué parte del aviso está realmente comprobada. Sin promesas. Sin suposiciones. Información clara para decidir mejor.</p>
+                          <p>Ves fotos. Leés descripciones. Preguntás.</p>
+                          <p>Pero no sabés con certeza qué estás reservando.</p>
+                          <p>La ubicación a veces no coincide. Las fotos pueden ser viejas. Y las condiciones cambian cuando empezás a hablar.</p>
+                          <p>El problema no es reservar. Es decidir sin saber.</p>
+                          <p>Alquiler Real existe para cambiar eso. Mostrarte, desde el principio, qué parte del aviso está realmente comprobada. Y qué no.</p>
                         </div>
                       </div>
                     </div>
