@@ -21,17 +21,24 @@ type ScopeCard = {
   points: string[];
   cardClassName: string;
   pointClassName: string;
+  accentClassName: string;
+  iconClassName: string;
 };
 
 type VerificationLevel = {
   title: string;
   description: string;
+  icon: IconType;
   cardClassName: string;
+  accentClassName: string;
+  iconClassName: string;
 };
 
 type FutureCard = {
   title: string;
   description: string;
+  cardClassName: string;
+  badgeClassName: string;
 };
 
 type RoleBenefit = {
@@ -69,8 +76,10 @@ const projectScopeCards: ScopeCard[] = [
       'Fotos del lugar',
       'Datos básicos verificados',
     ],
-    cardClassName: 'rounded-[20px] border-0 bg-white/92 p-4 shadow-[0_10px_20px_-18px_rgba(15,23,42,0.08)] dark:bg-slate-900/66 md:p-5',
-    pointClassName: 'text-[0.84rem] leading-5 text-slate-700 dark:text-slate-200',
+    cardClassName: 'rounded-[26px] border border-emerald-200/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(242,249,245,0.95))] p-5 shadow-[0_22px_48px_-40px_rgba(15,23,42,0.2)] dark:border-emerald-900/30 dark:bg-slate-900/72',
+    pointClassName: 'text-[0.88rem] leading-5 text-slate-700 dark:text-slate-200',
+    accentClassName: 'bg-emerald-400/85',
+    iconClassName: 'text-emerald-500 dark:text-emerald-300',
   },
   {
     title: 'Qué todavía evaluás vos',
@@ -80,8 +89,10 @@ const projectScopeCards: ScopeCard[] = [
       'Opiniones',
       'Detalles del lugar',
     ],
-    cardClassName: 'rounded-[20px] border-0 bg-white/92 p-4 shadow-[0_10px_20px_-18px_rgba(15,23,42,0.08)] dark:bg-slate-950/66 md:p-5',
-    pointClassName: 'text-[0.84rem] leading-5 text-slate-600 dark:text-slate-400',
+    cardClassName: 'rounded-[26px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(247,249,250,0.96))] p-5 shadow-[0_22px_48px_-40px_rgba(15,23,42,0.2)] dark:border-slate-800 dark:bg-slate-900/72',
+    pointClassName: 'text-[0.88rem] leading-5 text-slate-600 dark:text-slate-400',
+    accentClassName: 'bg-slate-400/80',
+    iconClassName: 'text-slate-400 dark:text-slate-500',
   },
 ];
 
@@ -89,12 +100,18 @@ const verificationLevels: VerificationLevel[] = [
   {
     title: 'Verificación presencial',
     description: 'Alguien fue al lugar y confirmó que existe.',
-    cardClassName: 'rounded-[18px] border-0 bg-white/92 p-4 shadow-[0_10px_20px_-18px_rgba(15,23,42,0.08)] dark:bg-slate-900/66',
+    icon: Icons.Home,
+    cardClassName: 'rounded-[24px] border border-emerald-200/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(243,250,246,0.95))] p-5 shadow-[0_20px_44px_-36px_rgba(15,23,42,0.18)] dark:border-emerald-900/30 dark:bg-slate-900/72',
+    accentClassName: 'bg-emerald-400/85',
+    iconClassName: 'text-emerald-600 dark:text-emerald-300',
   },
   {
     title: 'Verificación digital',
     description: 'Información validada online.',
-    cardClassName: 'rounded-[18px] border-0 bg-white/92 p-4 shadow-[0_10px_20px_-18px_rgba(15,23,42,0.08)] dark:bg-slate-900/66',
+    icon: Icons.Search,
+    cardClassName: 'rounded-[24px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(247,249,250,0.96))] p-5 shadow-[0_20px_44px_-36px_rgba(15,23,42,0.18)] dark:border-slate-800 dark:bg-slate-900/72',
+    accentClassName: 'bg-slate-400/80',
+    iconClassName: 'text-slate-500 dark:text-slate-300',
   },
 ];
 
@@ -102,14 +119,20 @@ const futureCards: FutureCard[] = [
   {
     title: 'Más claridad en cada aviso',
     description: 'Menos dudas antes de escribir o reservar',
+    cardClassName: 'rounded-[24px] border border-emerald-200/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(242,249,245,0.95))] p-5 shadow-[0_18px_38px_-34px_rgba(15,23,42,0.16)] dark:border-emerald-900/25 dark:bg-slate-900/70',
+    badgeClassName: 'bg-emerald-500/10 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-200',
   },
   {
     title: 'Más cosas verificadas',
     description: 'Cada aviso muestra mejor qué es real',
+    cardClassName: 'rounded-[24px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(247,249,250,0.96))] p-5 shadow-[0_18px_38px_-34px_rgba(15,23,42,0.16)] dark:border-slate-800 dark:bg-slate-900/70',
+    badgeClassName: 'bg-slate-500/10 text-slate-700 dark:bg-slate-700/50 dark:text-slate-200',
   },
   {
     title: 'Decidir más rápido',
     description: 'Menos vueltas, más certeza',
+    cardClassName: 'rounded-[24px] border border-teal-200/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(240,249,249,0.96))] p-5 shadow-[0_18px_38px_-34px_rgba(15,23,42,0.16)] dark:border-teal-900/25 dark:bg-slate-900/70',
+    badgeClassName: 'bg-teal-500/10 text-teal-700 dark:bg-teal-400/15 dark:text-teal-200',
   },
 ];
 
@@ -209,37 +232,47 @@ const guestSteps: StepCard = {
 
 const ScopeCardBlock = ({ card }: { card: ScopeCard }) => {
   return (
-    <Card padding="none" className={cn(card.cardClassName, 'h-full')}>
-      <div className="flex h-full flex-col gap-3">
-        <h3 className="text-[0.95rem] font-semibold leading-5 tracking-[-0.015em] text-slate-950 dark:text-slate-50">
+    <div className={cn('relative h-full overflow-hidden', card.cardClassName)}>
+      <div className={cn('absolute inset-x-0 top-0 h-1.5', card.accentClassName)} />
+      <div className="relative flex h-full flex-col gap-3">
+        <h3 className="text-[1rem] font-semibold leading-5 tracking-[-0.015em] text-slate-950 dark:text-slate-50">
           {card.title}
         </h3>
 
-        <ul className="space-y-1.5">
+        <ul className="space-y-2">
           {card.points.map((point) => (
             <li key={point} className={cn('flex items-start gap-2', card.pointClassName)}>
-              <Icons.Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400 dark:text-slate-500" />
+              <Icons.Check className={cn('mt-0.5 h-3.5 w-3.5 shrink-0', card.iconClassName)} />
               <span>{point}</span>
             </li>
           ))}
         </ul>
       </div>
-    </Card>
+    </div>
   );
 };
 
 const VerificationLevelCard = ({ level }: { level: VerificationLevel }) => {
+  const Icon = level.icon;
+
   return (
-    <Card padding="none" className={cn(level.cardClassName, 'h-full')}>
-      <div className="space-y-1.5">
-        <h3 className="text-[0.95rem] font-semibold leading-5 tracking-[-0.015em] text-slate-950 dark:text-slate-50">
-          {level.title}
-        </h3>
-        <p className="text-[0.92rem] leading-5 text-slate-600 dark:text-slate-300">
-          {level.description}
-        </p>
+    <div className={cn('relative h-full overflow-hidden', level.cardClassName)}>
+      <div className={cn('absolute inset-x-0 top-0 h-1.5', level.accentClassName)} />
+      <div className="relative flex h-full items-start gap-3">
+        <div className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/90 text-brand shadow-[0_16px_30px_-24px_rgba(67,56,202,0.28)] dark:bg-slate-950/70">
+          <Icon className={cn('h-5 w-5', level.iconClassName)} />
+        </div>
+
+        <div className="space-y-1.5">
+          <h3 className="text-[0.98rem] font-semibold leading-5 tracking-[-0.015em] text-slate-950 dark:text-slate-50">
+            {level.title}
+          </h3>
+          <p className="text-[0.92rem] leading-5 text-slate-600 dark:text-slate-300">
+            {level.description}
+          </p>
+        </div>
       </div>
-    </Card>
+    </div>
   );
 };
 
@@ -360,80 +393,117 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
               exit={{ opacity: 0, y: -10 }}
               className="pt-2 md:pt-3"
             >
-              <div className="flex w-full flex-col gap-4 md:gap-5">
-                <section className="w-full max-w-[720px] space-y-2 text-left">
-                  <p className="app-eyebrow">ANTES DE RESERVAR</p>
-                  <h2 className="text-[clamp(2.5rem,5.4vw,4.8rem)] font-semibold leading-[1.01] tracking-[-0.065em] text-slate-950 dark:text-slate-50">
-                    Antes de reservar, sabé qué es real.
-                  </h2>
-                  <p className="text-[1.02rem] leading-8 text-slate-700 dark:text-slate-300">
-                    No todos los avisos muestran lo mismo. Acá ves qué está verificado y qué no.
-                  </p>
-                </section>
+              <div className="mx-auto flex w-full max-w-[940px] flex-col gap-4 md:gap-5">
+                <section className="relative overflow-hidden rounded-[34px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.98))] p-5 shadow-[0_30px_80px_-60px_rgba(15,23,42,0.24)] md:p-7">
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(46,125,91,0.12),transparent_32%),radial-gradient(circle_at_bottom_left,rgba(15,23,42,0.05),transparent_28%)]" />
 
-                <section className="w-full max-w-[860px]">
-                  <Card padding="none" className="rounded-[30px] border-0 bg-white/95 p-8 shadow-[0_18px_38px_-34px_rgba(15,23,42,0.14)] dark:bg-slate-900/88 md:p-10 lg:p-12">
-                    <div className="max-w-[720px] space-y-3 text-left">
-                      <h2 className="text-[clamp(2.5rem,5.4vw,4.8rem)] font-semibold leading-[1.01] tracking-[-0.065em] text-slate-950 dark:text-slate-50">
-                        Alquilar hoy es una apuesta.
+                  <div className="relative grid gap-4 lg:grid-cols-[minmax(0,1.04fr)_minmax(18rem,0.96fr)]">
+                    <div className="space-y-4 text-left">
+                      <p className="inline-flex items-center rounded-full border border-emerald-200/80 bg-emerald-50 px-3 py-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-950/40 dark:text-emerald-300">
+                        ANTES DE RESERVAR
+                      </p>
+
+                      <h2 className="max-w-[12ch] text-[clamp(2.35rem,4.9vw,5rem)] font-semibold leading-[0.96] tracking-[-0.07em] text-slate-950 dark:text-slate-50">
+                        Antes de reservar, sabé qué es real.
                       </h2>
 
-                      <div className="space-y-2 text-[1.02rem] leading-8 text-slate-700 dark:text-slate-300">
-                        <p>No sabés si las fotos son reales.</p>
-                        <p>No sabés si la ubicación cierra.</p>
-                        <p>No sabés si lo que ves es lo que vas a encontrar.</p>
-                        <p className="pt-2">El problema no es reservar.</p>
-                        <p>Es no saber qué estás reservando.</p>
+                      <p className="max-w-[42ch] text-[1rem] leading-7 text-slate-700 dark:text-slate-300">
+                        No todos los avisos muestran lo mismo. Acá ves qué está verificado y qué no.
+                      </p>
+
+                      <div className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/80 px-3 py-2 text-[0.86rem] font-medium text-slate-600 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.12)] dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-300">
+                        <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                        Lo verificado se ve primero.
                       </div>
                     </div>
-                  </Card>
-                </section>
 
-                <p className="max-w-[720px] text-[0.95rem] font-medium leading-6 text-slate-600 dark:text-slate-400">
-                  Por eso, mostramos lo importante desde el principio.
-                </p>
+                    <div className="relative overflow-hidden rounded-[30px] border border-slate-900/10 bg-[linear-gradient(180deg,#0F172A,#111827)] p-6 text-slate-50 shadow-[0_28px_60px_-44px_rgba(15,23,42,0.55)]">
+                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(46,125,91,0.18),transparent_28%),linear-gradient(135deg,rgba(255,255,255,0.08),transparent_36%)]" />
 
-                <section className="w-full max-w-[860px]">
-                  <div className="grid gap-2.5 md:grid-cols-2 md:items-stretch">
-                    {projectScopeCards.map((card) => (
-                      <ScopeCardBlock key={card.title} card={card} />
-                    ))}
+                      <div className="relative space-y-4 text-left">
+                        <p className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-slate-200">
+                          Problema real
+                        </p>
+
+                        <h2 className="max-w-[10ch] text-[clamp(1.95rem,3.4vw,2.85rem)] font-semibold leading-[1] tracking-[-0.05em] text-white">
+                          Alquilar hoy es una apuesta.
+                        </h2>
+
+                        <div className="space-y-3 text-[0.98rem] leading-7 text-slate-200">
+                          <p>No sabés si las fotos son reales.</p>
+                          <p>No sabés si la ubicación cierra.</p>
+                          <p>No sabés si lo que ves es lo que vas a encontrar.</p>
+                          <p className="pt-1 text-slate-100">El problema no es reservar.</p>
+                          <p>Es no saber qué estás reservando.</p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </section>
 
-                <section className="w-full max-w-[860px] space-y-2">
-                  <h2 className="text-[clamp(1.5rem,2.6vw,2rem)] font-semibold leading-[1.08] tracking-[-0.04em] text-slate-950 dark:text-slate-50">
-                    Qué significa que algo esté verificado
-                  </h2>
+                <p className="rounded-[18px] border border-emerald-200/60 bg-emerald-50/75 px-4 py-3 text-[0.92rem] font-medium leading-6 text-slate-700 shadow-[0_14px_32px_-28px_rgba(15,23,42,0.12)] dark:border-emerald-900/30 dark:bg-emerald-950/24 dark:text-slate-300">
+                  Por eso, mostramos lo importante desde el principio.
+                </p>
 
-                  <div className="grid gap-2.5 md:grid-cols-2 md:items-stretch">
+                <section className="grid gap-3 md:grid-cols-2 md:items-stretch">
+                  {projectScopeCards.map((card) => (
+                    <ScopeCardBlock key={card.title} card={card} />
+                  ))}
+                </section>
+
+                <section className="rounded-[30px] border border-slate-200/80 bg-white/88 p-5 shadow-[0_24px_52px_-42px_rgba(15,23,42,0.15)] dark:border-slate-800 dark:bg-slate-900/76 md:p-6">
+                  <div className="flex items-start gap-3">
+                    <div className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 shadow-[0_16px_30px_-24px_rgba(34,197,94,0.28)] dark:bg-emerald-950/30 dark:text-emerald-300">
+                      <Icons.ShieldCheck className="h-5 w-5" />
+                    </div>
+
+                    <div className="space-y-1">
+                      <p className="app-eyebrow">Verificación</p>
+                      <h2 className="text-[clamp(1.55rem,2.5vw,2rem)] font-semibold leading-[1.08] tracking-[-0.04em] text-slate-950 dark:text-slate-50">
+                        Qué significa que algo esté verificado
+                      </h2>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 grid gap-3 md:grid-cols-2 md:items-stretch">
                     {verificationLevels.map((level) => (
                       <VerificationLevelCard key={level.title} level={level} />
                     ))}
                   </div>
 
-                  <p className="max-w-[760px] text-[0.92rem] leading-6 text-slate-600 dark:text-slate-400">
+                  <p className="mt-3 max-w-[760px] text-[0.92rem] leading-6 text-slate-600 dark:text-slate-400">
                     Aunque esté verificado, siguen importando las fotos, el precio, las reglas y las reseñas.
                   </p>
                 </section>
 
-                <section className="w-full max-w-[860px] space-y-2">
-                  <h2 className="text-[clamp(1.5rem,2.6vw,2rem)] font-semibold leading-[1.08] tracking-[-0.04em] text-slate-950 dark:text-slate-50">
-                    Esto recién empieza
-                  </h2>
+                <section className="space-y-3">
+                  <div className="flex flex-wrap items-end justify-between gap-3">
+                    <div className="space-y-1">
+                      <p className="app-eyebrow">Cierre</p>
+                      <h2 className="text-[clamp(1.55rem,2.5vw,2rem)] font-semibold leading-[1.08] tracking-[-0.04em] text-slate-950 dark:text-slate-50">
+                        Esto recién empieza
+                      </h2>
+                    </div>
+                  </div>
 
-                  <div className="grid gap-2.5 md:grid-cols-3">
-                    {futureCards.map((item) => (
-                      <Card key={item.title} padding="none" className={cn('h-full rounded-[20px] border-0 bg-white/92 p-4 shadow-[0_10px_20px_-18px_rgba(15,23,42,0.08)] dark:bg-slate-900/66', 'app-card-muted')}>
-                        <div className="space-y-2">
-                          <h3 className="text-[0.94rem] font-semibold leading-5 tracking-[-0.015em] text-slate-950 dark:text-slate-50">
-                            {item.title}
-                          </h3>
-                          <div className="text-[0.9rem] leading-5 text-slate-600 dark:text-slate-400">
-                            {item.description}
+                  <div className="grid gap-3 md:grid-cols-3">
+                    {futureCards.map((item, index) => (
+                      <div key={item.title} className={cn('relative h-full overflow-hidden', item.cardClassName)}>
+                        <div className="absolute inset-x-0 top-0 h-1.5 bg-slate-900/10 dark:bg-white/10" />
+                        <div className="relative flex h-full flex-col gap-4">
+                          <span className={cn('inline-flex h-9 w-9 items-center justify-center rounded-2xl text-[0.74rem] font-semibold tracking-[0.18em]', item.badgeClassName)}>
+                            0{index + 1}
+                          </span>
+                          <div className="space-y-1.5">
+                            <h3 className="text-[0.98rem] font-semibold leading-5 tracking-[-0.015em] text-slate-950 dark:text-slate-50">
+                              {item.title}
+                            </h3>
+                            <div className="text-[0.9rem] leading-5 text-slate-600 dark:text-slate-400">
+                              {item.description}
+                            </div>
                           </div>
                         </div>
-                      </Card>
+                      </div>
                     ))}
                   </div>
                 </section>
