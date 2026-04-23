@@ -14,16 +14,16 @@ describe('AboutPage', () => {
     );
 
     expect(screen.getByRole('heading', { name: 'Cómo funciona' })).toBeInTheDocument();
-    expect(screen.getByText('ANTES DE RESERVAR')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Antes de reservar, sabé qué es real.' })).toBeInTheDocument();
-    expect(screen.getByText('No todos los avisos muestran lo mismo. Acá ves qué está verificado y qué no.')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Alquilar no es el problema. El problema es no saber qué estás reservando.' })).toBeInTheDocument();
+    expect(screen.getByText('Fotos que no sabés si son actuales. Ubicaciones que no siempre coinciden. Condiciones que cambian cuando empezás a hablar.')).toBeInTheDocument();
+    expect(screen.getByText('Así se decide hoy.')).toBeInTheDocument();
+    expect(screen.getAllByText('Alquiler Real existe para cambiar eso.')).toHaveLength(2);
     expect(screen.getByRole('heading', { name: 'Alquilar hoy es una apuesta.' })).toBeInTheDocument();
     expect(screen.getByText('Ves fotos. Leés descripciones. Preguntás.')).toBeInTheDocument();
     expect(screen.getByText('Pero no sabés con certeza qué estás reservando.')).toBeInTheDocument();
     expect(screen.getByText('La ubicación a veces no coincide. Las fotos pueden ser viejas. Y las condiciones cambian cuando empezás a hablar.')).toBeInTheDocument();
     expect(screen.getByText('El problema no es reservar.')).toBeInTheDocument();
     expect(screen.getByText('Es decidir sin saber.')).toBeInTheDocument();
-    expect(screen.getByText('Alquiler Real existe para cambiar eso.')).toBeInTheDocument();
     expect(screen.getByText('Mostrarte, desde el principio,')).toBeInTheDocument();
     expect(screen.getByText('qué parte del aviso está realmente comprobada.')).toBeInTheDocument();
     expect(screen.getByText('Y qué no.')).toBeInTheDocument();
@@ -65,7 +65,7 @@ describe('AboutPage', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Proyecto' }));
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Antes de reservar, sabé qué es real.' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Alquilar no es el problema. El problema es no saber qué estás reservando.' })).toBeInTheDocument();
     });
 
     fireEvent.click(screen.getByRole('button', { name: 'Volver' }));

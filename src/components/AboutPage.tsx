@@ -401,22 +401,21 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
 
                   <div className="relative flex flex-col gap-3">
                     <div className="space-y-3 text-left">
-                      <p className="inline-flex items-center rounded-full border border-emerald-200/80 bg-emerald-50 px-3 py-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-950/40 dark:text-emerald-300">
-                        ANTES DE RESERVAR
-                      </p>
-
                       <h2 className="max-w-[12ch] text-[clamp(2rem,4vw,3.6rem)] font-semibold leading-[0.98] tracking-[-0.065em] text-slate-950 dark:text-slate-50">
-                        Antes de reservar, sabé qué es real.
+                        Alquilar no es el problema.<br />El problema es no saber qué estás reservando.
                       </h2>
 
                       <p className="max-w-[42ch] text-[0.95rem] leading-7 text-slate-700 dark:text-slate-300">
-                        No todos los avisos muestran lo mismo. Acá ves qué está verificado y qué no.
+                        Fotos que no sabés si son actuales. Ubicaciones que no siempre coinciden. Condiciones que cambian cuando empezás a hablar.
                       </p>
 
-                      <div className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/80 px-3 py-2 text-[0.82rem] font-medium text-slate-600 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.12)] dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-300">
-                        <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                        Lo verificado se ve primero.
-                      </div>
+                      <p className="max-w-[42ch] text-[0.95rem] leading-7 text-slate-700 dark:text-slate-300">
+                        Así se decide hoy.
+                      </p>
+
+                      <p className="max-w-[42ch] text-[0.95rem] leading-7 text-slate-700 dark:text-slate-300">
+                        Alquiler Real existe para cambiar eso.
+                      </p>
                     </div>
 
                     <div className="max-w-[680px] space-y-1.5 text-left text-[0.92rem] leading-6 text-slate-600 dark:text-slate-400">
