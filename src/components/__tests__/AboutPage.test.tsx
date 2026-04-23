@@ -14,10 +14,13 @@ describe('AboutPage', () => {
     );
 
     expect(screen.getByRole('heading', { name: 'Cómo funciona' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Alquilar no es el problema. El problema es no saber qué estás reservando.' })).toBeInTheDocument();
-    expect(screen.getByText('Fotos que no sabés si son actuales. Ubicaciones que no siempre coinciden. Condiciones que cambian cuando empezás a hablar.')).toBeInTheDocument();
-    expect(screen.getByText('Así se decide hoy.')).toBeInTheDocument();
-    expect(screen.getAllByText('Alquiler Real existe para cambiar eso.')).toHaveLength(2);
+    expect(screen.getByRole('heading', { name: '¿Te pasó de reservar un alquiler y no estar del todo tranquilo?' })).toBeInTheDocument();
+    expect(screen.getByText(/De mirar fotos y no saber si son reales\.\s*De dudar si la ubicación es la que dicen\.\s*De no tener claro quién está del otro lado\./)).toBeInTheDocument();
+    expect(screen.getByText(/Eso le pasa a todo el mundo\.\s*Y cuando se trata de vacaciones, no debería ser así\./)).toBeInTheDocument();
+    expect(screen.getByText(/Alquiler Real nace para eso:\s*para que alquilar deje de ser una apuesta\./)).toBeInTheDocument();
+    expect(screen.getByText('Para que puedas ver qué está realmente comprobado antes de decidir.')).toBeInTheDocument();
+    expect(screen.getByText(/Elegís\.\s*Hablás\.\s*Chequeás\.\s*Reservás\./)).toBeInTheDocument();
+    expect(screen.getByText('Y te vas tranquilo.')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Alquilar hoy es una apuesta.' })).toBeInTheDocument();
     expect(screen.getByText('Ves fotos. Leés descripciones. Preguntás.')).toBeInTheDocument();
     expect(screen.getByText('Pero no sabés con certeza qué estás reservando.')).toBeInTheDocument();
@@ -65,7 +68,7 @@ describe('AboutPage', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Proyecto' }));
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Alquilar no es el problema. El problema es no saber qué estás reservando.' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: '¿Te pasó de reservar un alquiler y no estar del todo tranquilo?' })).toBeInTheDocument();
     });
 
     fireEvent.click(screen.getByRole('button', { name: 'Volver' }));

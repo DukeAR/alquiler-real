@@ -402,19 +402,31 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                   <div className="relative flex flex-col gap-3">
                     <div className="space-y-3 text-left">
                       <h2 className="max-w-[12ch] text-[clamp(2rem,4vw,3.6rem)] font-semibold leading-[0.98] tracking-[-0.065em] text-slate-950 dark:text-slate-50">
-                        Alquilar no es el problema.<br />El problema es no saber qué estás reservando.
+                        ¿Te pasó de reservar un alquiler y no estar del todo tranquilo?
                       </h2>
 
                       <p className="max-w-[42ch] text-[0.95rem] leading-7 text-slate-700 dark:text-slate-300">
-                        Fotos que no sabés si son actuales. Ubicaciones que no siempre coinciden. Condiciones que cambian cuando empezás a hablar.
+                        De mirar fotos y no saber si son reales.<br />De dudar si la ubicación es la que dicen.<br />De no tener claro quién está del otro lado.
                       </p>
 
                       <p className="max-w-[42ch] text-[0.95rem] leading-7 text-slate-700 dark:text-slate-300">
-                        Así se decide hoy.
+                        Eso le pasa a todo el mundo.<br />Y cuando se trata de vacaciones, no debería ser así.
                       </p>
 
                       <p className="max-w-[42ch] text-[0.95rem] leading-7 text-slate-700 dark:text-slate-300">
-                        Alquiler Real existe para cambiar eso.
+                        Alquiler Real nace para eso:<br />para que alquilar deje de ser una apuesta.
+                      </p>
+
+                      <p className="max-w-[42ch] text-[0.95rem] leading-7 text-slate-700 dark:text-slate-300">
+                        Para que puedas ver qué está realmente comprobado antes de decidir.
+                      </p>
+
+                      <p className="max-w-[42ch] text-[0.95rem] leading-7 text-slate-700 dark:text-slate-300">
+                        Elegís.<br />Hablás.<br />Chequeás.<br />Reservás.
+                      </p>
+
+                      <p className="max-w-[42ch] text-[0.95rem] leading-7 text-slate-700 dark:text-slate-300">
+                        Y te vas tranquilo.
                       </p>
                     </div>
 
