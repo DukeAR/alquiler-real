@@ -359,8 +359,8 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
         onBack={onBack}
         heading="Cómo funciona"
         contentClassName="w-full max-w-[940px]"
-        headingClassName="text-[clamp(1.55rem,2vw,1.95rem)] font-semibold tracking-[-0.045em] leading-[1.05]"
-        className="mx-auto max-w-5xl items-start gap-3 px-6 py-3"
+        headingClassName="mb-0 text-[1.75rem] font-semibold tracking-[-0.045em] leading-[1.08] text-[#1F2933]"
+        className="mx-auto mb-8 max-w-5xl items-center gap-3 px-6 py-2 md:py-3"
       />
 
       <main className="mx-auto max-w-5xl px-6 py-8 space-y-0">
