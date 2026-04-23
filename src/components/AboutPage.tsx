@@ -400,49 +400,41 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                   <div className="absolute inset-0 hidden" />
 
                   <div className="relative flex flex-col gap-3">
-                    <div className="space-y-3 text-left">
-                      <h2 className="max-w-[12ch] text-[clamp(2rem,4vw,3.6rem)] font-semibold leading-[0.98] tracking-[-0.065em] text-slate-950 dark:text-slate-50">
+                    <div className="max-w-[680px] space-y-3 text-left">
+                      <h1 className="text-[clamp(2rem,4vw,3.6rem)] font-semibold leading-[0.98] tracking-[-0.065em] text-slate-950 dark:text-slate-50">
                         ¿Te pasó de reservar un alquiler y no estar del todo tranquilo?
-                      </h2>
+                      </h1>
 
-                      <p className="max-w-[42ch] text-[0.95rem] leading-7 text-slate-700 dark:text-slate-300">
-                        De mirar fotos y no saber si son reales.<br />De dudar si la ubicación es la que dicen.<br />De no tener claro quién está del otro lado.
+                      <p className="text-[0.95rem] leading-7 text-slate-700 dark:text-slate-300">
+                        De mirar fotos y no saber si son reales.<br />
+                        De dudar si la ubicación es la que dicen.<br />
+                        De no tener claro quién está del otro lado.
                       </p>
 
-                      <p className="max-w-[42ch] text-[0.95rem] leading-7 text-slate-700 dark:text-slate-300">
-                        Eso le pasa a todo el mundo.<br />Y cuando se trata de vacaciones, no debería ser así.
+                      <p className="text-[0.95rem] leading-7 text-slate-700 dark:text-slate-300">
+                        Eso le pasa a todo el mundo.<br />
+                        Y cuando se trata de vacaciones, no debería ser así.
                       </p>
 
-                      <p className="max-w-[42ch] text-[0.95rem] leading-7 text-slate-700 dark:text-slate-300">
-                        Alquiler Real nace para eso:<br />para que alquilar deje de ser una apuesta.
+                      <p className="text-[0.95rem] leading-7 text-slate-700 dark:text-slate-300">
+                        Alquiler Real nace para eso:<br />
+                        para que alquilar deje de ser una apuesta.
                       </p>
 
-                      <p className="max-w-[42ch] text-[0.95rem] leading-7 text-slate-700 dark:text-slate-300">
+                      <p className="text-[0.95rem] leading-7 text-slate-700 dark:text-slate-300">
                         Para que puedas ver qué está realmente comprobado antes de decidir.
                       </p>
 
-                      <p className="max-w-[42ch] text-[0.95rem] leading-7 text-slate-700 dark:text-slate-300">
-                        Elegís.<br />Hablás.<br />Chequeás.<br />Reservás.
+                      <p className="text-[0.98rem] font-semibold leading-6 text-slate-950 dark:text-slate-50">
+                        Elegís.<br />
+                        Hablás.<br />
+                        Chequeás.<br />
+                        Reservás.
                       </p>
 
-                      <p className="max-w-[42ch] text-[0.95rem] leading-7 text-slate-700 dark:text-slate-300">
+                      <p className="text-[0.95rem] font-medium leading-6 text-slate-700 dark:text-slate-300">
                         Y te vas tranquilo.
                       </p>
-                    </div>
-
-                    <div className="max-w-[680px] space-y-1.5 text-left text-[0.92rem] leading-6 text-slate-600 dark:text-slate-400">
-                      <h2 className="text-[1.7rem] font-semibold leading-[1.03] tracking-[-0.05em] text-slate-950 dark:text-slate-50">
-                        Alquilar hoy es una apuesta.
-                      </h2>
-                      <p className="text-[0.96rem] font-medium leading-6 text-slate-800 dark:text-slate-200">Ves fotos. Leés descripciones. Preguntás.</p>
-                      <p>Pero no sabés con certeza qué estás reservando.</p>
-                      <p>La ubicación a veces no coincide. Las fotos pueden ser viejas. Y las condiciones cambian cuando empezás a hablar.</p>
-                      <p className="text-[0.98rem] font-semibold leading-5 text-slate-950 dark:text-slate-50">El problema no es reservar.</p>
-                      <p className="text-[0.98rem] font-semibold leading-5 text-slate-950 dark:text-slate-50">Es decidir sin saber.</p>
-                      <p className="font-medium text-slate-700 dark:text-slate-300">Alquiler Real existe para cambiar eso.</p>
-                      <p>Mostrarte, desde el principio,</p>
-                      <p>qué parte del aviso está realmente comprobada.</p>
-                      <p>Y qué no.</p>
                     </div>
                   </div>
                 </section>
