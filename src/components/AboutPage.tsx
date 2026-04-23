@@ -396,43 +396,55 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
               className="pt-2 md:pt-3"
             >
               <div className="mx-auto flex w-full max-w-[940px] flex-col gap-4 md:gap-5">
-                <section className="relative overflow-hidden">
+                <section className="relative mb-12 overflow-hidden rounded-[24px] border border-slate-200/80 bg-white p-6 shadow-[0_10px_30px_rgba(0,0,0,0.04)] md:p-10 dark:border-slate-200/80 dark:bg-white">
                   <div className="absolute inset-0 hidden" />
 
-                  <div className="relative flex flex-col gap-3">
-                    <div className="max-w-[680px] space-y-3 text-left">
-                      <h1 className="text-[clamp(2rem,4vw,3.6rem)] font-semibold leading-[0.98] tracking-[-0.065em] text-slate-950 dark:text-slate-50">
+                  <div className="relative flex flex-col gap-8">
+                    <div className="max-w-[680px] space-y-4 text-left">
+                      <h1 className="max-w-[720px] text-[clamp(2.5rem,5vw,3rem)] font-extrabold leading-[0.94] tracking-[-0.07em] text-slate-950 dark:text-slate-950">
                         ¿Te pasó de reservar un alquiler y no estar del todo tranquilo?
                       </h1>
 
-                      <p className="text-[0.95rem] leading-7 text-slate-700 dark:text-slate-300">
+                      <p className="max-w-[600px] text-[0.95rem] leading-[1.6] text-[#5B6470] dark:text-[#5B6470]">
                         De mirar fotos y no saber si son reales.<br />
                         De dudar si la ubicación es la que dicen.<br />
                         De no tener claro quién está del otro lado.
                       </p>
 
-                      <p className="text-[0.95rem] leading-7 text-slate-700 dark:text-slate-300">
+                      <p className="max-w-[600px] text-[0.95rem] leading-[1.6] text-[#5B6470] dark:text-[#5B6470]">
                         Eso le pasa a todo el mundo.<br />
                         Y cuando se trata de vacaciones, no debería ser así.
                       </p>
 
-                      <p className="text-[0.95rem] leading-7 text-slate-700 dark:text-slate-300">
+                      <p className="max-w-[600px] text-[0.95rem] leading-[1.6] text-[#5B6470] dark:text-[#5B6470]">
                         Alquiler Real nace para eso:<br />
                         para que alquilar deje de ser una apuesta.
                       </p>
 
-                      <p className="text-[0.95rem] leading-7 text-slate-700 dark:text-slate-300">
+                      <p className="max-w-[600px] text-[0.95rem] leading-[1.6] text-[#5B6470] dark:text-[#5B6470]">
                         Para que puedas ver qué está realmente comprobado antes de decidir.
                       </p>
 
-                      <p className="text-[0.98rem] font-semibold leading-6 text-slate-950 dark:text-slate-50">
-                        Elegís.<br />
-                        Hablás.<br />
-                        Chequeás.<br />
-                        Reservás.
-                      </p>
+                      <div className="mt-8 flex flex-wrap gap-4">
+                        <div className="inline-flex min-w-[120px] items-center gap-3 rounded-[12px] bg-[#F7F8FA] px-4 py-3 font-semibold text-[#1C1F23] shadow-[0_1px_0_rgba(0,0,0,0.02)]">
+                          <span className="text-[0.68rem] font-semibold tracking-[0.16em] text-slate-400">01</span>
+                          <span>Elegís.</span>
+                        </div>
+                        <div className="inline-flex min-w-[120px] items-center gap-3 rounded-[12px] bg-[#F7F8FA] px-4 py-3 font-semibold text-[#1C1F23] shadow-[0_1px_0_rgba(0,0,0,0.02)]">
+                          <span className="text-[0.68rem] font-semibold tracking-[0.16em] text-slate-400">02</span>
+                          <span>Hablás.</span>
+                        </div>
+                        <div className="inline-flex min-w-[120px] items-center gap-3 rounded-[12px] bg-[#F7F8FA] px-4 py-3 font-semibold text-[#1C1F23] shadow-[0_1px_0_rgba(0,0,0,0.02)]">
+                          <span className="text-[0.68rem] font-semibold tracking-[0.16em] text-slate-400">03</span>
+                          <span>Chequeás.</span>
+                        </div>
+                        <div className="inline-flex min-w-[120px] items-center gap-3 rounded-[12px] bg-[#F7F8FA] px-4 py-3 font-semibold text-[#1C1F23] shadow-[0_1px_0_rgba(0,0,0,0.02)]">
+                          <span className="text-[0.68rem] font-semibold tracking-[0.16em] text-slate-400">04</span>
+                          <span>Reservás.</span>
+                        </div>
+                      </div>
 
-                      <p className="text-[0.95rem] font-medium leading-6 text-slate-700 dark:text-slate-300">
+                      <p className="mt-4 text-[0.95rem] font-semibold leading-6 text-[#1C1F23] dark:text-[#1C1F23]">
                         Y te vas tranquilo.
                       </p>
                     </div>

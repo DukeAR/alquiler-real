@@ -19,7 +19,10 @@ describe('AboutPage', () => {
     expect(screen.getByText(/Eso le pasa a todo el mundo\.\s*Y cuando se trata de vacaciones, no debería ser así\./)).toBeInTheDocument();
     expect(screen.getByText(/Alquiler Real nace para eso:\s*para que alquilar deje de ser una apuesta\./)).toBeInTheDocument();
     expect(screen.getByText('Para que puedas ver qué está realmente comprobado antes de decidir.')).toBeInTheDocument();
-    expect(screen.getByText(/Elegís\.\s*Hablás\.\s*Chequeás\.\s*Reservás\./)).toBeInTheDocument();
+    expect(screen.getByText('Elegís.')).toBeInTheDocument();
+    expect(screen.getByText('Hablás.')).toBeInTheDocument();
+    expect(screen.getByText('Chequeás.')).toBeInTheDocument();
+    expect(screen.getByText('Reservás.')).toBeInTheDocument();
     expect(screen.getByText('Y te vas tranquilo.')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Alquilar hoy es una apuesta.' })).not.toBeInTheDocument();
     expect(screen.queryByText('Ves fotos. Leés descripciones. Preguntás.')).not.toBeInTheDocument();
