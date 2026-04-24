@@ -72,6 +72,9 @@ const aboutTabs: Array<{ id: AboutTab; label: string }> = [
 
 const aboutTabButtonClass = 'app-button-base h-11 flex-1 rounded-[14px] px-4 text-[0.92rem] font-semibold tracking-[-0.01em]';
 const aboutFeatureCardClass = 'space-y-3 rounded-[24px] border-slate-200/85 bg-white/98 shadow-[0_16px_34px_-28px_rgba(15,23,42,0.14)] dark:border-slate-800 dark:bg-slate-900';
+const projectCardTitleClass = 'text-[0.95rem] font-semibold leading-6 tracking-[-0.015em] text-slate-950 dark:text-slate-50';
+const projectCardBodyClass = 'text-[0.88rem] leading-6 text-slate-600 dark:text-slate-300';
+const projectCardIconShellClass = 'inline-flex h-10 w-10 items-center justify-center rounded-[18px]';
 
 const projectScopeCards: ScopeCard[] = [
   {
@@ -257,15 +260,15 @@ const ScopeCardBlock = ({ card }: { card: ScopeCard }) => {
   return (
     <div className={cn('relative h-full overflow-hidden', card.cardClassName)}>
       <div className="relative flex h-full flex-col gap-4">
-        <div className={cn('inline-flex h-12 w-12 items-center justify-center rounded-[18px]', card.iconWrapperClassName)}>
+        <div className={cn(projectCardIconShellClass, card.iconWrapperClassName)}>
           <Icon className={cn('h-6 w-6', card.iconClassName)} />
         </div>
 
-        <h3 className="text-[1rem] font-semibold leading-6 tracking-[-0.015em] text-slate-950 dark:text-slate-50">
+        <h3 className={projectCardTitleClass}>
           {card.title}
         </h3>
 
-        <ul className="space-y-3">
+        <ul className="space-y-2.5">
           {card.points.map((point) => (
             <li key={point} className={card.pointClassName}>
               <Icons.CheckCircle2 className={cn('mt-0.5 h-4 w-4 shrink-0', card.pointIconClassName)} />
@@ -284,15 +287,15 @@ const VerificationLevelCard = ({ level }: { level: VerificationLevel }) => {
   return (
     <div className={cn('relative h-full overflow-hidden', level.cardClassName)}>
       <div className="relative flex h-full flex-col gap-4">
-        <div className={cn('inline-flex h-11 w-11 items-center justify-center rounded-[18px]', level.iconWrapperClassName)}>
+        <div className={cn(projectCardIconShellClass, level.iconWrapperClassName)}>
           <Icon className={cn('h-5 w-5', level.iconClassName)} />
         </div>
 
         <div className="space-y-1">
-          <h3 className="text-[0.95rem] font-semibold leading-6 tracking-[-0.015em] text-slate-950 dark:text-slate-50">
+          <h3 className={projectCardTitleClass}>
             {level.title}
           </h3>
-          <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+          <p className={projectCardBodyClass}>
             {level.description}
           </p>
         </div>
@@ -307,8 +310,8 @@ const RoleBenefitCard = ({ benefit }: { benefit: RoleBenefit }) => {
   return (
     <Card padding="lg" className={aboutFeatureCardClass}>
       <Icon className="h-6 w-6 text-brand" />
-      <h3 className="text-[1rem] font-semibold leading-6 tracking-[-0.015em] text-slate-950 dark:text-slate-50">{benefit.title}</h3>
-      <p className="app-body-sm leading-7 text-slate-700 dark:text-slate-300">{benefit.description}</p>
+      <h3 className={projectCardTitleClass}>{benefit.title}</h3>
+      <p className={projectCardBodyClass}>{benefit.description}</p>
     </Card>
   );
 };
@@ -324,7 +327,7 @@ const StepListCard = ({ content }: { content: StepCard }) => {
         ? 'rounded-[28px] border-brand/15 bg-brand/[0.06] p-6 dark:border-brand/20 dark:bg-brand/10 md:p-7'
         : 'rounded-[28px] border-emerald-200/70 bg-emerald-50/78 p-6 dark:border-emerald-900/30 dark:bg-emerald-900/14 md:p-7'}
     >
-      <div className="space-y-5">
+      <div className="space-y-4">
         <SectionTitle
           eyebrow={content.eyebrow}
           as="h3"
@@ -340,7 +343,7 @@ const StepListCard = ({ content }: { content: StepCard }) => {
           descriptionClassName="text-slate-700 dark:text-slate-300"
         />
 
-        <ol className="space-y-3">
+        <ol className="space-y-2.5">
           {content.steps.map((step, index) => (
             <li
               key={step}
@@ -383,12 +386,12 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
       <PageHeader
         onBack={onBack}
         heading="Cómo funciona"
-        contentClassName="w-full max-w-[940px]"
-        headingClassName="mb-0 text-[1.75rem] font-semibold tracking-[-0.045em] leading-[1.08] text-[#1F2933]"
-        className="mx-auto mb-8 max-w-5xl items-center gap-3 px-6 py-2 md:py-3"
+        contentClassName="w-full max-w-[780px]"
+        headingClassName="mb-0 text-[1.1rem] font-semibold tracking-[-0.03em] leading-[1.08] text-slate-900"
+        className="mx-auto mb-5 max-w-5xl items-center gap-2 px-6 py-1.5 md:py-2"
       />
 
-      <main className="mx-auto max-w-5xl px-6 py-8 space-y-12">
+        <main className="mx-auto max-w-5xl px-6 py-8 space-y-8">
         <div className="app-card app-card-muted rounded-[26px] p-1.5 dark:border-slate-800 dark:bg-slate-900" role="tablist" aria-label="Información sobre la plataforma">
           <div className="flex flex-col gap-1 sm:flex-row">
             {aboutTabs.map((tab) => (
@@ -420,71 +423,71 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
               exit={{ opacity: 0, y: -10 }}
               className="pt-2 md:pt-3"
             >
-              <div className="mx-auto flex w-full max-w-[940px] flex-col gap-10 md:gap-12">
-                <section className="relative mb-10 overflow-hidden rounded-[30px] border border-slate-200/85 bg-[radial-gradient(circle_at_top_right,rgba(67,56,202,0.08),transparent_38%),linear-gradient(180deg,rgba(255,255,255,0.99),rgba(248,250,252,0.98))] p-6 shadow-[0_22px_46px_-34px_rgba(15,23,42,0.16)] md:p-10 dark:border-slate-800 dark:bg-slate-900">
+              <div className="mx-auto flex w-full max-w-[940px] flex-col gap-8 md:gap-10">
+                <section className="relative mb-8 overflow-hidden rounded-[30px] border border-slate-200/85 bg-[radial-gradient(circle_at_top_right,rgba(67,56,202,0.08),transparent_38%),linear-gradient(180deg,rgba(255,255,255,0.99),rgba(248,250,252,0.98))] p-6 shadow-[0_22px_46px_-34px_rgba(15,23,42,0.16)] md:p-10 dark:border-slate-800 dark:bg-slate-900">
                   <div className="absolute inset-0 hidden" />
 
-                  <div className="relative flex flex-col gap-6">
+                  <div className="relative flex flex-col gap-5">
                     <div className="inline-flex h-12 w-12 items-center justify-center rounded-[18px] bg-brand/10 text-brand shadow-[0_16px_30px_-24px_rgba(67,56,202,0.36)] dark:bg-brand/15 dark:text-brand-light">
                       <Icons.Layers className="h-6 w-6" />
                     </div>
 
-                    <div className="max-w-[680px] space-y-4 text-left">
-                      <h1 className="max-w-[680px] text-[clamp(2.15rem,4vw,2.8rem)] font-semibold leading-[1.02] tracking-[-0.06em] text-slate-900 dark:text-slate-50">
+                    <div className="max-w-[640px] space-y-3 text-left">
+                      <h1 className="max-w-[640px] text-[clamp(2rem,3.6vw,2.5rem)] font-semibold leading-[1.02] tracking-[-0.06em] text-slate-900 dark:text-slate-50">
                         ¿Te pasó de reservar un alquiler y no estar del todo tranquilo?
                       </h1>
 
-                      <p className="max-w-[620px] text-[0.95rem] leading-relaxed text-slate-600 dark:text-slate-400">
+                      <p className="max-w-[620px] text-[0.9rem] leading-relaxed text-slate-600 dark:text-slate-400">
                         De mirar fotos y no saber si son reales.<br />
                         De dudar si la ubicación es la que dicen.<br />
                         De no tener claro quién está del otro lado.
                       </p>
 
-                      <p className="max-w-[620px] text-[0.95rem] leading-relaxed text-slate-600 dark:text-slate-400">
+                      <p className="max-w-[620px] text-[0.9rem] leading-relaxed text-slate-600 dark:text-slate-400">
                         Eso le pasa a todo el mundo.<br />
                         Y cuando se trata de vacaciones, no debería ser así.
                       </p>
 
-                      <p className="max-w-[620px] text-[0.95rem] leading-relaxed text-slate-600 dark:text-slate-400">
+                      <p className="max-w-[620px] text-[0.9rem] leading-relaxed text-slate-600 dark:text-slate-400">
                         Alquiler Real nace para eso:<br />
                         para que alquilar deje de ser una apuesta.
                       </p>
 
-                      <p className="max-w-[620px] text-[0.95rem] leading-relaxed text-slate-600 dark:text-slate-400">
+                      <p className="max-w-[620px] text-[0.9rem] leading-relaxed text-slate-600 dark:text-slate-400">
                         Para que puedas ver qué está realmente comprobado antes de decidir.
                       </p>
 
-                      <div className="mt-4 flex flex-wrap gap-3">
-                        <div className="inline-flex items-center gap-2 rounded-[14px] border border-slate-200/85 bg-white px-4 py-3 text-sm font-medium text-slate-800 shadow-none dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-100">
+                      <div className="mt-3 flex flex-wrap gap-2.5">
+                        <div className="inline-flex items-center gap-2 rounded-[14px] border border-slate-200/85 bg-white px-3.5 py-2.5 text-[0.88rem] font-medium text-slate-800 shadow-none dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-100">
                           <span className="text-[0.68rem] font-semibold tracking-[0.16em] text-slate-400">01</span>
                           <span>Elegís.</span>
                         </div>
-                        <div className="inline-flex items-center gap-2 rounded-[14px] border border-slate-200/85 bg-white px-4 py-3 text-sm font-medium text-slate-800 shadow-none dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-100">
+                        <div className="inline-flex items-center gap-2 rounded-[14px] border border-slate-200/85 bg-white px-3.5 py-2.5 text-[0.88rem] font-medium text-slate-800 shadow-none dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-100">
                           <span className="text-[0.68rem] font-semibold tracking-[0.16em] text-slate-400">02</span>
                           <span>Hablás.</span>
                         </div>
-                        <div className="inline-flex items-center gap-2 rounded-[14px] border border-slate-200/85 bg-white px-4 py-3 text-sm font-medium text-slate-800 shadow-none dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-100">
+                        <div className="inline-flex items-center gap-2 rounded-[14px] border border-slate-200/85 bg-white px-3.5 py-2.5 text-[0.88rem] font-medium text-slate-800 shadow-none dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-100">
                           <span className="text-[0.68rem] font-semibold tracking-[0.16em] text-slate-400">03</span>
                           <span>Chequeás.</span>
                         </div>
-                        <div className="inline-flex items-center gap-2 rounded-[14px] border border-slate-200/85 bg-white px-4 py-3 text-sm font-medium text-slate-800 shadow-none dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-100">
+                        <div className="inline-flex items-center gap-2 rounded-[14px] border border-slate-200/85 bg-white px-3.5 py-2.5 text-[0.88rem] font-medium text-slate-800 shadow-none dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-100">
                           <span className="text-[0.68rem] font-semibold tracking-[0.16em] text-slate-400">04</span>
                           <span>Reservás.</span>
                         </div>
                       </div>
 
-                      <p className="mt-4 text-[0.95rem] font-semibold leading-6 text-slate-900 dark:text-slate-50">
+                      <p className="mt-3 text-[0.9rem] font-semibold leading-6 text-slate-900 dark:text-slate-50">
                         Y te vas tranquilo.
                       </p>
                     </div>
                   </div>
                 </section>
 
-                <p className="rounded-full border border-emerald-200/60 bg-emerald-50/70 px-4 py-2 text-sm font-medium text-emerald-700 shadow-none dark:border-emerald-900/25 dark:bg-emerald-950/20 dark:text-emerald-300">
+                <p className="rounded-full border border-emerald-200/60 bg-emerald-50/70 px-4 py-2 text-[0.88rem] font-medium text-emerald-700 shadow-none dark:border-emerald-900/25 dark:bg-emerald-950/20 dark:text-emerald-300">
                   Por eso, en cada publicación diferenciamos dos cosas:
                 </p>
 
-                <section className="grid gap-4 md:grid-cols-2 md:items-stretch">
+                <section className="grid gap-3 md:grid-cols-2 md:items-stretch">
                   {projectScopeCards.map((card) => (
                     <ScopeCardBlock key={card.title} card={card} />
                   ))}
@@ -504,13 +507,13 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                     </div>
                   </div>
 
-                  <div className="grid gap-4 md:grid-cols-2 md:items-stretch">
+                  <div className="grid gap-3 md:grid-cols-2 md:items-stretch">
                     {verificationLevels.map((level) => (
                       <VerificationLevelCard key={level.title} level={level} />
                     ))}
                   </div>
 
-                  <p className="max-w-[760px] text-sm leading-relaxed text-slate-600 dark:text-slate-400">
+                  <p className={projectCardBodyClass}>
                     Aunque esté verificado, hay cosas que siguen siendo decisión tuya: precio, reglas y experiencias de otros.
                   </p>
                 </section>
@@ -522,13 +525,13 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                         <Icons.Lightbulb className="h-5 w-5" />
                       </div>
                       <p className="app-eyebrow">Cierre</p>
-                      <h2 className="text-[clamp(1.55rem,2.5vw,2rem)] font-semibold leading-[1.08] tracking-[-0.04em] text-slate-950 dark:text-slate-50">
+                      <h2 className="text-[clamp(1.45rem,2.2vw,1.8rem)] font-semibold leading-[1.08] tracking-[-0.04em] text-slate-950 dark:text-slate-50">
                         Esto recién empieza
                       </h2>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                     {futureCards.map((item, index) => (
                       <div key={item.title} className={cn('relative h-full overflow-hidden', item.cardClassName)}>
                         <div className="relative flex h-full flex-col gap-4">
