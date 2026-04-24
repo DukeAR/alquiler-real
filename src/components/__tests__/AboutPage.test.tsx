@@ -32,7 +32,6 @@ describe('AboutPage', () => {
     expect(screen.getByRole('heading', { name: 'Qué ya está comprobado' })).toBeInTheDocument();
     expect(screen.getByText('Ubicación real')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Qué sigue dependiendo de vos' })).toBeInTheDocument();
-    expect(screen.getByText('Por eso, en cada publicación diferenciamos dos cosas:')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Qué significa que algo esté verificado' })).toBeInTheDocument();
     expect(screen.getByText('Alguien fue al lugar y confirmó que existe y coincide.')).toBeInTheDocument();
     expect(screen.getByText('Información cargada y validada por quien publica.')).toBeInTheDocument();

@@ -430,7 +430,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
               exit={{ opacity: 0, y: -10 }}
               className="pt-0.5 md:pt-1"
             >
-              <div className="mx-auto flex w-full max-w-[940px] flex-col gap-6 md:gap-7">
+              <div className="mx-auto flex w-full max-w-[940px] flex-col gap-5 md:gap-6">
                 <section className="relative mb-4 overflow-hidden rounded-[30px] border border-slate-200/85 bg-[radial-gradient(circle_at_top_right,rgba(67,56,202,0.08),transparent_38%),linear-gradient(180deg,rgba(255,255,255,0.99),rgba(248,250,252,0.98))] p-6 shadow-[0_22px_46px_-34px_rgba(15,23,42,0.16)] md:p-10 dark:border-slate-800 dark:bg-slate-900">
                   <div className="absolute inset-0 hidden" />
 
@@ -489,10 +489,6 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                     </div>
                   </div>
                 </section>
-
-                <p className="rounded-full border border-emerald-200/60 bg-emerald-50/70 px-4 py-2 text-[0.88rem] font-medium text-emerald-700 shadow-none dark:border-emerald-900/25 dark:bg-emerald-950/20 dark:text-emerald-300">
-                  Por eso, en cada publicación diferenciamos dos cosas:
-                </p>
 
                 <section className="grid gap-2.5 md:grid-cols-2 md:items-stretch">
                   {projectScopeCards.map((card) => (
