@@ -390,10 +390,10 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
         contentClassName="w-max"
         headingClassName="mb-0 text-[1.1rem] font-semibold tracking-[-0.03em] leading-[1.08] text-brand"
         headingStyle={{ fontSize: '1.1rem', color: 'var(--color-brand)' }}
-        className="relative mx-auto mb-3 max-w-5xl items-center gap-2 px-6 py-1.5 md:py-1.5"
+        className="relative mx-auto mb-1 max-w-5xl items-center gap-2 px-6 py-1 md:py-1"
       />
 
-      <main className="mx-auto max-w-5xl px-6 py-6 space-y-7">
+      <main className="mx-auto max-w-5xl px-6 py-4 space-y-5">
         <div className="app-card app-card-muted rounded-[26px] p-1.5 dark:border-slate-800 dark:bg-slate-900" role="tablist" aria-label="Información sobre la plataforma">
           <div className="flex flex-col gap-1 sm:flex-row">
             {aboutTabs.map((tab) => (
@@ -423,10 +423,10 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="pt-2 md:pt-3"
+              className="pt-1 md:pt-2"
             >
-              <div className="mx-auto flex w-full max-w-[940px] flex-col gap-8 md:gap-10">
-                <section className="relative mb-8 overflow-hidden rounded-[30px] border border-slate-200/85 bg-[radial-gradient(circle_at_top_right,rgba(67,56,202,0.08),transparent_38%),linear-gradient(180deg,rgba(255,255,255,0.99),rgba(248,250,252,0.98))] p-6 shadow-[0_22px_46px_-34px_rgba(15,23,42,0.16)] md:p-10 dark:border-slate-800 dark:bg-slate-900">
+              <div className="mx-auto flex w-full max-w-[940px] flex-col gap-7 md:gap-8">
+                <section className="relative mb-5 overflow-hidden rounded-[30px] border border-slate-200/85 bg-[radial-gradient(circle_at_top_right,rgba(67,56,202,0.08),transparent_38%),linear-gradient(180deg,rgba(255,255,255,0.99),rgba(248,250,252,0.98))] p-6 shadow-[0_22px_46px_-34px_rgba(15,23,42,0.16)] md:p-10 dark:border-slate-800 dark:bg-slate-900">
                   <div className="absolute inset-0 hidden" />
 
                   <div className="relative flex flex-col gap-5">
@@ -489,14 +489,14 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                   Por eso, en cada publicación diferenciamos dos cosas:
                 </p>
 
-                <section className="grid gap-3 md:grid-cols-2 md:items-stretch">
+                <section className="grid gap-2.5 md:grid-cols-2 md:items-stretch">
                   {projectScopeCards.map((card) => (
                     <ScopeCardBlock key={card.title} card={card} />
                   ))}
                 </section>
 
-                <section className="space-y-5 rounded-[30px] border border-slate-200/85 bg-white/96 p-5 shadow-[0_22px_46px_-34px_rgba(15,23,42,0.16)] md:p-6 dark:border-slate-800 dark:bg-slate-900">
-                  <div className="space-y-3">
+                <section className="space-y-4 rounded-[30px] border border-slate-200/85 bg-white/96 p-5 shadow-[0_22px_46px_-34px_rgba(15,23,42,0.16)] md:p-6 dark:border-slate-800 dark:bg-slate-900">
+                  <div className="space-y-2.5">
                     <div className="inline-flex h-10 w-10 items-center justify-center rounded-[18px] bg-brand/10 text-brand shadow-[0_16px_30px_-24px_rgba(67,56,202,0.36)] dark:bg-brand/15 dark:text-brand-light">
                       <Icons.ShieldCheck className="h-5 w-5" />
                     </div>
@@ -509,7 +509,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                     </div>
                   </div>
 
-                  <div className="grid gap-3 md:grid-cols-2 md:items-stretch">
+                  <div className="grid gap-2.5 md:grid-cols-2 md:items-stretch">
                     {verificationLevels.map((level) => (
                       <VerificationLevelCard key={level.title} level={level} />
                     ))}
@@ -520,7 +520,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                   </p>
                 </section>
 
-                <section className="mx-auto max-w-4xl space-y-5 rounded-[30px] border border-slate-200/85 bg-white/96 p-5 shadow-[0_22px_46px_-34px_rgba(15,23,42,0.16)] md:p-6 dark:border-slate-800 dark:bg-slate-900">
+                <section className="mx-auto max-w-4xl space-y-4 rounded-[30px] border border-slate-200/85 bg-white/96 p-5 shadow-[0_22px_46px_-34px_rgba(15,23,42,0.16)] md:p-6 dark:border-slate-800 dark:bg-slate-900">
                   <div className="flex flex-wrap items-end justify-center gap-3 text-center">
                     <div className="space-y-1 text-center">
                       <div className="mx-auto inline-flex h-11 w-11 items-center justify-center rounded-[18px] bg-brand/10 text-brand shadow-[0_16px_30px_-24px_rgba(67,56,202,0.36)] dark:bg-brand/15 dark:text-brand-light">
