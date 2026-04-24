@@ -399,7 +399,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
       />
 
       <main className="mx-auto max-w-5xl px-6 py-3 space-y-4">
-        <div className="app-card app-card-muted mt-6 rounded-[26px] p-1.5 dark:border-slate-800 dark:bg-slate-900" role="tablist" aria-label="Información sobre la plataforma">
+        <div className="app-card app-card-muted mt-10 rounded-[26px] p-1.5 dark:border-slate-800 dark:bg-slate-900" role="tablist" aria-label="Información sobre la plataforma">
           <div className="flex flex-col gap-1 sm:flex-row">
             {aboutTabs.map((tab) => (
               <button
