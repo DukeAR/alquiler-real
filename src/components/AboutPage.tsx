@@ -388,12 +388,12 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
         heading="Cómo funciona"
         centerHeading
         contentClassName="w-max"
-        headingClassName="mb-0 text-[1.1rem] font-semibold tracking-[-0.03em] leading-[1.08] text-brand"
-        headingStyle={{ fontSize: '1.1rem', color: 'var(--color-brand)' }}
-        className="relative mx-auto mb-1 max-w-5xl items-center gap-2 px-6 py-1 md:py-1"
+        headingClassName="mb-0 inline-flex items-center justify-center whitespace-nowrap rounded-full border border-brand/20 bg-brand/10 px-5 py-2.5 text-[1.35rem] font-semibold tracking-[-0.05em] leading-none text-brand shadow-[0_16px_30px_-24px_rgba(67,56,202,0.24)]"
+        headingStyle={{ marginBottom: 0, lineHeight: 1, color: 'var(--color-brand)', fontSize: '1.5rem' }}
+        className="relative mx-auto mb-0 max-w-5xl items-center gap-2 px-6 py-1 md:py-1"
       />
 
-      <main className="mx-auto max-w-5xl px-6 py-4 space-y-5">
+      <main className="mx-auto max-w-5xl px-6 py-3 space-y-4">
         <div className="app-card app-card-muted rounded-[26px] p-1.5 dark:border-slate-800 dark:bg-slate-900" role="tablist" aria-label="Información sobre la plataforma">
           <div className="flex flex-col gap-1 sm:flex-row">
             {aboutTabs.map((tab) => (
@@ -423,10 +423,10 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="pt-1 md:pt-2"
+              className="pt-0.5 md:pt-1"
             >
-              <div className="mx-auto flex w-full max-w-[940px] flex-col gap-7 md:gap-8">
-                <section className="relative mb-5 overflow-hidden rounded-[30px] border border-slate-200/85 bg-[radial-gradient(circle_at_top_right,rgba(67,56,202,0.08),transparent_38%),linear-gradient(180deg,rgba(255,255,255,0.99),rgba(248,250,252,0.98))] p-6 shadow-[0_22px_46px_-34px_rgba(15,23,42,0.16)] md:p-10 dark:border-slate-800 dark:bg-slate-900">
+              <div className="mx-auto flex w-full max-w-[940px] flex-col gap-6 md:gap-7">
+                <section className="relative mb-4 overflow-hidden rounded-[30px] border border-slate-200/85 bg-[radial-gradient(circle_at_top_right,rgba(67,56,202,0.08),transparent_38%),linear-gradient(180deg,rgba(255,255,255,0.99),rgba(248,250,252,0.98))] p-6 shadow-[0_22px_46px_-34px_rgba(15,23,42,0.16)] md:p-10 dark:border-slate-800 dark:bg-slate-900">
                   <div className="absolute inset-0 hidden" />
 
                   <div className="relative flex flex-col gap-5">
