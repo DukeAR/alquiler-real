@@ -387,9 +387,9 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
         onBack={onBack}
         heading="Cómo funciona"
         centerHeading
-        contentClassName="w-max"
-        headingClassName="mb-0 inline-flex items-center justify-center whitespace-nowrap rounded-full border border-brand/20 bg-brand/10 px-5 py-2.5 text-[1.35rem] font-semibold tracking-[-0.05em] leading-none text-brand shadow-[0_16px_30px_-24px_rgba(67,56,202,0.24)]"
-        headingStyle={{ marginBottom: 0, lineHeight: 1, color: 'var(--color-brand)', fontSize: '1.5rem' }}
+        contentClassName="w-max translate-y-2"
+        headingClassName="mb-0 inline-flex items-center justify-center whitespace-nowrap rounded-full border border-brand/20 bg-brand/10 px-5 py-2.5 text-[1.35rem] font-semibold tracking-[-0.05em] leading-none text-slate-950 shadow-[0_16px_30px_-24px_rgba(67,56,202,0.24)]"
+        headingStyle={{ marginBottom: 0, lineHeight: 1, color: 'var(--color-text)', fontSize: '1.5rem' }}
         className="relative mx-auto mb-0 max-w-5xl items-center gap-2 px-6 py-1 md:py-1"
       />
 
