@@ -444,24 +444,30 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                         ¿Te pasó de reservar un alquiler y no estar del todo tranquilo?
                       </h1>
 
-                      <p className="max-w-[620px] text-[0.9rem] leading-relaxed text-slate-600 dark:text-slate-400">
+                      <p className="max-w-[620px] mb-[10px] text-[0.9rem] leading-[1.7] text-[#5B6470]">
                         Mirás fotos sin saber si son actuales. Dudás si la ubicación es realmente esa. Y muchas veces no tenés claro quién está del otro lado.
                       </p>
 
-                      <p className="max-w-[620px] text-[0.9rem] leading-relaxed text-slate-600 dark:text-slate-400">
+                      <p className="max-w-[620px] mb-[10px] text-[0.9rem] leading-[1.7] text-[#5B6470]">
                         Eso le pasa a todo el mundo. Y cuando se trata de vacaciones, no debería ser así.
                       </p>
 
-                      <p className="max-w-[620px] text-[0.9rem] leading-relaxed text-slate-600 dark:text-slate-400">
-                        Alquilar hoy muchas veces es una apuesta. No porque falten opciones, sino porque falta información confiable para decidir.
+                      <p className="max-w-[620px] mb-[10px] text-[0.9rem] leading-[1.7] text-[#5B6470]">
+                        <span className="inline-block mt-[12px] mb-[12px] rounded-full bg-[#ECFDF5] px-[12px] py-[6px] text-[14px] font-semibold text-[#166534]">
+                          No es un problema de opciones. Es un problema de confianza.
+                        </span>
                       </p>
 
-                      <p className="max-w-[620px] text-[0.9rem] leading-relaxed text-slate-600 dark:text-slate-400">
-                        Alquiler Real nace para cambiar eso: para que puedas ver, desde el principio, qué parte del aviso está realmente comprobada antes de hablar, reservar o pagar.
+                      <p className="max-w-[620px] mb-[10px] text-[0.9rem] leading-[1.7] text-[#5B6470]">
+                        Alquiler Real nace para cambiar eso: para que puedas ver, desde el principio, qué parte del aviso está realmente comprobada.
                       </p>
 
-                      <p className="max-w-[620px] text-[0.9rem] leading-relaxed text-slate-600 dark:text-slate-400">
-                        La idea es simple: menos incertidumbre, más claridad.
+                      <p className="max-w-[620px] mt-[6px] mb-[10px] text-[0.9rem] font-semibold leading-[1.7] text-[#111827]">
+                        Para que decidir no dependa de adivinar.
+                      </p>
+
+                      <p className="max-w-[620px] mt-[16px] mb-[10px] text-[20px] font-bold leading-[1.7] text-[#163329]">
+                        Menos incertidumbre. Más claridad.
                       </p>
 
                       <div className="mt-3 flex flex-wrap gap-2.5">
@@ -517,43 +523,22 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                   </p>
                 </section>
 
-                <section className="mx-auto max-w-4xl space-y-4 rounded-[30px] border border-slate-200/85 bg-white/96 p-5 shadow-[0_22px_46px_-34px_rgba(15,23,42,0.16)] md:p-6 dark:border-slate-800 dark:bg-slate-900">
-                  <div className="flex flex-wrap items-end justify-center gap-3 text-center">
-                    <div className="space-y-1 text-center">
-                      <div className="mx-auto inline-flex h-11 w-11 items-center justify-center rounded-[18px] bg-brand/10 text-brand shadow-[0_16px_30px_-24px_rgba(67,56,202,0.36)] dark:bg-brand/15 dark:text-brand-light">
-                        <Icons.Lightbulb className="h-5 w-5" />
-                      </div>
-                      <p className="app-eyebrow">Cierre</p>
-                      <h2 className="text-[clamp(1.45rem,2.2vw,1.8rem)] font-semibold leading-[1.08] tracking-[-0.04em] text-slate-950 dark:text-slate-50">
-                        Esto recién empieza
-                      </h2>
-                    </div>
-                  </div>
+                <section className="mx-auto mb-8 mt-12 max-w-[680px] text-center">
+                  <h2 className="mb-4 text-[36px] font-bold leading-[1.08] tracking-[-0.04em] text-[#0F172A]">
+                    Alquilar debería ser simple.
+                  </h2>
 
-                  <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                    {futureCards.map((item, index) => (
-                      <div key={item.title} className={cn('relative h-full overflow-hidden', item.cardClassName)}>
-                        <div className="relative flex h-full flex-col gap-4">
-                          <div className="flex items-center justify-between gap-3">
-                            <div className={cn('inline-flex h-11 w-11 items-center justify-center rounded-[18px]', item.iconWrapperClassName)}>
-                              <item.icon className={cn('h-5 w-5', item.iconClassName)} />
-                            </div>
-                            <span className={cn('inline-flex h-8 w-8 items-center justify-center rounded-full text-[0.68rem] font-semibold tracking-[0.18em]', item.badgeClassName)}>
-                              0{index + 1}
-                            </span>
-                          </div>
-                          <div className="space-y-1.5">
-                            <h3 className="text-[0.95rem] font-semibold leading-6 tracking-[-0.015em] text-slate-950 dark:text-slate-50">
-                              {item.title}
-                            </h3>
-                            <div className="text-sm leading-relaxed text-slate-600 dark:text-slate-400">
-                              {item.description}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                  <p className="mb-4 text-[16px] leading-[1.7] text-[#5B6470]">
+                    No debería ser una apuesta. No deberías tener que dudar de cada foto, de cada ubicación o de cada persona con la que hablás.
+                  </p>
+
+                  <p className="mb-4 text-[16px] leading-[1.7] text-[#5B6470]">
+                    Alquiler Real existe para eso: para que puedas elegir con información clara, hablar con más confianza y reservar sabiendo mejor dónde te estás metiendo.
+                  </p>
+
+                  <p className="text-[18px] font-semibold leading-[1.7] text-[#163329]">
+                    Menos dudas. Más tranquilidad.
+                  </p>
                 </section>
               </div>
             </motion.div>
@@ -646,6 +631,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                         ))}
                       </ul>
                     </div>
+
                   </Card>
 
                   <Card padding="none" className="rounded-[28px] border-emerald-200/70 bg-emerald-50/75 p-6 shadow-[0_18px_38px_-32px_rgba(15,23,42,0.16)] dark:border-emerald-900/30 dark:bg-emerald-900/14 md:p-7">
