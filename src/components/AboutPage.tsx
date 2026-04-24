@@ -385,7 +385,12 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
     >
       <PageHeader
         onBack={onBack}
-        heading="Cómo funciona"
+        heading={(
+          <>
+            <span>Cómo </span>
+            <span className="ml-1 text-brand">funciona</span>
+          </>
+        )}
         centerHeading
         contentClassName="w-max translate-y-2"
         headingClassName="mb-0 inline-flex items-center justify-center whitespace-nowrap rounded-full border border-brand/20 bg-brand/10 px-5 py-2.5 text-[1.35rem] font-semibold tracking-[-0.05em] leading-none text-slate-950 shadow-[0_16px_30px_-24px_rgba(67,56,202,0.24)]"
