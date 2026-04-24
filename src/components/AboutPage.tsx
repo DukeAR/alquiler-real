@@ -386,12 +386,14 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
       <PageHeader
         onBack={onBack}
         heading="Cómo funciona"
-        contentClassName="w-full max-w-[780px]"
-        headingClassName="mb-0 text-[1.1rem] font-semibold tracking-[-0.03em] leading-[1.08] text-slate-900"
-        className="mx-auto mb-5 max-w-5xl items-center gap-2 px-6 py-1.5 md:py-2"
+        centerHeading
+        contentClassName="w-max"
+        headingClassName="mb-0 text-[1.1rem] font-semibold tracking-[-0.03em] leading-[1.08] text-brand"
+        headingStyle={{ fontSize: '1.1rem', color: 'var(--color-brand)' }}
+        className="relative mx-auto mb-3 max-w-5xl items-center gap-2 px-6 py-1.5 md:py-1.5"
       />
 
-        <main className="mx-auto max-w-5xl px-6 py-8 space-y-8">
+      <main className="mx-auto max-w-5xl px-6 py-6 space-y-7">
         <div className="app-card app-card-muted rounded-[26px] p-1.5 dark:border-slate-800 dark:bg-slate-900" role="tablist" aria-label="Información sobre la plataforma">
           <div className="flex flex-col gap-1 sm:flex-row">
             {aboutTabs.map((tab) => (
