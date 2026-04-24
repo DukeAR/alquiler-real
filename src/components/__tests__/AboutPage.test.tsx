@@ -15,15 +15,15 @@ describe('AboutPage', () => {
 
     expect(screen.getByRole('heading', { name: 'Cómo funciona' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '¿Te pasó de reservar un alquiler y no estar del todo tranquilo?' })).toBeInTheDocument();
-    expect(screen.getByText(/De mirar fotos y no saber si son reales\.\s*De dudar si la ubicación es la que dicen\.\s*De no tener claro quién está del otro lado\./)).toBeInTheDocument();
-    expect(screen.getByText(/Eso le pasa a todo el mundo\.\s*Y cuando se trata de vacaciones, no debería ser así\./)).toBeInTheDocument();
-    expect(screen.getByText(/Alquiler Real nace para eso:\s*para que alquilar deje de ser una apuesta\./)).toBeInTheDocument();
-    expect(screen.getByText('Para que puedas ver qué está realmente comprobado antes de decidir.')).toBeInTheDocument();
+    expect(screen.getByText('Mirás fotos sin saber si son actuales. Dudás si la ubicación es realmente esa. Y muchas veces no tenés claro quién está del otro lado.')).toBeInTheDocument();
+    expect(screen.getByText('Eso le pasa a todo el mundo. Y cuando se trata de vacaciones, no debería ser así.')).toBeInTheDocument();
+    expect(screen.getByText('Alquilar hoy muchas veces es una apuesta. No porque falten opciones, sino porque falta información confiable para decidir.')).toBeInTheDocument();
+    expect(screen.getByText('Alquiler Real nace para cambiar eso: para que puedas ver, desde el principio, qué parte del aviso está realmente comprobada antes de hablar, reservar o pagar.')).toBeInTheDocument();
+    expect(screen.getByText('La idea es simple: menos incertidumbre, más claridad.')).toBeInTheDocument();
     expect(screen.getByText('Elegís.')).toBeInTheDocument();
     expect(screen.getByText('Hablás.')).toBeInTheDocument();
     expect(screen.getByText('Chequeás.')).toBeInTheDocument();
     expect(screen.getByText('Reservás.')).toBeInTheDocument();
-    expect(screen.getByText('Y te vas tranquilo.')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Alquilar hoy es una apuesta.' })).not.toBeInTheDocument();
     expect(screen.queryByText('Ves fotos. Leés descripciones. Preguntás.')).not.toBeInTheDocument();
     expect(screen.queryByText('Pero no sabés con certeza qué estás reservando.')).not.toBeInTheDocument();

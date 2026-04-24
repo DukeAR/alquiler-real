@@ -445,23 +445,23 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                       </h1>
 
                       <p className="max-w-[620px] text-[0.9rem] leading-relaxed text-slate-600 dark:text-slate-400">
-                        De mirar fotos y no saber si son reales.<br />
-                        De dudar si la ubicación es la que dicen.<br />
-                        De no tener claro quién está del otro lado.
+                        Mirás fotos sin saber si son actuales. Dudás si la ubicación es realmente esa. Y muchas veces no tenés claro quién está del otro lado.
                       </p>
 
                       <p className="max-w-[620px] text-[0.9rem] leading-relaxed text-slate-600 dark:text-slate-400">
-                        Eso le pasa a todo el mundo.<br />
-                        Y cuando se trata de vacaciones, no debería ser así.
+                        Eso le pasa a todo el mundo. Y cuando se trata de vacaciones, no debería ser así.
                       </p>
 
                       <p className="max-w-[620px] text-[0.9rem] leading-relaxed text-slate-600 dark:text-slate-400">
-                        Alquiler Real nace para eso:<br />
-                        para que alquilar deje de ser una apuesta.
+                        Alquilar hoy muchas veces es una apuesta. No porque falten opciones, sino porque falta información confiable para decidir.
                       </p>
 
                       <p className="max-w-[620px] text-[0.9rem] leading-relaxed text-slate-600 dark:text-slate-400">
-                        Para que puedas ver qué está realmente comprobado antes de decidir.
+                        Alquiler Real nace para cambiar eso: para que puedas ver, desde el principio, qué parte del aviso está realmente comprobada antes de hablar, reservar o pagar.
+                      </p>
+
+                      <p className="max-w-[620px] text-[0.9rem] leading-relaxed text-slate-600 dark:text-slate-400">
+                        La idea es simple: menos incertidumbre, más claridad.
                       </p>
 
                       <div className="mt-3 flex flex-wrap gap-2.5">
@@ -482,10 +482,6 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                           <span>Reservás.</span>
                         </div>
                       </div>
-
-                      <p className="mt-3 text-[0.9rem] font-semibold leading-6 text-slate-900 dark:text-slate-50">
-                        Y te vas tranquilo.
-                      </p>
                     </div>
                   </div>
                 </section>
