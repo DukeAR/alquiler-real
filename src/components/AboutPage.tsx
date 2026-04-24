@@ -21,8 +21,10 @@ type ScopeCard = {
   points: string[];
   cardClassName: string;
   pointClassName: string;
-  accentClassName: string;
+  icon: IconType;
   iconClassName: string;
+  iconWrapperClassName: string;
+  pointIconClassName: string;
 };
 
 type VerificationLevel = {
@@ -32,6 +34,7 @@ type VerificationLevel = {
   cardClassName: string;
   accentClassName: string;
   iconClassName: string;
+  iconWrapperClassName: string;
 };
 
 type FutureCard = {
@@ -39,6 +42,9 @@ type FutureCard = {
   description: string;
   cardClassName: string;
   badgeClassName: string;
+  icon: IconType;
+  iconClassName: string;
+  iconWrapperClassName: string;
 };
 
 type RoleBenefit = {
@@ -76,10 +82,12 @@ const projectScopeCards: ScopeCard[] = [
       'Fotos del lugar',
       'Datos básicos verificados',
     ],
-    cardClassName: 'rounded-[26px] border border-emerald-200/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(242,249,245,0.95))] p-5 shadow-[0_22px_48px_-40px_rgba(15,23,42,0.2)] dark:border-emerald-900/30 dark:bg-slate-900/72',
-    pointClassName: 'text-[0.88rem] leading-5 text-slate-700 dark:text-slate-200',
-    accentClassName: 'bg-emerald-400/85',
-    iconClassName: 'text-emerald-500 dark:text-emerald-300',
+    cardClassName: 'rounded-[24px] border border-brand/15 bg-brand/[0.06] p-5 shadow-[0_16px_34px_-28px_rgba(67,56,202,0.14)] dark:border-brand/20 dark:bg-brand/10',
+    pointClassName: 'flex items-start gap-3 rounded-[18px] border border-brand/10 bg-white/88 px-4 py-3.5 text-[0.92rem] leading-6 text-slate-800 shadow-[0_14px_28px_-24px_rgba(15,23,42,0.12)] dark:border-brand/20 dark:bg-slate-950/70 dark:text-slate-100',
+    icon: Icons.Verified,
+    iconClassName: 'text-brand dark:text-brand-light',
+    iconWrapperClassName: 'bg-brand/10 text-brand shadow-[0_16px_30px_-24px_rgba(67,56,202,0.36)] dark:bg-brand/15 dark:text-brand-light',
+    pointIconClassName: 'text-emerald-500/80 dark:text-emerald-300/80',
   },
   {
     title: 'Qué sigue dependiendo de vos',
@@ -89,10 +97,12 @@ const projectScopeCards: ScopeCard[] = [
       'Opiniones',
       'Detalles del lugar',
     ],
-    cardClassName: 'rounded-[26px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(247,249,250,0.96))] p-5 shadow-[0_22px_48px_-40px_rgba(15,23,42,0.2)] dark:border-slate-800 dark:bg-slate-900/72',
-    pointClassName: 'text-[0.88rem] leading-5 text-slate-600 dark:text-slate-400',
-    accentClassName: 'bg-slate-400/80',
-    iconClassName: 'text-slate-400 dark:text-slate-500',
+    cardClassName: 'rounded-[24px] border border-slate-200/85 bg-white p-5 shadow-[0_16px_34px_-28px_rgba(15,23,42,0.12)] dark:border-slate-800 dark:bg-slate-900',
+    pointClassName: 'flex items-start gap-3 rounded-[18px] border border-slate-200/80 bg-slate-50/82 px-4 py-3.5 text-[0.92rem] leading-6 text-slate-700 shadow-[0_14px_28px_-24px_rgba(15,23,42,0.12)] dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-300',
+    icon: Icons.Layers,
+    iconClassName: 'text-slate-500 dark:text-slate-300',
+    iconWrapperClassName: 'bg-slate-100 text-slate-700 shadow-[0_16px_30px_-24px_rgba(15,23,42,0.18)] dark:bg-slate-800 dark:text-slate-100',
+    pointIconClassName: 'text-slate-400 dark:text-slate-500',
   },
 ];
 
@@ -101,17 +111,19 @@ const verificationLevels: VerificationLevel[] = [
     title: 'Verificación presencial',
     description: 'Alguien fue al lugar y confirmó que existe y coincide.',
     icon: Icons.Home,
-    cardClassName: 'rounded-[24px] border border-emerald-200/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(243,250,246,0.95))] p-5 shadow-[0_20px_44px_-36px_rgba(15,23,42,0.18)] dark:border-emerald-900/30 dark:bg-slate-900/72',
-    accentClassName: 'bg-emerald-400/85',
-    iconClassName: 'text-emerald-600 dark:text-emerald-300',
+    cardClassName: 'rounded-[24px] border border-brand/15 bg-brand/[0.06] p-5 shadow-[0_16px_34px_-28px_rgba(67,56,202,0.14)] dark:border-brand/20 dark:bg-brand/10',
+    accentClassName: 'hidden',
+    iconClassName: 'text-brand dark:text-brand-light',
+    iconWrapperClassName: 'bg-brand/10 text-brand shadow-[0_16px_30px_-24px_rgba(67,56,202,0.36)] dark:bg-brand/15 dark:text-brand-light',
   },
   {
     title: 'Verificación digital',
     description: 'Información cargada y validada por quien publica.',
     icon: Icons.Search,
-    cardClassName: 'rounded-[24px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(247,249,250,0.96))] p-5 shadow-[0_20px_44px_-36px_rgba(15,23,42,0.18)] dark:border-slate-800 dark:bg-slate-900/72',
-    accentClassName: 'bg-slate-400/80',
+    cardClassName: 'rounded-[24px] border border-slate-200/85 bg-white p-5 shadow-[0_16px_34px_-28px_rgba(15,23,42,0.12)] dark:border-slate-800 dark:bg-slate-900',
+    accentClassName: 'hidden',
     iconClassName: 'text-slate-500 dark:text-slate-300',
+    iconWrapperClassName: 'bg-slate-100 text-slate-700 shadow-[0_16px_30px_-24px_rgba(15,23,42,0.18)] dark:bg-slate-800 dark:text-slate-100',
   },
 ];
 
@@ -119,20 +131,29 @@ const futureCards: FutureCard[] = [
   {
     title: 'Más claridad en cada aviso',
     description: 'Menos dudas antes de escribir o reservar',
-    cardClassName: 'rounded-[24px] border border-emerald-200/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(242,249,245,0.95))] p-5 shadow-[0_18px_38px_-34px_rgba(15,23,42,0.16)] dark:border-emerald-900/25 dark:bg-slate-900/70',
-    badgeClassName: 'bg-emerald-500/10 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-200',
+    cardClassName: 'rounded-[24px] border border-brand/15 bg-brand/[0.06] p-5 shadow-[0_16px_34px_-28px_rgba(67,56,202,0.14)] dark:border-brand/20 dark:bg-brand/10',
+    badgeClassName: 'bg-brand/10 text-brand dark:bg-brand/15 dark:text-brand-light',
+    icon: Icons.Lightbulb,
+    iconClassName: 'text-brand dark:text-brand-light',
+    iconWrapperClassName: 'bg-brand/10 text-brand shadow-[0_16px_30px_-24px_rgba(67,56,202,0.36)] dark:bg-brand/15 dark:text-brand-light',
   },
   {
     title: 'Más cosas verificadas',
     description: 'Cada aviso muestra mejor qué es real',
-    cardClassName: 'rounded-[24px] border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(247,249,250,0.96))] p-5 shadow-[0_18px_38px_-34px_rgba(15,23,42,0.16)] dark:border-slate-800 dark:bg-slate-900/70',
-    badgeClassName: 'bg-slate-500/10 text-slate-700 dark:bg-slate-700/50 dark:text-slate-200',
+    cardClassName: 'rounded-[24px] border border-slate-200/85 bg-white p-5 shadow-[0_16px_34px_-28px_rgba(15,23,42,0.12)] dark:border-slate-800 dark:bg-slate-900',
+    badgeClassName: 'bg-slate-100 text-slate-700 dark:bg-slate-700/50 dark:text-slate-200',
+    icon: Icons.Search,
+    iconClassName: 'text-slate-500 dark:text-slate-300',
+    iconWrapperClassName: 'bg-slate-100 text-slate-700 shadow-[0_16px_30px_-24px_rgba(15,23,42,0.18)] dark:bg-slate-800 dark:text-slate-100',
   },
   {
     title: 'Decidir más rápido',
     description: 'Menos vueltas, más certeza',
-    cardClassName: 'rounded-[24px] border border-teal-200/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(240,249,249,0.96))] p-5 shadow-[0_18px_38px_-34px_rgba(15,23,42,0.16)] dark:border-teal-900/25 dark:bg-slate-900/70',
-    badgeClassName: 'bg-teal-500/10 text-teal-700 dark:bg-teal-400/15 dark:text-teal-200',
+    cardClassName: 'rounded-[24px] border border-emerald-200/70 bg-emerald-50/80 p-5 shadow-[0_16px_34px_-28px_rgba(15,23,42,0.12)] dark:border-emerald-900/25 dark:bg-emerald-950/10',
+    badgeClassName: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-200',
+    icon: Icons.Zap,
+    iconClassName: 'text-emerald-600 dark:text-emerald-300',
+    iconWrapperClassName: 'bg-emerald-500/12 text-emerald-700 shadow-[0_16px_30px_-24px_rgba(16,185,129,0.34)] dark:bg-emerald-500/12 dark:text-emerald-300',
   },
 ];
 
@@ -231,18 +252,23 @@ const guestSteps: StepCard = {
 };
 
 const ScopeCardBlock = ({ card }: { card: ScopeCard }) => {
+  const Icon = card.icon;
+
   return (
     <div className={cn('relative h-full overflow-hidden', card.cardClassName)}>
-      <div className={cn('absolute inset-x-0 top-0 h-1.5', card.accentClassName)} />
-      <div className="relative flex h-full flex-col gap-3">
-        <h3 className="text-[1rem] font-semibold leading-5 tracking-[-0.015em] text-slate-950 dark:text-slate-50">
+      <div className="relative flex h-full flex-col gap-4">
+        <div className={cn('inline-flex h-12 w-12 items-center justify-center rounded-[18px]', card.iconWrapperClassName)}>
+          <Icon className={cn('h-6 w-6', card.iconClassName)} />
+        </div>
+
+        <h3 className="text-[1rem] font-semibold leading-6 tracking-[-0.015em] text-slate-950 dark:text-slate-50">
           {card.title}
         </h3>
 
-        <ul className="space-y-2">
+        <ul className="space-y-3">
           {card.points.map((point) => (
-            <li key={point} className={cn('flex items-start gap-2', card.pointClassName)}>
-              <Icons.Check className={cn('mt-0.5 h-3.5 w-3.5 shrink-0', card.iconClassName)} />
+            <li key={point} className={card.pointClassName}>
+              <Icons.CheckCircle2 className={cn('mt-0.5 h-4 w-4 shrink-0', card.pointIconClassName)} />
               <span>{point}</span>
             </li>
           ))}
@@ -257,17 +283,16 @@ const VerificationLevelCard = ({ level }: { level: VerificationLevel }) => {
 
   return (
     <div className={cn('relative h-full overflow-hidden', level.cardClassName)}>
-      <div className={cn('absolute inset-x-0 top-0 h-1.5', level.accentClassName)} />
-      <div className="relative flex h-full items-start gap-3">
-        <div className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/90 text-brand shadow-[0_16px_30px_-24px_rgba(67,56,202,0.28)] dark:bg-slate-950/70">
+      <div className="relative flex h-full flex-col gap-4">
+        <div className={cn('inline-flex h-11 w-11 items-center justify-center rounded-[18px]', level.iconWrapperClassName)}>
           <Icon className={cn('h-5 w-5', level.iconClassName)} />
         </div>
 
-        <div className="space-y-1.5">
-          <h3 className="text-[0.98rem] font-semibold leading-5 tracking-[-0.015em] text-slate-950 dark:text-slate-50">
+        <div className="space-y-1">
+          <h3 className="text-[0.95rem] font-semibold leading-6 tracking-[-0.015em] text-slate-950 dark:text-slate-50">
             {level.title}
           </h3>
-          <p className="text-[0.92rem] leading-5 text-slate-600 dark:text-slate-300">
+          <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
             {level.description}
           </p>
         </div>
@@ -363,7 +388,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
         className="mx-auto mb-8 max-w-5xl items-center gap-3 px-6 py-2 md:py-3"
       />
 
-      <main className="mx-auto max-w-5xl px-6 py-8 space-y-0">
+      <main className="mx-auto max-w-5xl px-6 py-8 space-y-12">
         <div className="app-card app-card-muted rounded-[26px] p-1.5 dark:border-slate-800 dark:bg-slate-900" role="tablist" aria-label="Información sobre la plataforma">
           <div className="flex flex-col gap-1 sm:flex-row">
             {aboutTabs.map((tab) => (
@@ -395,75 +420,79 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
               exit={{ opacity: 0, y: -10 }}
               className="pt-2 md:pt-3"
             >
-              <div className="mx-auto flex w-full max-w-[940px] flex-col gap-4 md:gap-5">
-                <section className="relative mb-12 overflow-hidden rounded-[24px] border border-slate-200/80 bg-white p-6 shadow-[0_10px_30px_rgba(0,0,0,0.04)] md:p-10 dark:border-slate-200/80 dark:bg-white">
+              <div className="mx-auto flex w-full max-w-[940px] flex-col gap-10 md:gap-12">
+                <section className="relative mb-10 overflow-hidden rounded-[30px] border border-slate-200/85 bg-[radial-gradient(circle_at_top_right,rgba(67,56,202,0.08),transparent_38%),linear-gradient(180deg,rgba(255,255,255,0.99),rgba(248,250,252,0.98))] p-6 shadow-[0_22px_46px_-34px_rgba(15,23,42,0.16)] md:p-10 dark:border-slate-800 dark:bg-slate-900">
                   <div className="absolute inset-0 hidden" />
 
-                  <div className="relative flex flex-col gap-8">
+                  <div className="relative flex flex-col gap-6">
+                    <div className="inline-flex h-12 w-12 items-center justify-center rounded-[18px] bg-brand/10 text-brand shadow-[0_16px_30px_-24px_rgba(67,56,202,0.36)] dark:bg-brand/15 dark:text-brand-light">
+                      <Icons.Layers className="h-6 w-6" />
+                    </div>
+
                     <div className="max-w-[680px] space-y-4 text-left">
-                      <h1 className="max-w-[720px] text-[clamp(2.5rem,5vw,3rem)] font-extrabold leading-[0.94] tracking-[-0.07em] text-slate-950 dark:text-slate-950">
+                      <h1 className="max-w-[680px] text-[clamp(2.15rem,4vw,2.8rem)] font-semibold leading-[1.02] tracking-[-0.06em] text-slate-900 dark:text-slate-50">
                         ¿Te pasó de reservar un alquiler y no estar del todo tranquilo?
                       </h1>
 
-                      <p className="max-w-[600px] text-[0.95rem] leading-[1.6] text-[#5B6470] dark:text-[#5B6470]">
+                      <p className="max-w-[620px] text-[0.95rem] leading-relaxed text-slate-600 dark:text-slate-400">
                         De mirar fotos y no saber si son reales.<br />
                         De dudar si la ubicación es la que dicen.<br />
                         De no tener claro quién está del otro lado.
                       </p>
 
-                      <p className="max-w-[600px] text-[0.95rem] leading-[1.6] text-[#5B6470] dark:text-[#5B6470]">
+                      <p className="max-w-[620px] text-[0.95rem] leading-relaxed text-slate-600 dark:text-slate-400">
                         Eso le pasa a todo el mundo.<br />
                         Y cuando se trata de vacaciones, no debería ser así.
                       </p>
 
-                      <p className="max-w-[600px] text-[0.95rem] leading-[1.6] text-[#5B6470] dark:text-[#5B6470]">
+                      <p className="max-w-[620px] text-[0.95rem] leading-relaxed text-slate-600 dark:text-slate-400">
                         Alquiler Real nace para eso:<br />
                         para que alquilar deje de ser una apuesta.
                       </p>
 
-                      <p className="max-w-[600px] text-[0.95rem] leading-[1.6] text-[#5B6470] dark:text-[#5B6470]">
+                      <p className="max-w-[620px] text-[0.95rem] leading-relaxed text-slate-600 dark:text-slate-400">
                         Para que puedas ver qué está realmente comprobado antes de decidir.
                       </p>
 
-                      <div className="mt-8 flex flex-wrap gap-4">
-                        <div className="inline-flex min-w-[120px] items-center gap-3 rounded-[12px] bg-[#F7F8FA] px-4 py-3 font-semibold text-[#1C1F23] shadow-[0_1px_0_rgba(0,0,0,0.02)]">
+                      <div className="mt-4 flex flex-wrap gap-3">
+                        <div className="inline-flex items-center gap-2 rounded-[14px] border border-slate-200/85 bg-white px-4 py-3 text-sm font-medium text-slate-800 shadow-none dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-100">
                           <span className="text-[0.68rem] font-semibold tracking-[0.16em] text-slate-400">01</span>
                           <span>Elegís.</span>
                         </div>
-                        <div className="inline-flex min-w-[120px] items-center gap-3 rounded-[12px] bg-[#F7F8FA] px-4 py-3 font-semibold text-[#1C1F23] shadow-[0_1px_0_rgba(0,0,0,0.02)]">
+                        <div className="inline-flex items-center gap-2 rounded-[14px] border border-slate-200/85 bg-white px-4 py-3 text-sm font-medium text-slate-800 shadow-none dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-100">
                           <span className="text-[0.68rem] font-semibold tracking-[0.16em] text-slate-400">02</span>
                           <span>Hablás.</span>
                         </div>
-                        <div className="inline-flex min-w-[120px] items-center gap-3 rounded-[12px] bg-[#F7F8FA] px-4 py-3 font-semibold text-[#1C1F23] shadow-[0_1px_0_rgba(0,0,0,0.02)]">
+                        <div className="inline-flex items-center gap-2 rounded-[14px] border border-slate-200/85 bg-white px-4 py-3 text-sm font-medium text-slate-800 shadow-none dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-100">
                           <span className="text-[0.68rem] font-semibold tracking-[0.16em] text-slate-400">03</span>
                           <span>Chequeás.</span>
                         </div>
-                        <div className="inline-flex min-w-[120px] items-center gap-3 rounded-[12px] bg-[#F7F8FA] px-4 py-3 font-semibold text-[#1C1F23] shadow-[0_1px_0_rgba(0,0,0,0.02)]">
+                        <div className="inline-flex items-center gap-2 rounded-[14px] border border-slate-200/85 bg-white px-4 py-3 text-sm font-medium text-slate-800 shadow-none dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-100">
                           <span className="text-[0.68rem] font-semibold tracking-[0.16em] text-slate-400">04</span>
                           <span>Reservás.</span>
                         </div>
                       </div>
 
-                      <p className="mt-4 text-[0.95rem] font-semibold leading-6 text-[#1C1F23] dark:text-[#1C1F23]">
+                      <p className="mt-4 text-[0.95rem] font-semibold leading-6 text-slate-900 dark:text-slate-50">
                         Y te vas tranquilo.
                       </p>
                     </div>
                   </div>
                 </section>
 
-                <p className="rounded-[18px] border border-emerald-200/60 bg-emerald-50/75 px-4 py-3 text-[0.86rem] font-medium leading-6 text-slate-700 shadow-[0_14px_32px_-28px_rgba(15,23,42,0.12)] dark:border-emerald-900/30 dark:bg-emerald-950/24 dark:text-slate-300">
+                <p className="rounded-full border border-emerald-200/60 bg-emerald-50/70 px-4 py-2 text-sm font-medium text-emerald-700 shadow-none dark:border-emerald-900/25 dark:bg-emerald-950/20 dark:text-emerald-300">
                   Por eso, en cada publicación diferenciamos dos cosas:
                 </p>
 
-                <section className="grid gap-3 md:grid-cols-2 md:items-stretch">
+                <section className="grid gap-4 md:grid-cols-2 md:items-stretch">
                   {projectScopeCards.map((card) => (
                     <ScopeCardBlock key={card.title} card={card} />
                   ))}
                 </section>
 
-                <section className="rounded-[30px] border border-slate-200/80 bg-white/88 p-5 shadow-[0_24px_52px_-42px_rgba(15,23,42,0.15)] dark:border-slate-800 dark:bg-slate-900/76 md:p-6">
-                  <div className="flex items-start gap-3">
-                    <div className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 shadow-[0_16px_30px_-24px_rgba(34,197,94,0.28)] dark:bg-emerald-950/30 dark:text-emerald-300">
+                <section className="space-y-5 rounded-[30px] border border-slate-200/85 bg-white/96 p-5 shadow-[0_22px_46px_-34px_rgba(15,23,42,0.16)] md:p-6 dark:border-slate-800 dark:bg-slate-900">
+                  <div className="space-y-3">
+                    <div className="inline-flex h-10 w-10 items-center justify-center rounded-[18px] bg-brand/10 text-brand shadow-[0_16px_30px_-24px_rgba(67,56,202,0.36)] dark:bg-brand/15 dark:text-brand-light">
                       <Icons.ShieldCheck className="h-5 w-5" />
                     </div>
 
@@ -475,20 +504,23 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                     </div>
                   </div>
 
-                  <div className="mt-4 grid gap-3 md:grid-cols-2 md:items-stretch">
+                  <div className="grid gap-4 md:grid-cols-2 md:items-stretch">
                     {verificationLevels.map((level) => (
                       <VerificationLevelCard key={level.title} level={level} />
                     ))}
                   </div>
 
-                  <p className="mt-3 max-w-[760px] text-[0.92rem] leading-6 text-slate-600 dark:text-slate-400">
+                  <p className="max-w-[760px] text-sm leading-relaxed text-slate-600 dark:text-slate-400">
                     Aunque esté verificado, hay cosas que siguen siendo decisión tuya: precio, reglas y experiencias de otros.
                   </p>
                 </section>
 
-                <section className="space-y-3">
-                  <div className="flex flex-wrap items-end justify-between gap-3">
-                    <div className="space-y-1">
+                <section className="mx-auto max-w-4xl space-y-5 rounded-[30px] border border-slate-200/85 bg-white/96 p-5 shadow-[0_22px_46px_-34px_rgba(15,23,42,0.16)] md:p-6 dark:border-slate-800 dark:bg-slate-900">
+                  <div className="flex flex-wrap items-end justify-center gap-3 text-center">
+                    <div className="space-y-1 text-center">
+                      <div className="mx-auto inline-flex h-11 w-11 items-center justify-center rounded-[18px] bg-brand/10 text-brand shadow-[0_16px_30px_-24px_rgba(67,56,202,0.36)] dark:bg-brand/15 dark:text-brand-light">
+                        <Icons.Lightbulb className="h-5 w-5" />
+                      </div>
                       <p className="app-eyebrow">Cierre</p>
                       <h2 className="text-[clamp(1.55rem,2.5vw,2rem)] font-semibold leading-[1.08] tracking-[-0.04em] text-slate-950 dark:text-slate-50">
                         Esto recién empieza
@@ -496,19 +528,23 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                     </div>
                   </div>
 
-                  <div className="grid gap-3 md:grid-cols-3">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                     {futureCards.map((item, index) => (
                       <div key={item.title} className={cn('relative h-full overflow-hidden', item.cardClassName)}>
-                        <div className="absolute inset-x-0 top-0 h-1.5 bg-slate-900/10 dark:bg-white/10" />
                         <div className="relative flex h-full flex-col gap-4">
-                          <span className={cn('inline-flex h-9 w-9 items-center justify-center rounded-2xl text-[0.74rem] font-semibold tracking-[0.18em]', item.badgeClassName)}>
-                            0{index + 1}
-                          </span>
+                          <div className="flex items-center justify-between gap-3">
+                            <div className={cn('inline-flex h-11 w-11 items-center justify-center rounded-[18px]', item.iconWrapperClassName)}>
+                              <item.icon className={cn('h-5 w-5', item.iconClassName)} />
+                            </div>
+                            <span className={cn('inline-flex h-8 w-8 items-center justify-center rounded-full text-[0.68rem] font-semibold tracking-[0.18em]', item.badgeClassName)}>
+                              0{index + 1}
+                            </span>
+                          </div>
                           <div className="space-y-1.5">
-                            <h3 className="text-[0.92rem] font-semibold leading-5 tracking-[-0.015em] text-slate-950 dark:text-slate-50">
+                            <h3 className="text-[0.95rem] font-semibold leading-6 tracking-[-0.015em] text-slate-950 dark:text-slate-50">
                               {item.title}
                             </h3>
-                              <div className="text-[0.84rem] leading-5 text-slate-600 dark:text-slate-400">
+                            <div className="text-sm leading-relaxed text-slate-600 dark:text-slate-400">
                               {item.description}
                             </div>
                           </div>
