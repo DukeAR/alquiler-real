@@ -288,53 +288,54 @@ const PRESENCIAL_VERIFICATION_ITEMS = [
 
 const PresencialVerificationInfoCard: React.FC = () => {
   return (
-    <div className="w-full space-y-8 rounded-[32px] border border-slate-200/80 bg-white px-5 py-6 shadow-[0_20px_46px_-38px_rgba(15,23,42,0.16)] sm:px-7 sm:py-8">
-      <div className="flex items-start gap-4 sm:gap-5">
+    <div className="w-full max-w-full overflow-hidden space-y-8 rounded-[32px] border border-slate-200/80 bg-white p-[28px] shadow-[0_20px_46px_-38px_rgba(15,23,42,0.16)]">
+      <div className="flex items-start gap-5">
         <img
           src="/verified-presencial-circular.png"
           alt="Verificado presencialmente"
-          className="h-20 w-20 shrink-0 object-contain sm:h-24 sm:w-24"
+          className="h-20 w-20 shrink-0 object-contain"
         />
 
-        <div className="min-w-0 space-y-2 pt-1">
-          <h3 className="text-balance max-w-4xl text-[clamp(1.6rem,2.3vw,2.25rem)] font-extrabold leading-[1.08] tracking-[-0.05em] text-slate-950">
-            Sello de seguridad: <span className="text-brand">Verificado presencialmente</span>
-          </h3>
-          <div className="max-w-3xl text-[0.98rem] leading-[1.65] text-slate-500">
-            <p>Este sello identifica a las propiedades que completaron la verificación presencial paga.</p>
-            <p>Te ayuda a elegir con más confianza.</p>
-          </div>
+        <div className="min-w-0">
+          <h2 className="text-3xl font-bold leading-tight text-slate-950">
+            Sello de seguridad: <span className="text-violet-600">Verificado presencialmente</span>
+          </h2>
+
+          <p className="mt-3 max-w-3xl text-base leading-relaxed text-slate-600">
+            Este sello identifica a las propiedades que completaron la verificación presencial paga.
+            Te ayuda a elegir con más confianza.
+          </p>
         </div>
       </div>
 
-      <div className="h-px w-full bg-slate-200/70" />
+      <div className="mt-10 w-full border-t border-[#E5E7EB]" />
 
       <div className="space-y-4">
         <p className="text-[0.85rem] font-bold uppercase tracking-[0.18em] text-slate-900">
           ¿Cómo funciona?
         </p>
 
-        <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-6" aria-label="Cómo funciona la verificación presencial">
+        <div className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)] md:items-start md:gap-x-4 md:gap-y-0" aria-label="Cómo funciona la verificación presencial">
           {PRESENCIAL_VERIFICATION_STEPS.map((step, index) => (
             <React.Fragment key={step.number}>
-              <div className="flex max-w-[200px] flex-col items-center text-center">
-                <div className="relative flex h-12 w-12 items-center justify-center rounded-full bg-brand/10 text-brand shadow-[0_10px_20px_-16px_rgba(79,70,229,0.26)] sm:h-12 sm:w-12">
+              <div className="flex min-w-0 flex-col items-center text-center">
+                <div className="relative flex h-14 w-14 items-center justify-center rounded-full bg-brand/10 text-brand shadow-[0_10px_20px_-16px_rgba(79,70,229,0.26)] sm:h-14 sm:w-14">
                   <span className="absolute -left-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-brand text-[0.72rem] font-bold text-white shadow-[0_8px_16px_-12px_rgba(79,70,229,0.55)]">
                     {step.number}
                   </span>
-                  <step.icon className="h-6 w-6" />
+                  <step.icon className="h-7 w-7" />
                 </div>
 
-                <h4 className="mt-4 text-[1.125rem] font-bold leading-[1.25] text-slate-900">
+                <h4 className="mt-4 text-[1.06rem] font-bold leading-[1.22] text-slate-900">
                   {step.title}
                 </h4>
-                <p className="mt-2 text-[0.875rem] leading-[1.5] text-slate-500">
+                <p className="mt-2 text-[0.86rem] leading-[1.52] text-slate-500">
                   {step.description}
                 </p>
               </div>
 
               {index < PRESENCIAL_VERIFICATION_STEPS.length - 1 ? (
-                <div className="mx-4 hidden shrink-0 items-center justify-center text-brand/50 xl:flex" aria-hidden="true">
+                <div className="hidden shrink-0 items-center justify-center self-start pt-14 text-brand/50 md:flex" aria-hidden="true">
                   <span className="select-none text-[2rem] leading-none">→</span>
                 </div>
               ) : null}

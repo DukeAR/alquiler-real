@@ -758,10 +758,12 @@ describe('PropertyDetail', () => {
     expect(sealImages[0]).toHaveAttribute('src', '/verified-presencial-circular.png');
     expect(sealImages[0]).toHaveClass('h-20', 'w-20', 'shrink-0', 'object-contain');
     const verificationPreview = screen.getByTestId('property-verification-preview');
+    const infoCard = verificationPreview.firstElementChild as HTMLElement;
+    expect(infoCard).toHaveClass('overflow-hidden', 'max-w-full', 'p-[28px]');
     expect(within(verificationPreview).getByAltText('Verificado presencialmente')).toHaveAttribute('src', '/verified-presencial-circular.png');
-    expect(within(verificationPreview).getByRole('heading', { name: /Sello de seguridad: Verificado presencialmente/i })).toBeDefined();
-    expect(within(verificationPreview).getByText('Este sello identifica a las propiedades que completaron la verificación presencial paga.')).toBeDefined();
-    expect(within(verificationPreview).getByText('Te ayuda a elegir con más confianza.')).toBeDefined();
+    expect(within(verificationPreview).getByRole('heading', { name: /Sello de seguridad: Verificado presencialmente/i })).toHaveClass('text-3xl', 'font-bold', 'leading-tight', 'text-slate-950');
+    expect(within(verificationPreview).getByRole('heading', { name: /Sello de seguridad: Verificado presencialmente/i }).querySelector('span')).toHaveClass('text-violet-600');
+    expect(within(verificationPreview).getByText(/Este sello identifica a las propiedades que completaron la verificación presencial paga\. Te ayuda a elegir con más confianza\./i, { selector: 'p' })).toHaveClass('mt-3', 'max-w-3xl', 'text-base', 'leading-relaxed', 'text-slate-600');
     expect(within(verificationPreview).getByText('¿Cómo funciona?')).toBeDefined();
     expect(within(verificationPreview).getByText('El anfitrión contrata la verificación presencial')).toBeDefined();
     expect(within(verificationPreview).getByText('Visitamos la propiedad')).toBeDefined();
