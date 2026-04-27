@@ -26,7 +26,6 @@ import { Card } from './ui/Card';
 import { NoticeBanner } from './ui/NoticeBanner';
 import { SectionTitle } from './ui/SectionTitle';
 import { TrustSignalsInline, getTrustSignalsFromInteractionHistory, getTrustSignalsFromItems, type TrustSignal } from './ui/TrustSignalsInline';
-import { PresencialVerificationBadge } from './ui/PresencialVerificationBadge';
 import { PropertyVerificationPanel } from './verification/PropertyVerificationPanel';
 import { VerificationInfoPanel } from './verification/VerificationInfoPanel';
 
@@ -245,125 +244,130 @@ const REQUEST_CONFIRMATION_NOTICE: BookingConfirmationNotice = {
   description: 'Si el anfitrión acepta, elegís si la dejás registrada acá o si la coordinás por fuera.',
 };
 
-type PresencialVerificationInfoStepTone = 'indigo' | 'emerald';
-
-type PresencialVerificationInfoStep = {
+type PresencialVerificationStep = {
   number: string;
   title: string;
   description: string;
   icon: IconComponent;
-  tone: PresencialVerificationInfoStepTone;
 };
 
-const PRESENCIAL_VERIFICATION_STEPS: PresencialVerificationInfoStep[] = [
+const PRESENCIAL_VERIFICATION_STEPS: PresencialVerificationStep[] = [
   {
     number: '1',
-    title: 'Solicitud del anfitrión',
-    description: 'Agenda la visita para revisar la propiedad.',
+    title: 'El anfitrión contrata la verificación presencial',
+    description: 'Elige la opción premium y agenda la visita de nuestro equipo.',
     icon: Icons.Calendar,
-    tone: 'indigo',
   },
   {
     number: '2',
-    title: 'Visita presencial',
-    description: 'Confirmamos que exista y coincida con el aviso.',
+    title: 'Visitamos la propiedad',
+    description: 'Un verificador revisa en persona que el lugar existe y que la información del aviso es real.',
     icon: Icons.Home,
-    tone: 'indigo',
   },
   {
     number: '3',
-    title: 'Revisión de datos',
-    description: 'Verificamos ubicación, fotos y condiciones.',
+    title: 'Verificamos y comprobamos',
+    description: 'Validamos ubicación, fotos, servicios y datos clave del aviso.',
     icon: Icons.ListTodo,
-    tone: 'indigo',
   },
   {
     number: '4',
-    title: 'Sello aprobado',
-    description: 'Si todo está correcto, recibe el sello.',
+    title: 'Publicación verificada',
+    description: 'Si todo está correcto, la propiedad recibe el sello de Verificado presencialmente.',
     icon: Icons.ShieldCheck,
-    tone: 'emerald',
   },
 ];
 
 const PRESENCIAL_VERIFICATION_ITEMS = [
   'Ubicación comprobada',
   'Anfitrión confirmado',
-  'Fotos revisadas',
-  'Condiciones claras',
+  'Fotos y datos revisados',
+  'Servicios verificados',
+  'Condiciones del lugar',
 ] as const;
 
 const PresencialVerificationInfoCard: React.FC = () => {
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col items-center gap-4 text-center">
+    <div className="w-full space-y-8 rounded-[32px] border border-slate-200/80 bg-white px-5 py-6 shadow-[0_20px_46px_-38px_rgba(15,23,42,0.16)] sm:px-7 sm:py-8">
+      <div className="flex items-start gap-4 sm:gap-5">
         <img
           src="/verified-presencial-circular.png"
           alt="Verificado presencialmente"
-          className="h-16 w-16 shrink-0 object-contain"
+          className="h-20 w-20 shrink-0 object-contain sm:h-24 sm:w-24"
         />
 
-        <div className="space-y-2">
-          <h3 className="text-balance max-w-4xl text-[clamp(1.35rem,2.2vw,2rem)] font-extrabold leading-[1.12] tracking-[-0.05em] text-slate-950">
-            Sello de seguridad: <span className="text-emerald-700">Verificado presencialmente</span>
+        <div className="min-w-0 space-y-2 pt-1">
+          <h3 className="text-balance max-w-4xl text-[clamp(1.6rem,2.3vw,2.25rem)] font-extrabold leading-[1.08] tracking-[-0.05em] text-slate-950">
+            Sello de seguridad: <span className="text-brand">Verificado presencialmente</span>
           </h3>
-          <p className="max-w-3xl text-[0.95rem] leading-[1.55] text-slate-500">
-            Este sello identifica propiedades que completaron la verificación presencial. Te ayuda a elegir con más confianza.
-          </p>
+          <div className="max-w-3xl text-[0.98rem] leading-[1.65] text-slate-500">
+            <p>Este sello identifica a las propiedades que completaron la verificación presencial paga.</p>
+            <p>Te ayuda a elegir con más confianza.</p>
+          </div>
         </div>
       </div>
 
-      <div className="flex flex-col items-center gap-5 text-center">
-        <p className="text-[0.9rem] font-bold uppercase tracking-[0.16em] text-slate-900">
+      <div className="h-px w-full bg-slate-200/70" />
+
+      <div className="space-y-4">
+        <p className="text-[0.85rem] font-bold uppercase tracking-[0.18em] text-slate-900">
           ¿Cómo funciona?
         </p>
 
-        <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-6">
+        <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-6" aria-label="Cómo funciona la verificación presencial">
           {PRESENCIAL_VERIFICATION_STEPS.map((step, index) => (
             <React.Fragment key={step.number}>
               <div className="flex max-w-[200px] flex-col items-center text-center">
-                <div className="flex items-center gap-3">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-[0.72rem] font-bold text-white shadow-[0_8px_16px_-12px_rgba(16,185,129,0.55)]">
+                <div className="relative flex h-12 w-12 items-center justify-center rounded-full bg-brand/10 text-brand shadow-[0_10px_20px_-16px_rgba(79,70,229,0.26)] sm:h-12 sm:w-12">
+                  <span className="absolute -left-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-brand text-[0.72rem] font-bold text-white shadow-[0_8px_16px_-12px_rgba(79,70,229,0.55)]">
                     {step.number}
                   </span>
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 shadow-[0_10px_20px_-16px_rgba(16,185,129,0.26)]">
-                    <step.icon className="h-6 w-6" strokeWidth={2.1} />
-                  </div>
+                  <step.icon className="h-6 w-6" />
                 </div>
 
-                <h4 className="line-clamp-1 text-[1.125rem] font-bold leading-[1.25] text-slate-900">
+                <h4 className="mt-4 text-[1.125rem] font-bold leading-[1.25] text-slate-900">
                   {step.title}
                 </h4>
-                <p className="line-clamp-2 text-[0.875rem] leading-[1.5] text-slate-500">
+                <p className="mt-2 text-[0.875rem] leading-[1.5] text-slate-500">
                   {step.description}
                 </p>
               </div>
 
               {index < PRESENCIAL_VERIFICATION_STEPS.length - 1 ? (
-                <span aria-hidden="true" className="mx-4 text-gray-300">
-                  →
-                </span>
+                <div className="mx-4 hidden shrink-0 items-center justify-center text-brand/50 xl:flex" aria-hidden="true">
+                  <span className="select-none text-[2rem] leading-none">→</span>
+                </div>
               ) : null}
             </React.Fragment>
           ))}
         </div>
       </div>
 
-      <div className="mt-12 rounded-2xl bg-green-50 border border-green-100 p-6">
-        <div className="space-y-4">
-          <h4 className="text-[0.95rem] font-semibold leading-6 text-slate-900 sm:text-[1rem]">
-            Solo propiedades verificadas
-          </h4>
-          <ul className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[0.875rem] leading-[1.5] text-slate-700 sm:text-[0.92rem]">
-            {PRESENCIAL_VERIFICATION_ITEMS.map((item) => (
-              <li key={item} className="inline-flex items-center gap-2 whitespace-nowrap">
-                <span aria-hidden="true" className="text-emerald-600">
-                  ✔
-                </span>
-                <span>{item}</span>
-              </li>
-            ))}
-          </ul>
+      <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-6">
+        <div className="flex items-start gap-4 sm:gap-5">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand shadow-[0_14px_24px_-18px_rgba(79,70,229,0.28)]">
+            <Icons.ShieldCheck className="h-6 w-6" />
+          </div>
+
+          <div className="min-w-0 space-y-3">
+            <div className="space-y-1">
+              <h4 className="text-[0.98rem] font-semibold leading-6 text-brand sm:text-[1rem]">
+                Solo propiedades 100% verificadas
+              </h4>
+              <p className="max-w-4xl text-[0.93rem] leading-6 text-slate-600">
+                Para mostrar este sello, la propiedad debe completar todas las comprobaciones (5/5).
+              </p>
+            </div>
+
+            <ul className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[0.875rem] leading-[1.5] text-slate-700 sm:text-[0.92rem]">
+              {PRESENCIAL_VERIFICATION_ITEMS.map((item) => (
+                <li key={item} className="inline-flex items-center gap-2 whitespace-nowrap">
+                  <Icons.CheckCircle2 className="h-4 w-4 text-brand" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </div>
     </div>
@@ -553,7 +557,6 @@ export const PropertyDetailShell: React.FC<{
   const verificationDetails = getPropertyVerificationDetails(property);
   const verificationPreviewMode = verificationDetails.previewMode;
   const verificationPreviewItems = verificationDetails.detailItems;
-  const showPresencialVerificationBadge = verificationDetails.isFullyVerified;
   const showPresencialVerificationInfoCard = verificationPreviewMode === 'premium' && Boolean(property.hasPresencialVerification);
   const hostResponseSignal = getHostResponseSignal(property.hostInteractionHistory);
   const completedReservationsLabel = property.hostInteractionHistory?.completedReservationsCount
@@ -1299,10 +1302,6 @@ export const PropertyDetailShell: React.FC<{
                   </div>
 
                   <div className="absolute top-6 right-6 z-20 flex flex-col items-end gap-3">
-                    {showPresencialVerificationBadge ? (
-                      <PresencialVerificationBadge size="lg" />
-                    ) : null}
-
                     {user ? (
                       <Button
                         onClick={toggleFav}
@@ -1370,9 +1369,9 @@ export const PropertyDetailShell: React.FC<{
           role="region"
           aria-label="Contexto de la reserva"
           data-motion-block
-          className="app-card-hover app-motion-block rounded-[30px] border border-slate-200/80 bg-white p-5 shadow-[0_30px_80px_-50px_rgba(15,23,42,0.28)] sm:p-6"
+          className="app-card-hover app-motion-block rounded-[24px] border border-slate-200/80 bg-white p-8 shadow-[0_30px_80px_-50px_rgba(15,23,42,0.28)]"
         >
-          <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(320px,0.82fr)] xl:items-start">
+          <div className="grid gap-8 lg:grid-cols-2 lg:items-start">
             <div className="space-y-5">
               <div className="space-y-3.5">
                 <div className="flex flex-wrap items-end gap-x-3 gap-y-2 text-slate-950">
@@ -1407,7 +1406,7 @@ export const PropertyDetailShell: React.FC<{
               ) : null}
             </div>
 
-            <div className="space-y-4 rounded-[28px] border border-slate-200/80 bg-slate-50/80 p-4 shadow-[0_24px_60px_-44px_rgba(15,23,42,0.18)] sm:p-5">
+            <div className="space-y-4 lg:pt-1">
               <div className="space-y-3">
                 <Button
                   ref={primaryBookingCtaRef}
@@ -1423,48 +1422,48 @@ export const PropertyDetailShell: React.FC<{
                   </>
                 </Button>
               </div>
-
-              <section
-                data-testid="property-verification-preview"
-                aria-label="Estado de verificación"
-                className="border-t border-slate-200/70 pt-4"
-              >
-                {showPresencialVerificationInfoCard ? (
-                  <PresencialVerificationInfoCard />
-                ) : (
-                  <ul className="space-y-2.5" aria-label="Comprobaciones de verificación">
-                    {verificationPreviewItems.map((item) => {
-                      const isComplete = item.status === 'complete';
-
-                      return (
-                        <li
-                          key={item.key}
-                          data-status={item.status}
-                          className="flex items-center gap-3 rounded-[18px] border border-slate-200/80 bg-white px-3.5 py-3"
-                        >
-                          <span
-                            className={cn(
-                              'inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border',
-                              isComplete
-                                ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                                : 'border-slate-200 bg-slate-100 text-slate-400',
-                            )}
-                            aria-hidden="true"
-                          >
-                            {isComplete ? <Icons.Check className="h-3.5 w-3.5" /> : <Icons.Circle className="h-2.5 w-2.5 fill-current" />}
-                          </span>
-
-                          <span className={cn('text-sm leading-6', isComplete ? 'font-semibold text-slate-900' : 'font-medium text-slate-500')}>
-                            {item.detailLabel}
-                          </span>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </section>
             </div>
           </div>
+
+          <section
+            data-testid="property-verification-preview"
+            aria-label="Estado de verificación"
+            className="mt-4 border-t border-slate-200/70 pt-4 lg:mt-5"
+          >
+            {showPresencialVerificationInfoCard ? (
+              <PresencialVerificationInfoCard />
+            ) : (
+              <ul className="space-y-2.5" aria-label="Comprobaciones de verificación">
+                {verificationPreviewItems.map((item) => {
+                  const isComplete = item.status === 'complete';
+
+                  return (
+                    <li
+                      key={item.key}
+                      data-status={item.status}
+                      className="flex h-11 items-center gap-2.5 overflow-hidden rounded-xl border border-slate-200/80 bg-white px-3.5 py-2.5"
+                    >
+                      <span
+                        className={cn(
+                          'inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border',
+                          isComplete
+                            ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                            : 'border-slate-200 bg-slate-100 text-slate-400',
+                        )}
+                        aria-hidden="true"
+                      >
+                        {isComplete ? <Icons.Check className="h-3 w-3" /> : <Icons.Circle className="h-2 w-2 fill-current" />}
+                      </span>
+
+                      <span className={cn('text-sm leading-5 whitespace-nowrap', isComplete ? 'font-semibold text-slate-900' : 'font-medium text-slate-500')}>
+                        {item.detailLabel}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </section>
         </section>
 
         <main

@@ -6,7 +6,6 @@ import { getPropertyCardVerificationState } from '../lib/propertyVerification';
 import { Property } from '../services/geminiService';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
-import { PresencialVerificationBadge } from './ui/PresencialVerificationBadge';
 
 const normalizePropertyText = (value?: string) => (value ?? '')
   .normalize('NFD')
@@ -121,7 +120,11 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-slate-950/24 via-slate-950/8 to-transparent" />
 
         {showPresencialVerificationBadge ? (
-          <PresencialVerificationBadge className="absolute top-4 left-4 z-20" />
+          <img
+            src="/verified-presencial-badge.png"
+            alt="Verificado presencialmente"
+            className="absolute top-4 left-4 z-20 h-11 w-auto drop-shadow-md"
+          />
         ) : null}
 
         {user ? (

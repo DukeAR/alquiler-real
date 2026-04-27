@@ -213,7 +213,10 @@ describe('PropertyCard', () => {
       />,
     );
 
-    expect(screen.getByAltText('Verificado presencialmente')).toHaveAttribute('src', '/verified-presencial-badge.png');
+    const presencialBadge = screen.getByAltText('Verificado presencialmente');
+    expect(presencialBadge).toHaveAttribute('src', '/verified-presencial-badge.png');
+    expect(presencialBadge).toHaveClass('absolute', 'top-4', 'left-4', 'z-20', 'h-11', 'w-auto', 'drop-shadow-md');
+    expect(presencialBadge.parentElement).toHaveClass('relative', 'aspect-[4/3]', 'overflow-hidden', 'bg-slate-100');
     const verificationBlock = screen.getByTestId('property-card-verification');
     expect(verificationBlock).toHaveAttribute('aria-label', 'Información verificada en persona');
     expect(within(verificationBlock).getByText('Información verificada en persona')).toBeInTheDocument();

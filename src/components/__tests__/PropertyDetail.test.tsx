@@ -735,7 +735,7 @@ describe('PropertyDetail', () => {
     await waitFor(() => expect(screen.getByText('Revisá el resumen y mandá la solicitud. La seña recién se define si el anfitrión acepta.')).toBeDefined());
   });
 
-  test('keeps the verification preview compact when the listing has many checks complete', async () => {
+  test('renders the presencial verification infographic across the reservation card width', async () => {
     (apiJson as any).mockImplementation(async (url: string) => {
       if (url.endsWith('/reviews')) return [{ id: 'r1', reviewer_id: 'u1', rating: 5, comment: 'Buen lugar' }];
       if (url === '/api/bookings') return [];
@@ -754,32 +754,34 @@ describe('PropertyDetail', () => {
     await waitForPropertyHeading();
 
     const sealImages = screen.getAllByAltText('Verificado presencialmente');
-    expect(sealImages).toHaveLength(2);
-    expect(sealImages.some((image) => image.getAttribute('src') === '/verified-presencial-badge.png')).toBe(true);
-    expect(sealImages.some((image) => image.getAttribute('src') === '/verified-presencial-circular.png')).toBe(true);
+    expect(sealImages).toHaveLength(1);
+    expect(sealImages[0]).toHaveAttribute('src', '/verified-presencial-circular.png');
+    expect(sealImages[0]).toHaveClass('h-20', 'w-20', 'shrink-0', 'object-contain');
     const verificationPreview = screen.getByTestId('property-verification-preview');
     expect(within(verificationPreview).getByAltText('Verificado presencialmente')).toHaveAttribute('src', '/verified-presencial-circular.png');
     expect(within(verificationPreview).getByRole('heading', { name: /Sello de seguridad: Verificado presencialmente/i })).toBeDefined();
-    expect(within(verificationPreview).getByText('Este sello identifica propiedades que completaron la verificación presencial. Te ayuda a elegir con más confianza.')).toBeDefined();
+    expect(within(verificationPreview).getByText('Este sello identifica a las propiedades que completaron la verificación presencial paga.')).toBeDefined();
+    expect(within(verificationPreview).getByText('Te ayuda a elegir con más confianza.')).toBeDefined();
     expect(within(verificationPreview).getByText('¿Cómo funciona?')).toBeDefined();
-    expect(within(verificationPreview).getAllByText('→')).toHaveLength(3);
-    expect(within(verificationPreview).getByText('Solicitud del anfitrión')).toBeDefined();
-    expect(within(verificationPreview).getByText('Agenda la visita para revisar la propiedad.')).toBeDefined();
-    expect(within(verificationPreview).getByText('Visita presencial')).toBeDefined();
-    expect(within(verificationPreview).getByText('Confirmamos que exista y coincida con el aviso.')).toBeDefined();
-    expect(within(verificationPreview).getByText('Revisión de datos')).toBeDefined();
-    expect(within(verificationPreview).getByText('Verificamos ubicación, fotos y condiciones.')).toBeDefined();
-    expect(within(verificationPreview).getByText('Sello aprobado')).toBeDefined();
-    expect(within(verificationPreview).getByText('Si todo está correcto, recibe el sello.')).toBeDefined();
-    expect(within(verificationPreview).getByText('Solo propiedades verificadas')).toBeDefined();
+    expect(within(verificationPreview).getByText('El anfitrión contrata la verificación presencial')).toBeDefined();
+    expect(within(verificationPreview).getByText('Visitamos la propiedad')).toBeDefined();
+    expect(within(verificationPreview).getByText('Verificamos y comprobamos')).toBeDefined();
+    expect(within(verificationPreview).getByText('Publicación verificada')).toBeDefined();
+    expect(within(verificationPreview).getByText('Solo propiedades 100% verificadas')).toBeDefined();
+    expect(within(verificationPreview).getByText('Para mostrar este sello, la propiedad debe completar todas las comprobaciones (5/5).')).toBeDefined();
     expect(within(verificationPreview).getByText('Ubicación comprobada')).toBeDefined();
     expect(within(verificationPreview).getByText('Anfitrión confirmado')).toBeDefined();
-    expect(within(verificationPreview).getByText('Fotos revisadas')).toBeDefined();
-    expect(within(verificationPreview).getByText('Condiciones claras')).toBeDefined();
-    expect(within(verificationPreview).queryByText('Verificación presencial completa')).toBeNull();
-    expect(within(verificationPreview).queryByText('Esta propiedad fue validada en persona.')).toBeNull();
-    expect(within(verificationPreview).queryByText('Incluye ubicación, anfitrión y datos confirmados.')).toBeNull();
-    expect(within(verificationPreview).getAllByRole('listitem')).toHaveLength(4);
+    expect(within(verificationPreview).getByText('Fotos y datos revisados')).toBeDefined();
+    expect(within(verificationPreview).getByText('Servicios verificados')).toBeDefined();
+    expect(within(verificationPreview).getByText('Condiciones del lugar')).toBeDefined();
+    expect(within(verificationPreview).getAllByText('→').length).toBeGreaterThanOrEqual(3);
+    expect(within(verificationPreview).getAllByRole('listitem')).toHaveLength(5);
+    expect(within(verificationPreview).queryByText('Esta propiedad completó la verificación presencial.')).toBeNull();
+    expect(within(verificationPreview).queryByText('Confirmamos la ubicación')).toBeNull();
+    expect(within(verificationPreview).queryByText('Revisamos datos principales')).toBeNull();
+
+    const bookingCta = screen.getByRole('button', { name: /consultar disponibilidad/i });
+    expect(bookingCta.compareDocumentPosition(verificationPreview) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   test('does not show the presencial infographic when the seal is not active even if the property reaches 5/5', async () => {
@@ -802,12 +804,19 @@ describe('PropertyDetail', () => {
 
     const verificationPreview = screen.getByTestId('property-verification-preview');
     expect(within(verificationPreview).queryByRole('heading', { name: /Sello de seguridad: Verificado presencialmente/i })).toBeNull();
-    expect(within(verificationPreview).getAllByRole('listitem')).toHaveLength(5);
-    expect(within(verificationPreview).getByText('Anfitrión confirmado')).toBeDefined();
-    expect(within(verificationPreview).getByText('Ubicación verificada')).toBeDefined();
-    expect(within(verificationPreview).getByText('Geolocalización precisa')).toBeDefined();
-    expect(within(verificationPreview).getByText('Fotos reales')).toBeDefined();
-    expect(within(verificationPreview).getByText('Disponibilidad validada')).toBeDefined();
+    const checklistItems = within(verificationPreview).getAllByRole('listitem');
+    expect(checklistItems).toHaveLength(5);
+
+    checklistItems.forEach((item) => {
+      expect(item).toHaveClass('h-11', 'gap-2.5', 'rounded-xl', 'px-3.5', 'py-2.5');
+      expect(item.querySelector('svg')).not.toBeNull();
+    });
+
+    expect(within(checklistItems[0]).getByText('Anfitrión confirmado')).toBeDefined();
+    expect(within(checklistItems[1]).getByText('Ubicación verificada')).toBeDefined();
+    expect(within(checklistItems[2]).getByText('Geolocalización precisa')).toBeDefined();
+    expect(within(checklistItems[3]).getByText('Fotos reales')).toBeDefined();
+    expect(within(checklistItems[4]).getByText('Disponibilidad validada')).toBeDefined();
   });
 
   test('uses a neutral action-oriented message for medium trust when key media and availability checks are already present', async () => {
