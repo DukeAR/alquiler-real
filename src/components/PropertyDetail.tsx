@@ -288,87 +288,85 @@ const PRESENCIAL_VERIFICATION_ITEMS = [
 
 const PresencialVerificationInfoCard: React.FC = () => {
   return (
-    <div className="w-full max-w-full overflow-hidden space-y-8 rounded-[32px] border border-slate-200/80 bg-white p-[28px] shadow-[0_20px_46px_-38px_rgba(15,23,42,0.16)]">
-      <div className="flex items-start gap-5">
+    <div className="w-full max-w-full overflow-hidden rounded-[32px] bg-white p-12 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
+      <header className="mb-10 flex items-center gap-8">
         <img
           src="/verified-presencial-circular.png"
           alt="Verificado presencialmente"
-          className="h-20 w-20 shrink-0 object-contain"
+          className="h-[132px] w-[132px] shrink-0 object-contain"
         />
 
-        <div className="min-w-0">
-          <h2 className="text-3xl font-bold leading-tight text-slate-950">
-            Sello de seguridad: <span className="text-violet-600">Verificado presencialmente</span>
+        <div className="min-w-0 space-y-3">
+          <h2 className="text-[42px] font-bold leading-[1.1] text-[#0F172A]">
+            Sello de seguridad: <span className="text-[#4F46E5]">Verificado presencialmente</span>
           </h2>
 
-          <p className="mt-3 max-w-3xl text-base leading-relaxed text-slate-600">
+          <p className="max-w-[960px] text-[20px] leading-[1.55] text-[#64748B]">
             Este sello identifica a las propiedades que completaron la verificación presencial paga.
             Te ayuda a elegir con más confianza.
           </p>
         </div>
-      </div>
+      </header>
 
-      <div className="mt-10 w-full border-t border-[#E5E7EB]" />
+      <div className="mt-10 border-t border-[#E5E7EB]" />
 
       <div className="space-y-4">
-        <p className="text-[0.85rem] font-bold uppercase tracking-[0.18em] text-slate-900">
+        <p className="mb-8 text-[18px] font-extrabold uppercase tracking-[0.18em] text-[#0F172A]">
           ¿Cómo funciona?
         </p>
 
-        <div className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)] md:items-start md:gap-x-4 md:gap-y-0" aria-label="Cómo funciona la verificación presencial">
+        <div className="grid w-full grid-cols-1 gap-14 md:grid-cols-4" aria-label="Cómo funciona la verificación presencial">
           {PRESENCIAL_VERIFICATION_STEPS.map((step, index) => (
             <React.Fragment key={step.number}>
-              <div className="flex min-w-0 flex-col items-center text-center">
-                <div className="relative flex h-14 w-14 items-center justify-center rounded-full bg-brand/10 text-brand shadow-[0_10px_20px_-16px_rgba(79,70,229,0.26)] sm:h-14 sm:w-14">
-                  <span className="absolute -left-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-brand text-[0.72rem] font-bold text-white shadow-[0_8px_16px_-12px_rgba(79,70,229,0.55)]">
+              <div className="relative flex min-w-0 flex-col items-center text-center">
+                <div className="relative flex h-[112px] w-[112px] items-center justify-center rounded-full bg-[#F1EEFF] text-[#4F46E5]">
+                  <span className="absolute -left-2 -top-2 flex h-7 w-7 items-center justify-center rounded-full bg-[#4F46E5] text-[0.72rem] font-bold text-white shadow-[0_8px_16px_-12px_rgba(79,70,229,0.55)]">
                     {step.number}
                   </span>
-                  <step.icon className="h-7 w-7" />
+                  <step.icon className={cn('h-11 w-11', index === PRESENCIAL_VERIFICATION_STEPS.length - 1 ? 'text-emerald-500' : 'text-[#4F46E5]')} />
                 </div>
 
-                <h4 className="mt-4 text-[1.06rem] font-bold leading-[1.22] text-slate-900">
+                <h4 className="mt-5 max-w-[240px] text-[20px] font-bold leading-[1.25] text-[#0F172A]">
                   {step.title}
                 </h4>
-                <p className="mt-2 text-[0.86rem] leading-[1.52] text-slate-500">
+                <p className="mx-auto mt-3 max-w-[240px] text-[16px] leading-[1.5] text-[#64748B]">
                   {step.description}
                 </p>
-              </div>
 
-              {index < PRESENCIAL_VERIFICATION_STEPS.length - 1 ? (
-                <div className="hidden shrink-0 items-center justify-center self-start pt-14 text-brand/50 md:flex" aria-hidden="true">
-                  <span className="select-none text-[2rem] leading-none">→</span>
-                </div>
-              ) : null}
+                {index < PRESENCIAL_VERIFICATION_STEPS.length - 1 ? (
+                  <span className="pointer-events-none absolute right-[-28px] top-[56px] hidden select-none text-[1.5rem] leading-none text-[#8B7CFF] md:block" aria-hidden="true">
+                    →
+                  </span>
+                ) : null}
+              </div>
             </React.Fragment>
           ))}
         </div>
       </div>
 
-      <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-6">
-        <div className="flex items-start gap-4 sm:gap-5">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand shadow-[0_14px_24px_-18px_rgba(79,70,229,0.28)]">
-            <Icons.ShieldCheck className="h-6 w-6" />
+      <div className="mt-12 flex items-center gap-6 rounded-[20px] border border-[#E7E0FF] bg-[#F7F5FF] px-8 py-6">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#F1EEFF] text-[#4F46E5]">
+          <Icons.ShieldCheck className="h-6 w-6" />
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <div className="space-y-1">
+            <h4 className="text-[20px] font-bold leading-[1.25] text-[#4F46E5]">
+              Solo propiedades 100% verificadas
+            </h4>
+            <p className="text-[16px] leading-[1.5] text-[#64748B]">
+              Para mostrar este sello, la propiedad debe completar todas las comprobaciones (5/5).
+            </p>
           </div>
 
-          <div className="min-w-0 space-y-3">
-            <div className="space-y-1">
-              <h4 className="text-[0.98rem] font-semibold leading-6 text-brand sm:text-[1rem]">
-                Solo propiedades 100% verificadas
-              </h4>
-              <p className="max-w-4xl text-[0.93rem] leading-6 text-slate-600">
-                Para mostrar este sello, la propiedad debe completar todas las comprobaciones (5/5).
-              </p>
-            </div>
-
-            <ul className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[0.875rem] leading-[1.5] text-slate-700 sm:text-[0.92rem]">
+          <ul className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2 text-[16px] leading-[1.5] text-[#475569]">
               {PRESENCIAL_VERIFICATION_ITEMS.map((item) => (
                 <li key={item} className="inline-flex items-center gap-2 whitespace-nowrap">
-                  <Icons.CheckCircle2 className="h-4 w-4 text-brand" />
+                  <Icons.CheckCircle2 className="h-4 w-4 text-[#4F46E5]" />
                   <span>{item}</span>
                 </li>
               ))}
-            </ul>
-          </div>
+          </ul>
         </div>
       </div>
     </div>
