@@ -16,7 +16,7 @@ describe('ExploreHero', () => {
     );
 
     const eyebrow = screen.getByText('COSTA ATLÁNTICA ARGENTINA');
-    const title = screen.getByRole('heading', { name: /Donde la información importa\.\s*Elegí mejor antes de reservar\./ });
+    const title = screen.getByRole('heading', { name: /La información real importa\.\s*Elegí mejor antes de reservar\./ });
     const subtitle = screen.getByText('Compará precio, zona y verificación antes de reservar.');
     const search = screen.getByRole('combobox', { name: 'Destino' });
     const badge = screen.getByText('Ubicación real');

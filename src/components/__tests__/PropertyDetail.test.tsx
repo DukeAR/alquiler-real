@@ -753,14 +753,61 @@ describe('PropertyDetail', () => {
 
     await waitForPropertyHeading();
 
+    const sealImages = screen.getAllByAltText('Verificado presencialmente');
+    expect(sealImages).toHaveLength(2);
+    expect(sealImages.some((image) => image.getAttribute('src') === '/verified-presencial-badge.png')).toBe(true);
+    expect(sealImages.some((image) => image.getAttribute('src') === '/verified-presencial-circular.png')).toBe(true);
     const verificationPreview = screen.getByTestId('property-verification-preview');
-    expect(within(verificationPreview).getByText('Verificado presencialmente')).toBeDefined();
-    expect(within(verificationPreview).getByText('Esta propiedad fue validada en persona.')).toBeDefined();
-    expect(within(verificationPreview).getByText('Incluye ubicación, anfitrión y datos confirmados.')).toBeDefined();
-    expect(within(verificationPreview).queryByText('(5/5)')).toBeNull();
-    expect(within(verificationPreview).queryByText('Listo para coordinar')).toBeNull();
-    expect(within(verificationPreview).queryAllByRole('listitem')).toHaveLength(0);
-    expect(screen.queryByText('Mostramos solo comprobaciones visibles que ayudan a decidir rápido y explican qué falta validar.')).toBeNull();
+    expect(within(verificationPreview).getByAltText('Verificado presencialmente')).toHaveAttribute('src', '/verified-presencial-circular.png');
+    expect(within(verificationPreview).getByRole('heading', { name: /Sello de seguridad: Verificado presencialmente/i })).toBeDefined();
+    expect(within(verificationPreview).getByText('Este sello identifica propiedades que completaron la verificación presencial. Te ayuda a elegir con más confianza.')).toBeDefined();
+    expect(within(verificationPreview).getByText('¿Cómo funciona?')).toBeDefined();
+    expect(within(verificationPreview).getAllByText('→')).toHaveLength(3);
+    expect(within(verificationPreview).getByText('Solicitud del anfitrión')).toBeDefined();
+    expect(within(verificationPreview).getByText('Agenda la visita para revisar la propiedad.')).toBeDefined();
+    expect(within(verificationPreview).getByText('Visita presencial')).toBeDefined();
+    expect(within(verificationPreview).getByText('Confirmamos que exista y coincida con el aviso.')).toBeDefined();
+    expect(within(verificationPreview).getByText('Revisión de datos')).toBeDefined();
+    expect(within(verificationPreview).getByText('Verificamos ubicación, fotos y condiciones.')).toBeDefined();
+    expect(within(verificationPreview).getByText('Sello aprobado')).toBeDefined();
+    expect(within(verificationPreview).getByText('Si todo está correcto, recibe el sello.')).toBeDefined();
+    expect(within(verificationPreview).getByText('Solo propiedades verificadas')).toBeDefined();
+    expect(within(verificationPreview).getByText('Ubicación comprobada')).toBeDefined();
+    expect(within(verificationPreview).getByText('Anfitrión confirmado')).toBeDefined();
+    expect(within(verificationPreview).getByText('Fotos revisadas')).toBeDefined();
+    expect(within(verificationPreview).getByText('Condiciones claras')).toBeDefined();
+    expect(within(verificationPreview).queryByText('Verificación presencial completa')).toBeNull();
+    expect(within(verificationPreview).queryByText('Esta propiedad fue validada en persona.')).toBeNull();
+    expect(within(verificationPreview).queryByText('Incluye ubicación, anfitrión y datos confirmados.')).toBeNull();
+    expect(within(verificationPreview).getAllByRole('listitem')).toHaveLength(4);
+  });
+
+  test('does not show the presencial infographic when the seal is not active even if the property reaches 5/5', async () => {
+    (apiJson as any).mockImplementation(async (url: string) => {
+      if (url.endsWith('/reviews')) return [{ id: 'r1', reviewer_id: 'u1', rating: 5, comment: 'Buen lugar' }];
+      if (url === '/api/bookings') return [];
+
+      return {
+        ...sampleProperty,
+        propertyType: 'house',
+        materialVerified: true,
+        availabilityValidated: true,
+        hasPresencialVerification: false,
+      };
+    });
+
+    renderPropertyDetail();
+
+    await waitForPropertyHeading();
+
+    const verificationPreview = screen.getByTestId('property-verification-preview');
+    expect(within(verificationPreview).queryByRole('heading', { name: /Sello de seguridad: Verificado presencialmente/i })).toBeNull();
+    expect(within(verificationPreview).getAllByRole('listitem')).toHaveLength(5);
+    expect(within(verificationPreview).getByText('Anfitrión confirmado')).toBeDefined();
+    expect(within(verificationPreview).getByText('Ubicación verificada')).toBeDefined();
+    expect(within(verificationPreview).getByText('Geolocalización precisa')).toBeDefined();
+    expect(within(verificationPreview).getByText('Fotos reales')).toBeDefined();
+    expect(within(verificationPreview).getByText('Disponibilidad validada')).toBeDefined();
   });
 
   test('uses a neutral action-oriented message for medium trust when key media and availability checks are already present', async () => {

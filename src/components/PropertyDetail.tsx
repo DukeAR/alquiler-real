@@ -26,7 +26,7 @@ import { Card } from './ui/Card';
 import { NoticeBanner } from './ui/NoticeBanner';
 import { SectionTitle } from './ui/SectionTitle';
 import { TrustSignalsInline, getTrustSignalsFromInteractionHistory, getTrustSignalsFromItems, type TrustSignal } from './ui/TrustSignalsInline';
-import { VerificationBadgePremium } from './ui/VerificationBadgePremium';
+import { PresencialVerificationBadge } from './ui/PresencialVerificationBadge';
 import { PropertyVerificationPanel } from './verification/PropertyVerificationPanel';
 import { VerificationInfoPanel } from './verification/VerificationInfoPanel';
 
@@ -245,6 +245,131 @@ const REQUEST_CONFIRMATION_NOTICE: BookingConfirmationNotice = {
   description: 'Si el anfitrión acepta, elegís si la dejás registrada acá o si la coordinás por fuera.',
 };
 
+type PresencialVerificationInfoStepTone = 'indigo' | 'emerald';
+
+type PresencialVerificationInfoStep = {
+  number: string;
+  title: string;
+  description: string;
+  icon: IconComponent;
+  tone: PresencialVerificationInfoStepTone;
+};
+
+const PRESENCIAL_VERIFICATION_STEPS: PresencialVerificationInfoStep[] = [
+  {
+    number: '1',
+    title: 'Solicitud del anfitrión',
+    description: 'Agenda la visita para revisar la propiedad.',
+    icon: Icons.Calendar,
+    tone: 'indigo',
+  },
+  {
+    number: '2',
+    title: 'Visita presencial',
+    description: 'Confirmamos que exista y coincida con el aviso.',
+    icon: Icons.Home,
+    tone: 'indigo',
+  },
+  {
+    number: '3',
+    title: 'Revisión de datos',
+    description: 'Verificamos ubicación, fotos y condiciones.',
+    icon: Icons.ListTodo,
+    tone: 'indigo',
+  },
+  {
+    number: '4',
+    title: 'Sello aprobado',
+    description: 'Si todo está correcto, recibe el sello.',
+    icon: Icons.ShieldCheck,
+    tone: 'emerald',
+  },
+];
+
+const PRESENCIAL_VERIFICATION_ITEMS = [
+  'Ubicación comprobada',
+  'Anfitrión confirmado',
+  'Fotos revisadas',
+  'Condiciones claras',
+] as const;
+
+const PresencialVerificationInfoCard: React.FC = () => {
+  return (
+    <div className="space-y-8">
+      <div className="flex flex-col items-center gap-4 text-center">
+        <img
+          src="/verified-presencial-circular.png"
+          alt="Verificado presencialmente"
+          className="h-16 w-16 shrink-0 object-contain"
+        />
+
+        <div className="space-y-2">
+          <h3 className="text-balance max-w-4xl text-[clamp(1.35rem,2.2vw,2rem)] font-extrabold leading-[1.12] tracking-[-0.05em] text-slate-950">
+            Sello de seguridad: <span className="text-emerald-700">Verificado presencialmente</span>
+          </h3>
+          <p className="max-w-3xl text-[0.95rem] leading-[1.55] text-slate-500">
+            Este sello identifica propiedades que completaron la verificación presencial. Te ayuda a elegir con más confianza.
+          </p>
+        </div>
+      </div>
+
+      <div className="flex flex-col items-center gap-5 text-center">
+        <p className="text-[0.9rem] font-bold uppercase tracking-[0.16em] text-slate-900">
+          ¿Cómo funciona?
+        </p>
+
+        <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-6">
+          {PRESENCIAL_VERIFICATION_STEPS.map((step, index) => (
+            <React.Fragment key={step.number}>
+              <div className="flex max-w-[200px] flex-col items-center text-center">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-[0.72rem] font-bold text-white shadow-[0_8px_16px_-12px_rgba(16,185,129,0.55)]">
+                    {step.number}
+                  </span>
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 shadow-[0_10px_20px_-16px_rgba(16,185,129,0.26)]">
+                    <step.icon className="h-6 w-6" strokeWidth={2.1} />
+                  </div>
+                </div>
+
+                <h4 className="line-clamp-1 text-[1.125rem] font-bold leading-[1.25] text-slate-900">
+                  {step.title}
+                </h4>
+                <p className="line-clamp-2 text-[0.875rem] leading-[1.5] text-slate-500">
+                  {step.description}
+                </p>
+              </div>
+
+              {index < PRESENCIAL_VERIFICATION_STEPS.length - 1 ? (
+                <span aria-hidden="true" className="mx-4 text-gray-300">
+                  →
+                </span>
+              ) : null}
+            </React.Fragment>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-12 rounded-2xl bg-green-50 border border-green-100 p-6">
+        <div className="space-y-4">
+          <h4 className="text-[0.95rem] font-semibold leading-6 text-slate-900 sm:text-[1rem]">
+            Solo propiedades verificadas
+          </h4>
+          <ul className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[0.875rem] leading-[1.5] text-slate-700 sm:text-[0.92rem]">
+            {PRESENCIAL_VERIFICATION_ITEMS.map((item) => (
+              <li key={item} className="inline-flex items-center gap-2 whitespace-nowrap">
+                <span aria-hidden="true" className="text-emerald-600">
+                  ✔
+                </span>
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const getHostName = (property: PropertyDetailData) => property.host?.name || property.hostName || 'Anfitrión';
 
 const getPropertyTypeLabel = (property: PropertyDetailData) => {
@@ -428,7 +553,8 @@ export const PropertyDetailShell: React.FC<{
   const verificationDetails = getPropertyVerificationDetails(property);
   const verificationPreviewMode = verificationDetails.previewMode;
   const verificationPreviewItems = verificationDetails.detailItems;
-  const showPremiumVerificationBadge = verificationDetails.isFullyVerified;
+  const showPresencialVerificationBadge = verificationDetails.isFullyVerified;
+  const showPresencialVerificationInfoCard = verificationPreviewMode === 'premium' && Boolean(property.hasPresencialVerification);
   const hostResponseSignal = getHostResponseSignal(property.hostInteractionHistory);
   const completedReservationsLabel = property.hostInteractionHistory?.completedReservationsCount
     ? `${property.hostInteractionHistory.completedReservationsCount} ${property.hostInteractionHistory.completedReservationsCount === 1 ? 'reserva cerrada' : 'reservas cerradas'}`
@@ -1135,79 +1261,82 @@ export const PropertyDetailShell: React.FC<{
 
                 <div className="property-hero-overlay pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.05)_0%,rgba(0,0,0,0.14)_34%,rgba(0,0,0,0.3)_62%,rgba(0,0,0,0.55)_100%)]" />
 
-                <div className="property-hero-copy-reveal absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-4 px-4 pb-4 pt-20 sm:gap-4 sm:px-6 sm:pb-6 sm:pt-24 lg:px-8 lg:pb-8 lg:pt-28">
-                  <div className="flex min-w-0 flex-col items-start gap-3 sm:gap-4">
-                    {showPremiumVerificationBadge ? (
-                      <VerificationBadgePremium
-                        size="md"
-                        className="border-emerald-200/70 bg-emerald-50/92 shadow-[0_18px_28px_-20px_rgba(5,150,105,0.34)] backdrop-blur-[10px]"
-                      />
+                <div className="property-hero-copy-reveal absolute inset-0 z-10 flex flex-col justify-between p-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex min-w-0 flex-col items-start gap-3 sm:gap-4">
+                      <button
+                        type="button"
+                        onClick={() => navigate(-1)}
+                        className="inline-flex items-center gap-2 rounded-full border border-white/18 bg-black/28 px-3.5 py-2 text-sm font-semibold text-white backdrop-blur-[10px] shadow-[0_18px_28px_-18px_rgba(15,23,42,0.52)] transition-[background-color,border-color,color,transform] duration-200 ease-out hover:border-white/28 hover:bg-black/38 hover:text-white focus-visible:outline-none focus-visible:shadow-[var(--app-focus-ring)] md:hover:-translate-y-[1px]"
+                      >
+                        <Icons.ArrowLeft className="h-4 w-4" />
+                        <span>Volver</span>
+                      </button>
+
+                      <div className="flex flex-wrap items-center gap-2 text-white">
+                        <span className="inline-flex items-center rounded-full border border-white/18 bg-black/28 px-3.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/90 backdrop-blur-[10px] shadow-[0_16px_24px_-18px_rgba(15,23,42,0.42)]">
+                          {propertyTypeLabel}
+                        </span>
+                        {hasMultipleImages ? (
+                          <Badge variant="neutral" size="md" className="border-white/18 bg-black/28 text-white/88 backdrop-blur-[10px] shadow-[0_16px_24px_-18px_rgba(15,23,42,0.42)]">
+                            {photoCountLabel}
+                          </Badge>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-1 items-center">
+                    <div className="max-w-full text-white sm:max-w-[34rem] lg:max-w-[38rem]">
+                      <h1 className="max-w-full text-balance text-[clamp(1.24rem,5vw,1.56rem)] font-semibold leading-[1.08] tracking-[-0.035em] text-white line-clamp-2 sm:max-w-[30rem] sm:text-[2.32rem] sm:leading-[1.08] lg:max-w-[35rem] lg:text-[2.72rem] lg:leading-[1.08]">
+                        {property.title}
+                      </h1>
+                      <div className="mt-2 inline-flex max-w-full items-center gap-2 text-[0.8rem] font-medium tracking-[-0.01em] text-white/90 sm:mt-3 sm:text-[0.9rem] sm:text-white/92">
+                        <Icons.MapPin className="h-4 w-4 shrink-0" />
+                        <span className="truncate">{property.location}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="absolute top-6 right-6 z-20 flex flex-col items-end gap-3">
+                    {showPresencialVerificationBadge ? (
+                      <PresencialVerificationBadge size="lg" />
                     ) : null}
 
+                    {user ? (
+                      <Button
+                        onClick={toggleFav}
+                        aria-pressed={isFav}
+                        aria-label={isFav ? 'Quitar de guardados' : 'Guardar en guardados'}
+                        variant="secondary"
+                        size="icon"
+                        className={cn(
+                          'border-white/18 bg-black/28 text-white backdrop-blur-[10px] shadow-[0_16px_28px_-18px_rgba(15,23,42,0.48)] hover:border-white/26 hover:bg-black/42 hover:text-white',
+                          isFav && 'border-brand/85 bg-brand/92 text-white shadow-[0_18px_30px_-18px_rgba(67,56,202,0.6)] hover:border-brand hover:bg-brand-dark hover:text-white',
+                        )}
+                      >
+                        <Icons.Heart className="h-5 w-5" />
+                      </Button>
+                    ) : null}
+                  </div>
+
+                  <div className="flex items-end justify-end gap-4">
                     <button
                       type="button"
-                      onClick={() => navigate(-1)}
-                      className="inline-flex items-center gap-2 rounded-full border border-white/18 bg-black/28 px-3.5 py-2 text-sm font-semibold text-white backdrop-blur-[10px] shadow-[0_18px_28px_-18px_rgba(15,23,42,0.52)] transition-[background-color,border-color,color,transform] duration-200 ease-out hover:border-white/28 hover:bg-black/38 hover:text-white focus-visible:outline-none focus-visible:shadow-[var(--app-focus-ring)] md:hover:-translate-y-[1px]"
+                      onClick={openLightbox}
+                      className="inline-flex shrink-0 items-center gap-2 rounded-full border border-white/14 bg-black/20 px-3 py-1.75 text-[0.76rem] font-medium text-white/82 backdrop-blur-[10px] shadow-[0_14px_24px_-22px_rgba(15,23,42,0.42)] transition-[background-color,border-color,color,transform] duration-200 ease-out hover:border-white/22 hover:bg-black/28 hover:text-white sm:px-4 sm:py-2 sm:text-[0.82rem] md:hover:-translate-y-[1px]"
                     >
-                      <Icons.ArrowLeft className="h-4 w-4" />
-                      <span>Volver</span>
-                    </button>
-
-                    <div className="flex flex-wrap items-center gap-2 text-white">
-                      <span className="inline-flex items-center rounded-full border border-white/18 bg-black/28 px-3.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/90 backdrop-blur-[10px] shadow-[0_16px_24px_-18px_rgba(15,23,42,0.42)]">
-                        {propertyTypeLabel}
-                      </span>
+                      <Icons.Camera className="h-4 w-4" />
                       {hasMultipleImages ? (
-                        <Badge variant="neutral" size="md" className="border-white/18 bg-black/28 text-white/88 backdrop-blur-[10px] shadow-[0_16px_24px_-18px_rgba(15,23,42,0.42)]">
-                          {photoCountLabel}
-                        </Badge>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  {user ? (
-                    <Button
-                      onClick={toggleFav}
-                      aria-pressed={isFav}
-                      aria-label={isFav ? 'Quitar de guardados' : 'Guardar en guardados'}
-                      variant="secondary"
-                      size="icon"
-                      className={cn(
-                        'border-white/18 bg-black/28 text-white backdrop-blur-[10px] shadow-[0_16px_28px_-18px_rgba(15,23,42,0.48)] hover:border-white/26 hover:bg-black/42 hover:text-white',
-                        isFav && 'border-brand/85 bg-brand/92 text-white shadow-[0_18px_30px_-18px_rgba(67,56,202,0.6)] hover:border-brand hover:bg-brand-dark hover:text-white',
+                        <>
+                          <span className="hidden sm:inline">Ver todas las fotos</span>
+                          <span className="sm:hidden">Expandir</span>
+                        </>
+                      ) : (
+                        <span>Ver foto</span>
                       )}
-                    >
-                      <Icons.Heart className="h-5 w-5" />
-                    </Button>
-                  ) : null}
-                </div>
-
-                <div className="property-hero-copy-reveal absolute inset-x-0 bottom-0 z-10 flex flex-col gap-4 px-4 pb-4 pt-4 sm:flex-row sm:items-end sm:justify-between sm:gap-8 sm:px-6 sm:pb-6 lg:px-8 lg:pb-8">
-                  <div className="max-w-full text-white sm:max-w-[34rem] lg:max-w-[38rem]">
-                    <h1 className="max-w-full text-balance text-[clamp(1.24rem,5vw,1.56rem)] font-semibold leading-[1.08] tracking-[-0.035em] text-white line-clamp-2 sm:max-w-[30rem] sm:text-[2.32rem] sm:leading-[1.08] lg:max-w-[35rem] lg:text-[2.72rem] lg:leading-[1.08]">
-                      {property.title}
-                    </h1>
-                    <div className="mt-2 inline-flex max-w-full items-center gap-2 text-[0.8rem] font-medium tracking-[-0.01em] text-white/90 sm:mt-3 sm:text-[0.9rem] sm:text-white/92">
-                      <Icons.MapPin className="h-4 w-4 shrink-0" />
-                      <span className="truncate">{property.location}</span>
-                    </div>
+                    </button>
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={openLightbox}
-                    className="inline-flex shrink-0 self-end items-center gap-2 rounded-full border border-white/14 bg-black/20 px-3 py-1.75 text-[0.76rem] font-medium text-white/82 backdrop-blur-[10px] shadow-[0_14px_24px_-22px_rgba(15,23,42,0.42)] transition-[background-color,border-color,color,transform] duration-200 ease-out hover:border-white/22 hover:bg-black/28 hover:text-white sm:self-auto sm:px-4 sm:py-2 sm:text-[0.82rem] md:hover:-translate-y-[1px]"
-                  >
-                    <Icons.Camera className="h-4 w-4" />
-                    {hasMultipleImages ? (
-                      <>
-                        <span className="hidden sm:inline">Ver todas las fotos</span>
-                        <span className="sm:hidden">Expandir</span>
-                      </>
-                    ) : (
-                      <span>Ver foto</span>
-                    )}
-                  </button>
                 </div>
               </div>
 
@@ -1300,23 +1429,8 @@ export const PropertyDetailShell: React.FC<{
                 aria-label="Estado de verificación"
                 className="border-t border-slate-200/70 pt-4"
               >
-                {verificationPreviewMode === 'premium' ? (
-                  <div className="rounded-[24px] border border-emerald-200/70 bg-emerald-50/65 p-4 sm:p-4.5">
-                    <div className="space-y-3">
-                      <VerificationBadgePremium size="md" className="w-fit" />
-
-                      <div className="min-w-0 space-y-1.5">
-                        <p className="text-sm leading-6 text-slate-700">
-                          {verificationDetails.premiumDescription}
-                        </p>
-                        {verificationDetails.premiumSupportingText ? (
-                          <p className="text-sm leading-6 text-slate-600">
-                            {verificationDetails.premiumSupportingText}
-                          </p>
-                        ) : null}
-                      </div>
-                    </div>
-                  </div>
+                {showPresencialVerificationInfoCard ? (
+                  <PresencialVerificationInfoCard />
                 ) : (
                   <ul className="space-y-2.5" aria-label="Comprobaciones de verificación">
                     {verificationPreviewItems.map((item) => {

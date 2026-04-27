@@ -6,7 +6,7 @@ import { getPropertyCardVerificationState } from '../lib/propertyVerification';
 import { Property } from '../services/geminiService';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
-import { VerificationBadgePremium } from './ui/VerificationBadgePremium';
+import { PresencialVerificationBadge } from './ui/PresencialVerificationBadge';
 
 const normalizePropertyText = (value?: string) => (value ?? '')
   .normalize('NFD')
@@ -71,7 +71,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   const propertyTypeLabel = getPropertyTypeLabel(property);
   const guestCapacityLabel = getGuestCapacityLabel(Number(property.maxGuests) || null);
   const isPremiumCard = verificationState.model === 'premium';
-  const showPremiumBadge = verificationState.presencialVerified;
+  const showPresencialVerificationBadge = verificationState.presencialVerified;
   const propertyCardCtaLabel = 'Ver detalle';
   const handleFavoriteToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -120,10 +120,8 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         />
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-slate-950/24 via-slate-950/8 to-transparent" />
 
-        {showPremiumBadge ? (
-          <div className="absolute left-4 top-4">
-            <VerificationBadgePremium className="shadow-[0_10px_22px_-18px_rgba(5,150,105,0.3)]" />
-          </div>
+        {showPresencialVerificationBadge ? (
+          <PresencialVerificationBadge className="absolute top-4 left-4 z-20" />
         ) : null}
 
         {user ? (

@@ -52,22 +52,22 @@ export const ExploreHero = ({
         ) : null}
 
         <div className="relative px-4 pt-9 pb-5 sm:px-6 sm:pt-10 sm:pb-6 md:px-8 md:pt-11 md:pb-7 lg:px-10 lg:pt-12 lg:pb-8">
-          <div className="mx-auto flex max-w-[47.5rem] flex-col items-center text-center">
-            <div className="flex max-w-[760px] flex-col items-center gap-2.5 text-center sm:gap-3">
-              <div className="mb-3 text-[0.78rem] font-semibold uppercase tracking-[0.28em] text-[#475569] sm:text-[0.82rem]">
+          <div className="mx-auto flex max-w-[47.5rem] flex-col items-center gap-5 text-center sm:gap-6">
+            <div className="flex max-w-[760px] flex-col items-center gap-4 text-center sm:gap-5">
+              <div className="text-[0.78rem] font-semibold uppercase tracking-[0.28em] text-[#475569] sm:text-[0.82rem]">
                 {heroGeoEyebrow}
               </div>
               <h1 className="font-display mx-auto max-w-[760px] text-balance text-[clamp(1.6rem,5.8vw,4.75rem)] font-semibold leading-[0.9] tracking-[-0.055em] text-slate-950">
-                <span className="block">Donde la información importa.</span>
+                <span className="block">La información real importa.</span>
                 <span className="block">Elegí mejor antes de reservar.</span>
               </h1>
-              <p className="mx-auto mt-0.5 mb-6 max-w-[40rem] rounded-[14px] bg-white/24 px-3 py-1.5 text-balance text-[0.72rem] font-medium leading-[1.45] tracking-[-0.01em] text-[#1e293b] backdrop-blur-[3px] sm:mb-7 sm:px-4 sm:text-[0.85rem]">
+                  <p className="mx-auto mt-0 mb-6 max-w-[44rem] text-balance text-[1rem] font-semibold leading-[1.55] tracking-[-0.01em] text-slate-800 sm:text-[1.05rem]">
                 {heroSubtitle}
               </p>
             </div>
 
             <form
-              className="mt-6 mb-4 flex w-full max-w-[760px] flex-col items-center sm:mt-7 sm:mb-5"
+              className="mt-1 flex w-full max-w-[760px] flex-col items-center"
               onSubmit={(event) => {
                 event.preventDefault();
                 onSearchSubmit();
@@ -99,10 +99,10 @@ export const ExploreHero = ({
               </div>
             </form>
 
-            <div className="mt-4 flex w-full max-w-[760px] flex-nowrap items-center justify-center gap-2 overflow-x-auto pt-0.5 text-[0.66rem] text-slate-600/90 sm:gap-2.5 sm:text-[0.7rem]">
+            <div className="flex w-full max-w-[760px] flex-nowrap items-center justify-center gap-2 overflow-x-auto pt-0.5 text-[0.62rem] text-slate-600/80 sm:gap-2.5 sm:text-[0.66rem]">
               {valueProofItems.map((item) => (
-                <span key={item} className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-white/30 bg-white/54 px-2.5 py-[0.35rem] font-medium leading-none text-slate-600/90 shadow-[0_6px_16px_-18px_rgba(15,23,42,0.12)] backdrop-blur-[1px]">
-                  <Icons.CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-600/75" />
+                <span key={item} className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-brand/12 bg-white/86 px-3 py-[0.42rem] font-medium leading-none text-brand shadow-[0_8px_18px_-18px_rgba(67,56,202,0.22)] backdrop-blur-[1px] opacity-70">
+                  <Icons.CheckCircle2 className="h-3 w-3 shrink-0 text-brand/70" />
                   <span>{item}</span>
                 </span>
               ))}
