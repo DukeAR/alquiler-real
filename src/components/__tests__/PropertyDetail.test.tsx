@@ -376,11 +376,13 @@ describe('PropertyDetail', () => {
 
     const heading = screen.getByRole('heading', { name: 'Casa de prueba' });
     const heroImage = screen.getByAltText(/imagen 1/i);
+    const backButton = screen.getByRole('button', { name: /volver/i });
 
     expect(heading.className).toContain('text-balance');
     expect(heading.className).toContain('max-w-full');
     expect(heroImage.parentElement?.className).toContain('min-h-[26rem]');
     expect(heroImage.parentElement?.className).toContain('aspect-[9/10]');
+    expect(backButton.parentElement?.className).toContain('pt-12');
   });
 
   test('uses singular photo copy when the property only has one image', async () => {
@@ -753,16 +755,24 @@ describe('PropertyDetail', () => {
 
     await waitForPropertyHeading();
 
-    const sealImages = screen.getAllByAltText('Verificado presencialmente');
-    expect(sealImages).toHaveLength(1);
-    expect(sealImages[0]).toHaveAttribute('src', '/verified-presencial-circular.png');
-    expect(sealImages[0]).toHaveClass('h-[132px]', 'w-[132px]', 'shrink-0', 'object-contain');
+    const sealImages = screen.queryAllByAltText('Verificado presencialmente');
+    expect(sealImages).toHaveLength(0);
     const verificationPreview = screen.getByTestId('property-verification-preview');
     const infoCard = verificationPreview.firstElementChild as HTMLElement;
     expect(infoCard).toHaveClass('w-full', 'max-w-full', 'overflow-hidden', 'rounded-[32px]', 'bg-white', 'p-12', 'shadow-[0_20px_60px_rgba(15,23,42,0.08)]');
-    expect(within(verificationPreview).getByAltText('Verificado presencialmente')).toHaveAttribute('src', '/verified-presencial-circular.png');
-    expect(within(verificationPreview).getByRole('heading', { name: /Sello de seguridad: Verificado presencialmente/i })).toHaveClass('text-[42px]', 'font-bold', 'leading-[1.1]', 'text-[#0F172A]');
-    expect(within(verificationPreview).getByRole('heading', { name: /Sello de seguridad: Verificado presencialmente/i }).querySelector('span')).toHaveClass('text-[#4F46E5]');
+    expect(within(verificationPreview).queryByAltText('Verificado presencialmente')).toBeNull();
+    const heading = within(verificationPreview).getByRole('heading', { name: /Sello de seguridad: Verificado presencialmente/i });
+    expect(heading).toHaveClass('text-[42px]', 'font-bold', 'leading-[1.1]', 'text-[#0F172A]');
+    expect(heading.querySelector('span')).toHaveClass('text-[#4F46E5]');
+    const header = heading.closest('header');
+    expect(header).not.toBeNull();
+    const logo = header?.firstElementChild as HTMLElement;
+    expect(logo).toHaveClass('relative', 'flex', 'h-24', 'w-24', 'shrink-0', 'items-center', 'justify-center', 'rounded-full', 'bg-emerald-50');
+    expect(logo.firstElementChild as HTMLElement).toHaveClass('flex', 'h-16', 'w-16', 'items-center', 'justify-center', 'rounded-2xl', 'bg-emerald-600', 'text-white');
+    expect(logo.querySelector('svg.lucide-house')).not.toBeNull();
+    const logoCheck = logo.querySelector('span.absolute') as HTMLElement;
+    expect(logoCheck).toHaveClass('absolute', 'bottom-1', 'right-1', 'flex', 'h-7', 'w-7', 'items-center', 'justify-center', 'rounded-full', 'bg-emerald-500', 'text-white');
+    expect(logo.querySelector('svg.lucide-check')).not.toBeNull();
     expect(within(verificationPreview).getByText(/Este sello identifica a las propiedades que completaron la verificación presencial paga\. Te ayuda a elegir con más confianza\./i, { selector: 'p' })).toHaveClass('max-w-[960px]', 'text-[20px]', 'leading-[1.55]', 'text-[#64748B]');
     expect(within(verificationPreview).getByText('¿Cómo funciona?')).toBeDefined();
     expect(within(verificationPreview).getByText('El anfitrión contrata la verificación presencial')).toBeDefined();

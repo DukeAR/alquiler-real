@@ -290,11 +290,15 @@ const PresencialVerificationInfoCard: React.FC = () => {
   return (
     <div className="w-full max-w-full overflow-hidden rounded-[32px] bg-white p-12 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
       <header className="mb-10 flex items-center gap-8">
-        <img
-          src="/verified-presencial-circular.png"
-          alt="Verificado presencialmente"
-          className="h-[132px] w-[132px] shrink-0 object-contain"
-        />
+        <div className="relative flex h-24 w-24 shrink-0 items-center justify-center rounded-full bg-emerald-50">
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-600 text-white">
+            <Icons.Home className="h-8 w-8" />
+          </div>
+
+          <span className="absolute bottom-1 right-1 flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500 text-white ring-4 ring-white">
+            <Icons.Check className="h-4 w-4" />
+          </span>
+        </div>
 
         <div className="min-w-0 space-y-3">
           <h2 className="text-[42px] font-bold leading-[1.1] text-[#0F172A]">
@@ -1265,7 +1269,7 @@ export const PropertyDetailShell: React.FC<{
 
                 <div className="property-hero-copy-reveal absolute inset-0 z-10 flex flex-col justify-between p-6">
                   <div className="flex items-start justify-between gap-4">
-                    <div className="flex min-w-0 flex-col items-start gap-3 sm:gap-4">
+                    <div className="flex min-w-0 flex-col items-start gap-3 pt-12 sm:gap-4 sm:pt-14">
                       <button
                         type="button"
                         onClick={() => navigate(-1)}
