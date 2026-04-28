@@ -161,27 +161,20 @@ const futureCards: FutureCard[] = [
   },
 ];
 
-const hostProblemPoints = [
-  'Consultas que no avanzan',
-  'Reservas que se caen',
-  'Huéspedes que no confían',
-  'Tiempo perdido respondiendo lo mismo',
-];
-
 const hostDifferentiators: RoleBenefit[] = [
   {
-    title: 'Claridad desde el inicio',
-    description: 'Tu aviso se entiende antes del primer mensaje.',
-    icon: Icons.Home,
+    title: 'Filtrar mejor a quién responder',
+    description: 'No todas las consultas valen lo mismo. Podés priorizar mejor.',
+    icon: Icons.BadgeCheck,
   },
   {
-    title: 'Información verificada',
-    description: 'Mostrás qué parte del aviso ya fue revisada.',
-    icon: Icons.Verified,
+    title: 'Ver historial del usuario',
+    description: 'Antes de seguir, ves más información sobre ese perfil.',
+    icon: Icons.Search,
   },
   {
-    title: 'Decisiones con contexto',
-    description: 'Recibís consultas más concretas y filtrás mejor.',
+    title: 'Decidir con más contexto',
+    description: 'Aceptás con más información y menos intuición.',
     icon: Icons.Layers,
   },
 ];
@@ -189,23 +182,9 @@ const hostDifferentiators: RoleBenefit[] = [
 const hostVerificationChecklist = [
   'Ubicación confirmada',
   'Fotos reales',
-  'Datos del aviso validados',
+  'Datos validados',
   'Servicios comprobados',
   'Condiciones verificadas',
-];
-
-const hostFlowSteps = [
-  'Publicás tu propiedad',
-  'Coordinás la verificación',
-  'Validamos la información',
-  'Recibís mejores reservas',
-];
-
-const hostOutcomePoints = [
-  'Menos consultas irrelevantes',
-  'Más reservas concretas',
-  'Mejor perfil de huésped',
-  'Decisiones más rápidas',
 ];
 
 const guestBenefits: RoleBenefit[] = [
@@ -359,8 +338,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = React.useState<AboutTab>('official');
   const hostVerificationRef = React.useRef<HTMLElement | null>(null);
-  const hostFlowRef = React.useRef<HTMLElement | null>(null);
-  const onsiteVerificationTarget = '/verification?mode=onsite&returnTo=/host-dashboard';
+  const hostVideoRef = React.useRef<HTMLElement | null>(null);
 
   const navigateWithAuthTarget = (target: string) => {
     if (user) {
@@ -373,10 +351,6 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
 
   const openPublishingFlow = () => {
     navigateWithAuthTarget('/host-dashboard');
-  };
-
-  const openOnsiteVerification = () => {
-    navigateWithAuthTarget(onsiteVerificationTarget);
   };
 
   const scrollToSection = (element: HTMLElement | null) => {
@@ -559,51 +533,40 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
               exit={{ opacity: 0, y: -10 }}
               className="space-y-10"
             >
-              <section className="overflow-hidden rounded-[34px] border border-slate-200/85 bg-[radial-gradient(circle_at_top_right,rgba(67,56,202,0.1),transparent_42%),linear-gradient(180deg,rgba(255,255,255,0.99),rgba(248,250,252,0.96))] px-7 py-10 shadow-[0_28px_56px_-40px_rgba(15,23,42,0.18)] dark:border-slate-800 dark:bg-slate-900 md:px-10 md:py-12">
+              <section className="overflow-hidden rounded-[34px] border border-slate-200/85 bg-[radial-gradient(circle_at_top_right,rgba(67,56,202,0.14),transparent_42%),linear-gradient(180deg,rgba(255,255,255,0.99),rgba(248,250,252,0.96))] px-7 py-10 shadow-[0_28px_56px_-40px_rgba(15,23,42,0.18)] dark:border-slate-800 dark:bg-slate-900 md:px-10 md:py-12">
                 <div className="max-w-3xl space-y-6">
                   <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500 dark:text-slate-400">Para anfitriones</p>
                   <div className="space-y-4">
                     <h2 className="max-w-3xl text-[36px] font-semibold leading-[1.02] tracking-[-0.05em] text-slate-950 dark:text-slate-50 md:text-[48px]">
-                      Publicar mejor no es publicar más. Es publicar con información real.
+                      Elegí con quién hablar antes de aceptar una reserva.
                     </h2>
                     <p className="max-w-2xl text-[1.05rem] leading-8 text-slate-700 dark:text-slate-300">
-                      Mostrá tu propiedad con datos verificados y atraé mejores reservas.
+                      En esta plataforma no solo publicás. También ves quién te contacta, qué historial tiene y cómo se comporta.
+                    </p>
+                    <p className="max-w-2xl text-[0.98rem] leading-7 text-slate-600 dark:text-slate-400">
+                      Publicar es simple y gratis. Mejorar la calidad de las consultas depende de la información que validás.
                     </p>
                   </div>
 
                   <div className="flex flex-col gap-3 sm:flex-row">
                     <Button size="lg" onClick={openPublishingFlow}>
                       <Icons.ArrowRight className="h-5 w-5" />
-                      Publicar mi propiedad
+                      Publicar propiedad
                     </Button>
-                    <Button size="lg" variant="secondary" onClick={() => scrollToSection(hostFlowRef.current)}>
+                    <Button size="lg" variant="secondary" onClick={() => scrollToSection(hostVerificationRef.current)}>
                       Ver cómo funciona
                     </Button>
                   </div>
                 </div>
               </section>
 
-              <section className="rounded-[30px] bg-slate-100/90 px-7 py-8 dark:bg-slate-900/90 md:px-9 md:py-9">
-                <div className="max-w-3xl space-y-6">
-                  <h3 className="text-[30px] font-semibold leading-[1.08] tracking-[-0.04em] text-slate-950 dark:text-slate-50 md:text-[36px]">
-                    Publicar sin información clara genera malos resultados
-                  </h3>
-
-                  <ul className="grid gap-x-8 gap-y-4 md:grid-cols-2">
-                    {hostProblemPoints.map((point) => (
-                      <li key={point} className="flex items-center gap-3 border-b border-slate-200/85 pb-4 text-[1rem] font-medium text-slate-700 dark:border-slate-800 dark:text-slate-300">
-                        <Icons.CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
-                        <span>{point}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </section>
-
               <section className="space-y-6">
-                <h3 className="text-[30px] font-semibold leading-[1.08] tracking-[-0.04em] text-slate-950 dark:text-slate-50 md:text-[36px]">
-                  Acá no publicás más. Publicás mejor.
-                </h3>
+                <div className="max-w-2xl space-y-2">
+                  <p className="app-eyebrow">Diferencial</p>
+                  <h3 className="text-[30px] font-semibold leading-[1.08] tracking-[-0.04em] text-slate-950 dark:text-slate-50 md:text-[36px]">
+                    Qué te ayuda a decidir antes de aceptar
+                  </h3>
+                </div>
 
                 <div className="grid gap-6 md:grid-cols-3 md:gap-8">
                   {hostDifferentiators.map((item) => {
@@ -641,10 +604,10 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                     <div className="space-y-4">
                       <p className="text-xs font-semibold uppercase tracking-[0.24em] text-brand/90 dark:text-brand-light/80">Verificación presencial</p>
                       <h3 className="max-w-2xl text-[32px] font-semibold leading-[1.05] tracking-[-0.045em] text-slate-950 dark:text-slate-50 md:text-[40px]">
-                        Verificación presencial: lo que cambia todo
+                        La verificación cambia la calidad de las reservas.
                       </h3>
                       <p className="max-w-2xl text-[1.02rem] leading-8 text-slate-700 dark:text-slate-300">
-                        Un verificador revisa tu propiedad en persona. Esto elimina dudas y mejora la calidad de las reservas.
+                        Podés publicar sin costo, pero las propiedades con mayor nivel de verificación reciben más visibilidad, consultas más claras y reservas más seguras.
                       </p>
                     </div>
 
@@ -658,71 +621,45 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                         ))}
                       </ul>
                     </div>
+
+                    <div>
+                      <Button size="lg" variant="secondary" onClick={() => scrollToSection(hostVideoRef.current)}>
+                        Entender cómo funciona la verificación
+                      </Button>
+                    </div>
                   </div>
 
                   <div className="rounded-[30px] bg-slate-950 px-6 py-7 text-white shadow-[0_32px_62px_-42px_rgba(15,23,42,0.45)] md:px-7 md:py-8 dark:bg-slate-900">
                     <div className="space-y-4">
-                      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Resultado</p>
+                      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Mayor impacto</p>
                       <p className="text-[1.4rem] font-semibold leading-[1.2] tracking-[-0.03em] text-white md:text-[1.7rem]">
-                        Las propiedades verificadas reciben consultas más claras y reservas más seguras.
+                        Más visibilidad, mejores consultas y menos ruido antes de aceptar.
                       </p>
                     </div>
                   </div>
                 </div>
               </section>
 
-              <section ref={hostFlowRef} className="scroll-mt-28 space-y-6">
-                <h3 className="text-[30px] font-semibold leading-[1.08] tracking-[-0.04em] text-slate-950 dark:text-slate-50 md:text-[36px]">
-                  Cómo funciona
-                </h3>
+              <section ref={hostVideoRef} className="scroll-mt-28 space-y-6">
+                <div className="max-w-2xl space-y-2">
+                  <p className="app-eyebrow">Próximamente</p>
+                  <h3 className="text-[30px] font-semibold leading-[1.08] tracking-[-0.04em] text-slate-950 dark:text-slate-50 md:text-[36px]">
+                    Cómo lograr la verificación máxima
+                  </h3>
+                </div>
 
-                <ol className="grid gap-6 md:grid-cols-4">
-                  {hostFlowSteps.map((step, index) => (
-                    <li key={step} className="space-y-3 border-t border-slate-200/85 pt-4 dark:border-slate-800">
-                      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand text-sm font-semibold text-white shadow-[0_16px_28px_-20px_rgba(67,56,202,0.42)]">
-                        {index + 1}
-                      </span>
-                      <p className="text-[1rem] font-semibold leading-7 text-slate-900 dark:text-slate-100">
-                        {step}
-                      </p>
-                    </li>
-                  ))}
-                </ol>
-              </section>
-
-              <section className="space-y-6">
-                <h3 className="text-[30px] font-semibold leading-[1.08] tracking-[-0.04em] text-slate-950 dark:text-slate-50 md:text-[36px]">
-                  Qué cambia cuando publicás con información real
-                </h3>
-
-                <ul className="grid gap-x-8 gap-y-4 md:grid-cols-2">
-                  {hostOutcomePoints.map((point) => (
-                    <li key={point} className="flex items-center gap-3 border-b border-slate-200/85 pb-4 text-[1rem] font-medium text-slate-700 dark:border-slate-800 dark:text-slate-300">
-                      <Icons.CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
-                      <span>{point}</span>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-
-              <section className="overflow-hidden rounded-[34px] bg-slate-950 px-7 py-9 shadow-[0_30px_60px_-42px_rgba(15,23,42,0.42)] dark:bg-slate-900 md:px-10 md:py-10">
-                <div className="max-w-3xl space-y-6">
-                  <div className="space-y-3">
-                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Listo para avanzar</p>
-                    <h3 className="text-[32px] font-semibold leading-[1.05] tracking-[-0.045em] text-white md:text-[40px]">
-                      Publicar mejor también te permite elegir mejor
-                    </h3>
+                <div className="space-y-5 rounded-[30px] border border-dashed border-slate-300/90 bg-white/96 p-5 shadow-[0_20px_42px_-34px_rgba(15,23,42,0.16)] dark:border-slate-700 dark:bg-slate-900 md:p-7">
+                  <div className="aspect-video overflow-hidden rounded-[24px] border border-slate-200/85 bg-[radial-gradient(circle_at_center,rgba(67,56,202,0.1),transparent_46%),linear-gradient(180deg,rgba(248,250,252,0.98),rgba(241,245,249,0.94))] dark:border-slate-800 dark:bg-slate-950">
+                    <div className="flex h-full items-center justify-center">
+                      <div className="inline-flex h-16 w-16 items-center justify-center rounded-full border border-white/80 bg-white/88 text-brand shadow-[0_18px_32px_-24px_rgba(67,56,202,0.32)] dark:border-slate-700 dark:bg-slate-900 dark:text-brand-light">
+                        <Icons.Video className="h-7 w-7" />
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="flex flex-col gap-3 sm:flex-row">
-                    <Button size="lg" onClick={openPublishingFlow}>
-                      <Icons.ArrowRight className="h-5 w-5" />
-                      Crear cuenta y publicar
-                    </Button>
-                    <Button size="lg" variant="secondary" onClick={openOnsiteVerification}>
-                      Quiero verificar mi propiedad
-                    </Button>
-                  </div>
+                  <p className="max-w-2xl text-[0.98rem] leading-7 text-slate-600 dark:text-slate-400">
+                    Próximamente: guía paso a paso para publicar con verificación completa y mejorar tu exposición.
+                  </p>
                 </div>
               </section>
             </motion.div>

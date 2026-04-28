@@ -60,24 +60,26 @@ describe('AboutPage', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Anfitriones' }));
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Publicar mejor no es publicar más. Es publicar con información real.' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Elegí con quién hablar antes de aceptar una reserva.' })).toBeInTheDocument();
     });
-    expect(screen.getByText('Mostrá tu propiedad con datos verificados y atraé mejores reservas.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Publicar mi propiedad' })).toBeInTheDocument();
+    expect(screen.getByText('En esta plataforma no solo publicás. También ves quién te contacta, qué historial tiene y cómo se comporta.')).toBeInTheDocument();
+    expect(screen.getByText('Publicar es simple y gratis. Mejorar la calidad de las consultas depende de la información que validás.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Publicar propiedad' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Ver cómo funciona' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Publicar sin información clara genera malos resultados' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Acá no publicás más. Publicás mejor.' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Verificación presencial: lo que cambia todo' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Qué te ayuda a decidir antes de aceptar' })).toBeInTheDocument();
+    expect(screen.getByText('Filtrar mejor a quién responder')).toBeInTheDocument();
+    expect(screen.getByText('Ver historial del usuario')).toBeInTheDocument();
+    expect(screen.getByText('Decidir con más contexto')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'La verificación cambia la calidad de las reservas.' })).toBeInTheDocument();
+    expect(screen.getByText('Podés publicar sin costo, pero las propiedades con mayor nivel de verificación reciben más visibilidad, consultas más claras y reservas más seguras.')).toBeInTheDocument();
     expect(screen.getByText('Ubicación confirmada')).toBeInTheDocument();
-    expect(screen.getByText('Las propiedades verificadas reciben consultas más claras y reservas más seguras.')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Cómo funciona', level: 3 })).toBeInTheDocument();
-    expect(screen.getByText('Publicás tu propiedad')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Qué cambia cuando publicás con información real' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Publicar mejor también te permite elegir mejor' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Crear cuenta y publicar' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Quiero verificar mi propiedad' })).toBeInTheDocument();
+    expect(screen.getByText('Más visibilidad, mejores consultas y menos ruido antes de aceptar.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Entender cómo funciona la verificación' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Cómo lograr la verificación máxima' })).toBeInTheDocument();
+    expect(screen.getByText('Próximamente: guía paso a paso para publicar con verificación completa y mejorar tu exposición.')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'No solo publicás mejor. También elegís con más información.' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'Más contexto para decidir con criterio' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Publicar mejor no es publicar más. Es publicar con información real.' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Acá no publicás más. Publicás mejor.' })).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Antes de reservar, sabé qué es real.' })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Huéspedes' }));
