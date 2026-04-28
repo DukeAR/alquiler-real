@@ -80,6 +80,19 @@ const hiddenMobileNavPrefixes = [
 
 const hiddenAssistantPrefixes = ['/login', '/register', '/verify', '/verification', '/chat'];
 
+const authGuardedPrefixes = [
+  '/favorites',
+  '/profile',
+  '/edit-profile',
+  '/change-password',
+  '/verification',
+  '/verify',
+  '/chat',
+  '/my-bookings',
+  '/host-dashboard',
+  '/tenant-profile',
+];
+
 const openLoginModal = async () => {
   const modal = await import('../lib/modal');
   modal.showLoginModal();
@@ -229,6 +242,8 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   const isAuthenticated = authViewState === 'authenticated' && Boolean(user);
   const isUnauthenticated = authViewState === 'unauthenticated';
   const hasSessionError = authViewState === 'error';
+  const isAuthGuardedRoute = authGuardedPrefixes.some((prefix) => matchesPath(location.pathname, prefix));
+  const showGuestAuthActions = !user && (isUnauthenticated || (hasSessionError && !isAuthGuardedRoute));
   const favoritesAction: NavAction = {
     label: 'Guardados',
     shortLabel: 'Guardados',
@@ -254,7 +269,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
 
     if (!action.path) return;
 
-    if (authViewState === 'loading') {
+    if (authViewState === 'loading' && action.protected) {
       return;
     }
 
@@ -348,7 +363,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
         { label: 'Reservas', shortLabel: 'Reservas', path: '/my-bookings', protected: true, icon: Icons.Calendar },
         { label: 'Perfil', shortLabel: 'Perfil', path: '/profile', protected: true, icon: Icons.User }
       ]
-    : isUnauthenticated
+    : showGuestAuthActions
       ? [
         { label: 'Explorar', shortLabel: 'Explorar', path: '/', icon: Icons.Search },
         { label: 'Ayuda', shortLabel: 'Ayuda', path: '/faq', icon: Icons.Lightbulb },
@@ -454,7 +469,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                     </div>
                   </button>
                 </>
-              ) : isUnauthenticated ? (
+              ) : showGuestAuthActions ? (
                 <>
                   <button
                     type="button"

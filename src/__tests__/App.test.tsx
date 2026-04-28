@@ -119,11 +119,24 @@ describe('App routing states', () => {
     consoleErrorMock.mockClear();
   });
 
-  test('shows the shared loading state while auth is bootstrapping', () => {
+  test('renders public routes while auth is bootstrapping', () => {
     useAuthMock.mockReturnValue({ loading: true, user: null, status: 'loading', refresh: vi.fn(async () => ({ user: null, status: 'unauthenticated', error: null })) });
 
     render(
       <MemoryRouter initialEntries={['/']}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText('Explore page')).toBeInTheDocument();
+    expect(screen.queryByText('Cargando tu cuenta...')).not.toBeInTheDocument();
+  });
+
+  test('keeps the shared loading state on guest-only routes while auth is bootstrapping', () => {
+    useAuthMock.mockReturnValue({ loading: true, user: null, status: 'loading', refresh: vi.fn(async () => ({ user: null, status: 'unauthenticated', error: null })) });
+
+    render(
+      <MemoryRouter initialEntries={['/login']}>
         <App />
       </MemoryRouter>,
     );

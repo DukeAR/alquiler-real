@@ -42,6 +42,12 @@ const RouteFallback = () => (
   </div>
 );
 
+const authBootstrapBlockingPrefixes = ['/login', '/register'];
+
+const matchesRoutePrefix = (pathname: string, prefix: string) => (
+  pathname === prefix || pathname.startsWith(prefix + '/') || pathname.startsWith(prefix + '?')
+);
+
 const GuestOnly = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
 
@@ -54,8 +60,12 @@ const GuestOnly = ({ children }: { children: ReactNode }) => {
 
 export default function App() {
   const { loading } = useAuth();
+  const location = useLocation();
 
-  if (loading) {
+  const shouldBlockOnAuthBootstrap = loading
+    && authBootstrapBlockingPrefixes.some((prefix) => matchesRoutePrefix(location.pathname, prefix));
+
+  if (shouldBlockOnAuthBootstrap) {
     return (
       <LoadingState
         fullScreen

@@ -195,7 +195,7 @@ describe('AppShell', () => {
     expect(screen.getByText('Verificando sesión...')).toBeInTheDocument();
   });
 
-  test('does not show guest auth actions when session verification failed', async () => {
+  test('falls back to guest auth actions on public routes when session verification failed', async () => {
     useAuthMock.mockReturnValue({
       user: null,
       loading: false,
@@ -205,9 +205,9 @@ describe('AppShell', () => {
 
     await renderShell();
 
-    expect(screen.queryAllByRole('button', { name: 'Ingresá' })).toHaveLength(0);
-    expect(screen.queryByRole('button', { name: 'Publicar propiedad' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Reintentar sesión' })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Ingresá' })).not.toHaveLength(0);
+    expect(screen.getByRole('button', { name: 'Publicar propiedad' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Reintentar sesión' })).not.toBeInTheDocument();
   });
 
   test('hides the mobile navigation on detail routes to avoid stacked fixed bars', async () => {
