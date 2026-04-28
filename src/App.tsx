@@ -21,6 +21,7 @@ const LazyFAQPage = lazy(() => import('./components/FAQPage').then((module) => (
 const LazyHostDashboard = lazy(() => import('./components/HostDashboard').then((module) => ({ default: module.HostDashboard })));
 const LazyHostProfileView = lazy(() => import('./components/HostProfileView').then((module) => ({ default: module.HostProfileView })));
 const LazyMyBookings = lazy(() => import('./components/MyBookings').then((module) => ({ default: module.MyBookings })));
+const LazyOnsiteVerificationPage = lazy(() => import('./components/OnsiteVerificationPage').then((module) => ({ default: module.OnsiteVerificationPage })));
 const LazyPrivacyPage = lazy(() => import('./components/PrivacyPage').then((module) => ({ default: module.PrivacyPage })));
 const LazyProfileViewNew = lazy(() => import('./components/ProfileViewNew.tsx'));
 const LazyPropertyDetail = lazy(() => import('./components/PropertyDetail'));
@@ -74,6 +75,7 @@ export default function App() {
               <Route path="/explore" element={<ExplorePage />} />
               <Route path="/detail/:id" element={<LazyPropertyDetail />} />
               <Route path="/about" element={<AboutPageWrapper />} />
+              <Route path="/verificacion-presencial" element={<OnsiteVerificationPageWrapper />} />
               <Route path="/faq" element={<FAQPageWrapper />} />
               <Route path="/terms" element={<TermsPageWrapper />} />
               <Route path="/privacy" element={<PrivacyPageWrapper />} />
@@ -116,6 +118,11 @@ const SecureChatWrapper = () => {
 const AboutPageWrapper = () => {
   const navigate = useNavigate();
   return <LazyAboutPage onBack={() => navigate(-1)} />;
+};
+
+const OnsiteVerificationPageWrapper = () => {
+  const navigate = useNavigate();
+  return <LazyOnsiteVerificationPage onBack={() => navigate(-1)} />;
 };
 
 const HostDashboardWrapper = () => {

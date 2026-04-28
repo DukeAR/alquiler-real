@@ -338,7 +338,6 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = React.useState<AboutTab>('official');
   const hostVerificationRef = React.useRef<HTMLElement | null>(null);
-  const hostVideoRef = React.useRef<HTMLElement | null>(null);
 
   const navigateWithAuthTarget = (target: string) => {
     if (user) {
@@ -351,6 +350,10 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
 
   const openPublishingFlow = () => {
     navigateWithAuthTarget('/host-dashboard');
+  };
+
+  const openOnsiteVerificationInfo = () => {
+    navigate('/verificacion-presencial');
   };
 
   const scrollToSection = (element: HTMLElement | null) => {
@@ -623,7 +626,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                     </div>
 
                     <div>
-                      <Button size="lg" variant="secondary" onClick={() => scrollToSection(hostVideoRef.current)}>
+                      <Button size="lg" variant="secondary" onClick={openOnsiteVerificationInfo}>
                         Entender cómo funciona la verificación
                       </Button>
                     </div>
@@ -640,7 +643,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                 </div>
               </section>
 
-              <section ref={hostVideoRef} className="scroll-mt-28 space-y-6">
+              <section className="space-y-6">
                 <div className="max-w-2xl space-y-2">
                   <p className="app-eyebrow">Próximamente</p>
                   <h3 className="text-[30px] font-semibold leading-[1.08] tracking-[-0.04em] text-slate-950 dark:text-slate-50 md:text-[36px]">
