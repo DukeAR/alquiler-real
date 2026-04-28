@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import { apiJson } from '../lib/apiConfig';
 import { LoadingState } from './LoadingState';
@@ -100,6 +101,14 @@ type BookingConfirmationNotice = {
   tone: NonNullable<React.ComponentProps<typeof NoticeBanner>['tone']>;
   heading: string;
   description: string;
+};
+
+type VerificationTooltipState = {
+  key: string;
+  top: number;
+  left: number;
+  width: number;
+  placement: 'top' | 'bottom';
 };
 
 const formatLocalIso = (date: Date) => {
@@ -289,56 +298,62 @@ const PRESENCIAL_VERIFICATION_ITEMS = [
 const PresencialVerificationInfoCard: React.FC = () => {
   return (
     <div className="w-full max-w-full overflow-hidden rounded-[32px] bg-white p-12 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
-      <header className="mb-10 flex items-center gap-8">
-        <div className="relative flex h-24 w-24 shrink-0 items-center justify-center rounded-full bg-emerald-50">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-600 text-white">
-            <Icons.Home className="h-8 w-8" />
-          </div>
+      <header className="mb-10 flex items-center gap-3 md:gap-5">
+        <img
+          src="/verified-presencial-badge.png"
+          alt="Verificado presencialmente"
+          className="h-[68px] w-auto shrink-0 object-contain md:h-20"
+        />
 
-          <span className="absolute bottom-1 right-1 flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500 text-white ring-4 ring-white">
-            <Icons.Check className="h-4 w-4" />
-          </span>
-        </div>
-
-        <div className="min-w-0 space-y-3">
-          <h2 className="text-[42px] font-bold leading-[1.1] text-[#0F172A]">
+        <div className="min-w-0 flex-1 space-y-1.5">
+          <h2 className="text-[28px] font-bold leading-[1.05] tracking-[-0.02em] text-[#0F172A]">
             Sello de seguridad: <span className="text-[#4F46E5]">Verificado presencialmente</span>
           </h2>
 
-          <p className="max-w-[960px] text-[20px] leading-[1.55] text-[#64748B]">
+          <p className="max-w-[1100px] text-[12px] leading-[1.4] text-[#64748B]">
             Este sello identifica a las propiedades que completaron la verificación presencial paga.
             Te ayuda a elegir con más confianza.
           </p>
         </div>
       </header>
 
-      <div className="mt-10 border-t border-[#E5E7EB]" />
+      <div className="mt-5 border-t border-[#E5E7EB]" />
 
-      <div className="space-y-4">
+      <div className="space-y-4 pt-8">
         <p className="mb-8 text-[18px] font-extrabold uppercase tracking-[0.18em] text-[#0F172A]">
           ¿Cómo funciona?
         </p>
 
-        <div className="grid w-full grid-cols-1 gap-14 md:grid-cols-4" aria-label="Cómo funciona la verificación presencial">
+        <div className="grid w-full grid-cols-1 gap-14 md:grid-cols-4 md:gap-10" aria-label="Cómo funciona la verificación presencial">
           {PRESENCIAL_VERIFICATION_STEPS.map((step, index) => (
             <React.Fragment key={step.number}>
-              <div className="relative flex min-w-0 flex-col items-center text-center">
-                <div className="relative flex h-[112px] w-[112px] items-center justify-center rounded-full bg-[#F1EEFF] text-[#4F46E5]">
-                  <span className="absolute -left-2 -top-2 flex h-7 w-7 items-center justify-center rounded-full bg-[#4F46E5] text-[0.72rem] font-bold text-white shadow-[0_8px_16px_-12px_rgba(79,70,229,0.55)]">
-                    {step.number}
-                  </span>
-                  <step.icon className={cn('h-11 w-11', index === PRESENCIAL_VERIFICATION_STEPS.length - 1 ? 'text-emerald-500' : 'text-[#4F46E5]')} />
+              <div className="relative flex min-w-0 flex-col items-center text-center md:px-2">
+                <div className="flex h-[112px] w-full items-center justify-center">
+                  {index === PRESENCIAL_VERIFICATION_STEPS.length - 1 ? (
+                    <img
+                      src="/verified-presencial-badge.png"
+                      alt="Verificado presencialmente"
+                      className="mx-auto h-[84px] w-auto object-contain md:h-[92px]"
+                    />
+                  ) : (
+                    <div className="relative flex h-[88px] w-[88px] items-center justify-center rounded-full border-2 border-[#1D8675] bg-white text-[#1D8675]">
+                      <span className="absolute -left-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-[#4F46E5] text-[0.68rem] font-bold text-white shadow-[0_8px_16px_-12px_rgba(79,70,229,0.55)]">
+                        {step.number}
+                      </span>
+                      <step.icon className="h-8 w-8 text-[#1D8675]" />
+                    </div>
+                  )}
                 </div>
 
-                <h4 className="mt-5 max-w-[240px] text-[20px] font-bold leading-[1.25] text-[#0F172A]">
+                <h4 className="mt-5 max-w-[220px] text-[16px] font-bold leading-[1.22] text-[#0F172A] md:min-h-[60px]">
                   {step.title}
                 </h4>
-                <p className="mx-auto mt-3 max-w-[240px] text-[16px] leading-[1.5] text-[#64748B]">
+                <p className="mx-auto mt-3 max-w-[220px] text-[13px] leading-[1.45] text-[#64748B] md:min-h-[92px]">
                   {step.description}
                 </p>
 
                 {index < PRESENCIAL_VERIFICATION_STEPS.length - 1 ? (
-                  <span className="pointer-events-none absolute right-[-28px] top-[56px] hidden select-none text-[1.5rem] leading-none text-[#8B7CFF] md:block" aria-hidden="true">
+                  <span className="pointer-events-none absolute right-[-24px] top-[48px] hidden select-none text-[1.35rem] leading-none text-[#8B7CFF] md:block" aria-hidden="true">
                     →
                   </span>
                 ) : null}
@@ -348,13 +363,13 @@ const PresencialVerificationInfoCard: React.FC = () => {
         </div>
       </div>
 
-      <div className="mt-12 flex items-center gap-6 rounded-[20px] border border-[#E7E0FF] bg-[#F7F5FF] px-8 py-6">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#F1EEFF] text-[#4F46E5]">
-          <Icons.ShieldCheck className="h-6 w-6" />
+      <div className="mt-12 flex items-start gap-6 rounded-[20px] border border-[#E7E0FF] bg-[#F7F5FF] px-8 py-6">
+        <div className="mt-1 flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#F1EEFF] text-[#4F46E5]">
+          <Icons.ShieldCheck className="h-7 w-7" />
         </div>
 
         <div className="min-w-0 flex-1">
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <h4 className="text-[20px] font-bold leading-[1.25] text-[#4F46E5]">
               Solo propiedades 100% verificadas
             </h4>
@@ -363,10 +378,10 @@ const PresencialVerificationInfoCard: React.FC = () => {
             </p>
           </div>
 
-          <ul className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2 text-[16px] leading-[1.5] text-[#475569]">
+          <ul className="mt-4 grid gap-x-6 gap-y-3 text-[16px] leading-[1.5] text-[#475569] sm:grid-cols-2 xl:grid-cols-3">
               {PRESENCIAL_VERIFICATION_ITEMS.map((item) => (
-                <li key={item} className="inline-flex items-center gap-2 whitespace-nowrap">
-                  <Icons.CheckCircle2 className="h-4 w-4 text-[#4F46E5]" />
+                <li key={item} className="inline-flex min-w-0 items-start gap-2.5">
+                  <Icons.CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-[#4F46E5]" />
                   <span>{item}</span>
                 </li>
               ))}
@@ -535,9 +550,11 @@ export const PropertyDetailShell: React.FC<{
   const [hasScrolledPastStickyIntro, setHasScrolledPastStickyIntro] = useState(false);
   const [hasScrolledPastStickyDeepThreshold, setHasScrolledPastStickyDeepThreshold] = useState(false);
   const [hasEngagedWithDecisionContent, setHasEngagedWithDecisionContent] = useState(false);
+  const [activeVerificationTooltip, setActiveVerificationTooltip] = useState<VerificationTooltipState | null>(null);
   const bookingStepPanelRef = useRef<HTMLDivElement | null>(null);
   const datePickerTriggerRef = useRef<HTMLButtonElement | null>(null);
   const pendingDatePickerOpenRef = useRef(false);
+  const verificationChipRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
   const reviewCount = Math.max(Number(property.reviewsCount) || 0, reviews.length);
   const nightly = getPositiveNumber(property?.price) ?? 0;
@@ -560,7 +577,7 @@ export const PropertyDetailShell: React.FC<{
   const verificationDetails = getPropertyVerificationDetails(property);
   const verificationPreviewMode = verificationDetails.previewMode;
   const verificationPreviewItems = verificationDetails.detailItems;
-  const showPresencialVerificationInfoCard = verificationPreviewMode === 'premium' && Boolean(property.hasPresencialVerification);
+  const showPremiumVerificationInfoCard = verificationPreviewMode === 'premium';
   const hostResponseSignal = getHostResponseSignal(property.hostInteractionHistory);
   const completedReservationsLabel = property.hostInteractionHistory?.completedReservationsCount
     ? `${property.hostInteractionHistory.completedReservationsCount} ${property.hostInteractionHistory.completedReservationsCount === 1 ? 'reserva cerrada' : 'reservas cerradas'}`
@@ -601,6 +618,10 @@ export const PropertyDetailShell: React.FC<{
 
     return mergedSignals.slice(0, 3);
   })();
+  const decoratedHostTrustSignals = hostTrustSignals.map((signal, index) => ({
+    ...signal,
+    tone: index === 0 ? 'success' as const : 'brand' as const,
+  }));
 
   const todayISO = formatLocalIso(new Date());
 
@@ -1005,6 +1026,36 @@ export const PropertyDetailShell: React.FC<{
   const handleReserve = async (e: React.FormEvent) => {
     e.preventDefault();
     await submitReservationRequest();
+  };
+
+  const hideVerificationTooltip = () => setActiveVerificationTooltip((current) => current ? null : current);
+
+  const showVerificationTooltip = (key: string) => {
+    const chip = verificationChipRefs.current[key];
+
+    if (!chip || typeof window === 'undefined') {
+      return;
+    }
+
+    const rect = chip.getBoundingClientRect();
+    const maxTooltipWidth = 320;
+    const horizontalViewportPadding = 16;
+    const tooltipWidth = Math.min(maxTooltipWidth, window.innerWidth - horizontalViewportPadding * 2);
+    const left = Math.min(
+      Math.max(rect.left + rect.width / 2, tooltipWidth / 2 + horizontalViewportPadding),
+      window.innerWidth - tooltipWidth / 2 - horizontalViewportPadding,
+    );
+    const estimatedTooltipHeight = 108;
+    const placement = rect.bottom + estimatedTooltipHeight + 16 > window.innerHeight ? 'top' : 'bottom';
+    const top = placement === 'top' ? rect.top - 10 : rect.bottom + 10;
+
+    setActiveVerificationTooltip({
+      key,
+      top,
+      left,
+      width: tooltipWidth,
+      placement,
+    });
   };
 
   const buildReservationRequestContext = (
@@ -1431,42 +1482,91 @@ export const PropertyDetailShell: React.FC<{
           <section
             data-testid="property-verification-preview"
             aria-label="Estado de verificación"
-            className="mt-4 border-t border-slate-200/70 pt-4 lg:mt-5"
+            className="relative z-20 mt-4 border-t border-slate-200/70 pt-4 lg:mt-5"
           >
-            {showPresencialVerificationInfoCard ? (
+            {showPremiumVerificationInfoCard ? (
               <PresencialVerificationInfoCard />
             ) : (
-              <ul className="space-y-2.5" aria-label="Comprobaciones de verificación">
+              <ul className="flex flex-wrap gap-2.5" aria-label="Comprobaciones de verificación">
                 {verificationPreviewItems.map((item) => {
                   const isComplete = item.status === 'complete';
+                  const isTooltipVisible = activeVerificationTooltip?.key === item.key;
+                  const tooltipId = `property-verification-tooltip-${item.key}`;
 
                   return (
                     <li
                       key={item.key}
                       data-status={item.status}
-                      className="flex h-11 items-center gap-2.5 overflow-hidden rounded-xl border border-slate-200/80 bg-white px-3.5 py-2.5"
+                      className="relative z-0 list-none"
                     >
-                      <span
-                        className={cn(
-                          'inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border',
-                          isComplete
-                            ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                            : 'border-slate-200 bg-slate-100 text-slate-400',
-                        )}
-                        aria-hidden="true"
-                      >
-                        {isComplete ? <Icons.Check className="h-3 w-3" /> : <Icons.Circle className="h-2 w-2 fill-current" />}
-                      </span>
+                      <button
+                        ref={(element) => {
+                          verificationChipRefs.current[item.key] = element;
+                        }}
+                        type="button"
+                        aria-describedby={isTooltipVisible ? tooltipId : undefined}
+                        aria-label={item.detailLabel}
+                        onMouseEnter={() => showVerificationTooltip(item.key)}
+                        onMouseLeave={hideVerificationTooltip}
+                        onFocus={() => showVerificationTooltip(item.key)}
+                        onBlur={hideVerificationTooltip}
+                        onClick={() => {
+                          if (activeVerificationTooltip?.key === item.key) {
+                            hideVerificationTooltip();
+                            return;
+                          }
 
-                      <span className={cn('text-sm leading-5 whitespace-nowrap', isComplete ? 'font-semibold text-slate-900' : 'font-medium text-slate-500')}>
-                        {item.detailLabel}
-                      </span>
+                          showVerificationTooltip(item.key);
+                        }}
+                        className={cn(
+                          'inline-flex cursor-pointer items-center gap-2 rounded-full border px-3 py-2 text-[13px] font-medium leading-none transition-all duration-200 ease-out hover:-translate-y-px hover:shadow-[0_14px_24px_-20px_rgba(15,23,42,0.35)] focus-visible:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/20',
+                          isComplete
+                            ? 'border-emerald-200/90 bg-emerald-50 text-slate-800'
+                            : 'border-slate-200 bg-slate-100 text-slate-500',
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            'inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full',
+                            isComplete ? 'text-emerald-600' : 'text-slate-400',
+                          )}
+                          aria-hidden="true"
+                        >
+                          {isComplete ? <Icons.Check className="h-3.5 w-3.5" /> : <Icons.Circle className="h-2.5 w-2.5 fill-current" />}
+                        </span>
+
+                        <span className={cn('whitespace-nowrap', isComplete ? 'text-slate-800' : 'text-slate-500')}>
+                          {item.detailLabel}
+                        </span>
+                      </button>
+
                     </li>
                   );
                 })}
               </ul>
             )}
           </section>
+
+          {activeVerificationTooltip && typeof document !== 'undefined'
+            ? createPortal(
+              <div
+                id={`property-verification-tooltip-${activeVerificationTooltip.key}`}
+                role="tooltip"
+                className="pointer-events-none fixed z-[120] whitespace-normal rounded-2xl border border-slate-200 bg-white px-3.5 py-3 text-[13px] font-medium leading-5 text-slate-600 shadow-[0_28px_60px_-28px_rgba(15,23,42,0.38)]"
+                style={{
+                  top: activeVerificationTooltip.top,
+                  left: activeVerificationTooltip.left,
+                  width: activeVerificationTooltip.width,
+                  transform: activeVerificationTooltip.placement === 'top'
+                    ? 'translate(-50%, -100%)'
+                    : 'translateX(-50%)',
+                }}
+              >
+                {verificationPreviewItems.find((item) => item.key === activeVerificationTooltip.key)?.description}
+              </div>,
+              document.body,
+            )
+            : null}
         </section>
 
         <main
@@ -1474,20 +1574,33 @@ export const PropertyDetailShell: React.FC<{
           onPointerDownCapture={handleDecisionContentEngagement}
           onFocusCapture={handleDecisionContentEngagement}
         >
-          <Card data-motion-block className="app-card-hover app-motion-block rounded-[32px] border-slate-200/80 bg-white p-6 shadow-[0_28px_70px_-50px_rgba(15,23,42,0.25)] sm:p-7">
-            <div className="space-y-5">
+          <Card data-motion-block className="app-card-hover app-motion-block relative overflow-hidden rounded-[32px] border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,1)_0%,rgba(248,250,255,0.985)_100%)] p-6 shadow-[0_28px_70px_-50px_rgba(15,23,42,0.25)] sm:p-7">
+            <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-[linear-gradient(90deg,rgba(29,134,117,0)_0%,rgba(29,134,117,0.18)_28%,rgba(79,70,229,0.22)_72%,rgba(79,70,229,0)_100%)]" />
+            <div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-[radial-gradient(circle,rgba(79,70,229,0.06)_0%,rgba(79,70,229,0)_70%)]" />
+            <div className="pointer-events-none absolute -left-14 bottom-[-3.5rem] h-40 w-40 rounded-full bg-[radial-gradient(circle,rgba(29,134,117,0.055)_0%,rgba(29,134,117,0)_72%)]" />
+            <div className="relative space-y-5">
               <SectionTitle
                 eyebrow="Lo esencial"
                 heading="Lo esencial del lugar"
                 description="Lo básico para decidir si querés elegir fechas o seguir con la consulta."
+                eyebrowClassName="text-[#4F46E5]/65"
+                descriptionClassName="text-slate-600"
               />
-              <p className="max-w-3xl text-base leading-8 text-slate-600">
+              <p className="max-w-3xl text-base leading-8 text-slate-700">
                 {property.description || 'Todavía no hay descripción disponible.'}
               </p>
 
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                {decisionHighlights.map((item) => (
-                  <div key={item} className="rounded-[24px] border border-slate-200/80 bg-slate-50/80 px-4 py-3 text-sm font-medium leading-6 text-slate-700">
+                {decisionHighlights.map((item, index) => (
+                  <div
+                    key={item}
+                    className={cn(
+                      'rounded-[24px] border px-4 py-3 text-sm font-medium leading-6 shadow-[0_16px_34px_-30px_rgba(15,23,42,0.18)]',
+                      index % 3 === 0 && 'border-[#1D8675]/12 bg-[#1D8675]/4 text-slate-700',
+                      index % 3 === 1 && 'border-brand/12 bg-[rgba(79,70,229,0.035)] text-slate-700',
+                      index % 3 === 2 && 'border-slate-200/80 bg-slate-50/80 text-slate-700',
+                    )}
+                  >
                     {item}
                   </div>
                 ))}
@@ -1511,11 +1624,14 @@ export const PropertyDetailShell: React.FC<{
             </>
           ) : null}
 
-          <Card data-motion-block className="app-card-hover app-motion-block rounded-[32px] border-slate-200/80 bg-white p-6 shadow-[0_28px_70px_-50px_rgba(15,23,42,0.25)] sm:p-7">
-            <div className="space-y-5">
+          <Card data-motion-block className="app-card-hover app-motion-block relative overflow-hidden rounded-[32px] border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,1)_0%,rgba(248,250,255,0.985)_100%)] p-6 shadow-[0_28px_70px_-50px_rgba(15,23,42,0.25)] sm:p-7">
+            <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-[linear-gradient(90deg,rgba(29,134,117,0)_0%,rgba(29,134,117,0.18)_28%,rgba(79,70,229,0.22)_72%,rgba(79,70,229,0)_100%)]" />
+            <div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-[radial-gradient(circle,rgba(79,70,229,0.06)_0%,rgba(79,70,229,0)_70%)]" />
+            <div className="pointer-events-none absolute -left-14 bottom-[-3.5rem] h-40 w-40 rounded-full bg-[radial-gradient(circle,rgba(29,134,117,0.055)_0%,rgba(29,134,117,0)_72%)]" />
+            <div className="relative space-y-5">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex items-center gap-4">
-                  <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+                  <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border border-[#1D8675]/10 bg-[linear-gradient(135deg,rgba(79,70,229,0.045)_0%,rgba(29,134,117,0.07)_100%)] text-[#1D8675] shadow-[0_18px_34px_-28px_rgba(29,134,117,0.24)] dark:bg-slate-800 dark:text-slate-300">
                     {property.host?.avatarUrl ? (
                       <img
                         src={property.host.avatarUrl}
@@ -1529,9 +1645,9 @@ export const PropertyDetailShell: React.FC<{
                   </div>
 
                   <div className="space-y-1">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Anfitrión</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#4F46E5]/65">Anfitrión</p>
                     <h2 className="text-xl font-semibold tracking-tight text-slate-950">{hostName}</h2>
-                    {hostSinceLabel ? <p className="text-sm leading-6 text-slate-500">{hostSinceLabel}</p> : null}
+                    {hostSinceLabel ? <p className="text-sm leading-6 text-[#1D8675]/75">{hostSinceLabel}</p> : null}
                   </div>
                 </div>
 
@@ -1541,7 +1657,7 @@ export const PropertyDetailShell: React.FC<{
                     variant="secondary"
                     size="sm"
                     onClick={() => navigate(`/host/${property.hostId}`)}
-                    className="rounded-full"
+                    className="rounded-full border-brand/10 bg-white/92 text-slate-800 shadow-[0_16px_30px_-26px_rgba(79,70,229,0.18)] hover:border-brand/20 hover:bg-white hover:text-brand"
                   >
                     <>
                       <Icons.ArrowRight className="h-4 w-4" />
@@ -1551,13 +1667,14 @@ export const PropertyDetailShell: React.FC<{
                 ) : null}
               </div>
 
-              <p className="text-sm leading-7 text-slate-600">
+              <p className="text-sm leading-7 text-slate-700">
                 {property.host?.bio?.trim() || 'Ves quién publica, qué historial ya aparece y qué información quedó validada dentro de la plataforma.'}
               </p>
 
               <TrustSignalsInline
                 title="Qué ya deja claro este perfil"
-                signals={hostTrustSignals}
+                signals={decoratedHostTrustSignals}
+                className="rounded-[24px] border border-slate-200/70 bg-white/82 p-3 shadow-[0_18px_40px_-36px_rgba(15,23,42,0.12)] sm:p-4"
                 emptyText="Todavía no hay suficientes señales visibles para resumir este perfil."
               />
             </div>
@@ -2063,7 +2180,7 @@ export const PropertyDetail: React.FC = () => {
     trackVerificationPreferenceOpen(property);
   }, [property]);
 
-  if (loading) return <LoadingState message="Cargando la propiedad..." />;
+  if (loading) return <LoadingState message="Cargando la propiedad..." fullScreen />;
   if (!property) return (
     <div className="max-w-4xl mx-auto p-6">
       <p className="text-center text-slate-500">No encontramos esta propiedad.</p>

@@ -2,10 +2,11 @@ import React from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { Icons } from './Icons';
 import { cn, formatCurrency } from '../lib/utils';
-import { getPropertyCardVerificationState } from '../lib/propertyVerification';
+import { getPropertyCardVerificationState, REAL_VERIFICATION_FILTER_MIN_SCORE } from '../lib/propertyVerification';
 import { Property } from '../services/geminiService';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
+import { VerificationBadgePremium } from './ui/VerificationBadgePremium';
 
 const normalizePropertyText = (value?: string) => (value ?? '')
   .normalize('NFD')
@@ -69,8 +70,11 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   const verificationState = getPropertyCardVerificationState(property);
   const propertyTypeLabel = getPropertyTypeLabel(property);
   const guestCapacityLabel = getGuestCapacityLabel(Number(property.maxGuests) || null);
-  const isPremiumCard = verificationState.model === 'premium';
-  const showPresencialVerificationBadge = verificationState.presencialVerified;
+  const usesVerifiedCardLayout = verificationState.count >= REAL_VERIFICATION_FILTER_MIN_SCORE;
+  const premiumVerificationSummary = 'Verificado presencialmente · Datos confirmados';
+  const verifiedCardSummary = verificationState.presencialVerified
+    ? premiumVerificationSummary
+    : `${verificationState.countLabel ?? verificationState.summaryTitle} · Información validada`;
   const propertyCardCtaLabel = 'Ver detalle';
   const handleFavoriteToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -102,28 +106,26 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
       onClick={onClick}
       onKeyDown={handleCardKeyDown}
       className={cn(
-        'group flex h-full flex-col overflow-hidden border-[color:var(--app-surface-border)] bg-white shadow-[var(--app-shadow-subtle)] transition-[transform,box-shadow,border-color,background-color] duration-200 ease-out',
-        onClick && 'cursor-pointer hover:-translate-y-[3px] hover:border-[color:var(--app-surface-border-strong)] hover:shadow-[var(--app-shadow-raised)] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-brand/10',
-        !isPremiumCard && 'border-slate-200/80 shadow-[0_28px_58px_-44px_rgba(15,23,42,0.18)]',
-        isPremiumCard && 'border-slate-200/90 bg-[linear-gradient(180deg,rgba(255,255,255,1)_0%,rgba(248,250,252,0.94)_100%)] shadow-[0_26px_54px_-40px_rgba(15,23,42,0.22)]',
-        isFavoritesVariant && 'bg-white shadow-[var(--app-shadow-soft)]',
+        'group flex h-full flex-col overflow-hidden rounded-[24px] border border-[#E5E7EB] bg-white shadow-[0_14px_34px_-22px_rgba(15,23,42,0.16)] transition-all duration-300 ease-out',
+        onClick && 'cursor-pointer hover:-translate-y-1 hover:border-slate-300 hover:shadow-[0_24px_44px_-24px_rgba(15,23,42,0.18)] hover:shadow-xl focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-brand/10',
+        isFavoritesVariant && 'shadow-[0_16px_36px_-24px_rgba(15,23,42,0.16)]',
         className,
       )}
     >
-      <div className="relative aspect-[4/3] overflow-hidden bg-slate-100">
+      <div className="relative h-[232px] overflow-hidden bg-slate-100 sm:h-[260px] lg:h-[300px]">
         <img 
           src={imageSrc} 
           alt={property.title}
-          className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.012]"
+          className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]"
           referrerPolicy="no-referrer"
         />
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-slate-950/24 via-slate-950/8 to-transparent" />
 
-        {showPresencialVerificationBadge ? (
-          <img
-            src="/verified-presencial-badge.png"
-            alt="Verificado presencialmente"
-            className="absolute top-4 left-4 z-20 h-11 w-auto drop-shadow-md"
+        {verificationState.presencialVerified ? (
+          <VerificationBadgePremium
+            size="xs"
+            data-testid="property-card-premium-badge"
+            className="absolute left-4 top-4 z-20 origin-top-left scale-[0.75]"
           />
         ) : null}
 
@@ -149,47 +151,45 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         ) : null}
       </div>
 
-      <div className="flex h-full flex-1 flex-col p-5 sm:p-5 md:p-6">
-        <div className={cn('space-y-4.5', !isPremiumCard && 'space-y-5')}>
-          <div className="space-y-2.5">
-            <p className={cn('text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500', !isPremiumCard && 'text-[11px] tracking-[0.22em] text-slate-600')}>
+      <div className="flex h-full flex-1 flex-col p-5 md:p-6">
+        <div>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
               {propertyTypeLabel}
             </p>
             <h3 className={cn(
-              'min-h-[3.5rem] line-clamp-2 text-[1.2rem] font-semibold leading-[1.18] tracking-[-0.03em] text-slate-950 transition-colors duration-150 group-hover:text-slate-950 md:text-[1.24rem]',
-              !isPremiumCard && 'min-h-[3.9rem] text-[1.22rem] leading-[1.12] tracking-[-0.04em] md:text-[1.28rem]',
+              'mt-1 min-h-[3.25rem] line-clamp-2 text-xl font-semibold leading-tight tracking-[-0.03em] text-slate-900 transition-colors duration-150 group-hover:text-slate-900',
+              !usesVerifiedCardLayout && 'min-h-[3.6rem]',
             )}>
               {property.title}
             </h3>
           </div>
 
-          <div className={cn('space-y-1', !isPremiumCard && 'space-y-1.5')}>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Por noche</p>
-            <p className={cn('text-[1.75rem] font-bold leading-none tracking-[-0.5px] text-slate-950', !isPremiumCard && 'text-[1.8rem] tracking-[-0.03em]')}>
-              {formatCurrency(Number(property.price) || 0)}
-            </p>
+          <div className="mt-4">
+            <div data-testid="property-card-price-row" className="flex items-baseline gap-1.5">
+              <p className="text-3xl font-semibold leading-none tracking-tight text-slate-900">
+                {formatCurrency(Number(property.price) || 0)}
+              </p>
+              <span className="ml-1 text-sm text-slate-500">/ noche</span>
+            </div>
+
+            {usesVerifiedCardLayout ? (
+              <p
+                data-testid="property-card-verification"
+                aria-label={verifiedCardSummary}
+                className="mt-2 text-sm leading-5 text-slate-500"
+              >
+                {verifiedCardSummary}
+              </p>
+            ) : null}
           </div>
 
-          <div
-            data-testid="property-card-verification"
-            aria-label={isPremiumCard ? verificationState.summaryTitle : verificationState.countLabel ?? verificationState.summaryTitle}
-            className={cn(
-              'min-h-[5.5rem]',
-              isPremiumCard
-                ? 'flex flex-col justify-center gap-1.5 px-0 py-0'
-                : 'flex flex-col gap-3.5 px-0 py-0',
-            )}
-          >
-            {isPremiumCard ? (
-              <>
-                <p className="text-[0.84rem] font-medium leading-5 text-slate-700">
-                  {verificationState.summaryTitle}
-                </p>
-                <p className="max-w-[18rem] text-[0.77rem] leading-5 text-slate-500">
-                  {verificationState.summaryDescription}
-                </p>
-              </>
-            ) : (
+          {!usesVerifiedCardLayout ? (
+            <div
+              data-testid="property-card-verification"
+              aria-label={verificationState.countLabel ?? verificationState.summaryTitle}
+              className="mt-4 min-h-[5.5rem] flex flex-col gap-3.5 px-0 py-0"
+            >
               <>
                 <div className="space-y-0.5">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
@@ -222,40 +222,33 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
                   ))}
                 </ul>
               </>
-            )}
-          </div>
+            </div>
+          ) : null}
         </div>
 
-        <div className={cn('mt-auto', !isPremiumCard && 'pt-5')}>
-          <div className={cn(
-            'flex items-end justify-between gap-4 border-t border-slate-200/70',
-            isPremiumCard ? 'pt-4' : 'pt-5',
-          )}>
-            <div className={cn(
-              'min-w-0 text-[0.83rem] font-medium leading-5 text-slate-500',
-              isPremiumCard ? 'flex flex-wrap items-center gap-x-3 gap-y-1.5' : 'flex flex-col items-start gap-1.5 text-[0.84rem] text-slate-600',
-            )}>
-            <span className="inline-flex items-center gap-1.5">
-              <Icons.MapPin className="h-3.5 w-3.5 text-slate-400" />
-              <span>{property.location}</span>
-            </span>
-            {guestCapacityLabel ? (
-              <span className="inline-flex items-center gap-1.5">
-                <Icons.Users className="h-3.5 w-3.5 text-slate-400" />
-                <span>{guestCapacityLabel}</span>
-              </span>
-            ) : null}
+        <div className={cn('mt-auto pt-4', !usesVerifiedCardLayout && 'pt-5')}>
+          <div className="border-t border-gray-200" />
+
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-4 text-sm font-medium leading-5 text-slate-600">
+                <span className="inline-flex items-center gap-1.5">
+                  <Icons.MapPin className="h-3.5 w-3.5 text-slate-400" />
+                  <span>{property.location}</span>
+                </span>
+                {guestCapacityLabel ? (
+                  <span className="inline-flex items-center gap-1.5">
+                    <Icons.Users className="h-3.5 w-3.5 text-slate-400" />
+                    <span>{guestCapacityLabel}</span>
+                  </span>
+                ) : null}
+              </div>
             </div>
 
             <span
               data-testid="property-card-cta"
               aria-hidden="true"
-              className={cn(
-                'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-[0.76rem] font-semibold transition-[border-color,color,background-color,box-shadow] duration-150',
-                isPremiumCard
-                  ? 'border-slate-200/90 bg-white/96 text-slate-700 shadow-[0_10px_20px_-18px_rgba(15,23,42,0.1)] group-hover:border-slate-300 group-hover:bg-white group-hover:text-slate-900'
-                  : 'border-slate-200/90 bg-white text-emerald-700 shadow-[0_12px_22px_-18px_rgba(15,23,42,0.12)] group-hover:border-emerald-200 group-hover:bg-white group-hover:text-emerald-800',
-              )}
+              className="inline-flex shrink-0 items-center gap-1.5 self-start rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-[0_10px_20px_-18px_rgba(15,23,42,0.12)] transition-all duration-200 hover:bg-slate-50 hover:border-slate-300 group-hover:border-slate-300 group-hover:bg-white group-hover:text-slate-900 sm:self-auto"
             >
               <span>{propertyCardCtaLabel}</span>
               <Icons.ArrowRight className="h-3.5 w-3.5" />

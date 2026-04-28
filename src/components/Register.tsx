@@ -107,12 +107,17 @@ export const Register = ({ mode = 'login' }: RegisterProps) => {
                                 type="button"
                                 onClick={() => navigate('/')}
                                 aria-label="Ir al inicio de Alquiler Real"
-                                className="flex items-center gap-3 rounded-full pr-3 text-left transition-transform duration-200 hover:scale-[1.01]"
+                                className="flex items-center gap-1.5 rounded-full pr-3 text-left transition-transform duration-200 hover:scale-[1.01]"
                             >
-                                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-[0_18px_35px_-22px_rgba(15,23,42,0.85)]">
-                                    <Icons.ShieldCheck className="h-6 w-6" />
+                                <div className="flex h-10 w-10 shrink-0 items-center justify-center">
+                                    <img
+                                        src="/verified-presencial-badge3.png"
+                                        alt=""
+                                        aria-hidden="true"
+                                        className="h-full w-full object-contain"
+                                    />
                                 </div>
-                                <div>
+                                <div className="flex flex-col justify-center">
                                     <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-brand">Antes de reservar</div>
                                     <div className="font-display text-[1.2rem] font-semibold tracking-tight text-slate-900">Alquiler Real</div>
                                 </div>

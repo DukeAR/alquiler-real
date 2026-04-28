@@ -116,6 +116,9 @@ describe('AppShell', () => {
   test('hides Guardados for guests while keeping the public navigation and auth actions visible', async () => {
     await renderShell();
 
+    const homeButton = screen.getByRole('button', { name: 'Ir al inicio de Alquiler Real' });
+    const logoMark = homeButton.querySelector('img');
+
     expect(screen.queryByRole('button', { name: 'Guardados' })).not.toBeInTheDocument();
     expect(screen.queryByTestId('notifications-menu')).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Explorar' })).toBeInTheDocument();
@@ -123,6 +126,8 @@ describe('AppShell', () => {
     expect(screen.getByRole('link', { name: 'Ayuda' })).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'Ingresá' })).not.toHaveLength(0);
     expect(screen.getByRole('button', { name: 'Publicar propiedad' })).toBeInTheDocument();
+    expect(logoMark).not.toBeNull();
+    expect(logoMark).toHaveAttribute('src', '/verified-presencial-badge3.png');
   });
 
   test('shows Guardados when the user is authenticated', async () => {

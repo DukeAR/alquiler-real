@@ -87,30 +87,17 @@ describe('PropertyCard', () => {
     expect(screen.getByText('Casa')).toBeInTheDocument();
     expect(screen.getByText('Santa Teresita')).toBeInTheDocument();
     expect(screen.getByText(/120\.000/)).toBeInTheDocument();
-    expect(screen.getByText('Por noche')).toBeInTheDocument();
+    expect(screen.getByText('/ noche')).toBeInTheDocument();
     expect(screen.queryByText('Precio por noche')).toBeNull();
     expect(screen.queryByText('4.8')).toBeNull();
     expect(screen.queryByText('12 reseñas')).toBeNull();
+    expect(screen.queryByTestId('property-card-premium-badge')).toBeNull();
     const verificationBlock = screen.getByTestId('property-card-verification');
-    expect(verificationBlock).toHaveAttribute('aria-label', '4 comprobaciones visibles');
-    expect(verificationBlock.className).not.toContain('border');
-    expect(within(verificationBlock).getByText('Verificación visible')).toBeInTheDocument();
-    expect(within(verificationBlock).getByText('4 comprobaciones visibles')).toHaveClass('text-slate-600');
-    expect(within(verificationBlock).getByRole('list', { name: /checks de verificación/i })).toBeInTheDocument();
-    expect(within(verificationBlock).getAllByRole('listitem')).toHaveLength(5);
-    expect(within(verificationBlock).getByText('Anfitrión confirmado')).toBeInTheDocument();
-    expect(within(verificationBlock).getByText('Ubicación verificada')).toBeInTheDocument();
-    expect(within(verificationBlock).getByText('Geolocalización precisa')).toBeInTheDocument();
-    expect(within(verificationBlock).getByText('Fotos / video reales')).toBeInTheDocument();
-    expect(within(verificationBlock).getByText('Disponibilidad validada')).toBeInTheDocument();
-    expect(getCompletedCheckItems(verificationBlock)).toHaveLength(4);
-    const completedItem = getVerificationListItem(verificationBlock, 'Anfitrión confirmado');
-    const pendingItem = getVerificationListItem(verificationBlock, 'Disponibilidad validada');
-    expect(within(completedItem).getByText('Anfitrión confirmado')).toHaveClass('text-slate-700');
-    expect(completedItem.querySelector('svg')).not.toBeNull();
-    expect(within(pendingItem).getByText('Disponibilidad validada')).toHaveClass('text-slate-400');
-    expect(pendingItem.querySelector('svg')).toBeNull();
-    expect(screen.queryByAltText('Verificado presencialmente')).toBeNull();
+    expect(verificationBlock).toHaveAttribute('aria-label', '4 comprobaciones visibles · Información validada');
+    expect(verificationBlock).toHaveTextContent('4 comprobaciones visibles · Información validada');
+    expect(within(verificationBlock).queryByRole('list')).toBeNull();
+    expect(within(verificationBlock).queryByText('Anfitrión confirmado')).toBeNull();
+    expect(screen.queryByRole('img', { name: 'Verificado presencialmente' })).toBeNull();
     expect(screen.queryByText('Más verificado')).toBeNull();
     expect(screen.queryByText('Confianza visible')).toBeNull();
     expect(screen.queryByText('Anfitrión con buen historial')).toBeNull();
@@ -131,17 +118,12 @@ describe('PropertyCard', () => {
       />,
     );
 
-    const verificationBlock = screen.getByLabelText('3 comprobaciones visibles');
+    expect(screen.queryByTestId('property-card-premium-badge')).toBeNull();
+    const verificationBlock = screen.getByTestId('property-card-verification');
 
-    expect(within(verificationBlock).getByText('Verificación visible')).toBeInTheDocument();
-    expect(within(verificationBlock).getByText('3 comprobaciones visibles')).toBeInTheDocument();
-    expect(within(verificationBlock).getAllByRole('listitem')).toHaveLength(5);
-    expect(within(verificationBlock).getByText('Anfitrión confirmado')).toBeInTheDocument();
-    expect(within(verificationBlock).getByText('Ubicación verificada')).toBeInTheDocument();
-    expect(within(verificationBlock).getByText('Geolocalización precisa')).toBeInTheDocument();
-    expect(within(verificationBlock).getByText('Fotos / video reales')).toBeInTheDocument();
-    expect(within(verificationBlock).getByText('Disponibilidad validada')).toBeInTheDocument();
-    expect(getCompletedCheckItems(verificationBlock)).toHaveLength(3);
+    expect(verificationBlock).toHaveAttribute('aria-label', '3 comprobaciones visibles · Información validada');
+    expect(verificationBlock).toHaveTextContent('3 comprobaciones visibles · Información validada');
+    expect(within(verificationBlock).queryByRole('list')).toBeNull();
     expect(screen.queryByText('Más verificado')).toBeNull();
   });
 
@@ -156,12 +138,12 @@ describe('PropertyCard', () => {
       />,
     );
 
-    const verificationBlock = screen.getByLabelText('4 comprobaciones visibles');
+    expect(screen.queryByTestId('property-card-premium-badge')).toBeNull();
+    const verificationBlock = screen.getByTestId('property-card-verification');
 
-    expect(within(verificationBlock).getByText('Verificación visible')).toBeInTheDocument();
-    expect(within(verificationBlock).getByText('4 comprobaciones visibles')).toBeInTheDocument();
-    expect(within(verificationBlock).getAllByRole('listitem')).toHaveLength(5);
-    expect(getCompletedCheckItems(verificationBlock)).toHaveLength(4);
+    expect(verificationBlock).toHaveAttribute('aria-label', '4 comprobaciones visibles · Información validada');
+    expect(verificationBlock).toHaveTextContent('4 comprobaciones visibles · Información validada');
+    expect(within(verificationBlock).queryByRole('list')).toBeNull();
   });
 
   test('keeps the card focused on verification even when the host trust level changes', () => {
@@ -185,7 +167,7 @@ describe('PropertyCard', () => {
     );
 
     expect(screen.queryByText('Anfitrión con buen historial')).toBeNull();
-    expect(screen.getByText('4 comprobaciones visibles')).toBeInTheDocument();
+    expect(screen.getByText('4 comprobaciones visibles · Información validada')).toBeInTheDocument();
     expect(screen.getByText('Ver detalle')).toBeInTheDocument();
   });
 
@@ -197,7 +179,8 @@ describe('PropertyCard', () => {
     );
 
     expect(screen.queryByText('Más verificado')).toBeNull();
-    expect(screen.getByText('4 comprobaciones visibles')).toBeInTheDocument();
+    expect(screen.queryByTestId('property-card-premium-badge')).toBeNull();
+    expect(screen.getByText('4 comprobaciones visibles · Información validada')).toBeInTheDocument();
     expect(screen.getByText('Ver detalle')).toBeInTheDocument();
   });
 
@@ -213,14 +196,35 @@ describe('PropertyCard', () => {
       />,
     );
 
-    const presencialBadge = screen.getByAltText('Verificado presencialmente');
-    expect(presencialBadge).toHaveAttribute('src', '/verified-presencial-badge.png');
-    expect(presencialBadge).toHaveClass('absolute', 'top-4', 'left-4', 'z-20', 'h-11', 'w-auto', 'drop-shadow-md');
-    expect(presencialBadge.parentElement).toHaveClass('relative', 'aspect-[4/3]', 'overflow-hidden', 'bg-slate-100');
+    const presencialBadge = screen.getByTestId('property-card-premium-badge');
+    expect(presencialBadge).toHaveClass(
+      'absolute',
+      'left-4',
+      'top-4',
+      'z-20',
+      'origin-top-left',
+      'scale-[0.75]',
+      'inline-flex',
+      'items-center',
+      'whitespace-nowrap',
+      'rounded-full',
+      'bg-[rgba(253,253,253,0.76)]',
+      'text-slate-700',
+      'transition-transform',
+      'duration-200',
+      'hover:-translate-y-0.5',
+      'gap-1.5',
+      'px-2.5',
+      'py-[5px]',
+    );
+    expect(presencialBadge).toHaveAttribute('role', 'img');
+    expect(presencialBadge).toHaveAttribute('aria-label', 'Verificado presencialmente');
+    expect(within(presencialBadge).getByText('Verificado presencialmente')).toBeInTheDocument();
+    expect(presencialBadge.parentElement).toHaveClass('relative', 'h-[232px]', 'overflow-hidden', 'bg-slate-100', 'sm:h-[260px]', 'lg:h-[300px]');
+    expect(screen.getByTestId('property-card-price-row')).not.toContainElement(presencialBadge);
     const verificationBlock = screen.getByTestId('property-card-verification');
-    expect(verificationBlock).toHaveAttribute('aria-label', 'Información verificada en persona');
-    expect(within(verificationBlock).getByText('Información verificada en persona')).toBeInTheDocument();
-    expect(within(verificationBlock).getByText('Ubicación, anfitrión y datos confirmados')).toBeInTheDocument();
+    expect(verificationBlock).toHaveAttribute('aria-label', 'Verificado presencialmente · Datos confirmados');
+    expect(within(verificationBlock).getByText('Verificado presencialmente · Datos confirmados')).toBeInTheDocument();
     expect(within(verificationBlock).queryByText('Verificación visible')).toBeNull();
     expect(within(verificationBlock).queryByText('5 comprobaciones visibles')).toBeNull();
     expect(within(verificationBlock).queryByRole('list')).toBeNull();
@@ -240,11 +244,12 @@ describe('PropertyCard', () => {
       />,
     );
 
-    expect(screen.queryByAltText('Verificado presencialmente')).toBeNull();
-    const verificationBlock = screen.getByLabelText('4 comprobaciones visibles');
-    expect(within(verificationBlock).getByText('Verificación visible')).toBeInTheDocument();
-    expect(within(verificationBlock).getByText('4 comprobaciones visibles')).toBeInTheDocument();
-    expect(within(verificationBlock).getAllByRole('listitem')).toHaveLength(5);
+    expect(screen.queryByRole('img', { name: 'Verificado presencialmente' })).toBeNull();
+    expect(screen.queryByTestId('property-card-premium-badge')).toBeNull();
+    const verificationBlock = screen.getByTestId('property-card-verification');
+    expect(verificationBlock).toHaveAttribute('aria-label', '4 comprobaciones visibles · Información validada');
+    expect(within(verificationBlock).getByText('4 comprobaciones visibles · Información validada')).toBeInTheDocument();
+    expect(within(verificationBlock).queryByRole('list')).toBeNull();
   });
 
   test('keeps the standard verification summary subtle even when the card is highlighted', () => {
@@ -257,7 +262,7 @@ describe('PropertyCard', () => {
 
     const trustLine = screen.getByTestId('property-card-verification');
 
-    expect(within(trustLine).getByText('4 comprobaciones visibles')).toHaveClass('text-slate-600');
+    expect(within(trustLine).getByText('4 comprobaciones visibles · Información validada')).toHaveClass('text-slate-500');
   });
 
   test('keeps the featured card free of extra verification badges', () => {
@@ -273,17 +278,19 @@ describe('PropertyCard', () => {
     expect(screen.queryByText('Más verificado')).toBeNull();
     expect(screen.queryByText('Buena relación precio / información')).toBeNull();
     expect(screen.queryByText('Más comprobado')).toBeNull();
-    expect(screen.getByText('4 comprobaciones visibles')).toBeInTheDocument();
+    expect(screen.getByText('4 comprobaciones visibles · Información validada')).toBeInTheDocument();
     expect(screen.getByText('Ver detalle')).toBeInTheDocument();
   });
 
   test('keeps the favorites variant free of Explore guidance labels', () => {
     render(<PropertyCard property={sampleProperty} variant="favorites" onClick={vi.fn()} />);
 
-    const verificationBlock = screen.getByLabelText('4 comprobaciones visibles');
+    expect(screen.queryByTestId('property-card-premium-badge')).toBeNull();
+    const verificationBlock = screen.getByTestId('property-card-verification');
 
-    expect(within(verificationBlock).getByText('4 comprobaciones visibles')).toBeInTheDocument();
-    expect(within(verificationBlock).getAllByRole('listitem')).toHaveLength(5);
+    expect(verificationBlock).toHaveAttribute('aria-label', '4 comprobaciones visibles · Información validada');
+    expect(within(verificationBlock).getByText('4 comprobaciones visibles · Información validada')).toBeInTheDocument();
+    expect(within(verificationBlock).queryByRole('list')).toBeNull();
     expect(screen.queryByText('Más verificado')).toBeNull();
     expect(screen.queryByText('Más confiable')).toBeNull();
     expect(screen.queryByText('Anfitrión con buen historial')).toBeNull();

@@ -369,18 +369,21 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
       {showHeader ? (
         <header className={cn('app-header z-50', isPropertyDetailRoute ? 'app-header-detail' : 'relative', headerOnHero && 'app-header-on-hero')}>
           <div className={cn(headerLayoutClass, 'flex items-center gap-5 py-3.5 sm:gap-8 sm:py-5 lg:gap-7 xl:gap-8')}>
-            <button type="button" onClick={() => navigate('/')} aria-label="Ir al inicio de Alquiler Real" className="flex shrink-0 items-center gap-4 rounded-2xl pr-0 transition-opacity duration-200 hover:opacity-95 focus-visible:outline-none focus-visible:shadow-[var(--app-focus-ring)] sm:gap-5">
+            <button type="button" onClick={() => navigate('/')} aria-label="Ir al inicio de Alquiler Real" className="flex shrink-0 items-center gap-1 rounded-2xl pr-0 transition-opacity duration-200 hover:opacity-95 focus-visible:outline-none focus-visible:shadow-[var(--app-focus-ring)] sm:gap-1.5">
               <div className={cn(
-                'flex h-9 w-9 items-center justify-center rounded-[1rem] border transition-[border-color,background-color,color,box-shadow] duration-200 sm:h-10 sm:w-10',
-                headerOnHero
-                  ? 'border-white/18 bg-white/8 text-white shadow-[0_18px_40px_-30px_rgba(0,0,0,0.42)] backdrop-blur-[10px]'
-                  : 'border-slate-200/90 bg-slate-50 text-slate-500 shadow-[0_10px_24px_-22px_rgba(15,23,42,0.22)]',
+                'flex h-9 w-9 shrink-0 items-center justify-center sm:h-10 sm:w-10',
+                headerOnHero && 'drop-shadow-[0_16px_28px_rgba(15,23,42,0.22)]',
               )}>
-                <Icons.ShieldCheck className="h-[1.05rem] w-[1.05rem] sm:h-[1.15rem] sm:w-[1.15rem]" />
+                <img
+                  src="/verified-presencial-badge3.png"
+                  alt=""
+                  aria-hidden="true"
+                  className="h-full w-full object-contain"
+                />
               </div>
-              <div className="min-w-max text-left">
-                <div className={cn('hidden text-[9px] font-semibold uppercase tracking-[0.18em] transition-colors duration-200 sm:block', headerOnHero ? 'text-white/62' : 'text-slate-400/80')}>Información real</div>
-                <div className={cn('font-display whitespace-nowrap text-[1.12rem] font-bold leading-none tracking-[-0.04em] transition-colors duration-200 sm:text-[1.42rem] lg:text-[1.56rem]', headerOnHero ? 'text-white' : 'text-slate-950')}>
+              <div className="flex min-w-max flex-col justify-center text-left">
+                <div className={cn('hidden text-[9px] font-semibold uppercase leading-none tracking-[0.18em] transition-colors duration-200 sm:block', headerOnHero ? 'text-white/62' : 'text-slate-400/80')}>Información real</div>
+                <div className={cn('font-display whitespace-nowrap text-[1.12rem] font-bold leading-[0.92] tracking-[-0.04em] transition-colors duration-200 sm:text-[1.42rem] lg:text-[1.56rem]', headerOnHero ? 'text-white' : 'text-slate-950')}>
                   <span className={cn('transition-colors duration-200', headerOnHero ? 'text-white' : 'text-slate-950')}>Alquiler</span>{' '}
                   <span className={cn('transition-colors duration-200', headerOnHero ? 'text-white' : 'text-brand')}>Real</span>
                 </div>

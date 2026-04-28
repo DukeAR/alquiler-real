@@ -1,39 +1,66 @@
-import { PRESENCIAL_VERIFICATION_LABEL } from '../../lib/propertyVerification';
+import type { ComponentPropsWithoutRef } from 'react';
+
 import { cn } from '../../lib/utils';
-import { Icons } from '../Icons';
 
-export type VerificationBadgePremiumSize = 'sm' | 'md';
+export type VerificationBadgePremiumSize = 'xs' | 'sm' | 'md';
 
-type VerificationBadgePremiumProps = {
-  className?: string;
+type VerificationBadgePremiumProps = ComponentPropsWithoutRef<'span'> & {
   size?: VerificationBadgePremiumSize;
+  alt?: string;
 };
 
-const sizeClasses: Record<VerificationBadgePremiumSize, string> = {
-  sm: 'gap-1.5 px-3 py-1.5 text-[11px]',
-  md: 'gap-2 px-3.5 py-2 text-[12px]',
-};
-
-const iconClasses: Record<VerificationBadgePremiumSize, string> = {
-  sm: 'h-3.25 w-3.25',
-  md: 'h-3.75 w-3.75',
+const badgeClasses: Record<VerificationBadgePremiumSize, {
+  container: string;
+  mark: string;
+  text: string;
+}> = {
+  xs: {
+    container: 'gap-1.5 px-2.5 py-[5px]',
+    mark: 'h-[30px] w-[34px]',
+    text: 'text-[13px]',
+  },
+  sm: {
+    container: 'gap-2 px-3 py-1.5',
+    mark: 'h-[34px] w-[39px]',
+    text: 'text-[14px]',
+    },
+  md: {
+    container: 'gap-3 px-4 py-2.5',
+    mark: 'h-[40px] w-[46px]',
+    text: 'text-base',
+  },
 };
 
 export const VerificationBadgePremium = ({
   className,
   size = 'sm',
+  alt = 'Verificado presencialmente',
+  ...props
 }: VerificationBadgePremiumProps) => {
+  const classes = badgeClasses[size];
+
   return (
-    <div
+    <span
+      {...props}
+      role="img"
+      aria-label={alt}
       className={cn(
-        'inline-flex items-center rounded-full border border-emerald-200/80 bg-emerald-50/92 font-medium tracking-[-0.01em] text-emerald-950 shadow-[0_10px_20px_-18px_rgba(5,150,105,0.22)]',
-        sizeClasses[size],
+        'inline-flex items-center whitespace-nowrap rounded-full bg-[rgba(253,253,253,0.76)] text-slate-700 shadow-[0_12px_30px_-20px_rgba(15,23,42,0.55)] transition-transform duration-200 hover:-translate-y-0.5',
+        classes.container,
         className,
       )}
     >
-      <Icons.ShieldCheck className={cn(iconClasses[size], 'shrink-0 text-emerald-700')} />
-      <span>{PRESENCIAL_VERIFICATION_LABEL}</span>
-    </div>
+      <img
+        src="/verified-presencial-badge3.png"
+        alt=""
+        aria-hidden="true"
+        draggable={false}
+        className={cn('shrink-0 object-contain', classes.mark)}
+      />
+      <span className={cn('font-semibold leading-none tracking-[-0.02em]', classes.text)}>
+        Verificado presencialmente
+      </span>
+    </span>
   );
 };
 

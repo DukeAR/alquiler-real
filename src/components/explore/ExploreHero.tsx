@@ -1,6 +1,6 @@
+import { motion } from 'motion/react';
 import { Icons } from '../Icons';
 import { LocationAutocomplete, type LocationSuggestion } from '../LocationAutocomplete';
-import { Button } from '../ui/Button';
 
 type ExploreHeroProps = {
   backgroundImage?: string;
@@ -20,6 +20,16 @@ const valueProofItems = [
   'Datos comprobados',
 ] as const;
 
+const getRevealMotionProps = (delay: number) => ({
+  initial: { opacity: 0, y: 8 },
+  animate: { opacity: 1, y: 0 },
+  transition: {
+    duration: 0.62,
+    delay,
+    ease: [0.22, 1, 0.36, 1] as const,
+  },
+});
+
 export const ExploreHero = ({
   backgroundImage,
   searchValue,
@@ -30,83 +40,98 @@ export const ExploreHero = ({
   onLocationSelect,
 }: ExploreHeroProps) => {
   return (
-    <section style={{ fontFamily: 'var(--font-ui)' }}>
-      <div className="relative overflow-hidden rounded-[calc(var(--app-radius-display)+4px)] bg-[#eef3f4] shadow-[0_14px_30px_-28px_rgba(15,23,42,0.12)]">
+    <section className="mx-auto mt-8 w-full max-w-[1440px] px-6" style={{ fontFamily: 'var(--font-ui)' }}>
+      <div className="relative overflow-hidden rounded-[28px] bg-slate-100 shadow-[0_30px_90px_rgba(15,23,42,0.16)] md:rounded-[40px] lg:min-h-[620px]">
         {backgroundImage ? (
           <div className="pointer-events-none absolute inset-0">
-            <div
-              className="absolute inset-0 scale-[1.005] bg-cover bg-center"
-              style={{
-                backgroundImage: `url(${backgroundImage})`,
-                filter: 'blur(0.2px) brightness(1.01) contrast(1.06) saturate(0.99)',
-                opacity: 1,
-              }}
-            />
-            <div
-              className="absolute inset-0"
-              style={{
-                background: 'linear-gradient(to bottom, rgba(248,250,252,0.34) 0%, rgba(247,250,252,0.16) 42%, rgba(243,246,248,0.05) 100%)',
-              }}
+            <img
+              src={backgroundImage}
+              alt=""
+              aria-hidden="true"
+              className="absolute inset-0 h-full w-full scale-[1.02] object-cover"
             />
           </div>
         ) : null}
 
-        <div className="relative px-4 pt-9 pb-5 sm:px-6 sm:pt-10 sm:pb-6 md:px-8 md:pt-11 md:pb-7 lg:px-10 lg:pt-12 lg:pb-8">
-          <div className="mx-auto flex max-w-[47.5rem] flex-col items-center gap-5 text-center sm:gap-6">
-            <div className="flex max-w-[760px] flex-col items-center gap-4 text-center sm:gap-5">
-              <div className="text-[0.78rem] font-semibold uppercase tracking-[0.28em] text-[#475569] sm:text-[0.82rem]">
-                {heroGeoEyebrow}
-              </div>
-              <h1 className="font-display mx-auto max-w-[760px] text-balance text-[clamp(1.6rem,5.8vw,4.75rem)] font-semibold leading-[0.9] tracking-[-0.055em] text-slate-950">
-                <span className="block">La información real importa.</span>
-                <span className="block">Elegí mejor antes de reservar.</span>
-              </h1>
-                  <p className="mx-auto mt-0 mb-6 max-w-[44rem] text-balance text-[1rem] font-semibold leading-[1.55] tracking-[-0.01em] text-slate-800 sm:text-[1.05rem]">
-                {heroSubtitle}
-              </p>
-            </div>
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/88 via-white/55 to-white/20" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-white/40 via-transparent to-white/20" />
 
-            <form
-              className="mt-1 flex w-full max-w-[760px] flex-col items-center"
+        <div className="relative z-10 flex flex-col items-center justify-center px-6 py-14 text-center md:min-h-[620px] md:px-8 md:py-16">
+          <div className="flex w-full max-w-4xl flex-col items-center text-center">
+            <motion.div
+              className="mb-5 text-xs font-semibold uppercase tracking-[0.34em] text-slate-600"
+              {...getRevealMotionProps(0.04)}
+            >
+              {heroGeoEyebrow}
+            </motion.div>
+
+            <motion.h1
+              className="font-display max-w-[780px] text-balance text-[36px] font-semibold leading-[1.05] tracking-[-0.045em] text-slate-950 md:text-[46px] md:leading-[1.02] lg:text-[56px] lg:leading-[0.98]"
+              {...getRevealMotionProps(0.1)}
+            >
+              <span className="block">La información real importa.</span>
+              <span className="block">Elegí mejor antes de reservar.</span>
+            </motion.h1>
+
+            <motion.p
+              className="mt-6 max-w-[620px] text-balance text-base font-medium leading-relaxed text-slate-700 md:text-lg lg:text-xl"
+              {...getRevealMotionProps(0.16)}
+            >
+              {heroSubtitle}
+            </motion.p>
+
+            <motion.form
+              className="mt-12 w-full max-w-[860px]"
               onSubmit={(event) => {
                 event.preventDefault();
                 onSearchSubmit();
               }}
+              {...getRevealMotionProps(0.22)}
             >
-              <div className="grid w-full grid-cols-[minmax(0,1.85fr)_minmax(0,1fr)] gap-2.5">
-                <div className="min-w-0">
-                  <LocationAutocomplete
-                    inputId="explore-destination"
-                    value={searchValue}
-                    suggestions={locationSuggestions}
-                    onChange={onSearchChange}
-                    placeholder="¿A dónde querés ir?"
-                    onSelect={onLocationSelect}
-                    onSubmitValue={onSearchSubmitValue}
-                    ariaLabel="Destino"
-                    inputClassName="!h-[60px] !min-h-[60px] rounded-[20px] border-[rgba(15,23,42,0.06)] bg-white/92 py-2.5 pl-14 text-[0.92rem] font-semibold text-slate-950 placeholder:text-slate-500 shadow-[0_8px_22px_-22px_rgba(15,23,42,0.18)] focus:border-brand/30 focus:bg-white focus:shadow-[0_0_0_4px_rgba(67,56,202,0.1)] sm:text-[0.95rem] md:pl-16 md:text-[1rem]"
-                  />
+              <div
+                className="relative flex flex-col rounded-[28px] border border-white/70 bg-white/95 p-3 shadow-[0_24px_70px_rgba(15,23,42,0.18)] backdrop-blur-md transition-all duration-300 hover:shadow-[0_28px_90px_rgba(15,23,42,0.22)] focus-within:ring-4 focus-within:ring-indigo-500/20 md:h-[72px] md:rounded-full md:p-0 md:px-4"
+                data-testid="hero-search-shell"
+              >
+                <LocationAutocomplete
+                  inputId="explore-destination"
+                  value={searchValue}
+                  suggestions={locationSuggestions}
+                  onChange={onSearchChange}
+                  placeholder="¿A dónde querés ir?"
+                  onSelect={onLocationSelect}
+                  onSubmitValue={onSearchSubmitValue}
+                  ariaLabel="Destino"
+                  icon={<Icons.MapPin className="h-6 w-6 text-slate-500" />}
+                  hideClearButton
+                  inputClassName="!h-12 !min-h-12 rounded-full !border-0 bg-transparent px-4 pl-12 pr-4 text-lg font-medium tracking-[-0.01em] text-slate-800 !shadow-none outline-none placeholder:text-slate-400 transition-all duration-200 hover:!border-transparent hover:!shadow-none focus:!border-transparent focus:!shadow-none focus:outline-none focus-visible:!border-transparent focus-visible:!shadow-none md:!h-[72px] md:!min-h-[72px] md:rounded-full md:pr-[15rem]"
+                />
+
+                <div className="mt-3 md:absolute md:right-2 md:top-1/2 md:mt-0 md:-translate-y-1/2">
+                  <button
+                    type="submit"
+                    className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-indigo-600 px-6 text-base font-semibold text-white shadow-[0_14px_35px_rgba(79,70,229,0.35)] transition-all duration-200 hover:-translate-y-[1px] hover:bg-indigo-700 active:translate-y-0 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-200 md:h-[56px] md:w-auto md:px-8"
+                  >
+                    Buscar alojamientos
+                    <Icons.ArrowRight className="h-5 w-5" />
+                  </button>
                 </div>
-
-                <Button
-                  type="submit"
-                  size="auto"
-                  className="!h-[60px] !min-h-[60px] w-full rounded-[20px] px-3 text-[0.84rem] font-extrabold leading-none tracking-[-0.02em] shadow-[0_18px_36px_-28px_rgba(67,56,202,0.4)] sm:px-4 sm:text-[0.95rem] md:px-5 md:text-[0.98rem]"
-                >
-                  Buscar alojamientos
-                  <Icons.ArrowRight className="hidden h-4 w-4 sm:block" />
-                </Button>
               </div>
-            </form>
+            </motion.form>
 
-            <div className="flex w-full max-w-[760px] flex-nowrap items-center justify-center gap-2 overflow-x-auto pt-0.5 text-[0.62rem] text-slate-600/80 sm:gap-2.5 sm:text-[0.66rem]">
+            <motion.div
+              className="mt-7 flex flex-wrap justify-center gap-3"
+              {...getRevealMotionProps(0.3)}
+            >
               {valueProofItems.map((item) => (
-                <span key={item} className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-brand/12 bg-white/86 px-3 py-[0.42rem] font-medium leading-none text-brand shadow-[0_8px_18px_-18px_rgba(67,56,202,0.22)] backdrop-blur-[1px] opacity-70">
-                  <Icons.CheckCircle2 className="h-3 w-3 shrink-0 text-brand/70" />
+                <span
+                  key={item}
+                  className="inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/90 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:bg-white"
+                >
+                  <Icons.CheckCircle2 className="h-4 w-4 text-emerald-500" />
                   <span>{item}</span>
                 </span>
               ))}
-            </div>
+            </motion.div>
           </div>
         </div>
       </div>

@@ -35,7 +35,8 @@ export const ExploreFiltersBar = ({
   hasActiveFilters,
   onClear,
 }: ExploreFiltersBarProps) => {
-  const sharedControlClassName = 'explore-filter-control h-11 min-w-0 text-[0.93rem] font-semibold tracking-[-0.015em] text-slate-950';
+  const sharedControlTypographyClassName = 'text-[0.93rem] font-semibold tracking-[-0.015em]';
+  const sharedControlClassName = `explore-filter-control h-11 min-w-0 ${sharedControlTypographyClassName} text-slate-950`;
 
   return (
     <section className="rounded-[calc(var(--app-radius-card)+4px)] border border-[rgba(15,23,42,0.04)] bg-[rgba(255,255,255,0.85)] px-4 py-2.5 shadow-[0_10px_30px_rgba(15,23,42,0.04)] backdrop-blur-[12px] sm:px-5 sm:py-3 lg:px-6">
@@ -75,8 +76,11 @@ export const ExploreFiltersBar = ({
           ) : null}
         </div>
 
-        <div className="flex flex-col gap-2.5 md:flex-row md:flex-wrap md:items-center md:gap-4 lg:flex-nowrap lg:items-center lg:gap-4 xl:gap-5">
-          <div className="min-w-0 md:w-[17rem] md:flex-none lg:w-[18rem]">
+        <div
+          data-testid="explore-filters-controls"
+          className="grid grid-cols-1 gap-2.5 md:grid-cols-2 md:gap-4 lg:grid-cols-4 lg:items-stretch xl:gap-5"
+        >
+          <div className="min-w-0">
             <select
               aria-label="Ordenar por"
               value={sortBy}
@@ -89,7 +93,7 @@ export const ExploreFiltersBar = ({
             </select>
           </div>
 
-          <div className="grid min-w-0 grid-cols-2 gap-2.5 md:w-[18rem] md:flex-none lg:w-[20rem] xl:w-[22rem]">
+          <div className="min-w-0">
             <Input
               type="number"
               inputMode="numeric"
@@ -100,7 +104,9 @@ export const ExploreFiltersBar = ({
               icon={<span className="text-sm font-semibold text-[#64748b]">$</span>}
               className={cn(sharedControlClassName, 'py-0 pl-10 pr-4 placeholder:font-semibold placeholder:text-slate-700 placeholder:opacity-100')}
             />
+          </div>
 
+          <div className="min-w-0">
             <Input
               type="number"
               inputMode="numeric"
@@ -114,7 +120,7 @@ export const ExploreFiltersBar = ({
           </div>
 
           <label className={cn(
-            'flex h-11 min-w-0 flex-none items-center justify-between gap-2.5 rounded-[12px] border px-3 text-left transition-[border-color,background-color] duration-150 md:w-[15.5rem] lg:w-[16.5rem] xl:w-[17rem]',
+            'flex h-11 min-w-0 w-full items-center justify-between gap-2.5 rounded-[12px] border px-4 text-left transition-[border-color,background-color] duration-150',
             filters.verifiedOnly
               ? 'border-brand/18 bg-brand/[0.04]'
               : 'border-[rgba(15,23,42,0.06)] bg-[#f8fafc]',

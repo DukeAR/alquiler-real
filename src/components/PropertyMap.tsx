@@ -4,8 +4,9 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import * as L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { Property } from '../services/geminiService';
-import { getPropertyCardVerificationState } from '../lib/propertyVerification';
+import { getPropertyCardVerificationState, REAL_VERIFICATION_FILTER_MIN_SCORE } from '../lib/propertyVerification';
 import { cn, formatCurrency } from '../lib/utils';
+import { Icons } from './Icons';
 import { VerificationBadgePremium } from './ui/VerificationBadgePremium';
 
 
@@ -14,6 +15,40 @@ interface PropertyMapProps {
     properties: Property[];
     onPropertyClick: (id: string) => void;
 }
+
+const normalizePropertyText = (value?: string) => (value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+
+const getPropertyTypeLabel = (property: Property) => {
+    const explicitType = normalizePropertyText(property.propertyType);
+
+    if (explicitType.includes('house') || explicitType.includes('casa')) return 'Casa';
+    if (explicitType.includes('apartment') || explicitType.includes('depto') || explicitType.includes('depart')) return 'Departamento';
+    if (explicitType.includes('room') || explicitType.includes('habitacion') || explicitType.includes('habitación')) return 'Habitación';
+    if (explicitType.includes('cabin') || explicitType.includes('caba')) return 'Cabaña';
+
+    const title = normalizePropertyText(property.title);
+
+    if (title.includes('casa')) return 'Casa';
+    if (title.includes('duplex') || title.includes('chalet') || /(^|\s)ph($|\s)/.test(title)) return 'Casa';
+    if (title.includes('monoambiente')) return 'Departamento';
+    if (title.includes('depto') || title.includes('depart')) return 'Departamento';
+    if (title.includes('habitacion') || title.includes('habitación') || title.includes('cuarto')) return 'Habitación';
+    if (title.includes('caba')) return 'Cabaña';
+
+    return 'Alojamiento';
+};
+
+const getGuestCapacityLabel = (maxGuests?: number | null) => {
+    if (!maxGuests || maxGuests < 1) {
+        return null;
+    }
+
+    return `Hasta ${maxGuests} ${maxGuests === 1 ? 'huésped' : 'huéspedes'}`;
+};
 
 const hasValidCoordinates = (property: Property) => (
     Number.isFinite(property.coordinates?.lat) && Number.isFinite(property.coordinates?.lng)
@@ -111,6 +146,12 @@ export const PropertyMap: React.FC<PropertyMapProps> = ({ properties, onProperty
                     const verification = getPropertyCardVerificationState(property);
                     const isHighlighted = activePropertyId === property.id || hoveredPropertyId === property.id;
                     const isPresencialVerified = verification.presencialVerified;
+                    const usesVerifiedCardLayout = verification.count >= REAL_VERIFICATION_FILTER_MIN_SCORE;
+                    const propertyTypeLabel = getPropertyTypeLabel(property);
+                    const guestCapacityLabel = getGuestCapacityLabel(Number(property.maxGuests) || null);
+                    const verifiedCardSummary = verification.presencialVerified
+                        ? 'Verificado presencialmente · Datos confirmados'
+                        : `${verification.countLabel ?? verification.summaryTitle} · Información validada`;
 
                     return (
                     <Marker
@@ -146,71 +187,89 @@ export const PropertyMap: React.FC<PropertyMapProps> = ({ properties, onProperty
                                         className="h-full w-full object-cover"
                                     />
 
-                                    {isPresencialVerified ? (
-                                        <div className="absolute left-3 top-3">
-                                            <VerificationBadgePremium className="shadow-[0_10px_22px_-18px_rgba(5,150,105,0.3)]" />
-                                        </div>
+                                    {verification.presencialVerified ? (
+                                        <VerificationBadgePremium className="absolute left-4 top-4 z-20" />
                                     ) : null}
                                 </div>
 
-                                <div className="space-y-2">
-                                    <h3 className="m-0 overflow-hidden text-[0.96rem] font-semibold leading-5 text-slate-950 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
-                                        {property.title}
-                                    </h3>
-                                    <p className="m-0 text-[1rem] font-black leading-none tracking-[-0.03em] text-slate-950">
-                                        {formatCurrency(Number(property.price) || 0)}
-                                        <span className="ml-1 text-[0.72rem] font-medium tracking-normal text-slate-500">/ noche</span>
-                                    </p>
+                                <div className="space-y-3">
+                                    <div>
+                                        <p className="m-0 text-[0.62rem] font-semibold uppercase tracking-[0.2em] text-slate-500">
+                                            {propertyTypeLabel}
+                                        </p>
+                                        <h3 className="mt-1 m-0 overflow-hidden text-[0.96rem] font-semibold leading-5 text-slate-950 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
+                                            {property.title}
+                                        </h3>
+                                    </div>
 
-                                    {verification.model === 'premium' ? (
-                                        <div className="space-y-1">
-                                            <p className="m-0 text-[0.8rem] font-medium leading-5 text-slate-700">
-                                                {verification.summaryTitle}
+                                    <div className="space-y-2">
+                                        <p className="m-0 text-[1rem] font-semibold leading-none tracking-tight text-slate-900">
+                                            {formatCurrency(Number(property.price) || 0)}
+                                            <span className="ml-1 text-[0.72rem] font-medium tracking-normal text-slate-500">/ noche</span>
+                                        </p>
+
+                                        {usesVerifiedCardLayout ? (
+                                            <p className="m-0 text-[0.74rem] leading-5 text-slate-500">
+                                                {verifiedCardSummary}
                                             </p>
-                                            {verification.summaryDescription ? (
-                                                <p className="m-0 text-[0.74rem] leading-5 text-slate-500">
-                                                    {verification.summaryDescription}
+                                        ) : (
+                                            <div className="space-y-2">
+                                                <p className="m-0 text-[0.74rem] font-medium leading-5 text-slate-600">
+                                                    {verification.countLabel}
                                                 </p>
-                                            ) : null}
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-2">
-                                            <p className="m-0 text-[0.74rem] font-medium leading-5 text-slate-600">
-                                                {verification.countLabel}
-                                            </p>
 
-                                            <ul className="space-y-1.5" aria-label="Checks de verificación">
-                                                {verification.checks.map((check) => (
-                                                    <li
-                                                        key={check.key}
-                                                        className="flex items-center gap-2 text-[0.72rem] font-medium leading-4"
-                                                    >
-                                                        <span
-                                                            className={cn(
-                                                                'shrink-0 text-[0.74rem] font-semibold leading-none',
-                                                                check.complete ? 'text-emerald-600' : 'text-slate-300',
-                                                            )}
-                                                            aria-hidden="true"
+                                                <ul className="space-y-1.5" aria-label="Checks de verificación">
+                                                    {verification.checks.map((check) => (
+                                                        <li
+                                                            key={check.key}
+                                                            className="flex items-center gap-2 text-[0.72rem] font-medium leading-4"
                                                         >
-                                                            ✔
-                                                        </span>
+                                                            <span
+                                                                className={cn(
+                                                                    'shrink-0 text-[0.74rem] font-semibold leading-none',
+                                                                    check.complete ? 'text-emerald-600' : 'text-slate-300',
+                                                                )}
+                                                                aria-hidden="true"
+                                                            >
+                                                                ✔
+                                                            </span>
 
-                                                        <span className={cn(check.complete ? 'text-slate-600' : 'text-slate-400')}>
-                                                            {check.label}
-                                                        </span>
-                                                    </li>
-                                                ))}
-                                            </ul>
+                                                            <span className={cn(check.complete ? 'text-slate-600' : 'text-slate-400')}>
+                                                                {check.label}
+                                                            </span>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="border-t border-gray-200" />
+
+                                    <div className="flex items-center justify-between gap-3">
+                                        <div className="min-w-0">
+                                            <div className="flex flex-wrap items-center gap-3 text-[0.72rem] font-medium leading-5 text-slate-600">
+                                                <span className="inline-flex items-center gap-1.5">
+                                                    <Icons.MapPin className="h-3.5 w-3.5 text-slate-400" />
+                                                    <span>{property.location}</span>
+                                                </span>
+                                                {guestCapacityLabel ? (
+                                                    <span className="inline-flex items-center gap-1.5">
+                                                        <Icons.Users className="h-3.5 w-3.5 text-slate-400" />
+                                                        <span>{guestCapacityLabel}</span>
+                                                    </span>
+                                                ) : null}
+                                            </div>
                                         </div>
-                                    )}
-                                </div>
 
-                                <button
-                                    onClick={(e) => handleDetailClick(e, property.id)}
-                                    className="inline-flex h-9 w-full items-center justify-center rounded-[0.95rem] bg-brand px-3.5 text-sm font-semibold text-white shadow-[0_14px_26px_-18px_rgba(67,56,202,0.45)] transition-[transform,box-shadow,background-color] duration-150 hover:translate-y-[-1px] hover:bg-brand-dark hover:shadow-[0_16px_28px_-18px_rgba(67,56,202,0.45)] active:translate-y-0"
-                                >
-                                    Ver detalle
-                                </button>
+                                        <button
+                                            onClick={(e) => handleDetailClick(e, property.id)}
+                                            className="inline-flex h-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-[0_10px_20px_-18px_rgba(15,23,42,0.12)] transition-all duration-200 hover:bg-slate-50 hover:border-slate-300"
+                                        >
+                                            Ver detalle
+                                        </button>
+                                    </div>
+                                </div>
                                 </div>
                             </div>
                         </Popup>

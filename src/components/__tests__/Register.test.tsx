@@ -31,11 +31,16 @@ describe('Register screen', () => {
       </MemoryRouter>
     );
 
+    const homeButton = screen.getByRole('button', { name: 'Ir al inicio de Alquiler Real' });
+    const logoMark = homeButton.querySelector('img');
+
     expect(screen.getByText('Ingresá a tu cuenta')).toBeInTheDocument();
     expect(screen.queryByText('Nombre completo')).toBeNull();
     expect(screen.getByRole('button', { name: /^Ingresá$/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Volver a explorar/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^Creá tu cuenta$/i })).toBeInTheDocument();
+    expect(logoMark).not.toBeNull();
+    expect(logoMark).toHaveAttribute('src', '/verified-presencial-badge3.png');
   });
 
   test('shows inline validation in login mode before submitting', () => {
