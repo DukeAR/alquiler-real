@@ -50,10 +50,30 @@ const verifierIdentityPoints = [
 ];
 
 const flowSteps = [
-  'Publicás',
-  'Coordinamos la visita',
-  'Validamos',
-  'Recibís el sello',
+  {
+    id: 'publish',
+    label: 'Publicás',
+    title: 'Publicás tu propiedad',
+    description: 'Cargás la información básica del aviso para que sea visible.',
+  },
+  {
+    id: 'schedule',
+    label: 'Coordinamos',
+    title: 'Coordinamos la visita',
+    description: 'Elegís día y horario para la verificación.',
+  },
+  {
+    id: 'verify',
+    label: 'Validamos',
+    title: 'Validamos identidad y acceso',
+    description: 'Confirmamos quién sos y tu vínculo con el lugar.',
+  },
+  {
+    id: 'seal',
+    label: 'Sello',
+    title: 'Recibís el sello',
+    description: 'La publicación se muestra como verificada.',
+  },
 ];
 
 export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ onBack }) => {
@@ -61,6 +81,7 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
   const { user } = useAuth();
   const howItWorksRef = React.useRef<HTMLElement | null>(null);
   const onsiteVerificationTarget = '/verification?mode=onsite&returnTo=/host-dashboard';
+  const [activeFlowStep, setActiveFlowStep] = React.useState(flowSteps[0].id);
 
   const navigateWithAuthTarget = (target: string) => {
     if (user) {
@@ -289,18 +310,77 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
             </p>
           </div>
 
-          <ol className="grid gap-5 text-[0.95rem] text-slate-700 dark:text-slate-300 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
-            {flowSteps.map((step, index) => (
-              <li key={step} className="flex items-start gap-4">
-                <span className="text-[1.5rem] font-semibold leading-none text-brand md:text-[1.8rem]">
-                  {index + 1}
-                </span>
-                <p className="pt-0.5 whitespace-nowrap font-medium leading-6 text-slate-900 dark:text-slate-100">
-                  {step}
-                </p>
-              </li>
-            ))}
-          </ol>
+          <div className="overflow-x-auto pb-2">
+            <div className="relative mx-auto min-w-[20rem] max-w-3xl px-1 pb-32 pt-2 md:pb-28">
+              <div
+                aria-hidden="true"
+                className="absolute left-[calc(12.5%+1.15rem)] right-[calc(12.5%+1.15rem)] top-9 h-px bg-slate-200 dark:bg-slate-700"
+              />
+
+              <ol className="relative grid grid-cols-4 gap-3 text-[0.95rem] text-slate-700 dark:text-slate-300 md:gap-8">
+                {flowSteps.map((step, index) => {
+                  const isActive = activeFlowStep === step.id;
+                  const isFirstStep = index === 0;
+                  const isLastStep = index === flowSteps.length - 1;
+
+                  return (
+                    <li key={step.id} className="relative flex flex-col items-center text-center">
+                      <button
+                        type="button"
+                        aria-label={`Paso ${index + 1}: ${step.title}`}
+                        aria-pressed={isActive}
+                        aria-describedby={isActive ? `flow-step-tooltip-${step.id}` : undefined}
+                        onClick={() => setActiveFlowStep(step.id)}
+                        className={[
+                          'relative flex h-14 w-14 cursor-pointer items-center justify-center rounded-full',
+                          'bg-[var(--color-primary)] text-lg font-semibold text-white',
+                          'shadow-[0_14px_28px_-18px_rgba(76,29,149,0.58)] transition-all duration-200',
+                          'hover:scale-[1.08] hover:shadow-[0_22px_38px_-18px_rgba(76,29,149,0.46)]',
+                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]',
+                          'focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 dark:focus-visible:ring-offset-slate-950',
+                          'md:h-16 md:w-16 md:text-xl',
+                          isActive
+                            ? 'scale-[1.05] ring-4 ring-violet-200/80 shadow-[0_22px_40px_-16px_rgba(76,29,149,0.5)] dark:ring-violet-500/25'
+                            : '',
+                        ].join(' ')}
+                      >
+                        <span>{index + 1}</span>
+                      </button>
+
+                      <p className="mt-3 whitespace-nowrap text-[0.81rem] font-medium leading-5 text-slate-900 dark:text-slate-100 md:text-[0.88rem]">
+                        {step.label}
+                      </p>
+
+                      {isActive ? (
+                        <motion.div
+                          id={`flow-step-tooltip-${step.id}`}
+                          role="tooltip"
+                          initial={{ opacity: 0, y: -8, scale: 0.98 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          transition={{ duration: 0.18, ease: 'easeOut' }}
+                          className={[
+                            'absolute top-full z-10 mt-5 w-[13.75rem] rounded-xl border border-slate-200/85',
+                            'bg-white p-4 text-left shadow-[0_24px_48px_-28px_rgba(15,23,42,0.3)]',
+                            'dark:border-slate-800 dark:bg-slate-900',
+                            isFirstStep ? 'left-0' : '',
+                            isLastStep ? 'right-0' : '',
+                            !isFirstStep && !isLastStep ? 'left-1/2 -translate-x-1/2' : '',
+                          ].join(' ')}
+                        >
+                          <p className="text-sm font-semibold leading-5 text-slate-950 dark:text-slate-50">
+                            {step.title}
+                          </p>
+                          <p className="mt-2 text-[0.92rem] leading-6 text-slate-600 dark:text-slate-400">
+                            {step.description}
+                          </p>
+                        </motion.div>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ol>
+            </div>
+          </div>
         </section>
 
         <section className="space-y-4 border-t border-slate-200/85 pt-8 dark:border-slate-800 md:pt-10">
