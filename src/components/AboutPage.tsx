@@ -318,7 +318,7 @@ const StepListCard = ({ content }: { content: StepCard }) => {
             >
               <span className={isBrand
                 ? 'flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand text-xs font-semibold text-white shadow-[0_14px_28px_-20px_rgba(67,56,202,0.42)]'
-                : 'flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-500/88 text-xs font-semibold text-white shadow-[0_14px_28px_-20px_rgba(16,185,129,0.34)]'}
+                : 'flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-emerald-200/80 bg-emerald-50 text-xs font-semibold text-emerald-700 shadow-[0_14px_28px_-20px_rgba(16,185,129,0.18)] dark:border-emerald-900/40 dark:bg-emerald-900/20 dark:text-emerald-200'}
               >
                 {index + 1}
               </span>
@@ -424,15 +424,15 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                     </div>
 
                     <div className="w-full space-y-3 text-left">
-                      <h1 className="max-w-[640px] text-[clamp(2rem,3.6vw,2.5rem)] font-semibold leading-[1.02] tracking-[-0.06em] text-slate-900 dark:text-slate-50">
+                      <h1 className="w-full text-[clamp(2rem,3.6vw,2.5rem)] font-semibold leading-[1.02] tracking-[-0.06em] text-slate-900 dark:text-slate-50">
                         ¿Te pasó de reservar un alquiler y no estar del todo tranquilo?
                       </h1>
 
-                      <p className="max-w-[620px] mb-[10px] text-[0.9rem] leading-[1.7] text-[#5B6470]">
+                      <p className="mb-[10px] w-full text-[0.9rem] leading-[1.7] text-[#5B6470]">
                         Mirás fotos sin saber si son actuales. Dudás si la ubicación es realmente esa. Y muchas veces no tenés claro quién está del otro lado.
                       </p>
 
-                      <p className="max-w-[620px] mb-[10px] text-[0.9rem] leading-[1.7] text-[#5B6470]">
+                      <p className="mb-[10px] w-full text-[0.9rem] leading-[1.7] text-[#5B6470]">
                         Eso le pasa a todo el mundo. Y cuando se trata de vacaciones, no debería ser así.
                       </p>
 
@@ -442,35 +442,35 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                         </span>
                       </div>
 
-                      <p className="max-w-[620px] mb-[10px] text-[0.9rem] leading-[1.7] text-[#5B6470]">
+                      <p className="mb-[10px] w-full text-[0.9rem] leading-[1.7] text-[#5B6470]">
                         Alquiler Real nace para cambiar eso: para que puedas ver, desde el principio, qué parte del aviso está realmente comprobada.
                       </p>
 
-                      <p className="max-w-[620px] mt-[6px] mb-[10px] text-[0.9rem] font-semibold leading-[1.7] text-[#111827]">
+                      <p className="mt-[6px] mb-[10px] w-full text-[0.9rem] font-semibold leading-[1.7] text-[#111827]">
                         Para que decidir no dependa de adivinar.
                       </p>
 
-                      <p className="max-w-[620px] mt-[16px] mb-[10px] text-[20px] font-bold leading-[1.7] text-[#163329]">
+                      <p className="mt-[16px] mb-[10px] w-full text-[20px] font-bold leading-[1.7] text-[#163329]">
                         Menos incertidumbre. Más claridad.
                       </p>
                     </div>
 
                     <div className="mt-2 grid w-full grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
-                      <div className="flex min-h-[72px] w-full items-center justify-center gap-2.5 rounded-full bg-emerald-950 px-4 py-3 text-center shadow-[0_20px_34px_-26px_rgba(6,78,59,0.46)] dark:bg-emerald-900">
-                        <span className="text-[0.72rem] font-semibold tracking-[0.16em] text-emerald-100/75">01</span>
-                        <span className="text-[1rem] font-semibold text-white">Elegís.</span>
+                      <div className="flex min-h-[72px] w-full items-center justify-center gap-2.5 rounded-full border border-emerald-200/85 bg-emerald-50/95 px-4 py-3 text-center shadow-[0_20px_34px_-28px_rgba(16,185,129,0.16)] dark:border-emerald-900/35 dark:bg-emerald-900/18">
+                        <span className="text-[0.72rem] font-semibold tracking-[0.16em] text-emerald-600/80 dark:text-emerald-200/75">01</span>
+                        <span className="text-[1rem] font-semibold text-emerald-800 dark:text-emerald-50">Elegís.</span>
                       </div>
-                      <div className="flex min-h-[72px] w-full items-center justify-center gap-2.5 rounded-full bg-emerald-950 px-4 py-3 text-center shadow-[0_20px_34px_-26px_rgba(6,78,59,0.46)] dark:bg-emerald-900">
-                        <span className="text-[0.72rem] font-semibold tracking-[0.16em] text-emerald-100/75">02</span>
-                        <span className="text-[1rem] font-semibold text-white">Hablás.</span>
+                      <div className="flex min-h-[72px] w-full items-center justify-center gap-2.5 rounded-full border border-emerald-200/85 bg-emerald-50/95 px-4 py-3 text-center shadow-[0_20px_34px_-28px_rgba(16,185,129,0.16)] dark:border-emerald-900/35 dark:bg-emerald-900/18">
+                        <span className="text-[0.72rem] font-semibold tracking-[0.16em] text-emerald-600/80 dark:text-emerald-200/75">02</span>
+                        <span className="text-[1rem] font-semibold text-emerald-800 dark:text-emerald-50">Hablás.</span>
                       </div>
-                      <div className="flex min-h-[72px] w-full items-center justify-center gap-2.5 rounded-full bg-emerald-950 px-4 py-3 text-center shadow-[0_20px_34px_-26px_rgba(6,78,59,0.46)] dark:bg-emerald-900">
-                        <span className="text-[0.72rem] font-semibold tracking-[0.16em] text-emerald-100/75">03</span>
-                        <span className="text-[1rem] font-semibold text-white">Chequeás.</span>
+                      <div className="flex min-h-[72px] w-full items-center justify-center gap-2.5 rounded-full border border-emerald-200/85 bg-emerald-50/95 px-4 py-3 text-center shadow-[0_20px_34px_-28px_rgba(16,185,129,0.16)] dark:border-emerald-900/35 dark:bg-emerald-900/18">
+                        <span className="text-[0.72rem] font-semibold tracking-[0.16em] text-emerald-600/80 dark:text-emerald-200/75">03</span>
+                        <span className="text-[1rem] font-semibold text-emerald-800 dark:text-emerald-50">Chequeás.</span>
                       </div>
-                      <div className="flex min-h-[72px] w-full items-center justify-center gap-2.5 rounded-full bg-emerald-950 px-4 py-3 text-center shadow-[0_20px_34px_-26px_rgba(6,78,59,0.46)] dark:bg-emerald-900">
-                        <span className="text-[0.72rem] font-semibold tracking-[0.16em] text-emerald-100/75">04</span>
-                        <span className="text-[1rem] font-semibold text-white">Reservás.</span>
+                      <div className="flex min-h-[72px] w-full items-center justify-center gap-2.5 rounded-full border border-emerald-200/85 bg-emerald-50/95 px-4 py-3 text-center shadow-[0_20px_34px_-28px_rgba(16,185,129,0.16)] dark:border-emerald-900/35 dark:bg-emerald-900/18">
+                        <span className="text-[0.72rem] font-semibold tracking-[0.16em] text-emerald-600/80 dark:text-emerald-200/75">04</span>
+                        <span className="text-[1rem] font-semibold text-emerald-800 dark:text-emerald-50">Reservás.</span>
                       </div>
                     </div>
                   </div>
