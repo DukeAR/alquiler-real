@@ -1,9 +1,11 @@
 import { cn } from '../../lib/utils';
+import { PRESENCIAL_VERIFICATION_LABEL } from '../../lib/propertyVerification';
 import {
   getVerificationCountLabel,
   getVerificationIdentityTone,
   type VerificationIdentityTone,
 } from '../../lib/verificationPresentation';
+import { PresencialVerificationSealMark } from './PresencialVerificationSealMark';
 import { Icons } from '../Icons';
 
 type VerificationSealSize = 'sm' | 'md' | 'lg';
@@ -22,6 +24,7 @@ type VerificationSealProps = {
 
 const sizeClasses: Record<VerificationSealSize, {
   wrapper: string;
+  seal: string;
   chip: string;
   icon: string;
   checkBubble: string;
@@ -32,6 +35,7 @@ const sizeClasses: Record<VerificationSealSize, {
 }> = {
   sm: {
     wrapper: 'gap-2.5',
+    seal: 'h-10 w-10',
     chip: 'h-10 w-10 rounded-[14px]',
     icon: 'h-5 w-5',
     checkBubble: 'h-[18px] w-[18px] -bottom-1 -right-1 rounded-full',
@@ -42,6 +46,7 @@ const sizeClasses: Record<VerificationSealSize, {
   },
   md: {
     wrapper: 'gap-3',
+    seal: 'h-11 w-11',
     chip: 'h-11 w-11 rounded-[16px]',
     icon: 'h-5.5 w-5.5',
     checkBubble: 'h-5 w-5 -bottom-1 -right-1 rounded-full',
@@ -52,6 +57,7 @@ const sizeClasses: Record<VerificationSealSize, {
   },
   lg: {
     wrapper: 'gap-3.5',
+    seal: 'h-12 w-12',
     chip: 'h-12 w-12 rounded-[18px]',
     icon: 'h-6 w-6',
     checkBubble: 'h-5 w-5 -bottom-1 -right-1 rounded-full',
@@ -111,6 +117,7 @@ export const VerificationSeal = ({
   const scale = sizeClasses[size];
   const palette = toneClasses[tone];
   const countLabel = getVerificationCountLabel(score, maxScore);
+  const isPresencialSeal = score >= maxScore && label === PRESENCIAL_VERIFICATION_LABEL;
   const accessibleLabel = ariaLabel ? { 'aria-label': ariaLabel } : {};
 
   return (
@@ -118,12 +125,20 @@ export const VerificationSeal = ({
       {...accessibleLabel}
       className={cn('inline-flex items-start', scale.wrapper, className)}
     >
-      <span className={cn('relative inline-flex shrink-0 items-center justify-center border shadow-[0_16px_30px_-24px_rgba(15,23,42,0.28)]', scale.chip, palette.chip)}>
-        <Icons.Shield className={cn(scale.icon, palette.icon, emphasized && tone === 'high' && 'text-emerald-800')} />
-        <span className={cn('absolute inline-flex items-center justify-center', scale.checkBubble, palette.checkBubble)}>
-          <Icons.Check className={scale.checkIcon} />
+      {isPresencialSeal ? (
+        <PresencialVerificationSealMark
+          alt=""
+          aria-hidden="true"
+          className={cn('shrink-0', scale.seal)}
+        />
+      ) : (
+        <span className={cn('relative inline-flex shrink-0 items-center justify-center border shadow-[0_16px_30px_-24px_rgba(15,23,42,0.28)]', scale.chip, palette.chip)}>
+          <Icons.Shield className={cn(scale.icon, palette.icon, emphasized && tone === 'high' && 'text-emerald-800')} />
+          <span className={cn('absolute inline-flex items-center justify-center', scale.checkBubble, palette.checkBubble)}>
+            <Icons.Check className={scale.checkIcon} />
+          </span>
         </span>
-      </span>
+      )}
 
       <span className="min-w-0">
         <span className="flex flex-wrap items-center gap-x-2 gap-y-1">

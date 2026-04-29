@@ -8,6 +8,7 @@ import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 import { FormField } from './ui/FormField';
 import { Input } from './ui/Input';
+import { PresencialVerificationSealMark } from './ui/PresencialVerificationSealMark';
 import { PlatformTermsQuickGuide } from './ui/PlatformTermsQuickGuide';
 import { SectionTitle } from './ui/SectionTitle';
 
@@ -110,11 +111,10 @@ export const Register = ({ mode = 'login' }: RegisterProps) => {
                                 className="flex items-center gap-1.5 rounded-full pr-3 text-left transition-transform duration-200 hover:scale-[1.01]"
                             >
                                 <div className="flex h-10 w-10 shrink-0 items-center justify-center">
-                                    <img
-                                        src="/verified-presencial-badge3.png"
+                                    <PresencialVerificationSealMark
                                         alt=""
                                         aria-hidden="true"
-                                        className="h-full w-full object-contain"
+                                        className="h-full w-full"
                                     />
                                 </div>
                                 <div className="flex flex-col justify-center">

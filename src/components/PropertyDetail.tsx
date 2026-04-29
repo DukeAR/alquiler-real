@@ -25,6 +25,7 @@ import { Button } from './ui/Button';
 import { Badge } from './ui/Badge';
 import { Card } from './ui/Card';
 import { NoticeBanner } from './ui/NoticeBanner';
+import { PresencialVerificationSealMark } from './ui/PresencialVerificationSealMark';
 import { SectionTitle } from './ui/SectionTitle';
 import { TrustSignalsInline, getTrustSignalsFromInteractionHistory, getTrustSignalsFromItems, type TrustSignal } from './ui/TrustSignalsInline';
 import { PropertyVerificationPanel } from './verification/PropertyVerificationPanel';
@@ -299,10 +300,9 @@ const PresencialVerificationInfoCard: React.FC = () => {
   return (
     <div className="w-full max-w-full overflow-hidden rounded-[32px] bg-white p-12 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
       <header className="mb-10 flex items-center gap-3 md:gap-5">
-        <img
-          src="/verified-presencial-badge.png"
+        <PresencialVerificationSealMark
           alt="Verificado presencialmente"
-          className="h-[68px] w-auto shrink-0 object-contain md:h-20"
+          className="h-[68px] w-auto shrink-0 md:h-20"
         />
 
         <div className="min-w-0 flex-1 space-y-1.5">
@@ -330,10 +330,9 @@ const PresencialVerificationInfoCard: React.FC = () => {
               <div className="relative flex min-w-0 flex-col items-center text-center md:px-2">
                 <div className="flex h-[112px] w-full items-center justify-center">
                   {index === PRESENCIAL_VERIFICATION_STEPS.length - 1 ? (
-                    <img
-                      src="/verified-presencial-badge.png"
+                    <PresencialVerificationSealMark
                       alt="Verificado presencialmente"
-                      className="mx-auto h-[84px] w-auto object-contain md:h-[92px]"
+                      className="mx-auto h-[84px] w-auto md:h-[92px]"
                     />
                   ) : (
                     <div className="relative flex h-[88px] w-[88px] items-center justify-center rounded-full border-2 border-[#1D8675] bg-white text-[#1D8675]">

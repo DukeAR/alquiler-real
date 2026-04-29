@@ -5,7 +5,7 @@ import { VerificationBadgePremium } from '../VerificationBadgePremium';
 import { PresencialVerificationBadge } from '../PresencialVerificationBadge';
 
 describe('VerificationBadgePremium', () => {
-  test('renders the badge3 icon asset inside the presencial seal UI', () => {
+  test('renders the shared circular seal asset inside the presencial badge UI', () => {
     const { container } = render(<VerificationBadgePremium data-testid="premium-badge" />);
 
     const badge = screen.getByRole('img', { name: 'Verificado presencialmente' });
@@ -14,8 +14,8 @@ describe('VerificationBadgePremium', () => {
     expect(badge).toHaveClass('inline-flex', 'items-center', 'whitespace-nowrap', 'rounded-full', 'bg-[rgba(253,253,253,0.76)]', 'text-slate-700', 'transition-transform', 'duration-200', 'hover:-translate-y-0.5', 'gap-2', 'px-3', 'py-1.5');
     expect(within(badge).getByText('Verificado presencialmente')).toBeInTheDocument();
     expect(mark).not.toBeNull();
-    expect(mark).toHaveAttribute('src', '/verified-presencial-badge3.png');
-    expect(mark).toHaveClass('shrink-0', 'object-contain', 'h-[34px]', 'w-[39px]');
+    expect(mark).toHaveAttribute('src', '/verified-presencial-circular.png');
+    expect(mark).toHaveClass('shrink-0', 'object-contain', 'h-[34px]', 'w-[34px]');
     expect(container.querySelectorAll('svg')).toHaveLength(0);
   });
 

@@ -40,7 +40,7 @@ describe('Register screen', () => {
     expect(screen.getByRole('button', { name: /Volver a explorar/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^Creá tu cuenta$/i })).toBeInTheDocument();
     expect(logoMark).not.toBeNull();
-    expect(logoMark).toHaveAttribute('src', '/verified-presencial-badge3.png');
+    expect(logoMark).toHaveAttribute('src', '/verified-presencial-circular.png');
   });
 
   test('shows inline validation in login mode before submitting', () => {

@@ -784,7 +784,7 @@ describe('PropertyDetail', () => {
     expect(header).not.toBeNull();
     const logo = header?.firstElementChild as HTMLElement;
     expect(logo.tagName).toBe('IMG');
-    expect(logo).toHaveAttribute('src', '/verified-presencial-badge.png');
+    expect(logo).toHaveAttribute('src', '/verified-presencial-circular.png');
     expect(logo).toHaveClass('h-[68px]', 'w-auto', 'object-contain');
     expect(header?.querySelector('svg')).toBeNull();
     expect(within(verificationPreview).getByText(/Este sello identifica a las propiedades que completaron la verificación presencial paga\. Te ayuda a elegir con más confianza\./i, { selector: 'p' })).toHaveClass('max-w-[1100px]', 'text-[12px]', 'leading-[1.4]', 'text-[#64748B]');
@@ -795,7 +795,7 @@ describe('PropertyDetail', () => {
     expect(within(verificationPreview).getByText('Publicación verificada')).toBeDefined();
     const verifiedPublicationStep = within(verificationPreview).getByText('Publicación verificada').closest('div') as HTMLElement;
     const stepSeal = within(verifiedPublicationStep).getByAltText('Verificado presencialmente');
-    expect(stepSeal).toHaveAttribute('src', '/verified-presencial-badge.png');
+    expect(stepSeal).toHaveAttribute('src', '/verified-presencial-circular.png');
     expect(stepSeal).toHaveClass('h-[84px]', 'w-auto', 'object-contain', 'mx-auto');
     expect(verifiedPublicationStep.querySelector('svg')).toBeNull();
     expect(within(verificationPreview).getByText('Solo propiedades 100% verificadas')).toBeDefined();

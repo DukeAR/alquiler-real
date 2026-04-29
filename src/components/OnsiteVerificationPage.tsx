@@ -5,6 +5,7 @@ import { useAuth } from '../hooks/useAuth';
 import { Icons } from './Icons';
 import { Button } from './ui/Button';
 import { PageHeader } from './ui/PageHeader';
+import { PresencialVerificationSealMark } from './ui/PresencialVerificationSealMark';
 
 interface OnsiteVerificationPageProps {
   onBack: () => void;
@@ -299,10 +300,9 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
         <section>
           <div className="grid gap-6 rounded-[30px] border border-slate-200/85 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.95))] px-6 py-6 shadow-[0_24px_48px_-40px_rgba(15,23,42,0.14)] dark:border-slate-800 dark:bg-slate-900/70 md:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] md:items-center md:gap-6 md:px-8 md:py-8">
             <div className="flex justify-center md:justify-start">
-              <img
-                src="/verified-presencial-circular.png"
+              <PresencialVerificationSealMark
                 alt="Sello Verificado presencialmente"
-                className="h-auto w-full max-w-[14rem] object-contain md:max-w-[20rem]"
+                className="h-auto w-full max-w-[14rem] md:max-w-[20rem]"
               />
             </div>
 
@@ -372,16 +372,17 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
                         aria-describedby={isActive ? `flow-step-tooltip-${step.id}` : undefined}
                         onClick={() => setActiveFlowStep(step.id)}
                         className={[
-                          'relative flex h-14 w-14 cursor-pointer items-center justify-center rounded-full',
-                          'bg-emerald-950 text-lg font-semibold text-white',
+                          'relative flex h-14 w-14 cursor-pointer items-center justify-center rounded-full border',
+                          'border-emerald-200/90 bg-emerald-50/95 text-lg font-semibold text-emerald-800',
                           'transition-all duration-200',
-                          'hover:scale-[1.08] hover:shadow-[0_22px_38px_-16px_rgba(6,78,59,0.46)]',
-                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700',
+                          'hover:scale-[1.08] hover:border-emerald-300 hover:shadow-[0_22px_38px_-16px_rgba(16,185,129,0.22)]',
+                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300',
                           'focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900',
+                          'dark:border-emerald-900/45 dark:bg-emerald-900/24 dark:text-emerald-100',
                           'md:h-16 md:w-16 md:text-xl',
                           isActive
-                            ? 'scale-[1.05] opacity-100 ring-[7px] ring-emerald-100 shadow-[0_28px_52px_-18px_rgba(6,78,59,0.58)] dark:ring-emerald-900/70'
-                            : 'opacity-65 shadow-[0_12px_24px_-18px_rgba(6,78,59,0.35)]',
+                            ? 'scale-[1.05] border-emerald-300 bg-emerald-100 text-emerald-950 ring-[7px] ring-emerald-100 shadow-[0_28px_52px_-18px_rgba(16,185,129,0.22)] dark:border-emerald-700/70 dark:bg-emerald-900/50 dark:text-emerald-50 dark:ring-emerald-900/65'
+                            : 'opacity-90 shadow-[0_12px_24px_-18px_rgba(16,185,129,0.16)]',
                         ].join(' ')}
                       >
                         <span>{index + 1}</span>

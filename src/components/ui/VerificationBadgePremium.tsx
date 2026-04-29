@@ -1,6 +1,7 @@
 import type { ComponentPropsWithoutRef } from 'react';
 
 import { cn } from '../../lib/utils';
+import { PresencialVerificationSealMark } from './PresencialVerificationSealMark';
 
 export type VerificationBadgePremiumSize = 'xs' | 'sm' | 'md';
 
@@ -16,17 +17,17 @@ const badgeClasses: Record<VerificationBadgePremiumSize, {
 }> = {
   xs: {
     container: 'gap-1.5 px-2.5 py-[5px]',
-    mark: 'h-[30px] w-[34px]',
+    mark: 'h-[30px] w-[30px]',
     text: 'text-[13px]',
   },
   sm: {
     container: 'gap-2 px-3 py-1.5',
-    mark: 'h-[34px] w-[39px]',
+    mark: 'h-[34px] w-[34px]',
     text: 'text-[14px]',
     },
   md: {
     container: 'gap-3 px-4 py-2.5',
-    mark: 'h-[40px] w-[46px]',
+    mark: 'h-[40px] w-[40px]',
     text: 'text-base',
   },
 };
@@ -50,12 +51,10 @@ export const VerificationBadgePremium = ({
         className,
       )}
     >
-      <img
-        src="/verified-presencial-badge3.png"
+      <PresencialVerificationSealMark
         alt=""
         aria-hidden="true"
-        draggable={false}
-        className={cn('shrink-0 object-contain', classes.mark)}
+        className={cn('shrink-0', classes.mark)}
       />
       <span className={cn('font-semibold leading-none tracking-[-0.02em]', classes.text)}>
         Verificado presencialmente

@@ -12,6 +12,7 @@ import { useSocket } from '../hooks/useSocket';
 import { cn } from '../lib/utils';
 import { showToast } from '../lib/toast';
 import { getResolvedAuthViewState } from '../lib/authViewState';
+import { PresencialVerificationSealMark } from './ui/PresencialVerificationSealMark';
 
 // --- Types and Utility Functions (local definitions) ---
 export type NavAction = {
@@ -389,11 +390,10 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                 'flex h-9 w-9 shrink-0 items-center justify-center sm:h-10 sm:w-10',
                 headerOnHero && 'drop-shadow-[0_16px_28px_rgba(15,23,42,0.22)]',
               )}>
-                <img
-                  src="/verified-presencial-badge3.png"
+                <PresencialVerificationSealMark
                   alt=""
                   aria-hidden="true"
-                  className="h-full w-full object-contain"
+                  className="h-full w-full"
                 />
               </div>
               <div className="flex min-w-max flex-col justify-center text-left">

@@ -127,7 +127,7 @@ describe('AppShell', () => {
     expect(screen.getAllByRole('button', { name: 'Ingresá' })).not.toHaveLength(0);
     expect(screen.getByRole('button', { name: 'Publicar propiedad' })).toBeInTheDocument();
     expect(logoMark).not.toBeNull();
-    expect(logoMark).toHaveAttribute('src', '/verified-presencial-badge3.png');
+    expect(logoMark).toHaveAttribute('src', '/verified-presencial-circular.png');
   });
 
   test('shows Guardados when the user is authenticated', async () => {
