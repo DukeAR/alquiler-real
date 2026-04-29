@@ -94,7 +94,12 @@ vi.mock('../components/Register', () => ({
 }));
 
 vi.mock('../components/AboutPage.tsx', () => ({
-  default: () => <div>About page</div>,
+  default: ({ onBack }: { onBack: () => void }) => (
+    <div>
+      <div>About page</div>
+      <button type="button" onClick={onBack}>Volver</button>
+    </div>
+  ),
 }));
 
 vi.mock('../components/FAQPage', () => ({
@@ -320,6 +325,46 @@ describe('App routing states', () => {
     );
 
     expect(await screen.findByText('Onsite verification page')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Volver' }));
+
+    expect(await screen.findByText('FAQ page')).toBeInTheDocument();
+  });
+
+  test('falls back to explore when the about page is opened directly and the user presses back', async () => {
+    window.history.replaceState({ idx: 0 }, '', window.location.href);
+
+    render(
+      <MemoryRouter
+        initialEntries={[{ pathname: '/about', key: 'default' }]}
+      >
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('About page')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Volver' }));
+
+    expect(await screen.findByText('Explore page')).toBeInTheDocument();
+  });
+
+  test('uses history back when the about page has a previous app entry', async () => {
+    window.history.replaceState({ idx: 1 }, '', window.location.href);
+
+    render(
+      <MemoryRouter
+        initialEntries={[
+          { pathname: '/faq', key: 'faq-entry' },
+          { pathname: '/about', key: 'about-entry' },
+        ]}
+        initialIndex={1}
+      >
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('About page')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Volver' }));
 

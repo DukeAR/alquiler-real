@@ -127,7 +127,17 @@ const SecureChatWrapper = () => {
 
 const AboutPageWrapper = () => {
   const navigate = useNavigate();
-  return <LazyAboutPage onBack={() => navigate(-1)} />;
+
+  const handleBack = () => {
+    if (window.history.state?.idx > 0) {
+      navigate(-1);
+      return;
+    }
+
+    navigate('/', { replace: true });
+  };
+
+  return <LazyAboutPage onBack={handleBack} />;
 };
 
 const OnsiteVerificationPageWrapper = () => {
