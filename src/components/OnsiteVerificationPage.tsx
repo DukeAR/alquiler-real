@@ -433,7 +433,7 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
             </h2>
           </div>
 
-          <div className="max-w-2xl space-y-3">
+          <div className="mx-auto max-w-2xl space-y-3">
             <div className="aspect-[16/7] overflow-hidden rounded-[18px] border border-dashed border-slate-300/90 bg-[radial-gradient(circle_at_center,rgba(67,56,202,0.08),transparent_46%),linear-gradient(180deg,rgba(248,250,252,0.98),rgba(241,245,249,0.94))] dark:border-slate-700 dark:bg-slate-950">
               <div className="flex h-full items-center justify-center">
                 <div className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-white/80 bg-white/88 text-brand shadow-[0_14px_24px_-22px_rgba(67,56,202,0.3)] dark:border-slate-700 dark:bg-slate-900 dark:text-brand-light">
