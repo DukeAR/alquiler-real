@@ -299,32 +299,30 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
           </div>
         </section>
 
-        <section ref={howItWorksRef} className="scroll-mt-28 space-y-4 border-t border-slate-200/85 pt-8 dark:border-slate-800 md:pt-10">
-          <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Cómo funciona</p>
-            <h2 className="text-[1.55rem] font-semibold leading-[1.08] tracking-[-0.04em] text-slate-950 dark:text-slate-50">
-              En cuatro pasos
-            </h2>
-            <p className="text-[0.95rem] leading-6 text-slate-600 dark:text-slate-400">
-              El proceso es simple y lo coordinamos con vos.
-            </p>
-          </div>
+        <section ref={howItWorksRef} className="scroll-mt-28 pt-8 md:pt-10">
+          <div className="rounded-[30px] border border-slate-200/85 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.96))] px-5 py-6 shadow-[0_24px_48px_-36px_rgba(15,23,42,0.18)] dark:border-slate-800 dark:bg-slate-900/70 md:px-8 md:py-8">
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Cómo funciona</p>
+              <h2 className="text-[1.55rem] font-semibold leading-[1.08] tracking-[-0.04em] text-slate-950 dark:text-slate-50">
+                En cuatro pasos
+              </h2>
+              <p className="max-w-2xl text-[0.95rem] leading-6 text-slate-600 dark:text-slate-400">
+                El proceso es simple y lo coordinamos con vos.
+              </p>
+            </div>
 
-          <div className="overflow-x-auto pb-2">
-            <div className="relative mx-auto min-w-[20rem] max-w-3xl px-1 pb-32 pt-2 md:pb-28">
+            <div className="relative mt-7">
               <div
                 aria-hidden="true"
-                className="absolute left-[calc(12.5%+1.15rem)] right-[calc(12.5%+1.15rem)] top-9 h-px bg-slate-200 dark:bg-slate-700"
+                className="absolute left-[calc(12.5%+2rem)] right-[calc(12.5%+2rem)] top-8 hidden h-px bg-slate-200 dark:bg-slate-700 lg:block"
               />
 
-              <ol className="relative grid grid-cols-4 gap-3 text-[0.95rem] text-slate-700 dark:text-slate-300 md:gap-8">
+              <ol className="relative grid gap-x-5 gap-y-6 sm:grid-cols-2 lg:grid-cols-4 lg:gap-x-8">
                 {flowSteps.map((step, index) => {
                   const isActive = activeFlowStep === step.id;
-                  const isFirstStep = index === 0;
-                  const isLastStep = index === flowSteps.length - 1;
 
                   return (
-                    <li key={step.id} className="relative flex flex-col items-center text-center">
+                    <li key={step.id} className="flex flex-col items-center text-center">
                       <button
                         type="button"
                         aria-label={`Paso ${index + 1}: ${step.title}`}
@@ -333,21 +331,21 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
                         onClick={() => setActiveFlowStep(step.id)}
                         className={[
                           'relative flex h-14 w-14 cursor-pointer items-center justify-center rounded-full',
-                          'bg-[var(--color-primary)] text-lg font-semibold text-white',
-                          'shadow-[0_14px_28px_-18px_rgba(76,29,149,0.58)] transition-all duration-200',
-                          'hover:scale-[1.08] hover:shadow-[0_22px_38px_-18px_rgba(76,29,149,0.46)]',
-                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]',
-                          'focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50 dark:focus-visible:ring-offset-slate-950',
+                          'bg-emerald-950 text-lg font-semibold text-white',
+                          'shadow-[0_14px_28px_-18px_rgba(6,78,59,0.55)] transition-all duration-200',
+                          'hover:scale-[1.08] hover:shadow-[0_22px_38px_-18px_rgba(6,78,59,0.46)]',
+                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700',
+                          'focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900',
                           'md:h-16 md:w-16 md:text-xl',
                           isActive
-                            ? 'scale-[1.05] ring-4 ring-violet-200/80 shadow-[0_22px_40px_-16px_rgba(76,29,149,0.5)] dark:ring-violet-500/25'
+                            ? 'scale-[1.05] ring-4 ring-emerald-100 shadow-[0_22px_40px_-16px_rgba(6,78,59,0.5)] dark:ring-emerald-900/70'
                             : '',
                         ].join(' ')}
                       >
                         <span>{index + 1}</span>
                       </button>
 
-                      <p className="mt-3 whitespace-nowrap text-[0.81rem] font-medium leading-5 text-slate-900 dark:text-slate-100 md:text-[0.88rem]">
+                      <p className="mt-3 max-w-[10rem] text-balance text-[0.9rem] font-medium leading-5 text-slate-900 dark:text-slate-100 md:text-[0.95rem]">
                         {step.label}
                       </p>
 
@@ -358,19 +356,12 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
                           initial={{ opacity: 0, y: -8, scale: 0.98 }}
                           animate={{ opacity: 1, y: 0, scale: 1 }}
                           transition={{ duration: 0.18, ease: 'easeOut' }}
-                          className={[
-                            'absolute top-full z-10 mt-5 w-[13.75rem] rounded-xl border border-slate-200/85',
-                            'bg-white p-4 text-left shadow-[0_24px_48px_-28px_rgba(15,23,42,0.3)]',
-                            'dark:border-slate-800 dark:bg-slate-900',
-                            isFirstStep ? 'left-0' : '',
-                            isLastStep ? 'right-0' : '',
-                            !isFirstStep && !isLastStep ? 'left-1/2 -translate-x-1/2' : '',
-                          ].join(' ')}
+                          className="mt-4 w-full max-w-[18rem] rounded-xl border border-slate-200/85 bg-white p-4 text-left shadow-[0_24px_48px_-28px_rgba(15,23,42,0.22)] dark:border-slate-800 dark:bg-slate-950"
                         >
-                          <p className="text-sm font-semibold leading-5 text-slate-950 dark:text-slate-50">
+                          <p className="text-[1rem] font-semibold leading-5 text-slate-950 dark:text-slate-50">
                             {step.title}
                           </p>
-                          <p className="mt-2 text-[0.92rem] leading-6 text-slate-600 dark:text-slate-400">
+                          <p className="mt-2 text-[0.94rem] leading-6 text-slate-600 dark:text-slate-400">
                             {step.description}
                           </p>
                         </motion.div>
