@@ -129,6 +129,7 @@ describe('App routing states', () => {
     useAuthMock.mockReset();
     apiJsonMock.mockReset();
     consoleErrorMock.mockClear();
+    window.history.replaceState({ idx: 0 }, '', window.location.href);
     useAuthMock.mockReturnValue({ loading: false, user: null, status: 'unauthenticated', refresh: vi.fn(async () => ({ user: null, status: 'unauthenticated', error: null })) });
   });
 
@@ -286,6 +287,8 @@ describe('App routing states', () => {
   });
 
   test('falls back to about when the onsite verification page is opened directly and the user presses back', async () => {
+    window.history.replaceState({ idx: 0 }, '', window.location.href);
+
     render(
       <MemoryRouter
         initialEntries={[{ pathname: '/verificacion-presencial', key: 'default' }]}
@@ -302,6 +305,8 @@ describe('App routing states', () => {
   });
 
   test('uses history back when the onsite verification page has a previous app entry', async () => {
+    window.history.replaceState({ idx: 1 }, '', window.location.href);
+
     render(
       <MemoryRouter
         initialEntries={[

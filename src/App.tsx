@@ -132,10 +132,9 @@ const AboutPageWrapper = () => {
 
 const OnsiteVerificationPageWrapper = () => {
   const navigate = useNavigate();
-  const location = useLocation();
 
   const handleBack = () => {
-    if (location.key !== 'default') {
+    if (window.history.state?.idx > 0) {
       navigate(-1);
       return;
     }
