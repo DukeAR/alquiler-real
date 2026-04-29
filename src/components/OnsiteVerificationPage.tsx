@@ -111,49 +111,66 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
         onBack={onBack}
         heading="Verificación presencial"
         centerHeading
-        className="relative mx-auto mb-0 max-w-4xl items-center gap-2 px-6 py-2"
+        className="relative mx-auto mb-1 max-w-4xl items-center gap-2 px-6 pt-4 pb-2 md:pt-5 md:pb-2"
+        contentClassName="translate-y-3 md:translate-y-4"
       />
 
-      <main className="mx-auto flex max-w-5xl flex-col gap-12 px-6 py-7 md:gap-14 md:py-9">
-        <section className="max-w-3xl space-y-5">
-          <h1 className="text-[clamp(2.35rem,5vw,3.7rem)] font-semibold leading-[0.98] tracking-[-0.06em] text-slate-950 dark:text-slate-50">
-            Más confianza. Mejores reservas.
-          </h1>
+      <main className="mx-auto flex max-w-5xl flex-col gap-9 px-6 py-7 md:gap-10 md:py-9">
+        <section className="relative overflow-hidden rounded-[36px] border border-slate-200/85 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.08),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.995),rgba(248,250,252,0.97))] px-6 py-8 shadow-[0_34px_70px_-42px_rgba(15,23,42,0.28)] dark:border-slate-800 dark:bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.12),transparent_30%),rgba(15,23,42,0.9)] md:px-10 md:py-10">
+          <div aria-hidden="true" className="absolute inset-x-6 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(16,185,129,0.5),transparent)] md:inset-x-10" />
 
-          <p className="max-w-2xl text-[0.98rem] leading-6 text-slate-700 dark:text-slate-300">
-            Verificamos en persona identidad y vínculo con la propiedad.
-          </p>
+          <div className="grid gap-8 md:grid-cols-[minmax(0,1.18fr)_minmax(280px,0.82fr)] md:items-start md:gap-10">
+            <div className="space-y-5 md:self-center md:space-y-6">
+              <h1 className="max-w-[11ch] text-[clamp(2.35rem,5vw,3.7rem)] font-semibold leading-[0.98] tracking-[-0.06em] text-slate-950 dark:text-slate-50">
+                Más confianza. Mejores reservas.
+              </h1>
 
-          <ul className="flex max-w-3xl flex-wrap items-center gap-x-5 gap-y-2 text-[0.92rem] font-medium leading-6 text-slate-600 dark:text-slate-300">
-            {heroBenefitPoints.map((item) => (
-              <li key={item} className="flex items-center gap-2">
-                <Icons.CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
-                <span>{item}</span>
-              </li>
-            ))}
-          </ul>
+              <p className="max-w-2xl text-[1rem] leading-7 text-slate-700 dark:text-slate-300 md:text-[1.05rem]">
+                Verificamos en persona identidad y vínculo con la propiedad.
+              </p>
 
-          <div className="space-y-2.5">
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <Button onClick={openOnsiteVerification}>
-                <Icons.Verified className="h-5 w-5" />
-                Quiero verificar mi propiedad
-              </Button>
-              <Button variant="secondary" onClick={() => scrollToSection(howItWorksRef.current)}>
-                Ver cómo funciona
-              </Button>
+              <div className="space-y-3">
+                <div className="flex flex-col gap-3 sm:flex-row">
+                  <Button onClick={openOnsiteVerification}>
+                    <Icons.Verified className="h-5 w-5" />
+                    Quiero verificar mi propiedad
+                  </Button>
+                  <Button variant="secondary" onClick={() => scrollToSection(howItWorksRef.current)}>
+                    Ver cómo funciona
+                  </Button>
+                </div>
+                <p className="text-[0.94rem] leading-6 text-slate-500 dark:text-slate-400">
+                  Se coordina una visita, no lleva más de unos minutos.
+                </p>
+              </div>
             </div>
-            <p className="text-[0.93rem] leading-6 text-slate-500 dark:text-slate-400">
-              Se coordina una visita, no lleva más de unos minutos.
-            </p>
-          </div>
 
-          <p className="text-[0.95rem] leading-6 text-slate-600 dark:text-slate-400">
-            Las propiedades verificadas se destacan automáticamente en los resultados.
-          </p>
+            <div className="space-y-4 md:space-y-5">
+              <div className="rounded-[28px] border border-emerald-100/80 bg-white/88 p-5 shadow-[0_22px_50px_-38px_rgba(15,23,42,0.38)] backdrop-blur-sm dark:border-emerald-500/10 dark:bg-white/5">
+                <p className="text-[0.74rem] font-semibold uppercase tracking-[0.26em] text-emerald-700 dark:text-emerald-300">
+                  Lo que transmite
+                </p>
+
+                <ul className="mt-4 grid gap-3 text-[0.95rem] font-medium leading-6 text-slate-700 dark:text-slate-200">
+                  {heroBenefitPoints.map((item) => (
+                    <li key={item} className="flex items-center gap-2.5">
+                      <Icons.CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <p className="rounded-[24px] border border-slate-950/10 bg-slate-950/[0.045] px-5 py-4 text-[1rem] font-semibold leading-7 text-black shadow-[0_16px_36px_-30px_rgba(15,23,42,0.45)] dark:border-slate-50/10 dark:bg-white/10 dark:text-white">
+                Las propiedades verificadas se destacan automáticamente en los resultados.
+              </p>
+            </div>
+          </div>
         </section>
 
-        <section className="space-y-6 rounded-[30px] bg-slate-100/75 px-6 py-6 dark:bg-slate-900/60 md:px-8 md:py-7">
+        <section className="relative space-y-6 overflow-hidden rounded-[30px] border border-slate-200/85 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.06),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.99),rgba(248,250,252,0.96))] px-6 py-6 shadow-[0_28px_60px_-46px_rgba(15,23,42,0.24)] dark:border-slate-800 dark:bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.12),transparent_30%),rgba(15,23,42,0.88)] md:px-8 md:py-8">
+          <div aria-hidden="true" className="absolute inset-x-6 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(16,185,129,0.42),transparent)] md:inset-x-8" />
+
           <div className="space-y-2">
             <h2 className="text-[1.62rem] font-semibold leading-[1.08] tracking-[-0.04em] text-slate-950 dark:text-slate-50">
               Qué cambia cuando verificás
@@ -188,96 +205,104 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
             </div>
           </div>
 
-          <p className="text-[0.95rem] leading-6 text-slate-600 dark:text-slate-400">
+          <p className="mx-auto max-w-3xl text-center text-[0.98rem] font-semibold leading-7 text-slate-900 dark:text-slate-100">
             Esto impacta directamente en cómo te contactan y qué tipo de consultas recibís.
           </p>
         </section>
 
-        <section className="space-y-6 border-t border-slate-200/85 pt-8 dark:border-slate-800 md:pt-10">
-          <div className="space-y-2">
-            <h2 className="text-[1.62rem] font-semibold leading-[1.08] tracking-[-0.04em] text-slate-950 dark:text-slate-50">
-              Qué revisa esta verificación
-            </h2>
-          </div>
+        <section>
+          <div className="relative overflow-hidden rounded-[30px] border border-slate-200/85 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.06),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.99),rgba(248,250,252,0.96))] px-6 py-6 shadow-[0_28px_60px_-44px_rgba(15,23,42,0.2)] dark:border-slate-800 dark:bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.12),transparent_30%),rgba(15,23,42,0.88)] md:px-8 md:py-8">
+            <div aria-hidden="true" className="absolute inset-x-6 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(16,185,129,0.42),transparent)] md:inset-x-8" />
 
-          <div className="grid gap-10 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] md:gap-12">
-            <div className="space-y-7">
-              <div className="space-y-3">
-                <h3 className="text-[1rem] font-semibold text-slate-900 dark:text-slate-100">Qué validamos</h3>
-                <ul className="space-y-3 text-[0.96rem] font-medium leading-7 text-slate-800 dark:text-slate-200">
-                  {validationItems.map((item) => (
-                    <li key={item} className="flex items-start gap-3">
-                      <Icons.CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-emerald-500" />
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
+            <div className="space-y-2">
+              <h2 className="text-[1.62rem] font-semibold leading-[1.08] tracking-[-0.04em] text-slate-950 dark:text-slate-50">
+                Qué revisa esta verificación
+              </h2>
+            </div>
+
+            <div className="mt-7 space-y-5 md:space-y-6">
+              <div className="grid gap-5 rounded-[28px] border border-slate-200/80 bg-white/88 p-5 shadow-[0_22px_48px_-36px_rgba(15,23,42,0.16)] backdrop-blur-sm dark:border-slate-700/80 dark:bg-white/5 md:grid-cols-[minmax(0,1fr)_1px_minmax(0,1fr)] md:gap-0 md:p-0">
+                <div className="space-y-3 md:p-6">
+                  <h3 className="text-[1rem] font-semibold text-slate-900 dark:text-slate-100">Qué validamos</h3>
+                  <ul className="space-y-3 text-[0.96rem] font-medium leading-7 text-slate-800 dark:text-slate-200">
+                    {validationItems.map((item) => (
+                      <li key={item} className="flex items-start gap-3">
+                        <Icons.CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-emerald-500" />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div aria-hidden="true" className="hidden h-full bg-slate-200/85 dark:bg-slate-700/70 md:block" />
+
+                <div className="space-y-3 border-t border-slate-200/80 pt-5 dark:border-slate-700/80 md:border-t-0 md:p-6 md:pt-6">
+                  <h3 className="text-[1rem] font-semibold text-slate-900 dark:text-slate-100">Qué no validamos</h3>
+                  <ul className="space-y-3 text-[0.96rem] leading-7 text-slate-600 dark:text-slate-400">
+                    {nonValidationItems.map((item) => (
+                      <li key={item} className="flex items-start gap-3">
+                        <Icons.X className="mt-1 h-4 w-4 shrink-0 text-slate-400 dark:text-slate-500" />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="text-[0.92rem] leading-6 text-slate-500 dark:text-slate-400">
+                    No evaluamos el estado del inmueble ni la calidad de los servicios.
+                  </p>
+                </div>
               </div>
 
-              <div className="space-y-3">
-                <h3 className="text-[1rem] font-semibold text-slate-900 dark:text-slate-100">Qué no validamos</h3>
-                <ul className="space-y-3 text-[0.96rem] leading-7 text-slate-600 dark:text-slate-400">
-                  {nonValidationItems.map((item) => (
-                    <li key={item} className="flex items-start gap-3">
-                      <Icons.X className="mt-1 h-4 w-4 shrink-0 text-slate-400 dark:text-slate-500" />
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-                <p className="text-[0.92rem] leading-6 text-slate-500 dark:text-slate-400">
-                  No evaluamos el estado del inmueble ni la calidad de los servicios.
-                </p>
+              <div className="grid gap-5 rounded-[28px] border border-slate-200/80 bg-white/88 p-5 shadow-[0_22px_48px_-36px_rgba(15,23,42,0.16)] backdrop-blur-sm dark:border-slate-700/80 dark:bg-white/5 md:grid-cols-[minmax(0,1fr)_1px_minmax(0,1fr)] md:gap-0 md:p-0">
+                <div className="space-y-3 md:p-6">
+                  <h3 className="text-[1rem] font-semibold text-slate-900 dark:text-slate-100">Cómo es la visita</h3>
+                  <ul className="space-y-3 text-[0.96rem] leading-7 text-slate-700 dark:text-slate-300">
+                    {verifierVisitChecks.map((item) => (
+                      <li key={item} className="flex items-start gap-3">
+                        <Icons.CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-brand" />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="text-[0.92rem] leading-6 text-slate-500 dark:text-slate-400">
+                    No se realiza inspección técnica ni evaluación de condiciones del inmueble.
+                  </p>
+                </div>
+
+                <div aria-hidden="true" className="hidden h-full bg-slate-200/85 dark:bg-slate-700/70 md:block" />
+
+                <div className="space-y-3 border-t border-slate-200/80 pt-5 dark:border-slate-700/80 md:border-t-0 md:p-6 md:pt-6">
+                  <h3 className="text-[1rem] font-semibold text-slate-900 dark:text-slate-100">Quién verifica</h3>
+                  <p className="text-[0.96rem] leading-7 text-slate-600 dark:text-slate-400">
+                    La verificación la realiza una persona del equipo o un verificador autorizado por la plataforma.
+                  </p>
+                  <ul className="space-y-3 text-[0.96rem] leading-7 text-slate-700 dark:text-slate-300">
+                    {verifierIdentityPoints.map((item) => (
+                      <li key={item} className="flex items-start gap-3">
+                        <Icons.CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-brand" />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="text-[0.92rem] leading-6 text-slate-500 dark:text-slate-400">
+                    La validación queda registrada dentro de la plataforma.
+                  </p>
+                </div>
               </div>
             </div>
 
-            <div className="space-y-7">
-              <div className="space-y-3">
-                <h3 className="text-[1rem] font-semibold text-slate-900 dark:text-slate-100">Cómo es la visita</h3>
-                <ul className="space-y-3 text-[0.96rem] leading-7 text-slate-700 dark:text-slate-300">
-                  {verifierVisitChecks.map((item) => (
-                    <li key={item} className="flex items-start gap-3">
-                      <Icons.CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-brand" />
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-                <p className="text-[0.92rem] leading-6 text-slate-500 dark:text-slate-400">
-                  No se realiza inspección técnica ni evaluación de condiciones del inmueble.
-                </p>
-              </div>
-
-              <div className="space-y-3">
-                <h3 className="text-[1rem] font-semibold text-slate-900 dark:text-slate-100">Quién verifica</h3>
-                <p className="text-[0.96rem] leading-7 text-slate-600 dark:text-slate-400">
-                  La verificación la realiza una persona del equipo o un verificador autorizado por la plataforma.
-                </p>
-                <ul className="space-y-3 text-[0.96rem] leading-7 text-slate-700 dark:text-slate-300">
-                  {verifierIdentityPoints.map((item) => (
-                    <li key={item} className="flex items-start gap-3">
-                      <Icons.CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-brand" />
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-                <p className="text-[0.92rem] leading-6 text-slate-500 dark:text-slate-400">
-                  La validación queda registrada dentro de la plataforma.
-                </p>
-              </div>
-            </div>
+            <p className="mx-auto mt-6 max-w-3xl text-center text-[0.98rem] font-semibold leading-7 text-slate-900 dark:text-slate-100">
+              No necesitás preparar nada. Solo mostrar la propiedad y acreditar tu vínculo.
+            </p>
           </div>
-
-          <p className="text-[0.95rem] leading-6 text-slate-600 dark:text-slate-400">
-            No necesitás preparar nada. Solo mostrar la propiedad y acreditar tu vínculo.
-          </p>
         </section>
 
-        <section className="space-y-4 border-t border-slate-200/85 pt-8 dark:border-slate-800 md:pt-10">
-          <div className="grid gap-6 rounded-[30px] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.95))] px-6 py-6 shadow-[0_24px_48px_-40px_rgba(15,23,42,0.14)] dark:bg-slate-900/70 md:grid-cols-[minmax(0,16rem)_minmax(0,1fr)] md:items-center md:gap-8 md:px-8 md:py-8">
+        <section>
+          <div className="grid gap-6 rounded-[30px] border border-slate-200/85 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.95))] px-6 py-6 shadow-[0_24px_48px_-40px_rgba(15,23,42,0.14)] dark:border-slate-800 dark:bg-slate-900/70 md:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] md:items-center md:gap-6 md:px-8 md:py-8">
             <div className="flex justify-center md:justify-start">
               <img
-                src="/verified-presencial-badge3.png"
+                src="/verified-presencial-circular.png"
                 alt="Sello Verificado presencialmente"
-                className="h-48 w-48 object-contain md:h-52 md:w-52"
+                className="h-auto w-full max-w-[14rem] object-contain md:max-w-[20rem]"
               />
             </div>
 
@@ -299,18 +324,27 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
           </div>
         </section>
 
-        <section ref={howItWorksRef} className="scroll-mt-28 pt-8 md:pt-10">
-          <div className="rounded-[30px] border border-slate-200/85 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.96))] px-5 py-6 shadow-[0_24px_48px_-36px_rgba(15,23,42,0.18)] dark:border-slate-800 dark:bg-slate-900/70 md:px-8 md:py-8">
-            <div className="max-w-3xl space-y-3 md:space-y-4">
-              <p className="inline-flex rounded-full bg-emerald-50 px-3 py-1 text-[0.74rem] font-semibold uppercase tracking-[0.26em] text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200">
+        <section ref={howItWorksRef} className="scroll-mt-28">
+          <div className="rounded-[30px] border border-slate-200/85 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.96))] px-6 py-6 shadow-[0_24px_48px_-36px_rgba(15,23,42,0.18)] dark:border-slate-800 dark:bg-slate-900/70 md:px-8 md:py-8">
+            <div className="max-w-3xl space-y-4 md:space-y-5">
+              <p className="inline-flex rounded-full border border-emerald-100 bg-emerald-50/90 px-3.5 py-1.5 text-[0.74rem] font-semibold uppercase tracking-[0.28em] text-emerald-900 shadow-[0_10px_24px_-20px_rgba(6,78,59,0.35)] dark:border-emerald-900/80 dark:bg-emerald-950/35 dark:text-emerald-200">
                 Cómo funciona
               </p>
-              <h2 className="max-w-xl text-[clamp(2.4rem,4.8vw,3.7rem)] font-semibold leading-[0.94] tracking-[-0.07em] text-slate-950 dark:text-slate-50">
-                En cuatro pasos
+              <h2 className="max-w-2xl text-[clamp(2.9rem,5.4vw,4.9rem)] font-semibold leading-[0.88] tracking-[-0.085em] text-slate-950 dark:text-slate-50">
+                En cuatro{' '}
+                <span className="relative inline-block">
+                  <span className="relative z-10">pasos</span>
+                  <span
+                    aria-hidden="true"
+                    className="absolute inset-x-0 bottom-[0.14em] z-0 h-[0.28em] rounded-full bg-emerald-100/90 dark:bg-emerald-900/70"
+                  />
+                </span>
               </h2>
-              <p className="max-w-xl text-[1.02rem] leading-7 text-slate-600 dark:text-slate-300 md:text-[1.08rem]">
-                El proceso es simple y lo coordinamos con vos.
-              </p>
+              <div className="max-w-xl border-l-4 border-emerald-200/90 pl-4 dark:border-emerald-800/80">
+                <p className="text-[1.04rem] leading-7 text-slate-600 dark:text-slate-300 md:text-[1.14rem]">
+                  El proceso es simple y lo coordinamos con vos.
+                </p>
+              </div>
             </div>
 
             <div className="relative mt-8 md:mt-10">
