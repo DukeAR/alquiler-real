@@ -423,7 +423,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                       <Icons.Layers className="h-6 w-6" />
                     </div>
 
-                    <div className="max-w-[640px] space-y-3 text-left">
+                    <div className="w-full space-y-3 text-left">
                       <h1 className="max-w-[640px] text-[clamp(2rem,3.6vw,2.5rem)] font-semibold leading-[1.02] tracking-[-0.06em] text-slate-900 dark:text-slate-50">
                         ¿Te pasó de reservar un alquiler y no estar del todo tranquilo?
                       </h1>
@@ -436,8 +436,8 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                         Eso le pasa a todo el mundo. Y cuando se trata de vacaciones, no debería ser así.
                       </p>
 
-                      <p className="max-w-[620px] mb-[10px] text-[0.9rem] leading-[1.7] text-[#5B6470]">
-                        <span className="inline-block mt-[12px] mb-[12px] rounded-full bg-[#ECFDF5] px-[12px] py-[6px] text-[14px] font-semibold text-[#166534]">
+                      <p className="max-w-[620px] mb-[10px] text-center text-[0.9rem] leading-[1.7] text-[#5B6470]">
+                        <span className="inline-flex mt-[12px] mb-[12px] items-center justify-center rounded-full bg-[#ECFDF5] px-[16px] py-[7px] text-[14px] font-semibold text-[#166534]">
                           No es un problema de opciones. Es un problema de confianza.
                         </span>
                       </p>
@@ -453,24 +453,24 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                       <p className="max-w-[620px] mt-[16px] mb-[10px] text-[20px] font-bold leading-[1.7] text-[#163329]">
                         Menos incertidumbre. Más claridad.
                       </p>
+                    </div>
 
-                      <div className="mt-3 flex flex-wrap gap-2.5">
-                        <div className="inline-flex items-center gap-2 rounded-[14px] border border-slate-200/85 bg-white px-3.5 py-2.5 text-[0.88rem] font-medium text-slate-800 shadow-none dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-100">
-                          <span className="text-[0.68rem] font-semibold tracking-[0.16em] text-slate-400">01</span>
-                          <span>Elegís.</span>
-                        </div>
-                        <div className="inline-flex items-center gap-2 rounded-[14px] border border-slate-200/85 bg-white px-3.5 py-2.5 text-[0.88rem] font-medium text-slate-800 shadow-none dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-100">
-                          <span className="text-[0.68rem] font-semibold tracking-[0.16em] text-slate-400">02</span>
-                          <span>Hablás.</span>
-                        </div>
-                        <div className="inline-flex items-center gap-2 rounded-[14px] border border-slate-200/85 bg-white px-3.5 py-2.5 text-[0.88rem] font-medium text-slate-800 shadow-none dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-100">
-                          <span className="text-[0.68rem] font-semibold tracking-[0.16em] text-slate-400">03</span>
-                          <span>Chequeás.</span>
-                        </div>
-                        <div className="inline-flex items-center gap-2 rounded-[14px] border border-slate-200/85 bg-white px-3.5 py-2.5 text-[0.88rem] font-medium text-slate-800 shadow-none dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-100">
-                          <span className="text-[0.68rem] font-semibold tracking-[0.16em] text-slate-400">04</span>
-                          <span>Reservás.</span>
-                        </div>
+                    <div className="mt-2 grid w-full grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
+                      <div className="flex min-h-[72px] w-full items-center justify-center gap-2.5 rounded-full bg-emerald-950 px-4 py-3 text-center shadow-[0_20px_34px_-26px_rgba(6,78,59,0.46)] dark:bg-emerald-900">
+                        <span className="text-[0.72rem] font-semibold tracking-[0.16em] text-emerald-100/75">01</span>
+                        <span className="text-[1rem] font-semibold text-white">Elegís.</span>
+                      </div>
+                      <div className="flex min-h-[72px] w-full items-center justify-center gap-2.5 rounded-full bg-emerald-950 px-4 py-3 text-center shadow-[0_20px_34px_-26px_rgba(6,78,59,0.46)] dark:bg-emerald-900">
+                        <span className="text-[0.72rem] font-semibold tracking-[0.16em] text-emerald-100/75">02</span>
+                        <span className="text-[1rem] font-semibold text-white">Hablás.</span>
+                      </div>
+                      <div className="flex min-h-[72px] w-full items-center justify-center gap-2.5 rounded-full bg-emerald-950 px-4 py-3 text-center shadow-[0_20px_34px_-26px_rgba(6,78,59,0.46)] dark:bg-emerald-900">
+                        <span className="text-[0.72rem] font-semibold tracking-[0.16em] text-emerald-100/75">03</span>
+                        <span className="text-[1rem] font-semibold text-white">Chequeás.</span>
+                      </div>
+                      <div className="flex min-h-[72px] w-full items-center justify-center gap-2.5 rounded-full bg-emerald-950 px-4 py-3 text-center shadow-[0_20px_34px_-26px_rgba(6,78,59,0.46)] dark:bg-emerald-900">
+                        <span className="text-[0.72rem] font-semibold tracking-[0.16em] text-emerald-100/75">04</span>
+                        <span className="text-[1rem] font-semibold text-white">Reservás.</span>
                       </div>
                     </div>
                   </div>
