@@ -19,44 +19,44 @@ describe('OnsiteVerificationPage', () => {
 
     expect(screen.getByRole('heading', { name: 'Verificación presencial' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Más confianza. Mejores reservas.' })).toBeInTheDocument();
-    expect(screen.getByText('Las propiedades verificadas reciben consultas más claras, menos fricción y decisiones más rápidas.')).toBeInTheDocument();
-    expect(screen.getByText('Revisamos tu propiedad en persona y validamos la información clave del aviso.')).toBeInTheDocument();
-    expect(screen.getByText('Más visibilidad')).toBeInTheDocument();
-    expect(screen.getByText('Consultas más claras')).toBeInTheDocument();
-    expect(screen.getByText('Menos fricción')).toBeInTheDocument();
+    expect(screen.getByText('Verificamos tu propiedad en persona para que recibas consultas más claras y seguras.')).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'Iniciar verificación' })).toHaveLength(2);
-    expect(screen.getByRole('button', { name: 'Cómo funciona' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ver cómo funciona' })).toBeInTheDocument();
 
-    expect(screen.getByRole('heading', { name: 'Publicar sin validar genera dudas.' })).toBeInTheDocument();
-    expect(screen.getByText('La verificación elimina fricción y mejora la calidad de las reservas.')).toBeInTheDocument();
-    expect(screen.getByText('Menos consultas irrelevantes')).toBeInTheDocument();
-    expect(screen.getByText('Decisiones más rápidas')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Qué cambia cuando verificás' })).toBeInTheDocument();
+    expect(screen.getByText('Sin verificación')).toBeInTheDocument();
+    expect(screen.getByText('Con verificación')).toBeInTheDocument();
+    expect(screen.getByText('Dudas constantes')).toBeInTheDocument();
+    expect(screen.getByText('Consultas que no avanzan')).toBeInTheDocument();
+    expect(screen.getByText('Tiempo perdido')).toBeInTheDocument();
+    expect(screen.getByText('Consultas claras')).toBeInTheDocument();
+    expect(screen.getByText('Decisiones rápidas')).toBeInTheDocument();
     expect(screen.getByText('Reservas más concretas')).toBeInTheDocument();
 
     expect(screen.getByRole('heading', { name: 'Qué validamos' })).toBeInTheDocument();
-    expect(screen.getByText('Ubicación confirmada')).toBeInTheDocument();
-    expect(screen.getByText('Fotos reales')).toBeInTheDocument();
-    expect(screen.getByText('Datos validados')).toBeInTheDocument();
-    expect(screen.getByText('Servicios comprobados')).toBeInTheDocument();
-    expect(screen.getByText('Condiciones verificadas')).toBeInTheDocument();
+    expect(screen.getByText('Ubicación real')).toBeInTheDocument();
+    expect(screen.getByText('Fotos actuales')).toBeInTheDocument();
+    expect(screen.getByText('Datos del aviso')).toBeInTheDocument();
+    expect(screen.getByText('Servicios publicados')).toBeInTheDocument();
+    expect(screen.getByText('Condiciones del lugar')).toBeInTheDocument();
 
     expect(screen.getByRole('heading', { name: 'Sello Verificado presencialmente' })).toBeInTheDocument();
-    expect(screen.getByText('Confirma que la propiedad fue revisada en persona y suma respaldo visible en el aviso.')).toBeInTheDocument();
+    expect(screen.getByText('Muestra de forma visible que la propiedad fue revisada en persona.')).toBeInTheDocument();
     expect(screen.getByAltText('Sello Verificado presencialmente')).toBeInTheDocument();
 
-    expect(screen.getByRole('heading', { name: 'Un proceso corto y claro' })).toBeInTheDocument();
-    expect(screen.getByText('Publicás tu propiedad')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'En cuatro pasos' })).toBeInTheDocument();
+    expect(screen.getByText('Publicás')).toBeInTheDocument();
     expect(screen.getByText('Coordinamos la visita')).toBeInTheDocument();
-    expect(screen.getByText('Validamos la información clave')).toBeInTheDocument();
-    expect(screen.getByText('Se activa el sello presencial')).toBeInTheDocument();
+    expect(screen.getByText('Validamos')).toBeInTheDocument();
+    expect(screen.getByText('Recibís el sello')).toBeInTheDocument();
 
     expect(screen.queryByRole('heading', { name: 'Lo que mejora cuando verificás' })).not.toBeInTheDocument();
 
     expect(screen.getByRole('heading', { name: 'Próximamente guía completa' })).toBeInTheDocument();
     expect(screen.getAllByText('Próximamente guía completa')).toHaveLength(2);
 
-    expect(screen.getByRole('heading', { name: 'Verificá tu propiedad.' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Publicar propiedad' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Verificar mejora cómo te eligen.' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Publicar propiedad' })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Volver' }));
 
