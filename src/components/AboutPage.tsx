@@ -436,11 +436,11 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                         Eso le pasa a todo el mundo. Y cuando se trata de vacaciones, no debería ser así.
                       </p>
 
-                      <p className="max-w-[620px] mb-[10px] text-center text-[0.9rem] leading-[1.7] text-[#5B6470]">
-                        <span className="inline-flex mt-[12px] mb-[12px] items-center justify-center rounded-full bg-[#ECFDF5] px-[16px] py-[7px] text-[14px] font-semibold text-[#166534]">
+                      <div className="my-[12px] flex w-full justify-center">
+                        <span className="inline-flex items-center justify-center rounded-full bg-[#ECFDF5] px-[16px] py-[7px] text-center text-[14px] font-semibold text-[#166534]">
                           No es un problema de opciones. Es un problema de confianza.
                         </span>
-                      </p>
+                      </div>
 
                       <p className="max-w-[620px] mb-[10px] text-[0.9rem] leading-[1.7] text-[#5B6470]">
                         Alquiler Real nace para cambiar eso: para que puedas ver, desde el principio, qué parte del aviso está realmente comprobada.
