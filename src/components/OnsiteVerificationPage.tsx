@@ -301,17 +301,19 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
 
         <section ref={howItWorksRef} className="scroll-mt-28 pt-8 md:pt-10">
           <div className="rounded-[30px] border border-slate-200/85 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.96))] px-5 py-6 shadow-[0_24px_48px_-36px_rgba(15,23,42,0.18)] dark:border-slate-800 dark:bg-slate-900/70 md:px-8 md:py-8">
-            <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Cómo funciona</p>
-              <h2 className="text-[1.55rem] font-semibold leading-[1.08] tracking-[-0.04em] text-slate-950 dark:text-slate-50">
+            <div className="max-w-3xl space-y-3 md:space-y-4">
+              <p className="inline-flex rounded-full bg-emerald-50 px-3 py-1 text-[0.74rem] font-semibold uppercase tracking-[0.26em] text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200">
+                Cómo funciona
+              </p>
+              <h2 className="max-w-xl text-[clamp(2.4rem,4.8vw,3.7rem)] font-semibold leading-[0.94] tracking-[-0.07em] text-slate-950 dark:text-slate-50">
                 En cuatro pasos
               </h2>
-              <p className="max-w-2xl text-[0.95rem] leading-6 text-slate-600 dark:text-slate-400">
+              <p className="max-w-xl text-[1.02rem] leading-7 text-slate-600 dark:text-slate-300 md:text-[1.08rem]">
                 El proceso es simple y lo coordinamos con vos.
               </p>
             </div>
 
-            <div className="relative mt-7">
+            <div className="relative mt-8 md:mt-10">
               <div
                 aria-hidden="true"
                 className="absolute left-[12.5%] right-[12.5%] top-8 hidden h-[2px] bg-slate-200 dark:bg-slate-700 md:block"
