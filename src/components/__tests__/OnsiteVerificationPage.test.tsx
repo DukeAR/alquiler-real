@@ -23,14 +23,17 @@ describe('OnsiteVerificationPage', () => {
     expect(screen.getByText('Propiedad real')).toBeInTheDocument();
     expect(screen.getByText('Anfitrión identificado')).toBeInTheDocument();
     expect(screen.getByText('Menor riesgo')).toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: 'Iniciar verificación' })).toHaveLength(2);
+    expect(screen.getAllByRole('button', { name: 'Quiero verificar mi propiedad' })).toHaveLength(2);
     expect(screen.getByRole('button', { name: 'Ver cómo funciona' })).toBeInTheDocument();
+    expect(screen.getByText('Se coordina una visita, no lleva más de unos minutos.')).toBeInTheDocument();
+    expect(screen.getByText('Las propiedades verificadas se destacan automáticamente en los resultados.')).toBeInTheDocument();
 
     expect(screen.getByRole('heading', { name: 'Qué cambia cuando verificás' })).toBeInTheDocument();
     expect(screen.getByText('La propiedad existe')).toBeInTheDocument();
     expect(screen.getByText('Hay una persona identificada detrás')).toBeInTheDocument();
     expect(screen.getByText('Menor riesgo de fraude')).toBeInTheDocument();
     expect(screen.getByText('Mayor confianza para decidir')).toBeInTheDocument();
+    expect(screen.getByText('Esto impacta directamente en cómo te contactan y qué tipo de consultas recibís.')).toBeInTheDocument();
 
     expect(screen.getByRole('heading', { name: 'Qué revisa esta verificación' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Qué validamos' })).toBeInTheDocument();
@@ -50,6 +53,7 @@ describe('OnsiteVerificationPage', () => {
     expect(screen.getByText('Verificación de vínculo con el lugar')).toBeInTheDocument();
     expect(screen.getByText('Coincidencia con la ubicación publicada')).toBeInTheDocument();
     expect(screen.getByText('No se realiza inspección técnica ni evaluación de condiciones del inmueble.')).toBeInTheDocument();
+    expect(screen.getByText('No necesitás preparar nada. Solo mostrar la propiedad y acreditar tu vínculo.')).toBeInTheDocument();
 
     expect(screen.getByRole('heading', { name: 'Quién verifica' })).toBeInTheDocument();
     expect(screen.getByText('La verificación la realiza una persona del equipo o un verificador autorizado por la plataforma.')).toBeInTheDocument();
@@ -60,10 +64,12 @@ describe('OnsiteVerificationPage', () => {
 
     expect(screen.getByRole('heading', { name: 'Un respaldo visible desde el primer vistazo' })).toBeInTheDocument();
     expect(screen.getByText('Indica que la propiedad fue visitada en persona y que el anfitrión fue identificado.')).toBeInTheDocument();
+    expect(screen.getByText('Es lo primero que ve un huésped al comparar opciones.')).toBeInTheDocument();
     expect(screen.getByText('No certifica estado, calidad ni condiciones del inmueble.')).toBeInTheDocument();
     expect(screen.getByAltText('Sello Verificado presencialmente')).toBeInTheDocument();
 
     expect(screen.getByRole('heading', { name: 'En cuatro pasos' })).toBeInTheDocument();
+    expect(screen.getByText('El proceso es simple y lo coordinamos con vos.')).toBeInTheDocument();
     expect(screen.getByText('Publicás')).toBeInTheDocument();
     expect(screen.getByText('Coordinamos la visita')).toBeInTheDocument();
     expect(screen.getByText('Validamos')).toBeInTheDocument();
@@ -74,7 +80,8 @@ describe('OnsiteVerificationPage', () => {
     expect(screen.getByRole('heading', { name: 'Cómo funciona en la práctica' })).toBeInTheDocument();
     expect(screen.getByText('Próximamente guía completa')).toBeInTheDocument();
 
-    expect(screen.getByRole('heading', { name: 'Verificá tu propiedad y destacate desde el primer vistazo.' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Empezá la verificación y destacá tu propiedad' })).toBeInTheDocument();
+    expect(screen.getByText('Coordinamos la visita en pocos pasos.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Publicar propiedad' })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Volver' }));

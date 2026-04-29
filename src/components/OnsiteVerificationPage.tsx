@@ -112,15 +112,24 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
             ))}
           </ul>
 
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <Button onClick={openOnsiteVerification}>
-              <Icons.Verified className="h-5 w-5" />
-              Iniciar verificación
-            </Button>
-            <Button variant="secondary" onClick={() => scrollToSection(howItWorksRef.current)}>
-              Ver cómo funciona
-            </Button>
+          <div className="space-y-2.5">
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Button onClick={openOnsiteVerification}>
+                <Icons.Verified className="h-5 w-5" />
+                Quiero verificar mi propiedad
+              </Button>
+              <Button variant="secondary" onClick={() => scrollToSection(howItWorksRef.current)}>
+                Ver cómo funciona
+              </Button>
+            </div>
+            <p className="text-[0.93rem] leading-6 text-slate-500 dark:text-slate-400">
+              Se coordina una visita, no lleva más de unos minutos.
+            </p>
           </div>
+
+          <p className="text-[0.95rem] leading-6 text-slate-600 dark:text-slate-400">
+            Las propiedades verificadas se destacan automáticamente en los resultados.
+          </p>
         </section>
 
         <section className="space-y-6 rounded-[30px] bg-slate-100/75 px-6 py-6 dark:bg-slate-900/60 md:px-8 md:py-7">
@@ -157,6 +166,10 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
               </ul>
             </div>
           </div>
+
+          <p className="text-[0.95rem] leading-6 text-slate-600 dark:text-slate-400">
+            Esto impacta directamente en cómo te contactan y qué tipo de consultas recibís.
+          </p>
         </section>
 
         <section className="space-y-6 border-t border-slate-200/85 pt-8 dark:border-slate-800 md:pt-10">
@@ -231,6 +244,10 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
               </div>
             </div>
           </div>
+
+          <p className="text-[0.95rem] leading-6 text-slate-600 dark:text-slate-400">
+            No necesitás preparar nada. Solo mostrar la propiedad y acreditar tu vínculo.
+          </p>
         </section>
 
         <section className="space-y-4 border-t border-slate-200/85 pt-8 dark:border-slate-800 md:pt-10">
@@ -251,6 +268,9 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
               <p className="text-[1rem] leading-7 text-slate-600 dark:text-slate-400">
                 Indica que la propiedad fue visitada en persona y que el anfitrión fue identificado.
               </p>
+              <p className="text-[0.95rem] leading-6 text-slate-600 dark:text-slate-400">
+                Es lo primero que ve un huésped al comparar opciones.
+              </p>
               <p className="text-[0.92rem] leading-6 text-slate-500 dark:text-slate-400">
                 No certifica estado, calidad ni condiciones del inmueble.
               </p>
@@ -264,6 +284,9 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
             <h2 className="text-[1.55rem] font-semibold leading-[1.08] tracking-[-0.04em] text-slate-950 dark:text-slate-50">
               En cuatro pasos
             </h2>
+            <p className="text-[0.95rem] leading-6 text-slate-600 dark:text-slate-400">
+              El proceso es simple y lo coordinamos con vos.
+            </p>
           </div>
 
           <ol className="grid gap-5 text-[0.95rem] text-slate-700 dark:text-slate-300 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
@@ -306,15 +329,18 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
         <section className="space-y-5 border-t border-slate-200/85 pt-8 dark:border-slate-800 md:pt-10">
           <div className="mx-auto flex max-w-2xl flex-col items-center space-y-2 text-center">
             <h2 className="text-[2.1rem] font-semibold leading-[1.02] tracking-[-0.05em] text-slate-950 dark:text-slate-50 md:text-[2.7rem]">
-              Verificá tu propiedad y destacate desde el primer vistazo.
+              Empezá la verificación y destacá tu propiedad
             </h2>
           </div>
 
-          <div className="flex justify-center">
+          <div className="flex flex-col items-center gap-2 text-center">
             <Button size="lg" onClick={openOnsiteVerification}>
               <Icons.Verified className="h-5 w-5" />
-              Iniciar verificación
+              Quiero verificar mi propiedad
             </Button>
+            <p className="text-[0.93rem] leading-6 text-slate-500 dark:text-slate-400">
+              Coordinamos la visita en pocos pasos.
+            </p>
           </div>
         </section>
       </main>
