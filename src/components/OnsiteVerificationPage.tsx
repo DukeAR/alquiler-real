@@ -52,25 +52,25 @@ const verifierIdentityPoints = [
 const flowSteps = [
   {
     id: 'publish',
-    label: 'Publicás',
+    label: 'Publicás tu propiedad',
     title: 'Publicás tu propiedad',
     description: 'Cargás la información básica del aviso para que sea visible.',
   },
   {
     id: 'schedule',
-    label: 'Coordinamos',
+    label: 'Coordinamos la visita',
     title: 'Coordinamos la visita',
     description: 'Elegís día y horario para la verificación.',
   },
   {
     id: 'verify',
-    label: 'Validamos',
+    label: 'Validamos identidad y acceso',
     title: 'Validamos identidad y acceso',
     description: 'Confirmamos quién sos y tu vínculo con el lugar.',
   },
   {
     id: 'seal',
-    label: 'Sello',
+    label: 'Recibís el sello',
     title: 'Recibís el sello',
     description: 'La publicación se muestra como verificada.',
   },
@@ -314,15 +314,21 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
             <div className="relative mt-7">
               <div
                 aria-hidden="true"
-                className="absolute left-[calc(12.5%+2rem)] right-[calc(12.5%+2rem)] top-8 hidden h-px bg-slate-200 dark:bg-slate-700 lg:block"
+                className="absolute left-[12.5%] right-[12.5%] top-8 hidden h-[2px] bg-slate-200 dark:bg-slate-700 md:block"
               />
 
-              <ol className="relative grid gap-x-5 gap-y-6 sm:grid-cols-2 lg:grid-cols-4 lg:gap-x-8">
+              <ol className="relative grid grid-cols-1 gap-y-5 md:grid-cols-4 md:gap-x-6 md:gap-y-0 lg:gap-x-8">
                 {flowSteps.map((step, index) => {
                   const isActive = activeFlowStep === step.id;
 
                   return (
-                    <li key={step.id} className="flex flex-col items-center text-center">
+                    <motion.li
+                      key={step.id}
+                      initial={{ opacity: 0, y: 18 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.24, delay: index * 0.08, ease: 'easeOut' }}
+                      className="flex flex-col items-center text-center"
+                    >
                       <button
                         type="button"
                         aria-label={`Paso ${index + 1}: ${step.title}`}
@@ -332,20 +338,25 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
                         className={[
                           'relative flex h-14 w-14 cursor-pointer items-center justify-center rounded-full',
                           'bg-emerald-950 text-lg font-semibold text-white',
-                          'shadow-[0_14px_28px_-18px_rgba(6,78,59,0.55)] transition-all duration-200',
-                          'hover:scale-[1.08] hover:shadow-[0_22px_38px_-18px_rgba(6,78,59,0.46)]',
+                          'transition-all duration-200',
+                          'hover:scale-[1.08] hover:shadow-[0_22px_38px_-16px_rgba(6,78,59,0.46)]',
                           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700',
                           'focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900',
                           'md:h-16 md:w-16 md:text-xl',
                           isActive
-                            ? 'scale-[1.05] ring-4 ring-emerald-100 shadow-[0_22px_40px_-16px_rgba(6,78,59,0.5)] dark:ring-emerald-900/70'
-                            : '',
+                            ? 'scale-[1.05] opacity-100 ring-[7px] ring-emerald-100 shadow-[0_28px_52px_-18px_rgba(6,78,59,0.58)] dark:ring-emerald-900/70'
+                            : 'opacity-65 shadow-[0_12px_24px_-18px_rgba(6,78,59,0.35)]',
                         ].join(' ')}
                       >
                         <span>{index + 1}</span>
                       </button>
 
-                      <p className="mt-3 max-w-[10rem] text-balance text-[0.9rem] font-medium leading-5 text-slate-900 dark:text-slate-100 md:text-[0.95rem]">
+                      <p
+                        className={[
+                          'mt-3 max-w-[11.5rem] text-balance text-[0.92rem] font-medium leading-5 text-slate-900 dark:text-slate-100 md:text-[0.96rem]',
+                          isActive ? 'opacity-100' : 'opacity-70',
+                        ].join(' ')}
+                      >
                         {step.label}
                       </p>
 
@@ -356,8 +367,12 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
                           initial={{ opacity: 0, y: -8, scale: 0.98 }}
                           animate={{ opacity: 1, y: 0, scale: 1 }}
                           transition={{ duration: 0.18, ease: 'easeOut' }}
-                          className="mt-4 w-full max-w-[18rem] rounded-xl border border-slate-200/85 bg-white p-4 text-left shadow-[0_24px_48px_-28px_rgba(15,23,42,0.22)] dark:border-slate-800 dark:bg-slate-950"
+                          className="relative mt-3 w-full max-w-[18rem] rounded-xl border border-slate-200/85 bg-white p-4 text-left shadow-[0_24px_48px_-28px_rgba(15,23,42,0.22)] dark:border-slate-800 dark:bg-slate-950"
                         >
+                          <div
+                            aria-hidden="true"
+                            className="absolute left-1/2 top-0 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rotate-45 border-l border-t border-slate-200/85 bg-white dark:border-slate-800 dark:bg-slate-950"
+                          />
                           <p className="text-[1rem] font-semibold leading-5 text-slate-950 dark:text-slate-50">
                             {step.title}
                           </p>
@@ -366,7 +381,7 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
                           </p>
                         </motion.div>
                       ) : null}
-                    </li>
+                    </motion.li>
                   );
                 })}
               </ol>

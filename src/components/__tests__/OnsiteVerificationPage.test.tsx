@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, test, vi } from 'vitest';
 import { OnsiteVerificationPage } from '../OnsiteVerificationPage';
@@ -70,20 +70,25 @@ describe('OnsiteVerificationPage', () => {
 
     expect(screen.getByRole('heading', { name: 'En cuatro pasos' })).toBeInTheDocument();
     expect(screen.getByText('El proceso es simple y lo coordinamos con vos.')).toBeInTheDocument();
-    expect(screen.getByText('Publicás')).toBeInTheDocument();
-    expect(screen.getByText('Coordinamos')).toBeInTheDocument();
-    expect(screen.getByText('Validamos')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Paso 1: Publicás tu propiedad' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Paso 2: Coordinamos la visita' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Paso 3: Validamos identidad y acceso' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Paso 4: Recibís el sello' })).toBeInTheDocument();
-    expect(screen.getByText('Publicás tu propiedad')).toBeInTheDocument();
-    expect(screen.getByText('Cargás la información básica del aviso para que sea visible.')).toBeInTheDocument();
+    let tooltip = screen.getByRole('tooltip');
+    expect(within(tooltip).getByText('Publicás tu propiedad')).toBeInTheDocument();
+    expect(within(tooltip).getByText('Cargás la información básica del aviso para que sea visible.')).toBeInTheDocument();
     expect(screen.getAllByRole('tooltip')).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'Paso 1: Publicás tu propiedad' })).toHaveAttribute('aria-pressed', 'true');
 
     fireEvent.click(screen.getByRole('button', { name: 'Paso 2: Coordinamos la visita' }));
 
-    expect(screen.getByText('Coordinamos la visita')).toBeInTheDocument();
-    expect(screen.getByText('Elegís día y horario para la verificación.')).toBeInTheDocument();
+    tooltip = screen.getByRole('tooltip');
+    expect(within(tooltip).getByText('Coordinamos la visita')).toBeInTheDocument();
+    expect(within(tooltip).getByText('Elegís día y horario para la verificación.')).toBeInTheDocument();
     expect(screen.queryByText('Cargás la información básica del aviso para que sea visible.')).not.toBeInTheDocument();
     expect(screen.getAllByRole('tooltip')).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'Paso 2: Coordinamos la visita' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Paso 1: Publicás tu propiedad' })).toHaveAttribute('aria-pressed', 'false');
 
     expect(screen.queryByRole('heading', { name: 'Lo que mejora cuando verificás' })).not.toBeInTheDocument();
 
