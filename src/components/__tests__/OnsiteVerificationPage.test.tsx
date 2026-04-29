@@ -40,6 +40,21 @@ describe('OnsiteVerificationPage', () => {
     expect(screen.getByText('Servicios publicados')).toBeInTheDocument();
     expect(screen.getByText('Condiciones del lugar')).toBeInTheDocument();
 
+    expect(screen.getByRole('heading', { name: 'Cuando llega el verificador' })).toBeInTheDocument();
+    expect(screen.getByText('Durante la visita se revisa:')).toBeInTheDocument();
+    expect(screen.getByText('Que la propiedad exista y coincida con la ubicación')).toBeInTheDocument();
+    expect(screen.getByText('Que las fotos representen el estado actual')).toBeInTheDocument();
+    expect(screen.getByText('Que los servicios publicados estén disponibles')).toBeInTheDocument();
+    expect(screen.getByText('Que los datos del aviso sean correctos')).toBeInTheDocument();
+    expect(screen.getByText('La visita es simple, no requiere preparación técnica.')).toBeInTheDocument();
+
+    expect(screen.getByRole('heading', { name: 'Quién realiza la verificación' })).toBeInTheDocument();
+    expect(screen.getByText('La verificación la realiza una persona del equipo o un verificador autorizado por la plataforma.')).toBeInTheDocument();
+    expect(screen.getByText('Se identifica antes de la visita')).toBeInTheDocument();
+    expect(screen.getByText('Coordina previamente')).toBeInTheDocument();
+    expect(screen.getByText('No solicita pagos ni datos sensibles')).toBeInTheDocument();
+    expect(screen.getByText('La validación queda registrada dentro de la plataforma.')).toBeInTheDocument();
+
     expect(screen.getByRole('heading', { name: 'Sello Verificado presencialmente' })).toBeInTheDocument();
     expect(screen.getByText('Muestra de forma visible que la propiedad fue revisada en persona.')).toBeInTheDocument();
     expect(screen.getByAltText('Sello Verificado presencialmente')).toBeInTheDocument();
