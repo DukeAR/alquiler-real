@@ -10,31 +10,25 @@ interface OnsiteVerificationPageProps {
   onBack: () => void;
 }
 
-const withoutVerificationPoints = [
-  'Dudas constantes',
-  'Consultas que no avanzan',
-  'Tiempo perdido',
-];
-
-const withVerificationPoints = [
-  'Consultas claras',
-  'Decisiones rápidas',
-  'Reservas más concretas',
+const trustOutcomePoints = [
+  'La propiedad existe',
+  'Hay una persona identificada detrás',
+  'Menor riesgo de fraude',
+  'Mayor confianza para decidir',
 ];
 
 const validationItems = [
-  'Ubicación real',
-  'Fotos actuales',
-  'Datos del aviso',
-  'Servicios publicados',
-  'Condiciones del lugar',
+  'Identidad del anfitrión (DNI)',
+  'Acceso real a la propiedad',
+  'Relación con la propiedad (servicios o documentación)',
+  'Coincidencia básica con la ubicación publicada',
 ];
 
 const verifierVisitChecks = [
-  'Que la propiedad exista y coincida con la ubicación',
-  'Que las fotos representen el estado actual',
-  'Que los servicios publicados estén disponibles',
-  'Que los datos del aviso sean correctos',
+  'Validación de identidad (DNI)',
+  'Confirmación de acceso a la propiedad',
+  'Verificación de vínculo con el lugar',
+  'Coincidencia con la ubicación publicada',
 ];
 
 const verifierIdentityPoints = [
@@ -94,7 +88,7 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
           </h1>
 
           <p className="max-w-xl text-[1rem] leading-7 text-slate-700 dark:text-slate-300">
-            Verificamos tu propiedad en persona para que recibas consultas más claras y seguras.
+            Verificamos identidad y vínculo con la propiedad en persona para que recibas consultas más claras y seguras.
           </p>
 
           <div className="flex flex-col gap-3 sm:flex-row">
@@ -110,37 +104,19 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
 
         <section className="space-y-5 border-t border-slate-200/85 pt-8 dark:border-slate-800 md:pt-10">
           <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Antes y después</p>
             <h2 className="text-[1.55rem] font-semibold leading-[1.08] tracking-[-0.04em] text-slate-950 dark:text-slate-50">
               Qué cambia cuando verificás
             </h2>
           </div>
 
-          <div className="grid gap-8 md:grid-cols-2 md:gap-12">
-            <div className="space-y-4 border-l-2 border-slate-200 pl-5 dark:border-slate-800 md:pr-4">
-              <h3 className="text-[1rem] font-semibold text-slate-900 dark:text-slate-100">Sin verificación</h3>
-              <ul className="space-y-3 text-[0.96rem] leading-7 text-slate-600 dark:text-slate-400">
-                {withoutVerificationPoints.map((point) => (
-                  <li key={point} className="flex items-start gap-2.5">
-                    <Icons.AlertTriangle className="mt-1 h-4 w-4 shrink-0 text-amber-500" />
-                    <span>{point}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="space-y-4 border-l-2 border-brand pl-5 md:pl-6">
-              <h3 className="text-[1rem] font-semibold text-slate-900 dark:text-slate-100">Con verificación</h3>
-              <ul className="space-y-3 text-[0.96rem] leading-7 text-slate-700 dark:text-slate-300">
-                {withVerificationPoints.map((point) => (
-                  <li key={point} className="flex items-start gap-2.5">
-                    <Icons.CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-emerald-500" />
-                    <span>{point}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
+          <ul className="space-y-3 text-[0.96rem] leading-7 text-slate-700 dark:text-slate-300">
+            {trustOutcomePoints.map((point) => (
+              <li key={point} className="flex items-start gap-3">
+                <Icons.CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-emerald-500" />
+                <span>{point}</span>
+              </li>
+            ))}
+          </ul>
         </section>
 
         <section className="space-y-4 border-t border-slate-200/85 pt-8 dark:border-slate-800 md:pt-10">
@@ -159,6 +135,10 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
               </li>
             ))}
           </ul>
+
+          <p className="text-[0.92rem] leading-6 text-slate-500 dark:text-slate-400">
+            No evaluamos el estado del inmueble ni la calidad de los servicios.
+          </p>
         </section>
 
         <section className="rounded-[26px] bg-slate-100/75 px-5 py-5 dark:bg-slate-900/60 md:px-6 md:py-6">
@@ -181,7 +161,7 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
           </ul>
 
           <p className="mt-4 text-[0.92rem] leading-6 text-slate-500 dark:text-slate-400">
-            La visita es simple, no requiere preparación técnica.
+            No se realiza inspección técnica ni evaluación de condiciones del inmueble.
           </p>
         </section>
 
@@ -216,7 +196,10 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
               Sello Verificado presencialmente
             </h2>
             <p className="max-w-lg text-[0.96rem] leading-7 text-slate-600 dark:text-slate-400">
-              Muestra de forma visible que la propiedad fue revisada en persona.
+              Indica que la propiedad fue visitada en persona y que el anfitrión fue identificado.
+            </p>
+            <p className="max-w-lg text-[0.92rem] leading-6 text-slate-500 dark:text-slate-400">
+              No certifica estado, calidad ni condiciones del inmueble.
             </p>
           </div>
 
