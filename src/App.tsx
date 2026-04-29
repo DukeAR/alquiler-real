@@ -132,7 +132,18 @@ const AboutPageWrapper = () => {
 
 const OnsiteVerificationPageWrapper = () => {
   const navigate = useNavigate();
-  return <LazyOnsiteVerificationPage onBack={() => navigate(-1)} />;
+  const location = useLocation();
+
+  const handleBack = () => {
+    if (location.key !== 'default') {
+      navigate(-1);
+      return;
+    }
+
+    navigate('/about', { replace: true });
+  };
+
+  return <LazyOnsiteVerificationPage onBack={handleBack} />;
 };
 
 const HostDashboardWrapper = () => {

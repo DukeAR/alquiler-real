@@ -93,6 +93,23 @@ vi.mock('../components/Register', () => ({
   ),
 }));
 
+vi.mock('../components/AboutPage.tsx', () => ({
+  default: () => <div>About page</div>,
+}));
+
+vi.mock('../components/FAQPage', () => ({
+  FAQPage: () => <div>FAQ page</div>,
+}));
+
+vi.mock('../components/OnsiteVerificationPage', () => ({
+  OnsiteVerificationPage: ({ onBack }: { onBack: () => void }) => (
+    <div>
+      <h1>Onsite verification page</h1>
+      <button type="button" onClick={onBack}>Volver</button>
+    </div>
+  ),
+}));
+
 vi.mock('../components/ProfileViewNew.tsx', () => ({
   default: () => <div>Profile page</div>,
 }));
@@ -266,5 +283,41 @@ describe('App routing states', () => {
     );
 
     expect(await screen.findByText('Host dashboard')).toBeInTheDocument();
+  });
+
+  test('falls back to about when the onsite verification page is opened directly and the user presses back', async () => {
+    render(
+      <MemoryRouter
+        initialEntries={[{ pathname: '/verificacion-presencial', key: 'default' }]}
+      >
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('Onsite verification page')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Volver' }));
+
+    expect(await screen.findByText('About page')).toBeInTheDocument();
+  });
+
+  test('uses history back when the onsite verification page has a previous app entry', async () => {
+    render(
+      <MemoryRouter
+        initialEntries={[
+          { pathname: '/faq', key: 'faq-entry' },
+          { pathname: '/verificacion-presencial', key: 'onsite-entry' },
+        ]}
+        initialIndex={1}
+      >
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('Onsite verification page')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Volver' }));
+
+    expect(await screen.findByText('FAQ page')).toBeInTheDocument();
   });
 });
