@@ -17,6 +17,18 @@ const trustOutcomePoints = [
   'Mayor confianza para decidir',
 ];
 
+const heroBenefitPoints = [
+  'Propiedad real',
+  'Anfitrión identificado',
+  'Menor riesgo',
+];
+
+const nonValidationItems = [
+  'Estado del inmueble',
+  'Calidad de los servicios',
+  'Condiciones técnicas del lugar',
+];
+
 const validationItems = [
   'Identidad del anfitrión (DNI)',
   'Acceso real a la propiedad',
@@ -81,15 +93,24 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
         className="relative mx-auto mb-0 max-w-4xl items-center gap-2 px-6 py-2"
       />
 
-      <main className="mx-auto flex max-w-4xl flex-col gap-9 px-6 py-6 md:gap-10 md:py-8">
-        <section className="max-w-2xl space-y-4">
+      <main className="mx-auto flex max-w-5xl flex-col gap-12 px-6 py-7 md:gap-14 md:py-9">
+        <section className="max-w-3xl space-y-5">
           <h1 className="text-[clamp(2.35rem,5vw,3.7rem)] font-semibold leading-[0.98] tracking-[-0.06em] text-slate-950 dark:text-slate-50">
             Más confianza. Mejores reservas.
           </h1>
 
-          <p className="max-w-xl text-[1rem] leading-7 text-slate-700 dark:text-slate-300">
-            Verificamos identidad y vínculo con la propiedad en persona para que recibas consultas más claras y seguras.
+          <p className="max-w-2xl text-[0.98rem] leading-6 text-slate-700 dark:text-slate-300">
+            Verificamos en persona identidad y vínculo con la propiedad.
           </p>
+
+          <ul className="flex max-w-3xl flex-wrap items-center gap-x-5 gap-y-2 text-[0.92rem] font-medium leading-6 text-slate-600 dark:text-slate-300">
+            {heroBenefitPoints.map((item) => (
+              <li key={item} className="flex items-center gap-2">
+                <Icons.CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
 
           <div className="flex flex-col gap-3 sm:flex-row">
             <Button onClick={openOnsiteVerification}>
@@ -102,113 +123,138 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
           </div>
         </section>
 
-        <section className="space-y-5 border-t border-slate-200/85 pt-8 dark:border-slate-800 md:pt-10">
+        <section className="space-y-6 rounded-[30px] bg-slate-100/75 px-6 py-6 dark:bg-slate-900/60 md:px-8 md:py-7">
           <div className="space-y-2">
-            <h2 className="text-[1.55rem] font-semibold leading-[1.08] tracking-[-0.04em] text-slate-950 dark:text-slate-50">
+            <h2 className="text-[1.62rem] font-semibold leading-[1.08] tracking-[-0.04em] text-slate-950 dark:text-slate-50">
               Qué cambia cuando verificás
             </h2>
           </div>
 
-          <ul className="space-y-3 text-[0.96rem] leading-7 text-slate-700 dark:text-slate-300">
-            {trustOutcomePoints.map((point) => (
-              <li key={point} className="flex items-start gap-3">
-                <Icons.CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-emerald-500" />
-                <span>{point}</span>
-              </li>
-            ))}
-          </ul>
+          <div className="grid gap-8 md:grid-cols-[minmax(0,1fr)_1px_minmax(0,1fr)] md:items-start md:gap-7">
+            <div className="space-y-4">
+              <h3 className="text-[0.98rem] font-semibold text-slate-900 dark:text-slate-100">Respaldo real</h3>
+              <ul className="space-y-3 text-[0.96rem] leading-7 text-slate-700 dark:text-slate-300">
+                {trustOutcomePoints.slice(0, 2).map((point) => (
+                  <li key={point} className="flex items-start gap-3">
+                    <Icons.CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-emerald-500" />
+                    <span>{point}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div aria-hidden="true" className="hidden h-full bg-slate-300/80 dark:bg-slate-700/80 md:block" />
+
+            <div className="space-y-4 md:pl-1">
+              <h3 className="text-[0.98rem] font-semibold text-slate-900 dark:text-slate-100">Impacto en la decisión</h3>
+              <ul className="space-y-3 text-[0.96rem] leading-7 text-slate-700 dark:text-slate-300">
+                {trustOutcomePoints.slice(2).map((point) => (
+                  <li key={point} className="flex items-start gap-3">
+                    <Icons.CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-emerald-500" />
+                    <span>{point}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
         </section>
 
-        <section className="space-y-4 border-t border-slate-200/85 pt-8 dark:border-slate-800 md:pt-10">
+        <section className="space-y-6 border-t border-slate-200/85 pt-8 dark:border-slate-800 md:pt-10">
           <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Validación</p>
-            <h2 className="text-[1.55rem] font-semibold leading-[1.08] tracking-[-0.04em] text-slate-950 dark:text-slate-50">
-              Qué validamos
+            <h2 className="text-[1.62rem] font-semibold leading-[1.08] tracking-[-0.04em] text-slate-950 dark:text-slate-50">
+              Qué revisa esta verificación
             </h2>
           </div>
 
-          <ul className="space-y-3 text-[0.96rem] font-medium leading-7 text-slate-800 dark:text-slate-200">
-            {validationItems.map((item) => (
-              <li key={item} className="flex items-center gap-3">
-                <Icons.CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
-                <span>{item}</span>
-              </li>
-            ))}
-          </ul>
+          <div className="grid gap-10 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] md:gap-12">
+            <div className="space-y-7">
+              <div className="space-y-3">
+                <h3 className="text-[1rem] font-semibold text-slate-900 dark:text-slate-100">Qué validamos</h3>
+                <ul className="space-y-3 text-[0.96rem] font-medium leading-7 text-slate-800 dark:text-slate-200">
+                  {validationItems.map((item) => (
+                    <li key={item} className="flex items-start gap-3">
+                      <Icons.CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-emerald-500" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
 
-          <p className="text-[0.92rem] leading-6 text-slate-500 dark:text-slate-400">
-            No evaluamos el estado del inmueble ni la calidad de los servicios.
-          </p>
-        </section>
+              <div className="space-y-3">
+                <h3 className="text-[1rem] font-semibold text-slate-900 dark:text-slate-100">Qué no validamos</h3>
+                <ul className="space-y-3 text-[0.96rem] leading-7 text-slate-600 dark:text-slate-400">
+                  {nonValidationItems.map((item) => (
+                    <li key={item} className="flex items-start gap-3">
+                      <Icons.X className="mt-1 h-4 w-4 shrink-0 text-slate-400 dark:text-slate-500" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-[0.92rem] leading-6 text-slate-500 dark:text-slate-400">
+                  No evaluamos el estado del inmueble ni la calidad de los servicios.
+                </p>
+              </div>
+            </div>
 
-        <section className="rounded-[26px] bg-slate-100/75 px-5 py-5 dark:bg-slate-900/60 md:px-6 md:py-6">
-          <div className="space-y-2.5">
-            <h2 className="text-[1.45rem] font-semibold leading-[1.08] tracking-[-0.035em] text-slate-950 dark:text-slate-50">
-              Cuando llega el verificador
-            </h2>
-            <p className="text-[0.96rem] leading-7 text-slate-600 dark:text-slate-400">
-              Durante la visita se revisa:
-            </p>
+            <div className="space-y-7">
+              <div className="space-y-3">
+                <h3 className="text-[1rem] font-semibold text-slate-900 dark:text-slate-100">Cómo es la visita</h3>
+                <ul className="space-y-3 text-[0.96rem] leading-7 text-slate-700 dark:text-slate-300">
+                  {verifierVisitChecks.map((item) => (
+                    <li key={item} className="flex items-start gap-3">
+                      <Icons.CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-brand" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-[0.92rem] leading-6 text-slate-500 dark:text-slate-400">
+                  No se realiza inspección técnica ni evaluación de condiciones del inmueble.
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <h3 className="text-[1rem] font-semibold text-slate-900 dark:text-slate-100">Quién verifica</h3>
+                <p className="text-[0.96rem] leading-7 text-slate-600 dark:text-slate-400">
+                  La verificación la realiza una persona del equipo o un verificador autorizado por la plataforma.
+                </p>
+                <ul className="space-y-3 text-[0.96rem] leading-7 text-slate-700 dark:text-slate-300">
+                  {verifierIdentityPoints.map((item) => (
+                    <li key={item} className="flex items-start gap-3">
+                      <Icons.CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-brand" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-[0.92rem] leading-6 text-slate-500 dark:text-slate-400">
+                  La validación queda registrada dentro de la plataforma.
+                </p>
+              </div>
+            </div>
           </div>
-
-          <ul className="mt-4 space-y-3 text-[0.96rem] font-normal leading-7 text-slate-700 dark:text-slate-300">
-            {verifierVisitChecks.map((item) => (
-              <li key={item} className="flex items-start gap-3">
-                <Icons.CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-brand" />
-                <span>{item}</span>
-              </li>
-            ))}
-          </ul>
-
-          <p className="mt-4 text-[0.92rem] leading-6 text-slate-500 dark:text-slate-400">
-            No se realiza inspección técnica ni evaluación de condiciones del inmueble.
-          </p>
-        </section>
-
-        <section className="rounded-[26px] bg-slate-100/75 px-5 py-5 dark:bg-slate-900/60 md:px-6 md:py-6">
-          <div className="space-y-2.5">
-            <h2 className="text-[1.45rem] font-semibold leading-[1.08] tracking-[-0.035em] text-slate-950 dark:text-slate-50">
-              Quién realiza la verificación
-            </h2>
-            <p className="text-[0.96rem] leading-7 text-slate-600 dark:text-slate-400">
-              La verificación la realiza una persona del equipo o un verificador autorizado por la plataforma.
-            </p>
-          </div>
-
-          <ul className="mt-4 space-y-3 text-[0.96rem] font-normal leading-7 text-slate-700 dark:text-slate-300">
-            {verifierIdentityPoints.map((item) => (
-              <li key={item} className="flex items-start gap-3">
-                <Icons.CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-brand" />
-                <span>{item}</span>
-              </li>
-            ))}
-          </ul>
-
-          <p className="mt-4 text-[0.92rem] leading-6 text-slate-500 dark:text-slate-400">
-            La validación queda registrada dentro de la plataforma.
-          </p>
         </section>
 
         <section className="space-y-4 border-t border-slate-200/85 pt-8 dark:border-slate-800 md:pt-10">
-          <div className="mx-auto flex max-w-xl flex-col items-center space-y-2 text-center">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Sello</p>
-            <h2 className="text-[1.55rem] font-semibold leading-[1.08] tracking-[-0.04em] text-slate-950 dark:text-slate-50">
-              Sello Verificado presencialmente
-            </h2>
-            <p className="max-w-lg text-[0.96rem] leading-7 text-slate-600 dark:text-slate-400">
-              Indica que la propiedad fue visitada en persona y que el anfitrión fue identificado.
-            </p>
-            <p className="max-w-lg text-[0.92rem] leading-6 text-slate-500 dark:text-slate-400">
-              No certifica estado, calidad ni condiciones del inmueble.
-            </p>
-          </div>
+          <div className="grid gap-6 rounded-[30px] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.95))] px-6 py-6 shadow-[0_24px_48px_-40px_rgba(15,23,42,0.14)] dark:bg-slate-900/70 md:grid-cols-[minmax(0,16rem)_minmax(0,1fr)] md:items-center md:gap-8 md:px-8 md:py-8">
+            <div className="flex justify-center md:justify-start">
+              <img
+                src="/verified-presencial-badge3.png"
+                alt="Sello Verificado presencialmente"
+                className="h-48 w-48 object-contain md:h-52 md:w-52"
+              />
+            </div>
 
-          <div className="flex justify-center">
-            <img
-              src="/verified-presencial-badge3.png"
-              alt="Sello Verificado presencialmente"
-              className="h-32 w-32 object-contain md:h-36 md:w-36"
-            />
+            <div className="space-y-3 text-center md:text-left">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Sello</p>
+              <h2 className="text-[1.72rem] font-semibold leading-[1.04] tracking-[-0.045em] text-slate-950 dark:text-slate-50">
+                Un respaldo visible desde el primer vistazo
+              </h2>
+              <p className="text-[1rem] leading-7 text-slate-600 dark:text-slate-400">
+                Indica que la propiedad fue visitada en persona y que el anfitrión fue identificado.
+              </p>
+              <p className="text-[0.92rem] leading-6 text-slate-500 dark:text-slate-400">
+                No certifica estado, calidad ni condiciones del inmueble.
+              </p>
+            </div>
           </div>
         </section>
 
@@ -220,13 +266,13 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
             </h2>
           </div>
 
-          <ol className="grid gap-4 text-[0.95rem] text-slate-700 dark:text-slate-300 sm:grid-cols-2 lg:grid-cols-4">
+          <ol className="grid gap-5 text-[0.95rem] text-slate-700 dark:text-slate-300 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
             {flowSteps.map((step, index) => (
-              <li key={step} className="flex items-start gap-3">
-                <span className="text-sm font-semibold text-brand">
+              <li key={step} className="flex items-start gap-4">
+                <span className="text-[1.5rem] font-semibold leading-none text-brand md:text-[1.8rem]">
                   {index + 1}
                 </span>
-                <p className="pt-0.5 font-medium leading-7 text-slate-900 dark:text-slate-100">
+                <p className="pt-0.5 whitespace-nowrap font-medium leading-6 text-slate-900 dark:text-slate-100">
                   {step}
                 </p>
               </li>
@@ -238,7 +284,7 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
           <div className="space-y-2">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Video</p>
             <h2 className="text-[1.55rem] font-semibold leading-[1.08] tracking-[-0.04em] text-slate-950 dark:text-slate-50">
-              Próximamente guía completa
+              Cómo funciona en la práctica
             </h2>
           </div>
 
@@ -260,7 +306,7 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
         <section className="space-y-5 border-t border-slate-200/85 pt-8 dark:border-slate-800 md:pt-10">
           <div className="mx-auto flex max-w-2xl flex-col items-center space-y-2 text-center">
             <h2 className="text-[2.1rem] font-semibold leading-[1.02] tracking-[-0.05em] text-slate-950 dark:text-slate-50 md:text-[2.7rem]">
-              Verificar mejora cómo te eligen.
+              Verificá tu propiedad y destacate desde el primer vistazo.
             </h2>
           </div>
 
