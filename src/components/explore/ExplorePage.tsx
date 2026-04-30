@@ -18,6 +18,8 @@ type ExplorePageProps = {
   disableAutoLoad?: boolean;
 };
 
+const EMPTY_INITIAL_PROPERTIES: Property[] = [];
+
 const defaultFilters: ExploreFilters = {
   minPrice: '',
   maxPrice: '',
@@ -75,7 +77,7 @@ export const buildLocationSuggestions = (items: Property[]): LocationSuggestion[
 const heroBackgroundImage = 'https://images.unsplash.com/photo-1500375592092-40eb2168fd21?auto=format&fit=crop&w=1800&q=80';
 
 export const ExplorePage = ({
-  initialProperties = [],
+  initialProperties = EMPTY_INITIAL_PROPERTIES,
   initialLocationSuggestions,
   disableAutoLoad = false,
 }: ExplorePageProps = {}) => {
