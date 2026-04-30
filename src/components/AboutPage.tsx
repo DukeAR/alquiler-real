@@ -69,12 +69,12 @@ const projectCardIconShellClass = 'inline-flex h-10 w-10 items-center justify-ce
 
 const projectScopeCards: ScopeCard[] = [
   {
-    title: 'Qué ya está validado',
+    title: 'Qué podés revisar en un aviso',
     points: [
       'Quién publica',
-      'Ubicación real',
+      'Si hubo verificación presencial',
       'Fotos del lugar',
-      'Datos básicos validados',
+      'Datos básicos del aviso',
     ],
     cardClassName: 'rounded-[24px] border border-brand/15 bg-brand/[0.06] p-5 shadow-[0_16px_34px_-28px_rgba(67,56,202,0.14)] dark:border-brand/20 dark:bg-brand/10',
     pointClassName: 'flex items-start gap-3 rounded-[18px] border border-brand/10 bg-white/88 px-4 py-3.5 text-[0.92rem] leading-6 text-slate-800 shadow-[0_14px_28px_-24px_rgba(15,23,42,0.12)] dark:border-brand/20 dark:bg-slate-950/70 dark:text-slate-100',
@@ -103,7 +103,7 @@ const projectScopeCards: ScopeCard[] = [
 const verificationLevels: VerificationLevel[] = [
   {
     title: 'Verificación presencial',
-    description: 'Alguien fue al lugar y confirmó que existe y coincide.',
+    description: 'La visita confirma identidad del anfitrión, acceso real, vínculo con el lugar y ubicación durante la visita.',
     icon: Icons.Home,
     cardClassName: 'rounded-[24px] border border-brand/15 bg-brand/[0.06] p-5 shadow-[0_16px_34px_-28px_rgba(67,56,202,0.14)] dark:border-brand/20 dark:bg-brand/10',
     accentClassName: 'hidden',
@@ -111,8 +111,8 @@ const verificationLevels: VerificationLevel[] = [
     iconWrapperClassName: 'bg-brand/10 text-brand shadow-[0_16px_30px_-24px_rgba(67,56,202,0.36)] dark:bg-brand/15 dark:text-brand-light',
   },
   {
-    title: 'Verificación digital',
-    description: 'Información cargada y validada por quien publica.',
+    title: 'Información publicada por el anfitrión',
+    description: 'El aviso muestra datos cargados por quien publica, sin checks presenciales.',
     icon: Icons.Search,
     cardClassName: 'rounded-[24px] border border-slate-200/85 bg-white p-5 shadow-[0_16px_34px_-28px_rgba(15,23,42,0.12)] dark:border-slate-800 dark:bg-slate-900',
     accentClassName: 'hidden',
@@ -402,7 +402,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                       </div>
 
                       <p className="mb-[10px] w-full text-[0.9rem] leading-[1.7] text-[#5B6470]">
-                        Alquiler Real nace para cambiar eso: para que puedas ver, desde el principio, qué parte del aviso está realmente validada.
+                        Alquiler Real nace para cambiar eso: para que puedas ver, desde el principio, qué parte del aviso tiene respaldo real y qué parte sigue siendo información publicada por el anfitrión.
                       </p>
 
                       <p className="mt-[6px] mb-[10px] w-full text-[0.9rem] font-semibold leading-[1.7] text-[#111827]">
@@ -450,7 +450,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                     <div className="space-y-1">
                       <p className="app-eyebrow">Verificación</p>
                       <h2 className="text-[clamp(1.4rem,2vw,1.8rem)] font-semibold leading-[1.08] tracking-[-0.04em] text-slate-950 dark:text-slate-50">
-                        Qué significa que algo esté verificado
+                        Qué significa cada nivel de respaldo
                       </h2>
                     </div>
                   </div>
@@ -462,7 +462,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                   </div>
 
                   <p className={projectCardBodyClass}>
-                    Aunque esté verificado, hay cosas que siguen siendo decisión tuya: precio, reglas y experiencias de otros.
+                    Aunque un aviso tenga verificación presencial, hay cosas que siguen siendo decisión tuya: precio, reglas y experiencias de otros.
                   </p>
                 </section>
 

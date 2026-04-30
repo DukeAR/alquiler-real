@@ -22,7 +22,7 @@ describe('AboutPage', () => {
     expect(screen.getByText('Mirás fotos sin saber si son actuales. Dudás si la ubicación es realmente esa. Y muchas veces no tenés claro quién está del otro lado.')).toBeInTheDocument();
     expect(screen.getByText('Eso le pasa a todo el mundo. Y cuando se trata de vacaciones, no debería ser así.')).toBeInTheDocument();
     expect(screen.getByText('No es un problema de opciones. Es un problema de confianza.')).toBeInTheDocument();
-    expect(screen.getByText('Alquiler Real nace para cambiar eso: para que puedas ver, desde el principio, qué parte del aviso está realmente validada.')).toBeInTheDocument();
+    expect(screen.getByText('Alquiler Real nace para cambiar eso: para que puedas ver, desde el principio, qué parte del aviso tiene respaldo real y qué parte sigue siendo información publicada por el anfitrión.')).toBeInTheDocument();
     expect(screen.getByText('Para que decidir no dependa de adivinar.')).toBeInTheDocument();
     expect(screen.getByText('Menos incertidumbre. Más claridad.')).toBeInTheDocument();
     expect(screen.getByText('Elegís.')).toBeInTheDocument();
@@ -35,13 +35,13 @@ describe('AboutPage', () => {
     expect(screen.queryByText('Alquilar hoy muchas veces es una apuesta. No porque falten opciones, sino porque falta información confiable para decidir.')).not.toBeInTheDocument();
     expect(screen.queryByText('Alquiler Real nace para cambiar eso: para que puedas ver, desde el principio, qué parte del aviso está realmente comprobada antes de hablar, reservar o pagar.')).not.toBeInTheDocument();
     expect(screen.queryByText('La idea es simple: menos incertidumbre, más claridad.')).not.toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Qué ya está validado' })).toBeInTheDocument();
-    expect(screen.getByText('Ubicación real')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Qué podés revisar en un aviso' })).toBeInTheDocument();
+    expect(screen.getByText('Si hubo verificación presencial')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Qué sigue dependiendo de vos' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Qué significa que algo esté verificado' })).toBeInTheDocument();
-    expect(screen.getByText('Alguien fue al lugar y confirmó que existe y coincide.')).toBeInTheDocument();
-    expect(screen.getByText('Información cargada y validada por quien publica.')).toBeInTheDocument();
-    expect(screen.getByText('Aunque esté verificado, hay cosas que siguen siendo decisión tuya: precio, reglas y experiencias de otros.')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Qué significa cada nivel de respaldo' })).toBeInTheDocument();
+    expect(screen.getByText('La visita confirma identidad del anfitrión, acceso real, vínculo con el lugar y ubicación durante la visita.')).toBeInTheDocument();
+    expect(screen.getByText('El aviso muestra datos cargados por quien publica, sin checks presenciales.')).toBeInTheDocument();
+    expect(screen.getByText('Aunque un aviso tenga verificación presencial, hay cosas que siguen siendo decisión tuya: precio, reglas y experiencias de otros.')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Alquilar debería ser simple.' })).toBeInTheDocument();
     expect(screen.getByText('No debería ser una apuesta. No deberías tener que dudar de cada foto, de cada ubicación o de cada persona con la que hablás.')).toBeInTheDocument();
     expect(screen.getByText('Alquiler Real existe para eso: para que puedas elegir con información clara, hablar con más confianza y reservar sabiendo mejor dónde te estás metiendo.')).toBeInTheDocument();
