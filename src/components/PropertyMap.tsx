@@ -146,10 +146,8 @@ export const PropertyMap: React.FC<PropertyMapProps> = ({ properties, onProperty
                     const verification = getPropertyVerificationDetails(property);
                     const isHighlighted = activePropertyId === property.id || hoveredPropertyId === property.id;
                     const isPresencialVerified = verification.isFullyVerified;
-                    const usesVerifiedCardLayout = verification.score >= REAL_VERIFICATION_FILTER_MIN_SCORE;
                     const propertyTypeLabel = getPropertyTypeLabel(property);
                     const guestCapacityLabel = getGuestCapacityLabel(Number(property.maxGuests) || null);
-                    const verifiedCardSummary = `${verification.countLabel} · Información validada`;
 
                     return (
                     <Marker
@@ -206,40 +204,17 @@ export const PropertyMap: React.FC<PropertyMapProps> = ({ properties, onProperty
                                             <span className="ml-1 text-[0.72rem] font-medium tracking-normal text-slate-500">/ noche</span>
                                         </p>
 
-                                        {usesVerifiedCardLayout && !isPresencialVerified ? (
+                                        {!isPresencialVerified ? (
                                             <p className="m-0 text-[0.74rem] leading-5 text-slate-500">
-                                                {verifiedCardSummary}
+                                                {verification.countLabel}
                                             </p>
                                         ) : null}
 
-                                        {!usesVerifiedCardLayout ? (
+                                        {!isPresencialVerified ? (
                                             <div className="space-y-2">
-                                                <p className="m-0 text-[0.74rem] font-medium leading-5 text-slate-600">
+                                                <p className="m-0 text-[0.74rem] leading-5 text-slate-500">
                                                     {verification.countLabel}
                                                 </p>
-
-                                                <ul className="space-y-1.5" aria-label="Checks de verificación">
-                                                    {verification.items.map((check) => (
-                                                        <li
-                                                            key={check.key}
-                                                            className="flex items-center gap-2 text-[0.72rem] font-medium leading-4"
-                                                        >
-                                                            <span
-                                                                className={cn(
-                                                                    'shrink-0 text-[0.74rem] font-semibold leading-none',
-                                                                    check.status === 'complete' ? 'text-emerald-600' : 'text-slate-300',
-                                                                )}
-                                                                aria-hidden="true"
-                                                            >
-                                                                ✔
-                                                            </span>
-
-                                                            <span className={cn(check.status === 'complete' ? 'text-slate-600' : 'text-slate-400')}>
-                                                                {check.label}
-                                                            </span>
-                                                        </li>
-                                                    ))}
-                                                </ul>
                                             </div>
                                         ) : null}
                                     </div>

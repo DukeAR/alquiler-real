@@ -72,7 +72,7 @@ describe('FavoritesView integration', () => {
     useAuthMock.mockReturnValue({ user: { id: 'u1' } });
   });
 
-  test('renders saved properties ordered by real verification with the same card summary', () => {
+  test('renders saved properties ordered by the new visible verification levels', () => {
     useFavoritesMock.mockReturnValue({
       favoritesMap: new Map([
         ['p2', secondarySavedProperty],
@@ -91,17 +91,13 @@ describe('FavoritesView integration', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByText('Compará con calma, retomá lo que te interesó y revisá primero las que ya tienen más validaciones visibles.')).toBeInTheDocument();
+    expect(screen.getByText('Compará con calma, retomá lo que te interesó y revisá primero las que ya muestran verificación presencial.')).toBeInTheDocument();
     expect(screen.getAllByRole('heading', { level: 3 }).map((title) => title.textContent)).toEqual([
       'Casa frente al mar',
       'Departamento tranquilo',
     ]);
-    expect(screen.getByText('Validaciones visibles')).toBeInTheDocument();
-    expect(screen.getByText('2/4')).toBeInTheDocument();
-    expect(screen.getAllByText('Ubicación confirmada').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Identidad del anfitrión validada').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Acceso real a la propiedad').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Vínculo comprobable con el lugar').length).toBeGreaterThan(0);
+    expect(screen.getByText('Información publicada por el anfitrión')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Verificado presencialmente' })).toBeInTheDocument();
     expect(screen.queryByText('Verificación parcial')).toBeNull();
     expect(screen.queryByText('5 comprobaciones visibles')).toBeNull();
     expect(screen.queryByText('Mejor verificado')).toBeNull();

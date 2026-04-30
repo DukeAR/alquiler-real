@@ -114,7 +114,7 @@ export const USER_VERIFICATION_LEVEL_META: Record<UserVerificationLevel, LevelMe
     shortLabel: 'Contacto confirmado',
     levelLabel: 'Base de contacto lista',
     headline: 'Tu cuenta ya muestra la base mínima de contacto.',
-    summary: 'Email y teléfono ya quedaron confirmados como información validada de la cuenta.',
+    summary: 'Email y teléfono ya quedaron confirmados dentro de tu cuenta.',
   },
   NIVEL_2: {
     shortLabel: 'Perfil completo',

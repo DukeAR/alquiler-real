@@ -140,21 +140,21 @@ const hostDifferentiators: RoleBenefit[] = [
 ];
 
 const hostVerificationChecklist = [
-  'Ubicación confirmada',
-  'Identidad del anfitrión validada',
-  'Acceso real a la propiedad',
+  'Identidad del anfitrión verificada',
+  'Acceso real a la propiedad confirmado',
   'Vínculo comprobable con el lugar',
+  'Ubicación validada durante visita',
 ];
 
 const guestBenefits: RoleBenefit[] = [
   {
     title: 'Quién publica',
-    description: 'Si hubo identidad confirmada, no hablás con un perfil anónimo.',
+    description: 'Si un aviso tiene verificación presencial, sabés quién acreditó su identidad durante la visita.',
     icon: Icons.BadgeCheck,
   },
   {
     title: 'Dónde está el lugar',
-    description: 'Podés revisar si la ubicación confirmada coincide con la propiedad.',
+    description: 'Si hubo visita presencial, la ubicación quedó validada en el lugar.',
     icon: Icons.MapPin,
   },
   {
@@ -171,7 +171,7 @@ const guestSteps: StepCard = {
   icon: Icons.ListTodo,
   steps: [
     'Elegí la zona y compará propiedades.',
-    'Revisá quién publica, si hay identidad confirmada, ubicación confirmada y reseñas reales.',
+    'Revisá si el aviso tiene verificación presencial, quién publica y qué reseñas reales tiene.',
     'Hacé preguntas concretas antes de avanzar.',
     'Coordiná el pago cuando ya hayas revisado ubicación, reseñas reales y reglas básicas.',
   ],
@@ -624,7 +624,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                     </div>
 
                     <p className="text-[0.94rem] leading-7 text-slate-500 dark:text-slate-400">
-                      No evaluamos el estado del inmueble ni la calidad de los servicios.
+                      No evaluamos estado ni calidad del inmueble.
                     </p>
 
                   </div>
@@ -714,15 +714,15 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                     <SectionTitle
                       eyebrow="Listo para explorar"
                       as="h3"
-                      heading="Explorá sabiendo qué ya fue validado"
-                      description="No reemplaza una visita ni una charla. Sirve para llegar a esa charla sabiendo qué ya fue validado."
+                      heading="Explorá sabiendo qué ya fue confirmado"
+                      description="No reemplaza una visita ni una charla. Sirve para llegar a esa charla sabiendo qué quedó confirmado."
                       className="max-w-sm"
                     />
 
                     <div className="space-y-3">
                       {[
-                        'Podés ver quién publica y qué ya se revisó en el aviso.',
-                        'Podés comparar ubicación confirmada, quién publica y qué ya fue validado en el aviso.',
+                        'Podés ver quién publica y si el aviso tiene verificación presencial.',
+                        'Podés comparar qué quedó confirmado durante la visita, quién publica y qué reseñas reales tiene.',
                         'La decisión sigue siendo tuya.',
                       ].map((point) => (
                         <div key={point} className="flex items-start gap-3 rounded-[18px] border border-slate-200/80 bg-white/88 px-4 py-3.5 text-[0.92rem] leading-6 text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300">

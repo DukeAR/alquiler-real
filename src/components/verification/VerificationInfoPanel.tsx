@@ -6,20 +6,20 @@ type VerificationInfoPanelProps = {
 
 const VERIFICATION_INFO_ITEMS = [
   {
-    title: 'Ubicación confirmada',
-    description: 'Confirmamos que la propiedad coincide con la ubicación publicada.',
+    title: 'Identidad del anfitrión verificada',
+    description: 'Durante la visita confirmamos la identidad del anfitrión asociada al aviso.',
   },
   {
-    title: 'Identidad del anfitrión validada',
-    description: 'Validamos la identidad de quien publica el aviso.',
-  },
-  {
-    title: 'Acceso real a la propiedad',
-    description: 'Confirmamos que hay una persona identificada con acceso real al lugar.',
+    title: 'Acceso real a la propiedad confirmado',
+    description: 'La visita confirmó que existe acceso real a la propiedad publicada.',
   },
   {
     title: 'Vínculo comprobable con el lugar',
-    description: 'Reunimos respaldo que vincula al anfitrión con la propiedad.',
+    description: 'La visita dejó respaldo comprobable del vínculo entre el anfitrión y el lugar.',
+  },
+  {
+    title: 'Ubicación validada durante visita',
+    description: 'La ubicación quedó validada durante la visita presencial al lugar.',
   },
 ] as const;
 
@@ -57,7 +57,7 @@ export const VerificationInfoPanel = ({ className }: VerificationInfoPanelProps)
         <div className="space-y-2">
           <p className="text-base font-semibold text-slate-900">La verificación reduce dudas antes de reservar.</p>
           <p className="text-sm leading-6 text-slate-600">Confirmamos que la propiedad existe y que hay una persona identificada con acceso al lugar.</p>
-          <p className="text-sm leading-6 text-slate-600">No evaluamos el estado del inmueble ni la calidad de los servicios.</p>
+          <p className="text-sm leading-6 text-slate-600">No evaluamos estado ni calidad del inmueble.</p>
         </div>
       </div>
     </section>

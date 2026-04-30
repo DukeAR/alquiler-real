@@ -41,17 +41,17 @@ export const VerificationDetailsBlock = ({
 
       <div className="mt-5 grid gap-4 lg:grid-cols-2">
         <div className="space-y-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">Ya visible</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">Señales visibles</p>
           <VerificationSnippetList
             summary={summary}
             status="complete"
             showDescriptions={showDescriptions}
-            emptyText="Todavia no hay validaciones visibles en este momento."
+            emptyText="Todavia no hay señales visibles en este momento."
           />
         </div>
 
         <div className="space-y-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">Todavia no visible</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">Pendiente de mostrar</p>
           {pendingItems.length > 0 ? (
             <VerificationSnippetList
               summary={summary}

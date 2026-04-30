@@ -218,7 +218,7 @@ export const HostProfileView: React.FC<HostProfileViewProps> = ({ profile, onBac
         <section className="rounded-[32px] border border-slate-200/80 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <div className="space-y-2">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Validaciones del aviso</p>
-            <h3 className="text-xl font-semibold tracking-tight text-slate-950 dark:text-slate-50">Qué propiedades ya tienen validaciones visibles</h3>
+            <h3 className="text-xl font-semibold tracking-tight text-slate-950 dark:text-slate-50">Qué propiedades ya tienen verificación presencial o respaldo interno</h3>
           </div>
 
           <div className="mt-5 grid gap-3 md:grid-cols-3">

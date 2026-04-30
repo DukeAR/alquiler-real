@@ -300,16 +300,16 @@ export const ProfileViewNew = ({ initialData, disableAutoLoad = false }: Profile
   const verificationSupportText = pendingChecks === 0
     ? 'Ya están visibles las 5 validaciones disponibles en tu cuenta.'
     : missingRequirementsText
-      ? `Si querés sumar más información validada, hoy podés revisar: ${missingRequirementsText}.`
-      : 'Podés sumar más información validada desde esta misma pantalla si te sirve.';
+      ? `Si querés sumar más respaldo visible, hoy podés revisar: ${missingRequirementsText}.`
+      : 'Podés sumar más respaldo visible desde esta misma pantalla si te sirve.';
   const verificationVisibilityText = pendingChecks === 0
-    ? 'Tu cuenta ya muestra toda la información validada disponible.'
+    ? 'Tu cuenta ya muestra todo el respaldo visible disponible.'
     : completedChecks > 0
-      ? `Tu cuenta ya muestra ${completedChecks} ${completedChecks === 1 ? 'validación visible' : 'validaciones visibles'}.`
-      : 'Tu cuenta todavía no muestra validaciones visibles.';
+      ? `Tu cuenta ya muestra ${completedChecks} ${completedChecks === 1 ? 'señal visible' : 'señales visibles'}.`
+      : 'Tu cuenta todavía no muestra señales visibles.';
   const verificationVisibilityHelperText = pendingChecks === 0
     ? 'No hace falta sumar nada más para mostrar las validaciones disponibles.'
-    : 'Si querés, podés revisar este bloque para sumar más información validada.';
+    : 'Si querés, podés revisar este bloque para sumar más respaldo visible.';
 
   const handlePremiumVerificationCheckout = async () => {
     if (!premiumDocumentaryOffer) {
@@ -537,7 +537,7 @@ export const ProfileViewNew = ({ initialData, disableAutoLoad = false }: Profile
                       <VerificationSnippetList
                         summary={verificationSummaryData}
                         status="complete"
-                        emptyText="Todavía no hay validaciones visibles en tu cuenta."
+                        emptyText="Todavía no hay señales visibles en tu cuenta."
                       />
                     </div>
 

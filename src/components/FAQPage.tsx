@@ -61,8 +61,8 @@ const validationBuckets: ValidationBucket[] = [
     icon: Icons.ShieldCheck,
     tone: 'positive',
     items: [
-      'Quién publica, cuando esa identidad quedó confirmada.',
-      'Si hay ubicación confirmada o si la ubicación coincide con el lugar.',
+      'Quién publica y, si hubo verificación presencial, qué quedó confirmado durante la visita.',
+      'Si la ubicación fue validada durante una visita presencial.',
       'Qué reseñas reales o registro del lugar hay.',
       'Qué parte del aviso ya está clara antes de hablar o pagar.',
     ],
@@ -486,7 +486,7 @@ export const FAQPage: React.FC<FAQPageProps> = ({ onBack }) => {
             eyebrow="Para cada rol"
             as="h2"
             heading="Cómo cambia si publicás o reservás"
-            description="La misma información sirve para publicar un aviso más claro o para reservar viendo qué ya fue validado."
+            description="La misma información sirve para publicar un aviso más claro o para reservar viendo qué quedó confirmado."
             className="max-w-3xl"
           />
 

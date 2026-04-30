@@ -580,8 +580,8 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
           verificationProgress,
           completedVerificationItems: verificationItems.filter((item) => item.status === 'complete'),
           pendingVerificationItems: verificationItems.filter((item) => item.status !== 'complete'),
-          completedVerificationDetails: verificationDetails.items.filter((item) => item.status === 'complete'),
-          pendingVerificationDetails: verificationDetails.items.filter((item) => item.status !== 'complete'),
+          completedVerificationDetails: verificationItems.filter((item) => item.status === 'complete'),
+          pendingVerificationDetails: verificationItems.filter((item) => item.status !== 'complete'),
         };
       })
       .sort((left: any, right: any) => {
@@ -725,8 +725,8 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
         eyebrow: 'Genera mas confianza',
         title: `Mejora ${propertyNeedingVerification.title}`,
         description: propertyNeedingVerification.pendingVerificationDetails.length === 1
-          ? `Te falta ${propertyNeedingVerification.pendingVerificationDetails[0]?.label?.toLowerCase() || 'una validación visible'} para que el aviso quede más claro.`
-          : `Te faltan ${propertyNeedingVerification.pendingVerificationDetails.length} validaciones visibles para que el aviso se entienda mejor y genere más confianza.`,
+          ? `Te falta ${propertyNeedingVerification.pendingVerificationDetails[0]?.label?.toLowerCase() || 'un paso de respaldo'} para que el aviso muestre mejor respaldo visible.`
+          : `Te faltan ${propertyNeedingVerification.pendingVerificationDetails.length} pasos de respaldo para acercar el aviso a la verificación presencial.`,
         actionLabel: 'Mejorar aviso',
         icon: <Icons.Shield className="h-5 w-5" />,
         kind: 'property',
@@ -1234,7 +1234,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
                       {showOnsiteAction ? (
                         <div className="rounded-[20px] border border-indigo-200/70 bg-indigo-50/70 p-3 dark:border-indigo-900/40 dark:bg-indigo-950/30">
                           <p className="eyebrow text-indigo-700 dark:text-indigo-300">Validación adicional</p>
-                          <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-100">Podés solicitar una verificación presencial para sumar otra validación visible y generar más confianza.</p>
+                          <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-100">Podés solicitar una verificación presencial para que el aviso muestre el sello completo cuando se confirme la visita.</p>
                           <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
                             {property.premiumOnsiteOffer.complimentaryReason
                               ? property.premiumOnsiteOffer.complimentaryReason

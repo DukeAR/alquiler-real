@@ -299,10 +299,10 @@ const PRESENCIAL_VERIFICATION_STEPS: PresencialVerificationStep[] = [
 ];
 
 const PRESENCIAL_VERIFICATION_ITEMS = [
-  'Ubicación confirmada',
-  'Identidad del anfitrión validada',
-  'Acceso real a la propiedad',
+  'Identidad del anfitrión verificada',
+  'Acceso real a la propiedad confirmado',
   'Vínculo comprobable con el lugar',
+  'Ubicación validada durante visita',
 ] as const;
 
 const PresencialVerificationInfoCard: React.FC = () => {
@@ -382,10 +382,10 @@ const PresencialVerificationInfoCard: React.FC = () => {
               Solo propiedades con verificación presencial completa
             </h4>
             <p className="text-[16px] leading-[1.5] text-[#64748B]">
-              Para mostrar este sello, confirmamos ubicación, identidad, acceso real y vínculo comprobable con el lugar.
+              Para mostrar este sello, confirmamos identidad, acceso real, vínculo comprobable y ubicación durante la visita.
             </p>
             <p className="text-[14px] leading-[1.5] text-[#64748B]">
-              No evaluamos el estado del inmueble ni la calidad de los servicios.
+              No evaluamos estado ni calidad del inmueble.
             </p>
           </div>
 
@@ -1514,10 +1514,9 @@ export const PropertyDetailShell: React.FC<{
           >
             {showPremiumVerificationInfoCard ? (
               <PresencialVerificationInfoCard />
-            ) : (
-              <ul className="flex flex-wrap gap-2.5" aria-label="Validaciones del aviso">
+            ) : verificationPreviewItems.length > 0 ? (
+              <ul className="flex flex-wrap gap-2.5" aria-label="Estado visible del aviso">
                 {verificationPreviewItems.map((item) => {
-                  const isComplete = item.status === 'complete';
                   const isTooltipVisible = activeVerificationTooltip?.key === item.key;
                   const tooltipId = `property-verification-tooltip-${item.key}`;
 
@@ -1546,24 +1545,16 @@ export const PropertyDetailShell: React.FC<{
 
                           showVerificationTooltip(item.key);
                         }}
-                        className={cn(
-                          'inline-flex cursor-pointer items-center gap-2 rounded-full border px-3 py-2 text-[13px] font-medium leading-none transition-all duration-200 ease-out hover:-translate-y-px hover:shadow-[0_14px_24px_-20px_rgba(15,23,42,0.35)] focus-visible:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/20',
-                          isComplete
-                            ? 'border-emerald-200/90 bg-emerald-50 text-slate-800'
-                            : 'border-slate-200 bg-slate-100 text-slate-500',
-                        )}
+                        className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-emerald-200/90 bg-emerald-50 px-3 py-2 text-[13px] font-medium leading-none text-slate-800 transition-all duration-200 ease-out hover:-translate-y-px hover:shadow-[0_14px_24px_-20px_rgba(15,23,42,0.35)] focus-visible:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/20"
                       >
                         <span
-                          className={cn(
-                            'inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full',
-                            isComplete ? 'text-emerald-600' : 'text-slate-400',
-                          )}
+                          className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-emerald-600"
                           aria-hidden="true"
                         >
-                          {isComplete ? <Icons.Check className="h-3.5 w-3.5" /> : <Icons.Circle className="h-2.5 w-2.5 fill-current" />}
+                          <Icons.Check className="h-3.5 w-3.5" />
                         </span>
 
-                        <span className={cn('whitespace-nowrap', isComplete ? 'text-slate-800' : 'text-slate-500')}>
+                        <span className="whitespace-nowrap text-slate-800">
                           {item.detailLabel}
                         </span>
                       </button>
@@ -1572,6 +1563,10 @@ export const PropertyDetailShell: React.FC<{
                   );
                 })}
               </ul>
+            ) : (
+              <p className="rounded-[18px] border border-slate-200/80 bg-slate-50/90 px-4 py-3 text-sm leading-6 text-slate-600">
+                {verificationDetails.countLabel}. No evaluamos estado ni calidad del inmueble.
+              </p>
             )}
           </section>
 

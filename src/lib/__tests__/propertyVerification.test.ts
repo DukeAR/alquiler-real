@@ -34,23 +34,23 @@ describe('propertyVerification', () => {
     expect(property.verificationScore).toBe(4);
     expect(getPropertyVerificationScore(property)).toBe(4);
     expect(getPropertyVerificationItems(property).map((item) => item.label)).toEqual([
-      'Identidad del anfitrión validada',
-      'Ubicación confirmada',
+      'Identidad del anfitrión validada en la plataforma',
+      'Ubicación del aviso cargada',
       'Punto exacto del aviso',
       'Respaldo visual del aviso',
       'Disponibilidad pendiente de confirmación',
     ]);
     expect(getPropertyVerificationBadge(property)).toEqual({
-      score: 4,
-      max: 5,
-      label: 'Verificación parcial (4/5)',
-      summaryLabel: 'Verificación parcial (4/5)',
-      compactLabel: 'Verificación parcial',
-      countLabel: '4/5',
-      levelLabel: 'Verificación parcial',
-      description: 'Este aviso tiene información confirmada, pero hay puntos pendientes.',
+      score: 0,
+      max: 4,
+      label: 'Información publicada por el anfitrión',
+      summaryLabel: 'Información publicada por el anfitrión',
+      compactLabel: 'Información publicada por el anfitrión',
+      countLabel: 'Información publicada por el anfitrión',
+      levelLabel: 'Información publicada por el anfitrión',
+      description: 'La información visible de este aviso fue publicada por el anfitrión.',
       isFullyVerified: false,
-      isCoordinationReady: true,
+      isCoordinationReady: false,
     });
   });
 
@@ -62,17 +62,11 @@ describe('propertyVerification', () => {
       videoValidated: false,
     });
 
-    expect(details.summaryLabel).toBe('Verificación parcial (2/4)');
-    expect(details.compactLabel).toBe('Verificación parcial');
-    expect(details.description).toBe('La verificación reduce dudas antes de reservar.');
-    expect(details.helperText).toBe('Ves 4 validaciones reales que reducen dudas antes de reservar.');
-    expect(details.items.map((item) => item.status)).toEqual(['complete', 'complete', 'pending', 'pending']);
-    expect(details.items.map((item) => item.label)).toEqual([
-      'Ubicación confirmada',
-      'Identidad del anfitrión validada',
-      'Acceso real a la propiedad',
-      'Vínculo comprobable con el lugar',
-    ]);
+    expect(details.summaryLabel).toBe('Información publicada por el anfitrión');
+    expect(details.compactLabel).toBe('Información publicada por el anfitrión');
+    expect(details.description).toBe('La información visible de este aviso fue publicada por el anfitrión.');
+    expect(details.helperText).toBe('No evaluamos estado ni calidad del inmueble.');
+    expect(details.items).toEqual([]);
   });
 
   test('ignores legacy price and generic data items when normalizing explicit verification arrays', () => {
@@ -85,43 +79,38 @@ describe('propertyVerification', () => {
       ],
     });
 
-    expect(details.score).toBe(1);
-    expect(details.items).toHaveLength(4);
-    expect(details.items.find((item) => item.key === 'hostIdentityValidated')?.status).toBe('complete');
-    expect(details.items.find((item) => item.key === 'locationConfirmed')?.status).toBe('pending');
-    expect(details.items.find((item) => item.key === 'realPropertyAccess')?.status).toBe('pending');
-    expect(details.items.find((item) => item.key === 'relationshipProof')?.status).toBe('pending');
+    expect(details.score).toBe(0);
+    expect(details.items).toHaveLength(0);
+    expect(details.items.find((item) => item.key === 'locationConfirmed')).toBeUndefined();
+    expect(details.items.find((item) => item.key === 'realPropertyAccess')).toBeUndefined();
+    expect(details.items.find((item) => item.key === 'relationshipProof')).toBeUndefined();
   });
 
-  test('does not infer availability from legacy relationship flags alone', () => {
+  test('does not expose relationship or location checks without presencial verification', () => {
     const details = getPropertyVerificationDetails({
       identityValidated: true,
       locationVerified: true,
       propertyRelationshipVerified: true,
     });
 
-    expect(details.summaryLabel).toBe('Verificación parcial (3/4)');
-    expect(details.items.find((item) => item.key === 'relationshipProof')).toEqual(expect.objectContaining({
-      key: 'relationshipProof',
-      label: 'Vínculo comprobable con el lugar',
-      status: 'complete',
-    }));
+    expect(details.summaryLabel).toBe('Información publicada por el anfitrión');
+    expect(details.items).toEqual([]);
   });
 
-  test('derives Explore guidance labels from the real verification score and top-result position', () => {
-    expect(getPropertyVerificationGuidanceLabel({ verificationScore: 4 }, { isTopResult: true })).toBe('Más verificado');
-    expect(getPropertyVerificationGuidanceLabel({ verificationScore: 4 }, { isTopResult: false })).toBeNull();
-    expect(getPropertyVerificationGuidanceLabel({ verificationScore: 3 }, { isTopResult: false })).toBeNull();
-    expect(getPropertyVerificationGuidanceLabel({ verificationScore: 2 }, { isTopResult: true })).toBeNull();
+  test('only exposes an explore guidance label for presencial verification', () => {
+    expect(getPropertyVerificationGuidanceLabel({ hasPresencialVerification: true }, { isTopResult: true })).toBe('Verificado presencialmente');
+    expect(getPropertyVerificationGuidanceLabel({ hasPresencialVerification: true }, { isTopResult: false })).toBe('Verificado presencialmente');
+    expect(getPropertyVerificationGuidanceLabel({ identityValidated: true }, { isTopResult: true })).toBeNull();
+    expect(getPropertyVerificationGuidanceLabel({ verificationScore: 4 }, { isTopResult: true })).toBeNull();
   });
 
-  test('derives the detail guidance message from the real verification score', () => {
-    expect(getPropertyVerificationGuidanceMessage({ verificationScore: 4 })).toBe('Este aviso muestra más validaciones visibles que la mayoría.');
-    expect(getPropertyVerificationGuidanceMessage({ verificationScore: 3 })).toBe('Este aviso ya tiene varias validaciones visibles.');
+  test('derives the detail guidance message from the visible verification level', () => {
+    expect(getPropertyVerificationGuidanceMessage({ hasPresencialVerification: true })).toBe('Este aviso tiene verificación presencial.');
+    expect(getPropertyVerificationGuidanceMessage({ identityValidated: true })).toBeNull();
     expect(getPropertyVerificationGuidanceMessage({ verificationScore: 2 })).toBeNull();
   });
 
-  test('treats five complete checks as the premium verification state and rejects incomplete premium flags', () => {
+  test('requires explicit presencial verification and never infers it from partial signals', () => {
     const fullyVerified = getPropertyVerificationBadge({
       identityValidated: true,
       locationVerified: true,
@@ -140,10 +129,10 @@ describe('propertyVerification', () => {
       hasPresencialVerification: true,
     });
 
-    expect(fullyVerified.summaryLabel).toBe('Verificado presencialmente (5/5)');
-    expect(fullyVerified.isFullyVerified).toBe(true);
-    expect(incompletePremiumFlag.summaryLabel).toBe('Verificación parcial (4/5)');
-    expect(incompletePremiumFlag.isFullyVerified).toBe(false);
+    expect(fullyVerified.summaryLabel).toBe('Información publicada por el anfitrión');
+    expect(fullyVerified.isFullyVerified).toBe(false);
+    expect(incompletePremiumFlag.summaryLabel).toBe('Verificación presencial');
+    expect(incompletePremiumFlag.isFullyVerified).toBe(true);
     expect(meetsRealVerificationFilter({
       identityValidated: true,
       locationVerified: true,
@@ -151,7 +140,7 @@ describe('propertyVerification', () => {
       availabilityValidated: true,
       coordinates: { lat: -36.7, lng: -56.7 },
       hasPresencialVerification: false,
-    })).toBe(true);
+    })).toBe(false);
     expect(meetsRealVerificationFilter({
       identityValidated: true,
       locationVerified: true,
@@ -159,10 +148,10 @@ describe('propertyVerification', () => {
       availabilityValidated: false,
       coordinates: { lat: -36.7, lng: -56.7 },
       hasPresencialVerification: true,
-    })).toBe(false);
+    })).toBe(true);
   });
 
-  test('keeps 5/5 properties together above lower verification levels without a separate flag boost', () => {
+  test('keeps presencial verification above lower levels', () => {
     const sorted = sortPropertiesByCatalogOrder([
       {
         id: 'p1',
@@ -194,10 +183,10 @@ describe('propertyVerification', () => {
       },
     ], 'verification');
 
-    expect(sorted.map((property) => property.id)).toEqual(['p1', 'p2', 'p3']);
+    expect(sorted.map((property) => property.id)).toEqual(['p2', 'p1', 'p3']);
   });
 
-  test('sorts first by verification score and then by verified location', () => {
+  test('sorts first by visible level and then by the internal tie breakers', () => {
     const sorted = sortPropertiesByCatalogOrder([
       { id: 'p1', identityValidated: true, verificationPhotoCount: 2, availabilityValidated: true, price: 90_000 },
       { id: 'p2', locationVerified: true, lat: -37.0, lng: -56.8, verificationPhotoCount: 2, price: 120_000 },

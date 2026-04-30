@@ -45,7 +45,7 @@ const DocumentaryIdentityStep: React.FC<{
         <Icons.FileText className="h-8 w-8 text-brand" />
       </div>
       <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Validación documental adicional</h1>
-      <p className="font-medium text-slate-500">Sumá DNI y selfie como información validada extra para tu perfil.</p>
+      <p className="font-medium text-slate-500">Sumá DNI y selfie como respaldo documental extra para tu perfil.</p>
     </div>
 
     {showPurchaseHint ? (

@@ -62,7 +62,7 @@ describe('PropertyCard', () => {
     useAuthMock.mockReturnValue({ user: { id: 'u1' } });
   });
 
-  test('renders the standard card model with visible verification evidence', () => {
+  test('renders the standard card model with only the host-published info state', () => {
     render(
       <PropertyCard
         property={sampleProperty}
@@ -81,8 +81,9 @@ describe('PropertyCard', () => {
     expect(screen.queryByText('12 reseñas')).toBeNull();
     expect(screen.queryByTestId('property-card-premium-badge')).toBeNull();
     const verificationBlock = screen.getByTestId('property-card-verification');
-    expect(verificationBlock).toHaveAttribute('aria-label', '3/4 · Información validada');
-    expect(verificationBlock).toHaveTextContent('3/4 · Información validada');
+    expect(verificationBlock).toHaveAttribute('aria-label', 'Información publicada por el anfitrión');
+    expect(verificationBlock).toHaveTextContent('Información publicada por el anfitrión');
+    expect(verificationBlock).not.toHaveTextContent('Verificación básica');
     expect(within(verificationBlock).queryByRole('list')).toBeNull();
     expect(within(verificationBlock).queryByText('Anfitrión confirmado')).toBeNull();
     expect(screen.queryByRole('img', { name: 'Verificado presencialmente' })).toBeNull();
@@ -94,9 +95,12 @@ describe('PropertyCard', () => {
     expect(screen.queryByText('Abrir ficha')).toBeNull();
     expect(screen.getByText('Ver detalle')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Abrir detalle de Casa frente al mar/i })).toBeInTheDocument();
+    expect(verificationBlock).toHaveAttribute('aria-label', 'Información publicada por el anfitrión');
+    expect(verificationBlock).toHaveTextContent('Información publicada por el anfitrión');
+    expect(verificationBlock).not.toHaveTextContent('Verificación básica');
   });
 
-  test('uses the standard card model with exactly 3 visible checks', () => {
+  test('keeps the same neutral card state even if other non-public signals change', () => {
     render(
       <PropertyCard
         property={{
@@ -109,8 +113,8 @@ describe('PropertyCard', () => {
     expect(screen.queryByTestId('property-card-premium-badge')).toBeNull();
     const verificationBlock = screen.getByTestId('property-card-verification');
 
-    expect(verificationBlock).toHaveAttribute('aria-label', '3/4 · Información validada');
-    expect(verificationBlock).toHaveTextContent('3/4 · Información validada');
+    expect(verificationBlock).toHaveAttribute('aria-label', 'Información publicada por el anfitrión');
+    expect(verificationBlock).toHaveTextContent('Información publicada por el anfitrión');
     expect(within(verificationBlock).queryByRole('list')).toBeNull();
     expect(screen.queryByText('Más verificado')).toBeNull();
   });
@@ -129,8 +133,8 @@ describe('PropertyCard', () => {
     expect(screen.queryByTestId('property-card-premium-badge')).toBeNull();
     const verificationBlock = screen.getByTestId('property-card-verification');
 
-    expect(verificationBlock).toHaveAttribute('aria-label', '3/4 · Información validada');
-    expect(verificationBlock).toHaveTextContent('3/4 · Información validada');
+    expect(verificationBlock).toHaveAttribute('aria-label', 'Información publicada por el anfitrión');
+    expect(verificationBlock).toHaveTextContent('Información publicada por el anfitrión');
     expect(within(verificationBlock).queryByRole('list')).toBeNull();
   });
 
@@ -155,7 +159,7 @@ describe('PropertyCard', () => {
     );
 
     expect(screen.queryByText('Anfitrión con buen historial')).toBeNull();
-    expect(screen.getByText('3/4 · Información validada')).toBeInTheDocument();
+    expect(screen.getByText('Información publicada por el anfitrión')).toBeInTheDocument();
     expect(screen.getByText('Ver detalle')).toBeInTheDocument();
   });
 
@@ -168,7 +172,7 @@ describe('PropertyCard', () => {
 
     expect(screen.queryByText('Más verificado')).toBeNull();
     expect(screen.queryByTestId('property-card-premium-badge')).toBeNull();
-    expect(screen.getByText('3/4 · Información validada')).toBeInTheDocument();
+    expect(screen.getByText('Información publicada por el anfitrión')).toBeInTheDocument();
     expect(screen.getByText('Ver detalle')).toBeInTheDocument();
   });
 
@@ -221,7 +225,7 @@ describe('PropertyCard', () => {
     expect(screen.getByText('Ver detalle')).toBeInTheDocument();
   });
 
-  test('keeps the standard card model when the presencial flag arrives without all four public validations', () => {
+  test('prioritizes the presencial card model whenever the presencial flag exists', () => {
     render(
       <PropertyCard
         property={{
@@ -232,12 +236,9 @@ describe('PropertyCard', () => {
       />,
     );
 
-    expect(screen.queryByRole('img', { name: 'Verificado presencialmente' })).toBeNull();
-    expect(screen.queryByTestId('property-card-premium-badge')).toBeNull();
-    const verificationBlock = screen.getByTestId('property-card-verification');
-    expect(verificationBlock).toHaveAttribute('aria-label', '3/4 · Información validada');
-    expect(within(verificationBlock).getByText('3/4 · Información validada')).toBeInTheDocument();
-    expect(within(verificationBlock).queryByRole('list')).toBeNull();
+    expect(screen.getByRole('img', { name: 'Verificado presencialmente' })).toBeInTheDocument();
+    expect(screen.getByTestId('property-card-premium-badge')).toBeInTheDocument();
+    expect(screen.queryByTestId('property-card-verification')).toBeNull();
   });
 
   test('keeps the standard verification summary subtle even when the card is highlighted', () => {
@@ -250,7 +251,7 @@ describe('PropertyCard', () => {
 
     const trustLine = screen.getByTestId('property-card-verification');
 
-    expect(within(trustLine).getByText('3/4 · Información validada')).toHaveClass('text-slate-500');
+    expect(within(trustLine).getByText('Información publicada por el anfitrión')).toHaveClass('text-slate-600');
   });
 
   test('keeps the featured card free of extra verification badges', () => {
@@ -266,7 +267,7 @@ describe('PropertyCard', () => {
     expect(screen.queryByText('Más verificado')).toBeNull();
     expect(screen.queryByText('Buena relación precio / información')).toBeNull();
     expect(screen.queryByText('Más comprobado')).toBeNull();
-    expect(screen.getByText('3/4 · Información validada')).toBeInTheDocument();
+    expect(screen.getByText('Información publicada por el anfitrión')).toBeInTheDocument();
     expect(screen.getByText('Ver detalle')).toBeInTheDocument();
   });
 
@@ -276,8 +277,8 @@ describe('PropertyCard', () => {
     expect(screen.queryByTestId('property-card-premium-badge')).toBeNull();
     const verificationBlock = screen.getByTestId('property-card-verification');
 
-    expect(verificationBlock).toHaveAttribute('aria-label', '3/4 · Información validada');
-    expect(within(verificationBlock).getByText('3/4 · Información validada')).toBeInTheDocument();
+    expect(verificationBlock).toHaveAttribute('aria-label', 'Información publicada por el anfitrión');
+    expect(within(verificationBlock).getByText('Información publicada por el anfitrión')).toBeInTheDocument();
     expect(within(verificationBlock).queryByRole('list')).toBeNull();
     expect(screen.queryByText('Más verificado')).toBeNull();
     expect(screen.queryByText('Más confiable')).toBeNull();
@@ -323,8 +324,9 @@ describe('PropertyCard', () => {
 
     expect(standardState.model).toBe('standard');
     expect(standardState.presencialVerified).toBe(false);
-    expect(standardState.count).toBe(4);
-    expect(standardState.countLabel).toBe('4 validaciones visibles');
+    expect(standardState.publicLevel).toBe('none');
+    expect(standardState.count).toBe(0);
+    expect(standardState.countLabel).toBe('Información publicada por el anfitrión');
     expect(standardState.verificationChecks.hostConfirmed).toBe(true);
     expect(standardState.verificationChecks.locationVerified).toBe(true);
     expect(standardState.verificationChecks.geolocationPrecise).toBe(true);
@@ -339,7 +341,8 @@ describe('PropertyCard', () => {
 
     expect(premiumState.model).toBe('premium');
     expect(premiumState.presencialVerified).toBe(true);
-    expect(premiumState.count).toBe(5);
+    expect(premiumState.publicLevel).toBe('presencial');
+    expect(premiumState.count).toBe(4);
     expect(premiumState.checks.every((check) => check.complete)).toBe(true);
 
     const fullVisibleState = getPropertyCardVerificationState({
@@ -348,11 +351,11 @@ describe('PropertyCard', () => {
       hasPresencialVerification: false,
     });
 
-    expect(fullVisibleState.model).toBe('premium');
-    expect(fullVisibleState.presencialVerified).toBe(true);
-    expect(fullVisibleState.count).toBe(5);
-    expect(fullVisibleState.countLabel).toBeNull();
-    expect(fullVisibleState.checks.every((check) => check.complete)).toBe(true);
+    expect(fullVisibleState.model).toBe('standard');
+    expect(fullVisibleState.presencialVerified).toBe(false);
+    expect(fullVisibleState.publicLevel).toBe('none');
+    expect(fullVisibleState.count).toBe(0);
+    expect(fullVisibleState.countLabel).toBe('Información publicada por el anfitrión');
 
     const inconsistentPremiumState = getPropertyCardVerificationState({
       ...sampleProperty,
@@ -360,15 +363,17 @@ describe('PropertyCard', () => {
       hasPresencialVerification: true,
     });
 
-    expect(inconsistentPremiumState.model).toBe('standard');
-    expect(inconsistentPremiumState.presencialVerified).toBe(false);
+    expect(inconsistentPremiumState.model).toBe('premium');
+    expect(inconsistentPremiumState.presencialVerified).toBe(true);
+    expect(inconsistentPremiumState.publicLevel).toBe('presencial');
     expect(inconsistentPremiumState.count).toBe(4);
-    expect(inconsistentPremiumState.countLabel).toBe('4 validaciones visibles');
+    expect(inconsistentPremiumState.countLabel).toBeNull();
 
     const numericFallbackState = getPropertyCardVerificationState({ verificationScore: 4 });
 
     expect(numericFallbackState.model).toBe('standard');
-    expect(numericFallbackState.count).toBe(4);
-    expect(numericFallbackState.checks.filter((check) => check.complete)).toHaveLength(4);
+    expect(numericFallbackState.publicLevel).toBe('none');
+    expect(numericFallbackState.count).toBe(0);
+    expect(numericFallbackState.checks.filter((check) => check.complete)).toHaveLength(0);
   });
 });

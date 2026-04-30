@@ -72,11 +72,11 @@ describe('AboutPage', () => {
     expect(screen.getByText('Decidir con más contexto')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'La verificación reduce dudas antes de reservar.' })).toBeInTheDocument();
     expect(screen.getByText('Confirmamos que la propiedad existe y que hay una persona identificada con acceso al lugar.')).toBeInTheDocument();
-    expect(screen.getByText('Ubicación confirmada')).toBeInTheDocument();
-    expect(screen.getByText('Identidad del anfitrión validada')).toBeInTheDocument();
-    expect(screen.getByText('Acceso real a la propiedad')).toBeInTheDocument();
+    expect(screen.getByText('Identidad del anfitrión verificada')).toBeInTheDocument();
+    expect(screen.getByText('Acceso real a la propiedad confirmado')).toBeInTheDocument();
     expect(screen.getByText('Vínculo comprobable con el lugar')).toBeInTheDocument();
-    expect(screen.getByText('No evaluamos el estado del inmueble ni la calidad de los servicios.')).toBeInTheDocument();
+    expect(screen.getByText('Ubicación validada durante visita')).toBeInTheDocument();
+    expect(screen.getByText('No evaluamos estado ni calidad del inmueble.')).toBeInTheDocument();
     expect(screen.getByText('Más visibilidad, mejores consultas y menos dudas antes de aceptar.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Entender cómo funciona la verificación' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Cómo lograr la verificación máxima' })).toBeInTheDocument();
@@ -91,7 +91,7 @@ describe('AboutPage', () => {
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: 'Qué mirar antes de reservar' })).toBeInTheDocument();
     });
-    expect(screen.getByRole('heading', { name: 'Explorá sabiendo qué ya fue validado' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Explorá sabiendo qué ya fue confirmado' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Antes de reservar, sabé qué es real.' })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Proyecto' }));

@@ -156,7 +156,7 @@ export const FavoritesView: React.FC = () => {
               <SectionTitle
                 eyebrow="Tu shortlist"
                 heading="Tus propiedades guardadas, mejor organizadas."
-                description="Compará con calma, retomá lo que te interesó y revisá primero las que ya tienen más validaciones visibles."
+                description="Compará con calma, retomá lo que te interesó y revisá primero las que ya muestran verificación presencial."
                 as="h1"
                 visualLevel="h2"
                 className="max-w-3xl"

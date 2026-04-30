@@ -724,11 +724,12 @@ describe('PropertyDetail', () => {
     expect(within(verificationPreview).queryByText('Verificación parcial')).toBeNull();
     expect(within(verificationPreview).queryByText('(4/5)')).toBeNull();
     expect(within(verificationPreview).queryByText('Listo para coordinar')).toBeNull();
-    expect(within(verificationPreview).getAllByRole('listitem')).toHaveLength(4);
-    expect(within(verificationPreview).getByText('Ubicación confirmada')).toBeDefined();
-    expect(within(verificationPreview).getByText('Identidad del anfitrión validada')).toBeDefined();
-    expect(within(verificationPreview).getByText('Acceso real a la propiedad')).toBeDefined();
-    expect(within(verificationPreview).getByText('Vínculo comprobable con el lugar')).toBeDefined();
+    expect(within(verificationPreview).queryAllByRole('listitem')).toHaveLength(0);
+    expect(within(verificationPreview).queryByText('Ubicación confirmada')).toBeNull();
+    expect(within(verificationPreview).queryByText('Identidad del anfitrión validada')).toBeNull();
+    expect(within(verificationPreview).queryByText('Acceso real a la propiedad confirmado')).toBeNull();
+    expect(within(verificationPreview).queryByText('Vínculo comprobable con el lugar')).toBeNull();
+    expect(within(verificationPreview).getByText('Información publicada por el anfitrión. No evaluamos estado ni calidad del inmueble.')).toBeDefined();
     expect(within(verificationPreview).queryByText('Comprobaciones visibles')).toBeNull();
     expect(screen.queryByText('Cómo se valida este aviso')).toBeNull();
     expect(screen.queryByText('Más comprobaciones, menos dudas al decidir')).toBeNull();
@@ -742,20 +743,13 @@ describe('PropertyDetail', () => {
     expect(screen.queryByText('Lectura del aviso')).toBeNull();
   });
 
-  test('shows explanatory tooltips for verification chips on hover', async () => {
+  test('does not render verification chip tooltips when the listing lacks a public checklist', async () => {
     renderPropertyDetail();
 
     await waitForPropertyHeading();
 
     const verificationPreview = screen.getByTestId('property-verification-preview');
-    const hostVerifiedChip = within(verificationPreview).getByRole('button', { name: 'Identidad del anfitrión validada' });
-
-    fireEvent.mouseEnter(hostVerifiedChip);
-
-    expect(screen.getByRole('tooltip')).toHaveTextContent('Validamos la identidad del anfitrión dentro de la plataforma.');
-
-    fireEvent.mouseLeave(hostVerifiedChip);
-
+    expect(within(verificationPreview).queryAllByRole('button')).toHaveLength(0);
     expect(screen.queryByRole('tooltip')).toBeNull();
   });
 
@@ -821,12 +815,12 @@ describe('PropertyDetail', () => {
     expect(stepSeal).toHaveClass('h-[84px]', 'w-auto', 'object-contain', 'mx-auto');
     expect(verifiedPublicationStep.querySelector('svg')).toBeNull();
     expect(within(verificationPreview).getByText('Solo propiedades con verificación presencial completa')).toBeDefined();
-    expect(within(verificationPreview).getByText('Para mostrar este sello, confirmamos ubicación, identidad, acceso real y vínculo comprobable con el lugar.')).toHaveClass('text-[16px]', 'leading-[1.5]', 'text-[#64748B]');
-    expect(within(verificationPreview).getByText('No evaluamos el estado del inmueble ni la calidad de los servicios.')).toHaveClass('text-[14px]', 'leading-[1.5]', 'text-[#64748B]');
-    expect(within(verificationPreview).getByText('Ubicación confirmada')).toBeDefined();
-    expect(within(verificationPreview).getByText('Identidad del anfitrión validada')).toBeDefined();
-    expect(within(verificationPreview).getByText('Acceso real a la propiedad')).toBeDefined();
+    expect(within(verificationPreview).getByText('Para mostrar este sello, confirmamos identidad, acceso real, vínculo comprobable y ubicación durante la visita.')).toHaveClass('text-[16px]', 'leading-[1.5]', 'text-[#64748B]');
+    expect(within(verificationPreview).getByText('No evaluamos estado ni calidad del inmueble.')).toHaveClass('text-[14px]', 'leading-[1.5]', 'text-[#64748B]');
+    expect(within(verificationPreview).getByText('Identidad del anfitrión verificada')).toBeDefined();
+    expect(within(verificationPreview).getByText('Acceso real a la propiedad confirmado')).toBeDefined();
     expect(within(verificationPreview).getByText('Vínculo comprobable con el lugar')).toBeDefined();
+    expect(within(verificationPreview).getByText('Ubicación validada durante visita')).toBeDefined();
     expect(within(verificationPreview).getAllByText('→').length).toBeGreaterThanOrEqual(3);
     expect(within(verificationPreview).getAllByRole('listitem')).toHaveLength(4);
     expect(within(verificationPreview).queryByText('Esta propiedad completó la verificación presencial.')).toBeNull();
@@ -859,8 +853,9 @@ describe('PropertyDetail', () => {
     expect(within(verificationPreview).queryByRole('heading', { name: /Sello de seguridad: Verificado presencialmente/i })).toBeNull();
     expect(within(verificationPreview).queryByText('¿Cómo funciona?')).toBeNull();
     expect(within(verificationPreview).queryAllByAltText('Verificado presencialmente')).toHaveLength(0);
-    expect(within(verificationPreview).getByRole('list', { name: /Validaciones del aviso/i })).toBeDefined();
-    expect(within(verificationPreview).getAllByRole('listitem')).toHaveLength(4);
+    expect(within(verificationPreview).queryByRole('list', { name: /Estado visible del aviso/i })).toBeNull();
+    expect(within(verificationPreview).queryAllByRole('listitem')).toHaveLength(0);
+    expect(within(verificationPreview).getByText('Información publicada por el anfitrión. No evaluamos estado ni calidad del inmueble.')).toBeDefined();
   });
 
   test('uses a neutral action-oriented message for medium trust when key media and availability checks are already present', async () => {
@@ -883,11 +878,11 @@ describe('PropertyDetail', () => {
 
     const verificationPreview = screen.getByTestId('property-verification-preview');
     expect(within(verificationPreview).queryByText('Verificación parcial')).toBeNull();
-    expect(within(verificationPreview).getAllByRole('listitem')).toHaveLength(4);
-    expect(within(verificationPreview).getByText('Ubicación confirmada')).toBeDefined();
-    expect(within(verificationPreview).getByText('Identidad del anfitrión validada')).toBeDefined();
-    expect(within(verificationPreview).getByText('Acceso real a la propiedad')).toBeDefined();
-    expect(within(verificationPreview).getByText('Vínculo comprobable con el lugar')).toBeDefined();
+    expect(within(verificationPreview).queryAllByRole('listitem')).toHaveLength(0);
+    expect(within(verificationPreview).getByText('Información publicada por el anfitrión. No evaluamos estado ni calidad del inmueble.')).toBeDefined();
+    expect(within(verificationPreview).queryByText('Ubicación confirmada')).toBeNull();
+    expect(within(verificationPreview).queryByText('Acceso real a la propiedad confirmado')).toBeNull();
+    expect(within(verificationPreview).queryByText('Vínculo comprobable con el lugar')).toBeNull();
     expect(within(verificationPreview).queryByText('Listo para coordinar')).toBeNull();
   });
 
@@ -931,11 +926,8 @@ describe('PropertyDetail', () => {
     const verificationPreview = screen.getByTestId('property-verification-preview');
     expect(within(verificationPreview).queryByText('Verificación parcial')).toBeNull();
     expect(within(verificationPreview).queryByText('(2/5)')).toBeNull();
-    expect(within(verificationPreview).getAllByRole('listitem')).toHaveLength(4);
-    expect(within(verificationPreview).getByText('Ubicación confirmada')).toBeDefined();
-    expect(within(verificationPreview).getByText('Identidad del anfitrión validada')).toBeDefined();
-    expect(within(verificationPreview).getByText('Acceso real a la propiedad')).toBeDefined();
-    expect(within(verificationPreview).getByText('Vínculo comprobable con el lugar')).toBeDefined();
+    expect(within(verificationPreview).queryAllByRole('listitem')).toHaveLength(0);
+    expect(within(verificationPreview).getByText('Información publicada por el anfitrión. No evaluamos estado ni calidad del inmueble.')).toBeDefined();
     expect(within(verificationPreview).queryByText('Listo para coordinar')).toBeNull();
   });
 

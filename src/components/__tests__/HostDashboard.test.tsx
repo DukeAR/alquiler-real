@@ -120,7 +120,7 @@ describe('HostDashboard', () => {
                 offerType: 'onsite-property',
                 targetType: 'property',
                 title: 'Validación presencial adicional',
-                summary: 'Podés pedir una revisión presencial para sumar información validada extra en este aviso.',
+                summary: 'Podés pedir una revisión presencial para sumar el sello completo en este aviso.',
                 contextHint: 'Mostramos qué está validado para que se entienda mejor el aviso.',
                 visibilityHint: 'Cuando se completa, deja una validación presencial visible dentro de la ficha del aviso.',
                 ctaLabel: 'Activar validación presencial sin cargo',
@@ -177,8 +177,8 @@ describe('HostDashboard', () => {
     expect(screen.getByText('Sugerencias para mover tus avisos')).toBeInTheDocument();
     expect(screen.getByText('Primero ves si cada aviso esta activo y despues cuanto ya queda claro para quien consulta.')).toBeInTheDocument();
     expect(screen.getByText('Estado de tu aviso')).toBeInTheDocument();
-    expect(screen.getByText('Verificación parcial (2/4)')).toBeInTheDocument();
-    expect(screen.getAllByText('Verificación parcial').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Identidad del anfitrión validada en la plataforma').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Pasos de respaldo del aviso').length).toBeGreaterThan(0);
     expect(screen.getByText('Te falta confirmar disponibilidad para aparecer entre los primeros resultados.')).toBeInTheDocument();
     expect(screen.getByText('Cómo impacta en tu publicación')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Solicitar verificación presencial/i })).toBeInTheDocument();

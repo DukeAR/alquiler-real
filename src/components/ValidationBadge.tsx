@@ -126,7 +126,7 @@ export function ValidationBadgeLarge({ level, levelNumber, progress }: Validatio
 
       <div className="mt-6 space-y-2">
         <div className="flex justify-between items-end">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Información validada</span>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Estado visible</span>
           <span className="text-sm font-bold text-slate-900 dark:text-white">{progress}%</span>
         </div>
         <div className="h-2.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden p-0.5">

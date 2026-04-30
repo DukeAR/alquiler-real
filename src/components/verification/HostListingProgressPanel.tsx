@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { apiJson } from '../../lib/apiConfig';
-import { getPropertyVerificationDetails, getPropertyVerificationItems } from '../../lib/propertyVerification';
+import { PRESENCIAL_VERIFICATION_LABEL, PRESENCIAL_VERIFICATION_LEVEL_LABEL, getPropertyVerificationItems } from '../../lib/propertyVerification';
 import { showToast } from '../../lib/toast';
 import { cn } from '../../lib/utils';
 import type { Property } from '../../types';
@@ -44,8 +44,8 @@ const impactByKey: Record<HostProgressKey, string> = {
 };
 
 const HOST_PROGRESS_LABELS: Record<HostProgressKey, string> = {
-  identity: 'Identidad del anfitrión validada',
-  location: 'Ubicación confirmada',
+  identity: 'Identidad del anfitrión validada en la plataforma',
+  location: 'Ubicación del aviso cargada',
   geolocation: 'Punto exacto del aviso',
   photos: 'Respaldo visual del aviso',
   availability: 'Disponibilidad reciente',
@@ -59,8 +59,8 @@ const getHostProgressDescription = (key: HostProgressKey, status: 'complete' | '
         : 'Todavía falta validar la identidad del anfitrión dentro de la plataforma.';
     case 'location':
       return status === 'complete'
-        ? 'La ubicación del aviso ya quedó confirmada.'
-        : 'Todavía falta confirmar la ubicación del aviso.';
+        ? 'La ubicación del aviso ya quedó cargada dentro de la plataforma.'
+        : 'Todavía falta cargar la ubicación del aviso.';
     case 'geolocation':
       return status === 'complete'
         ? 'El aviso ya tiene un punto de mapa para ubicar mejor la propiedad.'
@@ -178,9 +178,14 @@ export const HostListingProgressPanel = ({
       .sort((left, right) => CHECK_ORDER.indexOf(left.key) - CHECK_ORDER.indexOf(right.key))
   ), [property]);
 
-  const verificationDetails = getPropertyVerificationDetails({ ...property, verificationItems });
-  const score = verificationDetails.score;
-  const maxScore = verificationDetails.max;
+  const isPresencialVerified = Boolean(property.hasPresencialVerification || property.onsiteVerifiedAt);
+  const score = verificationItems.filter((item) => item.status === 'complete').length;
+  const maxScore = verificationItems.length;
+  const visibleSealTitle = isPresencialVerified ? PRESENCIAL_VERIFICATION_LEVEL_LABEL : 'Pasos de respaldo del aviso';
+  const visibleSealLabel = isPresencialVerified ? PRESENCIAL_VERIFICATION_LABEL : 'Pasos de respaldo';
+  const visibleSealDescription = isPresencialVerified
+    ? 'Confirmamos identidad, acceso, vínculo y ubicación durante una visita presencial.'
+    : 'Estos pasos internos ayudan a ordenar y respaldar tu publicación antes de solicitar la visita presencial.';
   const pendingKeys = new Set(
     verificationItems
       .filter((item) => item.status !== 'complete')
@@ -405,7 +410,7 @@ export const HostListingProgressPanel = ({
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-2">
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Estado de tu aviso</p>
-            <h3 className="text-2xl font-semibold tracking-tight text-slate-950">{verificationDetails.summaryLabel}</h3>
+            <h3 className="text-2xl font-semibold tracking-tight text-slate-950">{visibleSealTitle}</h3>
             <p className="max-w-2xl text-sm leading-6 text-slate-600">{topMessage}</p>
           </div>
 
@@ -414,10 +419,11 @@ export const HostListingProgressPanel = ({
             <VerificationSeal
               score={score}
               maxScore={maxScore}
-              label={verificationDetails.compactLabel}
-              description={verificationDetails.description}
+              label={visibleSealLabel}
+              description={visibleSealDescription}
               size="md"
-              ariaLabel={verificationDetails.summaryLabel}
+              showCount={false}
+              ariaLabel={visibleSealTitle}
               className="mt-3"
             />
           </div>

@@ -16,8 +16,8 @@ const heroSubtitle = 'Compará precio, zona y verificación antes de reservar.';
 const heroGeoEyebrow = 'COSTA ATLÁNTICA ARGENTINA';
 const valueProofItems = [
   'Ubicación real',
-  'Anfitrión visible',
-  'Datos validados',
+  'Identidad validada',
+  'Verificación presencial',
 ] as const;
 
 const getRevealMotionProps = (delay: number) => ({

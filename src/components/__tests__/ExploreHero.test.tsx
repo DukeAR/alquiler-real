@@ -58,7 +58,7 @@ describe('ExploreHero', () => {
     expect(badgeRow).toHaveClass('mt-7', 'flex-wrap', 'justify-center', 'gap-3');
     expect(badgeWrapper).toHaveClass('gap-2', 'rounded-full', 'border', 'border-white/70', 'bg-white/90', 'px-4', 'py-2', 'text-sm', 'font-semibold', 'text-slate-700', 'shadow-sm', 'backdrop-blur-md', 'transition-all', 'duration-200', 'hover:-translate-y-0.5', 'hover:bg-white');
     expect(badgeWrapper?.querySelector('svg')).toHaveClass('h-4', 'w-4', 'text-emerald-500');
-    expect(screen.getByText('Anfitrión visible')).toBeInTheDocument();
-    expect(screen.getByText('Datos validados')).toBeInTheDocument();
+    expect(screen.getByText('Identidad validada')).toBeInTheDocument();
+    expect(screen.getByText('Verificación presencial')).toBeInTheDocument();
   });
 });

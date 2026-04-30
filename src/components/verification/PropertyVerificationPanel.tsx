@@ -110,7 +110,6 @@ export const PropertyVerificationPanel = ({
   const verificationItems = getPropertyVerificationItems(property);
   const verificationDetails = getPropertyVerificationDetails({ ...property, verificationItems });
   const advancedItems = getPropertyAdvancedVerificationItems(property);
-  const pendingDisplayItems = verificationDetails.items.filter((item) => item.status !== 'complete');
   const photoAssets = Array.isArray(property.verificationMedia?.photos) ? property.verificationMedia.photos : [];
   const videoAsset = property.verificationMedia?.video ?? null;
   const documentAssets = Array.isArray(property.verificationMedia?.documents) ? property.verificationMedia.documents : [];
@@ -159,7 +158,11 @@ export const PropertyVerificationPanel = ({
           <div className="space-y-2">
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Lectura del aviso</p>
             <h2 className="text-2xl font-semibold tracking-tight text-slate-950">{verificationDetails.summaryLabel}</h2>
-            <p className="max-w-3xl text-sm leading-6 text-slate-600">Estas son las 4 validaciones que usamos para mostrar qué ya está confirmado antes de decidir.</p>
+            <p className="max-w-3xl text-sm leading-6 text-slate-600">
+              {verificationDetails.publicLevel === 'presencial'
+                ? 'Mostramos juntas las cuatro confirmaciones de la visita presencial.'
+                : 'Por ahora solo mostramos la información publicada por el anfitrión.'}
+            </p>
           </div>
 
           <div className="space-y-4 rounded-[24px] border border-slate-200/80 bg-slate-50/90 p-4">
@@ -169,16 +172,17 @@ export const PropertyVerificationPanel = ({
               label={verificationDetails.compactLabel}
               description={verificationDetails.description}
               size="md"
+              showCount={false}
               ariaLabel={verificationDetails.summaryLabel}
             />
-            <PropertyVerificationChecklist items={verificationDetails.items} size="md" columns={2} />
+            {verificationDetails.items.length > 0 ? (
+              <PropertyVerificationChecklist items={verificationDetails.items} size="md" columns={2} />
+            ) : (
+              <p className="rounded-[18px] border border-slate-200/80 bg-white/80 px-4 py-3 text-sm leading-6 text-slate-600">
+                {verificationDetails.countLabel}.
+              </p>
+            )}
           </div>
-
-          {pendingDisplayItems.length > 0 ? (
-            <p className="rounded-[22px] border border-slate-200/80 bg-slate-50/90 px-4 py-3 text-sm leading-6 text-slate-600">
-              Falta completar: {pendingDisplayItems.map((item) => item.label).join(' · ')}.
-            </p>
-          ) : null}
 
           <div className="rounded-[22px] border border-slate-200/80 bg-slate-50/90 p-4 text-sm leading-6 text-slate-600">
             {PLATFORM_PROPERTY_DISCLAIMER}

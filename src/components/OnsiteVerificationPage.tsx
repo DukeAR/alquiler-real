@@ -19,10 +19,10 @@ const trustOutcomePoints = [
 ];
 
 const heroBenefitPoints = [
-  'Ubicación confirmada',
-  'Identidad del anfitrión validada',
-  'Acceso real a la propiedad',
+  'Identidad del anfitrión verificada',
+  'Acceso real a la propiedad confirmado',
   'Vínculo comprobable con el lugar',
+  'Ubicación validada durante visita',
 ];
 
 const nonValidationItems = [
@@ -32,17 +32,17 @@ const nonValidationItems = [
 ];
 
 const validationItems = [
-  'Ubicación confirmada',
-  'Identidad del anfitrión validada',
-  'Acceso real a la propiedad',
+  'Identidad del anfitrión verificada',
+  'Acceso real a la propiedad confirmado',
   'Vínculo comprobable con el lugar',
+  'Ubicación validada durante visita',
 ];
 
 const verifierVisitChecks = [
-  'Identidad del anfitrión validada',
-  'Acceso real a la propiedad',
+  'Identidad del anfitrión verificada',
+  'Acceso real a la propiedad confirmado',
   'Vínculo comprobable con el lugar',
-  'Ubicación confirmada',
+  'Ubicación validada durante visita',
 ];
 
 const verifierIdentityPoints = [
@@ -68,7 +68,7 @@ const flowSteps = [
     id: 'verify',
     label: 'Validamos identidad y acceso',
     title: 'Validamos identidad y acceso',
-    description: 'Confirmamos identidad, acceso real, vínculo con el lugar y ubicación publicada.',
+    description: 'Confirmamos identidad del anfitrión, acceso real, vínculo comprobable con el lugar y ubicación durante la visita.',
   },
   {
     id: 'seal',
@@ -249,7 +249,7 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
                     ))}
                   </ul>
                   <p className="text-[0.92rem] leading-6 text-slate-500 dark:text-slate-400">
-                    No evaluamos el estado del inmueble ni la calidad de los servicios.
+                    No evaluamos estado ni calidad del inmueble.
                   </p>
                 </div>
               </div>

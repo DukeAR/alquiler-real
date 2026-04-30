@@ -866,7 +866,7 @@ export const MyBookings = () => {
     id: `saved-${usefulSavedProperties[0].id}`,
     eyebrow: 'Guardados útiles',
     title: `Volvé a ${usefulSavedProperties[0].title}`,
-    description: 'Ya muestra más información validada y te sirve para comparar rápido con lo que ya reservaste.',
+    description: 'Ya muestra verificación presencial o información útil del aviso para comparar rápido con lo que ya reservaste.',
     actionLabel: 'Ver guardado',
     icon: <Icons.Heart className="h-5 w-5" />,
     onAction: () => navigate(`/detail/${usefulSavedProperties[0].id}`),
@@ -1545,7 +1545,7 @@ export const MyBookings = () => {
             <SectionTitle
               eyebrow="Guardados útiles"
               heading="Lo que te conviene volver a mirar antes de decidir."
-              description="Mostramos primero los guardados con más validaciones visibles para que retomes comparaciones reales, no una lista plana de favoritos."
+              description="Mostramos primero los guardados con verificación presencial para que retomes comparaciones reales, no una lista plana de favoritos."
               as="h2"
               visualLevel="h3"
               className="max-w-3xl"
@@ -1585,6 +1585,7 @@ export const MyBookings = () => {
                           label={verificationDetails.compactLabel}
                           description={verificationDetails.description}
                           size="sm"
+                          showCount={false}
                           ariaLabel={verificationDetails.summaryLabel}
                         />
                         <Badge variant="neutral" size="md">{formatCurrency(property.price)}</Badge>
@@ -1593,7 +1594,11 @@ export const MyBookings = () => {
                         <h3 className="text-base font-semibold text-slate-950 dark:text-slate-50">{property.title}</h3>
                         <p className="text-sm text-slate-500 dark:text-slate-400">{property.location}</p>
                       </div>
-                      <PropertyVerificationChecklist items={verificationDetails.items} size="sm" columns={2} />
+                      {verificationDetails.items.length > 0 ? (
+                        <PropertyVerificationChecklist items={verificationDetails.items} size="sm" columns={2} />
+                      ) : (
+                        <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">{verificationDetails.countLabel}.</p>
+                      )}
                     </div>
                   </div>
 

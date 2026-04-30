@@ -126,7 +126,7 @@ export const PLATFORM_TERMS_CLAUSES: PlatformTermsClause[] = [
     id: 'property-information',
     eyebrow: 'Propiedades',
     title: 'Lo que muestra cada aviso',
-    body: 'La información, las fotos, los servicios, las reglas y las descripciones de cada propiedad son proporcionadas por el anfitrión. Alquiler Real puede mostrar validaciones visibles o historial visible, pero no garantiza coincidencia total entre lo publicado y la realidad del lugar.',
+    body: 'La información, las fotos, los servicios, las reglas y las descripciones de cada propiedad son proporcionadas por el anfitrión. Alquiler Real puede mostrar verificación presencial o historial visible, pero no garantiza coincidencia total entre lo publicado y la realidad del lugar.',
   },
   {
     id: 'host-responsibility',
@@ -156,7 +156,7 @@ export const PLATFORM_TERMS_CLAUSES: PlatformTermsClause[] = [
     id: 'verification-scope',
     eyebrow: 'Validaciones',
     title: 'Qué significan las validaciones y qué no significan',
-    body: 'Las validaciones pueden confirmar identidad, ubicación, material del aviso, documentos o actividad registrada según el flujo disponible. Sirven para dar más contexto y trazabilidad, pero no equivalen a una garantía total del inmueble ni de la experiencia final.',
+    body: 'Las validaciones pueden confirmar identidad, acceso real, vínculo con el lugar, ubicación durante una visita presencial, documentos o actividad registrada según el flujo disponible. Sirven para dar más contexto y trazabilidad, pero no equivalen a una garantía total del inmueble ni de la experiencia final.',
   },
   {
     id: 'deposits-and-cancellations',
@@ -182,7 +182,7 @@ export const BOOKING_CONTRACT_PLATFORM_TERMS: BookingContractPlatformTerm[] = PL
 }))
   .filter((term) => bookingContractTermIds.includes(term.id));
 
-export const PLATFORM_PROPERTY_DISCLAIMER = 'La información del aviso la carga el anfitrión. Las validaciones ayudan a revisar mejor, pero no garantizan el estado final del lugar.';
+export const PLATFORM_PROPERTY_DISCLAIMER = 'La información del aviso la carga el anfitrión. La verificación presencial ayuda a decidir mejor, pero no evaluamos estado ni calidad del inmueble.';
 
 export const PLATFORM_PUBLISHING_RESPONSIBILITY_NOTE = 'Al publicar, confirmás que las fotos, la descripción, los servicios, las reglas y las condiciones reales del alojamiento dependen de vos como anfitrión.';
 

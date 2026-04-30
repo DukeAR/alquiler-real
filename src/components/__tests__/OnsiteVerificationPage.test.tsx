@@ -20,10 +20,10 @@ describe('OnsiteVerificationPage', () => {
     expect(screen.getByRole('heading', { name: 'Verificación presencial' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'La verificación reduce dudas antes de reservar.' })).toBeInTheDocument();
     expect(screen.getByText('Confirmamos que la propiedad existe y que hay una persona identificada con acceso al lugar.')).toBeInTheDocument();
-    expect(screen.getAllByText('Ubicación confirmada').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Identidad del anfitrión validada').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Acceso real a la propiedad').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Identidad del anfitrión verificada').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Acceso real a la propiedad confirmado').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Vínculo comprobable con el lugar').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Ubicación validada durante visita').length).toBeGreaterThan(0);
     expect(screen.getAllByRole('button', { name: 'Quiero verificar mi propiedad' })).toHaveLength(2);
     expect(screen.getByRole('button', { name: 'Ver cómo funciona' })).toBeInTheDocument();
     expect(screen.getByText('Se coordina una visita, no lleva más de unos minutos.')).toBeInTheDocument();
@@ -38,21 +38,21 @@ describe('OnsiteVerificationPage', () => {
 
     expect(screen.getByRole('heading', { name: 'Qué revisa esta verificación' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Qué validamos' })).toBeInTheDocument();
-    expect(screen.getAllByText('Ubicación confirmada').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Identidad del anfitrión validada').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Acceso real a la propiedad').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Identidad del anfitrión verificada').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Acceso real a la propiedad confirmado').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Vínculo comprobable con el lugar').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Ubicación validada durante visita').length).toBeGreaterThan(0);
     expect(screen.getByRole('heading', { name: 'Qué no validamos' })).toBeInTheDocument();
     expect(screen.getByText('Estado del inmueble')).toBeInTheDocument();
     expect(screen.getByText('Calidad de los servicios')).toBeInTheDocument();
     expect(screen.getByText('Condiciones técnicas del lugar')).toBeInTheDocument();
-    expect(screen.getByText('No evaluamos el estado del inmueble ni la calidad de los servicios.')).toBeInTheDocument();
+    expect(screen.getByText('No evaluamos estado ni calidad del inmueble.')).toBeInTheDocument();
 
     expect(screen.getByRole('heading', { name: 'Cómo es la visita' })).toBeInTheDocument();
-    expect(screen.getAllByText('Identidad del anfitrión validada').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Acceso real a la propiedad').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Identidad del anfitrión verificada').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Acceso real a la propiedad confirmado').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Vínculo comprobable con el lugar').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Ubicación confirmada').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Ubicación validada durante visita').length).toBeGreaterThan(0);
     expect(screen.getByText('No se realiza inspección técnica ni evaluación de condiciones del inmueble.')).toBeInTheDocument();
     expect(screen.getByText('No necesitás preparar nada. Solo mostrar la propiedad y acreditar tu vínculo.')).toBeInTheDocument();
 

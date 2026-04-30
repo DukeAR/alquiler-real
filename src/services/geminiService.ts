@@ -23,7 +23,7 @@ export function calculateTraceability(property: Partial<Property>): Traceability
   // 2. Ubicación
   if (property.locationVerified) {
     score += 20;
-    factors.push({ label: 'Ubicación confirmada', value: 'La ubicación ya fue confirmada en el aviso.', impact: 'positive' });
+    factors.push({ label: 'Ubicación del aviso cargada', value: 'La ubicación ya fue cargada en el aviso.', impact: 'positive' });
   }
 
   // 3. Video del lugar

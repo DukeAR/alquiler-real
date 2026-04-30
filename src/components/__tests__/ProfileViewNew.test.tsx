@@ -59,9 +59,9 @@ describe('ProfileViewNew', () => {
               offerType: 'documentary-user',
               targetType: 'user',
               title: 'Validación documental adicional',
-              summary: 'Podés sumar DNI y selfie como información validada extra sobre tu cuenta.',
+              summary: 'Podés sumar DNI y selfie como respaldo documental extra sobre tu cuenta.',
               contextHint: 'Mostramos qué está validado para que otros puedan decidir mejor.',
-              visibilityHint: 'Suma una validación documental visible junto al resto de la información validada de tu cuenta.',
+              visibilityHint: 'Suma una señal documental visible junto al resto del respaldo visible de tu cuenta.',
               ctaLabel: 'Activar validación sin cargo',
               checkoutLabel: 'Activar sin cargo',
               processLabel: 'Ir a la validación',
@@ -156,7 +156,7 @@ describe('ProfileViewNew', () => {
     expect(screen.getByText('Mostramos solo qué ya fue validado y qué falta completar en tu cuenta.')).toBeInTheDocument();
     expect(screen.getByText('Qué ya está validado')).toBeInTheDocument();
     expect(screen.getByText('Qué podrías sumar si te sirve')).toBeInTheDocument();
-    expect(screen.getByText(/Si querés sumar más información validada, hoy podés revisar:/i)).toBeInTheDocument();
+    expect(screen.getByText(/Si querés sumar más respaldo visible, hoy podés revisar:/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Confirmar email/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Agregar teléfono/i })).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /Activar validación sin cargo/i }).length).toBeGreaterThan(0);

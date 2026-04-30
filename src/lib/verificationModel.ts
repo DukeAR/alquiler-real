@@ -217,7 +217,7 @@ export const buildPropertyVerificationItem = (input: {
   if (input.key === 'identity') {
     return {
       key: 'identity',
-      label: 'Identidad del anfitrión validada',
+      label: 'Identidad del anfitrión validada en la plataforma',
       status,
       description: input.complete
         ? 'La identidad del anfitrión ya quedó validada dentro de la plataforma.'
@@ -228,11 +228,11 @@ export const buildPropertyVerificationItem = (input: {
   if (input.key === 'location') {
     return {
       key: 'location',
-      label: 'Ubicación confirmada',
+      label: 'Ubicación del aviso cargada',
       status,
       description: input.complete
-        ? 'La ubicación del aviso ya quedó confirmada dentro de la plataforma.'
-        : 'Todavía falta confirmar la ubicación del aviso.',
+        ? 'La ubicación del aviso ya quedó cargada dentro de la plataforma.'
+        : 'Todavía falta cargar la ubicación del aviso.',
     };
   }
 

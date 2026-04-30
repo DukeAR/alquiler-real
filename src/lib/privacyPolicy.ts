@@ -40,7 +40,7 @@ export const PRIVACY_POLICY_QUICK_GUIDE_SECTIONS: PrivacyPolicyQuickGuideSection
   {
     id: 'usage',
     title: 'Para qué se usan',
-    body: 'Para operar la app, ordenar reservas, mostrar validaciones visibles, prevenir abuso y atender soporte.',
+    body: 'Para operar la app, ordenar reservas, mostrar estados públicos de confianza, prevenir abuso y atender soporte.',
   },
   {
     id: 'verification',
@@ -75,7 +75,7 @@ export const PRIVACY_POLICY_SECTIONS: PrivacyPolicySection[] = [
     id: 'usage',
     eyebrow: 'Uso',
     title: 'Para qué usamos esa información',
-    body: 'La información se usa para operar la app, ordenar el proceso entre huésped y anfitrión, mostrar validaciones visibles, prevenir abuso, revisar casos vinculados a flujos internos y responder consultas o reportes de soporte.',
+    body: 'La información se usa para operar la app, ordenar el proceso entre huésped y anfitrión, mostrar estados públicos de confianza, prevenir abuso, revisar casos vinculados a flujos internos y responder consultas o reportes de soporte.',
   },
   {
     id: 'verification',
@@ -87,7 +87,7 @@ export const PRIVACY_POLICY_SECTIONS: PrivacyPolicySection[] = [
     id: 'public-vs-private',
     eyebrow: 'Visibilidad',
     title: 'Qué parte puede verse públicamente y qué parte queda privada',
-    body: 'La plataforma solo muestra como parte visible del producto la información que el flujo define como pública, por ejemplo ciertas validaciones visibles, fotos del aviso, reseñas o datos básicos del perfil. Los documentos privados, selfies, comprobantes sensibles y coordenadas usadas para validar no se exponen públicamente.',
+    body: 'La plataforma solo muestra como parte visible del producto la información que el flujo define como pública, por ejemplo verificación presencial, fotos del aviso, reseñas o datos básicos del perfil. Los documentos privados, selfies, comprobantes sensibles y coordenadas usadas para validar no se exponen públicamente.',
   },
   {
     id: 'storage-and-care',
