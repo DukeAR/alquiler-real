@@ -91,15 +91,17 @@ describe('FavoritesView integration', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByText('Compará con calma, retomá lo que te interesó y revisá primero las que ya tienen más comprobaciones reales.')).toBeInTheDocument();
+    expect(screen.getByText('Compará con calma, retomá lo que te interesó y revisá primero las que ya tienen más validaciones visibles.')).toBeInTheDocument();
     expect(screen.getAllByRole('heading', { level: 3 }).map((title) => title.textContent)).toEqual([
       'Casa frente al mar',
       'Departamento tranquilo',
     ]);
-    expect(screen.getByText('Información verificada en persona')).toBeInTheDocument();
-    expect(screen.getByText('3 comprobaciones visibles')).toBeInTheDocument();
-    expect(screen.getAllByText('Anfitrión confirmado').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Ubicación verificada').length).toBeGreaterThan(0);
+    expect(screen.getByText('Validaciones visibles')).toBeInTheDocument();
+    expect(screen.getByText('2/4')).toBeInTheDocument();
+    expect(screen.getAllByText('Ubicación confirmada').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Identidad del anfitrión validada').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Acceso real a la propiedad').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Vínculo comprobable con el lugar').length).toBeGreaterThan(0);
     expect(screen.queryByText('Verificación parcial')).toBeNull();
     expect(screen.queryByText('5 comprobaciones visibles')).toBeNull();
     expect(screen.queryByText('Mejor verificado')).toBeNull();

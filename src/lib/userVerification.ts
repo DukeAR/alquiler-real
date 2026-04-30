@@ -105,10 +105,10 @@ type LevelMeta = {
 
 export const USER_VERIFICATION_LEVEL_META: Record<UserVerificationLevel, LevelMeta> = {
   INICIAL: {
-    shortLabel: 'Primeras comprobaciones',
-    levelLabel: 'Comprobaciones iniciales',
-    headline: 'Todavía faltan las comprobaciones base de tu cuenta.',
-    summary: 'Primero conviene confirmar email y teléfono. Después podés completar perfil, sumar historial real y, si querés, agregar la comprobación documental adicional.',
+    shortLabel: 'Primeras validaciones',
+    levelLabel: 'Validaciones iniciales',
+    headline: 'Todavía faltan las validaciones base de tu cuenta.',
+    summary: 'Primero conviene confirmar email y teléfono. Después podés completar perfil, sumar historial real y, si querés, agregar la validación documental adicional.',
   },
   NIVEL_1: {
     shortLabel: 'Contacto confirmado',
@@ -130,9 +130,9 @@ export const USER_VERIFICATION_LEVEL_META: Record<UserVerificationLevel, LevelMe
   },
   NIVEL_4: {
     shortLabel: 'Documental adicional',
-    levelLabel: 'Comprobación documental adicional',
-    headline: 'Sumaste la comprobación documental como respaldo extra.',
-    summary: 'Además del contacto, el perfil y el historial real, tu cuenta ya muestra la comprobación documental adicional.',
+    levelLabel: 'Validación documental adicional',
+    headline: 'Sumaste la validación documental como respaldo extra.',
+    summary: 'Además del contacto, el perfil y el historial real, tu cuenta ya muestra la validación documental adicional.',
   },
 };
 
@@ -145,7 +145,7 @@ const buildBenefits = (verificationSummary: UserVerificationSummary): UserVerifi
   current: verificationSummary.items
     .filter((item) => item.status === 'complete')
     .slice(0, 2)
-    .map((item) => `${item.label} ya está comprobado.`),
+    .map((item) => `${item.label} ya está validado.`),
   next: verificationSummary.items
     .filter((item) => item.status === 'pending' && item.key !== 'documentary')
     .slice(0, 2)
@@ -158,10 +158,10 @@ const getNextStep = (missingRequirements: string[], documentaryVerified: boolean
   }
 
   if (!documentaryVerified) {
-    return 'Si querés sumar respaldo extra, podés agregar la comprobación documental adicional.';
+    return 'Si querés sumar respaldo extra, podés agregar la validación documental adicional.';
   }
 
-  return 'Ya están visibles las 5 comprobaciones de tu cuenta.';
+  return 'Ya están visibles las 5 validaciones de tu cuenta.';
 };
 
 export const buildUserVerificationStatus = (input: UserVerificationInput): UserVerificationStatus => {
@@ -263,14 +263,14 @@ export const buildUserVerificationStatus = (input: UserVerificationInput): UserV
       score: Number(documentaryVerified),
       maxScore: 1,
       summary: documentaryVerified
-        ? 'La cuenta ya tiene una comprobación documental adicional.'
+        ? 'La cuenta ya tiene una validación documental adicional.'
         : documentarySubmitted
           ? 'Hay documentación enviada para sumar respaldo extra.'
           : 'La capa documental sigue siendo opcional y solo suma como respaldo extra.',
       checks: [
         {
           id: 'documentaryVerified',
-          label: 'Comprobación documental lista',
+          label: 'Validación documental lista',
           description: 'Es una capa adicional. No reemplaza el historial, el contacto ni el perfil.',
           done: documentaryVerified,
           optional: true,
@@ -301,7 +301,7 @@ export const buildUserVerificationStatus = (input: UserVerificationInput): UserV
     : 0;
   const missingRequirements = guestVerification.missingRequirements;
   const optionalUpgrade = !documentaryVerified
-    ? 'Podés sumar la comprobación documental adicional como respaldo extra. No reemplaza historial, contacto ni perfil.'
+    ? 'Podés sumar la validación documental adicional como respaldo extra. No reemplaza historial, contacto ni perfil.'
     : null;
 
   return {

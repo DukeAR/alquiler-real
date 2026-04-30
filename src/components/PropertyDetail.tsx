@@ -271,13 +271,13 @@ const PRESENCIAL_VERIFICATION_STEPS: PresencialVerificationStep[] = [
   {
     number: '2',
     title: 'Visitamos la propiedad',
-    description: 'Un verificador revisa en persona que el lugar existe y que la información del aviso es real.',
+    description: 'Un verificador confirma en persona que la propiedad existe y que hay acceso real al lugar.',
     icon: Icons.Home,
   },
   {
     number: '3',
-    title: 'Verificamos y comprobamos',
-    description: 'Validamos ubicación, fotos, servicios y datos clave del aviso.',
+    title: 'Validamos lo esencial',
+    description: 'Confirmamos ubicación, identidad del anfitrión y vínculo comprobable con el lugar.',
     icon: Icons.ListTodo,
   },
   {
@@ -289,11 +289,10 @@ const PRESENCIAL_VERIFICATION_STEPS: PresencialVerificationStep[] = [
 ];
 
 const PRESENCIAL_VERIFICATION_ITEMS = [
-  'Ubicación comprobada',
-  'Anfitrión confirmado',
-  'Fotos y datos revisados',
-  'Servicios verificados',
-  'Condiciones del lugar',
+  'Ubicación confirmada',
+  'Identidad del anfitrión validada',
+  'Acceso real a la propiedad',
+  'Vínculo comprobable con el lugar',
 ] as const;
 
 const PresencialVerificationInfoCard: React.FC = () => {
@@ -311,8 +310,8 @@ const PresencialVerificationInfoCard: React.FC = () => {
           </h2>
 
           <p className="max-w-[1100px] text-[12px] leading-[1.4] text-[#64748B]">
-            Este sello identifica a las propiedades que completaron la verificación presencial paga.
-            Te ayuda a elegir con más confianza.
+            Este sello identifica a las propiedades con verificación presencial completa.
+            Reduce dudas antes de reservar.
           </p>
         </div>
       </header>
@@ -370,14 +369,17 @@ const PresencialVerificationInfoCard: React.FC = () => {
         <div className="min-w-0 flex-1">
           <div className="space-y-1.5">
             <h4 className="text-[20px] font-bold leading-[1.25] text-[#4F46E5]">
-              Solo propiedades 100% verificadas
+              Solo propiedades con verificación presencial completa
             </h4>
             <p className="text-[16px] leading-[1.5] text-[#64748B]">
-              Para mostrar este sello, la propiedad debe completar todas las comprobaciones (5/5).
+              Para mostrar este sello, confirmamos ubicación, identidad, acceso real y vínculo comprobable con el lugar.
+            </p>
+            <p className="text-[14px] leading-[1.5] text-[#64748B]">
+              No evaluamos el estado del inmueble ni la calidad de los servicios.
             </p>
           </div>
 
-          <ul className="mt-4 grid gap-x-6 gap-y-3 text-[16px] leading-[1.5] text-[#475569] sm:grid-cols-2 xl:grid-cols-3">
+          <ul className="mt-4 grid gap-x-6 gap-y-3 text-[16px] leading-[1.5] text-[#475569] sm:grid-cols-2">
               {PRESENCIAL_VERIFICATION_ITEMS.map((item) => (
                 <li key={item} className="inline-flex min-w-0 items-start gap-2.5">
                   <Icons.CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-[#4F46E5]" />
@@ -1486,7 +1488,7 @@ export const PropertyDetailShell: React.FC<{
             {showPremiumVerificationInfoCard ? (
               <PresencialVerificationInfoCard />
             ) : (
-              <ul className="flex flex-wrap gap-2.5" aria-label="Comprobaciones de verificación">
+              <ul className="flex flex-wrap gap-2.5" aria-label="Validaciones del aviso">
                 {verificationPreviewItems.map((item) => {
                   const isComplete = item.status === 'complete';
                   const isTooltipVisible = activeVerificationTooltip?.key === item.key;

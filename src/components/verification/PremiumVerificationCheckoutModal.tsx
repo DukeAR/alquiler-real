@@ -70,7 +70,7 @@ export const PremiumVerificationCheckoutModal = ({
               </div>
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/50">
                 <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Qué suma</p>
-                <p className="mt-2 text-sm leading-6 text-slate-700 dark:text-slate-200">Una comprobación extra visible para que otros entiendan mejor tu perfil o tu aviso.</p>
+                <p className="mt-2 text-sm leading-6 text-slate-700 dark:text-slate-200">Una validación extra visible para que otros entiendan mejor tu perfil o tu aviso.</p>
               </div>
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/50">
                 <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Qué se muestra</p>
@@ -82,7 +82,7 @@ export const PremiumVerificationCheckoutModal = ({
               <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Cómo sigue</p>
               <div className="mt-3 space-y-3 text-sm leading-6 text-slate-700 dark:text-slate-200">
                 <p>1. Confirmás el costo o el cupo sin cargo.</p>
-                <p>2. Registramos esta comprobación adicional en tu cuenta o en tu aviso.</p>
+                <p>2. Registramos esta validación adicional en tu cuenta o en tu aviso.</p>
                 <p>3. Te llevamos al paso necesario para completarla.</p>
               </div>
             </div>
@@ -104,7 +104,7 @@ export const PremiumVerificationCheckoutModal = ({
                   <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">{offer.purchased || offer.completed ? offer.processLabel : offer.checkoutLabel}</p>
                   <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">
                     {offer.purchased || offer.completed
-                      ? 'La comprobación ya está activa. Podés seguir directo al proceso correspondiente.'
+                      ? 'La validación ya está activa. Podés seguir directo al proceso correspondiente.'
                       : 'Confirmamos el costo y te llevamos directo al proceso, sin pasos extra.'}
                   </p>
                 </div>

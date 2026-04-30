@@ -22,7 +22,7 @@ describe('AboutPage', () => {
     expect(screen.getByText('Mirás fotos sin saber si son actuales. Dudás si la ubicación es realmente esa. Y muchas veces no tenés claro quién está del otro lado.')).toBeInTheDocument();
     expect(screen.getByText('Eso le pasa a todo el mundo. Y cuando se trata de vacaciones, no debería ser así.')).toBeInTheDocument();
     expect(screen.getByText('No es un problema de opciones. Es un problema de confianza.')).toBeInTheDocument();
-    expect(screen.getByText('Alquiler Real nace para cambiar eso: para que puedas ver, desde el principio, qué parte del aviso está realmente comprobada.')).toBeInTheDocument();
+    expect(screen.getByText('Alquiler Real nace para cambiar eso: para que puedas ver, desde el principio, qué parte del aviso está realmente validada.')).toBeInTheDocument();
     expect(screen.getByText('Para que decidir no dependa de adivinar.')).toBeInTheDocument();
     expect(screen.getByText('Menos incertidumbre. Más claridad.')).toBeInTheDocument();
     expect(screen.getByText('Elegís.')).toBeInTheDocument();
@@ -35,7 +35,7 @@ describe('AboutPage', () => {
     expect(screen.queryByText('Alquilar hoy muchas veces es una apuesta. No porque falten opciones, sino porque falta información confiable para decidir.')).not.toBeInTheDocument();
     expect(screen.queryByText('Alquiler Real nace para cambiar eso: para que puedas ver, desde el principio, qué parte del aviso está realmente comprobada antes de hablar, reservar o pagar.')).not.toBeInTheDocument();
     expect(screen.queryByText('La idea es simple: menos incertidumbre, más claridad.')).not.toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Qué ya está comprobado' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Qué ya está validado' })).toBeInTheDocument();
     expect(screen.getByText('Ubicación real')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Qué sigue dependiendo de vos' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Qué significa que algo esté verificado' })).toBeInTheDocument();
@@ -70,10 +70,14 @@ describe('AboutPage', () => {
     expect(screen.getByText('Filtrar mejor a quién responder')).toBeInTheDocument();
     expect(screen.getByText('Ver historial del usuario')).toBeInTheDocument();
     expect(screen.getByText('Decidir con más contexto')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'La verificación cambia la calidad de las reservas.' })).toBeInTheDocument();
-    expect(screen.getByText('Podés publicar sin costo, pero las propiedades con mayor nivel de verificación reciben más visibilidad, consultas más claras y reservas más seguras.')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'La verificación reduce dudas antes de reservar.' })).toBeInTheDocument();
+    expect(screen.getByText('Confirmamos que la propiedad existe y que hay una persona identificada con acceso al lugar.')).toBeInTheDocument();
     expect(screen.getByText('Ubicación confirmada')).toBeInTheDocument();
-    expect(screen.getByText('Más visibilidad, mejores consultas y menos ruido antes de aceptar.')).toBeInTheDocument();
+    expect(screen.getByText('Identidad del anfitrión validada')).toBeInTheDocument();
+    expect(screen.getByText('Acceso real a la propiedad')).toBeInTheDocument();
+    expect(screen.getByText('Vínculo comprobable con el lugar')).toBeInTheDocument();
+    expect(screen.getByText('No evaluamos el estado del inmueble ni la calidad de los servicios.')).toBeInTheDocument();
+    expect(screen.getByText('Más visibilidad, mejores consultas y menos dudas antes de aceptar.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Entender cómo funciona la verificación' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Cómo lograr la verificación máxima' })).toBeInTheDocument();
     expect(screen.getByText('Próximamente: guía paso a paso para publicar con verificación completa y mejorar tu exposición.')).toBeInTheDocument();
@@ -87,7 +91,7 @@ describe('AboutPage', () => {
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: 'Qué mirar antes de reservar' })).toBeInTheDocument();
     });
-    expect(screen.getByRole('heading', { name: 'Explorá sabiendo qué ya fue comprobado' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Explorá sabiendo qué ya fue validado' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Antes de reservar, sabé qué es real.' })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Proyecto' }));

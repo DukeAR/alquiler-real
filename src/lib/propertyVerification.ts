@@ -122,43 +122,19 @@ const LEGACY_PROPERTY_KEY_ALIASES: Partial<Record<LegacyPropertyVerificationKey,
 };
 
 const PROPERTY_VERIFICATION_LABEL_KEY_MAP: Record<string, PropertyVerificationKey> = {
-  'anfitrion confirmado': 'identity',
-  'ubicacion verificada': 'location',
-  'geolocalizacion precisa': 'geolocation',
-  'fotos / video reales': 'photos',
-  'disponibilidad validada': 'availability',
-};
-
-const PROPERTY_VERIFICATION_SHORT_LABELS: Record<PropertyVerificationKey, string> = {
-  identity: 'Anfitrión',
-  location: 'Ubicación',
-  geolocation: 'Geolocalización',
-  photos: 'Fotos / video',
-  availability: 'Disponibilidad',
+  'identidad del anfitrion validada': 'identity',
+  'ubicacion confirmada': 'location',
+  'punto exacto del aviso': 'geolocation',
+  'respaldo visual del aviso': 'photos',
+  'disponibilidad reciente': 'availability',
 };
 
 const PROPERTY_VERIFICATION_DISPLAY_LABELS: Record<PropertyVerificationKey, string> = {
-  identity: 'Anfitrión confirmado',
-  location: 'Ubicación verificada',
-  geolocation: 'Geolocalización precisa',
-  photos: 'Fotos / video reales',
-  availability: 'Disponibilidad validada',
-};
-
-const PROPERTY_VERIFICATION_DETAIL_LABELS: Record<PropertyVerificationKey, string> = {
-  identity: 'Anfitrión confirmado',
-  location: 'Ubicación verificada',
-  geolocation: 'Geolocalización precisa',
-  photos: 'Fotos reales',
-  availability: 'Disponibilidad validada',
-};
-
-const PROPERTY_VERIFICATION_COMPACT_PRIORITY: Record<PropertyVerificationKey, number> = {
-  identity: 0,
-  location: 1,
-  availability: 2,
-  photos: 3,
-  geolocation: 4,
+  identity: 'Identidad del anfitrión validada',
+  location: 'Ubicación confirmada',
+  geolocation: 'Punto exacto del aviso',
+  photos: 'Respaldo visual del aviso',
+  availability: 'Disponibilidad reciente',
 };
 
 const PROPERTY_VERIFICATION_KEY_SET = new Set<string>(PROPERTY_VERIFICATION_KEYS);
@@ -206,7 +182,7 @@ export const getPropertyVerificationStateCopy = (
   const hasPresencialVerificationSeal = safeScore === safeMaxScore && options?.hasPresencialVerificationSeal === true;
   const title = hasPresencialVerificationSeal ? PRESENCIAL_VERIFICATION_LABEL : 'Verificación parcial';
   const description = hasPresencialVerificationSeal
-    ? 'Este aviso fue validado con verificación presencial y cumple con todas las comprobaciones.'
+    ? 'Este aviso fue validado con verificación presencial y cumple con las validaciones visibles.'
     : 'Este aviso tiene información confirmada, pero hay puntos pendientes.';
 
   return {
@@ -242,6 +218,82 @@ const getPropertyVerificationDisplayItems = (items: PropertyVerificationItem[]) 
       label: PROPERTY_VERIFICATION_DISPLAY_LABELS[key],
     };
   });
+};
+
+type PublicPropertyVerificationDetailKey = 'locationConfirmed' | 'hostIdentityValidated' | 'realPropertyAccess' | 'relationshipProof';
+
+type PublicPropertyVerificationDetailItem = {
+  key: PublicPropertyVerificationDetailKey;
+  label: string;
+  detailLabel: string;
+  shortLabel: string;
+  status: 'complete' | 'pending';
+  description: string;
+};
+
+const buildPublicPropertyVerificationDetailItems = (
+  property: PropertyVerificationLike,
+  items: PropertyVerificationItem[],
+): PublicPropertyVerificationDetailItem[] => {
+  const itemByKey = new Map<PropertyVerificationKey, PropertyVerificationItem>();
+
+  items.forEach((item) => {
+    const normalizedKey = normalizePropertyVerificationKey(typeof item.key === 'string' ? item.key : undefined);
+
+    if (!normalizedKey || itemByKey.has(normalizedKey)) {
+      return;
+    }
+
+    itemByKey.set(normalizedKey, item);
+  });
+
+  const identityComplete = itemByKey.get('identity')?.status === 'complete';
+  const locationComplete = itemByKey.get('location')?.status === 'complete';
+  const accessComplete = Boolean(property.hasPresencialVerification || property.onsiteVerifiedAt);
+  const relationshipComplete = Boolean(property.propertyRelationshipVerified || accessComplete);
+
+  return [
+    {
+      key: 'locationConfirmed',
+      label: 'Ubicación confirmada',
+      detailLabel: 'Ubicación confirmada',
+      shortLabel: 'Ubicación',
+      status: locationComplete ? 'complete' : 'pending',
+      description: locationComplete
+        ? 'Confirmamos que la propiedad coincide con la ubicación publicada.'
+        : 'Todavía falta confirmar que la propiedad coincida con la ubicación publicada.',
+    },
+    {
+      key: 'hostIdentityValidated',
+      label: 'Identidad del anfitrión validada',
+      detailLabel: 'Identidad del anfitrión validada',
+      shortLabel: 'Identidad',
+      status: identityComplete ? 'complete' : 'pending',
+      description: identityComplete
+        ? 'Validamos la identidad del anfitrión dentro de la plataforma.'
+        : 'Todavía falta validar la identidad del anfitrión dentro de la plataforma.',
+    },
+    {
+      key: 'realPropertyAccess',
+      label: 'Acceso real a la propiedad',
+      detailLabel: 'Acceso real a la propiedad',
+      shortLabel: 'Acceso real',
+      status: accessComplete ? 'complete' : 'pending',
+      description: accessComplete
+        ? 'Confirmamos que hay una persona identificada con acceso real al lugar.'
+        : 'Todavía no pudimos confirmar acceso real a la propiedad.',
+    },
+    {
+      key: 'relationshipProof',
+      label: 'Vínculo comprobable con el lugar',
+      detailLabel: 'Vínculo comprobable con el lugar',
+      shortLabel: 'Vínculo',
+      status: relationshipComplete ? 'complete' : 'pending',
+      description: relationshipComplete
+        ? 'Hay respaldo comprobable que vincula al anfitrión con la propiedad.'
+        : 'Todavía falta respaldo comprobable del vínculo con el lugar.',
+    },
+  ];
 };
 
 const normalizeCatalogText = (value?: string | null) => (value ?? '')
@@ -803,11 +855,11 @@ export const getPropertyVerificationGuidanceMessage = (property: PropertyVerific
   const score = getPropertyVerificationPresentationState(property).score;
 
   if (score >= HIGH_VERIFICATION_HIGHLIGHT_MIN_SCORE) {
-    return 'Este aviso muestra más comprobaciones reales que la mayoría.';
+    return 'Este aviso muestra más validaciones visibles que la mayoría.';
   }
 
   if (score >= REAL_VERIFICATION_FILTER_MIN_SCORE) {
-    return 'Este aviso ya tiene varias comprobaciones visibles.';
+    return 'Este aviso ya tiene varias validaciones visibles.';
   }
 
   return null;
@@ -843,54 +895,33 @@ export const getPropertyVerificationBadge = (property: PropertyVerificationLike)
 
 export const getPropertyVerificationDetails = (property: PropertyVerificationLike) => {
   const verificationState = getPropertyVerificationPresentationState(property);
-  const displayItems = getPropertyVerificationDisplayItems(verificationState.verificationSummary.items);
-  const detailItems = displayItems.map((item) => {
-    const normalizedKey = normalizePropertyVerificationKey(typeof item.key === 'string' ? item.key : undefined);
-
-    return {
-      ...item,
-      detailLabel: normalizedKey ? PROPERTY_VERIFICATION_DETAIL_LABELS[normalizedKey] : item.label,
-    };
+  const displayItems = buildPublicPropertyVerificationDetailItems(property, verificationState.verificationSummary.items);
+  const displayScore = displayItems.filter((item) => item.status === 'complete').length;
+  const displayStateCopy = getPropertyVerificationStateCopy(displayScore, displayItems.length, {
+    hasPresencialVerificationSeal: Boolean(property.hasPresencialVerification || property.onsiteVerifiedAt),
   });
-  const compactItems = verificationState.verificationSummary.items
-    .filter((item) => item.status === 'complete')
-    .sort((left, right) => {
-      const leftKey = normalizePropertyVerificationKey(typeof left.key === 'string' ? left.key : undefined);
-      const rightKey = normalizePropertyVerificationKey(typeof right.key === 'string' ? right.key : undefined);
-      const leftPriority = leftKey ? PROPERTY_VERIFICATION_COMPACT_PRIORITY[leftKey] : Number.MAX_SAFE_INTEGER;
-      const rightPriority = rightKey ? PROPERTY_VERIFICATION_COMPACT_PRIORITY[rightKey] : Number.MAX_SAFE_INTEGER;
-
-      return leftPriority - rightPriority;
-    })
-    .map((item) => {
-      const normalizedKey = normalizePropertyVerificationKey(typeof item.key === 'string' ? item.key : undefined);
-
-      return {
-        ...item,
-        shortLabel: normalizedKey ? PROPERTY_VERIFICATION_SHORT_LABELS[normalizedKey] : item.label,
-      };
-    });
+  const compactItems = displayItems.filter((item) => item.status === 'complete');
 
   return {
-    score: verificationState.score,
-    max: verificationState.max,
-    label: verificationState.label,
-    summaryLabel: verificationState.summaryLabel,
-    compactLabel: verificationState.compactLabel,
-    countLabel: verificationState.badgeCountLabel,
-    levelLabel: verificationState.levelLabel,
-    description: verificationState.description,
-    isFullyVerified: verificationState.isFullyVerified,
-    isCoordinationReady: verificationState.isCoordinationReady,
+    score: displayScore,
+    max: displayItems.length,
+    label: displayStateCopy.title,
+    summaryLabel: displayStateCopy.summaryLabel,
+    compactLabel: displayStateCopy.title,
+    countLabel: displayStateCopy.countLabel,
+    levelLabel: displayStateCopy.title,
+    description: 'La verificación reduce dudas antes de reservar.',
+    isFullyVerified: displayStateCopy.isFullyVerified,
+    isCoordinationReady: displayStateCopy.isCoordinationReady,
     items: displayItems,
-    detailItems,
+    detailItems: displayItems,
     compactItems,
     compactSummary: compactItems.slice(0, 3).map((item) => item.shortLabel).join(' · '),
-    previewMode: verificationState.model,
+    previewMode: displayStateCopy.isFullyVerified ? 'premium' : 'standard',
     premiumTitle: PRESENCIAL_VERIFICATION_LABEL,
-    premiumDescription: 'Esta propiedad fue validada en persona.',
-    premiumSupportingText: verificationState.isFullyVerified ? 'Incluye ubicación, anfitrión y datos confirmados.' : null,
-    helperText: 'Ves las 5 comprobaciones reales, lo ya confirmado y lo que todavía falta validar.',
+    premiumDescription: 'Confirmamos que la propiedad existe y que hay una persona identificada con acceso al lugar.',
+    premiumSupportingText: 'No evaluamos el estado del inmueble ni la calidad de los servicios.',
+    helperText: 'Ves 4 validaciones reales que reducen dudas antes de reservar.',
   };
 };
 
@@ -914,7 +945,7 @@ export type PropertyCardVerificationState = {
   countLabel: string | null;
 };
 
-const getPropertyCardVerificationCountLabel = (count: number) => `${count} ${count === 1 ? 'comprobación visible' : 'comprobaciones visibles'}`;
+const getPropertyCardVerificationCountLabel = (count: number) => `${count} ${count === 1 ? 'validación visible' : 'validaciones visibles'}`;
 
 type PropertyVerificationPresentationState = PropertyCardVerificationState & {
   verificationSummary: PropertyVerificationSummary;

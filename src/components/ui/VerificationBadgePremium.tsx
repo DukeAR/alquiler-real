@@ -1,34 +1,49 @@
 import type { ComponentPropsWithoutRef } from 'react';
 
 import { cn } from '../../lib/utils';
-import { PresencialVerificationSealMark } from './PresencialVerificationSealMark';
 
 export type VerificationBadgePremiumSize = 'xs' | 'sm' | 'md';
+export type VerificationBadgePremiumVariant = 'plain' | 'glass-card';
+
+const PRESENCIAL_VERIFICATION_CARD_BADGE_SRC = '/verified-presencial-badge3.png';
 
 type VerificationBadgePremiumProps = ComponentPropsWithoutRef<'span'> & {
   size?: VerificationBadgePremiumSize;
   alt?: string;
+  variant?: VerificationBadgePremiumVariant;
 };
 
-const badgeClasses: Record<VerificationBadgePremiumSize, {
+const badgeClasses: Record<VerificationBadgePremiumVariant, Record<VerificationBadgePremiumSize, {
   container: string;
   mark: string;
-  text: string;
-}> = {
-  xs: {
-    container: 'gap-1.5 px-2.5 py-[5px]',
-    mark: 'h-[30px] w-[30px]',
-    text: 'text-[13px]',
-  },
-  sm: {
-    container: 'gap-2 px-3 py-1.5',
-    mark: 'h-[34px] w-[34px]',
-    text: 'text-[14px]',
+}>> = {
+  plain: {
+    xs: {
+      container: 'h-[50px] w-[44px]',
+      mark: 'h-full w-full',
     },
-  md: {
-    container: 'gap-3 px-4 py-2.5',
-    mark: 'h-[40px] w-[40px]',
-    text: 'text-base',
+    sm: {
+      container: 'h-[58px] w-[51px]',
+      mark: 'h-full w-full',
+    },
+    md: {
+      container: 'h-[66px] w-[58px]',
+      mark: 'h-full w-full',
+    },
+  },
+  'glass-card': {
+    xs: {
+      container: 'rounded-[12px] bg-[rgba(255,255,255,0.85)] px-2 py-1.5 shadow-[0_4px_12px_rgba(0,0,0,0.08)] backdrop-blur-[6px] transition-transform duration-150 ease-out hover:scale-[1.03] group-hover:scale-[1.03]',
+      mark: 'h-[56px] w-[49px]',
+    },
+    sm: {
+      container: 'rounded-[12px] bg-[rgba(255,255,255,0.85)] px-2 py-1.5 shadow-[0_4px_12px_rgba(0,0,0,0.08)] backdrop-blur-[6px] transition-transform duration-150 ease-out hover:scale-[1.03] group-hover:scale-[1.03]',
+      mark: 'h-[64px] w-[56px]',
+    },
+    md: {
+      container: 'rounded-[12px] bg-[rgba(255,255,255,0.85)] px-2 py-1.5 shadow-[0_4px_12px_rgba(0,0,0,0.08)] backdrop-blur-[6px] transition-transform duration-150 ease-out hover:scale-[1.03] group-hover:scale-[1.03]',
+      mark: 'h-[72px] w-[63px]',
+    },
   },
 };
 
@@ -36,9 +51,10 @@ export const VerificationBadgePremium = ({
   className,
   size = 'sm',
   alt = 'Verificado presencialmente',
+  variant = 'plain',
   ...props
 }: VerificationBadgePremiumProps) => {
-  const classes = badgeClasses[size];
+  const classes = badgeClasses[variant][size];
 
   return (
     <span
@@ -46,19 +62,17 @@ export const VerificationBadgePremium = ({
       role="img"
       aria-label={alt}
       className={cn(
-        'inline-flex items-center whitespace-nowrap rounded-full bg-[rgba(253,253,253,0.76)] text-slate-700 shadow-[0_12px_30px_-20px_rgba(15,23,42,0.55)] transition-transform duration-200 hover:-translate-y-0.5',
+        'inline-flex shrink-0 items-center justify-center',
         classes.container,
         className,
       )}
     >
-      <PresencialVerificationSealMark
+      <img
+        src={PRESENCIAL_VERIFICATION_CARD_BADGE_SRC}
         alt=""
         aria-hidden="true"
-        className={cn('shrink-0', classes.mark)}
+        className={cn('shrink-0 object-contain', classes.mark)}
       />
-      <span className={cn('font-semibold leading-none tracking-[-0.02em]', classes.text)}>
-        Verificado presencialmente
-      </span>
     </span>
   );
 };

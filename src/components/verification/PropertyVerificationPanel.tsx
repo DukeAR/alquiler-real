@@ -2,7 +2,6 @@ import React, { useRef, useState } from 'react';
 import { apiJson } from '../../lib/apiConfig';
 import {
   getPropertyAdvancedVerificationItems,
-  getPropertyVerificationBadge,
   getPropertyVerificationDetails,
   getPropertyVerificationItems,
 } from '../../lib/propertyVerification';
@@ -109,10 +108,9 @@ export const PropertyVerificationPanel = ({
   const documentInputRef = useRef<HTMLInputElement | null>(null);
 
   const verificationItems = getPropertyVerificationItems(property);
-  const verificationBadge = getPropertyVerificationBadge({ ...property, verificationItems });
   const verificationDetails = getPropertyVerificationDetails({ ...property, verificationItems });
   const advancedItems = getPropertyAdvancedVerificationItems(property);
-  const pendingItems = verificationItems.filter((item) => item.status !== 'complete');
+  const pendingDisplayItems = verificationDetails.items.filter((item) => item.status !== 'complete');
   const photoAssets = Array.isArray(property.verificationMedia?.photos) ? property.verificationMedia.photos : [];
   const videoAsset = property.verificationMedia?.video ?? null;
   const documentAssets = Array.isArray(property.verificationMedia?.documents) ? property.verificationMedia.documents : [];
@@ -160,8 +158,8 @@ export const PropertyVerificationPanel = ({
         <div className="space-y-5">
           <div className="space-y-2">
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Lectura del aviso</p>
-            <h2 className="text-2xl font-semibold tracking-tight text-slate-950">{verificationBadge.summaryLabel}</h2>
-            <p className="max-w-3xl text-sm leading-6 text-slate-600">Estas son las 5 comprobaciones visibles que usamos para mostrar qué parte del aviso ya está validada y qué sigue pendiente.</p>
+            <h2 className="text-2xl font-semibold tracking-tight text-slate-950">{verificationDetails.summaryLabel}</h2>
+            <p className="max-w-3xl text-sm leading-6 text-slate-600">Estas son las 4 validaciones que usamos para mostrar qué ya está confirmado antes de decidir.</p>
           </div>
 
           <div className="space-y-4 rounded-[24px] border border-slate-200/80 bg-slate-50/90 p-4">
@@ -176,9 +174,9 @@ export const PropertyVerificationPanel = ({
             <PropertyVerificationChecklist items={verificationDetails.items} size="md" columns={2} />
           </div>
 
-          {pendingItems.length > 0 ? (
+          {pendingDisplayItems.length > 0 ? (
             <p className="rounded-[22px] border border-slate-200/80 bg-slate-50/90 px-4 py-3 text-sm leading-6 text-slate-600">
-              Falta completar: {pendingItems.map((item) => item.label).join(' · ')}.
+              Falta completar: {pendingDisplayItems.map((item) => item.label).join(' · ')}.
             </p>
           ) : null}
 
@@ -284,9 +282,9 @@ export const PropertyVerificationPanel = ({
             </div>
 
             <AssetPreviewStrip
-              title="Fotos de comprobacion"
+              title="Fotos de respaldo"
               assets={photoAssets}
-              emptyText="Cuando cargues fotos reales desde aca, aparecen como respaldo visible del aviso."
+              emptyText="Cuando cargues fotos del lugar desde aca, aparecen como respaldo visual del aviso."
               icon={<Icons.ImagePlus className="h-4 w-4 text-brand" />}
             />
 

@@ -13,7 +13,7 @@ describe('buildPropertyVerificationProgress', () => {
 
     expect(progress.level).toBe('medium');
     expect(progress.summary).toBe('Listo para coordinar.');
-    expect(progress.nextStep).toBe('Disponibilidad no confirmada recientemente.');
+    expect(progress.nextStep).toBe('Falta confirmar disponibilidad reciente.');
   });
 
   test('uses a medium decision summary when there is still visible information to complete', () => {
@@ -26,7 +26,7 @@ describe('buildPropertyVerificationProgress', () => {
 
     expect(progress.level).toBe('medium');
     expect(progress.summary).toBe('Podés avanzar, pero hay información a completar.');
-    expect(progress.nextStep).toBe('Falta validar fotos o video.');
+    expect(progress.nextStep).toBe('Falta sumar respaldo visual del aviso.');
   });
 
   test('prioritizes the missing photos message before other pending visible checks', () => {
@@ -39,7 +39,7 @@ describe('buildPropertyVerificationProgress', () => {
     });
 
     expect(progress.summary).toBe('Listo para coordinar.');
-    expect(progress.nextStep).toBe('Falta validar fotos o video.');
+    expect(progress.nextStep).toBe('Falta sumar respaldo visual del aviso.');
   });
 
   test('keeps a neutral low-confidence summary for listings missing key basics', () => {
@@ -50,7 +50,7 @@ describe('buildPropertyVerificationProgress', () => {
 
     expect(progress.level).toBe('base');
     expect(progress.summary).toBe('Todavía falta información clave para decidir.');
-    expect(progress.nextStep).toBe('Falta confirmar la identidad del anfitrión.');
+    expect(progress.nextStep).toBe('Falta validar la identidad del anfitrión.');
   });
 
   test('uses actionable pending labels and descriptions for media and availability', () => {
@@ -63,15 +63,15 @@ describe('buildPropertyVerificationProgress', () => {
 
     expect(summary.items.find((item) => item.key === 'photos')).toEqual({
       key: 'photos',
-      label: 'Faltan fotos reales o video del lugar',
+      label: 'Falta respaldo visual del aviso',
       status: 'pending',
-      description: 'Sumar contenido real mejora la confianza.',
+      description: 'Sumar fotos del lugar ayuda a que el aviso se entienda mejor.',
     });
     expect(summary.items.find((item) => item.key === 'availability')).toEqual({
       key: 'availability',
-      label: 'Disponibilidad no confirmada recientemente',
+      label: 'Disponibilidad pendiente de confirmación',
       status: 'pending',
-      description: 'Responder o confirmar fechas valida este punto.',
+      description: 'Responder o confirmar fechas actualiza este punto.',
     });
   });
 });

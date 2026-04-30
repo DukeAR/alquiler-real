@@ -44,7 +44,7 @@ const DocumentaryIdentityStep: React.FC<{
       <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-[24px] bg-brand/10">
         <Icons.FileText className="h-8 w-8 text-brand" />
       </div>
-      <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Comprobación documental adicional</h1>
+      <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Validación documental adicional</h1>
       <p className="font-medium text-slate-500">Sumá DNI y selfie como información validada extra para tu perfil.</p>
     </div>
 
@@ -53,7 +53,7 @@ const DocumentaryIdentityStep: React.FC<{
         <div className="flex gap-3">
           <Icons.Info className="h-5 w-5 shrink-0 text-amber-700" />
           <p className="text-xs font-medium leading-relaxed text-amber-900 dark:text-amber-200">
-            Si llegaste directo a esta pantalla, primero activá esta comprobación adicional desde tu perfil para continuar sin errores.
+            Si llegaste directo a esta pantalla, primero activá esta validación adicional desde tu perfil para continuar sin errores.
           </p>
         </div>
       </div>
@@ -107,7 +107,7 @@ const DocumentaryIdentityStep: React.FC<{
       <div className="flex gap-3">
         <Icons.Sparkles className="h-5 w-5 shrink-0 text-amber-600" />
         <p className="text-xs font-medium leading-relaxed text-amber-900 dark:text-amber-200">
-          Esta comprobación no reemplaza la base visible de tu cuenta. Lo principal sigue construyéndose con email, teléfono, perfil, actividad e historial real.
+          Esta validación no reemplaza la base visible de tu cuenta. Lo principal sigue construyéndose con email, teléfono, perfil, actividad e historial real.
         </p>
       </div>
     </div>
@@ -120,7 +120,7 @@ const BiometryStep: React.FC = () => (
       <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-[24px] bg-brand/10">
         <Icons.Zap className="h-8 w-8 fill-brand text-brand" />
       </div>
-      <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Comprobación de presencia</h1>
+      <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Validación de presencia</h1>
       <p className="font-medium text-slate-500">Sirve para respaldar que la documentación cargada corresponde con vos.</p>
     </div>
 
@@ -150,7 +150,7 @@ const DocumentaryReadyStep: React.FC = () => (
         <Icons.CheckCircle2 className="h-8 w-8 text-emerald-600" />
       </div>
       <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Todo listo para confirmar</h1>
-      <p className="font-medium text-slate-500">Ya cargaste la base documental. El último paso deja activa esta comprobación adicional en tu cuenta.</p>
+      <p className="font-medium text-slate-500">Ya cargaste la base documental. El último paso deja activa esta validación adicional en tu cuenta.</p>
     </div>
 
     <div className="space-y-4">
@@ -169,7 +169,7 @@ const DocumentaryReadyStep: React.FC = () => (
         </div>
         <div>
           <p className="text-sm font-bold text-emerald-900 dark:text-emerald-300">Chequeo visual completado</p>
-          <p className="text-xs font-medium text-emerald-600/70">Ya podés confirmar esta comprobación documental.</p>
+          <p className="text-xs font-medium text-emerald-600/70">Ya podés confirmar esta validación documental.</p>
         </div>
       </div>
     </div>
@@ -232,7 +232,7 @@ const OnsiteSuccessStep: React.FC<{ appointmentDate: string; propertyTitle?: str
       </div>
       <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Revisión presencial confirmada</h1>
       <p className="font-medium text-slate-500">
-        {propertyTitle ? `La comprobación adicional de ${propertyTitle} ya quedó lista.` : 'La comprobación adicional ya quedó lista para esta publicación.'}
+        {propertyTitle ? `La validación adicional de ${propertyTitle} ya quedó lista.` : 'La validación adicional ya quedó lista para esta publicación.'}
       </p>
     </div>
 
@@ -271,7 +271,7 @@ export const DocumentVerificationFlow: React.FC<DocumentVerificationFlowProps> =
       return step === 1 ? 'Confirmar horario' : 'Volver';
     }
 
-    return step === 3 ? 'Finalizar comprobación' : 'Continuar';
+    return step === 3 ? 'Finalizar validación' : 'Continuar';
   }, [mode, step]);
 
   const handleDocumentaryNext = async () => {
@@ -325,7 +325,7 @@ export const DocumentVerificationFlow: React.FC<DocumentVerificationFlowProps> =
       });
       await onComplete();
     } catch (error) {
-      showToast('Verificación', error instanceof Error ? error.message : 'No pudimos completar esta comprobación documental.', 'error');
+      showToast('Verificación', error instanceof Error ? error.message : 'No pudimos completar esta validación documental.', 'error');
     } finally {
       setIsVerifying(false);
     }

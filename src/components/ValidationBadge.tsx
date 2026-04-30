@@ -118,7 +118,7 @@ export function ValidationBadgeLarge({ level, levelNumber, progress }: Validatio
           <Icon className={cn('w-10 h-10', config.iconColor)} />
         </div>
         <div className="flex-1">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">{levelNumber > 0 ? 'Resumen actual' : 'Primeras comprobaciones'}</span>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">{levelNumber > 0 ? 'Resumen actual' : 'Primeras validaciones'}</span>
           <h3 className={cn('text-2xl font-black tracking-tight', config.iconColor)}>{config.label}</h3>
           <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 font-medium">{config.description}</p>
         </div>

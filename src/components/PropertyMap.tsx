@@ -4,7 +4,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import * as L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { Property } from '../services/geminiService';
-import { getPropertyCardVerificationState, REAL_VERIFICATION_FILTER_MIN_SCORE } from '../lib/propertyVerification';
+import { getPropertyVerificationDetails, REAL_VERIFICATION_FILTER_MIN_SCORE } from '../lib/propertyVerification';
 import { cn, formatCurrency } from '../lib/utils';
 import { Icons } from './Icons';
 import { VerificationBadgePremium } from './ui/VerificationBadgePremium';
@@ -143,15 +143,13 @@ export const PropertyMap: React.FC<PropertyMapProps> = ({ properties, onProperty
                 />
                 <MapUpdater properties={mappableProperties} />
                 {mappableProperties.map((property) => {
-                    const verification = getPropertyCardVerificationState(property);
+                    const verification = getPropertyVerificationDetails(property);
                     const isHighlighted = activePropertyId === property.id || hoveredPropertyId === property.id;
-                    const isPresencialVerified = verification.presencialVerified;
-                    const usesVerifiedCardLayout = verification.count >= REAL_VERIFICATION_FILTER_MIN_SCORE;
+                    const isPresencialVerified = verification.isFullyVerified;
+                    const usesVerifiedCardLayout = verification.score >= REAL_VERIFICATION_FILTER_MIN_SCORE;
                     const propertyTypeLabel = getPropertyTypeLabel(property);
                     const guestCapacityLabel = getGuestCapacityLabel(Number(property.maxGuests) || null);
-                    const verifiedCardSummary = verification.presencialVerified
-                        ? 'Verificado presencialmente · Datos confirmados'
-                        : `${verification.countLabel ?? verification.summaryTitle} · Información validada`;
+                    const verifiedCardSummary = `${verification.countLabel} · Información validada`;
 
                     return (
                     <Marker
@@ -187,7 +185,7 @@ export const PropertyMap: React.FC<PropertyMapProps> = ({ properties, onProperty
                                         className="h-full w-full object-cover"
                                     />
 
-                                    {verification.presencialVerified ? (
+                                    {isPresencialVerified ? (
                                         <VerificationBadgePremium className="absolute left-4 top-4 z-20" />
                                     ) : null}
                                 </div>
@@ -208,18 +206,20 @@ export const PropertyMap: React.FC<PropertyMapProps> = ({ properties, onProperty
                                             <span className="ml-1 text-[0.72rem] font-medium tracking-normal text-slate-500">/ noche</span>
                                         </p>
 
-                                        {usesVerifiedCardLayout ? (
+                                        {usesVerifiedCardLayout && !isPresencialVerified ? (
                                             <p className="m-0 text-[0.74rem] leading-5 text-slate-500">
                                                 {verifiedCardSummary}
                                             </p>
-                                        ) : (
+                                        ) : null}
+
+                                        {!usesVerifiedCardLayout ? (
                                             <div className="space-y-2">
                                                 <p className="m-0 text-[0.74rem] font-medium leading-5 text-slate-600">
                                                     {verification.countLabel}
                                                 </p>
 
                                                 <ul className="space-y-1.5" aria-label="Checks de verificación">
-                                                    {verification.checks.map((check) => (
+                                                    {verification.items.map((check) => (
                                                         <li
                                                             key={check.key}
                                                             className="flex items-center gap-2 text-[0.72rem] font-medium leading-4"
@@ -227,21 +227,21 @@ export const PropertyMap: React.FC<PropertyMapProps> = ({ properties, onProperty
                                                             <span
                                                                 className={cn(
                                                                     'shrink-0 text-[0.74rem] font-semibold leading-none',
-                                                                    check.complete ? 'text-emerald-600' : 'text-slate-300',
+                                                                    check.status === 'complete' ? 'text-emerald-600' : 'text-slate-300',
                                                                 )}
                                                                 aria-hidden="true"
                                                             >
                                                                 ✔
                                                             </span>
 
-                                                            <span className={cn(check.complete ? 'text-slate-600' : 'text-slate-400')}>
+                                                            <span className={cn(check.status === 'complete' ? 'text-slate-600' : 'text-slate-400')}>
                                                                 {check.label}
                                                             </span>
                                                         </li>
                                                     ))}
                                                 </ul>
                                             </div>
-                                        )}
+                                        ) : null}
                                     </div>
 
                                     <div className="border-t border-gray-200" />

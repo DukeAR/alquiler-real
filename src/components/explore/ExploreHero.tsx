@@ -17,7 +17,7 @@ const heroGeoEyebrow = 'COSTA ATLÁNTICA ARGENTINA';
 const valueProofItems = [
   'Ubicación real',
   'Anfitrión visible',
-  'Datos comprobados',
+  'Datos validados',
 ] as const;
 
 const getRevealMotionProps = (delay: number) => ({

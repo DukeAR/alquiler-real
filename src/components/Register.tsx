@@ -8,7 +8,6 @@ import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 import { FormField } from './ui/FormField';
 import { Input } from './ui/Input';
-import { PresencialVerificationSealMark } from './ui/PresencialVerificationSealMark';
 import { PlatformTermsQuickGuide } from './ui/PlatformTermsQuickGuide';
 import { SectionTitle } from './ui/SectionTitle';
 
@@ -38,6 +37,7 @@ export const Register = ({ mode = 'login' }: RegisterProps) => {
     const navigate = useNavigate();
     const location = useLocation();
     const isLogin = mode === 'login';
+    const registerReturnPath = getPostAuthRedirect(location.state, '/');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [fullName, setFullName] = useState('');
@@ -59,6 +59,17 @@ export const Register = ({ mode = 'login' }: RegisterProps) => {
     const handleModeChange = (targetMode: 'login' | 'register') => {
         clearError();
         navigate(targetMode === 'login' ? '/login' : '/register', { state: preserveAuthRedirectState(location.state) });
+    };
+
+    const handleRegisterExit = () => {
+        clearError();
+
+        if (window.history.state?.idx > 0) {
+            navigate(-1);
+            return;
+        }
+
+        navigate(registerReturnPath, { replace: true });
     };
 
     const handleInterestToggle = (interest: string) => {
@@ -111,10 +122,11 @@ export const Register = ({ mode = 'login' }: RegisterProps) => {
                                 className="flex items-center gap-1.5 rounded-full pr-3 text-left transition-transform duration-200 hover:scale-[1.01]"
                             >
                                 <div className="flex h-10 w-10 shrink-0 items-center justify-center">
-                                    <PresencialVerificationSealMark
+                                    <img
+                                        src="/verified-presencial-badge3.png"
                                         alt=""
                                         aria-hidden="true"
-                                        className="h-full w-full"
+                                        className="h-full w-full object-contain"
                                     />
                                 </div>
                                 <div className="flex flex-col justify-center">
@@ -187,8 +199,33 @@ export const Register = ({ mode = 'login' }: RegisterProps) => {
     }
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4">
-            <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-[32px] p-8 shadow-2xl border border-slate-100 dark:border-slate-800">
+        <div className="app-page flex min-h-[100svh] items-center justify-center py-4 sm:py-8">
+            <div className="w-full max-w-md">
+                <div className="mb-4 hidden sm:flex sm:items-center sm:justify-start">
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="auto"
+                        className="rounded-full px-3 py-2 text-sm text-slate-600"
+                        onClick={handleRegisterExit}
+                    >
+                        <Icons.ArrowLeft className="h-4 w-4" />
+                        Volver
+                    </Button>
+                </div>
+
+                <div className="relative w-full rounded-[32px] border border-slate-100 bg-white p-8 shadow-2xl dark:border-slate-800 dark:bg-slate-900">
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Cerrar registro"
+                        className="absolute right-4 top-4 rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100 sm:hidden"
+                        onClick={handleRegisterExit}
+                    >
+                        <Icons.X className="h-5 w-5" />
+                    </Button>
+
                 <div className="flex flex-col items-center gap-4 mb-8">
                     <div className="w-16 h-16 bg-brand rounded-2xl flex items-center justify-center shadow-lg shadow-brand/20">
                         <Icons.ShieldCheck className="w-8 h-8 text-white" />
@@ -377,6 +414,7 @@ export const Register = ({ mode = 'login' }: RegisterProps) => {
                     >
                         ¿Ya tenés cuenta? Ingresá
                     </button>
+                </div>
                 </div>
             </div>
         </div>

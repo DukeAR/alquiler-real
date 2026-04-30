@@ -152,8 +152,8 @@ const buildFallbackVerificationSummary = (checks?: ValidationChecks): Verificati
       label: 'Identidad documental',
       status: safeChecks.documentaryVerified ? 'complete' : 'pending',
       description: safeChecks.documentaryVerified
-        ? 'La comprobación documental adicional ya quedó lista.'
-        : 'La comprobación documental adicional sigue siendo opcional.',
+        ? 'La validación documental adicional ya quedó lista.'
+        : 'La validación documental adicional sigue siendo opcional.',
     },
   ];
 
@@ -259,7 +259,7 @@ export const ProfileViewNew = () => {
   const currentReviews = reviewTab === 'received' ? reviews.received : reviews.written;
   const reviewCountLabel = currentReviews.length === 1 ? '1 reseña' : `${currentReviews.length} reseñas`;
   const validationLevel = validationData?.level ?? 'INICIAL';
-  const verificationSummary = validationData?.summary ?? 'Mostramos qué ya fue comprobado y qué falta completar en tu cuenta.';
+  const verificationSummary = validationData?.summary ?? 'Mostramos qué ya fue validado y qué falta completar en tu cuenta.';
   const premiumDocumentaryOffer = validationData?.premiumDocumentaryOffer ?? null;
   const canConfirmEmail = Boolean(validationData?.checks && !validationData.checks.emailVerified);
   const canConfirmPhone = Boolean(validationData?.checks && !validationData.checks.phoneVerified && user.phone);
@@ -282,17 +282,17 @@ export const ProfileViewNew = () => {
     ? validationData.missingRequirements.slice(0, 3).join(' · ')
     : null;
   const verificationSupportText = pendingChecks === 0
-    ? 'Ya están visibles las 5 comprobaciones disponibles en tu cuenta.'
+    ? 'Ya están visibles las 5 validaciones disponibles en tu cuenta.'
     : missingRequirementsText
       ? `Si querés sumar más información validada, hoy podés revisar: ${missingRequirementsText}.`
       : 'Podés sumar más información validada desde esta misma pantalla si te sirve.';
   const verificationVisibilityText = pendingChecks === 0
     ? 'Tu cuenta ya muestra toda la información validada disponible.'
     : completedChecks > 0
-      ? `Tu cuenta ya muestra ${completedChecks} ${completedChecks === 1 ? 'comprobación visible' : 'comprobaciones visibles'}.`
-      : 'Tu cuenta todavía no muestra comprobaciones visibles.';
+      ? `Tu cuenta ya muestra ${completedChecks} ${completedChecks === 1 ? 'validación visible' : 'validaciones visibles'}.`
+      : 'Tu cuenta todavía no muestra validaciones visibles.';
   const verificationVisibilityHelperText = pendingChecks === 0
-    ? 'No hace falta sumar nada más para mostrar las comprobaciones disponibles.'
+    ? 'No hace falta sumar nada más para mostrar las validaciones disponibles.'
     : 'Si querés, podés revisar este bloque para sumar más información validada.';
 
   const handlePremiumVerificationCheckout = async () => {
@@ -318,7 +318,7 @@ export const ProfileViewNew = () => {
       setShowVerification(false);
       navigate(response.redirectTo || premiumDocumentaryOffer.redirectTo);
     } catch (error) {
-      showToast('Verificación', error instanceof Error ? error.message : 'No pudimos activar esta comprobación adicional ahora.', 'error');
+      showToast('Verificación', error instanceof Error ? error.message : 'No pudimos activar esta validación adicional ahora.', 'error');
     } finally {
       setProcessingPremiumVerification(false);
     }
@@ -480,8 +480,8 @@ export const ProfileViewNew = () => {
                   />
 
                   <div className="mt-6 grid gap-4 sm:grid-cols-3">
-                    <MiniMetric label="Comprobaciones" value={`${completedChecks} de ${totalChecks || 0}`} accent="brand" caption="visibles en tu cuenta" />
-                    <MiniMetric label={pendingChecks === 0 ? 'Estado' : 'Pendientes'} value={pendingChecks === 0 ? 'Al día' : String(pendingChecks)} accent={pendingChecks === 0 ? 'success' : 'warning'} caption={pendingChecks === 0 ? 'ya están visibles las 5 comprobaciones' : `${pendingChecks === 1 ? 'comprobación pendiente' : 'comprobaciones pendientes'}`} />
+                    <MiniMetric label="Validaciones" value={`${completedChecks} de ${totalChecks || 0}`} accent="brand" caption="visibles en tu cuenta" />
+                    <MiniMetric label={pendingChecks === 0 ? 'Estado' : 'Pendientes'} value={pendingChecks === 0 ? 'Al día' : String(pendingChecks)} accent={pendingChecks === 0 ? 'success' : 'warning'} caption={pendingChecks === 0 ? 'ya están visibles las 5 validaciones' : `${pendingChecks === 1 ? 'validación pendiente' : 'validaciones pendientes'}`} />
                     <MiniMetric label="Actividad" value={String(activity?.total_bookings || 0)} accent="brand" caption={(activity?.total_bookings || 0) === 1 ? 'reserva registrada' : 'reservas registradas'} />
                   </div>
 
@@ -494,9 +494,9 @@ export const ProfileViewNew = () => {
                 <Card padding="lg" className="space-y-6 dark:border-slate-800 dark:bg-slate-900">
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <SectionTitle
-                      eyebrow="Comprobaciones"
-                      heading={`Tu perfil tiene ${completedChecks} de ${totalChecks || 0} comprobaciones`}
-                      description="Mostramos solo qué ya fue comprobado y qué falta completar en tu cuenta."
+                      eyebrow="Validaciones"
+                      heading={`Tu perfil tiene ${completedChecks} de ${totalChecks || 0} validaciones`}
+                      description="Mostramos solo qué ya fue validado y qué falta completar en tu cuenta."
                       as="h2"
                       visualLevel="h4"
                       className="max-w-md"
@@ -517,11 +517,11 @@ export const ProfileViewNew = () => {
 
                   <div className="grid gap-4 lg:grid-cols-2">
                     <div className="space-y-2.5">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">Qué ya está comprobado</p>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">Qué ya está validado</p>
                       <VerificationSnippetList
                         summary={verificationSummaryData}
                         status="complete"
-                        emptyText="Todavía no hay comprobaciones visibles en tu cuenta."
+                        emptyText="Todavía no hay validaciones visibles en tu cuenta."
                       />
                     </div>
 
@@ -533,7 +533,7 @@ export const ProfileViewNew = () => {
                         <VerificationSnippetList summary={verificationSummaryData} status="pending" />
                       ) : (
                         <p className="rounded-[18px] border border-slate-200/80 bg-slate-50/85 px-4 py-3 text-sm leading-6 text-slate-500 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-400">
-                          No hay comprobaciones pendientes para mostrar ahora.
+                          No hay validaciones pendientes para mostrar ahora.
                         </p>
                       )}
                     </div>
@@ -543,8 +543,8 @@ export const ProfileViewNew = () => {
                     <div className="rounded-[var(--app-radius-control)] border border-indigo-200/70 bg-indigo-50/70 p-4 dark:border-indigo-900/40 dark:bg-indigo-950/30">
                       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                         <div className="space-y-2">
-                          <p className="app-form-label">Comprobación adicional de identidad</p>
-                          <p className="text-sm leading-6 text-slate-700 dark:text-slate-200">Podés sumar una comprobación adicional de identidad sin volverla obligatoria para tu cuenta.</p>
+                          <p className="app-form-label">Validación adicional de identidad</p>
+                          <p className="text-sm leading-6 text-slate-700 dark:text-slate-200">Podés sumar una validación adicional de identidad sin volverla obligatoria para tu cuenta.</p>
                           <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">
                             {premiumDocumentaryOffer.complimentaryReason
                               ? premiumDocumentaryOffer.complimentaryReason
@@ -601,7 +601,7 @@ export const ProfileViewNew = () => {
                     <Button type="button" variant="secondary" onClick={() => setShowVerification(true)}>
                       <>
                         <Icons.ShieldCheck className="h-5 w-5" />
-                        {premiumDocumentaryOffer?.ctaLabel ?? (validationData?.checks?.documentaryVerified ? 'Revisar comprobación documental' : 'Ver comprobación documental adicional')}
+                        {premiumDocumentaryOffer?.ctaLabel ?? (validationData?.checks?.documentaryVerified ? 'Revisar validación documental' : 'Ver validación documental adicional')}
                       </>
                     </Button>
                   </div>

@@ -52,19 +52,19 @@ describe('ProfileViewNew', () => {
             verificationScore: 34,
             progress: 40,
             headline: 'Ya resolviste la base mínima de contacto.',
-            summary: 'Mostramos qué está comprobado para que otros puedan decidir mejor con tu cuenta.',
+            summary: 'Mostramos qué está validado para que otros puedan decidir mejor con tu cuenta.',
             nextStep: 'Completá tu perfil y empezá a sumar actividad.',
             optionalUpgrade: 'La documentación queda como refuerzo opcional para más adelante.',
             premiumDocumentaryOffer: {
               offerType: 'documentary-user',
               targetType: 'user',
-              title: 'Comprobación documental adicional',
+              title: 'Validación documental adicional',
               summary: 'Podés sumar DNI y selfie como información validada extra sobre tu cuenta.',
-              contextHint: 'Mostramos qué está comprobado para que otros puedan decidir mejor.',
-              visibilityHint: 'Suma una comprobación documental visible junto al resto de la información validada de tu cuenta.',
-              ctaLabel: 'Activar comprobación sin cargo',
+              contextHint: 'Mostramos qué está validado para que otros puedan decidir mejor.',
+              visibilityHint: 'Suma una validación documental visible junto al resto de la información validada de tu cuenta.',
+              ctaLabel: 'Activar validación sin cargo',
               checkoutLabel: 'Activar sin cargo',
-              processLabel: 'Ir a la comprobación',
+              processLabel: 'Ir a la validación',
               priceArs: 0,
               currency: 'ARS',
               isComplimentary: true,
@@ -152,14 +152,14 @@ describe('ProfileViewNew', () => {
 
     expect(screen.getByText('Resolvé lo básico')).toBeInTheDocument();
     expect(screen.getByText('Lo que ajusta lo que ves')).toBeInTheDocument();
-    expect(screen.getByText('Tu perfil tiene 1 de 5 comprobaciones')).toBeInTheDocument();
-    expect(screen.getByText('Mostramos solo qué ya fue comprobado y qué falta completar en tu cuenta.')).toBeInTheDocument();
-    expect(screen.getByText('Qué ya está comprobado')).toBeInTheDocument();
+    expect(screen.getByText('Tu perfil tiene 1 de 5 validaciones')).toBeInTheDocument();
+    expect(screen.getByText('Mostramos solo qué ya fue validado y qué falta completar en tu cuenta.')).toBeInTheDocument();
+    expect(screen.getByText('Qué ya está validado')).toBeInTheDocument();
     expect(screen.getByText('Qué podrías sumar si te sirve')).toBeInTheDocument();
     expect(screen.getByText(/Si querés sumar más información validada, hoy podés revisar:/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Confirmar email/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Agregar teléfono/i })).toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: /Activar comprobación sin cargo/i }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('button', { name: /Activar validación sin cargo/i }).length).toBeGreaterThan(0);
     expect(screen.getByText('🏖️ Playa y Mar')).toBeInTheDocument();
   });
 

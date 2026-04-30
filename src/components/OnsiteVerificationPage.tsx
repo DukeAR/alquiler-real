@@ -19,9 +19,10 @@ const trustOutcomePoints = [
 ];
 
 const heroBenefitPoints = [
-  'Propiedad real',
-  'Anfitrión identificado',
-  'Menor riesgo',
+  'Ubicación confirmada',
+  'Identidad del anfitrión validada',
+  'Acceso real a la propiedad',
+  'Vínculo comprobable con el lugar',
 ];
 
 const nonValidationItems = [
@@ -31,17 +32,17 @@ const nonValidationItems = [
 ];
 
 const validationItems = [
-  'Identidad del anfitrión (DNI)',
+  'Ubicación confirmada',
+  'Identidad del anfitrión validada',
   'Acceso real a la propiedad',
-  'Relación con la propiedad (servicios o documentación)',
-  'Coincidencia básica con la ubicación publicada',
+  'Vínculo comprobable con el lugar',
 ];
 
 const verifierVisitChecks = [
-  'Validación de identidad (DNI)',
-  'Confirmación de acceso a la propiedad',
-  'Verificación de vínculo con el lugar',
-  'Coincidencia con la ubicación publicada',
+  'Identidad del anfitrión validada',
+  'Acceso real a la propiedad',
+  'Vínculo comprobable con el lugar',
+  'Ubicación confirmada',
 ];
 
 const verifierIdentityPoints = [
@@ -67,7 +68,7 @@ const flowSteps = [
     id: 'verify',
     label: 'Validamos identidad y acceso',
     title: 'Validamos identidad y acceso',
-    description: 'Confirmamos quién sos y tu vínculo con el lugar.',
+    description: 'Confirmamos identidad, acceso real, vínculo con el lugar y ubicación publicada.',
   },
   {
     id: 'seal',
@@ -122,12 +123,12 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
 
           <div className="grid gap-8 md:grid-cols-[minmax(0,1.18fr)_minmax(280px,0.82fr)] md:items-start md:gap-10">
             <div className="space-y-5 md:self-center md:space-y-6">
-              <h1 className="max-w-[11ch] text-[clamp(2.35rem,5vw,3.7rem)] font-semibold leading-[0.98] tracking-[-0.06em] text-slate-950 dark:text-slate-50">
-                Más confianza. Mejores reservas.
+              <h1 className="max-w-[12ch] text-[clamp(2.35rem,5vw,3.7rem)] font-semibold leading-[0.98] tracking-[-0.06em] text-slate-950 dark:text-slate-50">
+                La verificación reduce dudas antes de reservar.
               </h1>
 
               <p className="max-w-2xl text-[1rem] leading-7 text-slate-700 dark:text-slate-300 md:text-[1.05rem]">
-                Verificamos en persona identidad y vínculo con la propiedad.
+                Confirmamos que la propiedad existe y que hay una persona identificada con acceso al lugar.
               </p>
 
               <div className="space-y-3">
@@ -426,8 +427,8 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
           </div>
         </section>
 
-        <section className="space-y-4 border-t border-slate-200/85 pt-8 dark:border-slate-800 md:pt-10">
-          <div className="space-y-2">
+        <section className="space-y-4">
+          <div className="mx-auto max-w-2xl space-y-2 text-center">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Video</p>
             <h2 className="text-[1.55rem] font-semibold leading-[1.08] tracking-[-0.04em] text-slate-950 dark:text-slate-50">
               Cómo funciona en la práctica
@@ -449,7 +450,7 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
           </div>
         </section>
 
-        <section className="space-y-5 border-t border-slate-200/85 pt-8 dark:border-slate-800 md:pt-10">
+        <section className="space-y-5">
           <div className="mx-auto flex max-w-2xl flex-col items-center space-y-2 text-center">
             <h2 className="text-[2.1rem] font-semibold leading-[1.02] tracking-[-0.05em] text-slate-950 dark:text-slate-50 md:text-[2.7rem]">
               Empezá la verificación y destacá tu propiedad

@@ -1545,7 +1545,7 @@ export const MyBookings = () => {
             <SectionTitle
               eyebrow="Guardados útiles"
               heading="Lo que te conviene volver a mirar antes de decidir."
-              description="Mostramos primero los guardados con más comprobaciones visibles para que retomes comparaciones reales, no una lista plana de favoritos."
+              description="Mostramos primero los guardados con más validaciones visibles para que retomes comparaciones reales, no una lista plana de favoritos."
               as="h2"
               visualLevel="h3"
               className="max-w-3xl"

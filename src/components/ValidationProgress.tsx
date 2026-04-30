@@ -78,7 +78,7 @@ export function ValidationProgress({ checks, progress, missingRequirements, user
     <div className="space-y-6">
       <div className="space-y-2">
         <div className="flex justify-between items-center">
-          <span className="text-sm font-medium text-gray-700">Qué está comprobado en tu cuenta</span>
+          <span className="text-sm font-medium text-gray-700">Qué está validado en tu cuenta</span>
           <span className="text-sm font-bold text-blue-600">{progress}%</span>
         </div>
         <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
@@ -90,7 +90,7 @@ export function ValidationProgress({ checks, progress, missingRequirements, user
         <div>
           <h4 className="text-xs uppercase tracking-wider text-gray-500 font-medium mb-2 flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-blue-400" />
-            Comprobaciones principales
+            Validaciones principales
           </h4>
           <div className="space-y-2">
             {primaryItems.map((item) => (<ChecklistItem key={item.label} {...item} />))}
@@ -101,7 +101,7 @@ export function ValidationProgress({ checks, progress, missingRequirements, user
           <div>
             <h4 className="text-xs uppercase tracking-wider text-gray-500 font-medium mb-2 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-amber-400" />
-              Comprobación documental opcional
+              Validación documental opcional
             </h4>
             <div className="space-y-2">
               {optionalItems.map((item) => (<ChecklistItem key={item.label} {...item} />))}
@@ -112,7 +112,7 @@ export function ValidationProgress({ checks, progress, missingRequirements, user
 
       {missingRequirements.length > 0 && (
         <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-          <h4 className="text-sm font-medium text-amber-800 mb-2">Todavía podés completar estas comprobaciones:</h4>
+          <h4 className="text-sm font-medium text-amber-800 mb-2">Todavía podés completar estas validaciones:</h4>
           <ul className="space-y-1">
             {missingRequirements.map((req, index) => (
               <li key={index} className="text-sm text-amber-700 flex items-center gap-2">

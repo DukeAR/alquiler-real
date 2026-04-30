@@ -87,7 +87,7 @@ describe('buildUserVerificationStatus', () => {
     expect(status.highValueBookingEligible).toBe(true);
     expect(status.verificationScore).toBe(4);
     expect(status.progress).toBe(80);
-    expect(status.optionalUpgrade).toContain('comprobación documental adicional');
+    expect(status.optionalUpgrade).toContain('validación documental adicional');
     expect(status.verificationSummary.score).toBe(4);
     expect(status.identityVerification.status).toBe('unverified');
   });

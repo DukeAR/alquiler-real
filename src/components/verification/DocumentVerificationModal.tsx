@@ -57,7 +57,7 @@ export const DocumentVerificationModal: React.FC<DocumentVerificationModalProps>
   const statusCards = [
     {
       id: 'progressive',
-      title: 'Comprobaciones base',
+      title: 'Validaciones base',
       status: currentLevelLabel,
       icon: Icons.ShieldCheck,
       color: 'bg-brand/10 text-brand',
@@ -196,7 +196,7 @@ export const DocumentVerificationModal: React.FC<DocumentVerificationModalProps>
         </div>
 
         <div className="space-y-4">
-          <h3 className="font-bold text-slate-900 dark:text-white">Cómo se suma esta comprobación</h3>
+          <h3 className="font-bold text-slate-900 dark:text-white">Cómo se suma esta validación</h3>
 
           <div className="grid gap-4 lg:grid-cols-3">
             {statusCards.map((card) => {
@@ -301,7 +301,7 @@ export const DocumentVerificationModal: React.FC<DocumentVerificationModalProps>
           <div className="flex items-start gap-3">
             <Icons.Info className="mt-0.5 h-5 w-5 flex-shrink-0 text-brand" />
             <p>
-              Este envío no es requisito para registrarte ni para avanzar en los primeros niveles. Solo suma una comprobación adicional cuando querés reforzar tu perfil.
+              Este envío no es requisito para registrarte ni para avanzar en los primeros niveles. Solo suma una validación adicional cuando querés reforzar tu perfil.
             </p>
           </div>
         </div>

@@ -371,7 +371,7 @@ export const PropertyUploadForm: React.FC<PropertyUploadFormProps> = ({ onComple
       },
       {
         title: 'Hacé más claro el aviso con identidad y video',
-        description: 'Desde el panel podés sumar esas comprobaciones para que el aviso tenga más trazabilidad sin volver a empezar la publicación.',
+        description: 'Desde el panel podés sumar esas validaciones para que el aviso tenga más trazabilidad sin volver a empezar la publicación.',
       },
     ];
 

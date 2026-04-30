@@ -43,32 +43,32 @@ describe('mapPropertyRecord', () => {
     expect(property.verificationItems).toEqual([
       {
         key: 'identity',
-        label: 'Anfitrión confirmado',
-        description: 'La identidad del anfitrión ya fue confirmada dentro de la plataforma.',
+        label: 'Identidad del anfitrión validada',
+        description: 'La identidad del anfitrión ya quedó validada dentro de la plataforma.',
         status: 'complete',
       },
       {
         key: 'location',
-        label: 'Ubicación verificada',
-        description: 'La zona del alojamiento ya fue verificada dentro de la plataforma.',
+        label: 'Ubicación confirmada',
+        description: 'La ubicación del aviso ya quedó confirmada dentro de la plataforma.',
         status: 'complete',
       },
       {
         key: 'geolocation',
-        label: 'Geolocalización precisa',
-        description: 'El aviso ya cuenta con coordenadas precisas para ubicar el lugar con más claridad.',
+        label: 'Punto exacto del aviso',
+        description: 'El aviso ya cuenta con un punto de mapa para ubicar mejor la propiedad.',
         status: 'complete',
       },
       {
         key: 'photos',
-        label: 'Fotos / video reales',
-        description: 'El aviso ya muestra fotos o video reales del alojamiento.',
+        label: 'Respaldo visual del aviso',
+        description: 'El aviso ya muestra fotos del lugar como respaldo visual.',
         status: 'complete',
       },
       {
         key: 'availability',
-        label: 'Disponibilidad validada',
-        description: 'Todavía falta validar la disponibilidad con calendario o reservas registradas.',
+        label: 'Disponibilidad pendiente de confirmación',
+        description: 'Responder o confirmar fechas actualiza este punto.',
         status: 'pending',
       },
     ]);
@@ -110,8 +110,8 @@ describe('mapPropertyRecord', () => {
     });
     expect(property.verificationItems?.find((item) => item.key === 'identity')).toEqual({
       key: 'identity',
-      label: 'Anfitrión confirmado',
-      description: 'Todavía falta confirmar la identidad del anfitrión.',
+      label: 'Identidad del anfitrión validada',
+      description: 'Todavía falta validar la identidad del anfitrión.',
       status: 'pending',
     });
   });

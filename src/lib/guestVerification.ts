@@ -132,7 +132,7 @@ const getGuestVerificationRequirement = (
     case 'history':
       return 'Sumá historial real en la plataforma';
     case 'documentary':
-      return 'Sumá la comprobación documental adicional';
+      return 'Sumá la validación documental adicional';
     default:
       return item.label;
   }

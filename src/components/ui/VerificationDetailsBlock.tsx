@@ -46,7 +46,7 @@ export const VerificationDetailsBlock = ({
             summary={summary}
             status="complete"
             showDescriptions={showDescriptions}
-            emptyText="Todavia no hay comprobaciones visibles en este momento."
+            emptyText="Todavia no hay validaciones visibles en este momento."
           />
         </div>
 
@@ -60,7 +60,7 @@ export const VerificationDetailsBlock = ({
             />
           ) : (
             <p className="rounded-[18px] border border-emerald-200/80 bg-emerald-50/90 px-4 py-3 text-sm leading-6 text-emerald-800 dark:border-emerald-900/30 dark:bg-emerald-950/30 dark:text-emerald-200">
-              Este bloque ya muestra todas las comprobaciones disponibles.
+              Este bloque ya muestra todas las validaciones disponibles.
             </p>
           )}
         </div>

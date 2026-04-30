@@ -5,7 +5,7 @@ import { apiJson } from '../lib/apiConfig';
 import { isBookingCheckInReached } from '../lib/bookingDates';
 import { resolveGuestRequestProfile } from '../lib/guestRequestProfile';
 import { formatPremiumPriceLabel } from '../lib/premiumVerification';
-import { getPropertyVerificationBadge, getPropertyVerificationItems, getPropertyVerificationProgress } from '../lib/propertyVerification';
+import { getPropertyVerificationDetails, getPropertyVerificationItems, getPropertyVerificationProgress } from '../lib/propertyVerification';
 import { getReservationFlowCopy, getReservationNextActorDisplayLabel, getReservationNextStepDisplayLabel } from '../lib/reservationFlow';
 import { acceptConversationRequest, confirmDirectDeposit } from '../services/geminiService';
 import { showToast } from '../lib/toast';
@@ -478,7 +478,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
       setActivePremiumOffer(null);
       navigate(response.redirectTo || activePremiumOffer.redirectTo);
     } catch (error) {
-      showToast('Verificación', error instanceof Error ? error.message : 'No pudimos activar esta comprobación presencial ahora.', 'error');
+      showToast('Verificación', error instanceof Error ? error.message : 'No pudimos activar esta validación presencial ahora.', 'error');
     } finally {
       setProcessingPremiumOffer(false);
     }
@@ -554,7 +554,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
           nextArrivalDate: null,
         };
         const verificationItems = getPropertyVerificationItems(property);
-        const verificationBadge = getPropertyVerificationBadge({ ...property, verificationItems });
+        const verificationDetails = getPropertyVerificationDetails({ ...property, verificationItems });
         const verificationProgress = getPropertyVerificationProgress({ ...property, verificationItems });
 
         return {
@@ -564,11 +564,13 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
           nextArrivalDate: typeof property.nextArrivalDate === 'string' && property.nextArrivalDate
             ? property.nextArrivalDate
             : fallbackStats.nextArrivalDate,
-          verificationBadge,
+          verificationDetails,
           verificationItems,
           verificationProgress,
           completedVerificationItems: verificationItems.filter((item) => item.status === 'complete'),
           pendingVerificationItems: verificationItems.filter((item) => item.status !== 'complete'),
+          completedVerificationDetails: verificationDetails.items.filter((item) => item.status === 'complete'),
+          pendingVerificationDetails: verificationDetails.items.filter((item) => item.status !== 'complete'),
         };
       })
       .sort((left: any, right: any) => {
@@ -704,16 +706,16 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
       });
     }
 
-    const propertyNeedingVerification = hostProperties.find((property: any) => property.pendingVerificationItems.length > 0);
+    const propertyNeedingVerification = hostProperties.find((property: any) => property.pendingVerificationDetails.length > 0);
 
     if (propertyNeedingVerification) {
       actions.push({
         id: 'missing-verifications',
         eyebrow: 'Genera mas confianza',
         title: `Mejora ${propertyNeedingVerification.title}`,
-        description: propertyNeedingVerification.pendingVerificationItems.length === 1
-          ? `Te falta ${propertyNeedingVerification.pendingVerificationItems[0]?.label?.toLowerCase() || 'una comprobacion'} para que el aviso quede mas claro.`
-          : `Te faltan ${propertyNeedingVerification.pendingVerificationItems.length} comprobaciones para que el aviso se entienda mejor y genere mas confianza.`,
+        description: propertyNeedingVerification.pendingVerificationDetails.length === 1
+          ? `Te falta ${propertyNeedingVerification.pendingVerificationDetails[0]?.label?.toLowerCase() || 'una validación visible'} para que el aviso quede más claro.`
+          : `Te faltan ${propertyNeedingVerification.pendingVerificationDetails.length} validaciones visibles para que el aviso se entienda mejor y genere más confianza.`,
         actionLabel: 'Mejorar aviso',
         icon: <Icons.Shield className="h-5 w-5" />,
         kind: 'property',
@@ -1220,8 +1222,8 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
 
                       {showOnsiteAction ? (
                         <div className="rounded-[20px] border border-indigo-200/70 bg-indigo-50/70 p-3 dark:border-indigo-900/40 dark:bg-indigo-950/30">
-                          <p className="eyebrow text-indigo-700 dark:text-indigo-300">Comprobación adicional</p>
-                          <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-100">Podes solicitar una verificacion presencial para sumar otra comprobacion visible y generar mas confianza.</p>
+                          <p className="eyebrow text-indigo-700 dark:text-indigo-300">Validación adicional</p>
+                          <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-100">Podés solicitar una verificación presencial para sumar otra validación visible y generar más confianza.</p>
                           <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
                             {property.premiumOnsiteOffer.complimentaryReason
                               ? property.premiumOnsiteOffer.complimentaryReason

@@ -177,7 +177,7 @@ export const TenantProfileView: React.FC<TenantProfileViewProps> = ({ onBack }) 
           </div>
         </div>
 
-        {/* ESTADO DE COMPROBACIONES */}
+        {/* ESTADO DE VALIDACIONES */}
         {validationStatus && (
           <section className="space-y-4">
             <ValidationBadgeLarge
@@ -206,7 +206,7 @@ export const TenantProfileView: React.FC<TenantProfileViewProps> = ({ onBack }) 
             {validationStatus.level === 'INICIAL' && (
               <div className="p-4 bg-slate-100 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700">
                 <p className="text-sm text-slate-600 dark:text-slate-400">
-                  <strong>Primeras comprobaciones:</strong> Empezá por confirmar email y teléfono. La documentación queda para después y es opcional.
+                  <strong>Primeras validaciones:</strong> Empezá por confirmar email y teléfono. La documentación queda para después y es opcional.
                 </p>
               </div>
             )}
@@ -222,13 +222,13 @@ export const TenantProfileView: React.FC<TenantProfileViewProps> = ({ onBack }) 
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
                   <Icons.Shield className="w-4 h-4" />
-                  Estado de comprobaciones
+                  Estado de validaciones
                 </h3>
                 <button
                   onClick={() => setShowDocUpload(!showDocUpload)}
                   className="text-xs font-bold text-brand hover:text-brand/80 transition-colors"
                 >
-                  {showDocUpload ? 'Ocultar' : 'Ver comprobación documental'}
+                  {showDocUpload ? 'Ocultar' : 'Ver validación documental'}
                 </button>
               </div>
 
@@ -242,7 +242,7 @@ export const TenantProfileView: React.FC<TenantProfileViewProps> = ({ onBack }) 
               {showDocUpload && (
                 <div className="mt-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700">
                   <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
-                    Si querés sumar respaldo extra, activá la comprobación documental adicional desde tu perfil y seguí desde ahí.
+                    Si querés sumar respaldo extra, activá la validación documental adicional desde tu perfil y seguí desde ahí.
                   </p>
                   <button
                     onClick={() => window.location.href = '/profile'}

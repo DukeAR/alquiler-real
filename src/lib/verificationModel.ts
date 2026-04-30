@@ -217,87 +217,87 @@ export const buildPropertyVerificationItem = (input: {
   if (input.key === 'identity') {
     return {
       key: 'identity',
-      label: 'Anfitrión confirmado',
+      label: 'Identidad del anfitrión validada',
       status,
       description: input.complete
-        ? 'La identidad del anfitrión ya fue confirmada dentro de la plataforma.'
-        : 'Todavía falta confirmar la identidad del anfitrión.',
+        ? 'La identidad del anfitrión ya quedó validada dentro de la plataforma.'
+        : 'Todavía falta validar la identidad del anfitrión.',
     };
   }
 
   if (input.key === 'location') {
     return {
       key: 'location',
-      label: 'Ubicación verificada',
+      label: 'Ubicación confirmada',
       status,
       description: input.complete
-        ? 'La zona del alojamiento ya fue verificada dentro de la plataforma.'
-        : 'Todavía falta verificar la ubicación del alojamiento.',
+        ? 'La ubicación del aviso ya quedó confirmada dentro de la plataforma.'
+        : 'Todavía falta confirmar la ubicación del aviso.',
     };
   }
 
   if (input.key === 'geolocation') {
     return {
       key: 'geolocation',
-      label: 'Geolocalización precisa',
+      label: 'Punto exacto del aviso',
       status,
       description: input.complete
-        ? 'El aviso ya cuenta con coordenadas precisas para ubicar el lugar con más claridad.'
-        : 'Todavía falta validar una geolocalización precisa del lugar.',
+        ? 'El aviso ya cuenta con un punto de mapa para ubicar mejor la propiedad.'
+        : 'Todavía falta sumar el punto exacto del mapa para ubicar mejor la propiedad.',
     };
   }
 
   if (input.key === 'photos') {
     return {
       key: 'photos',
-      label: input.complete ? 'Fotos / video reales' : 'Faltan fotos reales o video del lugar',
+      label: input.complete ? 'Respaldo visual del aviso' : 'Falta respaldo visual del aviso',
       status,
       description: input.complete
-        ? 'El aviso ya muestra fotos o video reales del alojamiento.'
-        : 'Sumar contenido real mejora la confianza.',
+        ? 'El aviso ya muestra fotos del lugar como respaldo visual.'
+        : 'Sumar fotos del lugar ayuda a que el aviso se entienda mejor.',
     };
   }
 
   if (input.key === 'availability') {
     return {
       key: 'availability',
-      label: input.complete ? 'Disponibilidad validada' : 'Disponibilidad no confirmada recientemente',
+      label: input.complete ? 'Disponibilidad reciente' : 'Disponibilidad pendiente de confirmación',
       status,
       description: input.complete
-        ? 'La disponibilidad ya muestra calendario o reservas registradas dentro de la plataforma.'
-        : 'Responder o confirmar fechas valida este punto.',
+        ? 'La disponibilidad ya muestra calendario o actividad reciente dentro de la plataforma.'
+        : 'Responder o confirmar fechas actualiza este punto.',
     };
   }
 
   return {
     key: 'availability',
-    label: input.complete ? 'Disponibilidad validada' : 'Disponibilidad no confirmada recientemente',
+    label: input.complete ? 'Disponibilidad reciente' : 'Disponibilidad pendiente de confirmación',
     status,
     description: input.complete
-      ? 'La disponibilidad ya muestra calendario o reservas registradas dentro de la plataforma.'
-      : 'Responder o confirmar fechas valida este punto.',
+      ? 'La disponibilidad ya muestra calendario o actividad reciente dentro de la plataforma.'
+      : 'Responder o confirmar fechas actualiza este punto.',
   };
 };
 
 const getPropertyVerificationNextStep = (input: PropertyVerificationSummaryInput) => {
   if (!isRealMediaCheckComplete(input)) {
-    return 'Falta validar fotos o video.';
+    return 'Falta sumar respaldo visual del aviso.';
   }
 
   if (!isAvailabilityValidatedCheckComplete(input)) {
-    return 'Disponibilidad no confirmada recientemente.';
+    return 'Falta confirmar disponibilidad reciente.';
   }
 
   if (!isIdentityCheckComplete(input)) {
-    return 'Falta confirmar la identidad del anfitrión.';
+    return 'Falta validar la identidad del anfitrión.';
   }
 
   if (!isLocationVerifiedCheckComplete(input)) {
-    return 'Falta validar la ubicación del alojamiento.';
+    return 'Falta confirmar la ubicación del aviso.';
   }
 
   if (!isPreciseGeolocationCheckComplete(input)) {
-    return 'Falta validar la ubicación precisa del lugar.';
+    return 'Falta sumar el punto exacto del mapa.';
   }
 
   return 'Suma documentación privada o una revisión manual para reforzar todavía más la confianza.';

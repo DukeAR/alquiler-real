@@ -6,24 +6,20 @@ type VerificationInfoPanelProps = {
 
 const VERIFICATION_INFO_ITEMS = [
   {
-    title: 'Anfitrión confirmado',
-    description: 'Confirmamos la identidad de quien publica.',
+    title: 'Ubicación confirmada',
+    description: 'Confirmamos que la propiedad coincide con la ubicación publicada.',
   },
   {
-    title: 'Ubicación verificada',
-    description: 'Verificamos que el inmueble exista en la dirección publicada.',
+    title: 'Identidad del anfitrión validada',
+    description: 'Validamos la identidad de quien publica el aviso.',
   },
   {
-    title: 'Geolocalización precisa',
-    description: 'Chequeamos que el punto del mapa coincida con el lugar real.',
+    title: 'Acceso real a la propiedad',
+    description: 'Confirmamos que hay una persona identificada con acceso real al lugar.',
   },
   {
-    title: 'Fotos y video reales',
-    description: 'Revisamos fotos o video del lugar real.',
-  },
-  {
-    title: 'Disponibilidad validada',
-    description: 'Validamos disponibilidad reciente con el anfitrión.',
+    title: 'Vínculo comprobable con el lugar',
+    description: 'Reunimos respaldo que vincula al anfitrión con la propiedad.',
   },
 ] as const;
 
@@ -36,7 +32,7 @@ export const VerificationInfoPanel = ({ className }: VerificationInfoPanelProps)
       <div className="space-y-2">
         <h2 className="text-2xl font-semibold tracking-tight text-slate-950">Cómo se valida este aviso</h2>
         <p className="max-w-3xl text-sm leading-7 text-slate-600">
-          Estas 5 comprobaciones muestran qué ya está confirmado antes de decidir.
+          Estas 4 validaciones muestran qué sí está confirmado antes de decidir.
         </p>
       </div>
 
@@ -59,8 +55,9 @@ export const VerificationInfoPanel = ({ className }: VerificationInfoPanelProps)
 
       <div className="mt-6 border-t border-slate-200/80 pt-5">
         <div className="space-y-2">
-          <p className="text-base font-semibold text-slate-900">Más comprobaciones, menos dudas al decidir</p>
-          <p className="text-sm leading-6 text-slate-600">Los avisos más completos aparecen primero.</p>
+          <p className="text-base font-semibold text-slate-900">La verificación reduce dudas antes de reservar.</p>
+          <p className="text-sm leading-6 text-slate-600">Confirmamos que la propiedad existe y que hay una persona identificada con acceso al lugar.</p>
+          <p className="text-sm leading-6 text-slate-600">No evaluamos el estado del inmueble ni la calidad de los servicios.</p>
         </div>
       </div>
     </section>

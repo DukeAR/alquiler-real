@@ -26,6 +26,7 @@
     "src/lib/positiveIncentives.ts",
     "src/lib/propertyListingQuality.ts",
     "src/lib/propertyVerification.ts",
+    "src/lib/verificationPresentation.ts",
     "src/lib/verificationModel.ts"
   ]
 }

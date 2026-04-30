@@ -38,16 +38,6 @@ type VerificationLevel = {
   iconWrapperClassName: string;
 };
 
-type FutureCard = {
-  title: string;
-  description: string;
-  cardClassName: string;
-  badgeClassName: string;
-  icon: IconType;
-  iconClassName: string;
-  iconWrapperClassName: string;
-};
-
 type RoleBenefit = {
   title: string;
   description: string;
@@ -79,12 +69,12 @@ const projectCardIconShellClass = 'inline-flex h-10 w-10 items-center justify-ce
 
 const projectScopeCards: ScopeCard[] = [
   {
-    title: 'Qué ya está comprobado',
+    title: 'Qué ya está validado',
     points: [
       'Quién publica',
       'Ubicación real',
       'Fotos del lugar',
-      'Datos básicos verificados',
+      'Datos básicos validados',
     ],
     cardClassName: 'rounded-[24px] border border-brand/15 bg-brand/[0.06] p-5 shadow-[0_16px_34px_-28px_rgba(67,56,202,0.14)] dark:border-brand/20 dark:bg-brand/10',
     pointClassName: 'flex items-start gap-3 rounded-[18px] border border-brand/10 bg-white/88 px-4 py-3.5 text-[0.92rem] leading-6 text-slate-800 shadow-[0_14px_28px_-24px_rgba(15,23,42,0.12)] dark:border-brand/20 dark:bg-slate-950/70 dark:text-slate-100',
@@ -131,36 +121,6 @@ const verificationLevels: VerificationLevel[] = [
   },
 ];
 
-const futureCards: FutureCard[] = [
-  {
-    title: 'Más claridad en cada aviso',
-    description: 'Menos dudas antes de escribir o reservar',
-    cardClassName: 'rounded-[24px] border border-brand/15 bg-brand/[0.06] p-5 shadow-[0_16px_34px_-28px_rgba(67,56,202,0.14)] dark:border-brand/20 dark:bg-brand/10',
-    badgeClassName: 'bg-brand/10 text-brand dark:bg-brand/15 dark:text-brand-light',
-    icon: Icons.Lightbulb,
-    iconClassName: 'text-brand dark:text-brand-light',
-    iconWrapperClassName: 'bg-brand/10 text-brand shadow-[0_16px_30px_-24px_rgba(67,56,202,0.36)] dark:bg-brand/15 dark:text-brand-light',
-  },
-  {
-    title: 'Más cosas verificadas',
-    description: 'Cada aviso muestra mejor qué es real',
-    cardClassName: 'rounded-[24px] border border-slate-200/85 bg-white p-5 shadow-[0_16px_34px_-28px_rgba(15,23,42,0.12)] dark:border-slate-800 dark:bg-slate-900',
-    badgeClassName: 'bg-slate-100 text-slate-700 dark:bg-slate-700/50 dark:text-slate-200',
-    icon: Icons.Search,
-    iconClassName: 'text-slate-500 dark:text-slate-300',
-    iconWrapperClassName: 'bg-slate-100 text-slate-700 shadow-[0_16px_30px_-24px_rgba(15,23,42,0.18)] dark:bg-slate-800 dark:text-slate-100',
-  },
-  {
-    title: 'Decidir más rápido',
-    description: 'Menos vueltas, más certeza',
-    cardClassName: 'rounded-[24px] border border-emerald-200/70 bg-emerald-50/80 p-5 shadow-[0_16px_34px_-28px_rgba(15,23,42,0.12)] dark:border-emerald-900/25 dark:bg-emerald-950/10',
-    badgeClassName: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-200',
-    icon: Icons.Zap,
-    iconClassName: 'text-emerald-600 dark:text-emerald-300',
-    iconWrapperClassName: 'bg-emerald-500/12 text-emerald-700 shadow-[0_16px_30px_-24px_rgba(16,185,129,0.34)] dark:bg-emerald-500/12 dark:text-emerald-300',
-  },
-];
-
 const hostDifferentiators: RoleBenefit[] = [
   {
     title: 'Filtrar mejor a quién responder',
@@ -181,10 +141,9 @@ const hostDifferentiators: RoleBenefit[] = [
 
 const hostVerificationChecklist = [
   'Ubicación confirmada',
-  'Fotos reales',
-  'Datos validados',
-  'Servicios comprobados',
-  'Condiciones verificadas',
+  'Identidad del anfitrión validada',
+  'Acceso real a la propiedad',
+  'Vínculo comprobable con el lugar',
 ];
 
 const guestBenefits: RoleBenefit[] = [
@@ -195,7 +154,7 @@ const guestBenefits: RoleBenefit[] = [
   },
   {
     title: 'Dónde está el lugar',
-    description: 'Podés revisar si la ubicación verificada coincide con la propiedad.',
+    description: 'Podés revisar si la ubicación confirmada coincide con la propiedad.',
     icon: Icons.MapPin,
   },
   {
@@ -212,7 +171,7 @@ const guestSteps: StepCard = {
   icon: Icons.ListTodo,
   steps: [
     'Elegí la zona y compará propiedades.',
-    'Revisá quién publica, si hay identidad confirmada, ubicación verificada y reseñas reales.',
+    'Revisá quién publica, si hay identidad confirmada, ubicación confirmada y reseñas reales.',
     'Hacé preguntas concretas antes de avanzar.',
     'Coordiná el pago cuando ya hayas revisado ubicación, reseñas reales y reglas básicas.',
   ],
@@ -415,7 +374,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
               className="pt-0.5 md:pt-1"
             >
               <div className="mx-auto flex w-full max-w-[940px] flex-col gap-5 md:gap-6">
-                <section className="relative mb-4 overflow-hidden rounded-[30px] border border-slate-200/85 bg-[radial-gradient(circle_at_top_right,rgba(67,56,202,0.08),transparent_38%),linear-gradient(180deg,rgba(255,255,255,0.99),rgba(248,250,252,0.98))] p-6 shadow-[0_22px_46px_-34px_rgba(15,23,42,0.16)] md:p-10 dark:border-slate-800 dark:bg-slate-900">
+                <section className="relative overflow-hidden rounded-[30px] border border-slate-200/85 bg-[radial-gradient(circle_at_top_right,rgba(67,56,202,0.08),transparent_38%),linear-gradient(180deg,rgba(255,255,255,0.99),rgba(248,250,252,0.98))] p-6 shadow-[0_22px_46px_-34px_rgba(15,23,42,0.16)] md:p-10 dark:border-slate-800 dark:bg-slate-900">
                   <div className="absolute inset-0 hidden" />
 
                   <div className="relative flex flex-col gap-5">
@@ -443,7 +402,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                       </div>
 
                       <p className="mb-[10px] w-full text-[0.9rem] leading-[1.7] text-[#5B6470]">
-                        Alquiler Real nace para cambiar eso: para que puedas ver, desde el principio, qué parte del aviso está realmente comprobada.
+                        Alquiler Real nace para cambiar eso: para que puedas ver, desde el principio, qué parte del aviso está realmente validada.
                       </p>
 
                       <p className="mt-[6px] mb-[10px] w-full text-[0.9rem] font-semibold leading-[1.7] text-[#111827]">
@@ -507,22 +466,52 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                   </p>
                 </section>
 
-                <section className="mx-auto mb-8 mt-12 max-w-[680px] text-center">
-                  <h2 className="mb-4 text-[36px] font-bold leading-[1.08] tracking-[-0.04em] text-[#0F172A]">
-                    Alquilar debería ser simple.
-                  </h2>
+                <section className="relative overflow-hidden rounded-[34px] border border-slate-200/85 bg-[radial-gradient(circle_at_top,rgba(67,56,202,0.08),transparent_48%),linear-gradient(180deg,rgba(255,255,255,0.99),rgba(248,250,252,0.96))] px-7 py-10 shadow-[0_28px_56px_-40px_rgba(15,23,42,0.18)] md:px-10 md:py-12 dark:border-slate-800 dark:bg-slate-900">
+                  <div className="pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-brand/30 to-transparent dark:via-brand/20" />
+                  <div className="pointer-events-none absolute inset-x-12 bottom-0 h-px bg-gradient-to-r from-transparent via-slate-300/70 to-transparent dark:via-slate-700/70" />
+                  <div className="pointer-events-none absolute -right-12 top-6 h-28 w-28 rounded-full bg-brand/10 blur-3xl dark:bg-brand/15" />
+                  <div className="pointer-events-none absolute -left-10 bottom-4 h-24 w-24 rounded-full bg-emerald-400/10 blur-3xl dark:bg-emerald-400/10" />
 
-                  <p className="mb-4 text-[16px] leading-[1.7] text-[#5B6470]">
-                    No debería ser una apuesta. No deberías tener que dudar de cada foto, de cada ubicación o de cada persona con la que hablás.
-                  </p>
+                  <div className="relative mx-auto max-w-3xl text-center">
+                    <div className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/78 px-4 py-2 text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-slate-500 shadow-[0_16px_30px_-24px_rgba(15,23,42,0.14)] backdrop-blur-sm dark:border-slate-700 dark:bg-slate-950/70 dark:text-slate-300">
+                      <span className="h-2 w-2 rounded-full bg-emerald-500 dark:bg-emerald-300" />
+                      En resumen
+                    </div>
 
-                  <p className="mb-4 text-[16px] leading-[1.7] text-[#5B6470]">
-                    Alquiler Real existe para eso: para que puedas elegir con información clara, hablar con más confianza y reservar sabiendo mejor dónde te estás metiendo.
-                  </p>
+                    <h2 className="mt-6 text-[clamp(2rem,4vw,3.2rem)] font-semibold leading-[1.02] tracking-[-0.05em] text-slate-950 dark:text-slate-50">
+                      Alquilar debería ser simple.
+                    </h2>
 
-                  <p className="text-[18px] font-semibold leading-[1.7] text-[#163329]">
-                    Menos dudas. Más tranquilidad.
-                  </p>
+                    <div className="mt-5 space-y-4">
+                      <p className="text-[1.02rem] leading-8 text-slate-600 dark:text-slate-300 md:text-[1.08rem]">
+                        No debería ser una apuesta. No deberías tener que dudar de cada foto, de cada ubicación o de cada persona con la que hablás.
+                      </p>
+
+                      <p className="text-[1.02rem] leading-8 text-slate-600 dark:text-slate-300 md:text-[1.08rem]">
+                        Alquiler Real existe para eso: para que puedas elegir con información clara, hablar con más confianza y reservar sabiendo mejor dónde te estás metiendo.
+                      </p>
+                    </div>
+
+                    <div className="mt-7 flex flex-wrap items-center justify-center gap-2.5 text-[0.88rem] font-semibold leading-none md:text-[0.95rem]">
+                      <span className="rounded-full border border-slate-200/80 bg-white/85 px-4 py-2 text-slate-600 shadow-[0_16px_28px_-24px_rgba(15,23,42,0.12)] dark:border-slate-700 dark:bg-slate-950/65 dark:text-slate-300">
+                        Más claridad
+                      </span>
+                      <span className="rounded-full border border-slate-200/80 bg-white/85 px-4 py-2 text-slate-600 shadow-[0_16px_28px_-24px_rgba(15,23,42,0.12)] dark:border-slate-700 dark:bg-slate-950/65 dark:text-slate-300">
+                        Más contexto
+                      </span>
+                      <span className="rounded-full border border-emerald-200/85 bg-emerald-50/95 px-4 py-2 text-emerald-800 shadow-[0_18px_30px_-26px_rgba(16,185,129,0.18)] dark:border-emerald-900/35 dark:bg-emerald-900/18 dark:text-emerald-100">
+                        Menos dudas
+                      </span>
+                    </div>
+
+                    <div className="mt-8 flex items-center justify-center gap-4 text-center">
+                      <span className="hidden h-px w-16 bg-gradient-to-r from-transparent to-slate-300/80 md:block dark:to-slate-700/80" />
+                      <p className="text-[1.18rem] font-semibold leading-[1.4] tracking-[-0.03em] text-[#163329] dark:text-emerald-100 md:text-[1.42rem]">
+                        Menos dudas. Más tranquilidad.
+                      </p>
+                      <span className="hidden h-px w-16 bg-gradient-to-l from-transparent to-slate-300/80 md:block dark:to-slate-700/80" />
+                    </div>
+                  </div>
                 </section>
               </div>
             </motion.div>
@@ -537,21 +526,23 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
               className="space-y-10"
             >
               <section className="overflow-hidden rounded-[34px] border border-slate-200/85 bg-[radial-gradient(circle_at_top_right,rgba(67,56,202,0.14),transparent_42%),linear-gradient(180deg,rgba(255,255,255,0.99),rgba(248,250,252,0.96))] px-7 py-10 shadow-[0_28px_56px_-40px_rgba(15,23,42,0.18)] dark:border-slate-800 dark:bg-slate-900 md:px-10 md:py-12">
-                <div className="max-w-3xl space-y-6">
-                  <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500 dark:text-slate-400">Para anfitriones</p>
-                  <div className="space-y-4">
-                    <h2 className="max-w-3xl text-[36px] font-semibold leading-[1.02] tracking-[-0.05em] text-slate-950 dark:text-slate-50 md:text-[48px]">
-                      Elegí con quién hablar antes de aceptar una reserva.
-                    </h2>
-                    <p className="max-w-2xl text-[1.05rem] leading-8 text-slate-700 dark:text-slate-300">
-                      En esta plataforma no solo publicás. También ves quién te contacta, qué historial tiene y cómo se comporta.
-                    </p>
-                    <p className="max-w-2xl text-[0.98rem] leading-7 text-slate-600 dark:text-slate-400">
-                      Publicar es simple y gratis. Mejorar la calidad de las consultas depende de la información que validás.
-                    </p>
+                <div className="space-y-8">
+                  <div className="w-full space-y-6">
+                    <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500 dark:text-slate-400">Para anfitriones</p>
+                    <div className="space-y-4">
+                      <h2 className="w-full text-[36px] font-semibold leading-[1.02] tracking-[-0.05em] text-slate-950 dark:text-slate-50 md:text-[48px]">
+                        Elegí con quién hablar antes de aceptar una reserva.
+                      </h2>
+                      <p className="w-full text-[1.05rem] leading-8 text-slate-700 dark:text-slate-300">
+                        En esta plataforma no solo publicás. También ves quién te contacta, qué historial tiene y cómo se comporta.
+                      </p>
+                      <p className="w-full text-[0.98rem] leading-7 text-slate-600 dark:text-slate-400">
+                        Publicar es simple y gratis. Mejorar la calidad de las consultas depende de la información que validás.
+                      </p>
+                    </div>
                   </div>
 
-                  <div className="flex flex-col gap-3 sm:flex-row">
+                  <div className="flex flex-col items-center justify-center gap-4 py-2 sm:flex-row sm:gap-6">
                     <Button size="lg" onClick={openPublishingFlow}>
                       <Icons.ArrowRight className="h-5 w-5" />
                       Publicar propiedad
@@ -560,37 +551,44 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                       Ver cómo funciona
                     </Button>
                   </div>
-                </div>
-              </section>
 
-              <section className="space-y-6">
-                <div className="max-w-2xl space-y-2">
-                  <p className="app-eyebrow">Diferencial</p>
-                  <h3 className="text-[30px] font-semibold leading-[1.08] tracking-[-0.04em] text-slate-950 dark:text-slate-50 md:text-[36px]">
-                    Qué te ayuda a decidir antes de aceptar
-                  </h3>
-                </div>
-
-                <div className="grid gap-6 md:grid-cols-3 md:gap-8">
-                  {hostDifferentiators.map((item) => {
-                    const Icon = item.icon;
-
-                    return (
-                      <div key={item.title} className="space-y-3 border-t border-slate-200/85 pt-4 dark:border-slate-800">
-                        <div className="inline-flex h-11 w-11 items-center justify-center rounded-[16px] bg-brand/10 text-brand dark:bg-brand/15 dark:text-brand-light">
-                          <Icon className="h-5 w-5" />
-                        </div>
-                        <div className="space-y-2">
-                          <h4 className="text-[1.05rem] font-semibold tracking-[-0.02em] text-slate-950 dark:text-slate-50">
-                            {item.title}
-                          </h4>
-                          <p className="text-[0.98rem] leading-7 text-slate-600 dark:text-slate-400">
-                            {item.description}
-                          </p>
-                        </div>
+                  <div className="rounded-[30px] border border-emerald-200/70 bg-[linear-gradient(180deg,rgba(236,253,245,0.82),rgba(255,255,255,0.94))] p-5 shadow-[0_20px_40px_-32px_rgba(16,185,129,0.16)] dark:border-emerald-900/30 dark:bg-[linear-gradient(180deg,rgba(16,185,129,0.08),rgba(15,23,42,0.82))] md:p-7">
+                    <div className="space-y-6">
+                      <div className="mx-auto max-w-2xl space-y-2 text-center">
+                        <p className="app-eyebrow">Diferencial</p>
+                        <h3 className="text-[30px] font-semibold leading-[1.08] tracking-[-0.04em] text-slate-950 dark:text-slate-50 md:text-[36px]">
+                          Qué te ayuda a decidir antes de aceptar
+                        </h3>
                       </div>
-                    );
-                  })}
+
+                      <div className="grid gap-4 md:grid-cols-3 md:gap-5">
+                        {hostDifferentiators.map((item) => {
+                          const Icon = item.icon;
+
+                          return (
+                            <div
+                              key={item.title}
+                              className="rounded-[24px] border border-emerald-100/80 bg-white/82 p-5 shadow-[0_16px_30px_-26px_rgba(16,185,129,0.12)] dark:border-emerald-900/25 dark:bg-slate-900/88"
+                            >
+                              <div className="space-y-3">
+                                <div className="inline-flex h-11 w-11 items-center justify-center rounded-[16px] bg-emerald-500/12 text-emerald-700 dark:bg-emerald-500/12 dark:text-emerald-300">
+                                  <Icon className="h-5 w-5" />
+                                </div>
+                                <div className="space-y-2">
+                                  <h4 className="text-[1.05rem] font-semibold tracking-[-0.02em] text-slate-950 dark:text-slate-50">
+                                    {item.title}
+                                  </h4>
+                                  <p className="text-[0.98rem] leading-7 text-slate-600 dark:text-slate-400">
+                                    {item.description}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </section>
 
@@ -606,11 +604,11 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
 
                     <div className="space-y-4">
                       <p className="text-xs font-semibold uppercase tracking-[0.24em] text-brand/90 dark:text-brand-light/80">Verificación presencial</p>
-                      <h3 className="max-w-2xl text-[32px] font-semibold leading-[1.05] tracking-[-0.045em] text-slate-950 dark:text-slate-50 md:text-[40px]">
-                        La verificación cambia la calidad de las reservas.
+                      <h3 className="w-full text-[32px] font-semibold leading-[1.05] tracking-[-0.045em] text-slate-950 dark:text-slate-50 md:text-[40px]">
+                        La verificación reduce dudas antes de reservar.
                       </h3>
-                      <p className="max-w-2xl text-[1.02rem] leading-8 text-slate-700 dark:text-slate-300">
-                        Podés publicar sin costo, pero las propiedades con mayor nivel de verificación reciben más visibilidad, consultas más claras y reservas más seguras.
+                      <p className="w-full text-[1.02rem] leading-8 text-slate-700 dark:text-slate-300">
+                        Confirmamos que la propiedad existe y que hay una persona identificada con acceso al lugar.
                       </p>
                     </div>
 
@@ -625,20 +623,31 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                       </ul>
                     </div>
 
-                    <div>
-                      <Button size="lg" variant="secondary" onClick={openOnsiteVerificationInfo}>
-                        Entender cómo funciona la verificación
-                      </Button>
-                    </div>
+                    <p className="text-[0.94rem] leading-7 text-slate-500 dark:text-slate-400">
+                      No evaluamos el estado del inmueble ni la calidad de los servicios.
+                    </p>
+
                   </div>
 
-                  <div className="rounded-[30px] bg-slate-950 px-6 py-7 text-white shadow-[0_32px_62px_-42px_rgba(15,23,42,0.45)] md:px-7 md:py-8 dark:bg-slate-900">
-                    <div className="space-y-4">
-                      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Mayor impacto</p>
-                      <p className="text-[1.4rem] font-semibold leading-[1.2] tracking-[-0.03em] text-white md:text-[1.7rem]">
-                        Más visibilidad, mejores consultas y menos ruido antes de aceptar.
-                      </p>
+                  <div className="space-y-6 lg:pt-[4.5rem]">
+                    <div className="min-h-[196px] rounded-[32px] border border-brand/18 bg-[linear-gradient(160deg,rgba(2,6,23,0.96),rgba(49,46,129,0.94)_64%,rgba(5,150,105,0.26))] px-7 py-8 text-white shadow-[0_32px_62px_-42px_rgba(67,56,202,0.36)] ring-1 ring-white/10 md:min-h-[226px] md:px-9 md:py-10 dark:border-brand/22">
+                      <div className="space-y-5">
+                        <p className="text-[0.7rem] font-semibold uppercase tracking-[0.28em] text-brand-light/80">Mayor impacto</p>
+                        <p className="max-w-[16ch] text-[1.55rem] font-semibold leading-[1.16] tracking-[-0.03em] text-white md:text-[1.95rem]">
+                          Más visibilidad, mejores consultas y menos dudas antes de aceptar.
+                        </p>
+                      </div>
                     </div>
+
+                    <Button
+                      size="lg"
+                      fullWidth
+                      onClick={openOnsiteVerificationInfo}
+                      className="mt-3 h-[3.7rem] self-start rounded-[20px] border border-white/20 bg-[linear-gradient(135deg,rgba(79,70,229,1),rgba(99,102,241,1)_58%,rgba(16,185,129,0.94))] px-7 text-[1.02rem] font-semibold text-white shadow-[0_18px_34px_-18px_rgba(67,56,202,0.52),inset_0_1px_0_rgba(255,255,255,0.18)] ring-1 ring-brand/12 hover:bg-[linear-gradient(135deg,rgba(67,56,202,1),rgba(79,70,229,1)_58%,rgba(5,150,105,0.96))] hover:text-white hover:shadow-[0_22px_42px_-18px_rgba(67,56,202,0.58),inset_0_1px_0_rgba(255,255,255,0.18)] sm:px-8 md:mt-4 md:h-[3.85rem] md:w-auto"
+                    >
+                      <Icons.ArrowRight className="h-5 w-5" />
+                      Entender cómo funciona la verificación
+                    </Button>
                   </div>
                 </div>
               </section>
@@ -705,15 +714,15 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                     <SectionTitle
                       eyebrow="Listo para explorar"
                       as="h3"
-                      heading="Explorá sabiendo qué ya fue comprobado"
-                      description="No reemplaza una visita ni una charla. Sirve para llegar a esa charla sabiendo qué ya fue comprobado."
+                      heading="Explorá sabiendo qué ya fue validado"
+                      description="No reemplaza una visita ni una charla. Sirve para llegar a esa charla sabiendo qué ya fue validado."
                       className="max-w-sm"
                     />
 
                     <div className="space-y-3">
                       {[
                         'Podés ver quién publica y qué ya se revisó en el aviso.',
-                        'Podés comparar ubicación verificada, reseñas reales y fotos en la misma lectura.',
+                        'Podés comparar ubicación confirmada, quién publica y qué ya fue validado en el aviso.',
                         'La decisión sigue siendo tuya.',
                       ].map((point) => (
                         <div key={point} className="flex items-start gap-3 rounded-[18px] border border-slate-200/80 bg-white/88 px-4 py-3.5 text-[0.92rem] leading-6 text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300">

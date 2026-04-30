@@ -113,8 +113,8 @@ export const GuestRequestProfileCard: React.FC<GuestRequestProfileCardProps> = (
 
         <VerificationDetailsBlock
           summary={profile.verificationSummary}
-          title="Comprobaciones del huésped"
-          description="Mostramos qué ya está comprobado en esta cuenta y qué todavía no aparece como visible."
+          title="Validaciones del huésped"
+          description="Mostramos qué ya está validado en esta cuenta y qué todavía no aparece como visible."
           showDescriptions={false}
         />
 

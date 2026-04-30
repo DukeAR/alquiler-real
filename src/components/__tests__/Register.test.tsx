@@ -5,6 +5,16 @@ import { MemoryRouter } from 'react-router-dom';
 const loginMock = vi.fn();
 const registerMock = vi.fn();
 const clearErrorMock = vi.fn();
+const navigateMock = vi.fn();
+
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
+
+  return {
+    ...actual,
+    useNavigate: () => navigateMock,
+  };
+});
 
 vi.mock('../../hooks/useAuth', () => ({
   useAuth: () => ({
@@ -22,6 +32,7 @@ describe('Register screen', () => {
     loginMock.mockReset();
     registerMock.mockReset();
     clearErrorMock.mockReset();
+    navigateMock.mockReset();
   });
 
   test('renders login mode when requested', () => {
@@ -40,7 +51,7 @@ describe('Register screen', () => {
     expect(screen.getByRole('button', { name: /Volver a explorar/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^Creá tu cuenta$/i })).toBeInTheDocument();
     expect(logoMark).not.toBeNull();
-    expect(logoMark).toHaveAttribute('src', '/verified-presencial-circular.png');
+    expect(logoMark).toHaveAttribute('src', '/verified-presencial-badge3.png');
   });
 
   test('shows inline validation in login mode before submitting', () => {
@@ -69,6 +80,21 @@ describe('Register screen', () => {
     expect(screen.getByRole('heading', { name: 'Qué tenés que saber antes de usar la app' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /términos y condiciones/i })).toHaveAttribute('href', '/terms');
     expect(screen.getByRole('link', { name: /política de privacidad/i })).toHaveAttribute('href', '/privacy');
+    expect(screen.getByRole('button', { name: /^Volver$/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Cerrar registro/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^Creá tu cuenta$/i })).toBeInTheDocument();
+  });
+
+  test('returns to the preserved origin when leaving register mode without browser history', () => {
+    render(
+      <MemoryRouter initialEntries={[{ pathname: '/register', state: { from: '/detail/p1' } }]}> 
+        <Register mode="register" />
+      </MemoryRouter>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /^Volver$/i }));
+
+    expect(clearErrorMock).toHaveBeenCalled();
+    expect(navigateMock).toHaveBeenCalledWith('/detail/p1', { replace: true });
   });
 });

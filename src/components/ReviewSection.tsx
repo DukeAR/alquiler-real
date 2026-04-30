@@ -190,7 +190,7 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
             <div className="flex flex-wrap gap-2">
               {review.photosMatchReality && (
                 <span className="px-2 py-1 bg-emerald-500/10 text-emerald-400 text-[10px] font-bold rounded-lg border border-emerald-500/20 flex items-center gap-1">
-                  <Icons.Camera className="w-3 h-3" /> Fotos Reales
+                  <Icons.Camera className="w-3 h-3" /> Fotos del huésped
                 </span>
               )}
               {review.pressureToBookFast && (

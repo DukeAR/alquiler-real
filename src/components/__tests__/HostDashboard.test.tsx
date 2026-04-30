@@ -119,11 +119,11 @@ describe('HostDashboard', () => {
               premiumOnsiteOffer: {
                 offerType: 'onsite-property',
                 targetType: 'property',
-                title: 'Comprobación presencial adicional',
+                title: 'Validación presencial adicional',
                 summary: 'Podés pedir una revisión presencial para sumar información validada extra en este aviso.',
-                contextHint: 'Mostramos qué está comprobado para que se entienda mejor el aviso.',
-                visibilityHint: 'Cuando se completa, deja una comprobación presencial visible dentro de la ficha del aviso.',
-                ctaLabel: 'Activar comprobación presencial sin cargo',
+                contextHint: 'Mostramos qué está validado para que se entienda mejor el aviso.',
+                visibilityHint: 'Cuando se completa, deja una validación presencial visible dentro de la ficha del aviso.',
+                ctaLabel: 'Activar validación presencial sin cargo',
                 checkoutLabel: 'Activar sin cargo',
                 processLabel: 'Ir a la coordinación',
                 priceArs: 0,
@@ -177,7 +177,7 @@ describe('HostDashboard', () => {
     expect(screen.getByText('Sugerencias para mover tus avisos')).toBeInTheDocument();
     expect(screen.getByText('Primero ves si cada aviso esta activo y despues cuanto ya queda claro para quien consulta.')).toBeInTheDocument();
     expect(screen.getByText('Estado de tu aviso')).toBeInTheDocument();
-    expect(screen.getByText('Verificación parcial (4/5)')).toBeInTheDocument();
+    expect(screen.getByText('Verificación parcial (2/4)')).toBeInTheDocument();
     expect(screen.getAllByText('Verificación parcial').length).toBeGreaterThan(0);
     expect(screen.getByText('Te falta confirmar disponibilidad para aparecer entre los primeros resultados.')).toBeInTheDocument();
     expect(screen.getByText('Cómo impacta en tu publicación')).toBeInTheDocument();
@@ -346,10 +346,10 @@ describe('HostDashboard', () => {
 
     expect(within(profileCard).getByText('Lo que ya podés revisar antes de aceptar')).toBeInTheDocument();
     expect(within(profileCard).getByText('Señales rápidas')).toBeInTheDocument();
-    expect(within(profileCard).getByText('Comprobaciones del huésped')).toBeInTheDocument();
+    expect(within(profileCard).getByText('Validaciones del huésped')).toBeInTheDocument();
     expect(within(profileCard).getByText('Nivel muy alto')).toBeInTheDocument();
     expect(within(profileCard).getByText('(5/5)')).toBeInTheDocument();
-    expect(within(profileCard).getByText('Mostramos qué ya está comprobado en esta cuenta y qué todavía no aparece como visible.')).toBeInTheDocument();
+    expect(within(profileCard).getByText('Mostramos qué ya está validado en esta cuenta y qué todavía no aparece como visible.')).toBeInTheDocument();
     expect(within(profileCard).getAllByText('Email verificado').length).toBeGreaterThan(0);
     expect(within(profileCard).getAllByText('Identidad documental').length).toBeGreaterThan(0);
     expect(within(profileCard).getByText('Historial compartido')).toBeInTheDocument();
@@ -362,8 +362,8 @@ describe('HostDashboard', () => {
     expect(screen.queryByRole('button', { name: 'Ver ficha del huésped' })).not.toBeInTheDocument();
 
     const profileText = profileCard.textContent ?? '';
-    expect(profileText.indexOf('Señales rápidas')).toBeLessThan(profileText.indexOf('Comprobaciones del huésped'));
-    expect(profileText.indexOf('Comprobaciones del huésped')).toBeLessThan(profileText.indexOf('Historial compartido'));
+    expect(profileText.indexOf('Señales rápidas')).toBeLessThan(profileText.indexOf('Validaciones del huésped'));
+    expect(profileText.indexOf('Validaciones del huésped')).toBeLessThan(profileText.indexOf('Historial compartido'));
   });
 
   test('lets the host accept a pending request from the dashboard and open its chat', async () => {
@@ -611,13 +611,13 @@ describe('HostDashboard', () => {
     const profileCard = await screen.findByTestId('guest-request-profile-card');
 
     expect(within(profileCard).getByText('Cuenta sin historial todavía')).toBeInTheDocument();
-    expect(within(profileCard).getByText('Comprobaciones del huésped')).toBeInTheDocument();
+    expect(within(profileCard).getByText('Validaciones del huésped')).toBeInTheDocument();
     expect(within(profileCard).getByText('Todavía no hay estadías ni reseñas de anfitriones para revisar.')).toBeInTheDocument();
     expect(within(profileCard).getByText('Historial compartido')).toBeInTheDocument();
     expect(within(profileCard).getByText('Todavía no hay suficientes cierres compartidos para resumir esta cuenta.')).toBeInTheDocument();
     expect(within(profileCard).getByText('Nivel bajo')).toBeInTheDocument();
     expect(within(profileCard).getByText('(2/5)')).toBeInTheDocument();
-    expect(within(profileCard).getByText('Mostramos qué ya está comprobado en esta cuenta y qué todavía no aparece como visible.')).toBeInTheDocument();
+    expect(within(profileCard).getByText('Mostramos qué ya está validado en esta cuenta y qué todavía no aparece como visible.')).toBeInTheDocument();
     expect(within(profileCard).getAllByText('Email verificado').length).toBeGreaterThan(0);
     expect(within(profileCard).getAllByText('Identidad documental').length).toBeGreaterThan(0);
     expect(within(profileCard).getByText('Teléfono verificado')).toBeInTheDocument();

@@ -265,7 +265,7 @@ export const buildDemoData = (referenceDate = new Date()): DemoSeedCatalog => {
       name: 'Rocio Navarro',
       zone: 'La Plata, Buenos Aires',
       phone: '+54 221 498 2214',
-      bio: 'Trabaja remoto algunos dias y prioriza wifi estable, buena luz y barrios tranquilos para descansar sin ruido.',
+      bio: 'Trabaja remoto algunos dias y prioriza wifi estable, buena luz y barrios tranquilos para descansar con mas calma.',
       interests: ['wifi estable', 'trabajo remoto', 'estadias de 4 a 7 noches'],
       memberSince: timestamp(-365, 11, 5),
       createdAt: timestamp(-365, 11, 5),

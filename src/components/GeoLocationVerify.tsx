@@ -113,7 +113,7 @@ export const GeoLocationVerify: React.FC<GeoLocationVerifyProps> = ({ onVerified
           <div className="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-2xl border border-emerald-200 dark:border-emerald-800/30">
             <div className="flex items-center gap-3 mb-3">
               <Icons.CheckCircle2 className="w-6 h-6 text-emerald-600" />
-              <span className="font-bold text-emerald-800 dark:text-emerald-300">¡Ubicación verificada!</span>
+              <span className="font-bold text-emerald-800 dark:text-emerald-300">¡Ubicación confirmada!</span>
             </div>
             <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
               <div className="bg-white dark:bg-slate-800 p-3 rounded-xl">

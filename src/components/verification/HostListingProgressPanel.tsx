@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { apiJson } from '../../lib/apiConfig';
-import { getPropertyVerificationBadge, getPropertyVerificationDisplayLabel, getPropertyVerificationItems } from '../../lib/propertyVerification';
+import { getPropertyVerificationDetails, getPropertyVerificationItems } from '../../lib/propertyVerification';
 import { showToast } from '../../lib/toast';
 import { cn } from '../../lib/utils';
 import type { Property } from '../../types';
@@ -38,9 +38,44 @@ const uploadAcceptMap: Record<VerificationUploadKind, string> = {
 const impactByKey: Record<HostProgressKey, string> = {
   identity: 'Da más claridad sobre quién publica el aviso.',
   location: 'Hace que el aviso se entienda más rápido cuando comparan opciones.',
-  geolocation: 'Ayuda a competir mejor cuando eligen entre avisos cercanos.',
-  photos: 'Mejora la visibilidad y reduce dudas antes de abrir chat.',
+  geolocation: 'Ayuda a ubicar mejor la propiedad cuando comparan opciones.',
+  photos: 'Suma respaldo visual y aclara mejor el aviso antes de abrir chat.',
   availability: 'Hace más probable que la consulta avance sin fricción.',
+};
+
+const HOST_PROGRESS_LABELS: Record<HostProgressKey, string> = {
+  identity: 'Identidad del anfitrión validada',
+  location: 'Ubicación confirmada',
+  geolocation: 'Punto exacto del aviso',
+  photos: 'Respaldo visual del aviso',
+  availability: 'Disponibilidad reciente',
+};
+
+const getHostProgressDescription = (key: HostProgressKey, status: 'complete' | 'pending') => {
+  switch (key) {
+    case 'identity':
+      return status === 'complete'
+        ? 'La identidad del anfitrión ya quedó validada dentro de la plataforma.'
+        : 'Todavía falta validar la identidad del anfitrión dentro de la plataforma.';
+    case 'location':
+      return status === 'complete'
+        ? 'La ubicación del aviso ya quedó confirmada.'
+        : 'Todavía falta confirmar la ubicación del aviso.';
+    case 'geolocation':
+      return status === 'complete'
+        ? 'El aviso ya tiene un punto de mapa para ubicar mejor la propiedad.'
+        : 'Todavía falta sumar el punto exacto del mapa para ubicar mejor la propiedad.';
+    case 'photos':
+      return status === 'complete'
+        ? 'El aviso ya cuenta con fotos del lugar como respaldo visual.'
+        : 'Todavía falta sumar fotos del lugar como respaldo visual.';
+    case 'availability':
+      return status === 'complete'
+        ? 'La disponibilidad ya muestra calendario o actividad reciente.'
+        : 'Todavía falta confirmar disponibilidad reciente.';
+    default:
+      return '';
+  }
 };
 
 const getTopMessage = (pendingKeys: Set<HostProgressKey>) => {
@@ -49,7 +84,7 @@ const getTopMessage = (pendingKeys: Set<HostProgressKey>) => {
   }
 
   if (pendingKeys.has('photos')) {
-    return 'Te falta subir fotos reales para aparecer entre los primeros resultados.';
+    return 'Te falta sumar respaldo visual para aparecer entre los primeros resultados.';
   }
 
   if (pendingKeys.has('availability')) {
@@ -64,7 +99,7 @@ const getTopMessage = (pendingKeys: Set<HostProgressKey>) => {
     return 'Te falta validar tu identidad para aparecer entre los primeros resultados.';
   }
 
-  return 'Te falta completar una comprobación clave para aparecer entre los primeros resultados.';
+  return 'Te falta completar un paso clave para aparecer entre los primeros resultados.';
 };
 
 const normalizeProgressKey = (key: string): HostProgressKey | null => {
@@ -134,8 +169,8 @@ export const HostListingProgressPanel = ({
 
         return {
           key,
-          label: getPropertyVerificationDisplayLabel(key),
-          description: item.description,
+          label: HOST_PROGRESS_LABELS[key],
+          description: getHostProgressDescription(key, item.status),
           status: item.status,
         } satisfies OrderedProgressItem;
       })
@@ -143,9 +178,9 @@ export const HostListingProgressPanel = ({
       .sort((left, right) => CHECK_ORDER.indexOf(left.key) - CHECK_ORDER.indexOf(right.key))
   ), [property]);
 
-  const verificationBadge = getPropertyVerificationBadge({ ...property, verificationItems });
-  const score = verificationBadge.score;
-  const maxScore = verificationBadge.max;
+  const verificationDetails = getPropertyVerificationDetails({ ...property, verificationItems });
+  const score = verificationDetails.score;
+  const maxScore = verificationDetails.max;
   const pendingKeys = new Set(
     verificationItems
       .filter((item) => item.status !== 'complete')
@@ -176,8 +211,8 @@ export const HostListingProgressPanel = ({
       showToast(
         'Material real',
         files.length === 1
-          ? 'La foto ya suma una comprobación visible del aviso.'
-          : 'Las fotos ya suman comprobaciones visibles del aviso.',
+          ? 'La foto ya suma respaldo visual en el aviso.'
+          : 'Las fotos ya suman respaldo visual en el aviso.',
         'success',
       );
     } catch (error: any) {
@@ -358,7 +393,7 @@ export const HostListingProgressPanel = ({
     <div className={cn('rounded-[28px] border border-slate-200/80 bg-slate-50/85 p-5 shadow-[0_18px_38px_-34px_rgba(15,23,42,0.2)]', className)}>
       <input
         ref={photoInputRef}
-        aria-label="Subir fotos reales"
+        aria-label="Subir fotos de respaldo"
         type="file"
         accept={uploadAcceptMap.photo}
         multiple
@@ -370,7 +405,7 @@ export const HostListingProgressPanel = ({
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-2">
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Estado de tu aviso</p>
-            <h3 className="text-2xl font-semibold tracking-tight text-slate-950">{verificationBadge.summaryLabel}</h3>
+            <h3 className="text-2xl font-semibold tracking-tight text-slate-950">{verificationDetails.summaryLabel}</h3>
             <p className="max-w-2xl text-sm leading-6 text-slate-600">{topMessage}</p>
           </div>
 
@@ -379,10 +414,10 @@ export const HostListingProgressPanel = ({
             <VerificationSeal
               score={score}
               maxScore={maxScore}
-              label={verificationBadge.compactLabel}
-              description={verificationBadge.description}
+              label={verificationDetails.compactLabel}
+              description={verificationDetails.description}
               size="md"
-              ariaLabel={verificationBadge.summaryLabel}
+              ariaLabel={verificationDetails.summaryLabel}
               className="mt-3"
             />
           </div>
@@ -412,7 +447,7 @@ export const HostListingProgressPanel = ({
 
               <div className="min-w-0 space-y-1.5">
                 <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-sm font-semibold text-slate-950">{getPropertyVerificationDisplayLabel(item.key)}</p>
+                    <p className="text-sm font-semibold text-slate-950">{item.label}</p>
                   <span className={cn(
                     'rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]',
                     item.status === 'complete'
@@ -437,7 +472,7 @@ export const HostListingProgressPanel = ({
           <div className="rounded-[24px] border border-slate-200/80 bg-white/96 p-4 shadow-[0_16px_34px_-30px_rgba(15,23,42,0.16)]">
             <div className="space-y-1">
               <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Completar ubicación</p>
-              <p className="text-sm leading-6 text-slate-600">Guardá la zona del aviso y, si podés, sumá el punto exacto para completar la geolocalización.</p>
+              <p className="text-sm leading-6 text-slate-600">Guardá la zona del aviso y, si podés, sumá el punto exacto para ubicar mejor la propiedad.</p>
             </div>
 
             <div className="mt-4 grid gap-3 md:grid-cols-3">
