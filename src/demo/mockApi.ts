@@ -956,6 +956,17 @@ const createDemoStore = (): DemoStore => {
 
 let store = createDemoStore();
 
+export type DemoAuditSnapshot = ReturnType<typeof createDemoStore>;
+
+export const getDemoAuditSnapshot = (): DemoAuditSnapshot => cloneValue(createDemoStore());
+
+export const getDemoPropertyDetailSnapshot = (propertyId: string) => {
+  const snapshot = createDemoStore();
+  const property = snapshot.properties.find((entry) => entry.id === propertyId) ?? null;
+
+  return property ? buildPropertyDetail(property) : null;
+};
+
 const getUrl = (endpoint: string) => {
   if (endpoint.startsWith('http://') || endpoint.startsWith('https://')) {
     return new URL(endpoint);

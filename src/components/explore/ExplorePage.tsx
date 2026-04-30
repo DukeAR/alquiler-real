@@ -12,6 +12,12 @@ import { ExploreFiltersBar, type ExploreFilters, type ExploreSort } from './Expl
 import { ExploreHero } from './ExploreHero';
 import { ExploreResultsSection } from './ExploreResultsSection';
 
+type ExplorePageProps = {
+  initialProperties?: Property[];
+  initialLocationSuggestions?: LocationSuggestion[];
+  disableAutoLoad?: boolean;
+};
+
 const defaultFilters: ExploreFilters = {
   minPrice: '',
   maxPrice: '',
@@ -28,7 +34,7 @@ const hasCatalogSuggestionContext = (filters: ExploreFilters, searchQuery: strin
   !filters.verifiedOnly
 );
 
-const buildLocationSuggestions = (items: Property[]): LocationSuggestion[] => {
+export const buildLocationSuggestions = (items: Property[]): LocationSuggestion[] => {
   const locations = new Map<string, LocationSuggestion>();
 
   items.forEach((property) => {
@@ -68,11 +74,15 @@ const buildLocationSuggestions = (items: Property[]): LocationSuggestion[] => {
 
 const heroBackgroundImage = 'https://images.unsplash.com/photo-1500375592092-40eb2168fd21?auto=format&fit=crop&w=1800&q=80';
 
-export const ExplorePage = () => {
+export const ExplorePage = ({
+  initialProperties = [],
+  initialLocationSuggestions,
+  disableAutoLoad = false,
+}: ExplorePageProps = {}) => {
   const { toggleFavorite, isFavorite } = useFavorites();
-  const [properties, setProperties] = useState<Property[]>([]);
+  const [properties, setProperties] = useState<Property[]>(initialProperties);
   const [verificationPreference, setVerificationPreference] = useState(() => getVerificationPreferenceState());
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !disableAutoLoad);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -80,10 +90,28 @@ export const ExplorePage = () => {
   const [sortBy, setSortBy] = useState<ExploreSort>('verification');
   const [visibleCount, setVisibleCount] = useState(9);
   const [filters, setFilters] = useState<ExploreFilters>(defaultFilters);
-  const [locationSuggestions, setLocationSuggestions] = useState<LocationSuggestion[]>([]);
+  const [locationSuggestions, setLocationSuggestions] = useState<LocationSuggestion[]>(() => {
+    if (initialLocationSuggestions) {
+      return initialLocationSuggestions;
+    }
+
+    return buildLocationSuggestions(initialProperties);
+  });
   const [refreshToken, setRefreshToken] = useState(0);
 
   useEffect(() => {
+    if (disableAutoLoad) {
+      setLoading(false);
+
+      if (initialLocationSuggestions) {
+        setLocationSuggestions(initialLocationSuggestions);
+      } else if (initialProperties.length > 0) {
+        setLocationSuggestions(buildLocationSuggestions(initialProperties));
+      }
+
+      return;
+    }
+
     const fetchProperties = async () => {
       setLoading(true);
       setLoadError(null);
@@ -115,7 +143,7 @@ export const ExplorePage = () => {
     };
 
     void fetchProperties();
-  }, [filters, refreshToken, searchQuery]);
+  }, [disableAutoLoad, filters, initialLocationSuggestions, initialProperties, refreshToken, searchQuery]);
 
   useEffect(() => {
     setVisibleCount(9);

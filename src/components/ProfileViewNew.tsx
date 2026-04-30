@@ -28,6 +28,18 @@ import { VerificationMeter, VerificationSnippetList } from './ui/VerificationMet
 
 type ReviewTab = 'received' | 'written';
 
+type ProfileViewInitialData = {
+  validationData: ReturnType<typeof useUserProfile>['validationData'];
+  activity: ReturnType<typeof useUserProfile>['activity'];
+  reviews: ReturnType<typeof useUserProfile>['reviews'];
+  preferences: UserPreferences | null;
+};
+
+type ProfileViewNewProps = {
+  initialData?: ProfileViewInitialData;
+  disableAutoLoad?: boolean;
+};
+
 const profilePanelClass = 'rounded-[var(--app-radius-control)] border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/50';
 const actionRowBaseClass = 'flex w-full items-center justify-between gap-4 rounded-[var(--app-radius-control)] border p-4 text-left shadow-[var(--app-shadow-subtle)] transition-[transform,box-shadow,border-color,background-color] hover:-translate-y-px hover:shadow-[var(--app-shadow-soft)]';
 
@@ -164,21 +176,21 @@ const buildFallbackVerificationSummary = (checks?: ValidationChecks): Verificati
   };
 };
 
-export const ProfileViewNew = () => {
+export const ProfileViewNew = ({ initialData, disableAutoLoad = false }: ProfileViewNewProps = {}) => {
   const navigate = useNavigate();
   const { user, logout, refresh, updateProfile } = useAuth();
   const {
-    validationData,
-    activity,
-    reviews,
+    validationData: loadedValidationData,
+    activity: loadedActivity,
+    reviews: loadedReviews,
     loading: profileDataLoading,
     reload: reloadProfileData,
-  } = useUserProfile();
+  } = useUserProfile({ autoLoad: !disableAutoLoad });
   const {
-    preferences,
+    preferences: loadedPreferences,
     loading: preferencesLoading,
     savePreferences,
-  } = useUserPreferences();
+  } = useUserPreferences({ autoLoad: !disableAutoLoad });
   const [showVerification, setShowVerification] = useState(false);
   const [showInterestsModal, setShowInterestsModal] = useState(false);
   const [showPreferencesModal, setShowPreferencesModal] = useState(false);
@@ -187,7 +199,11 @@ export const ProfileViewNew = () => {
   const [confirmingContactField, setConfirmingContactField] = useState<'email' | 'phone' | null>(null);
   const [processingPremiumVerification, setProcessingPremiumVerification] = useState(false);
 
-  const loadingProfile = profileDataLoading || preferencesLoading;
+  const validationData = initialData?.validationData ?? loadedValidationData;
+  const activity = initialData?.activity ?? loadedActivity;
+  const reviews = initialData?.reviews ?? loadedReviews;
+  const preferences = initialData?.preferences ?? loadedPreferences;
+  const loadingProfile = disableAutoLoad ? false : profileDataLoading || preferencesLoading;
 
   const handleSaveInterests = async (interests: string[], bio: string) => {
     try {

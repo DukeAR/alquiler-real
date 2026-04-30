@@ -13,13 +13,18 @@ import { isDemoMode } from './demoMode';
 // ngrok, localtunnel o cualquier host remoto sin intentar llamar a localhost desde el navegador.
 // En producción: configura VITE_BACKEND_URL en .env.production.
 const normalizeBackendUrl = (value: string) => value.replace(/\/+$/, '');
+const runtimeEnv = (typeof import.meta !== 'undefined' && import.meta.env
+  ? import.meta.env
+  : {}) as Record<string, string | boolean | undefined>;
 
 const getBackendUrl = (): string => {
-  const configuredUrl = import.meta.env.VITE_BACKEND_URL?.trim();
+  const configuredUrl = typeof runtimeEnv.VITE_BACKEND_URL === 'string'
+    ? runtimeEnv.VITE_BACKEND_URL.trim()
+    : '';
 
   // En desarrollo, si alguien dejó localhost/127.0.0.1 en .env,
   // forzamos rutas relativas para no romper el acceso desde túneles/HTTPS.
-  if (import.meta.env.DEV) {
+  if (runtimeEnv.DEV) {
     if (!configuredUrl) {
       return '';
     }
@@ -40,7 +45,7 @@ const getBackendUrl = (): string => {
 };
 
 export const API_BASE_URL = getBackendUrl();
-const API_TIMEOUT_MS = Number(import.meta.env.VITE_API_TIMEOUT || 30000);
+const API_TIMEOUT_MS = Number(runtimeEnv.VITE_API_TIMEOUT || 30000);
 
 export type ApiRequestOptions = Omit<RequestInit, 'credentials'> & {
   includeCredentials?: true;
@@ -48,7 +53,7 @@ export type ApiRequestOptions = Omit<RequestInit, 'credentials'> & {
 
 // Logger para debugging
 const logApiCall = (method: string, url: string, details?: any) => {
-  if (import.meta.env.DEV) {
+  if (runtimeEnv.DEV) {
     console.log(`[API] ${method} ${url}`, details || '');
   }
 };

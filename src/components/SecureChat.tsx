@@ -118,6 +118,13 @@ type HostClosingChip = {
   intent: HostCloseIntent;
 };
 
+type SecureChatProps = {
+  initialConversationId?: string;
+  initialRequestContext?: ReservationRequestContext | null;
+  initialConversations?: Conversation[];
+  disableAutoLoad?: boolean;
+};
+
 const buildHostClosingChips = (requestContext: ReservationRequestContext | null) => {
   const advanceWithDepositMessage = requestContext?.mode === 'protected'
     ? 'Si te parece bien, podemos avanzar con la seña y dejarlo confirmado.'
@@ -456,18 +463,20 @@ const getActiveRequestContext = (
   return null;
 };
 
-export const SecureChat: React.FC<{ initialConversationId?: string; initialRequestContext?: ReservationRequestContext | null }> = ({
+export const SecureChat: React.FC<SecureChatProps> = ({
   initialConversationId,
   initialRequestContext = null,
+  initialConversations = [],
+  disableAutoLoad = false,
 }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [conversations, setConversations] = useState<Conversation[]>(initialConversations);
   const [activeConv, setActiveConv] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !disableAutoLoad && initialConversations.length === 0);
   const [sendingMessageId, setSendingMessageId] = useState<string | null>(null);
   const [acceptingRequest, setAcceptingRequest] = useState(false);
   const [pendingHostCloseIntent, setPendingHostCloseIntent] = useState<HostCloseIntent | null>(null);
@@ -483,8 +492,13 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
   const [loadedMessagesConversationId, setLoadedMessagesConversationId] = useState<string | null>(null);
 
   useEffect(() => {
-    loadConversations();
-  }, []);
+    if (disableAutoLoad) {
+      setLoading(false);
+      return;
+    }
+
+    void loadConversations();
+  }, [disableAutoLoad]);
 
   useEffect(() => {
     if (initialConversationId) {
@@ -516,11 +530,18 @@ export const SecureChat: React.FC<{ initialConversationId?: string; initialReque
       setPendingHostCloseIntent(null);
       setInputText('');
       setLoadedMessagesConversationId(null);
+
+      if (disableAutoLoad) {
+        setMessages([]);
+        setLoadedMessagesConversationId(activeConv.id);
+        return;
+      }
+
       loadMessages(activeConv.id);
       const interval = setInterval(() => loadMessages(activeConv.id), 5000);
       return () => clearInterval(interval);
     }
-  }, [activeConv?.id]);
+  }, [activeConv?.id, disableAutoLoad]);
 
   useEffect(() => {
     if (scrollRef.current) {

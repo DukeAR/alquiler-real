@@ -25,6 +25,8 @@ import { PremiumVerificationCheckoutModal } from './verification/PremiumVerifica
 
 interface HostDashboardProps {
   onBack: () => void;
+  initialDashboardData?: any;
+  disableAutoLoad?: boolean;
 }
 
 const dashboardSectionClass = 'card space-y-6 p-6 md:p-8 dark:border-slate-800 dark:bg-slate-900';
@@ -261,11 +263,15 @@ const BookingGroup = ({ title, description, count, emptyText, children }: Bookin
   </div>
 );
 
-export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
+export const HostDashboard: React.FC<HostDashboardProps> = ({
+  onBack,
+  initialDashboardData = null,
+  disableAutoLoad = false,
+}) => {
   const navigate = useNavigate();
   const { user, setActiveMode } = useAuth();
-  const [dashboardData, setDashboardData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [dashboardData, setDashboardData] = useState<any>(initialDashboardData);
+  const [loading, setLoading] = useState(() => !disableAutoLoad && !initialDashboardData);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isAddingProperty, setIsAddingProperty] = useState(false);
   const [showPublishingFlow, setShowPublishingFlow] = useState(false);
@@ -288,8 +294,13 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ onBack }) => {
   };
 
   useEffect(() => {
+    if (disableAutoLoad) {
+      setLoading(false);
+      return;
+    }
+
     void fetchData();
-  }, []);
+  }, [disableAutoLoad]);
 
   useEffect(() => {
     if (user?.activeMode !== 'host') {
