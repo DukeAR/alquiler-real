@@ -5,6 +5,9 @@
  * Mantén el control del base URL en UN SOLO lugar.
  */
 
+import { getMockApiResponse } from '../demo/mockApi';
+import { isDemoMode } from './demoMode';
+
 // Base URL del backend
 // En desarrollo: usa rutas relativas /api para que el proxy de Vite maneje localhost,
 // ngrok, localtunnel o cualquier host remoto sin intentar llamar a localhost desde el navegador.
@@ -145,6 +148,15 @@ export async function apiFetch(
     hasBody: !!fetchOptions.body,
     origin: window.location.origin
   });
+
+  if (isDemoMode()) {
+    const mockResponse = await getMockApiResponse(endpoint, finalOptions);
+
+    if (mockResponse) {
+      logApiCall(`${method} RESPONSE`, `${mockResponse.status} DEMO`, { url });
+      return mockResponse;
+    }
+  }
 
   try {
     const controller = new AbortController();

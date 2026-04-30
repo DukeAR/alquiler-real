@@ -11,6 +11,7 @@ import { LoadingState } from './components/LoadingState';
 import { ExplorePage } from './components/explore/ExplorePage';
 import { FavoritesProvider } from './contexts/FavoritesContext';
 import { useAuth } from './hooks/useAuth';
+import { withDemoQuery } from './lib/demoMode';
 import { type HostProfile, type ReservationRequestContext } from './services/geminiService';
 
 const LazyAboutPage = lazy(() => import('./components/AboutPage.tsx'));
@@ -58,6 +59,12 @@ const GuestOnly = ({ children }: { children: ReactNode }) => {
   return <>{children}</>;
 };
 
+const LegacyDemoPropertyRedirect = () => {
+  const { id } = useParams();
+
+  return <Navigate to={withDemoQuery(`/detail/${id || '1'}`, '?demo=true')} replace />;
+};
+
 export default function App() {
   const { loading } = useAuth();
   const location = useLocation();
@@ -81,6 +88,11 @@ export default function App() {
         <AppShell>
           <Suspense fallback={<RouteFallback />}>
             <Routes>
+              <Route path="/demo" element={<Navigate to={withDemoQuery('/', '?demo=true')} replace />} />
+              <Route path="/demo/search" element={<Navigate to={withDemoQuery('/', '?demo=true')} replace />} />
+              <Route path="/demo/profile" element={<Navigate to={withDemoQuery('/profile', '?demo=true')} replace />} />
+              <Route path="/demo/property/:id" element={<LegacyDemoPropertyRedirect />} />
+              <Route path="/demo/*" element={<Navigate to={withDemoQuery('/', '?demo=true')} replace />} />
               <Route path="/" element={<ExplorePage />} />
               <Route path="/explore" element={<ExplorePage />} />
               <Route path="/detail/:id" element={<LazyPropertyDetail />} />

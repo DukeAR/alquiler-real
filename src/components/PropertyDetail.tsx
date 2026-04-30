@@ -18,7 +18,7 @@ import {
 } from '../lib/verificationPreference';
 import { type Property as AppProperty, type ReservationRequestContext, type ReservationRequestMode } from '../types';
 import { useFavorites } from '../hooks/useFavorites';
-import { useBookings } from '../hooks/useBookings';
+import { useBookings, type BookingCreatePayload, type BookingCreateResult } from '../hooks/useBookings';
 import { useAuth } from '../hooks/useAuth';
 import { startConversation } from '../services/geminiService';
 import { Button } from './ui/Button';
@@ -66,6 +66,16 @@ type PropertyReviewItem = {
   hadIncident?: boolean;
   photosMatchReality?: boolean;
   date?: string;
+};
+
+type PropertyDetailFlowOverrides = {
+  createBooking?: (payload: BookingCreatePayload) => Promise<BookingCreateResult>;
+  prepareConversationForRequest?: (requestContext: ReservationRequestContext, bookingId: string) => Promise<{
+    conversationId: string;
+    requestCreatedAt: string;
+  }>;
+  navigateToConversation?: (conversationId: string, requestContext: ReservationRequestContext) => void;
+  openHostProfile?: (hostId: string) => void;
 };
 
 type BookingFieldKey = 'dates' | 'guests';
@@ -508,10 +518,12 @@ export const PropertyDetailShell: React.FC<{
   reviews?: PropertyReviewItem[];
   onRefresh?: () => Promise<void> | void;
   onOpenIdentityVerification?: () => void;
-}> = ({ property, images, mainIndex, setMainIndex, isFav, toggleFav, reviews = [], onRefresh, onOpenIdentityVerification }) => {
+  flowOverrides?: PropertyDetailFlowOverrides;
+}> = ({ property, images, mainIndex, setMainIndex, isFav, toggleFav, reviews = [], onRefresh, onOpenIdentityVerification, flowOverrides }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { createBooking } = useBookings({ autoLoad: false });
+  const { createBooking: createBookingFromHook } = useBookings({ autoLoad: false });
+  const createBooking = flowOverrides?.createBooking ?? createBookingFromHook;
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [zoomed, setZoomed] = useState(false);
   const touchStartX = useRef<number | null>(null);
@@ -1105,6 +1117,21 @@ export const PropertyDetailShell: React.FC<{
     navigate(`/chat/${conversationId}`, { state: { requestContext } });
   };
 
+  const prepareConversation = flowOverrides?.prepareConversationForRequest ?? prepareConversationForRequest;
+  const openConversation = flowOverrides?.navigateToConversation ?? navigateToConversation;
+  const handleOpenHostProfile = () => {
+    if (!property.hostId) {
+      return;
+    }
+
+    if (flowOverrides?.openHostProfile) {
+      flowOverrides.openHostProfile(property.hostId);
+      return;
+    }
+
+    navigate(`/host/${property.hostId}`);
+  };
+
   const openLoginForRequest = (title: string, description: string) => {
     resetBookingSubmitState();
     showToast(title, description, 'warning');
@@ -1173,9 +1200,9 @@ export const PropertyDetailShell: React.FC<{
     setAvailabilityRefreshToken((currentValue) => currentValue + 1);
 
     try {
-      const { conversationId, requestCreatedAt } = await prepareConversationForRequest(requestContext, result.data.booking.id);
+      const { conversationId, requestCreatedAt } = await prepareConversation(requestContext, result.data.booking.id);
 
-      navigateToConversation(conversationId, { ...requestContext, requestCreatedAt });
+      openConversation(conversationId, { ...requestContext, requestCreatedAt });
       showToast(
         'Solicitud enviada',
         `La solicitud quedó registrada por ${formatCurrency(bookedTotal)}. Abrimos el chat con un primer mensaje sugerido para que lo revises y lo envíes en un click.`,
@@ -1657,7 +1684,7 @@ export const PropertyDetailShell: React.FC<{
                     type="button"
                     variant="secondary"
                     size="sm"
-                    onClick={() => navigate(`/host/${property.hostId}`)}
+                    onClick={handleOpenHostProfile}
                     className="rounded-full border-brand/10 bg-white/92 text-slate-800 shadow-[0_16px_30px_-26px_rgba(79,70,229,0.18)] hover:border-brand/20 hover:bg-white hover:text-brand"
                   >
                     <>

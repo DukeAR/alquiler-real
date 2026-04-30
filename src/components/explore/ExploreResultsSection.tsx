@@ -97,6 +97,7 @@ type ExploreResultsSectionProps = {
   onClearFilters: () => void;
   onFavoriteToggle: (propertyId: string, isFavorite: boolean) => void | Promise<unknown>;
   isFavorite: (propertyId: string) => boolean;
+  onPropertyClick?: (property: Property) => void;
 };
 
 export const ExploreResultsSection = ({
@@ -118,6 +119,7 @@ export const ExploreResultsSection = ({
   onClearFilters,
   onFavoriteToggle,
   isFavorite,
+  onPropertyClick,
 }: ExploreResultsSectionProps) => {
   const navigate = useNavigate();
   const totalResults = filteredProperties.length;
@@ -172,6 +174,26 @@ export const ExploreResultsSection = ({
     : 'Más opciones para seguir eligiendo.';
   const filteredResultsDescription = `${formatPropertyCount(totalResults)} en esta búsqueda.`;
   const filteredVisibleResultsLabel = `${visibleCount} ${visibleCount === 1 ? 'visible' : 'visibles'} en esta búsqueda.`;
+
+  const handlePropertyClick = (property: Property) => {
+    if (onPropertyClick) {
+      onPropertyClick(property);
+      return;
+    }
+
+    navigate(`/detail/${property.id}`);
+  };
+
+  const handlePropertyClickById = (propertyId: string) => {
+    const property = filteredProperties.find((item) => item.id === propertyId);
+
+    if (!property) {
+      navigate(`/detail/${propertyId}`);
+      return;
+    }
+
+    handlePropertyClick(property);
+  };
 
   const summaryEyebrow = viewMode === 'map'
     ? 'Mapa'
@@ -379,7 +401,7 @@ export const ExploreResultsSection = ({
             <Suspense fallback={<MapFallback />}>
               <LazyPropertyMap
                 properties={filteredProperties}
-                onPropertyClick={(id) => navigate(`/detail/${id}`)}
+                onPropertyClick={handlePropertyClickById}
               />
             </Suspense>
           </div>
@@ -431,7 +453,7 @@ export const ExploreResultsSection = ({
                     emphasizeVerification={caresAboutVerification}
                     decisionFeatured={highlightedVerificationResultId === property.id}
                     decisionSupportLabel={null}
-                    onClick={() => navigate(`/detail/${property.id}`)}
+                    onClick={() => handlePropertyClick(property)}
                     isFavorite={isFavorite(property.id)}
                     onFavoriteToggle={onFavoriteToggle}
                   />
@@ -535,7 +557,7 @@ export const ExploreResultsSection = ({
                   emphasizeVerification={caresAboutVerification}
                   decisionFeatured={highlightedVerificationResultId === property.id}
                   decisionSupportLabel={null}
-                  onClick={() => navigate(`/detail/${property.id}`)}
+                  onClick={() => handlePropertyClick(property)}
                   isFavorite={isFavorite(property.id)}
                   onFavoriteToggle={onFavoriteToggle}
                 />

@@ -1,5 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { apiFetch } from '../lib/apiConfig';
+import { DEMO_USER_ID, DEMO_USER_INTERESTS_JSON, DEMO_USER_PROFILE } from '../demo/mockIdentity';
+import { isDemoMode } from '../lib/demoMode';
 
 export type UserMode = 'guest' | 'host';
 
@@ -43,7 +45,7 @@ export interface AuthRefreshResult {
     error: string | null;
 }
 
-interface AuthContextType {
+export interface AuthContextValue {
     user: User | null;
     loading: boolean;
     isAuthenticated: boolean;
@@ -59,7 +61,7 @@ interface AuthContextType {
     clearError: () => void;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 const normalizeInterests = (value: unknown): string | undefined => {
     if (typeof value === 'string') {
@@ -189,11 +191,32 @@ type SessionFetchResult = {
 };
 
 const DEFAULT_SESSION_ERROR = 'No pudimos recuperar tu sesión. Intentá de nuevo.';
+const DEMO_AUTH_USER: User = {
+    id: DEMO_USER_ID,
+    name: DEMO_USER_PROFILE.name,
+    email: DEMO_USER_PROFILE.email,
+    role: 'host',
+    canGuest: true,
+    canHost: true,
+    activeMode: 'guest',
+    memberSince: DEMO_USER_PROFILE.memberSince,
+    createdAt: DEMO_USER_PROFILE.createdAt,
+    phone: DEMO_USER_PROFILE.phone,
+    bio: DEMO_USER_PROFILE.bio,
+    interests: DEMO_USER_INTERESTS_JSON,
+    zone: DEMO_USER_PROFILE.zone,
+    positiveReviews: 18,
+    totalReviews: 19,
+    rating: 4.9,
+    totalProperties: 3,
+    totalBookingsHosted: 21,
+};
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const [user, setUser] = useState<User | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [status, setStatus] = useState<AuthStatus>('loading');
+    const demoModeRef = useRef(isDemoMode());
+    const [user, setUser] = useState<User | null>(demoModeRef.current ? DEMO_AUTH_USER : null);
+    const [loading, setLoading] = useState(!demoModeRef.current);
+    const [status, setStatus] = useState<AuthStatus>(demoModeRef.current ? 'authenticated' : 'loading');
     const [error, setError] = useState<string | null>(null);
     const [sessionError, setSessionError] = useState<string | null>(null);
     const userRef = useRef<User | null>(null);
@@ -203,6 +226,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, [user]);
 
     const loadCurrentUser = useCallback(async (): Promise<SessionFetchResult> => {
+        if (demoModeRef.current) {
+            return {
+                user: userRef.current ?? DEMO_AUTH_USER,
+                status: 'authenticated',
+                error: null,
+            };
+        }
+
         try {
             const response = await apiFetch('/api/auth/me', { includeCredentials: true });
             if (!response.ok) {
@@ -305,11 +336,30 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, [syncSession]);
 
     useEffect(() => {
+        if (demoModeRef.current) {
+            setUser(DEMO_AUTH_USER);
+            setStatus('authenticated');
+            setLoading(false);
+            setSessionError(null);
+            return;
+        }
+
         void syncSession({ initial: true });
     }, [syncSession]);
 
     const login = async (email: string, password: string) => {
         setError(null);
+
+        if (demoModeRef.current) {
+            setUser((currentUser) => ({
+                ...(currentUser ?? DEMO_AUTH_USER),
+                email: email.trim().toLowerCase() || DEMO_AUTH_USER.email,
+            }));
+            setStatus('authenticated');
+            setSessionError(null);
+            return true;
+        }
+
         try {
             const normalizedEmail = email.trim().toLowerCase();
             const response = await apiFetch('/api/auth/login', {
@@ -345,6 +395,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const register = async (email: string, password: string, fullName: string, zone: string, phone?: string, bio?: string, interests?: string[]) => {
         setError(null);
+
+        if (demoModeRef.current) {
+            setUser({
+                ...DEMO_AUTH_USER,
+                name: fullName.trim() || DEMO_AUTH_USER.name,
+                email: email.trim().toLowerCase() || DEMO_AUTH_USER.email,
+                zone,
+                phone: phone?.trim() || DEMO_AUTH_USER.phone,
+                bio: bio?.trim() || DEMO_AUTH_USER.bio,
+                interests: interests && interests.length > 0 ? JSON.stringify(interests) : DEMO_AUTH_USER.interests,
+            });
+            setStatus('authenticated');
+            setSessionError(null);
+            return true;
+        }
+
         try {
             const normalizedEmail = email.trim().toLowerCase();
             const response = await apiFetch('/api/auth/register', {
@@ -378,6 +444,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const setActiveMode = useCallback(async (mode: UserMode) => {
         setError(null);
 
+        if (demoModeRef.current) {
+            setUser((currentUser) => {
+                if (!currentUser) {
+                    return {
+                        ...DEMO_AUTH_USER,
+                        activeMode: mode,
+                    };
+                }
+
+                return {
+                    ...currentUser,
+                    activeMode: mode,
+                };
+            });
+            setStatus('authenticated');
+            setSessionError(null);
+            return true;
+        }
+
         try {
             const response = await apiFetch('/api/auth/context', {
                 method: 'PUT',
@@ -408,6 +493,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const updateProfile = async (payload: UpdateProfilePayload) => {
         setError(null);
 
+        if (demoModeRef.current) {
+            setUser((currentUser) => {
+                const previousUser = currentUser ?? DEMO_AUTH_USER;
+
+                return {
+                    ...previousUser,
+                    name: payload.name ?? previousUser.name,
+                    zone: payload.zone ?? previousUser.zone,
+                    phone: payload.phone ?? previousUser.phone,
+                    bio: payload.bio ?? previousUser.bio,
+                    interests: payload.interests ? JSON.stringify(payload.interests) : previousUser.interests,
+                };
+            });
+            setStatus('authenticated');
+            setSessionError(null);
+            return true;
+        }
+
         try {
             const response = await apiFetch('/api/auth/profile', {
                 method: 'PUT',
@@ -437,6 +540,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const logout = async () => {
         setError(null);
+
+        if (demoModeRef.current) {
+            setUser(DEMO_AUTH_USER);
+            setStatus('authenticated');
+            setSessionError(null);
+            return;
+        }
+
         try {
             await apiFetch('/api/auth/logout', { method: 'POST', includeCredentials: true });
             setUser(null);

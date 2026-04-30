@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from './useAuth';
+import { isDemoMode } from '../lib/demoMode';
 import { emitUserNotification, showToast, type ToastType } from '../lib/toast';
 
 const normalizeNotificationType = (value: string): ToastType => {
@@ -16,7 +17,7 @@ export function useSocket() {
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || isDemoMode()) return;
 
     // Connect to the same host that served the page
     const socket = io();

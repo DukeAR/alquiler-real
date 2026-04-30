@@ -76,7 +76,10 @@ export const PlatformTermsQuickGuide: React.FC<PlatformTermsQuickGuideProps> = (
           ) : null}
         </div>
 
-        <div className={cn('grid gap-3', isCompact ? 'sm:grid-cols-2 xl:grid-cols-5' : 'md:grid-cols-2 xl:grid-cols-5')}>
+        <div
+          data-testid="platform-terms-quick-guide-grid"
+          className={cn('grid gap-3', isCompact ? 'sm:grid-cols-2' : 'md:grid-cols-2 xl:grid-cols-5')}
+        >
           {PLATFORM_TERMS_QUICK_GUIDE_SECTIONS.map((section) => {
             const Icon = sectionIcons[section.id];
 
