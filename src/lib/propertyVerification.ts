@@ -175,6 +175,8 @@ export const PRESENCIAL_VERIFICATION_LABEL = 'Verificado presencialmente';
 
 export const PRESENCIAL_VERIFICATION_LEVEL_LABEL = 'Verificación presencial';
 
+export const HOST_IDENTITY_VALIDATED_LABEL = 'Identidad del anfitrión validada';
+
 export const HOST_PUBLISHED_INFO_LABEL = 'Información publicada por el anfitrión';
 
 export const PROPERTY_VERIFICATION_QUALITY_NOTE = 'No evaluamos estado ni calidad del inmueble.';
@@ -458,6 +460,17 @@ const getExplicitPropertyVerificationKey = (item: PropertyVerificationItemInput)
   );
 
   return PROPERTY_VERIFICATION_LABEL_KEY_MAP[normalizedLabel] ?? null;
+};
+
+const hasExplicitIdentityVerification = (items?: PropertyVerificationItemInput[] | null) => {
+  if (!Array.isArray(items) || items.length === 0) {
+    return false;
+  }
+
+  return items.some((item) => (
+    getExplicitPropertyVerificationKey(item) === 'identity'
+    && normalizeVerificationStatus(item.status) === 'complete'
+  ));
 };
 
 const buildSummaryFromExplicitItems = (items: PropertyVerificationItemInput[]): PropertyVerificationSummary => {
@@ -932,7 +945,7 @@ export type PropertyCardVerificationCheck = {
 export type PropertyCardVerificationState = {
   model: 'premium' | 'standard';
   presencialVerified: boolean;
-  publicLevel: PublicPropertyVerificationLevel;
+  publicLevel: 'none' | 'identity' | 'presencial';
   verificationChecks: Record<PropertyCardVerificationCheckKey, boolean>;
   count: number;
   checks: PropertyCardVerificationCheck[];
@@ -1064,18 +1077,61 @@ export const hasPropertyPresencialVerificationSeal = (property: PropertyVerifica
 
 export const getPropertyCardVerificationState = (property: PropertyVerificationLike): PropertyCardVerificationState => {
   const verificationState = getPropertyVerificationPresentationState(property);
+  const hasPresencialVerification = verificationState.presencialVerified;
+  const hasIdentityValidation = !hasPresencialVerification && (
+    property.identityValidated === true
+    || hasExplicitIdentityVerification(property.verificationSummary?.items)
+    || hasExplicitIdentityVerification(property.verificationItems)
+  );
+
+  if (hasPresencialVerification) {
+    return {
+      model: 'premium',
+      presencialVerified: true,
+      publicLevel: 'presencial',
+      verificationChecks: verificationState.verificationChecks,
+      count: 4,
+      checks: verificationState.checks,
+      badgeText: PRESENCIAL_VERIFICATION_LABEL,
+      summaryTitle: PRESENCIAL_VERIFICATION_LEVEL_LABEL,
+      summaryDescription: 'Confirmamos identidad, acceso, vínculo y ubicación durante una visita presencial.',
+      countLabel: null,
+    };
+  }
+
+  if (hasIdentityValidation) {
+    return {
+      model: 'standard',
+      presencialVerified: false,
+      publicLevel: 'identity',
+      verificationChecks: verificationState.verificationChecks,
+      count: 1,
+      checks: [
+        {
+          key: 'identity',
+          label: HOST_IDENTITY_VALIDATED_LABEL,
+          description: 'Validamos la identidad del anfitrión antes de mostrar esta señal.',
+          complete: true,
+        },
+      ],
+      badgeText: null,
+      summaryTitle: HOST_IDENTITY_VALIDATED_LABEL,
+      summaryDescription: 'La identidad del anfitrión ya quedó validada en la plataforma.',
+      countLabel: HOST_IDENTITY_VALIDATED_LABEL,
+    };
+  }
 
   return {
-    model: verificationState.model,
-    presencialVerified: verificationState.presencialVerified,
-    publicLevel: verificationState.publicLevel,
+    model: 'standard',
+    presencialVerified: false,
+    publicLevel: 'none',
     verificationChecks: verificationState.verificationChecks,
-    count: verificationState.count,
-    checks: verificationState.checks,
-    badgeText: verificationState.badgeText,
-    summaryTitle: verificationState.summaryTitle,
-    summaryDescription: verificationState.summaryDescription,
-    countLabel: verificationState.countLabel,
+    count: 0,
+    checks: [],
+    badgeText: null,
+    summaryTitle: HOST_PUBLISHED_INFO_LABEL,
+    summaryDescription: 'La información visible de este aviso fue publicada por el anfitrión.',
+    countLabel: HOST_PUBLISHED_INFO_LABEL,
   };
 };
 

@@ -2,7 +2,7 @@ import React from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { Icons } from './Icons';
 import { cn, formatCurrency } from '../lib/utils';
-import { getPropertyVerificationDetails, REAL_VERIFICATION_FILTER_MIN_SCORE } from '../lib/propertyVerification';
+import { getPropertyCardVerificationState } from '../lib/propertyVerification';
 import { Property } from '../services/geminiService';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
@@ -67,10 +67,10 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   const user = auth.user;
   const imageSrc = property.imageUrl || 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=900&q=80';
   const isFavoritesVariant = variant === 'favorites';
-  const verificationDetails = getPropertyVerificationDetails(property);
+  const verificationState = getPropertyCardVerificationState(property);
   const propertyTypeLabel = getPropertyTypeLabel(property);
   const guestCapacityLabel = getGuestCapacityLabel(Number(property.maxGuests) || null);
-  const usesVerifiedCardLayout = verificationDetails.score >= REAL_VERIFICATION_FILTER_MIN_SCORE;
+  const usesVerifiedCardLayout = verificationState.model === 'premium';
   const propertyCardCtaLabel = 'Ver detalle';
   const handleFavoriteToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -117,7 +117,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         />
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-slate-950/24 via-slate-950/8 to-transparent" />
 
-        {verificationDetails.isFullyVerified ? (
+        {verificationState.presencialVerified ? (
           <VerificationBadgePremium
             size="xs"
             variant="glass-card"
@@ -175,12 +175,21 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           {!usesVerifiedCardLayout ? (
             <div
               data-testid="property-card-verification"
-              aria-label={verificationDetails.summaryLabel}
+              aria-label={verificationState.summaryTitle}
               className="mt-4 min-h-[5.5rem] flex flex-col gap-3.5 px-0 py-0"
             >
-              <p className="text-[0.82rem] font-medium leading-5 text-slate-600">
-                {verificationDetails.countLabel}
-              </p>
+              {verificationState.publicLevel === 'identity' ? (
+                <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200/85 bg-emerald-50/95 px-3 py-2 text-emerald-800 shadow-[0_14px_24px_-22px_rgba(16,185,129,0.3)]">
+                  <Icons.CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" aria-hidden="true" />
+                  <p className="text-[0.82rem] font-medium leading-5 text-emerald-800">
+                    {verificationState.countLabel}
+                  </p>
+                </div>
+              ) : (
+                <p className="text-[0.82rem] font-medium leading-5 text-slate-600">
+                  {verificationState.countLabel}
+                </p>
+              )}
             </div>
           ) : null}
         </div>
