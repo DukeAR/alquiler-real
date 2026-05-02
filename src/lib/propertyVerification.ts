@@ -177,6 +177,8 @@ export const PRESENCIAL_VERIFICATION_LEVEL_LABEL = 'Verificación presencial';
 
 export const HOST_IDENTITY_VALIDATED_LABEL = 'Identidad del anfitrión validada';
 
+const PROPERTY_CARD_IDENTITY_VALIDATED_LABEL = 'Identidad validada';
+
 export const HOST_PUBLISHED_INFO_LABEL = 'Información publicada por el anfitrión';
 
 export const PROPERTY_VERIFICATION_QUALITY_NOTE = 'No evaluamos estado ni calidad del inmueble.';
@@ -1093,8 +1095,8 @@ export const getPropertyCardVerificationState = (property: PropertyVerificationL
       count: 4,
       checks: verificationState.checks,
       badgeText: PRESENCIAL_VERIFICATION_LABEL,
-      summaryTitle: PRESENCIAL_VERIFICATION_LEVEL_LABEL,
-      summaryDescription: 'Confirmamos identidad, acceso, vínculo y ubicación durante una visita presencial.',
+      summaryTitle: PRESENCIAL_VERIFICATION_LABEL,
+      summaryDescription: 'Identidad, ubicación y acceso confirmados',
       countLabel: null,
     };
   }
@@ -1115,9 +1117,9 @@ export const getPropertyCardVerificationState = (property: PropertyVerificationL
         },
       ],
       badgeText: null,
-      summaryTitle: HOST_IDENTITY_VALIDATED_LABEL,
-      summaryDescription: 'La identidad del anfitrión ya quedó validada en la plataforma.',
-      countLabel: HOST_IDENTITY_VALIDATED_LABEL,
+      summaryTitle: PROPERTY_CARD_IDENTITY_VALIDATED_LABEL,
+      summaryDescription: null,
+      countLabel: PROPERTY_CARD_IDENTITY_VALIDATED_LABEL,
     };
   }
 

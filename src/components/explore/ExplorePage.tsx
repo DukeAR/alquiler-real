@@ -2,7 +2,11 @@ import { useEffect, useState } from 'react';
 import { apiJson } from '../../lib/apiConfig';
 import { useFavorites } from '../../hooks/useFavorites';
 import type { Property } from '../../services/geminiService';
-import { meetsRealVerificationFilter, sortPropertiesByCatalogOrder } from '../../lib/propertyVerification';
+import {
+  hasPropertyPresencialVerificationSeal,
+  meetsRealVerificationFilter,
+  sortPropertiesByCatalogOrder,
+} from '../../lib/propertyVerification';
 import {
   getVerificationPreferenceState,
   trackVerificationPreferenceSave,
@@ -157,9 +161,12 @@ export const ExplorePage = ({
   const filteredProperties = filters.verifiedOnly
     ? orderedProperties.filter((property) => meetsRealVerificationFilter(property))
     : orderedProperties;
+  const usePresencialFeaturedSplit = !hasActiveFilters && sortBy === 'verification';
   const featuredProperties = hasActiveFilters
     ? []
-    : filteredProperties.slice(0, 3);
+    : usePresencialFeaturedSplit
+      ? filteredProperties.filter((property) => hasPropertyPresencialVerificationSeal(property))
+      : filteredProperties.slice(0, 3);
   const featuredIds = new Set(featuredProperties.map((property) => property.id));
   const appliedFilterCount = [
     Boolean(searchQuery),
@@ -171,7 +178,9 @@ export const ExplorePage = ({
   ].filter(Boolean).length;
   const listingProperties = hasActiveFilters
     ? filteredProperties
-    : filteredProperties.filter((property) => !featuredIds.has(property.id));
+    : usePresencialFeaturedSplit
+      ? filteredProperties.filter((property) => !hasPropertyPresencialVerificationSeal(property))
+      : filteredProperties.filter((property) => !featuredIds.has(property.id));
   const visibleProperties = listingProperties.slice(0, visibleCount);
   const hasMoreResults = visibleProperties.length < listingProperties.length;
 

@@ -48,6 +48,7 @@ const sampleProperties = [
     identityValidated: true,
     locationVerified: true,
     videoValidated: true,
+    hasPresencialVerification: true,
     coordinates: { lat: -36.7, lng: -56.7 },
   },
   {
@@ -62,6 +63,7 @@ const sampleProperties = [
     reviewsCount: 8,
     identityValidated: true,
     locationVerified: true,
+    hasPresencialVerification: false,
     coordinates: { lat: -37.0, lng: -56.8 },
   },
   {
@@ -74,7 +76,8 @@ const sampleProperties = [
     maxGuests: 4,
     rating: 4.7,
     reviewsCount: 10,
-    identityValidated: true,
+    identityValidated: false,
+    hasPresencialVerification: false,
   },
 ] as any[];
 
@@ -112,7 +115,7 @@ describe('ExploreResultsSection', () => {
     renderSection();
 
     expect(screen.getByRole('heading', { name: 'Empezá por los más verificados' })).toBeInTheDocument();
-    expect(screen.getByText('Primero ves los avisos con más respaldo.')).toBeInTheDocument();
+    expect(screen.getByText('Primero ves solo los avisos con verificación presencial.')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Más para comparar' })).toBeInTheDocument();
     expect(screen.getAllByText('Más verificado')).toHaveLength(1);
     expect(screen.queryByText(/Buena relación precio \/ información|De las más completas en este rango/)).toBeNull();

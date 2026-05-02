@@ -70,7 +70,6 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   const verificationState = getPropertyCardVerificationState(property);
   const propertyTypeLabel = getPropertyTypeLabel(property);
   const guestCapacityLabel = getGuestCapacityLabel(Number(property.maxGuests) || null);
-  const usesVerifiedCardLayout = verificationState.model === 'premium';
   const propertyCardCtaLabel = 'Ver detalle';
   const handleFavoriteToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -154,10 +153,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
               {propertyTypeLabel}
             </p>
-            <h3 className={cn(
-              'mt-1 min-h-[3.25rem] line-clamp-2 text-xl font-semibold leading-tight tracking-[-0.03em] text-slate-900 transition-colors duration-150 group-hover:text-slate-900',
-              !usesVerifiedCardLayout && 'min-h-[3.6rem]',
-            )}>
+            <h3 className="mt-1 min-h-[3.6rem] line-clamp-2 text-xl font-semibold leading-tight tracking-[-0.03em] text-slate-900 transition-colors duration-150 group-hover:text-slate-900">
               {property.title}
             </h3>
           </div>
@@ -172,29 +168,36 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
 
           </div>
 
-          {!usesVerifiedCardLayout ? (
-            <div
-              data-testid="property-card-verification"
-              aria-label={verificationState.summaryTitle}
-              className="mt-4 min-h-[5.5rem] flex flex-col gap-3.5 px-0 py-0"
-            >
-              {verificationState.publicLevel === 'identity' ? (
-                <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200/85 bg-emerald-50/95 px-3 py-2 text-emerald-800 shadow-[0_14px_24px_-22px_rgba(16,185,129,0.3)]">
-                  <Icons.CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" aria-hidden="true" />
-                  <p className="text-[0.82rem] font-medium leading-5 text-emerald-800">
-                    {verificationState.countLabel}
-                  </p>
-                </div>
-              ) : (
-                <p className="text-[0.82rem] font-medium leading-5 text-slate-600">
-                  {verificationState.countLabel}
+          <div
+            data-testid="property-card-verification"
+            aria-label={verificationState.summaryTitle}
+            className="mt-3 min-h-[3.8rem] px-0 py-0"
+          >
+            {verificationState.publicLevel === 'presencial' ? (
+              <div className="inline-flex max-w-full flex-col rounded-xl border border-emerald-100/90 bg-emerald-50/90 px-3 py-2.5 shadow-[0_14px_28px_-24px_rgba(5,150,105,0.65)]">
+                <p className="text-sm font-semibold leading-5 text-emerald-600">
+                  {verificationState.summaryTitle}
                 </p>
-              )}
-            </div>
-          ) : null}
+                {verificationState.summaryDescription ? (
+                  <p className="mt-0.5 text-xs leading-4 text-emerald-700">
+                    {verificationState.summaryDescription}
+                  </p>
+                ) : null}
+              </div>
+            ) : verificationState.publicLevel === 'identity' ? (
+              <div className="inline-flex items-center gap-1.5 text-sm font-medium leading-5">
+                <Icons.CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-500" aria-hidden="true" />
+                <p className="text-slate-700">{verificationState.summaryTitle}</p>
+              </div>
+            ) : (
+              <p className="text-sm font-medium leading-5 text-slate-500">
+                {verificationState.summaryTitle}
+              </p>
+            )}
+          </div>
         </div>
 
-        <div className={cn('mt-auto pt-4', !usesVerifiedCardLayout && 'pt-5')}>
+        <div className="mt-auto pt-5">
           <div className="border-t border-gray-200" />
 
           <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

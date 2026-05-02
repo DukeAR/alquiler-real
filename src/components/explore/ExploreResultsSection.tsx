@@ -154,7 +154,7 @@ export const ExploreResultsSection = ({
       ? 'Precio claro primero.'
       : sortBy === 'rating'
         ? 'Las mejor valoradas primero.'
-        : 'Primero ves los avisos con más respaldo.';
+        : 'Primero ves solo los avisos con verificación presencial.';
   const listingHeading = hasActiveFilters
     ? 'Resultados para revisar'
     : showFeaturedSection
