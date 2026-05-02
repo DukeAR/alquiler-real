@@ -418,7 +418,7 @@ describe('Bookings and availability endpoints', () => {
         return { rows: [{ id: 'booking-1', propertyId: 'prop-1', userId: 'user-1' }] };
       }
 
-      if (text.includes('SELECT * FROM conversations')) {
+      if (text.includes('FROM conversations') && text.includes('WHERE tenant_id = $1 AND host_id = $2 AND property_id = $3')) {
         expect(params).toEqual(['user-1', 'host-1', 'prop-1']);
         return { rows: [{ id: 'conv-1', booking_id: null, property_id: 'prop-1', tenant_id: 'user-1', host_id: 'host-1' }] };
       }
@@ -462,7 +462,7 @@ describe('Bookings and availability endpoints', () => {
         return { rows: [{ id: 'prop-1', hostId: 'host-1' }] };
       }
 
-      if (text.includes('SELECT * FROM conversations')) {
+      if (text.includes('FROM conversations') && text.includes('WHERE tenant_id = $1 AND host_id = $2 AND property_id = $3')) {
         return {
           rows: [{
             id: 'conv-1',
@@ -678,7 +678,7 @@ describe('Bookings and availability endpoints', () => {
         return { rows: [] };
       }
 
-      if (text.includes('SELECT * FROM messages WHERE conversation_id = $1')) {
+      if (text.includes('FROM messages') && text.includes('WHERE conversation_id = $1')) {
         return {
           rows: [
             {

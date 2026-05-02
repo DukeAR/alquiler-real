@@ -1,9 +1,18 @@
 /**
  * CONFIGURACIÓN CENTRALIZADA DE API
- * 
+ *
  * Todas las llamadas al backend DEBEN usar esta configuración.
  * Mantén el control del base URL en UN SOLO lugar.
  */
+
+import {
+  getRequestCacheMode,
+  getRequestTtlMs,
+  getDataProviderStats,
+  invalidateRelatedData,
+  loadResponse,
+  maybeGetMockApiResponse,
+} from './dataProvider';
 
 // Base URL del backend
 // En desarrollo: usa rutas relativas /api para que el proxy de Vite maneje localhost,
@@ -19,8 +28,6 @@ const getBackendUrl = (): string => {
     ? runtimeEnv.VITE_BACKEND_URL.trim()
     : '';
 
-  // En desarrollo, si alguien dejó localhost/127.0.0.1 en .env,
-  // forzamos rutas relativas para no romper el acceso desde túneles/HTTPS.
   if (runtimeEnv.DEV) {
     if (!configuredUrl) {
       return '';
@@ -33,7 +40,6 @@ const getBackendUrl = (): string => {
         return '';
       }
     } catch {
-      // Si la URL es inválida, caer al proxy local evita romper toda la app.
       return '';
     }
   }
@@ -46,6 +52,9 @@ const API_TIMEOUT_MS = Number(runtimeEnv.VITE_API_TIMEOUT || 30000);
 
 export type ApiRequestOptions = Omit<RequestInit, 'credentials'> & {
   includeCredentials?: true;
+  ttlMs?: number;
+  noCache?: boolean;
+  revalidateSeconds?: number;
 };
 
 // Logger para debugging
@@ -117,16 +126,25 @@ export async function apiFetch(
   endpoint: string,
   options: ApiRequestOptions = {}
 ): Promise<Response> {
-  const { includeCredentials: _includeCredentials, ...fetchOptions } = options;
+  const {
+    includeCredentials: _includeCredentials,
+    ttlMs,
+    noCache = false,
+    revalidateSeconds,
+    ...fetchOptions
+  } = options;
 
   // Construir URL absoluta
   const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
+  const method = (fetchOptions.method || 'GET').toUpperCase();
+  const resolvedCacheMode = getRequestCacheMode(endpoint, method, fetchOptions.cache, noCache);
+  const resolvedTtlMs = getRequestTtlMs(endpoint, ttlMs, revalidateSeconds);
 
   // Configurar opciones finales
   const finalOptions: RequestInit = {
     ...fetchOptions,
     credentials: 'include',
-    cache: 'no-store',
+    ...(resolvedCacheMode ? { cache: resolvedCacheMode } : {}),
   };
 
   // Asegurar que headers sea un objeto
@@ -143,24 +161,41 @@ export async function apiFetch(
     }
   }
 
-  const method = finalOptions.method || 'GET';
-  
   logApiCall(method, url, { 
     credentials: finalOptions.credentials,
     hasBody: !!fetchOptions.body,
-    origin: window.location.origin
+    cache: finalOptions.cache,
+    ttlMs: resolvedTtlMs,
+    origin: typeof window !== 'undefined' ? window.location.origin : undefined,
   });
 
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
+    const response = await loadResponse(endpoint, {
+      method,
+      ttlMs: resolvedTtlMs,
+      noCache,
+    }, async () => {
+      const mockResponse = await maybeGetMockApiResponse(endpoint, {
+        ...finalOptions,
+        method,
+      });
 
-    const response = await fetch(url, {
-      ...finalOptions,
-      signal: controller.signal,
+      if (mockResponse) {
+        return mockResponse;
+      }
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
+
+      try {
+        return await fetch(url, {
+          ...finalOptions,
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeoutId);
+      }
     });
-    
-    clearTimeout(timeoutId);
 
     const contentType = response.headers?.get?.('Content-Type') || null;
     const corsHeader = response.headers?.get?.('Access-Control-Allow-Origin') || null;
@@ -179,6 +214,8 @@ export async function apiFetch(
         corsHeader,
         origin: window.location.origin,
       });
+    } else if (method !== 'GET') {
+      invalidateRelatedData(endpoint, { body: fetchOptions.body });
     }
     
     return response;
@@ -194,6 +231,8 @@ export async function apiFetch(
     throw new Error(errorMsg);
   }
 }
+
+export const getApiUsageStats = getDataProviderStats;
 
 /**
  * Función helper para peticiones JSON con type-safety

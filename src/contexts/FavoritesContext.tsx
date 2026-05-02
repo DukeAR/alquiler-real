@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { apiFetch, apiJson } from '../lib/apiConfig';
+import { apiFetch } from '../lib/apiConfig';
 import { showToast } from '../lib/toast';
 
 type PropertyObject = any;
@@ -194,12 +194,9 @@ export const FavoritesProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               return;
             }
             if (!res.ok) throw new Error('server');
-            // fetch full property and cache
-            try {
-              const p = await apiJson<PropertyObject>(`/api/properties/${op.propertyId}`);
-              setFavoritesMap(prev => new Map(prev).set(p.id, p));
-            } catch {
-              // ignore property fetch failure and keep sync result only
+            const payload = await res.json().catch(() => null) as { property?: PropertyObject } | null;
+            if (payload?.property?.id) {
+              setFavoritesMap((prev) => new Map(prev).set(payload.property!.id, payload.property!));
             }
           } else if (op.action === 'remove') {
             const res = await apiFetch(`/api/favorites/${op.propertyId}`, { method: 'DELETE' });
@@ -335,14 +332,11 @@ export const FavoritesProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           return 'unchanged';
         }
         if (!res.ok) throw new Error('server');
-        // fetch full property and replace placeholder
-        try {
-          const p = await apiJson<PropertyObject>(`/api/properties/${propertyId}`);
-          setFavoritesMap(prev => new Map(prev).set(p.id, p));
-        } catch {
-          // leave placeholder if we can't fetch details
-          showToast('Guardados', 'La propiedad se agregó a tus guardados.', 'success');
+        const payload = await res.json().catch(() => null) as { property?: PropertyObject } | null;
+        if (payload?.property?.id) {
+          setFavoritesMap((prev) => new Map(prev).set(payload.property!.id, payload.property!));
         }
+        showToast('Guardados', 'La propiedad se agregó a tus guardados.', 'success');
         return 'added';
       } catch (err) {
         console.error('[FavoritesProvider] add error', err);

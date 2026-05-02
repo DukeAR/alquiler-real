@@ -125,6 +125,8 @@ type SecureChatProps = {
   disableAutoLoad?: boolean;
 };
 
+const CHAT_MESSAGE_POLL_MS = 15_000;
+
 const buildHostClosingChips = (requestContext: ReservationRequestContext | null) => {
   const advanceWithDepositMessage = requestContext?.mode === 'protected'
     ? 'Si te parece bien, podemos avanzar con la seña y dejarlo confirmado.'
@@ -489,7 +491,32 @@ export const SecureChat: React.FC<SecureChatProps> = ({
   const trackedGuestChatOpenIdsRef = useRef(new Set<string>());
   const autoLoadedSuggestionIdsRef = useRef(new Set<string>());
   const handledDepositCheckoutRef = useRef<string | null>(null);
+  const activeConversationIdRef = useRef<string | null>(null);
+  const messageRequestTokenRef = useRef(0);
+  const messageRequestsInFlightRef = useRef(0);
   const [loadedMessagesConversationId, setLoadedMessagesConversationId] = useState<string | null>(null);
+
+  const isChatPollingAllowed = () => {
+    if (typeof document !== 'undefined') {
+      if (document.hidden) {
+        return false;
+      }
+
+      if (typeof document.hasFocus === 'function' && !document.hasFocus()) {
+        return false;
+      }
+    }
+
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      return false;
+    }
+
+    return true;
+  };
+
+  useEffect(() => {
+    activeConversationIdRef.current = activeConv?.id ?? null;
+  }, [activeConv?.id]);
 
   useEffect(() => {
     if (disableAutoLoad) {
@@ -537,9 +564,35 @@ export const SecureChat: React.FC<SecureChatProps> = ({
         return;
       }
 
-      loadMessages(activeConv.id);
-      const interval = setInterval(() => loadMessages(activeConv.id), 5000);
-      return () => clearInterval(interval);
+      const refreshMessages = () => {
+        if (!isChatPollingAllowed()) {
+          return;
+        }
+
+        void loadMessages(activeConv.id, { skipIfInFlight: true });
+      };
+
+      void loadMessages(activeConv.id);
+
+      const handleWindowFocus = () => {
+        refreshMessages();
+      };
+
+      const handleVisibilityChange = () => {
+        if (typeof document !== 'undefined' && !document.hidden) {
+          refreshMessages();
+        }
+      };
+
+      window.addEventListener('focus', handleWindowFocus);
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+
+      const interval = window.setInterval(refreshMessages, CHAT_MESSAGE_POLL_MS);
+      return () => {
+        window.clearInterval(interval);
+        window.removeEventListener('focus', handleWindowFocus);
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      };
     }
   }, [activeConv?.id, disableAutoLoad]);
 
@@ -574,15 +627,29 @@ export const SecureChat: React.FC<SecureChatProps> = ({
     }
   };
 
-  const loadMessages = async (id: string) => {
+  const loadMessages = async (id: string, options: { skipIfInFlight?: boolean } = {}) => {
+    if (options.skipIfInFlight && messageRequestsInFlightRef.current > 0) {
+      return;
+    }
+
+    const requestToken = ++messageRequestTokenRef.current;
+    messageRequestsInFlightRef.current += 1;
+
     try {
       setError(null);
       const data = await fetchMessages(id);
+
+      if (activeConversationIdRef.current !== id || requestToken !== messageRequestTokenRef.current) {
+        return;
+      }
+
       setMessages(data || []);
       setLoadedMessagesConversationId(id);
     } catch (err: any) {
       console.error('[SecureChat] Error loading messages:', err);
       setError(err?.message || 'No pudimos cargar los mensajes.');
+    } finally {
+      messageRequestsInFlightRef.current = Math.max(0, messageRequestsInFlightRef.current - 1);
     }
   };
 

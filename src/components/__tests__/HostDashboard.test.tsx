@@ -242,6 +242,75 @@ describe('HostDashboard', () => {
     expect(screen.getByRole('button', { name: /Cancelar/i })).toBeInTheDocument();
   });
 
+  test('updates property status without refetching the whole dashboard', async () => {
+    apiJsonMock.mockImplementation(async (url: string, options?: RequestInit) => {
+      if (url === '/api/host/dashboard') {
+        return {
+          stats: {
+            host_rating: 4.9,
+            total_bookings_hosted: 3,
+            trust_score: 88,
+            badge: 'Verificado',
+            host_verified: true,
+          },
+          properties: [
+            {
+              id: 'prop-1',
+              title: 'Casa del bosque',
+              location: 'Pinamar',
+              price: 150000,
+              status: 'active',
+              reviewsCount: 8,
+              rating: 4.9,
+              imageUrl: 'https://example.com/property.jpg',
+              verificationScore: 4,
+              verificationItems: [
+                { key: 'identity', label: 'Identidad confirmada', description: 'Sabés con quién estás hablando.', status: 'complete' },
+              ],
+            },
+          ],
+          recentBookings: [],
+          contactedGuests: [],
+          estimatedIncome: 250000,
+          funnelMetrics: {
+            windowDays: 30,
+            detailViews: 20,
+            availabilityClicks: 12,
+            availabilityClickRate: 60,
+            chatStarts: 7,
+            chatsWithFirstMessage: 5,
+            firstMessageRate: 71,
+            acceptedRequests: 4,
+            depositsCompleted: 2,
+            depositConversionRate: 50,
+          },
+        };
+      }
+
+      if (url === '/api/properties/prop-1' && options?.method === 'PUT') {
+        return { success: true };
+      }
+
+      return {};
+    });
+
+    renderDashboard();
+
+    expect(await screen.findByText('Casa del bosque')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Pausar aviso/i }));
+
+    await waitFor(() => {
+      expect(apiJsonMock).toHaveBeenCalledWith(
+        '/api/properties/prop-1',
+        expect.objectContaining({ method: 'PUT' }),
+      );
+    });
+
+    expect(apiJsonMock.mock.calls.filter(([url]) => url === '/api/host/dashboard')).toHaveLength(1);
+    expect(await screen.findByText('Pausado')).toBeInTheDocument();
+  });
+
   test('shows the guest profile sheet for a pending booking before evaluation is enabled', async () => {
     apiJsonMock.mockResolvedValue({
       stats: {

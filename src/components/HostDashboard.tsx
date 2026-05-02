@@ -321,7 +321,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
     setLoadError(null);
 
     try {
-      const data = await apiJson<any>('/api/host/dashboard', { includeCredentials: true });
+      const data = await apiJson<any>('/api/host/dashboard', { includeCredentials: true, ttlMs: 60_000 });
       setDashboardData(data);
       return data;
     } catch (err) {
@@ -342,6 +342,21 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
         ...currentData,
         recentBookings: currentData.recentBookings.map((booking: any) => (
           booking.id === nextBooking.id ? { ...booking, ...nextBooking } : booking
+        )),
+      };
+    });
+  };
+
+  const updateHostProperty = (propertyId: string, patch: Record<string, unknown>) => {
+    setDashboardData((currentData: any) => {
+      if (!currentData || !Array.isArray(currentData.properties)) {
+        return currentData;
+      }
+
+      return {
+        ...currentData,
+        properties: currentData.properties.map((property: any) => (
+          property.id === propertyId ? { ...property, ...patch } : property
         )),
       };
     });
@@ -455,8 +470,8 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
         body: JSON.stringify({ status: newStatus }),
         includeCredentials: true,
       });
+      updateHostProperty(id, { status: newStatus });
       showToast('Publicación actualizada', newStatus === 'active' ? 'La propiedad volvió a quedar visible.' : 'La propiedad quedó pausada y ya no recibe reservas nuevas.', 'success');
-      void fetchData();
     } catch (err) {
       console.error(err);
       showToast('Publicación', err instanceof Error ? err.message : 'No pudimos actualizar el estado de la propiedad.', 'error');
@@ -1389,8 +1404,10 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
             type="host_to_guest"
             onClose={() => setReviewingBooking(null)}
             onComplete={() => {
+              if (reviewingBooking?.id) {
+                updateRecentBooking({ ...reviewingBooking, hostReviewSubmitted: true });
+              }
               setReviewingBooking(null);
-              void fetchData();
             }}
           />
         )}

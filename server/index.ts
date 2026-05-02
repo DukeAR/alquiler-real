@@ -977,6 +977,17 @@ const PROPERTY_VERIFICATION_FILE_SUMMARY_JOINS = `
       ) property_file_summary ON property_file_summary.property_id = p.id
 `;
 
+const PROPERTY_LIST_SELECT = `p.id, p.title, p.location, p.price, p."hostId", p."hostName",
+        p.description, p."imageUrl", p.images, p.rating, p."reviewsCount",
+        p."identityValidated", p."locationVerified", p."materialVerified", p."videoValidated",
+        COALESCE(u.internal_visibility_penalty, 0) as "internalVisibilityPenalty",
+        p."traceabilityLevel", p."maxGuests", p."hasPresencialVerification", p."onsiteVerifiedAt", p."hasDigitalVerification", p.lat, p.lng,
+        p.beds, p.bedrooms, p.bathrooms, p.property_type as "propertyType",
+        p.is_verified_property as "isVerifiedProperty",
+        ${PROPERTY_AVAILABILITY_VALIDATED_SELECT},
+        ${PROPERTY_VERIFICATION_FILE_SUMMARY_SELECT},
+        ${PROPERTY_HOST_TRUST_SELECT}`;
+
 type VerificationAssetKind = 'photo' | 'video' | 'document';
 
 type PropertyVerificationReviewAction = 'approve-documents' | 'reject-documents' | 'complete-manual-review' | 'clear-manual-review';
@@ -2751,7 +2762,15 @@ app.post('/api/verification/confirm-contact', async (req, res) => {
 app.get('/api/users/preferences', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: AUTH_REQUIRED_ERROR });
   try {
-    const result = await db.query('SELECT * FROM user_preferences WHERE user_id = $1', [req.session.userId]);
+    const result = await db.query(
+      `SELECT preferred_zone,
+              max_price,
+              preferred_property_type,
+              updated_at
+       FROM user_preferences
+       WHERE user_id = $1`,
+      [req.session.userId],
+    );
     res.json(result.rows[0] || { preferred_zone: null, max_price: null, preferred_property_type: null });
   } catch (err) {
     res.status(500).json({ error: 'No pudimos cargar tus preferencias.' });
@@ -3635,7 +3654,9 @@ app.get('/api/host/dashboard', async (req, res) => {
         [req.session.userId],
       ),
       db.query(
-        `SELECT *
+        `SELECT recent_guests.id,
+                recent_guests.name,
+                recent_guests.created_at
          FROM (
            SELECT DISTINCT ON (guest.id)
                   guest.id,
@@ -3839,6 +3860,9 @@ app.get('/api/host/dashboard', async (req, res) => {
         bookingSignalsByBookingId.set(signal.bookingId, signal);
       });
     }
+
+    res.set('Cache-Control', 'private, max-age=30, stale-while-revalidate=120');
+    res.vary('Cookie');
 
     res.json({
       stats: {
@@ -4090,21 +4114,15 @@ app.post('/api/users/block', async (req, res) => {
 app.get('/api/properties', async (req, res) => {
   try {
     const { 
-      minPrice, maxPrice, guests, verifiedOnly, type, location 
+      minPrice, maxPrice, guests, verifiedOnly, type, location, limit, page
     } = req.query;
+
+    const requestedLimit = Math.max(0, Math.min(20, Math.floor(toSafeNumber(limit))));
+    const requestedPage = Math.max(1, Math.floor(toSafeNumber(page) || 1));
 
     let query = `
       SELECT
-        p.id, p.title, p.location, p.price, p."hostId", p."hostName",
-        p.description, p."imageUrl", p.images, p.rating, p."reviewsCount",
-        p."identityValidated", p."locationVerified", p."materialVerified", p."videoValidated",
-        COALESCE(u.internal_visibility_penalty, 0) as "internalVisibilityPenalty",
-        p."traceabilityLevel", p."maxGuests", p."hasPresencialVerification", p."onsiteVerifiedAt", p."hasDigitalVerification", p.lat, p.lng,
-        p.beds, p.bedrooms, p.bathrooms, p.property_type as "propertyType",
-        p.is_verified_property as "isVerifiedProperty",
-        ${PROPERTY_AVAILABILITY_VALIDATED_SELECT},
-        ${PROPERTY_VERIFICATION_FILE_SUMMARY_SELECT},
-        ${PROPERTY_HOST_TRUST_SELECT}
+        ${PROPERTY_LIST_SELECT}
       FROM properties p
       ${PROPERTY_HOST_TRUST_JOINS}
       ${PROPERTY_VERIFICATION_FILE_SUMMARY_JOINS}
@@ -4123,6 +4141,14 @@ app.get('/api/properties', async (req, res) => {
     }
 
     query += ` ORDER BY COALESCE(u.internal_visibility_penalty, 0) ASC, p.rating DESC NULLS LAST`;
+
+    if (requestedLimit > 0) {
+      params.push(requestedLimit + 1);
+      query += ` LIMIT $${params.length}`;
+
+      params.push((requestedPage - 1) * requestedLimit);
+      query += ` OFFSET $${params.length}`;
+    }
 
     const result = await db.query(query, params);
 
@@ -4145,7 +4171,15 @@ app.get('/api/properties', async (req, res) => {
         || Number(right.property.rating ?? 0) - Number(left.property.rating ?? 0)
       ))
       .map(({ property }) => property);
-    res.json(properties);
+
+    const paginatedProperties = requestedLimit > 0
+      ? properties.slice(0, requestedLimit)
+      : properties;
+
+    res.set('Cache-Control', 'public, max-age=60, s-maxage=60, stale-while-revalidate=300');
+    res.set('X-Data-Limit', String(requestedLimit || properties.length));
+    res.set('X-Data-Has-More', requestedLimit > 0 && properties.length > requestedLimit ? 'true' : 'false');
+    res.json(paginatedProperties);
   } catch (err) {
     console.error('Error al obtener propiedades:', err);
     res.status(500).json({ error: 'No pudimos cargar las propiedades.' });
@@ -5949,6 +5983,9 @@ app.get('/api/conversations', async (req, res) => {
   const userId = req.session.userId;
   if (!userId) return res.status(401).json({ error: AUTH_REQUIRED_ERROR });
 
+  const requestedLimit = Math.max(0, Math.min(20, Math.floor(toSafeNumber(req.query.limit))));
+  const requestedPage = Math.max(1, Math.floor(toSafeNumber(req.query.page) || 1));
+
   try {
     const [result, interactionContinuityMap] = await Promise.all([
       db.query(
@@ -5981,8 +6018,10 @@ app.get('/api/conversations', async (req, res) => {
         ${CONVERSATION_GUEST_PROFILE_JOINS}
          LEFT JOIN bookings b ON c.booking_id = b.id
          WHERE c.tenant_id = $1 OR c.host_id = $1
-         ORDER BY c.updated_at DESC`,
-        [userId]
+         ORDER BY c.updated_at DESC${requestedLimit > 0 ? ` LIMIT $2 OFFSET $3` : ''}`,
+        requestedLimit > 0
+          ? [userId, requestedLimit, (requestedPage - 1) * requestedLimit]
+          : [userId]
       ),
       getInteractionContinuityMapForUser(userId),
     ]);
@@ -5998,12 +6037,31 @@ app.get('/api/conversations/:id/messages', async (req, res) => {
   const userId = req.session.userId;
   if (!userId) return res.status(401).json({ error: AUTH_REQUIRED_ERROR });
 
+  const requestedLimit = Math.max(0, Math.min(100, Math.floor(toSafeNumber(req.query.limit))));
+  const requestedPage = Math.max(1, Math.floor(toSafeNumber(req.query.page) || 1));
+
   try {
     await syncConversationSystemMessages(req.params.id);
 
+    const messageQuery = `SELECT id,
+                                 conversation_id,
+                                 sender_id,
+                                 receiver_id,
+                                 content,
+                                 is_system,
+                                 system_key,
+                                 is_suspicious,
+                                 is_optimistic,
+                                 created_at
+                          FROM messages
+                          WHERE conversation_id = $1
+                          ORDER BY created_at ASC${requestedLimit > 0 ? ` LIMIT $2 OFFSET $3` : ''}`;
+
     const messages = await db.query(
-      `SELECT * FROM messages WHERE conversation_id = $1 ORDER BY created_at ASC`,
-      [req.params.id]
+      messageQuery,
+      requestedLimit > 0
+        ? [req.params.id, requestedLimit, (requestedPage - 1) * requestedLimit]
+        : [req.params.id],
     );
     res.json(messages.rows);
   } catch (err) {
@@ -6150,7 +6208,30 @@ app.post('/api/conversations', async (req, res) => {
     }
 
     const existing = await db.query(
-      `SELECT * FROM conversations WHERE tenant_id = $1 AND host_id = $2 AND property_id = $3`,
+      `SELECT id,
+              property_id,
+              booking_id,
+              tenant_id,
+              host_id,
+              last_message,
+              request_mode,
+              request_status,
+              request_created_at,
+              request_start_date,
+              request_end_date,
+              request_guests,
+              request_total_price,
+              deposit_status,
+              deposit_type,
+              deposit_amount_ars,
+              service_fee_ars,
+              deposit_total_charge_ars,
+              deposit_payment_reference,
+              cancellation_actor,
+              created_at,
+              updated_at
+       FROM conversations
+       WHERE tenant_id = $1 AND host_id = $2 AND property_id = $3`,
       [userId, hostId, propertyId]
     );
 
@@ -7255,10 +7336,11 @@ app.get('/api/favorites', async (req, res) => {
   if (!userId) return res.status(401).json({ error: AUTH_REQUIRED_ERROR });
   try {
     const result = await db.query(
-      `SELECT p.*, ${PROPERTY_AVAILABILITY_VALIDATED_SELECT}, ${PROPERTY_HOST_TRUST_SELECT}
+      `SELECT ${PROPERTY_LIST_SELECT}
        FROM favorites f
        JOIN properties p ON p.id = f.property_id
        ${PROPERTY_HOST_TRUST_JOINS}
+       ${PROPERTY_VERIFICATION_FILE_SUMMARY_JOINS}
        WHERE f.user_id = $1
          AND COALESCE(u.internal_manual_review_required, FALSE) = FALSE
        ORDER BY f.created_at DESC`,
@@ -7277,9 +7359,18 @@ app.post('/api/favorites/:propertyId', async (req, res) => {
   if (!userId) return res.status(401).json({ error: AUTH_REQUIRED_ERROR });
   const propertyId = req.params.propertyId;
   try {
-    // Ensure property exists
-    const prop = await db.query('SELECT id FROM properties WHERE id = $1', [propertyId]);
-    if (prop.rows.length === 0) return res.status(404).json({ error: 'No encontramos esa propiedad.' });
+    const propertyResult = await db.query(
+      `SELECT ${PROPERTY_LIST_SELECT}
+       FROM properties p
+       ${PROPERTY_HOST_TRUST_JOINS}
+       ${PROPERTY_VERIFICATION_FILE_SUMMARY_JOINS}
+       WHERE p.id = $1
+         AND COALESCE(u.internal_manual_review_required, FALSE) = FALSE
+       LIMIT 1`,
+      [propertyId],
+    );
+
+    if (propertyResult.rows.length === 0) return res.status(404).json({ error: 'No encontramos esa propiedad.' });
 
     await db.query(
       `INSERT INTO favorites (user_id, property_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
@@ -7289,7 +7380,7 @@ app.post('/api/favorites/:propertyId', async (req, res) => {
     // Optional: log activity
     await logActivity(userId, 'FAVORITE_ADD', { propertyId }, req.ip);
 
-    res.status(201).json({ success: true, propertyId });
+    res.status(201).json({ success: true, propertyId, property: mapPropertyRecord(propertyResult.rows[0]) });
   } catch (err) {
     console.error('Error adding favorite:', err);
     res.status(500).json({ error: 'No pudimos guardar esta propiedad. Intentá de nuevo.' });
@@ -7374,6 +7465,7 @@ app.get('/api/properties/:id/reviews', async (req, res) => {
        LIMIT 20`,
       [req.params.id]
     );
+    res.set('Cache-Control', 'public, max-age=60, s-maxage=60, stale-while-revalidate=300');
     res.json(result.rows);
   } catch (err) {
     console.error('Error fetching reviews:', err);

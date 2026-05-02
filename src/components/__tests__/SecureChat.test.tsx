@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { beforeEach, describe, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 const useAuthMock = vi.fn();
 const fetchConversationsMock = vi.fn();
@@ -168,6 +168,37 @@ describe('SecureChat', () => {
     confirmArrivalMock.mockReset();
     reportArrivalProblemMock.mockReset();
     showToastMock.mockReset();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  test('uses a slower foreground polling cadence for messages', async () => {
+    const setIntervalSpy = vi.spyOn(window, 'setInterval');
+
+    useAuthMock.mockReturnValue({ user: { id: 'tenant-1' } });
+    fetchConversationsMock.mockResolvedValue([
+      {
+        ...baseConversation,
+        requestMode: 'direct',
+        requestStatus: 'pending',
+        requestStartDate: '2026-05-10',
+        requestEndDate: '2026-05-13',
+        requestGuests: 2,
+        requestTotalPrice: 320000,
+      },
+    ]);
+    fetchMessagesMock.mockResolvedValue([]);
+
+    renderChat();
+
+    await waitFor(() => {
+      expect(fetchMessagesMock).toHaveBeenCalledTimes(1);
+    });
+
+    expect(setIntervalSpy).toHaveBeenCalledWith(expect.any(Function), 15_000);
   });
 
   test('lets the guest report a direct deposit from an inline system message in the thread', async () => {
