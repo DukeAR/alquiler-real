@@ -8,6 +8,7 @@ import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 import { PageHeader } from './ui/PageHeader';
 import { SectionTitle } from './ui/SectionTitle';
+import { VerificationBadgePremium } from './ui/VerificationBadgePremium';
 
 interface AboutPageProps {
   onBack: () => void;
@@ -42,6 +43,12 @@ type RoleBenefit = {
   title: string;
   description: string;
   icon: IconType;
+};
+
+type GuestVerificationLevel = {
+  title: string;
+  description: string;
+  tone: 'none' | 'identity' | 'presencial';
 };
 
 type StepCardTone = 'brand' | 'success';
@@ -164,6 +171,24 @@ const guestBenefits: RoleBenefit[] = [
   },
 ];
 
+const guestVerificationLevels: GuestVerificationLevel[] = [
+  {
+    title: 'Sin validación',
+    description: 'Información cargada por el anfitrión.',
+    tone: 'none',
+  },
+  {
+    title: 'Identidad validada',
+    description: 'El anfitrión confirmó su identidad.',
+    tone: 'identity',
+  },
+  {
+    title: 'Verificado presencialmente',
+    description: 'Identidad, ubicación y acceso confirmados durante una visita.',
+    tone: 'presencial',
+  },
+];
+
 const guestSteps: StepCard = {
   eyebrow: 'Cómo usarlo',
   title: 'Qué revisar antes de reservar',
@@ -237,6 +262,55 @@ const RoleBenefitCard = ({ benefit }: { benefit: RoleBenefit }) => {
       <h3 className={projectCardTitleClass}>{benefit.title}</h3>
       <p className={projectCardBodyClass}>{benefit.description}</p>
     </Card>
+  );
+};
+
+const GuestVerificationLevelCard = ({ level }: { level: GuestVerificationLevel }) => {
+  if (level.tone === 'presencial') {
+    return (
+      <div className="rounded-[24px] border border-emerald-200/85 bg-emerald-50/95 p-5 shadow-[0_18px_34px_-28px_rgba(16,185,129,0.24)] dark:border-emerald-900/30 dark:bg-emerald-900/16">
+        <div className="space-y-2.5">
+          <VerificationBadgePremium size="sm" className="self-start" />
+          <h4 className="text-[1.02rem] font-semibold tracking-[-0.02em] text-emerald-600 dark:text-emerald-300">
+            {level.title}
+          </h4>
+          <p className="text-[0.94rem] leading-6 text-emerald-800 dark:text-emerald-100">
+            {level.description}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (level.tone === 'identity') {
+    return (
+      <div className="rounded-[24px] border border-slate-200/85 bg-white/98 p-5 shadow-[0_16px_30px_-28px_rgba(15,23,42,0.12)] dark:border-slate-800 dark:bg-slate-900">
+        <div className="space-y-2.5">
+          <div className="inline-flex items-center gap-2 text-slate-700 dark:text-slate-200">
+            <Icons.CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
+            <h4 className="text-[1.02rem] font-semibold tracking-[-0.02em]">
+              {level.title}
+            </h4>
+          </div>
+          <p className="text-[0.94rem] leading-6 text-slate-600 dark:text-slate-400">
+            {level.description}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-[24px] border border-slate-200/85 bg-slate-50/82 p-5 shadow-[0_16px_30px_-28px_rgba(15,23,42,0.1)] dark:border-slate-800 dark:bg-slate-900">
+      <div className="space-y-2.5">
+        <h4 className="text-[1.02rem] font-semibold tracking-[-0.02em] text-slate-500 dark:text-slate-300">
+          {level.title}
+        </h4>
+        <p className="text-[0.94rem] leading-6 text-slate-500 dark:text-slate-400">
+          {level.description}
+        </p>
+      </div>
+    </div>
   );
 };
 
@@ -703,6 +777,29 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                       <RoleBenefitCard key={benefit.title} benefit={benefit} />
                     ))}
                   </div>
+                </div>
+              </section>
+
+              <section className="app-card app-card-elevated overflow-hidden border-slate-200/85 bg-white/98 p-6 md:p-7 dark:border-slate-800 dark:bg-slate-900">
+                <div className="space-y-6">
+                  <div className="max-w-2xl space-y-2">
+                    <h3 className="text-[1.5rem] font-semibold leading-[1.08] tracking-[-0.04em] text-slate-950 dark:text-slate-50 md:text-[1.8rem]">
+                      Niveles de verificación
+                    </h3>
+                    <p className="text-[0.98rem] leading-7 text-slate-600 dark:text-slate-400">
+                      No todos los avisos tienen el mismo nivel de respaldo.
+                    </p>
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-3">
+                    {guestVerificationLevels.map((level) => (
+                      <GuestVerificationLevelCard key={level.title} level={level} />
+                    ))}
+                  </div>
+
+                  <p className="text-xs leading-6 text-slate-500 dark:text-slate-400">
+                    *No evaluamos estado ni calidad del inmueble*
+                  </p>
                 </div>
               </section>
 

@@ -33,16 +33,16 @@ const badgeClasses: Record<VerificationBadgePremiumVariant, Record<VerificationB
   },
   'glass-card': {
     xs: {
-      container: 'rounded-[12px] bg-[rgba(255,255,255,0.85)] px-2 py-1.5 shadow-[0_4px_12px_rgba(0,0,0,0.08)] backdrop-blur-[6px] transition-transform duration-150 ease-out hover:scale-[1.03] group-hover:scale-[1.03]',
-      mark: 'h-[56px] w-[49px]',
+      container: 'rounded-[10px] bg-[rgba(255,255,255,0.78)] px-1.5 py-1 shadow-[0_8px_18px_-14px_rgba(15,23,42,0.16)] backdrop-blur-[4px] transition-transform duration-150 ease-out hover:scale-[1.01] group-hover:scale-[1.01]',
+      mark: 'h-[47px] w-[41px]',
     },
     sm: {
-      container: 'rounded-[12px] bg-[rgba(255,255,255,0.85)] px-2 py-1.5 shadow-[0_4px_12px_rgba(0,0,0,0.08)] backdrop-blur-[6px] transition-transform duration-150 ease-out hover:scale-[1.03] group-hover:scale-[1.03]',
-      mark: 'h-[64px] w-[56px]',
+      container: 'rounded-[10px] bg-[rgba(255,255,255,0.78)] px-1.5 py-1 shadow-[0_8px_18px_-14px_rgba(15,23,42,0.16)] backdrop-blur-[4px] transition-transform duration-150 ease-out hover:scale-[1.01] group-hover:scale-[1.01]',
+      mark: 'h-[54px] w-[47px]',
     },
     md: {
-      container: 'rounded-[12px] bg-[rgba(255,255,255,0.85)] px-2 py-1.5 shadow-[0_4px_12px_rgba(0,0,0,0.08)] backdrop-blur-[6px] transition-transform duration-150 ease-out hover:scale-[1.03] group-hover:scale-[1.03]',
-      mark: 'h-[72px] w-[63px]',
+      container: 'rounded-[10px] bg-[rgba(255,255,255,0.78)] px-1.5 py-1 shadow-[0_8px_18px_-14px_rgba(15,23,42,0.16)] backdrop-blur-[4px] transition-transform duration-150 ease-out hover:scale-[1.01] group-hover:scale-[1.01]',
+      mark: 'h-[61px] w-[53px]',
     },
   },
 };

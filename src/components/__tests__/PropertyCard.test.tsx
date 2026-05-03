@@ -96,6 +96,7 @@ describe('PropertyCard', () => {
     expect(screen.getByText('Ver detalle')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Abrir detalle de Casa frente al mar/i })).toBeInTheDocument();
     expect(within(verificationBlock).getByText('Identidad validada')).toHaveClass('text-slate-700');
+    expect(verificationBlock.firstElementChild).toHaveClass('gap-2', 'text-[0.95rem]', 'font-medium');
     expect(verificationBlock.querySelector('svg')).not.toBeNull();
     expect(verificationBlock).toHaveAttribute('aria-label', 'Identidad validada');
     expect(verificationBlock).toHaveTextContent('Identidad validada');
@@ -217,43 +218,25 @@ describe('PropertyCard', () => {
       />,
     );
 
-    const presencialBadge = screen.getByTestId('property-card-premium-badge');
-    expect(presencialBadge).toHaveClass(
-      'absolute',
-      'left-3',
-      'top-3',
-      'z-20',
+    expect(screen.queryByTestId('property-card-premium-badge')).toBeNull();
+    expect(screen.queryByRole('img', { name: 'Verificado presencialmente' })).toBeNull();
+    const verificationBlock = screen.getByTestId('property-card-verification');
+    expect(verificationBlock).toHaveAttribute('aria-label', 'Verificado presencialmente');
+    expect(within(verificationBlock).getByTestId('property-card-verification-icon')).toHaveClass(
       'inline-flex',
+      'h-6',
+      'w-6',
       'shrink-0',
       'items-center',
       'justify-center',
-      'rounded-[12px]',
-      'bg-[rgba(255,255,255,0.85)]',
-      'px-2',
-      'py-1.5',
-      'shadow-[0_4px_12px_rgba(0,0,0,0.08)]',
-      'backdrop-blur-[6px]',
-      'transition-transform',
-      'duration-150',
-      'ease-out',
-      'hover:scale-[1.03]',
-      'group-hover:scale-[1.03]',
+      'rounded-full',
+      'bg-emerald-100',
+      'text-emerald-600',
     );
-    expect(presencialBadge).toHaveAttribute('role', 'img');
-    expect(presencialBadge).toHaveAttribute('aria-label', 'Verificado presencialmente');
-    expect(within(presencialBadge).queryByText('Verificado presencialmente')).toBeNull();
-    const presencialBadgeMark = presencialBadge.querySelector('img');
-    expect(presencialBadgeMark).not.toBeNull();
-    expect(presencialBadgeMark).toHaveAttribute('src', '/verified-presencial-badge3.png');
-    expect(presencialBadgeMark).toHaveClass('shrink-0', 'object-contain', 'h-[56px]', 'w-[49px]');
-    expect(presencialBadge.parentElement).toHaveClass('relative', 'h-[232px]', 'overflow-hidden', 'bg-slate-100', 'sm:h-[260px]', 'lg:h-[300px]');
-    expect(screen.getByTestId('property-card-price-row')).not.toContainElement(presencialBadge);
-    const verificationBlock = screen.getByTestId('property-card-verification');
-    expect(verificationBlock).toHaveAttribute('aria-label', 'Verificado presencialmente');
     expect(within(verificationBlock).getByText('Verificado presencialmente')).toBeInTheDocument();
-    expect(verificationBlock.firstElementChild).toHaveClass('bg-emerald-50/90', 'border-emerald-100/90');
-    expect(within(verificationBlock).getByText('Verificado presencialmente')).toHaveClass('text-emerald-600');
-    expect(within(verificationBlock).getByText('Identidad, ubicación y acceso confirmados')).toHaveClass('text-emerald-700');
+    expect(verificationBlock.firstElementChild).toHaveClass('bg-emerald-50/90', 'border-emerald-100/90', 'gap-2', 'py-2');
+    expect(within(verificationBlock).getByText('Verificado presencialmente')).toHaveClass('text-emerald-600', 'text-[0.94rem]', 'font-semibold');
+    expect(within(verificationBlock).getByText('Identidad, ubicación y acceso confirmados')).toHaveClass('text-emerald-700', 'text-[0.72rem]');
     expect(within(verificationBlock).queryByText('Identidad validada')).toBeNull();
     expect(screen.queryByText('(5/5)')).toBeNull();
     expect(screen.queryByText('Más verificado')).toBeNull();
@@ -271,9 +254,10 @@ describe('PropertyCard', () => {
       />,
     );
 
-    expect(screen.getByRole('img', { name: 'Verificado presencialmente' })).toBeInTheDocument();
-    expect(screen.getByTestId('property-card-premium-badge')).toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: 'Verificado presencialmente' })).toBeNull();
+    expect(screen.queryByTestId('property-card-premium-badge')).toBeNull();
     const verificationBlock = screen.getByTestId('property-card-verification');
+    expect(within(verificationBlock).getByTestId('property-card-verification-icon')).toBeInTheDocument();
     expect(within(verificationBlock).getByText('Verificado presencialmente')).toBeInTheDocument();
     expect(within(verificationBlock).getByText('Identidad, ubicación y acceso confirmados')).toBeInTheDocument();
   });
@@ -289,6 +273,7 @@ describe('PropertyCard', () => {
     const trustLine = screen.getByTestId('property-card-verification');
 
     expect(within(trustLine).getByText('Identidad validada')).toHaveClass('text-slate-700');
+    expect(trustLine.firstElementChild).toHaveClass('gap-2', 'text-[0.95rem]');
   });
 
   test('keeps the featured card free of extra verification badges', () => {
@@ -435,7 +420,7 @@ describe('PropertyCard', () => {
     const verificationBlock = screen.getByTestId('property-card-verification');
 
     expect(verificationBlock).toHaveAttribute('aria-label', 'Información publicada por el anfitrión');
-    expect(within(verificationBlock).getByText('Información publicada por el anfitrión')).toHaveClass('text-slate-500');
+    expect(within(verificationBlock).getByText('Información publicada por el anfitrión')).toHaveClass('text-slate-500', 'text-[0.82rem]', 'font-medium');
     expect(within(verificationBlock).queryByText('Identidad validada')).toBeNull();
     expect(screen.queryByTestId('property-card-premium-badge')).toBeNull();
   });

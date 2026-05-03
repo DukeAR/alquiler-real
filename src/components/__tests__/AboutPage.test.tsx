@@ -92,6 +92,16 @@ describe('AboutPage', () => {
       expect(screen.getByRole('heading', { name: 'Qué mirar antes de reservar' })).toBeInTheDocument();
     });
     expect(screen.getByRole('heading', { name: 'Explorá sabiendo qué ya fue confirmado' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Niveles de verificación' })).toBeInTheDocument();
+    expect(screen.getByText('No todos los avisos tienen el mismo nivel de respaldo.')).toBeInTheDocument();
+    expect(screen.getByText('Sin validación')).toBeInTheDocument();
+    expect(screen.getByText('Información cargada por el anfitrión.')).toBeInTheDocument();
+    expect(screen.getAllByText('Identidad validada').length).toBeGreaterThan(0);
+    expect(screen.getByText('El anfitrión confirmó su identidad.')).toBeInTheDocument();
+    expect(screen.getAllByText('Verificado presencialmente').length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('img', { name: 'Verificado presencialmente' }).length).toBeGreaterThan(0);
+    expect(screen.getByText('Identidad, ubicación y acceso confirmados durante una visita.')).toBeInTheDocument();
+    expect(screen.getByText('*No evaluamos estado ni calidad del inmueble*')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Antes de reservar, sabé qué es real.' })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Proyecto' }));

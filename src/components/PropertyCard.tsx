@@ -6,7 +6,6 @@ import { getPropertyCardVerificationState } from '../lib/propertyVerification';
 import { Property } from '../services/geminiService';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
-import { VerificationBadgePremium } from './ui/VerificationBadgePremium';
 
 const normalizePropertyText = (value?: string) => (value ?? '')
   .normalize('NFD')
@@ -116,15 +115,6 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         />
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-slate-950/24 via-slate-950/8 to-transparent" />
 
-        {verificationState.presencialVerified ? (
-          <VerificationBadgePremium
-            size="xs"
-            variant="glass-card"
-            data-testid="property-card-premium-badge"
-            className="absolute left-3 top-3 z-20"
-          />
-        ) : null}
-
         {user ? (
           <div className="absolute right-4 top-4">
             <Button
@@ -171,26 +161,34 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
           <div
             data-testid="property-card-verification"
             aria-label={verificationState.summaryTitle}
-            className="mt-3 min-h-[3.8rem] px-0 py-0"
+            className="mt-3 min-h-[3.5rem] px-0 py-0"
           >
             {verificationState.publicLevel === 'presencial' ? (
-              <div className="inline-flex max-w-full flex-col rounded-xl border border-emerald-100/90 bg-emerald-50/90 px-3 py-2.5 shadow-[0_14px_28px_-24px_rgba(5,150,105,0.65)]">
-                <p className="text-sm font-semibold leading-5 text-emerald-600">
-                  {verificationState.summaryTitle}
-                </p>
-                {verificationState.summaryDescription ? (
-                  <p className="mt-0.5 text-xs leading-4 text-emerald-700">
-                    {verificationState.summaryDescription}
+              <div className="inline-flex max-w-full items-start gap-2 rounded-xl border border-emerald-100/90 bg-emerald-50/90 px-3 py-2 shadow-[0_10px_18px_-18px_rgba(5,150,105,0.45)]">
+                <span
+                  data-testid="property-card-verification-icon"
+                  className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600"
+                >
+                  <Icons.ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[0.94rem] font-semibold leading-5 text-emerald-600">
+                    {verificationState.summaryTitle}
                   </p>
-                ) : null}
+                  {verificationState.summaryDescription ? (
+                    <p className="mt-0.5 text-[0.72rem] leading-4 text-emerald-700">
+                      {verificationState.summaryDescription}
+                    </p>
+                  ) : null}
+                </div>
               </div>
             ) : verificationState.publicLevel === 'identity' ? (
-              <div className="inline-flex items-center gap-1.5 text-sm font-medium leading-5">
-                <Icons.CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-500" aria-hidden="true" />
+              <div className="inline-flex items-center gap-2 text-[0.95rem] font-medium leading-5">
+                <Icons.CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" aria-hidden="true" />
                 <p className="text-slate-700">{verificationState.summaryTitle}</p>
               </div>
             ) : (
-              <p className="text-sm font-medium leading-5 text-slate-500">
+              <p className="text-[0.82rem] font-medium leading-5 text-slate-500">
                 {verificationState.summaryTitle}
               </p>
             )}
