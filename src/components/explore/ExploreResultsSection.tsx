@@ -78,11 +78,32 @@ const getActiveSortLabel = (sortBy: PropertyCatalogSort) => {
   return 'Más verificados primero';
 };
 
+const getVerificationFilterContextCopy = (verifiedOnly: boolean) => {
+  if (verifiedOnly) {
+    return {
+      title: 'Mostrando solo propiedades verificadas',
+      description: 'Identidad, ubicación y acceso confirmados',
+      containerClassName: 'border-emerald-200/80 bg-emerald-50/85 shadow-[0_16px_30px_-26px_rgba(22,163,74,0.22)]',
+      titleClassName: 'text-emerald-950',
+      descriptionClassName: 'text-emerald-900/80',
+    };
+  }
+
+  return {
+    title: 'Mostrando todas las propiedades',
+    description: 'Algunas pueden no estar verificadas',
+    containerClassName: 'border-slate-200/80 bg-slate-50/82 shadow-[0_14px_28px_-28px_rgba(15,23,42,0.12)]',
+    titleClassName: 'text-slate-900',
+    descriptionClassName: 'text-slate-600',
+  };
+};
+
 type ExploreResultsSectionProps = {
   loading: boolean;
   loadError: string | null;
   viewMode: 'grid' | 'map';
   sortBy: PropertyCatalogSort;
+  verifiedOnly: boolean;
   caresAboutVerification: boolean;
   hasActiveFilters: boolean;
   searchQuery: string;
@@ -105,6 +126,7 @@ export const ExploreResultsSection = ({
   loadError,
   viewMode,
   sortBy,
+  verifiedOnly,
   caresAboutVerification,
   hasActiveFilters,
   searchQuery,
@@ -136,6 +158,7 @@ export const ExploreResultsSection = ({
   const listingSectionClass = 'space-y-5 md:space-y-6';
   const firstVisibleResult = listingProperties[0] ?? null;
   const activeSortLabel = getActiveSortLabel(sortBy);
+  const verificationFilterContext = getVerificationFilterContextCopy(verifiedOnly);
   const highlightedVerificationResultId = !loading && sortBy === 'verification' && firstVisibleResult
     ? getPropertyVerificationGuidanceLabel(firstVisibleResult, { isTopResult: true })
       ? firstVisibleResult.id
@@ -407,6 +430,23 @@ export const ExploreResultsSection = ({
 
       {loading || hasActiveFilters || listingProperties.length > 0 || !hasAnyResults ? (
         <section className={listingSectionClass}>
+          <div
+            key={verifiedOnly ? 'verified-only-results' : 'all-results'}
+            data-testid="explore-verification-context"
+            aria-live="polite"
+            className={cn(
+              'results-filter-context-fade rounded-[20px] border px-5 py-4 transition-[background-color,border-color,color,opacity,transform] duration-150',
+              verificationFilterContext.containerClassName,
+            )}
+          >
+            <p className={cn('text-[1rem] font-semibold leading-6 tracking-[-0.02em]', verificationFilterContext.titleClassName)}>
+              {verificationFilterContext.title}
+            </p>
+            <p className={cn('mt-1 text-[0.88rem] leading-5', verificationFilterContext.descriptionClassName)}>
+              {verificationFilterContext.description}
+            </p>
+          </div>
+
           {showListingHeader ? (
             <div className="space-y-3.5 border-b border-slate-200/70 pb-5 md:space-y-5">
               {hasActiveFilters && !loading && hasAnyResults ? (

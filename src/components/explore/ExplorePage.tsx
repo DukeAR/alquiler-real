@@ -253,6 +253,7 @@ export const ExplorePage = ({
           loadError={loadError}
           viewMode={viewMode}
           sortBy={sortBy}
+          verifiedOnly={filters.verifiedOnly}
           caresAboutVerification={verificationPreference.caresAboutVerification}
           hasActiveFilters={hasActiveFilters}
           searchQuery={searchQuery}

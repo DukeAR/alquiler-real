@@ -87,6 +87,7 @@ const renderSection = (props?: Partial<React.ComponentProps<typeof ExploreResult
     loadError: null,
     viewMode: 'grid',
     sortBy: 'verification',
+    verifiedOnly: false,
     caresAboutVerification: false,
     hasActiveFilters: false,
     searchQuery: '',
@@ -111,6 +112,26 @@ const renderSection = (props?: Partial<React.ComponentProps<typeof ExploreResult
 };
 
 describe('ExploreResultsSection', () => {
+  test('shows a neutral context block when all properties remain visible', () => {
+    renderSection();
+
+    const contextBlock = screen.getByTestId('explore-verification-context');
+
+    expect(screen.getByText('Mostrando todas las propiedades')).toBeInTheDocument();
+    expect(screen.getByText('Algunas pueden no estar verificadas')).toBeInTheDocument();
+    expect(contextBlock).toHaveClass('border-slate-200/80', 'bg-slate-50/82', 'results-filter-context-fade');
+  });
+
+  test('shows a highlighted green context block when only presencial properties are visible', () => {
+    renderSection({ verifiedOnly: true, hasActiveFilters: true, appliedFilterCount: 1 });
+
+    const contextBlock = screen.getByTestId('explore-verification-context');
+
+    expect(screen.getByText('Mostrando solo propiedades verificadas')).toBeInTheDocument();
+    expect(screen.getByText('Identidad, ubicación y acceso confirmados')).toBeInTheDocument();
+    expect(contextBlock).toHaveClass('border-emerald-200/80', 'bg-emerald-50/85', 'results-filter-context-fade');
+  });
+
   test('renders a single verification-first grid without rigid featured blocks', () => {
     renderSection();
 

@@ -72,6 +72,12 @@ describe('ExplorePage', () => {
         )),
       ).toBe(true);
     });
+
+    await waitFor(() => {
+      const latestCall = exploreResultsSectionMock.mock.calls.at(-1)?.[0];
+
+      expect(latestCall?.verifiedOnly).toBe(true);
+    });
   });
 
   test('activates the local verification preference after saving a highly verified property', async () => {
