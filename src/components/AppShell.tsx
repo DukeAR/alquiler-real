@@ -108,24 +108,24 @@ const getDesktopNavItemClassName = (
 ) => {
   if (style === 'soft-pill') {
     return cn(
-      'group relative inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2 text-[0.92rem] font-semibold tracking-[-0.01em] transition-[color,background-color,border-color,box-shadow] duration-150',
+      'group relative inline-flex h-[3.25rem] shrink-0 items-center justify-center gap-2.5 whitespace-nowrap rounded-full border px-[1.4rem] text-[0.98rem] font-semibold tracking-[-0.01em] transition-[color,background-color,border-color,box-shadow,transform] duration-200 ease-out motion-reduce:transform-none hover:-translate-y-px active:translate-y-0 sm:h-[3.35rem] sm:px-[1.52rem] sm:text-[1.02rem] lg:h-12 lg:gap-2 lg:px-[1.05rem] lg:text-[0.94rem] xl:h-14 xl:gap-2.5 xl:px-[1.65rem] xl:text-[1.04rem]',
       inverted
         ? active
-          ? 'border-white/28 bg-white/16 text-brand-light shadow-[0_18px_34px_-28px_rgba(0,0,0,0.34)] backdrop-blur-[10px]'
+          ? 'border-white/24 bg-white/18 text-white shadow-[0_18px_34px_-26px_rgba(0,0,0,0.34)] backdrop-blur-[12px]'
           : prominent
-            ? 'border-white/24 bg-white/14 text-white shadow-[0_14px_28px_-28px_rgba(0,0,0,0.28)] backdrop-blur-[10px] hover:border-white/30 hover:bg-white/20 hover:text-white'
-            : 'border-white/18 bg-white/10 text-white/84 backdrop-blur-[10px] hover:border-white/24 hover:bg-white/16 hover:text-white'
+            ? 'border-white/16 bg-white/10 text-white shadow-[0_14px_28px_-28px_rgba(0,0,0,0.24)] backdrop-blur-[12px] hover:border-white/24 hover:bg-white/16 hover:text-white hover:shadow-[0_18px_34px_-26px_rgba(0,0,0,0.28)]'
+            : 'border-transparent bg-transparent text-white/74 hover:border-white/16 hover:bg-white/10 hover:text-white hover:shadow-[0_18px_34px_-28px_rgba(0,0,0,0.22)]'
         : active
-          ? 'border-brand/20 bg-brand/[0.06] text-brand shadow-[0_18px_34px_-28px_rgba(15,23,42,0.24)]'
+          ? 'border-slate-200/90 bg-white text-slate-950 shadow-[0_18px_34px_-26px_rgba(15,23,42,0.16)]'
           : prominent
-            ? 'border-[rgba(15,23,42,0.1)] bg-[rgba(248,250,252,0.96)] text-slate-900 shadow-[0_14px_28px_-28px_rgba(15,23,42,0.18)] hover:border-[rgba(15,23,42,0.14)] hover:bg-white hover:text-slate-950'
-            : 'border-[rgba(15,23,42,0.08)] bg-[rgba(255,255,255,0.72)] text-slate-900 hover:border-[rgba(15,23,42,0.12)] hover:bg-[rgba(255,255,255,0.92)] hover:text-slate-950',
+            ? 'border-slate-200/90 bg-white/94 text-slate-950 shadow-[0_14px_28px_-28px_rgba(15,23,42,0.14)] hover:border-slate-300 hover:bg-white hover:text-slate-950 hover:shadow-[0_18px_34px_-24px_rgba(15,23,42,0.18)]'
+            : 'border-transparent bg-transparent text-slate-600 hover:border-slate-200/80 hover:bg-white/92 hover:text-slate-950 hover:shadow-[0_18px_34px_-28px_rgba(15,23,42,0.12)]',
     );
   }
 
   return cn(
-    'group relative inline-flex items-center gap-2 px-0 py-2 text-[0.92rem] font-semibold tracking-[-0.01em] transition-[color] duration-150',
-    'after:absolute after:bottom-0 after:left-0 after:h-px after:w-full after:origin-left after:scale-x-0 after:transition-transform after:duration-150 hover:after:scale-x-100',
+    'group relative inline-flex items-center gap-2 px-0 py-2 text-[0.92rem] font-semibold tracking-[-0.01em] transition-[color,transform] duration-200 ease-out motion-reduce:transform-none hover:-translate-y-px active:translate-y-0 lg:gap-1.5 lg:text-[0.9rem] xl:gap-2 xl:text-[0.95rem]',
+    'after:absolute after:bottom-0 after:left-0 after:h-px after:w-full after:origin-left after:scale-x-0 after:transition-transform after:duration-200 hover:after:scale-x-100',
     inverted
       ? 'text-white/78 hover:text-white after:bg-white/38'
       : 'text-slate-600 hover:text-slate-950 after:bg-slate-300',
@@ -141,23 +141,23 @@ const getDesktopNavIconClassName = (
 ) => {
   if (style === 'soft-pill') {
     return cn(
-      'h-4 w-4 transition-colors duration-150',
+      'h-[1.05rem] w-[1.05rem] transition-colors duration-150 lg:h-4 lg:w-4 xl:h-[1.1rem] xl:w-[1.1rem]',
       inverted
         ? active
-          ? 'text-brand-light'
+            ? 'text-white'
           : prominent
-            ? 'text-brand-light/95 group-hover:text-brand-light'
-            : 'text-brand-light/90 group-hover:text-brand-light'
+              ? 'text-white/90 group-hover:text-white'
+              : 'text-white/56 group-hover:text-white/90'
         : active
-          ? 'text-brand'
+            ? 'text-brand'
           : prominent
-            ? 'text-brand group-hover:text-brand-dark'
-            : 'text-brand group-hover:text-brand-dark',
+              ? 'text-brand group-hover:text-brand-dark'
+              : 'text-slate-400 group-hover:text-brand',
     );
   }
 
   return cn(
-    'h-4 w-4 transition-colors duration-150',
+    'h-4 w-4 transition-colors duration-150 lg:h-[0.95rem] lg:w-[0.95rem] xl:h-4 xl:w-4',
     inverted
       ? active ? 'text-white' : 'text-white/70 group-hover:text-white/92'
       : active ? 'text-brand' : 'text-slate-400 group-hover:text-slate-500',
@@ -173,7 +173,16 @@ const DesktopNavButton = ({ action, active, inverted = false, onSelect }: { acti
       className={getDesktopNavItemClassName(active, inverted, action.desktopStyle, action.desktopProminent)}
     >
       <action.icon className={getDesktopNavIconClassName(active, inverted, action.desktopStyle, action.desktopProminent)} />
-      <span>{action.label}</span>
+      {action.path === '/favorites' ? (
+        <span className="hidden xl:inline">{action.label}</span>
+      ) : action.shortLabel !== action.label ? (
+        <>
+          <span className="hidden xl:inline">{action.label}</span>
+          <span className="xl:hidden">{action.shortLabel}</span>
+        </>
+      ) : (
+        <span>{action.label}</span>
+      )}
     </Link>
   ) : (
     <button
@@ -184,7 +193,16 @@ const DesktopNavButton = ({ action, active, inverted = false, onSelect }: { acti
       className={getDesktopNavItemClassName(active, inverted, action.desktopStyle, action.desktopProminent)}
     >
       <action.icon className={getDesktopNavIconClassName(active, inverted, action.desktopStyle, action.desktopProminent)} />
-      <span>{action.label}</span>
+      {action.path === '/favorites' ? (
+        <span className="hidden xl:inline">{action.label}</span>
+      ) : action.shortLabel !== action.label ? (
+        <>
+          <span className="hidden xl:inline">{action.label}</span>
+          <span className="xl:hidden">{action.shortLabel}</span>
+        </>
+      ) : (
+        <span>{action.label}</span>
+      )}
       {action.badge ? (
         <span aria-hidden="true" className="absolute -right-3 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-black text-white">
           {action.badge}
@@ -250,6 +268,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
     path: '/favorites',
     protected: true,
     icon: Icons.Heart,
+    desktopStyle: 'soft-pill',
     badge: getUnseenFavoritesCount(),
     badgeLabel: (count) => `${count} ${count === 1 ? 'guardado nuevo' : 'guardados nuevos'}`,
   };
@@ -348,12 +367,22 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   const usesExploreLayoutWidth = location.pathname === '/' || matchesPath(location.pathname, '/explore');
   const headerLayoutClass = usesExploreLayoutWidth ? 'app-page-explore' : 'app-page';
   const headerOnHero = isPropertyDetailRoute && isPropertyHeroVisible;
+  const useSymmetricGuestHeader = showGuestAuthActions;
+  const desktopHeaderPrimaryClass = 'flex min-w-0 flex-1 items-center justify-between gap-6 sm:gap-7 lg:gap-8 xl:gap-10';
+  const desktopHeaderNavigationClass = cn(
+    'hidden min-w-0 flex-1 items-center justify-between gap-5 rounded-[1.9rem] px-5 py-1.5 lg:flex lg:justify-start lg:gap-3 lg:px-3.5 xl:justify-between xl:gap-6 xl:px-8',
+    headerOnHero
+      ? 'border border-white/14 bg-black/12 shadow-[0_22px_46px_-36px_rgba(0,0,0,0.46)] backdrop-blur-[14px]'
+      : 'border border-slate-200/80 bg-white/72 shadow-[0_22px_46px_-38px_rgba(15,23,42,0.16)] backdrop-blur-[14px]',
+  );
+  const guestDesktopActionsClass = 'flex shrink-0 items-center justify-end gap-4 sm:gap-5 lg:pl-3 lg:gap-6 xl:pl-4 xl:gap-7';
+  const accountDesktopActionsClass = 'flex shrink-0 items-center justify-end gap-3.5 sm:gap-4.5 lg:pl-3 lg:gap-5 xl:pl-4 xl:gap-6';
 
   const desktopActions: NavAction[] = [
     { label: 'Explorar', shortLabel: 'Explorar', path: '/', icon: Icons.Search, desktopStyle: 'soft-pill', desktopProminent: true },
     ...(isAuthenticated ? [favoritesAction] : []),
-    { label: 'Cómo funciona', shortLabel: 'Cómo', path: '/about', icon: Icons.Info, desktopStyle: 'soft-pill' },
-    { label: 'Ayuda', shortLabel: 'Ayuda', path: '/faq', icon: Icons.Lightbulb, desktopStyle: 'soft-pill' }
+    { label: 'Cómo funciona', shortLabel: 'Cómo', path: '/about', icon: Icons.Info },
+    { label: 'Ayuda', shortLabel: 'Ayuda', path: '/faq', icon: Icons.Lightbulb }
   ];
 
   const mobileActions: NavAction[] = isAuthenticated
@@ -374,6 +403,172 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
         { label: 'Ayuda', shortLabel: 'Ayuda', path: '/faq', icon: Icons.Lightbulb }
       ];
 
+  const brandHomeButton = (
+    <button
+      type="button"
+      onClick={() => navigate('/')}
+      aria-label="Ir al inicio de Alquiler Real"
+      className={cn(
+        'flex shrink-0 items-center rounded-2xl pr-0 transition-[opacity,transform] duration-200 ease-out hover:-translate-y-px hover:opacity-95 focus-visible:outline-none focus-visible:shadow-[var(--app-focus-ring)] motion-reduce:transform-none',
+        isPropertyDetailRoute ? 'gap-0' : 'gap-3.5 sm:gap-4 lg:gap-[1.15rem]',
+      )}
+    >
+      {!isPropertyDetailRoute ? (
+        <div className={cn(
+          'relative flex h-[3.25rem] w-[3.25rem] shrink-0 items-center justify-center overflow-visible sm:h-[3.35rem] sm:w-[3.35rem] lg:h-14 lg:w-14',
+          headerOnHero && 'drop-shadow-[0_16px_28px_rgba(15,23,42,0.22)]',
+        )}>
+          <img
+            src="/verified-presencial-badge3.png"
+            alt=""
+            aria-hidden="true"
+            className="absolute left-1/2 top-1/2 h-full w-full -translate-x-1/2 -translate-y-1/2 scale-[1.42] object-contain sm:scale-[1.5] lg:scale-[1.62]"
+          />
+        </div>
+      ) : null}
+      <div className="flex min-w-max flex-col justify-center text-left">
+        <div className={cn('hidden text-[9px] font-bold uppercase leading-none tracking-[0.22em] transition-colors duration-200 sm:block sm:text-[10px]', headerOnHero ? 'text-white/60' : 'text-slate-400/85')}>Información real</div>
+        <div className={cn('font-display whitespace-nowrap text-[1.28rem] font-extrabold leading-[0.88] tracking-[-0.045em] transition-colors duration-200 sm:text-[1.6rem] lg:text-[1.72rem] xl:text-[1.92rem]', headerOnHero ? 'text-white' : 'text-slate-950')}>
+          <span className={cn('transition-colors duration-200', headerOnHero ? 'text-white' : 'text-slate-950')}>Alquiler</span>{' '}
+          <span className={cn('transition-colors duration-200', headerOnHero ? 'text-white' : 'text-brand')}>Real</span>
+        </div>
+      </div>
+    </button>
+  );
+
+  const renderDesktopNavigation = (className: string) => (
+    <nav aria-label="Navegación principal" className={className}>
+      {desktopActions.map((action) => (
+        <DesktopNavButton
+          key={action.label}
+          action={action}
+          active={!!action.path && matchesPath(location.pathname, action.path)}
+          inverted={headerOnHero}
+          onSelect={onSelect}
+        />
+      ))}
+    </nav>
+  );
+
+  const renderDesktopHeaderActions = (className: string) => (
+    <div className={className}>
+      {isAuthenticated && user ? <AccountModeSwitch className={cn(
+        'hidden self-center !rounded-[1.05rem] !p-0.5 lg:inline-flex xl:!rounded-[1.15rem] xl:!p-1',
+        headerOnHero
+          ? '!border-white/16 !bg-black/18 !shadow-[0_18px_34px_-28px_rgba(0,0,0,0.34)]'
+          : '!border-slate-200/90 !bg-white/96 !shadow-[0_18px_34px_-28px_rgba(15,23,42,0.18)]',
+      )} buttonClassName={cn(
+        '!h-11 !rounded-[0.9rem] !px-3 !text-[0.86rem] !font-semibold !shadow-none transition-[transform,box-shadow] duration-200 ease-out motion-reduce:transform-none hover:-translate-y-px active:translate-y-0 xl:!h-12 xl:!rounded-[0.95rem] xl:!px-4 xl:!text-[0.92rem]',
+        headerOnHero
+          ? '[&:not([data-loading=true])]:!text-white/82 [&:not([data-loading=true])]:hover:!text-white'
+          : '[&:not([data-loading=true])]:!text-slate-600 [&:not([data-loading=true])]:hover:!text-slate-950',
+      )} compact /> : null}
+
+      {isAuthenticated && user ? (
+        <NotificationsMenu
+          status={notifications.status}
+          notifications={notifications.notifications}
+          unreadCount={notifications.unreadCount}
+          errorMessage={notifications.errorMessage}
+          isMarkingAllRead={notifications.isMarkingAllRead}
+          onRefresh={notifications.loadNotifications}
+          onMarkAllAsRead={notifications.markAllAsRead}
+          onLoginRequired={openLoginModal}
+          inverted={headerOnHero}
+        />
+      ) : null}
+
+      {isAuthenticated && user ? (
+        <>
+          <button
+            type="button"
+            onClick={() => navigate('/my-bookings')}
+            className={cn(
+              'hidden h-[3.25rem] w-[3.25rem] items-center justify-center rounded-[1rem] border transition-[color,background-color,border-color,box-shadow,transform] duration-200 ease-out motion-reduce:transform-none hover:-translate-y-px active:translate-y-0 focus-visible:outline-none focus-visible:shadow-[var(--app-focus-ring)] md:inline-flex lg:h-14 lg:w-14',
+              headerOnHero
+                ? 'border-white/16 bg-black/16 text-white/84 shadow-[0_16px_30px_-26px_rgba(0,0,0,0.3)] backdrop-blur-[10px] hover:border-white/22 hover:bg-black/24 hover:text-white hover:shadow-[0_18px_32px_-24px_rgba(0,0,0,0.3)]'
+                : 'border-slate-200/88 bg-white/92 text-slate-500 shadow-[0_16px_30px_-28px_rgba(15,23,42,0.16)] hover:border-slate-300 hover:bg-white hover:text-slate-900 hover:shadow-[0_18px_32px_-24px_rgba(15,23,42,0.18)]',
+            )}
+            aria-label="Mis reservas"
+          >
+            <Icons.Calendar className="h-[1.05rem] w-[1.05rem] lg:h-[1.1rem] lg:w-[1.1rem]" />
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/profile')}
+            className={cn(
+              'flex h-[3.25rem] items-center gap-3.5 rounded-full px-4.5 transition-[background-color,border-color,box-shadow,transform,color] duration-200 ease-out motion-reduce:transform-none hover:-translate-y-px active:translate-y-0 sm:h-[3.35rem] lg:h-14 lg:px-[1.2rem]',
+              headerOnHero
+                ? 'border border-white/18 bg-black/20 text-white shadow-[0_18px_35px_-28px_rgba(0,0,0,0.32)] backdrop-blur-[12px] hover:border-white/26 hover:bg-black/28 hover:shadow-[0_22px_40px_-28px_rgba(0,0,0,0.34)]'
+                : 'border border-slate-200/90 bg-white/98 shadow-[0_18px_35px_-28px_rgba(15,23,42,0.22)] hover:border-slate-300 hover:bg-white hover:shadow-[0_22px_40px_-28px_rgba(15,23,42,0.22)]',
+            )}
+            aria-label="Ir al perfil"
+          >
+            <div className="hidden text-right xl:block">
+              <div className={cn('text-[10px] font-bold uppercase tracking-[0.16em]', headerOnHero ? 'text-white/62' : 'text-slate-400')}>Cuenta</div>
+              <div className={cn('text-[0.96rem] font-bold leading-tight', headerOnHero ? 'text-white' : 'text-slate-900')}>{user.name}</div>
+            </div>
+            <div className={cn('h-10 w-10 overflow-hidden rounded-full lg:h-11 lg:w-11', headerOnHero ? 'bg-white/16' : 'bg-slate-100')}>
+              <img src={user.profilePhoto || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`} alt={user.name} className="h-full w-full object-cover" />
+            </div>
+          </button>
+        </>
+      ) : showGuestAuthActions ? (
+        <>
+          <button
+            type="button"
+            onClick={() => openLoginModal()}
+            className={cn(
+              'hidden h-[3.25rem] shrink-0 items-center rounded-full border px-6 text-[0.98rem] font-semibold tracking-[-0.01em] transition-[color,background-color,border-color,box-shadow,transform] duration-200 ease-out motion-reduce:transform-none hover:-translate-y-px active:translate-y-0 focus-visible:outline-none focus-visible:shadow-[var(--app-focus-ring)] md:inline-flex lg:h-14 lg:px-7 lg:text-[1.04rem]',
+              headerOnHero
+                ? 'border-white/18 bg-white/12 text-white/92 shadow-[0_18px_34px_-26px_rgba(0,0,0,0.24)] backdrop-blur-[12px] hover:border-white/24 hover:bg-white/18 hover:text-white hover:shadow-[0_18px_34px_-24px_rgba(0,0,0,0.26)]'
+                : 'border-slate-200/90 bg-white/96 text-slate-900 shadow-[0_18px_34px_-28px_rgba(15,23,42,0.14)] hover:border-slate-300 hover:bg-white hover:text-slate-950 hover:shadow-[0_18px_34px_-24px_rgba(15,23,42,0.16)]',
+            )}
+          >
+            Ingresá
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/register')}
+            aria-label="Publicar propiedad"
+            className={cn(
+              'app-button-primary h-[3.25rem] whitespace-nowrap rounded-[1.2rem] border border-transparent px-5 text-[0.97rem] transition-[transform,box-shadow] duration-200 ease-out motion-reduce:transform-none hover:-translate-y-px active:translate-y-0 sm:px-6 sm:text-[1rem] lg:h-14 lg:px-5 lg:text-[0.98rem] xl:px-7 xl:text-[1.05rem]',
+              headerOnHero ? 'shadow-[0_22px_42px_-26px_rgba(15,23,42,0.48)]' : 'shadow-[0_20px_38px_-26px_rgba(55,48,163,0.52)]',
+            )}
+          >
+            <span className="xl:hidden">Publicar</span>
+            <span className="hidden xl:inline">Publicar propiedad</span>
+            <Icons.ArrowRight className="hidden h-4.5 w-4.5 sm:block" />
+          </button>
+        </>
+      ) : hasSessionError ? (
+        <button
+          type="button"
+          onClick={() => void refresh()}
+          className={cn(
+            'inline-flex h-10 w-10 items-center justify-center transition-[border-color,color,background-color,box-shadow,transform] duration-200 ease-out motion-reduce:transform-none hover:-translate-y-px active:translate-y-0 focus-visible:outline-none focus-visible:shadow-[var(--app-focus-ring)] md:min-h-[3.25rem] md:w-auto md:gap-3 md:px-5 md:py-0 lg:min-h-14 lg:px-6',
+            headerOnHero
+              ? 'rounded-full border border-white/18 bg-black/18 text-white shadow-[0_16px_34px_-28px_rgba(0,0,0,0.32)] backdrop-blur-[10px] hover:border-white/26 hover:bg-black/28 hover:text-white md:rounded-[0.95rem] md:shadow-[0_16px_34px_-28px_rgba(0,0,0,0.32)]'
+              : 'rounded-full border border-slate-200/85 bg-white/88 text-slate-600 shadow-[0_16px_34px_-28px_rgba(15,23,42,0.24)] hover:border-slate-300 hover:bg-white hover:text-slate-950 md:rounded-[0.95rem] md:bg-white/70 md:shadow-none',
+          )}
+        >
+          <Icons.AlertTriangle className="h-4 w-4" />
+          <span className="hidden md:inline">Reintentar sesión</span>
+        </button>
+      ) : (
+        <div role="status" aria-live="polite" className={cn(
+          'inline-flex h-10 w-10 items-center justify-center md:min-h-[3.25rem] md:w-auto md:gap-3 md:px-0 md:py-0 lg:min-h-14',
+          headerOnHero
+            ? 'rounded-full border border-white/16 bg-black/18 text-white/84 shadow-[0_16px_34px_-28px_rgba(0,0,0,0.28)] backdrop-blur-[10px] md:rounded-none md:border-transparent md:bg-transparent md:shadow-none'
+            : 'rounded-full border border-slate-200/80 bg-white/88 text-slate-500 shadow-[0_16px_34px_-28px_rgba(15,23,42,0.18)] md:rounded-none md:border-transparent md:bg-transparent md:shadow-none',
+        )}>
+          <Icons.Loader2 className="h-4 w-4 animate-spin" />
+          <span className="hidden md:inline">Verificando sesión...</span>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div className="app-shell">
       <NotificationToast />
@@ -383,145 +578,24 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
 
       {showHeader ? (
         <header className={cn('app-header z-50', isPropertyDetailRoute ? 'app-header-detail' : 'relative', headerOnHero && 'app-header-on-hero')}>
-          <div className={cn(headerLayoutClass, 'flex items-center gap-5 py-3.5 sm:gap-8 sm:py-5 lg:gap-7 xl:gap-8')}>
-            <button type="button" onClick={() => navigate('/')} aria-label="Ir al inicio de Alquiler Real" className="flex shrink-0 items-center gap-1 rounded-2xl pr-0 transition-opacity duration-200 hover:opacity-95 focus-visible:outline-none focus-visible:shadow-[var(--app-focus-ring)] sm:gap-1.5">
-              <div className={cn(
-                'flex h-9 w-9 shrink-0 items-center justify-center sm:h-10 sm:w-10',
-                headerOnHero && 'drop-shadow-[0_16px_28px_rgba(15,23,42,0.22)]',
-              )}>
-                <img
-                  src="/verified-presencial-badge3.png"
-                  alt=""
-                  aria-hidden="true"
-                  className="h-full w-full object-contain"
-                />
+          {useSymmetricGuestHeader ? (
+            <div className={cn(headerLayoutClass, 'flex items-center justify-between gap-5 py-4 sm:gap-6 sm:py-5 lg:gap-8 xl:gap-10')}>
+              <div className={desktopHeaderPrimaryClass}>
+                {brandHomeButton}
+                {renderDesktopNavigation(desktopHeaderNavigationClass)}
               </div>
-              <div className="flex min-w-max flex-col justify-center text-left">
-                <div className={cn('hidden text-[9px] font-semibold uppercase leading-none tracking-[0.18em] transition-colors duration-200 sm:block', headerOnHero ? 'text-white/62' : 'text-slate-400/80')}>Información real</div>
-                <div className={cn('font-display whitespace-nowrap text-[1.12rem] font-bold leading-[0.92] tracking-[-0.04em] transition-colors duration-200 sm:text-[1.42rem] lg:text-[1.56rem]', headerOnHero ? 'text-white' : 'text-slate-950')}>
-                  <span className={cn('transition-colors duration-200', headerOnHero ? 'text-white' : 'text-slate-950')}>Alquiler</span>{' '}
-                  <span className={cn('transition-colors duration-200', headerOnHero ? 'text-white' : 'text-brand')}>Real</span>
-                </div>
-              </div>
-            </button>
 
-            <nav aria-label="Navegación principal" className="hidden items-center gap-5 lg:ml-auto lg:flex lg:pl-4 xl:gap-6 xl:pl-5">
-              {desktopActions.map((action) => (
-                <DesktopNavButton
-                  key={action.label}
-                  action={action}
-                  active={!!action.path && matchesPath(location.pathname, action.path)}
-                  inverted={headerOnHero}
-                  onSelect={onSelect}
-                />
-              ))}
-            </nav>
-
-            <div className="flex shrink-0 items-center gap-1.5 sm:gap-4 lg:pl-3 lg:gap-5 xl:pl-4 xl:gap-6">
-              {isAuthenticated && user ? <AccountModeSwitch className="hidden lg:inline-flex" compact /> : null}
-
-              {isAuthenticated && user ? (
-                <NotificationsMenu
-                  status={notifications.status}
-                  notifications={notifications.notifications}
-                  unreadCount={notifications.unreadCount}
-                  errorMessage={notifications.errorMessage}
-                  isMarkingAllRead={notifications.isMarkingAllRead}
-                  onRefresh={notifications.loadNotifications}
-                  onMarkAllAsRead={notifications.markAllAsRead}
-                  onLoginRequired={openLoginModal}
-                  inverted={headerOnHero}
-                />
-              ) : null}
-
-              {isAuthenticated && user ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => navigate('/my-bookings')}
-                    className={cn(
-                      'hidden h-9 w-9 items-center justify-center rounded-xl transition-[color,background-color,box-shadow] duration-200 focus-visible:outline-none focus-visible:shadow-[var(--app-focus-ring)] md:inline-flex sm:h-10 sm:w-10',
-                      headerOnHero
-                        ? 'text-white/84 hover:bg-white/10 hover:text-white'
-                        : 'text-slate-500 hover:bg-slate-100/70 hover:text-slate-900',
-                    )}
-                    aria-label="Mis reservas"
-                  >
-                    <Icons.Calendar className="h-4.5 w-4.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => navigate('/profile')}
-                    className={cn(
-                      'flex items-center gap-3 rounded-full px-2 py-2 transition-[background-color,border-color,box-shadow,transform,color] duration-200',
-                      headerOnHero
-                        ? 'border border-white/18 bg-black/18 text-white shadow-[0_18px_35px_-28px_rgba(0,0,0,0.32)] backdrop-blur-[10px] hover:border-white/26 hover:bg-black/28 hover:shadow-[0_22px_40px_-28px_rgba(0,0,0,0.34)]'
-                        : 'border border-slate-200/90 bg-white/96 shadow-[0_18px_35px_-28px_rgba(15,23,42,0.24)] hover:border-slate-300 hover:bg-white hover:shadow-[0_22px_40px_-28px_rgba(15,23,42,0.24)]',
-                    )}
-                    aria-label="Ir al perfil"
-                  >
-                    <div className="hidden text-right md:block">
-                      <div className={cn('text-[10px] font-bold uppercase tracking-[0.16em]', headerOnHero ? 'text-white/62' : 'text-slate-400')}>Cuenta</div>
-                      <div className={cn('text-sm font-bold', headerOnHero ? 'text-white' : 'text-slate-900')}>{user.name}</div>
-                    </div>
-                    <div className={cn('h-10 w-10 overflow-hidden rounded-full', headerOnHero ? 'bg-white/16' : 'bg-slate-100')}>
-                      <img src={user.profilePhoto || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`} alt={user.name} className="h-full w-full object-cover" />
-                    </div>
-                  </button>
-                </>
-              ) : showGuestAuthActions ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => openLoginModal()}
-                    className={cn(
-                      'hidden shrink-0 items-center rounded-full border px-4 py-2 text-[0.92rem] font-semibold tracking-[-0.01em] transition-[color,background-color,border-color,box-shadow] duration-200 focus-visible:outline-none focus-visible:shadow-[var(--app-focus-ring)] md:inline-flex',
-                      headerOnHero
-                        ? 'border-white/18 bg-white/10 text-white/92 backdrop-blur-[10px] hover:border-white/24 hover:bg-white/16 hover:text-white'
-                        : 'border-[rgba(15,23,42,0.08)] bg-[rgba(255,255,255,0.72)] text-slate-900 hover:border-[rgba(15,23,42,0.12)] hover:bg-[rgba(255,255,255,0.92)] hover:text-slate-950',
-                    )}
-                  >
-                    Ingresá
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => navigate('/register')}
-                    className={cn(
-                      'app-button-primary h-10 whitespace-nowrap rounded-[1rem] px-4 text-[0.9rem] sm:h-11 sm:px-6 sm:text-[0.96rem]',
-                      headerOnHero ? 'shadow-[0_22px_42px_-26px_rgba(15,23,42,0.48)]' : 'shadow-[0_20px_38px_-26px_rgba(55,48,163,0.52)]',
-                    )}
-                  >
-                    Publicar propiedad
-                    <Icons.ArrowRight className="hidden h-4 w-4 sm:block" />
-                  </button>
-                </>
-              ) : hasSessionError ? (
-                <button
-                  type="button"
-                  onClick={() => void refresh()}
-                  className={cn(
-                    'inline-flex h-10 w-10 items-center justify-center transition-[border-color,color,background-color,box-shadow] duration-200 focus-visible:outline-none focus-visible:shadow-[var(--app-focus-ring)] md:h-auto md:w-auto md:gap-2 md:px-4 md:py-2.5',
-                    headerOnHero
-                      ? 'rounded-full border border-white/18 bg-black/18 text-white shadow-[0_16px_34px_-28px_rgba(0,0,0,0.32)] backdrop-blur-[10px] hover:border-white/26 hover:bg-black/28 hover:text-white md:rounded-[0.95rem] md:shadow-[0_16px_34px_-28px_rgba(0,0,0,0.32)]'
-                      : 'rounded-full border border-slate-200/85 bg-white/88 text-slate-600 shadow-[0_16px_34px_-28px_rgba(15,23,42,0.24)] hover:border-slate-300 hover:bg-white hover:text-slate-950 md:rounded-[0.95rem] md:bg-white/70 md:shadow-none',
-                  )}
-                >
-                  <Icons.AlertTriangle className="h-4 w-4" />
-                  <span className="hidden md:inline">Reintentar sesión</span>
-                </button>
-              ) : (
-                <div role="status" aria-live="polite" className={cn(
-                  'inline-flex h-10 w-10 items-center justify-center md:h-auto md:w-auto md:gap-2 md:px-0 md:py-0',
-                  headerOnHero
-                    ? 'rounded-full border border-white/16 bg-black/18 text-white/84 shadow-[0_16px_34px_-28px_rgba(0,0,0,0.28)] backdrop-blur-[10px] md:rounded-none md:border-transparent md:bg-transparent md:shadow-none'
-                    : 'rounded-full border border-slate-200/80 bg-white/88 text-slate-500 shadow-[0_16px_34px_-28px_rgba(15,23,42,0.18)] md:rounded-none md:border-transparent md:bg-transparent md:shadow-none',
-                )}>
-                  <Icons.Loader2 className="h-4 w-4 animate-spin" />
-                  <span className="hidden md:inline">Verificando sesión...</span>
-                </div>
-              )}
+              {renderDesktopHeaderActions(guestDesktopActionsClass)}
             </div>
-          </div>
+          ) : (
+            <div className={cn(headerLayoutClass, 'flex items-center justify-between gap-5 py-4 sm:gap-6 sm:py-5 lg:gap-8 xl:gap-10')}>
+              <div className={desktopHeaderPrimaryClass}>
+                {brandHomeButton}
+                {renderDesktopNavigation(desktopHeaderNavigationClass)}
+              </div>
+              {renderDesktopHeaderActions(accountDesktopActionsClass)}
+            </div>
+          )}
         </header>
       ) : null}
 

@@ -6,6 +6,7 @@ import { Button } from './Button';
 
 type AccountModeSwitchProps = {
   className?: string;
+  buttonClassName?: string;
   compact?: boolean;
 };
 
@@ -14,7 +15,7 @@ const labels: Record<UserMode, string> = {
   host: 'Modo anfitrión',
 };
 
-export const AccountModeSwitch = ({ className, compact = false }: AccountModeSwitchProps) => {
+export const AccountModeSwitch = ({ className, buttonClassName, compact = false }: AccountModeSwitchProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, setActiveMode } = useAuth();
@@ -85,6 +86,7 @@ export const AccountModeSwitch = ({ className, compact = false }: AccountModeSwi
             className={cn(
               'rounded-full px-3',
               !isActive && 'text-slate-500 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-50',
+              buttonClassName,
             )}
             onClick={() => {
               void handleModeChange(mode);

@@ -114,14 +114,48 @@ describe('ExploreResultsSection', () => {
   test('renders the decision-oriented hierarchy on the home results view', () => {
     renderSection();
 
-    expect(screen.getByRole('heading', { name: 'Empezá por los más verificados' })).toBeInTheDocument();
+    const featuredHeading = screen.getByRole('heading', { name: 'Empezá por los más verificados' });
+    const comparisonHeading = screen.getByRole('heading', { name: 'Más para comparar' });
+    const featuredSection = featuredHeading.closest('section');
+    const comparisonSection = comparisonHeading.closest('section');
+
+    expect(featuredHeading).toBeInTheDocument();
     expect(screen.getByText('Primero ves solo los avisos con verificación presencial.')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Más para comparar' })).toBeInTheDocument();
+    expect(comparisonHeading).toBeInTheDocument();
+    expect(featuredSection).not.toBeNull();
+    expect(featuredSection).toHaveClass('rounded-xl', 'py-8');
+    expect(featuredSection?.className).toContain('bg-[#f8fafc]');
+    expect(comparisonSection).not.toBeNull();
+    expect(comparisonSection).toHaveClass('mt-12', 'px-5', 'md:px-6');
+    expect(comparisonSection).not.toHaveClass('border-t');
+    expect(comparisonHeading.parentElement?.parentElement?.parentElement?.parentElement).toHaveClass('opacity-[0.92]');
+    expect(comparisonHeading).toHaveClass('font-medium', 'text-slate-500');
+    expect(screen.getByText('Propiedades con menor nivel de validación')).toBeInTheDocument();
     expect(screen.getAllByText('Más verificado')).toHaveLength(1);
     expect(screen.queryByText(/Buena relación precio \/ información|De las más completas en este rango/)).toBeNull();
     expect(screen.getByText('Casa frente al mar')).toBeInTheDocument();
     expect(screen.getByText('Departamento luminoso')).toBeInTheDocument();
     expect(screen.queryByText('Cabaña entre pinos')).toBeInTheDocument();
+
+    const featuredGrid = screen.getByText('Casa frente al mar').closest('div')?.parentElement;
+    const listingGrid = screen.getByText('Departamento luminoso').closest('div')?.parentElement;
+
+    expect(featuredGrid).not.toBeNull();
+    expect(featuredGrid).toHaveClass('grid-cols-1', 'auto-rows-fr', 'items-stretch', 'md:grid-cols-2', 'lg:grid-cols-3');
+    expect(listingGrid).not.toBeNull();
+    expect(listingGrid).toHaveClass('grid-cols-1', 'auto-rows-fr', 'items-stretch', 'md:grid-cols-2', 'lg:grid-cols-3');
+  });
+
+  test('uses a singular verification-first heading when one presencial result stays in the main grid', () => {
+    renderSection({
+      featuredProperties: [],
+      listingProperties: sampleProperties,
+      visibleProperties: sampleProperties,
+    });
+
+    expect(screen.getByRole('heading', { name: 'Empezá por la opción más verificada' })).toBeInTheDocument();
+    expect(screen.getByText('La primera opción ya tiene verificación presencial. Después comparás el resto.')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Opciones para comparar' })).toBeNull();
   });
 
   test('shows the subtle verification hint and emphasizes cards when the preference is active', () => {

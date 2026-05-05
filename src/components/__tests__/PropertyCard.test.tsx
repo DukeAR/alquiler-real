@@ -62,7 +62,7 @@ describe('PropertyCard', () => {
     useAuthMock.mockReturnValue({ user: { id: 'u1' } });
   });
 
-  test('renders the intermediate identity-validated state as a single positive signal', () => {
+  test('keeps identity-validated cards free of verification badges until presencial verification exists', () => {
     render(
       <PropertyCard
         property={sampleProperty}
@@ -80,31 +80,23 @@ describe('PropertyCard', () => {
     expect(screen.queryByText('4.8')).toBeNull();
     expect(screen.queryByText('12 reseñas')).toBeNull();
     expect(screen.queryByTestId('property-card-premium-badge')).toBeNull();
-    const verificationBlock = screen.getByTestId('property-card-verification');
-    expect(verificationBlock).toHaveAttribute('aria-label', 'Identidad validada');
-    expect(verificationBlock).toHaveTextContent('Identidad validada');
-    expect(verificationBlock).not.toHaveTextContent('Verificación básica');
-    expect(within(verificationBlock).queryByRole('list')).toBeNull();
-    expect(within(verificationBlock).queryByText('Anfitrión confirmado')).toBeNull();
+    expect(screen.queryByTestId('property-card-verification')).toBeNull();
     expect(screen.queryByRole('img', { name: 'Verificado presencialmente' })).toBeNull();
+    expect(screen.queryByText('Identidad verificada')).toBeNull();
+    expect(screen.queryByText('Anfitrión confirmado')).toBeNull();
     expect(screen.queryByText('Más verificado')).toBeNull();
     expect(screen.queryByText('Confianza visible')).toBeNull();
     expect(screen.queryByText('Anfitrión con buen historial')).toBeNull();
     expect(screen.queryByText('12 reseñas reales')).toBeNull();
     expect(screen.queryByText('Anfitrión: Laura')).toBeNull();
     expect(screen.queryByText('Abrir ficha')).toBeNull();
-    expect(screen.getByText('Ver detalle')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Abrir detalle de Casa frente al mar/i })).toBeInTheDocument();
-    expect(within(verificationBlock).getByText('Identidad validada')).toHaveClass('text-slate-700');
-    expect(verificationBlock.firstElementChild).toHaveClass('gap-2', 'text-[0.95rem]', 'font-medium');
-    expect(verificationBlock.querySelector('svg')).not.toBeNull();
-    expect(verificationBlock).toHaveAttribute('aria-label', 'Identidad validada');
-    expect(verificationBlock).toHaveTextContent('Identidad validada');
-    expect(verificationBlock).not.toHaveTextContent('Verificación básica');
-    expect(within(verificationBlock).queryByText('Identidad y acceso confirmados')).toBeNull();
+    expect(screen.getByText('Ver propiedad')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Ver propiedad: Casa frente al mar/i })).toBeInTheDocument();
+    expect(screen.getByTestId('property-card-price-row').firstElementChild).toHaveClass('text-[2.05rem]', 'text-slate-950');
+    expect(screen.queryByText('Mejor información para decidir')).toBeNull();
   });
 
-  test('example: a card with only identity validation shows the intermediate state', () => {
+  test('example: a card with only identity validation keeps verification hidden', () => {
     const identityValidatedExample = {
       ...sampleProperty,
       id: 'example-intermediate',
@@ -121,16 +113,26 @@ describe('PropertyCard', () => {
 
     render(<PropertyCard property={identityValidatedExample} onClick={vi.fn()} />);
 
-    const verificationBlock = screen.getByTestId('property-card-verification');
-
-    expect(verificationBlock).toHaveAttribute('aria-label', 'Identidad validada');
-    expect(within(verificationBlock).getByText('Identidad validada')).toBeInTheDocument();
-    expect(within(verificationBlock).getByText('Identidad validada')).toHaveClass('text-slate-700');
-    expect(within(verificationBlock).queryByText('Información publicada por el anfitrión')).toBeNull();
+    expect(screen.queryByTestId('property-card-verification')).toBeNull();
+    expect(screen.queryByText('Identidad verificada')).toBeNull();
+    expect(screen.queryByText('Anfitrión confirmado')).toBeNull();
     expect(screen.queryByRole('img', { name: 'Verificado presencialmente' })).toBeNull();
   });
 
-  test('keeps the same neutral card state even if other non-public signals change', () => {
+  test('keeps compact cards free of verification badges without presencial verification', () => {
+    render(
+      <PropertyCard
+        property={sampleProperty}
+        density="compact"
+        onClick={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByTestId('property-card-verification')).toBeNull();
+    expect(screen.queryByText('Anfitrión confirmado')).toBeNull();
+  });
+
+  test('keeps identity-only cards free of verification badges even if other non-public signals change', () => {
     render(
       <PropertyCard
         property={{
@@ -141,15 +143,12 @@ describe('PropertyCard', () => {
     );
 
     expect(screen.queryByTestId('property-card-premium-badge')).toBeNull();
-    const verificationBlock = screen.getByTestId('property-card-verification');
-
-    expect(verificationBlock).toHaveAttribute('aria-label', 'Identidad validada');
-    expect(verificationBlock).toHaveTextContent('Identidad validada');
-    expect(within(verificationBlock).queryByRole('list')).toBeNull();
+    expect(screen.queryByTestId('property-card-verification')).toBeNull();
+    expect(screen.queryByText('Identidad verificada')).toBeNull();
     expect(screen.queryByText('Más verificado')).toBeNull();
   });
 
-  test('keeps the same public verification summary even if media or availability changes', () => {
+  test('keeps non-presencial cards free of verification badges even if media or availability changes', () => {
     render(
       <PropertyCard
         property={{
@@ -161,14 +160,11 @@ describe('PropertyCard', () => {
     );
 
     expect(screen.queryByTestId('property-card-premium-badge')).toBeNull();
-    const verificationBlock = screen.getByTestId('property-card-verification');
-
-    expect(verificationBlock).toHaveAttribute('aria-label', 'Identidad validada');
-    expect(verificationBlock).toHaveTextContent('Identidad validada');
-    expect(within(verificationBlock).queryByRole('list')).toBeNull();
+    expect(screen.queryByTestId('property-card-verification')).toBeNull();
+    expect(screen.queryByText('Identidad verificada')).toBeNull();
   });
 
-  test('keeps the card focused on verification even when the host trust level changes', () => {
+  test('keeps the card free of verification badges even when the host trust level changes', () => {
     render(
       <PropertyCard
         property={{
@@ -189,8 +185,9 @@ describe('PropertyCard', () => {
     );
 
     expect(screen.queryByText('Anfitrión con buen historial')).toBeNull();
-    expect(screen.getByText('Identidad validada')).toBeInTheDocument();
-    expect(screen.getByText('Ver detalle')).toBeInTheDocument();
+    expect(screen.queryByTestId('property-card-verification')).toBeNull();
+    expect(screen.queryByText('Identidad verificada')).toBeNull();
+    expect(screen.getByText('Ver propiedad')).toBeInTheDocument();
   });
 
   test('keeps the badge hidden unless the ordering context marks the card as a real standout', () => {
@@ -202,8 +199,9 @@ describe('PropertyCard', () => {
 
     expect(screen.queryByText('Más verificado')).toBeNull();
     expect(screen.queryByTestId('property-card-premium-badge')).toBeNull();
-    expect(screen.getByText('Identidad validada')).toBeInTheDocument();
-    expect(screen.getByText('Ver detalle')).toBeInTheDocument();
+    expect(screen.queryByTestId('property-card-verification')).toBeNull();
+    expect(screen.queryByText('Identidad verificada')).toBeNull();
+    expect(screen.getByText('Ver propiedad')).toBeInTheDocument();
   });
 
   test('uses the premium card model when the presencial verification completes the four public validations', () => {
@@ -215,6 +213,7 @@ describe('PropertyCard', () => {
           hasPresencialVerification: true,
         }}
         verificationGuidanceLabel="Más verificado"
+        onClick={vi.fn()}
       />,
     );
 
@@ -224,23 +223,28 @@ describe('PropertyCard', () => {
     expect(verificationBlock).toHaveAttribute('aria-label', 'Verificado presencialmente');
     expect(within(verificationBlock).getByTestId('property-card-verification-icon')).toHaveClass(
       'inline-flex',
-      'h-6',
-      'w-6',
+      'h-7',
+      'w-7',
       'shrink-0',
       'items-center',
       'justify-center',
       'rounded-full',
-      'bg-emerald-100',
-      'text-emerald-600',
+      'bg-emerald-200',
+      'text-emerald-800',
     );
     expect(within(verificationBlock).getByText('Verificado presencialmente')).toBeInTheDocument();
-    expect(verificationBlock.firstElementChild).toHaveClass('bg-emerald-50/90', 'border-emerald-100/90', 'gap-2', 'py-2');
-    expect(within(verificationBlock).getByText('Verificado presencialmente')).toHaveClass('text-emerald-600', 'text-[0.94rem]', 'font-semibold');
-    expect(within(verificationBlock).getByText('Identidad, ubicación y acceso confirmados')).toHaveClass('text-emerald-700', 'text-[0.72rem]');
-    expect(within(verificationBlock).queryByText('Identidad validada')).toBeNull();
+    expect(verificationBlock.firstElementChild).toHaveClass('bg-[#ECFDF3]', 'border-emerald-300/70', 'gap-3', 'px-4', 'py-3', 'rounded-2xl');
+    expect(within(verificationBlock).getByText('Verificado presencialmente')).toHaveClass('text-emerald-900', 'text-[0.98rem]', 'font-semibold');
+    expect(within(verificationBlock).getByText('Identidad, ubicación y acceso confirmados')).toHaveClass('text-emerald-900/80', 'text-[0.74rem]');
+    expect(screen.getByRole('button', { name: /Ver propiedad: Casa frente al mar/i })).toHaveClass('box-border', 'w-full', 'h-full', 'border-2', 'border-[#22c55e]', 'shadow-lg', 'duration-150', 'ease-[ease]', 'hover:-translate-y-1');
+    expect(screen.getByAltText('Casa frente al mar')).toHaveClass('duration-150', 'group-hover:scale-[1.02]');
+    expect(screen.getByTestId('property-card-cta')).toHaveClass('absolute', 'bottom-4', 'right-4', 'opacity-0', 'group-hover:opacity-100');
+    expect(within(verificationBlock).getByTestId('property-card-verification-icon')).toHaveClass('group-hover:scale-[1.05]');
+    expect(within(verificationBlock).queryByText('Mejor información para decidir')).toBeNull();
+    expect(within(verificationBlock).queryByText('Identidad del anfitrión confirmada')).toBeNull();
     expect(screen.queryByText('(5/5)')).toBeNull();
     expect(screen.queryByText('Más verificado')).toBeNull();
-    expect(screen.getByText('Ver detalle')).toBeInTheDocument();
+    expect(screen.getByText('Ver propiedad')).toBeInTheDocument();
   });
 
   test('prioritizes the presencial card model whenever the presencial flag exists', () => {
@@ -262,7 +266,7 @@ describe('PropertyCard', () => {
     expect(within(verificationBlock).getByText('Identidad, ubicación y acceso confirmados')).toBeInTheDocument();
   });
 
-  test('keeps the standard verification summary subtle even when the card is highlighted', () => {
+  test('keeps highlighted non-presencial cards free of verification badges', () => {
     render(
       <PropertyCard
         property={sampleProperty}
@@ -270,10 +274,8 @@ describe('PropertyCard', () => {
       />,
     );
 
-    const trustLine = screen.getByTestId('property-card-verification');
-
-    expect(within(trustLine).getByText('Identidad validada')).toHaveClass('text-slate-700');
-    expect(trustLine.firstElementChild).toHaveClass('gap-2', 'text-[0.95rem]');
+    expect(screen.queryByTestId('property-card-verification')).toBeNull();
+    expect(screen.queryByText('Identidad verificada')).toBeNull();
   });
 
   test('keeps the featured card free of extra verification badges', () => {
@@ -289,47 +291,57 @@ describe('PropertyCard', () => {
     expect(screen.queryByText('Más verificado')).toBeNull();
     expect(screen.queryByText('Buena relación precio / información')).toBeNull();
     expect(screen.queryByText('Más comprobado')).toBeNull();
-    expect(screen.getByText('Identidad validada')).toBeInTheDocument();
-    expect(screen.getByText('Ver detalle')).toBeInTheDocument();
+    expect(screen.queryByTestId('property-card-verification')).toBeNull();
+    expect(screen.queryByText('Identidad verificada')).toBeNull();
+    expect(screen.getByText('Ver propiedad')).toBeInTheDocument();
   });
 
   test('keeps the favorites variant free of Explore guidance labels', () => {
     render(<PropertyCard property={sampleProperty} variant="favorites" onClick={vi.fn()} />);
 
     expect(screen.queryByTestId('property-card-premium-badge')).toBeNull();
-    const verificationBlock = screen.getByTestId('property-card-verification');
-
-    expect(verificationBlock).toHaveAttribute('aria-label', 'Identidad validada');
-    expect(within(verificationBlock).getByText('Identidad validada')).toBeInTheDocument();
-    expect(within(verificationBlock).queryByRole('list')).toBeNull();
+    expect(screen.queryByTestId('property-card-verification')).toBeNull();
+    expect(screen.queryByText('Identidad verificada')).toBeNull();
     expect(screen.queryByText('Más verificado')).toBeNull();
     expect(screen.queryByText('Más confiable')).toBeNull();
     expect(screen.queryByText('Anfitrión con buen historial')).toBeNull();
     expect(screen.queryByText('Abrir ficha')).toBeNull();
     expect(screen.queryByText('Abrir detalle')).toBeNull();
-    expect(screen.getByText('Ver detalle')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Abrir detalle de Casa frente al mar/i })).toBeInTheDocument();
+    expect(screen.getByText('Ver propiedad')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Ver propiedad: Casa frente al mar/i })).toBeInTheDocument();
   });
 
   test('supports keyboard navigation and favorite toggling', () => {
+    vi.useFakeTimers();
+
     const onClick = vi.fn();
     const onFavoriteToggle = vi.fn();
 
-    render(
-      <PropertyCard
-        property={sampleProperty}
-        isFavorite={false}
-        onClick={onClick}
-        onFavoriteToggle={onFavoriteToggle}
-      />,
-    );
+    try {
+      render(
+        <PropertyCard
+          property={sampleProperty}
+          isFavorite={false}
+          onClick={onClick}
+          onFavoriteToggle={onFavoriteToggle}
+        />,
+      );
 
-    fireEvent.keyDown(screen.getByRole('button', { name: /Abrir detalle de Casa frente al mar/i }), { key: 'Enter' });
-    expect(onClick).toHaveBeenCalledTimes(1);
+      const card = screen.getByRole('button', { name: /Ver propiedad: Casa frente al mar/i });
 
-    fireEvent.click(screen.getByRole('button', { name: /Guardar propiedad/i }));
-    expect(onFavoriteToggle).toHaveBeenCalledWith('p1', true);
-    expect(onClick).toHaveBeenCalledTimes(1);
+      fireEvent.keyDown(card, { key: 'Enter' });
+      expect(card).toHaveClass('scale-[1.015]', 'opacity-0', 'pointer-events-none');
+      expect(onClick).toHaveBeenCalledTimes(0);
+
+      vi.advanceTimersByTime(180);
+      expect(onClick).toHaveBeenCalledTimes(1);
+
+      fireEvent.click(screen.getByRole('button', { name: /Guardar propiedad/i }));
+      expect(onFavoriteToggle).toHaveBeenCalledWith('p1', true);
+      expect(onClick).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   test('hides the save button when there is no active session', () => {
@@ -348,9 +360,9 @@ describe('PropertyCard', () => {
     expect(standardState.presencialVerified).toBe(false);
     expect(standardState.publicLevel).toBe('identity');
     expect(standardState.count).toBe(1);
-  expect(standardState.summaryTitle).toBe('Identidad validada');
+  expect(standardState.summaryTitle).toBe('Identidad verificada');
   expect(standardState.summaryDescription).toBeNull();
-  expect(standardState.countLabel).toBe('Identidad validada');
+  expect(standardState.countLabel).toBe('Identidad verificada');
     expect(standardState.verificationChecks.hostConfirmed).toBe(true);
     expect(standardState.verificationChecks.locationVerified).toBe(true);
     expect(standardState.verificationChecks.geolocationPrecise).toBe(true);
@@ -381,7 +393,7 @@ describe('PropertyCard', () => {
     expect(fullVisibleState.presencialVerified).toBe(false);
     expect(fullVisibleState.publicLevel).toBe('identity');
     expect(fullVisibleState.count).toBe(1);
-    expect(fullVisibleState.countLabel).toBe('Identidad validada');
+    expect(fullVisibleState.countLabel).toBe('Identidad verificada');
 
     const inconsistentPremiumState = getPropertyCardVerificationState({
       ...sampleProperty,
@@ -414,14 +426,33 @@ describe('PropertyCard', () => {
           verificationPhotoCount: 0,
           isVerifiedProperty: false,
         }}
+        deemphasizeNonPresencial
+        onClick={vi.fn()}
       />,
     );
 
-    const verificationBlock = screen.getByTestId('property-card-verification');
-
-    expect(verificationBlock).toHaveAttribute('aria-label', 'Información publicada por el anfitrión');
-    expect(within(verificationBlock).getByText('Información publicada por el anfitrión')).toHaveClass('text-slate-500', 'text-[0.82rem]', 'font-medium');
-    expect(within(verificationBlock).queryByText('Identidad validada')).toBeNull();
+    expect(screen.getByRole('button', { name: /Ver propiedad: Casa frente al mar/i })).toHaveClass('opacity-90', 'hover:opacity-100', 'border-transparent');
+    expect(screen.queryByTestId('property-card-verification')).toBeNull();
+    expect(screen.queryByText('Sin verificación')).toBeNull();
+    expect(screen.queryByText('Datos no confirmados')).toBeNull();
+    expect(screen.queryByText('Información publicada por el anfitrión')).toBeNull();
     expect(screen.queryByTestId('property-card-premium-badge')).toBeNull();
+  });
+
+  test('keeps identity-validated cards fully opaque when the comparison block deemphasizes non-presencial options', () => {
+    render(
+      <PropertyCard
+        property={sampleProperty}
+        deemphasizeNonPresencial
+        onClick={vi.fn()}
+      />,
+    );
+
+    const card = screen.getByRole('button', { name: /Ver propiedad: Casa frente al mar/i });
+
+    expect(card).not.toHaveClass('opacity-90');
+    expect(card).toHaveClass('border-transparent');
+    expect(screen.queryByTestId('property-card-verification')).toBeNull();
+    expect(screen.queryByText('Identidad verificada')).toBeNull();
   });
 });

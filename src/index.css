@@ -491,14 +491,14 @@ body {
 
 .app-page-explore {
   width: 100%;
-  max-width: 68.75rem;
+  max-width: 91.25rem;
   margin-inline: auto;
-  padding-inline: 1.25rem;
+  padding-inline: 1rem;
 }
 
 @media (min-width: 640px) {
   .app-page-explore {
-    padding-inline: 1.5rem;
+    padding-inline: 1.25rem;
   }
 }
 
@@ -508,7 +508,13 @@ body {
   }
 
   .app-page-explore {
-    padding-inline: 2rem;
+    padding-inline: 1.25rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  .app-page-explore {
+    padding-inline: 1.5rem;
   }
 }
 
@@ -536,29 +542,41 @@ body {
   -webkit-backdrop-filter: none;
 }
 
-.app-header .app-page,
-.app-header .app-page-explore {
+.app-header .app-page {
   padding-inline: 1.5rem;
 }
 
+.app-header .app-page-explore {
+  padding-inline: 1rem;
+}
+
 @media (min-width: 640px) {
-  .app-header .app-page,
-  .app-header .app-page-explore {
+  .app-header .app-page {
     padding-inline: 1.9rem;
+  }
+
+  .app-header .app-page-explore {
+    padding-inline: 1.25rem;
   }
 }
 
 @media (min-width: 768px) {
-  .app-header .app-page,
-  .app-header .app-page-explore {
+  .app-header .app-page {
     padding-inline: 2.4rem;
+  }
+
+  .app-header .app-page-explore {
+    padding-inline: 1.25rem;
   }
 }
 
 @media (min-width: 1280px) {
-  .app-header .app-page,
-  .app-header .app-page-explore {
+  .app-header .app-page {
     padding-inline: 2.75rem;
+  }
+
+  .app-header .app-page-explore {
+    padding-inline: 1.5rem;
   }
 }
 

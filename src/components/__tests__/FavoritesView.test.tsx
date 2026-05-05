@@ -85,11 +85,16 @@ describe('FavoritesView', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText('Compará con calma, retomá lo que te interesó y revisá primero las que ya tienen más comprobaciones reales.')).toBeInTheDocument();
+    expect(screen.getByText('Compará con calma, retomá lo que te interesó y revisá primero las que ya muestran verificación presencial.')).toBeInTheDocument();
     expect(screen.getAllByTestId('saved-property-card').map((card) => card.getAttribute('data-title'))).toEqual([
       'Casa con más comprobaciones',
       'Casa con menos comprobaciones',
     ]);
+
+    const savedCardsGrid = screen.getAllByTestId('saved-property-card')[0]?.parentElement;
+
+    expect(savedCardsGrid).not.toBeNull();
+    expect(savedCardsGrid).toHaveClass('grid-cols-1', 'auto-rows-fr', 'items-stretch', 'md:grid-cols-2', 'lg:grid-cols-3');
   });
 
   test('shows local removal feedback with undo after removing a favorite', async () => {

@@ -1,11 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import { apiJson } from '../lib/apiConfig';
 import { LoadingState } from './LoadingState';
 import { Icons } from './Icons';
 import DateRangePicker from './DateRangePicker';
 import {
+  getPropertyCardVerificationState,
   getPropertyVerificationDetails,
 } from '../lib/propertyVerification';
 import { getHostResponseSignal } from '../lib/positiveIncentives';
@@ -112,14 +112,6 @@ type BookingConfirmationNotice = {
   tone: NonNullable<React.ComponentProps<typeof NoticeBanner>['tone']>;
   heading: string;
   description: string;
-};
-
-type VerificationTooltipState = {
-  key: string;
-  top: number;
-  left: number;
-  width: number;
-  placement: 'top' | 'bottom';
 };
 
 const formatLocalIso = (date: Date) => {
@@ -264,143 +256,81 @@ const REQUEST_CONFIRMATION_NOTICE: BookingConfirmationNotice = {
   description: 'Si el anfitrión acepta, elegís si la dejás registrada acá o si la coordinás por fuera.',
 };
 
-type PresencialVerificationStep = {
-  number: string;
-  title: string;
-  description: string;
-  icon: IconComponent;
+type DetailVerificationVisibleLevel = 'none' | 'identity' | 'presencial';
+
+type DetailVerificationChecklistItem = {
+  key: 'identity' | 'location' | 'access';
+  confirmed: boolean;
+  label: string;
 };
 
-const PRESENCIAL_VERIFICATION_STEPS: PresencialVerificationStep[] = [
-  {
-    number: '1',
-    title: 'El anfitrión contrata la verificación presencial',
-    description: 'Elige la opción premium y agenda la visita de nuestro equipo.',
-    icon: Icons.Calendar,
-  },
-  {
-    number: '2',
-    title: 'Visitamos la propiedad',
-    description: 'Un verificador confirma en persona que la propiedad existe y que hay acceso real al lugar.',
-    icon: Icons.Home,
-  },
-  {
-    number: '3',
-    title: 'Validamos lo esencial',
-    description: 'Confirmamos ubicación, identidad del anfitrión y vínculo comprobable con el lugar.',
-    icon: Icons.ListTodo,
-  },
-  {
-    number: '4',
-    title: 'Publicación verificada',
-    description: 'Si todo está correcto, la propiedad recibe el sello de Verificado presencialmente.',
-    icon: Icons.ShieldCheck,
-  },
-];
+const getHeroVerificationCopy = (publicLevel: DetailVerificationVisibleLevel) => {
+  if (publicLevel === 'presencial') {
+    return {
+      title: 'Verificado en persona',
+      description: 'Identidad, ubicación y acceso confirmados durante una visita real',
+    };
+  }
 
-const PRESENCIAL_VERIFICATION_ITEMS = [
-  'Identidad del anfitrión verificada',
-  'Acceso real a la propiedad confirmado',
-  'Vínculo comprobable con el lugar',
-  'Ubicación validada durante visita',
-] as const;
+  if (publicLevel === 'identity') {
+    return {
+      title: 'Identidad verificada',
+      description: 'Anfitrión confirmado',
+    };
+  }
 
-const PresencialVerificationInfoCard: React.FC = () => {
-  return (
-    <div className="w-full max-w-full overflow-hidden rounded-[32px] bg-white p-12 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
-      <header className="mb-10 flex items-center gap-3 md:gap-5">
-        <PresencialVerificationSealMark
-          alt="Verificado presencialmente"
-          className="h-[68px] w-auto shrink-0 md:h-20"
-        />
+  return {
+    title: 'Sin verificación',
+    description: 'Datos no confirmados',
+  };
+};
 
-        <div className="min-w-0 flex-1 space-y-1.5">
-          <h2 className="text-[28px] font-bold leading-[1.05] tracking-[-0.02em] text-[#0F172A]">
-            Sello de seguridad: <span className="text-[#4F46E5]">Verificado presencialmente</span>
-          </h2>
+const getDetailVerificationChecklist = (publicLevel: DetailVerificationVisibleLevel): DetailVerificationChecklistItem[] => {
+  if (publicLevel === 'presencial') {
+    return [
+      { key: 'identity', confirmed: true, label: 'Identidad del anfitrión' },
+      { key: 'location', confirmed: true, label: 'Ubicación confirmada' },
+      { key: 'access', confirmed: true, label: 'Acceso validado' },
+    ];
+  }
 
-          <p className="max-w-[1100px] text-[12px] leading-[1.4] text-[#64748B]">
-            Este sello identifica a las propiedades con verificación presencial completa.
-            Reduce dudas antes de reservar.
-          </p>
-        </div>
-      </header>
+  if (publicLevel === 'identity') {
+    return [
+      { key: 'identity', confirmed: true, label: 'Identidad del anfitrión' },
+      { key: 'location', confirmed: false, label: 'Ubicación no verificada' },
+      { key: 'access', confirmed: false, label: 'Acceso no verificado' },
+    ];
+  }
 
-      <div className="mt-5 border-t border-[#E5E7EB]" />
+  return [
+    { key: 'identity', confirmed: false, label: 'Identidad no confirmada' },
+    { key: 'location', confirmed: false, label: 'Ubicación no confirmada' },
+    { key: 'access', confirmed: false, label: 'Acceso no confirmado' },
+  ];
+};
 
-      <div className="space-y-4 pt-8">
-        <p className="mb-8 text-[18px] font-extrabold uppercase tracking-[0.18em] text-[#0F172A]">
-          ¿Cómo funciona?
-        </p>
+const getBookingEntryCtaLabel = (publicLevel: DetailVerificationVisibleLevel) => {
+  if (publicLevel === 'presencial') {
+    return 'Consultar disponibilidad segura';
+  }
 
-        <div className="grid w-full grid-cols-1 gap-14 md:grid-cols-4 md:gap-10" aria-label="Cómo funciona la verificación presencial">
-          {PRESENCIAL_VERIFICATION_STEPS.map((step, index) => (
-            <React.Fragment key={step.number}>
-              <div className="relative flex min-w-0 flex-col items-center text-center md:px-2">
-                <div className="flex h-[112px] w-full items-center justify-center">
-                  {index === PRESENCIAL_VERIFICATION_STEPS.length - 1 ? (
-                    <PresencialVerificationSealMark
-                      alt="Verificado presencialmente"
-                      className="mx-auto h-[84px] w-auto md:h-[92px]"
-                    />
-                  ) : (
-                    <div className="relative flex h-[88px] w-[88px] items-center justify-center rounded-full border-2 border-[#1D8675] bg-white text-[#1D8675]">
-                      <span className="absolute -left-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-[#4F46E5] text-[0.68rem] font-bold text-white shadow-[0_8px_16px_-12px_rgba(79,70,229,0.55)]">
-                        {step.number}
-                      </span>
-                      <step.icon className="h-8 w-8 text-[#1D8675]" />
-                    </div>
-                  )}
-                </div>
+  if (publicLevel === 'identity') {
+    return 'Consultar disponibilidad con anfitrión verificado';
+  }
 
-                <h4 className="mt-5 max-w-[220px] text-[16px] font-bold leading-[1.22] text-[#0F172A] md:min-h-[60px]">
-                  {step.title}
-                </h4>
-                <p className="mx-auto mt-3 max-w-[220px] text-[13px] leading-[1.45] text-[#64748B] md:min-h-[92px]">
-                  {step.description}
-                </p>
+  return 'Consultar disponibilidad';
+};
 
-                {index < PRESENCIAL_VERIFICATION_STEPS.length - 1 ? (
-                  <span className="pointer-events-none absolute right-[-24px] top-[48px] hidden select-none text-[1.35rem] leading-none text-[#8B7CFF] md:block" aria-hidden="true">
-                    →
-                  </span>
-                ) : null}
-              </div>
-            </React.Fragment>
-          ))}
-        </div>
-      </div>
+const getBookingCtaSupportCopy = (publicLevel: DetailVerificationVisibleLevel) => {
+  if (publicLevel === 'presencial') {
+    return 'Esta propiedad fue validada en persona';
+  }
 
-      <div className="mt-12 flex items-start gap-6 rounded-[20px] border border-[#E7E0FF] bg-[#F7F5FF] px-8 py-6">
-        <div className="mt-1 flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#F1EEFF] text-[#4F46E5]">
-          <Icons.ShieldCheck className="h-7 w-7" />
-        </div>
+  if (publicLevel === 'identity') {
+    return 'La identidad del anfitrión fue confirmada';
+  }
 
-        <div className="min-w-0 flex-1">
-          <div className="space-y-1.5">
-            <h4 className="text-[20px] font-bold leading-[1.25] text-[#4F46E5]">
-              Solo propiedades con verificación presencial completa
-            </h4>
-            <p className="text-[16px] leading-[1.5] text-[#64748B]">
-              Para mostrar este sello, confirmamos identidad, acceso real, vínculo comprobable y ubicación durante la visita.
-            </p>
-            <p className="text-[14px] leading-[1.5] text-[#64748B]">
-              No evaluamos estado ni calidad del inmueble.
-            </p>
-          </div>
-
-          <ul className="mt-4 grid gap-x-6 gap-y-3 text-[16px] leading-[1.5] text-[#475569] sm:grid-cols-2">
-              {PRESENCIAL_VERIFICATION_ITEMS.map((item) => (
-                <li key={item} className="inline-flex min-w-0 items-start gap-2.5">
-                  <Icons.CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-[#4F46E5]" />
-                  <span>{item}</span>
-                </li>
-              ))}
-          </ul>
-        </div>
-      </div>
-    </div>
-  );
+  return null;
 };
 
 const getHostName = (property: PropertyDetailData) => property.host?.name || property.hostName || 'Anfitrión';
@@ -563,11 +493,9 @@ export const PropertyDetailShell: React.FC<{
   const [hasScrolledPastStickyIntro, setHasScrolledPastStickyIntro] = useState(false);
   const [hasScrolledPastStickyDeepThreshold, setHasScrolledPastStickyDeepThreshold] = useState(false);
   const [hasEngagedWithDecisionContent, setHasEngagedWithDecisionContent] = useState(false);
-  const [activeVerificationTooltip, setActiveVerificationTooltip] = useState<VerificationTooltipState | null>(null);
   const bookingStepPanelRef = useRef<HTMLDivElement | null>(null);
   const datePickerTriggerRef = useRef<HTMLButtonElement | null>(null);
   const pendingDatePickerOpenRef = useRef(false);
-  const verificationChipRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
   const reviewCount = Math.max(Number(property.reviewsCount) || 0, reviews.length);
   const nightly = getPositiveNumber(property?.price) ?? 0;
@@ -588,14 +516,17 @@ export const PropertyDetailShell: React.FC<{
     bathroomsCount ? formatCountLabel(bathroomsCount, 'baño', 'baños') : null,
   ].filter((value): value is string => Boolean(value));
   const verificationDetails = getPropertyVerificationDetails(property);
-  const verificationPreviewMode = verificationDetails.previewMode;
-  const verificationPreviewItems = verificationDetails.detailItems;
-  const showPremiumVerificationInfoCard = verificationPreviewMode === 'premium';
+  const detailVerificationState = getPropertyCardVerificationState(property);
+  const heroVerificationCopy = getHeroVerificationCopy(detailVerificationState.publicLevel);
+  const detailVerificationChecklist = getDetailVerificationChecklist(detailVerificationState.publicLevel);
+  const isPresencialDetail = detailVerificationState.publicLevel === 'presencial';
+  const isIdentityDetail = detailVerificationState.publicLevel === 'identity';
   const hostResponseSignal = getHostResponseSignal(property.hostInteractionHistory);
   const completedReservationsLabel = property.hostInteractionHistory?.completedReservationsCount
     ? `${property.hostInteractionHistory.completedReservationsCount} ${property.hostInteractionHistory.completedReservationsCount === 1 ? 'reserva cerrada' : 'reservas cerradas'}`
     : null;
-  const hostSinceLabel = property.hostSince ? `Miembro desde ${formatMonthYear(property.hostSince)}` : null;
+  const bookingEntryCtaLabel = getBookingEntryCtaLabel(detailVerificationState.publicLevel);
+  const bookingCtaSupportCopy = getBookingCtaSupportCopy(detailVerificationState.publicLevel);
   const visibleReviews = reviews.slice(0, 2);
   const hostTrustSignals = (() => {
     const mergedSignals: TrustSignal[] = [];
@@ -661,7 +592,6 @@ export const PropertyDetailShell: React.FC<{
   const mobileBookingSummary = hasCompleteDates
     ? `${nightsSummaryLabel} · ${guestCountLabel} · ${formatCurrency(total)}`
     : `${guestCountLabel} · Total al elegir fechas`;
-  const bookingEntryCtaLabel = 'Consultar disponibilidad';
   const stickyBookingBrowseCtaLabel = 'Ver disponibilidad';
   const stickyBookingCoordinationCtaLabel = verificationDetails.isFullyVerified
     ? 'Coordinar visita o fechas'
@@ -1039,36 +969,6 @@ export const PropertyDetailShell: React.FC<{
   const handleReserve = async (e: React.FormEvent) => {
     e.preventDefault();
     await submitReservationRequest();
-  };
-
-  const hideVerificationTooltip = () => setActiveVerificationTooltip((current) => current ? null : current);
-
-  const showVerificationTooltip = (key: string) => {
-    const chip = verificationChipRefs.current[key];
-
-    if (!chip || typeof window === 'undefined') {
-      return;
-    }
-
-    const rect = chip.getBoundingClientRect();
-    const maxTooltipWidth = 320;
-    const horizontalViewportPadding = 16;
-    const tooltipWidth = Math.min(maxTooltipWidth, window.innerWidth - horizontalViewportPadding * 2);
-    const left = Math.min(
-      Math.max(rect.left + rect.width / 2, tooltipWidth / 2 + horizontalViewportPadding),
-      window.innerWidth - tooltipWidth / 2 - horizontalViewportPadding,
-    );
-    const estimatedTooltipHeight = 108;
-    const placement = rect.bottom + estimatedTooltipHeight + 16 > window.innerHeight ? 'top' : 'bottom';
-    const top = placement === 'top' ? rect.top - 10 : rect.bottom + 10;
-
-    setActiveVerificationTooltip({
-      key,
-      top,
-      left,
-      width: tooltipWidth,
-      placement,
-    });
   };
 
   const buildReservationRequestContext = (
@@ -1463,6 +1363,41 @@ export const PropertyDetailShell: React.FC<{
                   <span className="pb-1 text-base font-semibold text-slate-500">/ noche</span>
                 </div>
 
+                <div
+                  className={cn(
+                    'inline-flex max-w-full items-start gap-3 rounded-[24px] border px-5 py-4 shadow-[0_24px_52px_-34px_rgba(15,23,42,0.28)]',
+                    isPresencialDetail && 'border-emerald-300 bg-emerald-100 text-emerald-950 shadow-[0_28px_60px_-32px_rgba(5,150,105,0.34)]',
+                    isIdentityDetail && 'border-[#D1D5DB] bg-[#F3F4F6] text-[#374151]',
+                    !isPresencialDetail && !isIdentityDetail && 'border-[#E5E7EB] bg-[#F9FAFB] text-[#4B5563]',
+                  )}
+                >
+                  {isPresencialDetail ? (
+                    <PresencialVerificationSealMark
+                      alt="Verificado en persona"
+                      className="mt-0.5 h-14 w-auto shrink-0"
+                    />
+                  ) : (
+                    <span
+                      className={cn(
+                        'mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border bg-white',
+                        isIdentityDetail ? 'border-[#D1D5DB] text-emerald-600' : 'border-[#E5E7EB] text-slate-400',
+                      )}
+                      aria-hidden="true"
+                    >
+                      {isIdentityDetail ? <Icons.Check className="h-5 w-5" /> : <Icons.Info className="h-5 w-5" />}
+                    </span>
+                  )}
+
+                  <div className="min-w-0">
+                    <p className={cn('text-[0.98rem] font-semibold leading-5', isPresencialDetail ? 'text-emerald-900' : isIdentityDetail ? 'text-[#374151]' : 'text-[#4B5563]')}>
+                      {heroVerificationCopy.title}
+                    </p>
+                    <p className={cn('mt-1 text-[0.78rem] leading-5', isPresencialDetail ? 'text-emerald-900/85' : 'text-[#6B7280]')}>
+                      {heroVerificationCopy.description}
+                    </p>
+                  </div>
+                </div>
+
                 <div className="flex flex-wrap items-center gap-2.5">
                   {guestCapacity ? (
                     <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm font-medium text-slate-700">
@@ -1503,97 +1438,56 @@ export const PropertyDetailShell: React.FC<{
                     {bookingEntryCtaLabel}
                   </>
                 </Button>
+
+                {bookingCtaSupportCopy ? (
+                  <p className="text-center text-[0.76rem] font-medium leading-5 text-slate-500">
+                    {bookingCtaSupportCopy}
+                  </p>
+                ) : null}
               </div>
             </div>
           </div>
 
-          <section
-            data-testid="property-verification-preview"
-            aria-label="Estado de verificación"
-            className="relative z-20 mt-4 border-t border-slate-200/70 pt-4 lg:mt-5"
-          >
-            {showPremiumVerificationInfoCard ? (
-              <PresencialVerificationInfoCard />
-            ) : verificationPreviewItems.length > 0 ? (
-              <ul className="flex flex-wrap gap-2.5" aria-label="Estado visible del aviso">
-                {verificationPreviewItems.map((item) => {
-                  const isTooltipVisible = activeVerificationTooltip?.key === item.key;
-                  const tooltipId = `property-verification-tooltip-${item.key}`;
+        </section>
 
-                  return (
-                    <li
-                      key={item.key}
-                      data-status={item.status}
-                      className="relative z-0 list-none"
+        <section
+          data-testid="property-verification-preview"
+          aria-label="Qué está confirmado"
+          data-motion-block
+          className="app-motion-block mt-3 md:mt-5"
+        >
+          <div className="rounded-[24px] border border-slate-200/80 bg-white px-6 py-5 shadow-[0_24px_60px_-48px_rgba(15,23,42,0.24)] sm:px-7 sm:py-6">
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#4F46E5]/65">Verificación</p>
+                <h2 className="text-xl font-semibold tracking-tight text-slate-950">Qué está confirmado</h2>
+              </div>
+
+              <ul className="space-y-3" aria-label="Qué está confirmado">
+                {detailVerificationChecklist.map((item) => (
+                  <li
+                    key={item.key}
+                    className={cn('flex min-w-0 items-start gap-3 text-[0.98rem] font-medium leading-6', item.confirmed ? 'text-slate-900' : 'text-[#4B5563]')}
+                  >
+                    <span
+                      className={cn(
+                        'mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full',
+                        item.confirmed ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400',
+                      )}
+                      aria-hidden="true"
                     >
-                      <button
-                        ref={(element) => {
-                          verificationChipRefs.current[item.key] = element;
-                        }}
-                        type="button"
-                        aria-describedby={isTooltipVisible ? tooltipId : undefined}
-                        aria-label={item.detailLabel}
-                        onMouseEnter={() => showVerificationTooltip(item.key)}
-                        onMouseLeave={hideVerificationTooltip}
-                        onFocus={() => showVerificationTooltip(item.key)}
-                        onBlur={hideVerificationTooltip}
-                        onClick={() => {
-                          if (activeVerificationTooltip?.key === item.key) {
-                            hideVerificationTooltip();
-                            return;
-                          }
-
-                          showVerificationTooltip(item.key);
-                        }}
-                        className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-emerald-200/90 bg-emerald-50 px-3 py-2 text-[13px] font-medium leading-none text-slate-800 transition-all duration-200 ease-out hover:-translate-y-px hover:shadow-[0_14px_24px_-20px_rgba(15,23,42,0.35)] focus-visible:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/20"
-                      >
-                        <span
-                          className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-emerald-600"
-                          aria-hidden="true"
-                        >
-                          <Icons.Check className="h-3.5 w-3.5" />
-                        </span>
-
-                        <span className="whitespace-nowrap text-slate-800">
-                          {item.detailLabel}
-                        </span>
-                      </button>
-
-                    </li>
-                  );
-                })}
+                      {item.confirmed ? <Icons.Check className="h-4 w-4" /> : <Icons.X className="h-4 w-4" />}
+                    </span>
+                    <span>{item.label}</span>
+                  </li>
+                ))}
               </ul>
-            ) : (
-              <p className="rounded-[18px] border border-slate-200/80 bg-slate-50/90 px-4 py-3 text-sm leading-6 text-slate-600">
-                {verificationDetails.countLabel}. No evaluamos estado ni calidad del inmueble.
-              </p>
-            )}
-          </section>
-
-          {activeVerificationTooltip && typeof document !== 'undefined'
-            ? createPortal(
-              <div
-                id={`property-verification-tooltip-${activeVerificationTooltip.key}`}
-                role="tooltip"
-                className="pointer-events-none fixed z-[120] whitespace-normal rounded-2xl border border-slate-200 bg-white px-3.5 py-3 text-[13px] font-medium leading-5 text-slate-600 shadow-[0_28px_60px_-28px_rgba(15,23,42,0.38)]"
-                style={{
-                  top: activeVerificationTooltip.top,
-                  left: activeVerificationTooltip.left,
-                  width: activeVerificationTooltip.width,
-                  transform: activeVerificationTooltip.placement === 'top'
-                    ? 'translate(-50%, -100%)'
-                    : 'translateX(-50%)',
-                }}
-              >
-                {verificationPreviewItems.find((item) => item.key === activeVerificationTooltip.key)?.description}
-              </div>,
-              document.body,
-            )
-            : null}
+            </div>
+          </div>
         </section>
 
         <main
-          className="space-y-6 md:space-y-8"
+          className="mt-3 space-y-6 md:mt-5 md:space-y-8"
           onPointerDownCapture={handleDecisionContentEngagement}
           onFocusCapture={handleDecisionContentEngagement}
         >
@@ -1668,9 +1562,9 @@ export const PropertyDetailShell: React.FC<{
                   </div>
 
                   <div className="space-y-1">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#4F46E5]/65">Anfitrión</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#4F46E5]/65">Quién publica</p>
                     <h2 className="text-xl font-semibold tracking-tight text-slate-950">{hostName}</h2>
-                    {hostSinceLabel ? <p className="text-sm leading-6 text-[#1D8675]/75">{hostSinceLabel}</p> : null}
+                    <p className="text-sm leading-6 text-[#1D8675]/75">Identidad confirmada dentro de la plataforma</p>
                   </div>
                 </div>
 
@@ -1707,8 +1601,8 @@ export const PropertyDetailShell: React.FC<{
             <div className="space-y-5">
               <SectionTitle
                 eyebrow="Opiniones"
-                heading={reviewCount > 0 ? `${reviewCount} ${reviewCount === 1 ? 'opinión visible' : 'opiniones visibles'}` : 'Opiniones del lugar'}
-                description="Comentarios de estadías reales que suman contexto antes de decidir."
+                heading="Opiniones reales"
+                description="Experiencias de huéspedes en esta propiedad"
               />
 
               {visibleReviews.length > 0 ? (

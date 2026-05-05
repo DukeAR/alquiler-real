@@ -1,6 +1,12 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
-import { clearDataProviderCache, getDataProviderStats, invalidateRelatedData, loadResponse } from '../dataProvider';
+import {
+  clearDataProviderCache,
+  getDataProviderStats,
+  getRequestCacheMode,
+  invalidateRelatedData,
+  loadResponse,
+} from '../dataProvider';
 
 const createJsonResponse = (payload: unknown) => new Response(JSON.stringify(payload), {
   status: 200,
@@ -45,5 +51,10 @@ describe('dataProvider', () => {
 
     expect(loader).toHaveBeenCalledTimes(2);
     expect(getDataProviderStats().invalidations).toBeGreaterThanOrEqual(1);
+  });
+
+  test('avoids browser force-cache for the public property catalog', () => {
+    expect(getRequestCacheMode('/api/properties?guests=2', 'GET')).toBe('no-store');
+    expect(getRequestCacheMode('/api/properties/demo_prop_1/reviews', 'GET')).toBe('force-cache');
   });
 });

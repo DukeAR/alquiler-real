@@ -162,10 +162,16 @@ export const ExplorePage = ({
     ? orderedProperties.filter((property) => meetsRealVerificationFilter(property))
     : orderedProperties;
   const usePresencialFeaturedSplit = !hasActiveFilters && sortBy === 'verification';
+  const presencialFeaturedProperties = usePresencialFeaturedSplit
+    ? filteredProperties.filter((property) => hasPropertyPresencialVerificationSeal(property))
+    : [];
+  const shouldSplitPresencialFeatured = usePresencialFeaturedSplit && presencialFeaturedProperties.length > 1;
   const featuredProperties = hasActiveFilters
     ? []
-    : usePresencialFeaturedSplit
-      ? filteredProperties.filter((property) => hasPropertyPresencialVerificationSeal(property))
+    : shouldSplitPresencialFeatured
+      ? presencialFeaturedProperties
+      : usePresencialFeaturedSplit
+        ? []
       : filteredProperties.slice(0, 3);
   const featuredIds = new Set(featuredProperties.map((property) => property.id));
   const appliedFilterCount = [
@@ -178,8 +184,10 @@ export const ExplorePage = ({
   ].filter(Boolean).length;
   const listingProperties = hasActiveFilters
     ? filteredProperties
-    : usePresencialFeaturedSplit
+    : shouldSplitPresencialFeatured
       ? filteredProperties.filter((property) => !hasPropertyPresencialVerificationSeal(property))
+      : usePresencialFeaturedSplit
+        ? filteredProperties
       : filteredProperties.filter((property) => !featuredIds.has(property.id));
   const visibleProperties = listingProperties.slice(0, visibleCount);
   const hasMoreResults = visibleProperties.length < listingProperties.length;

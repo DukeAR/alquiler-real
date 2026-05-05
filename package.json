@@ -7,7 +7,7 @@
     "dev": "concurrently \"npm run server\" \"vite\"",
     "dev:full": "node ./scripts/dev-full.cjs",
     "dev:frontend": "vite",
-    "server": "cross-env NODE_ENV=development tsx server/index.ts",
+    "server": "cross-env NODE_ENV=development tsx watch server/index.ts",
     "start": "cross-env NODE_ENV=production tsx server/index.ts",
     "build": "vite build",
     "build:analyze": "cross-env ANALYZE=true vite build",

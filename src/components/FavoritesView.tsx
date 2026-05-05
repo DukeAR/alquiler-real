@@ -219,7 +219,7 @@ export const FavoritesView: React.FC = () => {
           </Card>
         ) : null}
 
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 auto-rows-fr items-stretch gap-5 md:grid-cols-2 lg:grid-cols-3">
           {sortedProperties.map((property) => (
             <PropertyCard
               key={property.id}

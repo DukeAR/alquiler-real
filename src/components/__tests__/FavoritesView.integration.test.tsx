@@ -96,13 +96,15 @@ describe('FavoritesView integration', () => {
       'Casa frente al mar',
       'Departamento tranquilo',
     ]);
-    expect(screen.getByText('Información publicada por el anfitrión')).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: 'Verificado presencialmente' })).toBeInTheDocument();
+    expect(screen.queryByText('Identidad validada')).toBeNull();
+    expect(screen.queryByText('Identidad verificada')).toBeNull();
+    expect(screen.queryByText('Información publicada por el anfitrión')).toBeNull();
+    expect(screen.getByLabelText('Verificado presencialmente')).toBeInTheDocument();
     expect(screen.queryByText('Verificación parcial')).toBeNull();
     expect(screen.queryByText('5 comprobaciones visibles')).toBeNull();
     expect(screen.queryByText('Mejor verificado')).toBeNull();
     expect(screen.queryByText('Alto nivel de verificación')).toBeNull();
-    expect(screen.getAllByText('Ver detalle')).toHaveLength(2);
-    expect(screen.getAllByRole('button', { name: /Abrir detalle de/i })).toHaveLength(2);
+    expect(screen.getAllByText('Ver propiedad')).toHaveLength(2);
+    expect(screen.getAllByRole('button', { name: /Ver propiedad:/i })).toHaveLength(2);
   });
 });

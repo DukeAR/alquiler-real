@@ -37,8 +37,8 @@ describe('ExploreFiltersBar', () => {
     expect(screen.queryByText('Precio')).not.toBeInTheDocument();
     expect(screen.queryByText('Verificación')).not.toBeInTheDocument();
     expect(controlsGrid).toHaveClass('grid', 'grid-cols-1', 'md:grid-cols-2', 'lg:grid-cols-4');
-    expect(verifiedTitle).toHaveClass('text-[0.78rem]', 'font-semibold', 'tracking-[-0.015em]');
-    expect(verifiedSubtitle).toHaveClass('text-[0.64rem]', 'font-medium', 'tracking-[-0.01em]');
+    expect(verifiedTitle).toHaveClass('text-[0.82rem]', 'font-semibold', 'tracking-[-0.015em]');
+    expect(verifiedSubtitle).toHaveClass('text-[0.68rem]', 'font-medium', 'tracking-[-0.01em]');
     expect(screen.getByRole('option', { name: 'Más verificados primero' })).toBeInTheDocument();
 
     fireEvent.click(checkbox);

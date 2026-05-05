@@ -91,6 +91,8 @@ const touchPathStat = (path: string, field: keyof PathStats) => {
 
 const isSessionSensitivePath = (path: string) => /^\/api\/(?:auth|notifications|favorites)(?:\/|$)/.test(path);
 
+const requiresFreshBrowserRead = (path: string) => path === '/api/properties';
+
 const getDefaultTtlMs = (path: string) => {
   if (/^\/api\/properties\/[^/]+\/reviews(?:\/|$)/.test(path)) {
     return 60_000;
@@ -264,6 +266,8 @@ export const getRequestCacheMode = (
   explicitCache?: RequestCache,
   noCache = false,
 ): RequestCache | undefined => {
+  const path = getRequestPath(endpoint);
+
   if (explicitCache) {
     return explicitCache;
   }
@@ -272,7 +276,11 @@ export const getRequestCacheMode = (
     return undefined;
   }
 
-  return isSessionSensitivePath(getRequestPath(endpoint)) ? 'default' : 'force-cache';
+  if (requiresFreshBrowserRead(path)) {
+    return 'no-store';
+  }
+
+  return isSessionSensitivePath(path) ? 'default' : 'force-cache';
 };
 
 export const getRequestTtlMs = (

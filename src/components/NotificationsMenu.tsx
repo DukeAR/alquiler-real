@@ -193,19 +193,19 @@ export const NotificationsMenu: React.FC<NotificationsMenuProps> = ({
         type="button"
         onClick={handleToggle}
         className={cn(
-          'relative inline-flex h-9 w-9 items-center justify-center rounded-xl transition-[color,background-color,box-shadow] duration-200 focus-visible:outline-none focus-visible:shadow-[var(--app-focus-ring)] sm:h-10 sm:w-10',
+          'relative inline-flex h-[3.25rem] w-[3.25rem] items-center justify-center rounded-[1rem] border transition-[color,background-color,border-color,box-shadow,transform] duration-200 ease-out motion-reduce:transform-none hover:-translate-y-px active:translate-y-0 focus-visible:outline-none focus-visible:shadow-[var(--app-focus-ring)] lg:h-14 lg:w-14',
           inverted
-            ? 'text-white/84 hover:bg-white/10 hover:text-white'
-            : 'text-slate-500 hover:bg-slate-100/70 hover:text-slate-900',
-          isOpen && (inverted ? 'bg-white/12 text-white' : 'bg-slate-100/75 text-slate-950'),
+            ? 'border-white/16 bg-black/16 text-white/84 shadow-[0_16px_30px_-26px_rgba(0,0,0,0.3)] backdrop-blur-[10px] hover:border-white/22 hover:bg-black/24 hover:text-white hover:shadow-[0_18px_32px_-24px_rgba(0,0,0,0.3)]'
+            : 'border-slate-200/88 bg-white/92 text-slate-500 shadow-[0_16px_30px_-28px_rgba(15,23,42,0.16)] hover:border-slate-300 hover:bg-white hover:text-slate-900 hover:shadow-[0_18px_32px_-24px_rgba(15,23,42,0.18)]',
+          isOpen && (inverted ? 'border-white/24 bg-black/24 text-white' : 'border-slate-300 bg-white text-slate-950'),
         )}
         aria-label={buttonLabel}
         aria-expanded={isOpen}
         aria-controls="app-notifications-panel"
       >
-        <Icons.Bell className="h-4.5 w-4.5" />
+        <Icons.Bell className="h-[1.05rem] w-[1.05rem] lg:h-[1.1rem] lg:w-[1.1rem]" />
         {unreadCount > 0 ? (
-          <span aria-hidden="true" className="absolute -right-1 -top-1 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-black text-white">
+          <span aria-hidden="true" className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-black text-white">
             {unreadCount}
           </span>
         ) : null}

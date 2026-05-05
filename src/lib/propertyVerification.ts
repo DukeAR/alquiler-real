@@ -177,7 +177,7 @@ export const PRESENCIAL_VERIFICATION_LEVEL_LABEL = 'Verificación presencial';
 
 export const HOST_IDENTITY_VALIDATED_LABEL = 'Identidad del anfitrión validada';
 
-const PROPERTY_CARD_IDENTITY_VALIDATED_LABEL = 'Identidad validada';
+const PROPERTY_CARD_IDENTITY_VALIDATED_LABEL = 'Identidad verificada';
 
 export const HOST_PUBLISHED_INFO_LABEL = 'Información publicada por el anfitrión';
 
@@ -756,7 +756,25 @@ const compareNullableAscending = (left: number | null, right: number | null) => 
   return left - right;
 };
 
+const getVisibleVerificationLevelRank = (property: PropertySortLike) => {
+  if (Boolean(property.hasPresencialVerification || property.onsiteVerifiedAt)) {
+    return 2;
+  }
+
+  const hasIdentityValidation = property.identityValidated === true
+    || hasExplicitIdentityVerification(property.verificationSummary?.items)
+    || hasExplicitIdentityVerification(property.verificationItems);
+
+  return hasIdentityValidation ? 1 : 0;
+};
+
 const comparePropertiesByVerificationSignals = (left: PropertySortLike, right: PropertySortLike) => {
+  const visibleLevelDifference = getVisibleVerificationLevelRank(right) - getVisibleVerificationLevelRank(left);
+
+  if (visibleLevelDifference !== 0) {
+    return visibleLevelDifference;
+  }
+
   const leftVerification = getPropertyVerificationPresentationState(left);
   const rightVerification = getPropertyVerificationPresentationState(right);
   const onsiteDifference = Number(rightVerification.isFullyVerified) - Number(leftVerification.isFullyVerified);

@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { AppShell } from '../AppShell';
@@ -130,6 +130,16 @@ describe('AppShell', () => {
     expect(logoMark).toHaveAttribute('src', '/verified-presencial-badge3.png');
   });
 
+  test('keeps the detail header brand clean by removing the badge icon on /detail routes', async () => {
+    await renderShell(['/detail/demo_prop_casa_familiar_1']);
+
+    const homeButton = screen.getByRole('button', { name: 'Ir al inicio de Alquiler Real' });
+    const logoMark = homeButton.querySelector('img[src="/verified-presencial-badge3.png"]');
+
+    expect(homeButton).toHaveTextContent('Alquiler Real');
+    expect(logoMark).toBeNull();
+  });
+
   test('shows Guardados when the user is authenticated', async () => {
     useAuthMock.mockReturnValue({
       user: {
@@ -149,6 +159,8 @@ describe('AppShell', () => {
     await renderShell();
 
     expect(screen.getAllByRole('button', { name: 'Guardados' })).not.toHaveLength(0);
+    expect(screen.getAllByRole('button', { name: 'Guardados' })[0]).toHaveClass('rounded-full');
+    expect(screen.getAllByRole('button', { name: 'Guardados' })[0]).toHaveClass('border');
     expect(screen.getByTestId('notifications-menu')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Publicar propiedad' })).not.toBeInTheDocument();
     expect(screen.getByTestId('account-mode-switch')).toBeInTheDocument();
@@ -208,6 +220,73 @@ describe('AppShell', () => {
     expect(screen.getAllByRole('button', { name: 'Ingresá' })).not.toHaveLength(0);
     expect(screen.getByRole('button', { name: 'Publicar propiedad' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Reintentar sesión' })).not.toBeInTheDocument();
+  });
+
+  test('stretches the public desktop header without relying on fixed offset margins', async () => {
+    await renderShell();
+
+    const header = screen.getByRole('banner');
+    const headerRow = header.firstElementChild;
+    const homeButton = within(header).getByRole('button', { name: 'Ir al inicio de Alquiler Real' });
+    const desktopNav = within(header).getByRole('navigation', { name: 'Navegación principal' });
+    const leftGroup = homeButton.parentElement;
+    const guestActionsGroup = screen.getByRole('button', { name: 'Publicar propiedad' }).parentElement;
+
+    expect(headerRow).not.toBeNull();
+    expect(headerRow).toHaveClass('justify-between');
+    expect(leftGroup).not.toBeNull();
+    expect(leftGroup).toHaveClass('flex-1');
+    expect(leftGroup).toHaveClass('justify-between');
+    expect(leftGroup).toHaveClass('lg:gap-8');
+    expect(leftGroup).toHaveClass('xl:gap-10');
+    expect(desktopNav).toHaveClass('flex-1');
+    expect(desktopNav).toHaveClass('justify-between');
+    expect(desktopNav).toHaveClass('gap-5');
+    expect(desktopNav).toHaveClass('xl:gap-6');
+    expect(desktopNav).toHaveClass('px-5');
+    expect(desktopNav).toHaveClass('xl:px-8');
+    expect(desktopNav).not.toHaveClass('lg:ml-auto');
+    expect(desktopNav).not.toHaveClass('lg:pl-6');
+
+    expect(guestActionsGroup).not.toBeNull();
+    expect(guestActionsGroup).toHaveClass('justify-end');
+    expect(guestActionsGroup).toHaveClass('lg:pl-3');
+    expect(guestActionsGroup).toHaveClass('xl:pl-4');
+    expect(guestActionsGroup).toHaveClass('lg:gap-6');
+    expect(guestActionsGroup).toHaveClass('xl:gap-7');
+    expect(guestActionsGroup).not.toHaveClass('lg:ml-8');
+  });
+
+  test('keeps authenticated desktop actions balanced after the header stretches', async () => {
+    useAuthMock.mockReturnValue({
+      user: {
+        id: 'u1',
+        name: 'Ana',
+        email: 'ana@test.com',
+        role: 'tenant',
+        canGuest: true,
+        canHost: false,
+        activeMode: 'guest',
+      },
+      loading: false,
+      status: 'authenticated',
+      refresh: vi.fn(async () => undefined),
+    });
+
+    await renderShell();
+
+    const header = screen.getByRole('banner');
+    const desktopNav = within(header).getByRole('navigation', { name: 'Navegación principal' });
+    const actionsGroup = screen.getByRole('button', { name: 'Ir al perfil' }).parentElement;
+
+    expect(desktopNav).toHaveClass('flex-1');
+    expect(desktopNav).toHaveClass('justify-between');
+    expect(actionsGroup).not.toBeNull();
+    expect(actionsGroup).toHaveClass('justify-end');
+    expect(actionsGroup).toHaveClass('lg:pl-3');
+    expect(actionsGroup).toHaveClass('xl:pl-4');
+    expect(actionsGroup).toHaveClass('lg:gap-5');
+    expect(actionsGroup).toHaveClass('xl:gap-6');
   });
 
   test('hides the mobile navigation on detail routes to avoid stacked fixed bars', async () => {

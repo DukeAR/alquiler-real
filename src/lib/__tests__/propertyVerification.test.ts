@@ -193,7 +193,17 @@ describe('propertyVerification', () => {
       { id: 'p3', identityValidated: true, locationVerified: true, lat: -37.1, lng: -56.9, verificationPhotoCount: 2, price: 130_000 },
     ], 'verification');
 
-    expect(sorted.map((property) => property.id)).toEqual(['p3', 'p2', 'p1']);
+    expect(sorted.map((property) => property.id)).toEqual(['p3', 'p1', 'p2']);
+  });
+
+  test('keeps visible levels ordered as presencial, identidad y sin validación', () => {
+    const sorted = sortPropertiesByCatalogOrder([
+      { id: 'none', locationVerified: true, verificationPhotoCount: 3, price: 100_000 },
+      { id: 'identity', identityValidated: true, price: 95_000 },
+      { id: 'presencial', hasPresencialVerification: true, price: 120_000 },
+    ], 'verification');
+
+    expect(sorted.map((property) => property.id)).toEqual(['presencial', 'identity', 'none']);
   });
 
   test('uses host confirmation after location when the score is tied', () => {
