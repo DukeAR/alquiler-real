@@ -29,17 +29,19 @@ describe('ExploreFiltersBar', () => {
 
     const checkbox = screen.getByRole('checkbox', { name: /Solo verificados presencialmente/i });
     const controlsGrid = screen.getByTestId('explore-filters-controls');
-    const verifiedTitle = screen.getByText('Solo verificados');
-    const verifiedSubtitle = screen.getByText('con validación completa');
+    const verifiedTitle = screen.getByText('Solo propiedades verificadas presencialmente');
+    const verifiedSubtitle = screen.getByText('Filtra solo avisos con visita real');
 
     expect(checkbox).not.toBeChecked();
     expect(screen.queryByText('Ordenar por')).not.toBeInTheDocument();
     expect(screen.queryByText('Precio')).not.toBeInTheDocument();
     expect(screen.queryByText('Verificación')).not.toBeInTheDocument();
     expect(controlsGrid).toHaveClass('grid', 'grid-cols-1', 'md:grid-cols-2', 'lg:grid-cols-4');
-    expect(verifiedTitle).toHaveClass('text-[0.82rem]', 'font-semibold', 'tracking-[-0.015em]');
+    expect(verifiedTitle).toHaveClass('text-[0.8rem]', 'font-semibold', 'tracking-[-0.015em]');
     expect(verifiedSubtitle).toHaveClass('text-[0.68rem]', 'font-medium', 'tracking-[-0.01em]');
     expect(screen.getByRole('option', { name: 'Más verificados primero' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Precio más bajo' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Precio más alto' })).toBeInTheDocument();
 
     fireEvent.click(checkbox);
 

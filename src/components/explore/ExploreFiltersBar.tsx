@@ -90,8 +90,8 @@ export const ExploreFiltersBar = ({
               className={cn('app-control px-4', sharedControlClassName)}
             >
               <option value="verification">Más verificados primero</option>
-              <option value="rating">Mejor calificación</option>
               <option value="price">Precio más bajo</option>
+              <option value="price-desc">Precio más alto</option>
             </select>
             </div>
 
@@ -128,11 +128,11 @@ export const ExploreFiltersBar = ({
                 : 'border-[rgba(15,23,42,0.06)] bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)]',
             )}>
               <span className="flex min-w-0 flex-1 flex-col justify-center pr-1.5">
-                <span className="block truncate text-[0.82rem] font-semibold tracking-[-0.015em] leading-[1.05] text-slate-900">
-                  Solo verificados
+                <span className="block text-[0.8rem] font-semibold tracking-[-0.015em] leading-[1.15] text-slate-900">
+                  Solo propiedades verificadas presencialmente
                 </span>
-                <span className="mt-0.5 block truncate text-[0.68rem] font-medium tracking-[-0.01em] leading-[1.05] text-slate-500">
-                  con validación completa
+                <span className="mt-1 block text-[0.68rem] font-medium tracking-[-0.01em] leading-[1.1] text-slate-500">
+                  Filtra solo avisos con visita real
                 </span>
               </span>
 

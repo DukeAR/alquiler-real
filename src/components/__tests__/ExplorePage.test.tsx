@@ -116,13 +116,13 @@ describe('ExplorePage', () => {
     });
   });
 
-  test('splits home results into presencial featured cards and non-premium comparison cards', async () => {
+  test('keeps verification-first home results in a single mixed grid without rigid featured blocks', async () => {
     apiJsonMock.mockResolvedValue([
       {
         id: 'presencial-1',
         title: 'Casa verificada frente al mar',
         location: 'Costa del Este',
-        price: 120000,
+        price: 60000,
         description: 'Con visita presencial completa.',
         propertyType: 'house',
         maxGuests: 5,
@@ -137,38 +137,10 @@ describe('ExplorePage', () => {
         coordinates: { lat: -36.7, lng: -56.7 },
       },
       {
-        id: 'identity-1',
-        title: 'PH con identidad validada',
-        location: 'Santa Teresita',
-        price: 78000,
-        description: 'Con validación de identidad visible.',
-        propertyType: 'house',
-        maxGuests: 4,
-        rating: 4.7,
-        reviewsCount: 10,
-        identityValidated: true,
-        hasPresencialVerification: false,
-        coordinates: { lat: -36.54, lng: -56.69 },
-      },
-      {
-        id: 'none-1',
-        title: 'Cabaña sin validación',
-        location: 'Aguas Verdes',
-        price: 52000,
-        description: 'Sin validaciones visibles.',
-        propertyType: 'cabin',
-        maxGuests: 3,
-        rating: 4.4,
-        reviewsCount: 5,
-        identityValidated: false,
-        hasPresencialVerification: false,
-        coordinates: { lat: -36.64, lng: -56.9 },
-      },
-      {
         id: 'presencial-2',
         title: 'Departamento con verificación presencial',
         location: 'San Bernardo',
-        price: 86000,
+        price: 70000,
         description: 'Con identidad, ubicación y acceso confirmados.',
         propertyType: 'apartment',
         maxGuests: 4,
@@ -181,6 +153,65 @@ describe('ExplorePage', () => {
         hasPresencialVerification: true,
         coordinates: { lat: -36.68, lng: -56.68 },
       },
+      {
+        id: 'identity-1',
+        title: 'PH con identidad validada',
+        location: 'Santa Teresita',
+        price: 50000,
+        description: 'Con validación de identidad visible.',
+        propertyType: 'house',
+        maxGuests: 4,
+        rating: 4.7,
+        reviewsCount: 10,
+        identityValidated: true,
+        hasPresencialVerification: false,
+        coordinates: { lat: -36.54, lng: -56.69 },
+      },
+      {
+        id: 'presencial-3',
+        title: 'Loft con visita real',
+        location: 'Mar de Ajó',
+        price: 80000,
+        description: 'Con verificación presencial reciente.',
+        propertyType: 'apartment',
+        maxGuests: 3,
+        rating: 4.7,
+        reviewsCount: 9,
+        identityValidated: true,
+        locationVerified: true,
+        propertyRelationshipVerified: true,
+        availabilityValidated: true,
+        hasPresencialVerification: true,
+        coordinates: { lat: -36.72, lng: -56.7 },
+      },
+      {
+        id: 'none-1',
+        title: 'Cabaña sin validación',
+        location: 'Aguas Verdes',
+        price: 40000,
+        description: 'Sin validaciones visibles.',
+        propertyType: 'cabin',
+        maxGuests: 3,
+        rating: 4.4,
+        reviewsCount: 5,
+        identityValidated: false,
+        hasPresencialVerification: false,
+        coordinates: { lat: -36.64, lng: -56.9 },
+      },
+      {
+        id: 'identity-2',
+        title: 'Casa con identidad confirmada',
+        location: 'Las Toninas',
+        price: 55000,
+        description: 'Solo con identidad verificada.',
+        propertyType: 'house',
+        maxGuests: 4,
+        rating: 4.5,
+        reviewsCount: 6,
+        identityValidated: true,
+        hasPresencialVerification: false,
+        coordinates: { lat: -36.5, lng: -56.7 },
+      },
     ]);
 
     render(<ExplorePage />);
@@ -191,11 +222,18 @@ describe('ExplorePage', () => {
 
     const latestCall = exploreResultsSectionMock.mock.calls.at(-1)?.[0];
 
-    expect(latestCall.featuredProperties.map((property: { id: string }) => property.id)).toEqual(['presencial-1', 'presencial-2']);
-    expect(latestCall.listingProperties.map((property: { id: string }) => property.id)).toEqual(['identity-1', 'none-1']);
+    expect(latestCall.featuredProperties).toEqual([]);
+    expect(latestCall.listingProperties.map((property: { id: string }) => property.id)).toEqual([
+      'presencial-1',
+      'presencial-2',
+      'identity-1',
+      'presencial-3',
+      'none-1',
+      'identity-2',
+    ]);
   });
 
-  test('keeps a single presencial result inside the main grid instead of opening a separate featured block', async () => {
+  test('keeps a single presencial result at the front of the main verification-first grid', async () => {
     apiJsonMock.mockResolvedValue([
       {
         id: 'presencial-1',

@@ -103,7 +103,7 @@ type PropertySortLike = Omit<PropertyVerificationLike, 'title' | 'location' | 'd
   lng?: number;
 };
 
-export type PropertyCatalogSort = 'verification' | 'rating' | 'price';
+export type PropertyCatalogSort = 'verification' | 'price' | 'price-desc';
 
 export type PropertyCatalogSortContext = {
   searchQuery?: string;
@@ -756,6 +756,8 @@ const compareNullableAscending = (left: number | null, right: number | null) => 
   return left - right;
 };
 
+const VERIFICATION_VISIBLE_LEVEL_SEQUENCE: Array<0 | 1 | 2> = [2, 2, 1, 2, 0, 1];
+
 const getVisibleVerificationLevelRank = (property: PropertySortLike) => {
   if (Boolean(property.hasPresencialVerification || property.onsiteVerifiedAt)) {
     return 2;
@@ -864,6 +866,42 @@ const comparePropertiesByVerificationCatalogOrder = (
   }
 
   return String(left.title || '').localeCompare(String(right.title || ''), 'es');
+};
+
+const mixPropertiesByVisibleVerificationLevel = <T extends PropertySortLike>(items: T[]) => {
+  if (items.length <= 2) {
+    return items;
+  }
+
+  const groupedItems: Record<0 | 1 | 2, T[]> = {
+    0: [],
+    1: [],
+    2: [],
+  };
+
+  items.forEach((item) => {
+    groupedItems[getVisibleVerificationLevelRank(item) as 0 | 1 | 2].push(item);
+  });
+
+  const mixedItems: T[] = [];
+  let sequenceIndex = 0;
+
+  while (groupedItems[2].length > 0 || groupedItems[1].length > 0 || groupedItems[0].length > 0) {
+    const preferredLevel = VERIFICATION_VISIBLE_LEVEL_SEQUENCE[sequenceIndex % VERIFICATION_VISIBLE_LEVEL_SEQUENCE.length];
+    const nextItem = groupedItems[preferredLevel].shift()
+      ?? groupedItems[2].shift()
+      ?? groupedItems[1].shift()
+      ?? groupedItems[0].shift();
+
+    if (!nextItem) {
+      break;
+    }
+
+    mixedItems.push(nextItem);
+    sequenceIndex += 1;
+  }
+
+  return mixedItems;
 };
 
 export const getPropertyVerificationGuidanceLabel = (
@@ -1163,25 +1201,20 @@ export const sortPropertiesByCatalogOrder = <T extends PropertySortLike>(
   const sortedItems = [...items];
 
   sortedItems.sort((left, right) => {
-    const ratingDifference = Number(right.rating || 0) - Number(left.rating || 0);
-    const reviewsDifference = Number(right.reviewsCount || 0) - Number(left.reviewsCount || 0);
-    const priceDifference = Number(left.price || 0) - Number(right.price || 0);
+    const ascendingPriceDifference = Number(left.price || 0) - Number(right.price || 0);
+    const descendingPriceDifference = Number(right.price || 0) - Number(left.price || 0);
 
     if (sortBy === 'price') {
-      if (priceDifference !== 0) {
-        return priceDifference;
+      if (ascendingPriceDifference !== 0) {
+        return ascendingPriceDifference;
       }
 
       return comparePropertiesByVerificationCatalogOrder(left, right, context);
     }
 
-    if (sortBy === 'rating') {
-      if (ratingDifference !== 0) {
-        return ratingDifference;
-      }
-
-      if (reviewsDifference !== 0) {
-        return reviewsDifference;
+    if (sortBy === 'price-desc') {
+      if (descendingPriceDifference !== 0) {
+        return descendingPriceDifference;
       }
 
       return comparePropertiesByVerificationCatalogOrder(left, right, context);
@@ -1189,6 +1222,10 @@ export const sortPropertiesByCatalogOrder = <T extends PropertySortLike>(
 
     return comparePropertiesByVerificationCatalogOrder(left, right, context);
   });
+
+  if (sortBy === 'verification') {
+    return mixPropertiesByVisibleVerificationLevel(sortedItems);
+  }
 
   return sortedItems;
 };

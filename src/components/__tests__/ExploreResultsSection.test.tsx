@@ -92,9 +92,9 @@ const renderSection = (props?: Partial<React.ComponentProps<typeof ExploreResult
     searchQuery: '',
     appliedFilterCount: 0,
     filteredProperties: sampleProperties,
-    featuredProperties: [sampleProperties[0]],
-    listingProperties: [sampleProperties[1], sampleProperties[2]],
-    visibleProperties: [sampleProperties[1], sampleProperties[2]],
+    featuredProperties: [],
+    listingProperties: sampleProperties,
+    visibleProperties: sampleProperties,
     hasMoreResults: false,
     onLoadMore: vi.fn(),
     onRetry: vi.fn(),
@@ -111,51 +111,33 @@ const renderSection = (props?: Partial<React.ComponentProps<typeof ExploreResult
 };
 
 describe('ExploreResultsSection', () => {
-  test('renders the decision-oriented hierarchy on the home results view', () => {
+  test('renders a single verification-first grid without rigid featured blocks', () => {
     renderSection();
 
-    const featuredHeading = screen.getByRole('heading', { name: 'Empezá por los más verificados' });
-    const comparisonHeading = screen.getByRole('heading', { name: 'Más para comparar' });
-    const featuredSection = featuredHeading.closest('section');
-    const comparisonSection = comparisonHeading.closest('section');
+    const heading = screen.getByRole('heading', { name: 'Más verificados primero' });
+    const resultsSection = heading.closest('section');
+    const listingGrid = screen.getByText('Casa frente al mar').closest('div')?.parentElement;
 
-    expect(featuredHeading).toBeInTheDocument();
-    expect(screen.getByText('Primero ves solo los avisos con verificación presencial.')).toBeInTheDocument();
-    expect(comparisonHeading).toBeInTheDocument();
-    expect(featuredSection).not.toBeNull();
-    expect(featuredSection).toHaveClass('rounded-xl', 'py-8');
-    expect(featuredSection?.className).toContain('bg-[#f8fafc]');
-    expect(comparisonSection).not.toBeNull();
-    expect(comparisonSection).toHaveClass('mt-12', 'px-5', 'md:px-6');
-    expect(comparisonSection).not.toHaveClass('border-t');
-    expect(comparisonHeading.parentElement?.parentElement?.parentElement?.parentElement).toHaveClass('opacity-[0.92]');
-    expect(comparisonHeading).toHaveClass('font-medium', 'text-slate-500');
-    expect(screen.getByText('Propiedades con menor nivel de validación')).toBeInTheDocument();
+    expect(heading).toBeInTheDocument();
+    expect(screen.getByText('Priorizamos la verificación presencial sin perder diversidad de oferta.')).toBeInTheDocument();
+    expect(resultsSection).not.toBeNull();
+    expect(resultsSection).toHaveClass('space-y-5');
+    expect(screen.queryByRole('heading', { name: 'Más para comparar' })).toBeNull();
+    expect(screen.queryByText('Propiedades con menor nivel de validación')).toBeNull();
     expect(screen.getAllByText('Más verificado')).toHaveLength(1);
-    expect(screen.queryByText(/Buena relación precio \/ información|De las más completas en este rango/)).toBeNull();
     expect(screen.getByText('Casa frente al mar')).toBeInTheDocument();
     expect(screen.getByText('Departamento luminoso')).toBeInTheDocument();
     expect(screen.queryByText('Cabaña entre pinos')).toBeInTheDocument();
 
-    const featuredGrid = screen.getByText('Casa frente al mar').closest('div')?.parentElement;
-    const listingGrid = screen.getByText('Departamento luminoso').closest('div')?.parentElement;
-
-    expect(featuredGrid).not.toBeNull();
-    expect(featuredGrid).toHaveClass('grid-cols-1', 'auto-rows-fr', 'items-stretch', 'md:grid-cols-2', 'lg:grid-cols-3');
     expect(listingGrid).not.toBeNull();
     expect(listingGrid).toHaveClass('grid-cols-1', 'auto-rows-fr', 'items-stretch', 'md:grid-cols-2', 'lg:grid-cols-3');
   });
 
-  test('uses a singular verification-first heading when one presencial result stays in the main grid', () => {
-    renderSection({
-      featuredProperties: [],
-      listingProperties: sampleProperties,
-      visibleProperties: sampleProperties,
-    });
+  test('updates the home heading when sorting by the highest prices first', () => {
+    renderSection({ sortBy: 'price-desc' });
 
-    expect(screen.getByRole('heading', { name: 'Empezá por la opción más verificada' })).toBeInTheDocument();
-    expect(screen.getByText('La primera opción ya tiene verificación presencial. Después comparás el resto.')).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'Opciones para comparar' })).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Precio más alto primero' })).toBeInTheDocument();
+    expect(screen.getByText('Las opciones de mayor precio aparecen primero.')).toBeInTheDocument();
   });
 
   test('shows the subtle verification hint and emphasizes cards when the preference is active', () => {

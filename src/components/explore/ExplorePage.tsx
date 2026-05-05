@@ -3,7 +3,6 @@ import { apiJson } from '../../lib/apiConfig';
 import { useFavorites } from '../../hooks/useFavorites';
 import type { Property } from '../../services/geminiService';
 import {
-  hasPropertyPresencialVerificationSeal,
   meetsRealVerificationFilter,
   sortPropertiesByCatalogOrder,
 } from '../../lib/propertyVerification';
@@ -161,19 +160,7 @@ export const ExplorePage = ({
   const filteredProperties = filters.verifiedOnly
     ? orderedProperties.filter((property) => meetsRealVerificationFilter(property))
     : orderedProperties;
-  const usePresencialFeaturedSplit = !hasActiveFilters && sortBy === 'verification';
-  const presencialFeaturedProperties = usePresencialFeaturedSplit
-    ? filteredProperties.filter((property) => hasPropertyPresencialVerificationSeal(property))
-    : [];
-  const shouldSplitPresencialFeatured = usePresencialFeaturedSplit && presencialFeaturedProperties.length > 1;
-  const featuredProperties = hasActiveFilters
-    ? []
-    : shouldSplitPresencialFeatured
-      ? presencialFeaturedProperties
-      : usePresencialFeaturedSplit
-        ? []
-      : filteredProperties.slice(0, 3);
-  const featuredIds = new Set(featuredProperties.map((property) => property.id));
+  const featuredProperties: Property[] = [];
   const appliedFilterCount = [
     Boolean(searchQuery),
     Boolean(filters.minPrice),
@@ -182,13 +169,7 @@ export const ExplorePage = ({
     Boolean(filters.type),
     filters.verifiedOnly,
   ].filter(Boolean).length;
-  const listingProperties = hasActiveFilters
-    ? filteredProperties
-    : shouldSplitPresencialFeatured
-      ? filteredProperties.filter((property) => !hasPropertyPresencialVerificationSeal(property))
-      : usePresencialFeaturedSplit
-        ? filteredProperties
-      : filteredProperties.filter((property) => !featuredIds.has(property.id));
+  const listingProperties = filteredProperties;
   const visibleProperties = listingProperties.slice(0, visibleCount);
   const hasMoreResults = visibleProperties.length < listingProperties.length;
 

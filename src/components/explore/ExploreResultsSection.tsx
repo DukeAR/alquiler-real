@@ -11,7 +11,6 @@ import { NoticeBanner } from '../ui/NoticeBanner';
 import { SectionTitle } from '../ui/SectionTitle';
 import {
   getPropertyVerificationGuidanceLabel,
-  hasPropertyPresencialVerificationSeal,
   type PropertyCatalogSort,
 } from '../../lib/propertyVerification';
 import type { Property } from '../../services/geminiService';
@@ -72,8 +71,8 @@ const getActiveSortLabel = (sortBy: PropertyCatalogSort) => {
     return 'Precio más bajo primero';
   }
 
-  if (sortBy === 'rating') {
-    return 'Mejor calificación primero';
+  if (sortBy === 'price-desc') {
+    return 'Precio más alto primero';
   }
 
   return 'Más verificados primero';
@@ -131,58 +130,31 @@ export const ExploreResultsSection = ({
   const showingStaleResults = Boolean(loadError) && !loading && hasAnyResults;
   const showHomeBlocks = !hasActiveFilters && viewMode === 'grid';
   const showSummaryCard = viewMode === 'map' || failedToLoadResults || (hasActiveFilters && !hasAnyResults);
-  const showFeaturedSection = showHomeBlocks && (loading || featuredProperties.length > 0);
   const useCompactWideCards = showHomeBlocks;
   const showListingHeader = !hasActiveFilters || loading || hasAnyResults;
   const sectionSpacingClass = showHomeBlocks ? 'space-y-5 md:space-y-6' : 'space-y-6 md:space-y-8';
-  const listingSectionClass = showFeaturedSection
-    ? 'mt-12 space-y-4 px-5 md:mt-14 md:space-y-5 md:px-6'
-    : 'space-y-5 md:space-y-6';
-  const firstVisibleResult = (showFeaturedSection ? featuredProperties : listingProperties)[0] ?? null;
-  const leadsWithSinglePresencialResult = !hasActiveFilters
-    && !showFeaturedSection
-    && sortBy === 'verification'
-    && Boolean(firstVisibleResult)
-    && hasPropertyPresencialVerificationSeal(firstVisibleResult);
+  const listingSectionClass = 'space-y-5 md:space-y-6';
+  const firstVisibleResult = listingProperties[0] ?? null;
   const activeSortLabel = getActiveSortLabel(sortBy);
   const highlightedVerificationResultId = !loading && sortBy === 'verification' && firstVisibleResult
     ? getPropertyVerificationGuidanceLabel(firstVisibleResult, { isTopResult: true })
       ? firstVisibleResult.id
       : null
     : null;
-  const featuredHeading = sortBy === 'price'
-    ? 'Empezá por las más convenientes'
-    : sortBy === 'rating'
-      ? 'Empezá por las mejor valoradas'
-      : 'Empezá por los más verificados';
-  const featuredDescription = loading
-    ? 'Ordenando opciones.'
-    : sortBy === 'price'
-      ? 'Precio claro primero.'
-      : sortBy === 'rating'
-        ? 'Las mejor valoradas primero.'
-        : 'Primero ves solo los avisos con verificación presencial.';
   const listingHeading = hasActiveFilters
     ? 'Resultados para revisar'
-    : showFeaturedSection
-      ? 'Más para comparar'
-      : leadsWithSinglePresencialResult
-        ? 'Empezá por la opción más verificada'
-        : 'Opciones para comparar';
+    : activeSortLabel;
   const listingDescription = loading
     ? 'Actualizando resultados.'
     : hasActiveFilters
       ? `${formatPropertyCount(listingProperties.length)} en esta búsqueda.`
       : listingProperties.length > 0
-        ? showFeaturedSection
-          ? `${formatPropertyCount(listingProperties.length)} para seguir eligiendo.`
-          : leadsWithSinglePresencialResult
-            ? 'La primera opción ya tiene verificación presencial. Después comparás el resto.'
-          : `${formatPropertyCount(listingProperties.length)} para seguir mirando.`
+        ? sortBy === 'verification'
+          ? 'Priorizamos la verificación presencial sin perder diversidad de oferta.'
+          : sortBy === 'price'
+            ? 'Las opciones más accesibles aparecen primero.'
+            : 'Las opciones de mayor precio aparecen primero.'
         : 'No hay más propiedades por ahora.';
-  const homeListingDescription = loading
-    ? 'Preparando más opciones.'
-    : 'Más opciones para seguir eligiendo.';
   const filteredResultsDescription = `${formatPropertyCount(totalResults)} en esta búsqueda.`;
   const filteredVisibleResultsLabel = `${visibleCount} ${visibleCount === 1 ? 'visible' : 'visibles'} en esta búsqueda.`;
 
@@ -433,49 +405,10 @@ export const ExploreResultsSection = ({
         />
       ) : null}
 
-      {showFeaturedSection ? (
-        <section className="space-y-3.5 rounded-xl bg-[#f8fafc] px-5 py-8 md:space-y-4 md:px-6">
-          <div className="max-w-2xl space-y-1">
-            <h2 className="text-[1.38rem] font-semibold tracking-tight text-slate-950 md:text-[1.56rem]">
-              {featuredHeading}
-            </h2>
-            <p className="text-sm leading-6 text-slate-600">
-              {featuredDescription}
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 auto-rows-fr items-stretch gap-5 md:grid-cols-2 md:gap-6 lg:grid-cols-3">
-            {loading
-              ? renderSkeletons(3)
-              : featuredProperties.map((property) => (
-                  <PropertyCard
-                    key={property.id}
-                    property={property}
-                    density={useCompactWideCards ? 'compact' : 'default'}
-                    className={cn(
-                      featuredProperties.length === 1 && 'md:col-span-2 md:w-full md:max-w-[56rem] md:justify-self-center',
-                    )}
-                    verificationGuidanceLabel={sortBy === 'verification'
-                      ? getPropertyVerificationGuidanceLabel(property, {
-                          isTopResult: highlightedVerificationResultId === property.id,
-                        })
-                      : null}
-                    emphasizeVerification={caresAboutVerification}
-                    decisionFeatured={highlightedVerificationResultId === property.id}
-                    decisionSupportLabel={null}
-                    onClick={() => handlePropertyClick(property)}
-                    isFavorite={isFavorite(property.id)}
-                    onFavoriteToggle={onFavoriteToggle}
-                  />
-                ))}
-          </div>
-        </section>
-      ) : null}
-
       {loading || hasActiveFilters || listingProperties.length > 0 || !hasAnyResults ? (
         <section className={listingSectionClass}>
           {showListingHeader ? (
-            <div className={cn('space-y-3.5', showFeaturedSection && 'opacity-[0.92]', !showFeaturedSection && 'border-b border-slate-200/70 pb-5 md:space-y-5')}>
+            <div className="space-y-3.5 border-b border-slate-200/70 pb-5 md:space-y-5">
               {hasActiveFilters && !loading && hasAnyResults ? (
                 <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end md:gap-4">
                   <div className="max-w-3xl space-y-2.5">
@@ -502,25 +435,14 @@ export const ExploreResultsSection = ({
               ) : (
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
                   <div className="max-w-2xl">
-                    {showFeaturedSection ? (
-                      <div className="space-y-1">
-                        <h2 className="text-[1.32rem] font-medium tracking-tight text-slate-500 md:text-[1.48rem]" style={{ color: '#64748b', fontWeight: 500 }}>
-                          {listingHeading}
-                        </h2>
-                        <p className="text-sm leading-6 text-slate-600">
-                          Propiedades con menor nivel de validación
-                        </p>
-                      </div>
-                    ) : (
-                      <SectionTitle
-                        heading={listingHeading}
-                        description={listingDescription}
-                        className="max-w-2xl"
-                      />
-                    )}
+                    <SectionTitle
+                      heading={listingHeading}
+                      description={listingDescription}
+                      className="max-w-2xl"
+                    />
                   </div>
 
-                  {!loading && listingProperties.length > 0 && !showFeaturedSection ? (
+                  {!loading && listingProperties.length > 0 ? (
                     <p className="text-sm text-slate-500">
                       {remainingResults > 0
                         ? `Mostrando ${visibleCount}. Quedan ${remainingResults} para revisar.`
@@ -560,7 +482,6 @@ export const ExploreResultsSection = ({
                   key={property.id}
                   property={property}
                   density={useCompactWideCards ? 'compact' : 'default'}
-                  deemphasizeNonPresencial={showFeaturedSection}
                   verificationGuidanceLabel={sortBy === 'verification'
                     ? getPropertyVerificationGuidanceLabel(property, {
                         isTopResult: highlightedVerificationResultId === property.id,

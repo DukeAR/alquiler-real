@@ -206,6 +206,26 @@ describe('propertyVerification', () => {
     expect(sorted.map((property) => property.id)).toEqual(['presencial', 'identity', 'none']);
   });
 
+  test('mixes lower visible verification levels into the verification-first catalog without rigid blocks', () => {
+    const sorted = sortPropertiesByCatalogOrder([
+      { id: 'presencial-3', hasPresencialVerification: true, price: 80_000 },
+      { id: 'identity-2', identityValidated: true, price: 55_000 },
+      { id: 'none-1', price: 40_000 },
+      { id: 'presencial-2', hasPresencialVerification: true, price: 70_000 },
+      { id: 'identity-1', identityValidated: true, price: 50_000 },
+      { id: 'presencial-1', hasPresencialVerification: true, price: 60_000 },
+    ], 'verification');
+
+    expect(sorted.map((property) => property.id)).toEqual([
+      'presencial-1',
+      'presencial-2',
+      'identity-1',
+      'presencial-3',
+      'none-1',
+      'identity-2',
+    ]);
+  });
+
   test('uses host confirmation after location when the score is tied', () => {
     const sorted = sortPropertiesByCatalogOrder([
       { id: 'p1', locationVerified: true, lat: -37.0, lng: -56.8, verificationPhotoCount: 2, price: 120_000 },
@@ -241,6 +261,16 @@ describe('propertyVerification', () => {
     ], 'price');
 
     expect(sorted.map((property) => property.id)).toEqual(['p2', 'p1', 'p3']);
+  });
+
+  test('sorts by highest price when selected and keeps verification as the tie breaker for equal prices', () => {
+    const sorted = sortPropertiesByCatalogOrder([
+      { id: 'p1', verificationScore: 2, price: 100_000 },
+      { id: 'p2', verificationScore: 4, price: 100_000 },
+      { id: 'p3', verificationScore: 5, price: 120_000 },
+    ], 'price-desc');
+
+    expect(sorted.map((property) => property.id)).toEqual(['p3', 'p2', 'p1']);
   });
 
   test('uses search relevance before the remaining secondary signals when verification still ties', () => {
