@@ -212,7 +212,7 @@ describe('MyBookings', () => {
     expect(screen.getAllByText('Guardados útiles')).not.toHaveLength(0);
     expect(screen.getAllByText('Conversaciones')).not.toHaveLength(0);
     expect(await screen.findByText('Loft con terraza')).toBeInTheDocument();
-    expect(await screen.findByLabelText('Verificación parcial (3/5)')).toBeInTheDocument();
+    expect(await screen.findByLabelText('Información publicada por el anfitrión')).toBeInTheDocument();
     expect(await screen.findByText('Quedó pendiente coordinar el horario de llegada.')).toBeInTheDocument();
   });
 
@@ -263,6 +263,55 @@ describe('MyBookings', () => {
     expect(screen.getByText('Revisar el cierre')).toBeInTheDocument();
     expect(screen.queryByText('Propuesta enviada')).toBeNull();
     expect(screen.queryByText('Esperar respuesta')).toBeNull();
+  });
+
+  test('shows not advanced requests as closed reservations with the explicit next-step copy', async () => {
+    mockDashboardApi({
+      bookings: [
+        {
+          id: 'booking-not-advanced',
+          propertyId: 'property-1',
+          userId: 'user-1',
+          conversationId: 'conv-not-advanced',
+          status: 'cancelled',
+          requestMode: 'protected',
+          requestStatus: 'not_advanced',
+          propertyTitle: 'Casa frente al bosque',
+          location: 'Pinamar',
+          startDate: getRelativeArgentinaDate(18),
+          endDate: getRelativeArgentinaDate(21),
+          guests: 2,
+          totalPrice: 240000,
+        },
+      ],
+      conversations: [
+        {
+          id: 'conv-not-advanced',
+          property_id: 'property-1',
+          tenant_id: 'user-1',
+          host_id: 'host-1',
+          hostName: 'Valeria',
+          propertyTitle: 'Casa frente al bosque',
+          last_message: 'La solicitud no avanzó.',
+          bookingStatus: 'cancelled',
+          requestMode: 'protected',
+          requestStatus: 'not_advanced',
+          updated_at: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+        },
+      ],
+    });
+
+    render(
+      <MemoryRouter>
+        <MyBookings />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('Finalizadas')).toBeInTheDocument();
+    expect(screen.getAllByText('No avanzó').length).toBeGreaterThan(0);
+    expect(screen.getByText('No se pudo avanzar con esta reserva.')).toBeInTheDocument();
+    expect(screen.getByText('El anfitrión no puede avanzar en este momento. Podés seguir conversando o buscar otras opciones.')).toBeInTheDocument();
   });
 
   test('marks the agreement as accepted and emits success feedback', async () => {

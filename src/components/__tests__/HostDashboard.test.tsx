@@ -521,6 +521,90 @@ describe('HostDashboard', () => {
     expect(await screen.findByText('Ruta chat anfitrión')).toBeInTheDocument();
   });
 
+  test('lets the host mark a pending request as not advanced from the dashboard', async () => {
+    apiJsonMock.mockImplementation(async (url: string, options?: RequestInit) => {
+      if (url === '/api/host/dashboard') {
+        return {
+          stats: {
+            host_rating: 4.9,
+            total_bookings_hosted: 4,
+            trust_score: 88,
+            badge: 'Verificado',
+            host_verified: true,
+          },
+          properties: [
+            {
+              id: 'prop-1',
+              title: 'Casa del bosque',
+              location: 'Pinamar',
+              price: 150000,
+              status: 'active',
+              reviewsCount: 8,
+              rating: 4.9,
+              imageUrl: 'https://example.com/property.jpg',
+              verificationScore: 4,
+              verificationItems: [
+                { key: 'identity', label: 'Identidad confirmada', description: 'Sabés con quién estás hablando.', status: 'complete' },
+              ],
+            },
+          ],
+          recentBookings: [
+            {
+              id: 'booking-not-advanced',
+              status: 'pending',
+              requestMode: 'protected',
+              conversationId: 'conv-not-advanced',
+              userId: 'guest-1',
+              userName: 'Marina',
+              propertyTitle: 'Casa del bosque',
+              startDate: '2026-10-12',
+              endDate: '2026-10-16',
+              guests: 2,
+              totalPrice: 320000,
+            },
+          ],
+          contactedGuests: [],
+          estimatedIncome: 250000,
+        };
+      }
+
+      if (url === '/api/conversations/conv-not-advanced/not-advance-request' && options?.method === 'POST') {
+        return {
+          id: 'conv-not-advanced',
+          requestMode: 'protected',
+          requestStatus: 'not_advanced',
+          bookingStatus: 'cancelled',
+          depositStatus: null,
+          depositType: null,
+        };
+      }
+
+      return {};
+    });
+
+    renderDashboard();
+
+    expect(await screen.findByRole('button', { name: /No avanzar/i })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /No avanzar/i }));
+
+    await waitFor(() => {
+      expect(apiJsonMock).toHaveBeenCalledWith(
+        '/api/conversations/conv-not-advanced/not-advance-request',
+        expect.objectContaining({ method: 'POST' }),
+      );
+    });
+
+    expect(await screen.findAllByText('No avanzó')).not.toHaveLength(0);
+    expect(screen.getByText('Marcaste que no podés avanzar con esta reserva por ahora.')).toBeInTheDocument();
+    expect(screen.getByText('El chat sigue abierto por si quieren recoordinar o dejar una nueva propuesta por acá.')).toBeInTheDocument();
+    expect(showToastMock).toHaveBeenCalledWith(
+      'Estado actualizado',
+      'Quedó marcado que no se pudo avanzar. El chat sigue abierto por si quieren recoordinar.',
+      'success',
+    );
+  });
+
   test('shows explicit missing-data states when the guest profile is not structured yet', async () => {
     apiJsonMock.mockResolvedValue({
       stats: {

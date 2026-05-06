@@ -73,6 +73,8 @@ const baseConversation = {
   hostName: 'Mariana',
   propertyTitle: 'Casa de prueba',
   propertyImage: 'https://example.com/property.jpg',
+  propertyPrice: 120000,
+  hostMemberSince: '2022-02-10',
   hostTrustScore: 3,
   hostTrust: {
     score: 3,
@@ -290,7 +292,7 @@ describe('SecureChat', () => {
 
     renderChat();
 
-    expect(await screen.findByText('Tu propuesta fue enviada por chat. El anfitrión puede responder por acá.')).toBeInTheDocument();
+    expect((await screen.findAllByText('Tu propuesta fue enviada por chat. El anfitrión puede responder por acá.')).length).toBeGreaterThan(0);
   });
 
   test('does not infer a protected deposit step from booking_id alone when a direct booking is already confirmed', async () => {
@@ -351,7 +353,7 @@ describe('SecureChat', () => {
     expect(await screen.findByText('Antes de transferir, verificá que el titular coincida.')).toBeInTheDocument();
   });
 
-  test('renders a compact header with host verification, booking context, and current status', async () => {
+  test('shows a guided starter state with host context and quick questions for the first guest message', async () => {
     useAuthMock.mockReturnValue({ user: { id: 'tenant-1' } });
     fetchConversationsMock.mockResolvedValue([
       {
@@ -373,14 +375,25 @@ describe('SecureChat', () => {
 
     renderChat();
 
-    expect(await screen.findByRole('heading', { name: 'Mariana' })).toBeInTheDocument();
+    expect((await screen.findAllByText('Consultá disponibilidad o hacé preguntas antes de decidir.')).length).toBeGreaterThan(0);
+    expect(await screen.findByText('Conversación con Mariana')).toBeInTheDocument();
     expect(screen.getByText((content) => content.includes('Casa de prueba') && content.includes('2 huéspedes'))).toBeInTheDocument();
     expect(screen.getByText('Estado: Propuesta enviada')).toBeInTheDocument();
+    expect(screen.getByText('Por seguridad, mantené la conversación dentro de Alquiler Real hasta confirmar la reserva.')).toBeInTheDocument();
+    expect(screen.getByText('Verificación media')).toBeInTheDocument();
+    expect(screen.getByText(/120\.000\/noche/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ver propiedad' })).toBeInTheDocument();
+    expect(screen.getByText('Sin mensajes')).toBeInTheDocument();
+    expect(screen.getByText('Responde en ~18 min')).toBeInTheDocument();
+    expect(screen.getByText('En la plataforma desde feb 2022')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '¿Está disponible?' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '¿Aceptan mascotas?' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '¿Qué incluye?' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '¿Cómo es la zona?' })).toBeInTheDocument();
     expect(screen.queryByText('Ya interactuaron antes sin inconvenientes')).not.toBeInTheDocument();
     expect(screen.queryByText('Identidad confirmada')).not.toBeInTheDocument();
     expect(screen.queryByText('Historial de reservas')).not.toBeInTheDocument();
     expect(screen.queryByText('Reseñas de huéspedes')).not.toBeInTheDocument();
-    expect(screen.getByText('Podés hablar y cerrar todo por acá. Cuando lo acuerden, después pueden avanzar con la seña.')).toBeInTheDocument();
     expect(screen.getByText('Ahora le toca responder al anfitrión.')).toBeInTheDocument();
     expect(screen.queryByText('Aceptada')).not.toBeInTheDocument();
     expect(screen.queryByText('Seña confirmada')).not.toBeInTheDocument();
@@ -388,24 +401,19 @@ describe('SecureChat', () => {
     expect(screen.queryByText('Estado actual')).not.toBeInTheDocument();
     expect(screen.queryByText('Actúa ahora')).not.toBeInTheDocument();
     expect(screen.queryByText('Próximo paso')).not.toBeInTheDocument();
-    expect(screen.queryByText('Mensaje sugerido')).not.toBeInTheDocument();
-    expect(screen.queryByText('Preguntas rápidas')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Agregar motivo del viaje' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Consultar horario de llegada' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Preguntar qué incluye' })).not.toBeInTheDocument();
 
-    const composer = screen.getByRole('textbox') as HTMLTextAreaElement;
-    await waitFor(() => {
-      expect(composer.value).toContain('Hola, ¿cómo estás? Estoy viendo el lugar');
-    });
-    expect(composer.value).toContain('Hola, ¿cómo estás? Estoy viendo el lugar');
+    const composer = screen.getByPlaceholderText('Escribí tu consulta...') as HTMLInputElement;
+    expect(composer.value).toBe('');
+
+    fireEvent.click(screen.getByRole('button', { name: '¿Está disponible?' }));
+
+    expect(composer.value).toContain('¿Está disponible');
     expect(composer.value).toContain('10 may');
     expect(composer.value).toContain('13 may');
     expect(composer.value).toContain('para 2 personas');
-    expect(composer.value).toContain('me interesa avanzar si está todo bien.');
   });
 
-  test('prefills a single first guest message without extra starter chips', async () => {
+  test('autocompletes a quick question and lets the guest edit it before sending', async () => {
     useAuthMock.mockReturnValue({ user: { id: 'tenant-1' } });
     fetchConversationsMock.mockResolvedValue([
       {
@@ -422,19 +430,87 @@ describe('SecureChat', () => {
 
     renderChat();
 
-    await screen.findByRole('heading', { name: 'Mariana' });
+    expect((await screen.findAllByText('Consultá disponibilidad o hacé preguntas antes de decidir.')).length).toBeGreaterThan(0);
+    await screen.findByText('Conversación con Mariana');
 
-    const composer = screen.getByRole('textbox') as HTMLTextAreaElement;
-    await waitFor(() => {
-      expect(composer.value).toContain('Hola, ¿cómo estás? Estoy viendo el lugar');
-    });
-    expect(composer.value).toContain('10 may');
-    expect(composer.value).toContain('13 may');
-    expect(composer.value).toContain('para 2 personas');
-    expect(composer.value).toContain('me interesa avanzar si está todo bien.');
-    expect(screen.queryByRole('button', { name: 'Agregar motivo del viaje' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Consultar horario de llegada' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Preguntar qué incluye' })).not.toBeInTheDocument();
+    const composer = screen.getByPlaceholderText('Escribí tu consulta...') as HTMLInputElement;
+
+    fireEvent.click(screen.getByRole('button', { name: '¿Aceptan mascotas?' }));
+    expect(composer.value).toBe('¿Aceptan mascotas?');
+
+    fireEvent.change(composer, { target: { value: '¿Aceptan mascotas? Tengo una perra chica.' } });
+    expect(composer.value).toBe('¿Aceptan mascotas? Tengo una perra chica.');
+  });
+
+  test('shows a soft warning when the draft includes external contact data and keeps it editable', async () => {
+    useAuthMock.mockReturnValue({ user: { id: 'tenant-1' } });
+    fetchConversationsMock.mockResolvedValue([
+      {
+        ...baseConversation,
+        requestMode: 'direct',
+        requestStatus: 'pending',
+        requestStartDate: '2026-05-10',
+        requestEndDate: '2026-05-13',
+        requestGuests: 2,
+        requestTotalPrice: 320000,
+      },
+    ]);
+    fetchMessagesMock.mockResolvedValue([]);
+
+    renderChat();
+
+    const composer = await screen.findByRole('textbox') as HTMLInputElement;
+    fireEvent.change(composer, { target: { value: 'Escribime por WhatsApp al 11 5555 4444' } });
+    fireEvent.click(screen.getByRole('button', { name: /Enviar mensaje/i }));
+
+    expect(sendMessageMock).not.toHaveBeenCalled();
+    expect(screen.getByText('Parece que este mensaje incluye datos de contacto externos. Te recomendamos mantener la conversación dentro de la plataforma.')).toBeInTheDocument();
+    expect(screen.getByText('Podés editarlo antes de enviarlo.')).toBeInTheDocument();
+    expect(composer.value).toBe('Escribime por WhatsApp al 11 5555 4444');
+
+    fireEvent.change(composer, { target: { value: '¿Está disponible?' } });
+    expect(screen.queryByText('Parece que este mensaje incluye datos de contacto externos. Te recomendamos mantener la conversación dentro de la plataforma.')).not.toBeInTheDocument();
+  });
+
+  test('shows sent messages with timestamps and read state', async () => {
+    useAuthMock.mockReturnValue({ user: { id: 'tenant-1' } });
+    fetchConversationsMock.mockResolvedValue([
+      {
+        ...baseConversation,
+        requestMode: 'direct',
+        requestStatus: 'pending',
+        requestStartDate: '2026-05-10',
+        requestEndDate: '2026-05-13',
+        requestGuests: 2,
+        requestTotalPrice: 320000,
+      },
+    ]);
+    fetchMessagesMock.mockResolvedValue([
+      {
+        id: 'msg-out-1',
+        conversation_id: 'conv-1',
+        sender_id: 'tenant-1',
+        receiver_id: 'host-1',
+        content: '¿Está disponible?',
+        created_at: '2026-04-06T11:07:00.000Z',
+        readAt: null,
+      },
+      {
+        id: 'msg-out-2',
+        conversation_id: 'conv-1',
+        sender_id: 'tenant-1',
+        receiver_id: 'host-1',
+        content: 'Buenísimo, gracias.',
+        created_at: '2026-04-06T11:09:00.000Z',
+        readAt: '2026-04-06T11:10:00.000Z',
+      },
+    ]);
+
+    renderChat();
+
+    expect(await screen.findByText('¿Está disponible?')).toBeInTheDocument();
+    expect(screen.getAllByText(/No leído/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Leído/).length).toBeGreaterThan(0);
   });
 
   test('shows compact guest context without response chip groups', async () => {
@@ -456,7 +532,7 @@ describe('SecureChat', () => {
     renderChat();
 
     expect(await screen.findByText('Estado: Propuesta enviada')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Abrir conversacion con Lucía .* 2 personas .* Propuesta enviada/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Abrir conversacion sobre Casa de prueba .* Con Lucía .* Sin mensajes .* Propuesta enviada/i })).toBeInTheDocument();
     expect(screen.queryByText('Email verificado')).not.toBeInTheDocument();
     expect(screen.queryByText('Teléfono verificado')).not.toBeInTheDocument();
     expect(screen.queryByText('Perfil del huésped')).not.toBeInTheDocument();

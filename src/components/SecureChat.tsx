@@ -15,11 +15,12 @@ import { navigateToExternalUrl } from '../lib/browserNavigation';
 import { PLATFORM_DIRECT_FLOW_NOTE, PLATFORM_PROTECTED_FLOW_NOTE } from '../lib/platformTerms';
 import { getProtectedDepositPricingFromBooking } from '../lib/protectedDeposit';
 import { getReservationFlowCopy, getReservationVisibleStatus } from '../lib/reservationFlow';
+import { getHostTrust } from '../lib/hostTrust';
 import { trackFrontendFunnelEvent } from '../lib/funnelTracking';
-import { ChatContextBar } from './ui/ChatContextBar';
 import { DepositChoiceBlock } from './ui/DepositChoiceBlock';
 import { ReservationConfirmedState } from './ui/ReservationConfirmedState';
 import { SystemEventMessage } from './ui/SystemEventMessage';
+import type { TrustSignal } from './ui/TrustSignalsInline';
 
 type InlineThreadNoticeTone = 'neutral' | 'warning' | 'brand';
 
@@ -74,6 +75,23 @@ const containsTransferKeywords = (value?: string) => {
   return /\b(transferencia|transferir|cbu|alias)\b/.test(normalizeSafetyText(value));
 };
 
+const containsExternalContactData = (value?: string) => {
+  if (!value) {
+    return false;
+  }
+
+  const normalizedValue = normalizeSafetyText(value);
+  const phoneRegex = /(?:\+?\d{1,4}[\s.-]?)?(?:\(?\d{2,4}\)?[\s.-]?)?\d{3,4}[\s.-]?\d{4}\b/;
+  const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
+  const linkRegex = /\b(?:https?:\/\/|www\.)\S+/i;
+
+  return phoneRegex.test(value)
+    || emailRegex.test(value)
+    || linkRegex.test(value)
+    || /\b(instagram|insta|ig)\b/.test(normalizedValue)
+    || /\b(whatsapp|whats|wsp|wpp|wa\.me)\b/.test(normalizedValue);
+};
+
 const sortThreadTimeline = (items: Message[]) => items
   .map((message, index) => ({
     message,
@@ -111,6 +129,8 @@ const formatCompactDateRange = (startDate?: string, endDate?: string) => {
 
 type HostCloseIntent = 'advance-deposit' | 'confirm-reservation';
 
+type ChatStarterQuestionKey = 'availability' | 'pets' | 'includes' | 'area';
+
 type HostClosingChip = {
   key: HostCloseIntent;
   label: string;
@@ -126,6 +146,16 @@ type SecureChatProps = {
 };
 
 const CHAT_MESSAGE_POLL_MS = 15_000;
+const CHAT_SECURITY_REMINDER = 'Por seguridad, mantené la conversación dentro de Alquiler Real hasta confirmar la reserva.';
+const EXTERNAL_CONTACT_WARNING = 'Parece que este mensaje incluye datos de contacto externos. Te recomendamos mantener la conversación dentro de la plataforma.';
+const EXTERNAL_CONTACT_EDIT_HINT = 'Podés editarlo antes de enviarlo.';
+const CHAT_STARTER_QUESTIONS = [
+  { key: 'availability', label: '¿Está disponible?' },
+  { key: 'pets', label: '¿Aceptan mascotas?' },
+  { key: 'includes', label: '¿Qué incluye?' },
+  { key: 'area', label: '¿Cómo es la zona?' },
+] as const satisfies ReadonlyArray<{ key: ChatStarterQuestionKey; label: string }>;
+const SPANISH_MONTH_LABELS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'] as const;
 
 const buildHostClosingChips = (requestContext: ReservationRequestContext | null) => {
   const advanceWithDepositMessage = requestContext?.mode === 'protected'
@@ -185,20 +215,32 @@ const formatSuggestedMessageGuestCount = (requestContext: ReservationRequestCont
   return `para ${requestContext.guests} ${requestContext.guests === 1 ? 'persona' : 'personas'}`;
 };
 
-const buildSuggestedFirstMessage = (_counterpartyName: string, requestContext: ReservationRequestContext | null) => {
-  const messageParts = ['Hola, ¿cómo estás? Estoy viendo el lugar'];
-  const dateRange = formatSuggestedMessageDateRange(requestContext);
-  const guestCount = formatSuggestedMessageGuestCount(requestContext);
+const buildStarterQuestionMessage = (key: ChatStarterQuestionKey, requestContext: ReservationRequestContext | null) => {
+  if (key === 'availability') {
+    const messageParts = ['¿Está disponible'];
+    const dateRange = formatSuggestedMessageDateRange(requestContext);
+    const guestCount = formatSuggestedMessageGuestCount(requestContext);
 
-  if (dateRange) {
-    messageParts.push(dateRange);
+    if (dateRange) {
+      messageParts.push(dateRange);
+    }
+
+    if (guestCount) {
+      messageParts.push(guestCount);
+    }
+
+    return `${messageParts.join(' ')}?`;
   }
 
-  if (guestCount) {
-    messageParts.push(guestCount);
+  if (key === 'pets') {
+    return '¿Aceptan mascotas?';
   }
 
-  return `${messageParts.join(' ')} y me interesa avanzar si está todo bien.`;
+  if (key === 'includes') {
+    return '¿Qué incluye?';
+  }
+
+  return '¿Cómo es la zona?';
 };
 
 const NOT_ADVANCE_REASON_OPTIONS = [
@@ -253,6 +295,8 @@ const getConversationListPreview = (
     guestsLabel: requestContext?.guests
       ? `${requestContext.guests} ${requestContext.guests === 1 ? 'persona' : 'personas'}`
       : null,
+    previewText: getConversationPreviewText(conversation, viewerRole),
+    readState: getConversationReadState(conversation),
     status: getCompactReservationStatus({
       mode: requestContext?.mode,
       depositType: requestContext?.depositType,
@@ -306,6 +350,134 @@ const getRequestDeadline = (requestCreatedAt?: string) => {
   }
 
   return new Date(requestCreatedAtDate.getTime() + REQUEST_RESPONSE_WINDOW_MS);
+};
+
+const formatHostResponseTimeLabel = (minutes?: number | null) => {
+  if (!minutes || minutes <= 0) {
+    return null;
+  }
+
+  if (minutes < 60) {
+    return `Responde en ~${Math.max(1, Math.round(minutes))} min`;
+  }
+
+  if (minutes < 24 * 60) {
+    return `Responde en ~${Math.max(1, Math.round(minutes / 60))} h`;
+  }
+
+  const dayCount = Math.max(1, Math.round(minutes / (24 * 60)));
+  return `Responde en ~${dayCount} día${dayCount === 1 ? '' : 's'}`;
+};
+
+const formatHostMemberSinceLabel = (value?: string | null) => {
+  const parsed = parseTimestampValue(value);
+
+  if (!parsed) {
+    return null;
+  }
+
+  return `En la plataforma desde ${SPANISH_MONTH_LABELS[parsed.getUTCMonth()]} ${parsed.getUTCFullYear()}`;
+};
+
+const formatNightlyPriceLabel = (value?: number | null) => {
+  if (!value || value <= 0) {
+    return null;
+  }
+
+  return `${currencyFormatter.format(value)}/noche`;
+};
+
+const getHostVerificationSummary = (conversation: Conversation | null) => {
+  if (!conversation || (!conversation.hostTrust && typeof conversation.hostTrustScore !== 'number')) {
+    return null;
+  }
+
+  const hostTrust = getHostTrust({
+    hostTrust: conversation.hostTrust,
+    hostTrustScore: conversation.hostTrustScore,
+  });
+
+  if (!(hostTrust.score > 0 || (conversation.hostTrust?.items?.length ?? 0) > 0)) {
+    return null;
+  }
+
+  const levelLabel = hostTrust.level === 'high' ? 'alta' : hostTrust.level === 'medium' ? 'media' : 'baja';
+
+  return {
+    level: hostTrust.level,
+    label: `Verificación ${levelLabel}`,
+    tone: hostTrust.level === 'high' ? 'success' : hostTrust.level === 'medium' ? 'brand' : 'neutral' as const,
+  };
+};
+
+const buildHostContextSignals = (conversation: Conversation | null) => {
+  if (!conversation) {
+    return [] as TrustSignal[];
+  }
+
+  const signals: TrustSignal[] = [];
+  const hostVerificationSummary = getHostVerificationSummary(conversation);
+
+  if (hostVerificationSummary) {
+    signals.push({
+      key: 'host-verification-level',
+      label: `Nivel de verificación: ${hostVerificationSummary.label.replace('Verificación ', '')}`,
+      tone: hostVerificationSummary.tone,
+      icon: <Icons.BadgeCheck className="h-3.5 w-3.5" />,
+    });
+  }
+
+  const responseTimeLabel = formatHostResponseTimeLabel(conversation.hostInteractionHistory?.avgResponseTimeMinutes);
+  if (responseTimeLabel) {
+    signals.push({
+      key: 'host-response-time',
+      label: responseTimeLabel,
+      tone: 'neutral',
+      icon: <Icons.Clock className="h-3.5 w-3.5" />,
+    });
+  }
+
+  const memberSinceLabel = formatHostMemberSinceLabel(conversation.hostMemberSince);
+  if (memberSinceLabel) {
+    signals.push({
+      key: 'host-member-since',
+      label: memberSinceLabel,
+      tone: 'neutral',
+      icon: <Icons.Calendar className="h-3.5 w-3.5" />,
+    });
+  }
+
+  return signals;
+};
+
+const getConversationPreviewText = (conversation: Conversation, viewerRole: 'guest' | 'host') => {
+  const normalizedLastMessage = typeof conversation.last_message === 'string'
+    ? conversation.last_message.replace(/\s+/g, ' ').trim()
+    : '';
+
+  if (normalizedLastMessage) {
+    return normalizedLastMessage;
+  }
+
+  return viewerRole === 'guest'
+    ? 'Consultá disponibilidad o hacé preguntas antes de decidir.'
+    : 'Respondé por acá para cerrar la consulta dentro de la plataforma.';
+};
+
+const getConversationReadState = (conversation: Conversation) => {
+  const hasLastMessage = Boolean(typeof conversation.last_message === 'string' && conversation.last_message.trim());
+
+  if (!hasLastMessage) {
+    return {
+      label: 'Sin mensajes',
+      unread: false,
+    };
+  }
+
+  return {
+    label: conversation.lastMessageReadAt ? 'Leído' : 'No leído',
+    unread: !conversation.lastMessageReadAt,
+  };
 };
 
 const inferConversationMode = (conversation: Conversation | null) => {
@@ -487,14 +659,15 @@ export const SecureChat: React.FC<SecureChatProps> = ({
   const [selectedNotAdvanceReason, setSelectedNotAdvanceReason] = useState<(typeof NOT_ADVANCE_REASON_OPTIONS)[number] | null>(null);
   const [otherNotAdvanceReason, setOtherNotAdvanceReason] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [composerWarning, setComposerWarning] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const trackedGuestChatOpenIdsRef = useRef(new Set<string>());
-  const autoLoadedSuggestionIdsRef = useRef(new Set<string>());
   const handledDepositCheckoutRef = useRef<string | null>(null);
   const activeConversationIdRef = useRef<string | null>(null);
   const messageRequestTokenRef = useRef(0);
   const messageRequestsInFlightRef = useRef(0);
   const [loadedMessagesConversationId, setLoadedMessagesConversationId] = useState<string | null>(null);
+  const composerInputRef = useRef<HTMLInputElement>(null);
 
   const isChatPollingAllowed = () => {
     if (typeof document !== 'undefined') {
@@ -553,9 +726,9 @@ export const SecureChat: React.FC<SecureChatProps> = ({
 
   useEffect(() => {
     if (activeConv) {
-      autoLoadedSuggestionIdsRef.current.delete(activeConv.id);
       setPendingHostCloseIntent(null);
       setInputText('');
+      setComposerWarning(null);
       setLoadedMessagesConversationId(null);
 
       if (disableAutoLoad) {
@@ -643,8 +816,10 @@ export const SecureChat: React.FC<SecureChatProps> = ({
         return;
       }
 
-      setMessages(data || []);
+      const nextMessages = data || [];
+      setMessages(nextMessages);
       setLoadedMessagesConversationId(id);
+      syncConversationListPreviewFromMessages(id, nextMessages);
     } catch (err: any) {
       console.error('[SecureChat] Error loading messages:', err);
       setError(err?.message || 'No pudimos cargar los mensajes.');
@@ -691,11 +866,25 @@ export const SecureChat: React.FC<SecureChatProps> = ({
   };
 
   const handleSend = async () => {
-    if (!inputText.trim() || !activeConv || !user) return;
+    const messageText = inputText.trim();
+
+    if (!messageText || !activeConv || !user) return;
+
+    if (containsExternalContactData(messageText)) {
+      setComposerWarning(EXTERNAL_CONTACT_WARNING);
+      setError(null);
+      return;
+    }
 
     const receiverId = user.id === activeConv.tenant_id ? activeConv.host_id : activeConv.tenant_id;
-    const messageText = inputText;
     const optimisticId = `opt-${Date.now()}`;
+    const previousConversationPreview = {
+      last_message: activeConv.last_message,
+      lastMessageSenderId: activeConv.lastMessageSenderId,
+      lastMessageReadAt: activeConv.lastMessageReadAt ?? null,
+      lastMessageCreatedAt: activeConv.lastMessageCreatedAt ?? null,
+      updated_at: activeConv.updated_at,
+    };
     const detectedHostCloseIntent = user.id === activeConv.host_id && flowCopy?.stage === 'request-pending'
       ? detectHostCloseIntent(messageText)
       : null;
@@ -713,14 +902,29 @@ export const SecureChat: React.FC<SecureChatProps> = ({
     };
     
     setInputText('');
+    setComposerWarning(null);
     setMessages(prev => [...prev, optimisticMessage]);
     setSendingMessageId(optimisticId);
+    syncConversationListPreview(activeConv.id, {
+      last_message: messageText,
+      lastMessageSenderId: user.id,
+      lastMessageReadAt: null,
+      lastMessageCreatedAt: optimisticMessage.created_at,
+      updated_at: optimisticMessage.created_at,
+    });
 
     try {
       setError(null);
       const newMsg = await sendMessage(activeConv.id, messageText, receiverId);
       // Replace optimistic message with real one from server
       setMessages(prev => prev.map(msg => msg.id === optimisticId ? newMsg : msg));
+      syncConversationListPreview(activeConv.id, {
+        last_message: newMsg.content,
+        lastMessageSenderId: newMsg.sender_id,
+        lastMessageReadAt: newMsg.readAt ?? null,
+        lastMessageCreatedAt: newMsg.created_at,
+        updated_at: newMsg.created_at,
+      });
       setPendingHostCloseIntent(null);
 
       if (shouldAdvanceReservationAfterSend) {
@@ -730,10 +934,19 @@ export const SecureChat: React.FC<SecureChatProps> = ({
         });
       }
     } catch (err: any) {
-      setError(err?.message || 'No pudimos enviar el mensaje. Intentá de nuevo.');
+      const errorMessage = err?.message || 'No pudimos enviar el mensaje. Intentá de nuevo.';
+
+      if (errorMessage === EXTERNAL_CONTACT_WARNING) {
+        setComposerWarning(errorMessage);
+        setError(null);
+      } else {
+        setError(errorMessage);
+      }
+
       setInputText(messageText); // Restore input on error
       // Remove optimistic message on error
       setMessages(prev => prev.filter(msg => msg.id !== optimisticId));
+      syncConversationListPreview(activeConv.id, previousConversationPreview);
       console.error('[SecureChat] Error sending message:', err);
     } finally {
       setSendingMessageId(null);
@@ -777,6 +990,35 @@ export const SecureChat: React.FC<SecureChatProps> = ({
       conversation.id === updatedConversation.id ? { ...conversation, ...updatedConversation } : conversation
     )));
     setActiveConv((current) => (current && current.id === updatedConversation.id ? { ...current, ...updatedConversation } : current));
+  };
+
+  const syncConversationListPreview = (conversationId: string, preview: Partial<Conversation>) => {
+    setConversations((current) => current.map((conversation) => (
+      conversation.id === conversationId ? { ...conversation, ...preview } : conversation
+    )));
+    setActiveConv((current) => (current && current.id === conversationId ? { ...current, ...preview } : current));
+  };
+
+  const syncConversationListPreviewFromMessages = (conversationId: string, nextMessages: Message[]) => {
+    const latestMessage = [...nextMessages].reverse().find((message) => !message.is_system && Boolean(message.content?.trim()));
+
+    if (!latestMessage) {
+      syncConversationListPreview(conversationId, {
+        last_message: '',
+        lastMessageSenderId: undefined,
+        lastMessageReadAt: null,
+        lastMessageCreatedAt: null,
+      });
+      return;
+    }
+
+    syncConversationListPreview(conversationId, {
+      last_message: latestMessage.content,
+      lastMessageSenderId: latestMessage.sender_id,
+      lastMessageReadAt: latestMessage.readAt ?? null,
+      lastMessageCreatedAt: latestMessage.created_at,
+      updated_at: latestMessage.created_at,
+    });
   };
 
   const applyBookingUpdate = (booking: {
@@ -1091,10 +1333,21 @@ export const SecureChat: React.FC<SecureChatProps> = ({
     user && messages.some((message) => !message.is_system && message.sender_id === user.id),
   );
   const hasNonSystemConversationMessages = messages.some((message) => !message.is_system);
-  const suggestedFirstMessage = isTenantConversation && !hasAuthoredConversationMessage && !hasNonSystemConversationMessages
-    ? buildSuggestedFirstMessage(counterpartyName, activeRequestContext)
-    : null;
-  const guestIntroPrompt = null;
+  const showInitialGuestStarter = Boolean(
+    activeConv
+    && isTenantConversation
+    && loadedMessagesConversationId === activeConv.id
+    && !hasNonSystemConversationMessages,
+  );
+  const starterQuickQuestions = showInitialGuestStarter
+    ? CHAT_STARTER_QUESTIONS.map((question) => ({
+        ...question,
+        message: buildStarterQuestionMessage(question.key, activeRequestContext),
+      }))
+    : [];
+  const hostVerificationSummary = isTenantConversation ? getHostVerificationSummary(activeConv) : null;
+  const hostContextSignals = isTenantConversation ? buildHostContextSignals(activeConv) : [];
+  const headerNightlyPrice = formatNightlyPriceLabel(activeConv?.propertyPrice ?? activeRequestContext?.nightly ?? null);
   const contextSummaryLine = activeRequestContext
     ? [
         activeRequestContext.propertyTitle,
@@ -1240,19 +1493,6 @@ export const SecureChat: React.FC<SecureChatProps> = ({
                 : reservationProgressHint;
 
   useEffect(() => {
-    if (!activeConv || !suggestedFirstMessage || loadedMessagesConversationId !== activeConv.id) {
-      return;
-    }
-
-    if (autoLoadedSuggestionIdsRef.current.has(activeConv.id)) {
-      return;
-    }
-
-    autoLoadedSuggestionIdsRef.current.add(activeConv.id);
-    setInputText((currentValue) => currentValue.trim() ? currentValue : suggestedFirstMessage);
-  }, [activeConv?.id, loadedMessagesConversationId, suggestedFirstMessage]);
-
-  useEffect(() => {
     if (!activeConv || !isTenantConversation || loadedMessagesConversationId !== activeConv.id || hasNonSystemConversationMessages) {
       return;
     }
@@ -1322,7 +1562,7 @@ export const SecureChat: React.FC<SecureChatProps> = ({
         .map((message) => message.content.trim()),
     );
 
-    if (messages.length === 0 && !existingSystemTexts.has(softerChatStartText) && activeConv) {
+    if (messages.length === 0 && !showInitialGuestStarter && !existingSystemTexts.has(softerChatStartText) && activeConv) {
       reminders.push({
         id: `assist-safer-chat-${activeConv.id}`,
         conversation_id: activeConv.id,
@@ -1613,14 +1853,16 @@ export const SecureChat: React.FC<SecureChatProps> = ({
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-white pt-2 dark:bg-slate-950 sm:pt-4 md:pt-0">
+    <div className="flex h-screen overflow-hidden bg-slate-50/80 pt-2 dark:bg-slate-950 sm:pt-4 md:pt-0">
       {/* Sidebar List */}
       <div className={cn(
-        "w-full md:w-80 border-r border-slate-100 dark:border-slate-800 flex flex-col transition-all",
+        "flex w-full flex-col border-r border-slate-200/80 bg-white/94 transition-all dark:border-slate-800 dark:bg-slate-950/92 md:w-[22rem] xl:w-[24rem]",
         activeConv ? "hidden md:flex" : "flex"
       )}>
-        <div className="border-b border-slate-100 p-4 dark:border-slate-800 sm:p-6">
-          <h2 className="text-xl font-black uppercase tracking-tight">Mensajes</h2>
+        <div className="border-b border-slate-100/90 p-4 dark:border-slate-800 sm:p-6">
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">Chat interno</p>
+          <h2 className="mt-1 text-xl font-black uppercase tracking-tight text-slate-950 dark:text-white">Mensajes</h2>
+          <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">Seguí la consulta, verificá el contexto y cerrá todo sin salir de Alquiler Real.</p>
         </div>
 
         {error && !activeConv && (
@@ -1643,11 +1885,12 @@ export const SecureChat: React.FC<SecureChatProps> = ({
                   initialConversationId,
                   initialRequestContext,
                 );
-                const previewMeta = [preview.dateRange, preview.guestsLabel].filter(Boolean).join(' · ') || 'Sin fechas definidas';
+                const previewMeta = [preview.dateRange, preview.guestsLabel].filter(Boolean).join(' · ') || 'Chat dentro de Alquiler Real';
                 const previewLabel = [
-                  `Abrir conversacion con ${previewCounterpartyName || 'esta persona'}`,
-                  preview.dateRange,
-                  preview.guestsLabel,
+                  `Abrir conversacion sobre ${c.propertyTitle || 'esta propiedad'}`,
+                  previewCounterpartyName ? `Con ${previewCounterpartyName}` : null,
+                  preview.previewText,
+                  preview.readState.label,
                   preview.status.label,
                 ].filter(Boolean).join(' · ');
 
@@ -1657,26 +1900,32 @@ export const SecureChat: React.FC<SecureChatProps> = ({
                     aria-label={previewLabel}
                     onClick={() => setActiveConv(c)}
                     className={cn(
-                      "flex w-full items-start gap-4 rounded-[24px] border border-transparent p-3 text-left transition-all sm:rounded-3xl sm:p-4",
+                      "flex w-full items-start gap-4 rounded-[28px] border p-3.5 text-left transition-all sm:p-4",
                       activeConv?.id === c.id
-                        ? "border-brand/15 bg-brand/8 text-slate-900 shadow-[0_18px_36px_-32px_rgba(67,56,202,0.35)] dark:border-brand/20 dark:bg-brand/10 dark:text-white"
-                        : "hover:bg-slate-50 dark:hover:bg-slate-900"
+                        ? "border-brand/15 bg-brand/8 text-slate-900 shadow-[0_22px_46px_-36px_rgba(67,56,202,0.38)] dark:border-brand/20 dark:bg-brand/10 dark:text-white"
+                        : "border-slate-200/70 bg-white hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:hover:border-slate-700 dark:hover:bg-slate-900"
                     )}
                   >
-                    <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 overflow-hidden shrink-0">
-                      <img src={c.propertyImage} className="w-full h-full object-cover" />
+                    <div className="h-14 w-14 shrink-0 overflow-hidden rounded-[22px] bg-slate-100 dark:bg-slate-800">
+                      {c.propertyImage ? (
+                        <img src={c.propertyImage} alt={c.propertyTitle || 'Propiedad'} className="h-full w-full object-cover" />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center">
+                          <Icons.Home className="h-4 w-4 text-slate-400" />
+                        </div>
+                      )}
                     </div>
-                    <div className="min-w-0 flex-1">
+                    <div className="min-w-0 flex-1 space-y-2">
                       <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="font-bold truncate text-sm">
-                            {previewCounterpartyName}
+                        <div className="min-w-0 space-y-1">
+                          <p className="truncate text-sm font-semibold tracking-tight text-slate-950 dark:text-white">
+                            {c.propertyTitle || 'Propiedad'}
                           </p>
                           <p className={cn(
-                            "text-[10px] truncate uppercase font-black tracking-widest leading-tight",
-                            activeConv?.id === c.id ? "text-brand dark:text-brand-light" : "text-slate-400"
+                            "truncate text-[10px] font-black uppercase tracking-[0.16em] leading-tight",
+                            activeConv?.id === c.id ? "text-brand dark:text-brand-light" : "text-slate-400 dark:text-slate-500"
                           )}>
-                            {c.propertyTitle}
+                            {previewCounterpartyName ? `Con ${previewCounterpartyName}` : 'Conversación abierta'}
                           </p>
                         </div>
                         <span className={cn(
@@ -1686,7 +1935,26 @@ export const SecureChat: React.FC<SecureChatProps> = ({
                           {preview.status.label}
                         </span>
                       </div>
-                      <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-300">{previewMeta}</p>
+                      <p className={cn(
+                        'truncate text-sm leading-6',
+                        preview.readState.unread
+                          ? 'font-semibold text-slate-900 dark:text-white'
+                          : 'text-slate-500 dark:text-slate-300',
+                      )}>
+                        {preview.previewText}
+                      </p>
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="truncate text-[11px] leading-5 text-slate-400 dark:text-slate-500">{previewMeta}</p>
+                        <span className={cn(
+                          'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]',
+                          preview.readState.unread
+                            ? 'border-brand/15 bg-brand/8 text-brand dark:border-brand/20 dark:bg-brand/10 dark:text-brand-light'
+                            : 'border-slate-200 bg-white text-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300',
+                        )}>
+                          <span className={cn('h-1.5 w-1.5 rounded-full', preview.readState.unread ? 'bg-brand' : 'bg-slate-300 dark:bg-slate-600')} />
+                          <span>{preview.readState.label}</span>
+                        </span>
+                      </div>
                     </div>
                   </button>
                 );
@@ -1699,7 +1967,7 @@ export const SecureChat: React.FC<SecureChatProps> = ({
       {/* Main Chat Area */}
       <div className={cn(
         "flex-1 flex flex-col transition-all",
-        !activeConv ? "hidden md:flex bg-slate-50 dark:bg-slate-900/10 items-center justify-center" : "flex"
+        !activeConv ? "hidden items-center justify-center bg-slate-50 dark:bg-slate-900/10 md:flex" : "flex"
       )}>
         {!activeConv ? (
           <div className="text-center space-y-4 opacity-30 select-none">
@@ -1709,28 +1977,118 @@ export const SecureChat: React.FC<SecureChatProps> = ({
         ) : (
           <>
             {/* Header */}
-            <div className="flex items-center border-b border-slate-100 bg-white/92 p-3.5 backdrop-blur dark:border-slate-800 dark:bg-slate-950/92 sm:p-4">
-              <div className="flex items-center gap-3 sm:gap-4">
+            <div className="border-b border-slate-200/80 bg-white/92 px-4 py-3.5 backdrop-blur dark:border-slate-800 dark:bg-slate-950/92 sm:px-6 sm:py-4">
+              <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
+                <div className="flex min-w-0 items-center gap-3 sm:gap-4">
                 <button onClick={() => setActiveConv(null)} className="rounded-full p-2 md:hidden">
                   <Icons.ChevronLeft className="w-6 h-6" />
                 </button>
-                <div>
-                  <h3 className="text-base font-semibold tracking-tight text-slate-950 dark:text-white sm:text-lg">
-                    {counterpartyName}
-                  </h3>
+                <div className="flex min-w-0 items-center gap-3.5">
+                  <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-[22px] bg-slate-100 dark:bg-slate-800">
+                    {activeConv.propertyImage ? (
+                      <img src={activeConv.propertyImage} alt={activeConv.propertyTitle || 'Propiedad'} className="h-full w-full object-cover" />
+                    ) : (
+                      <Icons.Home className="h-5 w-5 text-slate-400" />
+                    )}
+                  </div>
+                  <div className="min-w-0 space-y-1.5">
+                    <p className="truncate text-[10px] font-black uppercase tracking-[0.16em] text-slate-400 dark:text-slate-500">
+                      Conversación con {counterpartyName}
+                    </p>
+                    <h3 className="truncate text-base font-semibold tracking-tight text-slate-950 dark:text-white sm:text-lg">
+                      {activeConv.propertyTitle || 'Propiedad'}
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {headerNightlyPrice ? (
+                        <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200">
+                          {headerNightlyPrice}
+                        </span>
+                      ) : null}
+                      {hostVerificationSummary ? (
+                        <span className={cn(
+                          'inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold',
+                          hostVerificationSummary.tone === 'success'
+                            ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-900/20 dark:text-emerald-300'
+                            : hostVerificationSummary.tone === 'brand'
+                              ? 'border-brand/15 bg-brand/8 text-brand dark:border-brand/20 dark:bg-brand/10 dark:text-brand-light'
+                              : 'border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300',
+                        )}>
+                          {hostVerificationSummary.label}
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+              </div>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/detail/${activeConv.property_id}`)}
+                  className="inline-flex shrink-0 items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 transition-colors hover:border-brand/30 hover:text-brand dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
+                >
+                  <Icons.Home className="h-3.5 w-3.5" />
+                  <span>Ver propiedad</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="border-b border-slate-200/80 bg-white/88 px-4 py-4 dark:border-slate-800 dark:bg-slate-950/90 sm:px-6">
+              <div className="mx-auto grid max-w-6xl gap-3 xl:grid-cols-[minmax(0,1.8fr)_minmax(280px,1fr)]">
+                <div className="rounded-[28px] border border-slate-200/80 bg-slate-50/85 p-4 dark:border-slate-800 dark:bg-slate-900/60 sm:p-5">
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="min-w-0 space-y-1">
+                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400 dark:text-slate-500">Contexto de la consulta</p>
+                      {contextSummaryLine ? (
+                        <p className="text-sm font-medium leading-6 text-slate-800 dark:text-slate-100">{contextSummaryLine}</p>
+                      ) : null}
+                      {chatContextHelper ? (
+                        <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">{chatContextHelper}</p>
+                      ) : null}
+                    </div>
+                    {compactReservationStatus ? (
+                      <p className={cn('inline-flex items-center gap-2 self-start rounded-full border px-3 py-1.5 text-[11px] font-semibold', compactReservationStatusToneClasses[compactReservationStatus.tone])}>
+                        <span className={cn('h-1.5 w-1.5 rounded-full', compactReservationStatus.tone === 'brand' ? 'bg-brand' : compactReservationStatus.tone === 'success' ? 'bg-emerald-500' : compactReservationStatus.tone === 'warning' ? 'bg-amber-500' : 'bg-slate-400')} />
+                        <span>Estado: {compactReservationStatus.label}</span>
+                      </p>
+                    ) : null}
+                  </div>
+
+                  {hostContextSignals.length > 0 ? (
+                    <div className="mt-4 grid gap-2 sm:grid-cols-3">
+                      {hostContextSignals.map((signal) => (
+                        <div
+                          key={signal.key}
+                          className={cn(
+                            'flex items-start gap-3 rounded-[22px] border px-3.5 py-3 text-sm leading-5',
+                            signal.tone === 'success'
+                              ? 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/30 dark:bg-emerald-900/20 dark:text-emerald-200'
+                              : signal.tone === 'brand'
+                                ? 'border-brand/15 bg-brand/8 text-slate-800 dark:border-brand/20 dark:bg-brand/10 dark:text-slate-100'
+                                : 'border-slate-200 bg-white text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200',
+                          )}
+                        >
+                          <span className="mt-0.5 shrink-0">{signal.icon}</span>
+                          <p className="font-medium">{signal.label}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+
+                <div className="rounded-[28px] border border-slate-200/80 bg-white p-4 dark:border-slate-800 dark:bg-slate-950/85 sm:p-5">
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400 dark:text-slate-500">Seguridad</p>
+                  <div className="mt-3 flex items-start gap-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-500 dark:bg-slate-900 dark:text-slate-300">
+                      <Icons.ShieldCheck className="h-4 w-4" />
+                    </span>
+                    <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">{CHAT_SECURITY_REMINDER}</p>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <ChatContextBar
-              summary={contextSummaryLine}
-              helper={chatContextHelper}
-              status={compactReservationStatus ? { label: compactReservationStatus.label, tone: compactReservationStatus.tone } : null}
-            />
-
             {/* Messages */}
             <div ref={scrollRef} className="flex-1 overflow-y-auto bg-[linear-gradient(180deg,rgba(248,250,252,0.72),rgba(255,255,255,1))] px-4 py-5 no-scrollbar dark:bg-slate-950 sm:px-6 sm:py-6">
-              <div className="mx-auto flex w-full max-w-4xl flex-col gap-5">
+              <div className="mx-auto flex w-full max-w-5xl flex-col gap-5">
                 {error && activeConv && (
                   <div className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 dark:border-red-900/30 dark:bg-red-900/20">
                     <Icons.AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
@@ -1775,7 +2133,50 @@ export const SecureChat: React.FC<SecureChatProps> = ({
                   </div>
                 ))}
 
-                {threadMessages.length === 0 && !error && inlineThreadNotices.length === 0 ? (
+                {showInitialGuestStarter ? (
+                  <div className="mx-auto w-full max-w-2xl rounded-[28px] border border-slate-200/80 bg-white/96 p-4 shadow-[0_24px_48px_-40px_rgba(15,23,42,0.28)] dark:border-slate-800 dark:bg-slate-900/92 sm:p-5">
+                    <div className="flex items-start gap-4">
+                      <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-slate-100 dark:bg-slate-800">
+                        {activeConv.propertyImage ? (
+                          <img src={activeConv.propertyImage} alt={activeConv.propertyTitle || 'Propiedad'} className="h-full w-full object-cover" />
+                        ) : (
+                          <Icons.Home className="h-5 w-5 text-slate-400" />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400 dark:text-slate-500">
+                          Primer mensaje
+                        </p>
+                        <h4 className="text-sm font-semibold text-slate-900 dark:text-white sm:text-base">
+                          {activeConv.propertyTitle || 'Propiedad'}
+                        </h4>
+                        <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">
+                          Consultá disponibilidad o hacé preguntas antes de decidir.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {starterQuickQuestions.map((question) => (
+                        <button
+                          key={question.key}
+                          type="button"
+                          onClick={() => {
+                            setInputText(question.message);
+                            setComposerWarning(null);
+                            composerInputRef.current?.focus();
+                          }}
+                          className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 transition-colors hover:border-brand/30 hover:text-brand dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
+                        >
+                          <Icons.MessageSquare className="h-3.5 w-3.5" />
+                          <span>{question.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                {threadMessages.length === 0 && !error && inlineThreadNotices.length === 0 && !showInitialGuestStarter ? (
                   <div className="py-12 text-center text-slate-400">
                     <Icons.MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-30" />
                     <p className="text-sm font-medium">Todavía no hay mensajes</p>
@@ -1817,11 +2218,11 @@ export const SecureChat: React.FC<SecureChatProps> = ({
 
                   return (
                     <div key={msg.id} className={cn(
-                      'flex max-w-[82%] flex-col gap-1',
+                      'flex max-w-[82%] flex-col gap-1 sm:max-w-[76%]',
                       msg.sender_id === user?.id ? 'self-end' : 'self-start'
                     )}>
                       <div className={cn(
-                        'relative rounded-[26px] px-4 py-3.5 text-sm font-medium leading-7 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.22)]',
+                        'relative rounded-[26px] px-4 py-3.5 text-sm font-medium leading-7 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.18)]',
                         msg.sender_id === user?.id
                           ? 'rounded-br-md bg-brand text-white'
                           : 'rounded-bl-md border border-slate-200/80 bg-white text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-white'
@@ -1836,7 +2237,9 @@ export const SecureChat: React.FC<SecureChatProps> = ({
                         msg.sender_id === user?.id ? 'text-right' : 'text-left',
                         sendingMessageId === msg.id && 'opacity-50'
                       )}>
-                        {(msg as any).is_optimistic ? 'Enviando...' : new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {(msg as any).is_optimistic
+                          ? 'Enviando...'
+                          : `${new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}${msg.sender_id === user?.id ? ` · ${msg.readAt ? 'Leído' : 'No leído'}` : ''}`}
                       </span>
                     </div>
                   );
@@ -1854,10 +2257,11 @@ export const SecureChat: React.FC<SecureChatProps> = ({
             </div>
 
             {/* Input */}
-            <div className="border-t border-slate-100 bg-white/96 px-4 py-4 dark:border-slate-800 dark:bg-slate-950/96 sm:px-6">
-              <div className="mx-auto max-w-4xl space-y-3">
+            <div className="sticky bottom-0 z-10 border-t border-slate-200/80 bg-white/96 px-4 py-4 backdrop-blur dark:border-slate-800 dark:bg-slate-950/96 sm:px-6">
+              <div className="mx-auto max-w-6xl space-y-3">
                 <div className="flex items-end gap-3">
                   <input
+                    ref={composerInputRef}
                     type="text"
                     value={inputText}
                     onChange={(e) => {
@@ -1866,25 +2270,44 @@ export const SecureChat: React.FC<SecureChatProps> = ({
 
                       if (!nextValue.trim()) {
                         setPendingHostCloseIntent(null);
+                        setComposerWarning(null);
+                        return;
+                      }
+
+                      if (composerWarning && !containsExternalContactData(nextValue)) {
+                        setComposerWarning(null);
                       }
                     }}
                     onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                    placeholder="Escribí un mensaje..."
+                    placeholder="Escribí tu consulta..."
                     className="flex-1 rounded-[22px] border border-slate-200 bg-white px-5 py-3.5 text-sm font-medium text-slate-900 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.18)] outline-none transition-all placeholder:text-slate-400 focus:border-brand/30 focus:ring-2 focus:ring-brand/12 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
                   />
                   <button
                     aria-label="Enviar mensaje"
                     onClick={handleSend}
                     disabled={!inputText.trim() || sendingMessageId !== null}
-                    className="rounded-[20px] bg-brand p-3.5 text-white shadow-[0_18px_38px_-24px_rgba(67,56,202,0.42)] transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="inline-flex items-center gap-2 rounded-[20px] bg-brand px-4 py-3.5 text-sm font-semibold text-white shadow-[0_18px_38px_-24px_rgba(67,56,202,0.42)] transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {sendingMessageId !== null ? (
-                      <Icons.Loader2 className="w-5 h-5 animate-spin" />
+                      <>
+                        <Icons.Loader2 className="h-5 w-5 animate-spin" />
+                        <span>Enviando</span>
+                      </>
                     ) : (
-                      <Icons.Send className="w-5 h-5" />
+                      <>
+                        <Icons.Send className="h-5 w-5" />
+                        <span>Enviar</span>
+                      </>
                     )}
                   </button>
                 </div>
+
+                {composerWarning ? (
+                  <div className="rounded-[18px] border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-xs leading-5 text-amber-800 dark:border-amber-900/30 dark:bg-amber-900/20 dark:text-amber-200">
+                    <p className="font-medium">{composerWarning}</p>
+                    <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-300">{EXTERNAL_CONTACT_EDIT_HINT}</p>
+                  </div>
+                ) : null}
 
                 {showDepositChoiceBlock || hasInlineComposerActions ? (
                   <div className="space-y-3">
@@ -2103,12 +2526,6 @@ export const SecureChat: React.FC<SecureChatProps> = ({
                       </div>
                     </div>
                   </div>
-                ) : null}
-
-                {guestIntroPrompt ? (
-                  <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">
-                    {guestIntroPrompt}
-                  </p>
                 ) : null}
 
                 {showGuestNoAdvanceActions ? (

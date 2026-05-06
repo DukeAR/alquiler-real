@@ -36,14 +36,14 @@ export const ExploreFiltersBar = ({
   onClear,
 }: ExploreFiltersBarProps) => {
   const sharedControlTypographyClassName = 'text-[0.98rem] font-semibold tracking-[-0.015em]';
-  const sharedControlClassName = `explore-filter-control h-12 min-w-0 ${sharedControlTypographyClassName} text-slate-950`;
+  const sharedControlClassName = `explore-filter-control h-14 min-w-0 ${sharedControlTypographyClassName} text-slate-950`;
 
   return (
-    <section className="relative overflow-hidden rounded-[calc(var(--app-radius-card)+10px)] border border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.96)_0%,rgba(246,249,252,0.94)_100%)] px-5 py-4 shadow-[0_20px_48px_-34px_rgba(15,23,42,0.22)] ring-1 ring-[rgba(255,255,255,0.55)] backdrop-blur-[16px] sm:px-6 sm:py-4.5 lg:px-7">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[radial-gradient(circle_at_top,rgba(99,102,241,0.14),transparent_68%)]" />
-      <div className="relative z-10 flex flex-col gap-3.5">
-        <div className="flex flex-col gap-2.5 sm:relative sm:min-h-[2.75rem] sm:items-center sm:justify-center">
-          <div className="inline-flex h-11 w-fit items-center gap-1 self-center rounded-[1.05rem] border border-white/90 bg-white/80 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.7),0_14px_32px_-28px_rgba(15,23,42,0.22)]">
+    <section className="relative overflow-hidden rounded-[calc(var(--app-radius-card)+10px)] border border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.96)_0%,rgba(246,249,252,0.94)_100%)] px-5 py-5 shadow-[0_20px_48px_-34px_rgba(15,23,42,0.22)] ring-1 ring-[rgba(255,255,255,0.55)] backdrop-blur-[16px] sm:px-6 sm:py-5.5 lg:px-7 lg:py-6">
+      <div className="pointer-events-none absolute inset-x-0 top-1 h-24 bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.16),transparent_72%)]" />
+      <div className="relative z-10 flex flex-col gap-5 sm:gap-6">
+        <div className="flex flex-col gap-3.5 sm:relative sm:min-h-[3.25rem] sm:items-center sm:justify-center">
+          <div className="inline-flex h-12 w-fit items-center gap-1.5 self-center rounded-[1.15rem] border border-white/90 bg-white/80 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.7),0_14px_32px_-28px_rgba(15,23,42,0.22)]">
             {(['grid', 'map'] as const).map((mode) => (
               <button
                 key={mode}
@@ -51,7 +51,7 @@ export const ExploreFiltersBar = ({
                 aria-pressed={viewMode === mode}
                 onClick={() => onViewModeChange(mode)}
                 className={cn(
-                  'flex h-full items-center justify-center gap-2 rounded-[0.9rem] px-5 py-2.5 text-[0.87rem] font-semibold uppercase tracking-[0.08em] transition-[background-color,color,box-shadow] duration-150',
+                  'flex h-full items-center justify-center gap-2 rounded-[1rem] px-6 py-2.5 text-[0.88rem] font-semibold uppercase tracking-[0.08em] transition-[background-color,color,box-shadow] duration-150',
                   viewMode === mode
                     ? 'bg-white text-slate-950 shadow-[0_16px_28px_-24px_rgba(15,23,42,0.22)]'
                     : 'text-slate-700 hover:text-slate-950',
@@ -77,25 +77,25 @@ export const ExploreFiltersBar = ({
           ) : null}
         </div>
 
-        <div className="rounded-[22px] border border-white/80 bg-white/70 p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] sm:p-3">
+        <div className="rounded-[24px] border border-white/80 bg-white/70 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] sm:p-4">
           <div
             data-testid="explore-filters-controls"
-            className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-[1.125rem] lg:grid-cols-4 lg:items-stretch xl:gap-5"
+            className="grid grid-cols-1 gap-3.5 md:grid-cols-2 md:gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(17.5rem,1.15fr)] lg:items-stretch xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(18.5rem,1.2fr)] xl:gap-5"
           >
-            <div className="min-w-0">
+            <div className="min-w-0 self-center">
             <select
               aria-label="Ordenar por"
               value={sortBy}
               onChange={(event) => onSortChange(event.target.value as ExploreSort)}
-              className={cn('app-control px-4', sharedControlClassName)}
+              className={cn('app-control px-4.5', sharedControlClassName)}
             >
-              <option value="verification">Más verificados primero</option>
+              <option value="verification">Más verificadas primero</option>
               <option value="price">Precio más bajo</option>
               <option value="price-desc">Precio más alto</option>
             </select>
             </div>
 
-            <div className="min-w-0">
+            <div className="min-w-0 self-center">
             <Input
               type="number"
               inputMode="numeric"
@@ -104,11 +104,12 @@ export const ExploreFiltersBar = ({
               onChange={(event) => onFiltersChange({ ...filters, minPrice: event.target.value })}
               placeholder="Desde"
               icon={<span className="text-sm font-semibold text-[#64748b]">$</span>}
-              className={cn(sharedControlClassName, 'py-0 pl-10 pr-4 placeholder:font-semibold placeholder:text-slate-700 placeholder:opacity-100')}
+              wrapperClassName="w-full"
+              className={cn(sharedControlClassName, 'py-0 pl-11 pr-4 placeholder:font-semibold placeholder:text-slate-700 placeholder:opacity-100')}
             />
             </div>
 
-            <div className="min-w-0">
+            <div className="min-w-0 self-center">
             <Input
               type="number"
               inputMode="numeric"
@@ -117,26 +118,27 @@ export const ExploreFiltersBar = ({
               onChange={(event) => onFiltersChange({ ...filters, maxPrice: event.target.value })}
               placeholder="Hasta"
               icon={<span className="text-sm font-semibold text-[#64748b]">$</span>}
-              className={cn(sharedControlClassName, 'py-0 pl-10 pr-4 placeholder:font-semibold placeholder:text-slate-700 placeholder:opacity-100')}
+              wrapperClassName="w-full"
+              className={cn(sharedControlClassName, 'py-0 pl-11 pr-4 placeholder:font-semibold placeholder:text-slate-700 placeholder:opacity-100')}
             />
             </div>
 
             <label className={cn(
-              'flex h-12 min-w-0 w-full items-center justify-between gap-2.5 rounded-[14px] border px-4.5 text-left shadow-[0_10px_24px_-26px_rgba(15,23,42,0.2)] transition-[border-color,background-color,box-shadow] duration-150',
+              'flex min-h-[4.5rem] min-w-0 w-full items-center justify-between gap-3 rounded-[18px] border px-5 py-3 text-left shadow-[0_10px_24px_-26px_rgba(15,23,42,0.2)] transition-[border-color,background-color,box-shadow] duration-150',
               filters.verifiedOnly
                 ? 'border-brand/18 bg-[linear-gradient(180deg,rgba(79,70,229,0.07)_0%,rgba(79,70,229,0.03)_100%)]'
                 : 'border-[rgba(15,23,42,0.06)] bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)]',
             )}>
-              <span className="flex min-w-0 flex-1 flex-col justify-center pr-1.5">
-                <span className="block text-[0.8rem] font-semibold tracking-[-0.015em] leading-[1.15] text-slate-900">
+              <span className="flex min-w-0 flex-1 flex-col justify-center pr-2">
+                <span className="block text-[0.84rem] font-semibold tracking-[-0.015em] leading-[1.15] text-slate-900">
                   Solo propiedades verificadas presencialmente
                 </span>
-                <span className="mt-1 block text-[0.68rem] font-medium tracking-[-0.01em] leading-[1.1] text-slate-500">
+                <span className="mt-1 block text-[0.72rem] font-medium tracking-[-0.01em] leading-[1.15] text-slate-500">
                   Filtra solo avisos con visita real
                 </span>
               </span>
 
-              <span className="relative inline-flex h-6 w-11 shrink-0 items-center self-center">
+              <span className="relative inline-flex h-7 w-[3.15rem] shrink-0 items-center self-center">
                 <input
                   type="checkbox"
                   aria-label="Solo verificados presencialmente"
@@ -144,8 +146,8 @@ export const ExploreFiltersBar = ({
                   onChange={(event) => onFiltersChange({ ...filters, verifiedOnly: event.target.checked })}
                   className="peer sr-only"
                 />
-                <span className="absolute inset-0 rounded-full bg-slate-200/90 transition-colors duration-150 peer-checked:bg-brand" />
-                <span className="absolute left-0.5 h-5 w-5 rounded-full bg-white shadow-[0_2px_4px_rgba(15,23,42,0.12)] transition-transform duration-150 peer-checked:translate-x-5" />
+                <span className="absolute inset-0 rounded-full bg-slate-200/90 shadow-[inset_0_1px_1px_rgba(255,255,255,0.7)] transition-colors duration-150 peer-checked:bg-brand/95" />
+                <span className="absolute left-0.5 h-6 w-6 rounded-full bg-white shadow-[0_4px_10px_rgba(15,23,42,0.14)] transition-transform duration-150 peer-checked:translate-x-[1.35rem]" />
               </span>
             </label>
           </div>

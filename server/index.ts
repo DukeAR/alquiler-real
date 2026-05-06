@@ -689,6 +689,42 @@ const mapActivityLogToNotification = (row: any) => {
 // ANTI-FRAUDE & RISK SYSTEM
 // ==========================================
 
+const EXTERNAL_CONTACT_WARNING_MESSAGE = 'Parece que este mensaje incluye datos de contacto externos. Te recomendamos mantener la conversación dentro de la plataforma.';
+
+const normalizeChatSafetyText = (value: string) => value
+  .toLowerCase()
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '');
+
+const getExternalContactSignals = (value: string) => {
+  const normalizedValue = normalizeChatSafetyText(value);
+  const signals = new Set<string>();
+  const phoneMatches = value.match(/(?:\+?\d{1,4}[\s.-]?)?(?:\(?\d{2,4}\)?[\s.-]?)?\d{3,4}[\s.-]?\d{4}\b/g) ?? [];
+  const linkMatches = value.match(/\b(?:https?:\/\/|www\.)\S+/gi) ?? [];
+
+  if (phoneMatches.some((candidate) => candidate.replace(/\D/g, '').length >= 8)) {
+    signals.add('phone');
+  }
+
+  if (/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/.test(value)) {
+    signals.add('email');
+  }
+
+  if (linkMatches.some((candidate) => !/(?:alquilerreal|localhost|127\.0\.0\.1)/i.test(candidate))) {
+    signals.add('link');
+  }
+
+  if (/\b(?:instagram|insta|ig)\b/.test(normalizedValue)) {
+    signals.add('instagram');
+  }
+
+  if (/\b(?:whatsapp|whats|wsp|wpp|wa\.me)\b/.test(normalizedValue)) {
+    signals.add('whatsapp');
+  }
+
+  return Array.from(signals);
+};
+
 // Chat Filter Middleware
 const filterChatMiddleware = async (req: any, res: any, next: any) => {
   const rawMessage = typeof req.body?.text === 'string'
@@ -701,52 +737,100 @@ const filterChatMiddleware = async (req: any, res: any, next: any) => {
 
   if (!rawMessage) return next();
 
-  const phoneRegex = /(\+?\d{1,4}[\s.-]?)?(\(?\d{3}\)?[\s.-]?)?\d{3}[\s.-]?\d{4}/g;
-  const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
-  const linkRegex = /(https?:\/\/[^\s]+)|(www\.[^\s]+)/g;
+  const signals = getExternalContactSignals(rawMessage);
 
-  if (phoneRegex.test(rawMessage) || emailRegex.test(rawMessage) || linkRegex.test(rawMessage)) {
+  if (signals.length > 0) {
+    req.chatSafetyWarning = {
+      type: 'external_contact',
+      message: EXTERNAL_CONTACT_WARNING_MESSAGE,
+      signals,
+    };
+
     const userId = req.session.userId;
-    await logActivity(userId || 'anonymous', 'SUSPICIOUS_MESSAGE_BLOCKED', { text: rawMessage }, req.ip);
+    await logActivity(userId || 'anonymous', 'SUSPICIOUS_MESSAGE_BLOCKED', { text: rawMessage, signals }, req.ip);
 
     if (userId) {
       await evaluateInternalRisk(userId);
     }
-
-    return res.status(403).json({ 
-      error: 'Para que el proceso quede registrado en la app, no podés compartir contactos, redes ni datos externos por acá. Mantené esta conversación dentro de la plataforma.' 
-    });
   }
+
   next();
 };
 
 // POST /api/reports
 app.post('/api/reports', async (req, res) => {
-  const { reported_user_id, reason, description } = req.body;
   const reporterId = req.session.userId;
+  const incomingReportedUserId = typeof req.body?.reportedUserId === 'string'
+    ? req.body.reportedUserId
+    : typeof req.body?.reported_user_id === 'string'
+      ? req.body.reported_user_id
+      : '';
+  const propertyId = typeof req.body?.propertyId === 'string'
+    ? req.body.propertyId.trim()
+    : typeof req.body?.property_id === 'string'
+      ? req.body.property_id.trim()
+      : '';
+  const reason = normalizeReportReason(req.body?.reason);
+  const description = typeof req.body?.description === 'string' ? req.body.description.trim() : '';
 
-  if (!reporterId || !reported_user_id || !reason) {
+  if (!reporterId || !reason || (!incomingReportedUserId && !propertyId)) {
     return res.status(400).json({ error: 'Completá los datos necesarios para enviar el reporte.' });
   }
 
   try {
+    let resolvedReportedUserId = incomingReportedUserId.trim();
+
+    if (propertyId) {
+      const propertyResult = await db.query(
+        `SELECT id, "hostId" as "hostId"
+         FROM properties
+         WHERE id = $1`,
+        [propertyId],
+      );
+
+      if (propertyResult.rows.length === 0) {
+        return res.status(404).json({ error: 'No encontramos esa publicación.' });
+      }
+
+      if (!resolvedReportedUserId && typeof propertyResult.rows[0]?.hostId === 'string') {
+        resolvedReportedUserId = propertyResult.rows[0].hostId;
+      }
+    }
+
     const id = `rep_${Date.now()}`;
+    const severity = getReportSeverity(reason);
+    const reporterWeight = await getReporterTrustWeight(reporterId);
     await db.query(
-      `INSERT INTO reports (id, reported_user_id, reported_by_user_id, reason, description)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [id, reported_user_id, reporterId, reason, description]
+      `INSERT INTO reports (id, property_id, reported_user_id, reported_by_user_id, reason, description, reporter_weight, severity, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending')`,
+      [id, propertyId || null, resolvedReportedUserId || null, reporterId, reason, description || null, reporterWeight, severity]
     );
 
-    const evaluation = await evaluateInternalRisk(reported_user_id);
+    const evaluation = resolvedReportedUserId ? await evaluateInternalRisk(resolvedReportedUserId) : null;
 
     if (evaluation?.snapshot.manualReviewRequired) {
       await logActivity('system', 'RISK_MANUAL_REVIEW_REQUIRED', {
-        userId: reported_user_id,
+        userId: resolvedReportedUserId,
         source: 'report',
+        reason,
+        propertyId: propertyId || null,
       });
     }
 
-    res.json({ success: true, message: 'Recibimos tu reporte. Lo vamos a revisar.' });
+    res.status(201).json({
+      success: true,
+      report: {
+        id,
+        reporterId,
+        ...(resolvedReportedUserId ? { reportedUserId: resolvedReportedUserId } : {}),
+        ...(propertyId ? { propertyId } : {}),
+        reason,
+        description,
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+      },
+      message: 'Recibimos tu reporte. Lo vamos a revisar.',
+    });
   } catch (err) {
     res.status(500).json({ error: 'No pudimos enviar el reporte. Intentá de nuevo.' });
   }
@@ -763,7 +847,8 @@ app.post('/api/chat/analyze', filterChatMiddleware, async (req, res) => {
   res.json({
     isScam: isSuspicious,
     reason: isSuspicious ? 'Detectamos un intento de pedir pago externo o compartir datos bancarios.' : '',
-    riskLevel: isSuspicious ? 'high' : 'low'
+    riskLevel: isSuspicious ? 'high' : 'low',
+    platformWarning: (req as any).chatSafetyWarning?.message ?? null,
   });
 });
 
@@ -835,6 +920,24 @@ const buildReviewWouldInteractAgainSql = (alias: string) => `COALESCE(${alias}.w
 const buildReviewHadIncidentSql = (alias: string) => `COALESCE(${alias}.had_incident, CASE WHEN ${alias}.pressure_to_book_fast = TRUE OR ${alias}.photos_match_reality = FALSE THEN TRUE WHEN ${alias}.rating IS NOT NULL THEN ${alias}.rating <= 3 ELSE FALSE END)`;
 
 const buildReviewListingConsistencySql = (alias: string) => `COALESCE(${alias}.photos_match_reality, CASE WHEN ${alias}.rating IS NOT NULL THEN ${alias}.rating >= 4 ELSE TRUE END)`;
+
+const PROPERTY_REPORT_STATS_SELECT = `COALESCE(property_report_stats."reportsCount", 0) as "reportsCount",
+        COALESCE(property_report_stats."pendingReportsCount", 0) as "pendingReportsCount",
+        COALESCE(property_report_stats."confirmedReportsCount", 0) as "confirmedReportsCount",
+        COALESCE(property_report_stats."confirmedSevereReportsCount", 0) as "confirmedSevereReportsCount"`;
+
+const PROPERTY_REPORT_STATS_JOINS = `
+      LEFT JOIN (
+        SELECT property_id,
+               COUNT(*)::int as "reportsCount",
+               COUNT(*) FILTER (WHERE status = 'pending')::int as "pendingReportsCount",
+               COUNT(*) FILTER (WHERE status IN ('reviewed', 'action_taken'))::int as "confirmedReportsCount",
+               COUNT(*) FILTER (WHERE status IN ('reviewed', 'action_taken') AND COALESCE(severity, 'standard') = 'severe')::int as "confirmedSevereReportsCount"
+        FROM reports
+        WHERE property_id IS NOT NULL
+        GROUP BY property_id
+      ) property_report_stats ON property_report_stats.property_id = p.id
+`;
 
 const PROPERTY_HOST_TRUST_SELECT = `u.identity_validated as "hostIdentityValidated",
         u.is_identity_verified as "hostIdentityVerified",
@@ -986,7 +1089,14 @@ const PROPERTY_LIST_SELECT = `p.id, p.title, p.location, p.price, p."hostId", p.
         p.is_verified_property as "isVerifiedProperty",
         ${PROPERTY_AVAILABILITY_VALIDATED_SELECT},
         ${PROPERTY_VERIFICATION_FILE_SUMMARY_SELECT},
+  ${PROPERTY_REPORT_STATS_SELECT},
         ${PROPERTY_HOST_TRUST_SELECT}`;
+
+const PUBLIC_PROPERTY_VISIBILITY_WHERE = `COALESCE(u.internal_manual_review_required, FALSE) = FALSE
+  AND COALESCE(u.internal_moderation_status, 'clear') <> 'suspended'
+  AND COALESCE(NULLIF(p.internal_moderation_status, ''), 'clear') <> 'hidden'
+  AND p.internal_hidden_at IS NULL
+  AND (p.internal_paused_until IS NULL OR p.internal_paused_until <= NOW())`;
 
 type VerificationAssetKind = 'photo' | 'video' | 'document';
 
@@ -2273,6 +2383,302 @@ app.post('/api/internal/properties/:id/verification/review', async (req, res) =>
   }
 });
 
+app.get('/api/internal/moderation/review-queue', async (req, res) => {
+  if (!requireInternalOpsAccess(req, res)) {
+    return;
+  }
+
+  const requestedStatus = typeof req.query.status === 'string' ? req.query.status.trim() : 'pending';
+  const normalizedStatus = requestedStatus === 'all'
+    ? 'all'
+    : requestedStatus === 'reviewed' || requestedStatus === 'dismissed' || requestedStatus === 'action_taken'
+      ? requestedStatus
+      : 'pending';
+
+  try {
+    const params: string[] = [];
+    const whereClauses = ['1 = 1'];
+
+    if (normalizedStatus !== 'all') {
+      params.push(normalizedStatus);
+      whereClauses.push(`r.status = $${params.length}`);
+    }
+
+    const result = await db.query(
+      `SELECT r.id,
+              r.reason,
+              r.description,
+              r.severity,
+              r.status,
+              r.created_at as "createdAt",
+              r.review_notes as "reviewNotes",
+              r.reviewed_by as "reviewedBy",
+              COALESCE(r.reporter_weight, 1)::numeric as "reporterWeight",
+              COALESCE(r.strike_delta, 0)::int as "appliedStrikeDelta",
+              p.id as "propertyId",
+              p.title as "propertyTitle",
+              target.id as "reportedUserId",
+              COALESCE(target.name, 'Usuario') as "reportedUserName",
+              COALESCE(target.internal_strikes_count, 0)::int as "strikesCount",
+              COALESCE(report_history."recentReportsCount", 0)::int as "recentReportsCount",
+              COALESCE(report_history."confirmedReportsCount", 0)::int as "confirmedReportsCount",
+              COALESCE(moderation_history."recentModerationEvents", '[]'::json) as "recentModerationEvents"
+       FROM reports r
+       LEFT JOIN properties p ON p.id = r.property_id
+       LEFT JOIN users target ON target.id = r.reported_user_id
+       LEFT JOIN LATERAL (
+         SELECT COUNT(*) FILTER (WHERE history_reports.created_at >= NOW() - INTERVAL '30 days')::int as "recentReportsCount",
+                COUNT(*) FILTER (WHERE history_reports.status IN ('reviewed', 'action_taken'))::int as "confirmedReportsCount"
+         FROM reports history_reports
+         WHERE history_reports.reported_user_id = r.reported_user_id
+       ) report_history ON TRUE
+       LEFT JOIN LATERAL (
+         SELECT COALESCE(
+                  json_agg(
+                    json_build_object(
+                      'eventType', recent_events.event_type,
+                      'reason', recent_events.reason,
+                      'createdAt', recent_events.created_at
+                    )
+                    ORDER BY recent_events.created_at DESC
+                  ),
+                  '[]'::json
+                ) as "recentModerationEvents"
+         FROM (
+           SELECT me.event_type, me.reason, me.created_at
+           FROM moderation_events me
+           WHERE (r.reported_user_id IS NOT NULL AND me.user_id = r.reported_user_id)
+              OR (r.property_id IS NOT NULL AND me.property_id = r.property_id)
+           ORDER BY me.created_at DESC
+           LIMIT 5
+         ) recent_events
+       ) moderation_history ON TRUE
+       WHERE ${whereClauses.join(' AND ')}
+       ORDER BY CASE WHEN r.status = 'pending' THEN 0 ELSE 1 END ASC,
+                COALESCE(r.reporter_weight, 1) DESC,
+                r.created_at DESC`,
+      params,
+    );
+
+    return res.json({
+      items: result.rows.map((row) => ({
+        id: row.id,
+        createdAt: row.createdAt,
+        status: row.status,
+        severity: row.severity,
+        reason: row.reason,
+        reasonLabel: REPORT_REASON_LABELS[normalizeReportReason(row.reason) ?? 'other'],
+        description: row.description,
+        reporterWeight: Number(row.reporterWeight ?? 1),
+        user: {
+          id: row.reportedUserId ?? null,
+          name: row.reportedUserName ?? 'Usuario',
+        },
+        property: row.propertyId
+          ? {
+              id: row.propertyId,
+              title: row.propertyTitle ?? 'Publicacion',
+            }
+          : null,
+        history: {
+          recentReportsCount: Number(row.recentReportsCount ?? 0),
+          confirmedReportsCount: Number(row.confirmedReportsCount ?? 0),
+          recentModerationEvents: parseRecentModerationEvents(row.recentModerationEvents),
+        },
+        strikes: Number(row.strikesCount ?? 0),
+        appliedStrikeDelta: Number(row.appliedStrikeDelta ?? 0),
+        reviewNotes: row.reviewNotes ?? null,
+        reviewedBy: row.reviewedBy ?? null,
+      })),
+    });
+  } catch (err) {
+    console.error('Error loading internal moderation queue:', err);
+    return res.status(500).json({ error: 'No pudimos cargar la cola interna de moderacion.' });
+  }
+});
+
+app.post('/api/internal/reports/:id/review', async (req, res) => {
+  if (!requireInternalOpsAccess(req, res)) {
+    return;
+  }
+
+  const action = req.body?.action;
+  const notes = typeof req.body?.notes === 'string' ? req.body.notes.trim() : '';
+  const reviewedBy = typeof req.body?.reviewedBy === 'string' && req.body.reviewedBy.trim().length > 0
+    ? req.body.reviewedBy.trim()
+    : 'internal_ops';
+
+  if (!isModerationReviewAction(action)) {
+    return res.status(400).json({ error: 'Elegi una accion interna valida.' });
+  }
+
+  try {
+    const reportResult = await db.query(
+      `SELECT r.id,
+              r.reason,
+              r.severity,
+              r.status,
+              r.property_id as "propertyId",
+              r.reported_user_id as "reportedUserId",
+              p.title as "propertyTitle",
+              target.name as "reportedUserName",
+              COALESCE(target.internal_strikes_count, 0)::int as "currentStrikesCount",
+              target.internal_account_limited_until as "currentAccountLimitedUntil",
+              target.internal_account_blocked_until as "currentAccountBlockedUntil"
+       FROM reports r
+       LEFT JOIN properties p ON p.id = r.property_id
+       LEFT JOIN users target ON target.id = r.reported_user_id
+       WHERE r.id = $1
+       LIMIT 1`,
+      [req.params.id],
+    );
+
+    const report = reportResult.rows[0] as {
+      id: string;
+      reason?: string | null;
+      severity?: string | null;
+      status?: string | null;
+      propertyId?: string | null;
+      reportedUserId?: string | null;
+      propertyTitle?: string | null;
+      reportedUserName?: string | null;
+      currentStrikesCount?: number | string | null;
+      currentAccountLimitedUntil?: string | Date | null;
+      currentAccountBlockedUntil?: string | Date | null;
+    } | undefined;
+
+    if (!report) {
+      return res.status(404).json({ error: 'No encontramos ese reporte.' });
+    }
+
+    const reason = normalizeReportReason(report.reason) ?? 'other';
+    const outcome = buildModerationReviewOutcome(action, REPORT_REASON_LABELS[reason], req.body?.strikeDelta);
+    const reviewedAt = new Date().toISOString();
+
+    await db.query(
+      `UPDATE reports
+       SET status = $1,
+           reviewed_at = $2,
+           review_notes = $3,
+           reviewed_by = $4,
+           strike_delta = $5
+       WHERE id = $6`,
+      [outcome.reportStatus, reviewedAt, notes || null, reviewedBy, outcome.strikeDelta, req.params.id],
+    );
+
+    let nextStrikesCount = Number(report.currentStrikesCount ?? 0);
+    let nextModerationStatus: string | null = null;
+
+    if (report.reportedUserId) {
+      const currentLimitedUntil = toFutureDateString(report.currentAccountLimitedUntil);
+      const currentBlockedUntil = toFutureDateString(report.currentAccountBlockedUntil);
+      const nextLimitedUntil = getLatestFutureDateString(currentLimitedUntil, outcome.accountLimitedUntil);
+      const nextBlockedUntil = getLatestFutureDateString(currentBlockedUntil, outcome.accountBlockedUntil);
+
+      nextStrikesCount = Math.max(0, Number(report.currentStrikesCount ?? 0) + outcome.strikeDelta);
+      nextModerationStatus = resolveInternalModerationStatus({
+        strikesCount: nextStrikesCount,
+        accountLimitedUntil: nextLimitedUntil,
+        accountBlockedUntil: nextBlockedUntil,
+      });
+
+      await db.query(
+        `UPDATE users
+         SET internal_strikes_count = $2,
+             internal_moderation_status = $3,
+             internal_account_limited_until = $4,
+             internal_account_blocked_until = $5,
+             internal_risk_updated_at = NOW()
+         WHERE id = $1`,
+        [report.reportedUserId, nextStrikesCount, nextModerationStatus, nextLimitedUntil, nextBlockedUntil],
+      );
+    }
+
+    if (report.propertyId && outcome.propertyStatus === 'paused') {
+      await db.query(
+        `UPDATE properties
+         SET internal_moderation_status = 'paused',
+             internal_moderation_reason = $2,
+             internal_paused_until = $3,
+             internal_hidden_at = NULL,
+             internal_moderation_updated_at = NOW()
+         WHERE id = $1`,
+        [report.propertyId, outcome.propertyReason, outcome.pausedUntil],
+      );
+    }
+
+    if (report.propertyId && outcome.propertyStatus === 'hidden') {
+      await db.query(
+        `UPDATE properties
+         SET internal_moderation_status = 'hidden',
+             internal_moderation_reason = $2,
+             internal_paused_until = NULL,
+             internal_hidden_at = COALESCE(internal_hidden_at, $3),
+             internal_moderation_updated_at = NOW()
+         WHERE id = $1`,
+        [report.propertyId, outcome.propertyReason, outcome.hiddenAt],
+      );
+    }
+
+    if (report.reportedUserId) {
+      await evaluateInternalRisk(report.reportedUserId);
+    }
+
+    const moderationEventId = `mod_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    await db.query(
+      `INSERT INTO moderation_events (
+         id, report_id, user_id, property_id, event_type, severity, reason, notes, strike_delta, created_by, metadata
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb)`,
+      [
+        moderationEventId,
+        report.id,
+        report.reportedUserId ?? null,
+        report.propertyId ?? null,
+        outcome.eventType,
+        report.severity ?? 'standard',
+        reason,
+        notes || null,
+        outcome.strikeDelta,
+        reviewedBy,
+        JSON.stringify({
+          action,
+          reportStatus: outcome.reportStatus,
+          severityLevel: outcome.severityLevel,
+          propertyTitle: report.propertyTitle ?? null,
+          reportedUserName: report.reportedUserName ?? null,
+        }),
+      ],
+    );
+
+    return res.json({
+      success: true,
+      report: {
+        id: report.id,
+        status: outcome.reportStatus,
+        reviewedAt,
+        strikeDelta: outcome.strikeDelta,
+      },
+      user: {
+        id: report.reportedUserId ?? null,
+        name: report.reportedUserName ?? 'Usuario',
+        strikes: nextStrikesCount,
+        moderationStatus: nextModerationStatus,
+      },
+      property: report.propertyId
+        ? {
+            id: report.propertyId,
+            title: report.propertyTitle ?? 'Publicacion',
+            moderationStatus: outcome.propertyStatus,
+          }
+        : null,
+    });
+  } catch (err) {
+    console.error('Error reviewing moderation report:', err);
+    return res.status(500).json({ error: 'No pudimos guardar esa revision interna.' });
+  }
+});
+
 app.post('/api/properties/:id/verification/assets', verificationAssetUpload.array('files', 6), async (req, res) => {
   if (!req.session.userId) {
     return res.status(401).json({ error: AUTH_REQUIRED_ERROR });
@@ -2386,6 +2792,12 @@ app.post('/api/verification/premium-checkout', async (req, res) => {
   }
 
   try {
+    const boostRisk = await checkUserRisk(req.session.userId, 'access_boosts');
+
+    if (boostRisk.blocked) {
+      return res.status(403).json({ error: boostRisk.reason || 'No pudimos validar esta accion.' });
+    }
+
     const usageRowsPromise = getPremiumPromotionalUsageRows();
 
     if (offerType === PREMIUM_DOCUMENTARY_OFFER_TYPE) {
@@ -2887,17 +3299,19 @@ app.get('/api/users/reviews', async (req, res) => {
     const written = await db.query(
       `SELECT r.id,
               r.booking_id as "bookingId",
+              r.conversation_id as "conversationId",
               r.reviewer_id as "reviewerId",
               r.reviewed_user_id as "reviewedUserId",
               r.property_id as "propertyId",
               r.type,
               r.rating,
               r.comment,
+              r.category_scores as "categoryScores",
               r.agreement_kept as "agreementKept",
               r.would_interact_again as "wouldInteractAgain",
               r.had_incident as "hadIncident",
               r.photos_match_reality as "photosMatchReality",
-              r.created_at,
+              r.created_at as "createdAt",
               p.title as "propertyTitle", u.name as "userName"
        FROM reviews r
        LEFT JOIN properties p ON r.property_id = p.id
@@ -2909,17 +3323,19 @@ app.get('/api/users/reviews', async (req, res) => {
     const received = await db.query(
       `SELECT r.id,
               r.booking_id as "bookingId",
+              r.conversation_id as "conversationId",
               r.reviewer_id as "reviewerId",
               r.reviewed_user_id as "reviewedUserId",
               r.property_id as "propertyId",
               r.type,
               r.rating,
               r.comment,
+              r.category_scores as "categoryScores",
               r.agreement_kept as "agreementKept",
               r.would_interact_again as "wouldInteractAgain",
               r.had_incident as "hadIncident",
               r.photos_match_reality as "photosMatchReality",
-              r.created_at,
+              r.created_at as "createdAt",
               u.name as "userName", p.title as "propertyTitle"
        FROM reviews r
        LEFT JOIN users u ON r.reviewer_id = u.id
@@ -2928,7 +3344,10 @@ app.get('/api/users/reviews', async (req, res) => {
        ORDER BY r.created_at DESC`,
       [req.session.userId]
     );
-    res.json({ written: written.rows, received: received.rows });
+    res.json({
+      written: written.rows.map((row) => mapPublicReviewRecord(row)),
+      received: received.rows.map((row) => mapPublicReviewRecord(row)),
+    });
   } catch (err) {
     res.status(500).json({ error: 'No pudimos cargar las reseñas.' });
   }
@@ -2954,6 +3373,490 @@ app.post('/api/users/documents', async (req, res) => {
 const toSafeNumber = (value: unknown) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
+};
+
+type StoredReviewType = 'host_to_guest' | 'guest_to_host';
+type CanonicalReviewType = 'host_review' | 'guest_review';
+type ReportReason = 'suspicious_listing' | 'false_information' | 'off_platform_attempt' | 'inappropriate_conduct' | 'not_as_listed' | 'other';
+type ReportSeverity = 'standard' | 'severe';
+type ModerationReviewAction = 'dismiss' | 'confirm_low' | 'confirm_medium' | 'confirm_high';
+
+type ReviewCategoryScore = {
+  key: string;
+  label: string;
+  score: number;
+};
+
+const REVIEW_CATEGORY_DEFINITIONS: Record<StoredReviewType, ReviewCategoryScore[]> = {
+  guest_to_host: [
+    { key: 'communication', label: 'Comunicación', score: 0 },
+    { key: 'listing_clarity', label: 'Claridad del aviso', score: 0 },
+    { key: 'agreement_fulfillment', label: 'Cumplimiento de lo acordado', score: 0 },
+    { key: 'overall_experience', label: 'Experiencia general', score: 0 },
+  ],
+  host_to_guest: [
+    { key: 'respectful_treatment', label: 'Trato respetuoso', score: 0 },
+    { key: 'agreement_fulfillment', label: 'Cumplimiento de acuerdos', score: 0 },
+    { key: 'property_care', label: 'Cuidado del lugar', score: 0 },
+    { key: 'platform_history', label: 'Historial en la plataforma', score: 0 },
+  ],
+};
+
+const REPORT_REASON_LABELS: Record<ReportReason, string> = {
+  suspicious_listing: 'Publicación sospechosa',
+  false_information: 'Datos falsos',
+  off_platform_attempt: 'Intento de operar por fuera',
+  inappropriate_conduct: 'Maltrato o conducta inapropiada',
+  not_as_listed: 'No coincidencia con lo publicado',
+  other: 'Otro',
+};
+
+const REPORT_REASON_SEVERITY = new Set<ReportReason>([
+  'suspicious_listing',
+  'false_information',
+  'off_platform_attempt',
+  'inappropriate_conduct',
+]);
+
+const normalizeStoredReviewType = (value: unknown): StoredReviewType | null => {
+  if (value === 'host_to_guest' || value === 'host_review') {
+    return 'host_to_guest';
+  }
+
+  if (value === 'guest_to_host' || value === 'guest_review') {
+    return 'guest_to_host';
+  }
+
+  return null;
+};
+
+const toCanonicalReviewType = (value: unknown): CanonicalReviewType => (
+  normalizeStoredReviewType(value) === 'host_to_guest' ? 'host_review' : 'guest_review'
+);
+
+const normalizeReportReason = (value: unknown): ReportReason | null => {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const normalizedValue = value.trim().toLowerCase();
+
+  const aliasMap: Record<string, ReportReason> = {
+    suspicious_listing: 'suspicious_listing',
+    'publicacion sospechosa': 'suspicious_listing',
+    'publicación sospechosa': 'suspicious_listing',
+    false_information: 'false_information',
+    'datos falsos': 'false_information',
+    off_platform_attempt: 'off_platform_attempt',
+    'intento de operar por fuera': 'off_platform_attempt',
+    inappropriate_conduct: 'inappropriate_conduct',
+    'maltrato o conducta inapropiada': 'inappropriate_conduct',
+    not_as_listed: 'not_as_listed',
+    'no coincidencia con lo publicado': 'not_as_listed',
+    other: 'other',
+    otro: 'other',
+  };
+
+  return aliasMap[normalizedValue] ?? null;
+};
+
+const getReportSeverity = (reason: ReportReason): ReportSeverity => (
+  REPORT_REASON_SEVERITY.has(reason) ? 'severe' : 'standard'
+);
+
+type ReporterTrustRow = {
+  internalTrustScore?: unknown;
+  totalReviews?: unknown;
+  memberSince?: unknown;
+  documentaryVerified?: unknown;
+};
+
+type ModerationReviewOutcome = {
+  reportStatus: 'dismissed' | 'reviewed' | 'action_taken';
+  severityLevel: 'clear' | 'low' | 'medium' | 'high';
+  strikeDelta: number;
+  propertyStatus: 'paused' | 'hidden' | null;
+  propertyReason: string | null;
+  pausedUntil: string | null;
+  hiddenAt: string | null;
+  accountLimitedUntil: string | null;
+  accountBlockedUntil: string | null;
+  eventType: string;
+};
+
+const REPORTER_WEIGHT_MIN = 0.35;
+const REPORTER_WEIGHT_MAX = 1.75;
+const MODERATION_LIMIT_HOURS = 48;
+const MODERATION_BLOCK_HOURS = 24 * 7;
+
+const clampNumber = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
+
+const toTimestamp = (value: unknown) => {
+  if (typeof value === 'string' && value.trim().length > 0) {
+    const parsed = Date.parse(value);
+    return Number.isNaN(parsed) ? null : parsed;
+  }
+
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value.getTime();
+  }
+
+  return null;
+};
+
+const toFutureDateString = (value: unknown) => {
+  const timestamp = toTimestamp(value);
+
+  if (timestamp === null || timestamp <= Date.now()) {
+    return null;
+  }
+
+  return new Date(timestamp).toISOString();
+};
+
+const getLatestFutureDateString = (currentValue: string | null, candidateValue: string | null) => {
+  if (!currentValue) {
+    return candidateValue;
+  }
+
+  if (!candidateValue) {
+    return currentValue;
+  }
+
+  return Date.parse(currentValue) >= Date.parse(candidateValue) ? currentValue : candidateValue;
+};
+
+const getDatePlusHours = (hours: number) => new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
+
+const getAccountAgeDays = (value: unknown) => {
+  const timestamp = toTimestamp(value);
+
+  if (timestamp === null) {
+    return 365;
+  }
+
+  return Math.max(0, Math.floor((Date.now() - timestamp) / (1000 * 60 * 60 * 24)));
+};
+
+const resolveInternalModerationStatus = (params: {
+  strikesCount: number;
+  accountLimitedUntil: string | null;
+  accountBlockedUntil: string | null;
+}) => {
+  if (params.accountBlockedUntil || params.strikesCount >= 3) {
+    return 'suspended';
+  }
+
+  if (params.accountLimitedUntil || params.strikesCount >= 2) {
+    return 'limited';
+  }
+
+  if (params.strikesCount >= 1) {
+    return 'warned';
+  }
+
+  return 'clear';
+};
+
+const isModerationReviewAction = (value: unknown): value is ModerationReviewAction => (
+  value === 'dismiss'
+  || value === 'confirm_low'
+  || value === 'confirm_medium'
+  || value === 'confirm_high'
+);
+
+const calculateReporterWeight = (row: ReporterTrustRow | null | undefined) => {
+  const internalTrustScore = toSafeNumber(row?.internalTrustScore);
+  const totalReviews = toSafeNumber(row?.totalReviews);
+  const accountAgeDays = getAccountAgeDays(row?.memberSince);
+  const documentaryVerified = Boolean(row?.documentaryVerified);
+
+  let weight = 1;
+
+  if (internalTrustScore >= 80) {
+    weight += 0.35;
+  } else if (internalTrustScore >= 65) {
+    weight += 0.15;
+  } else if (internalTrustScore > 0 && internalTrustScore < 40) {
+    weight -= 0.2;
+  }
+
+  if (documentaryVerified) {
+    weight += 0.2;
+  }
+
+  if (totalReviews >= 5) {
+    weight += 0.15;
+  } else if (totalReviews === 0) {
+    weight -= 0.15;
+  }
+
+  if (accountAgeDays >= 90) {
+    weight += 0.15;
+  } else if (accountAgeDays <= 14) {
+    weight -= 0.35;
+  }
+
+  return Number(clampNumber(weight, REPORTER_WEIGHT_MIN, REPORTER_WEIGHT_MAX).toFixed(2));
+};
+
+const getReporterTrustWeight = async (userId: string) => {
+  const reporterResult = await db.query(
+    `SELECT COALESCE(internal_trust_score, 50)::numeric as "internalTrustScore",
+            COALESCE(total_reviews, 0)::int as "totalReviews",
+            COALESCE(member_since, created_at) as "memberSince",
+            (COALESCE(identity_validated, FALSE) OR COALESCE(is_identity_verified, FALSE)) as "documentaryVerified"
+     FROM users
+     WHERE id = $1
+     LIMIT 1`,
+    [userId],
+  );
+
+  return calculateReporterWeight(reporterResult.rows[0] as ReporterTrustRow | undefined);
+};
+
+const buildModerationReviewOutcome = (
+  action: ModerationReviewAction,
+  reasonLabel: string,
+  requestedStrikeDelta: unknown,
+): ModerationReviewOutcome => {
+  const normalizedStrikeDelta = action === 'dismiss'
+    ? 0
+    : clampNumber(Math.round(toSafeNumber(requestedStrikeDelta) || 1), 0, 1);
+
+  if (action === 'dismiss') {
+    return {
+      reportStatus: 'dismissed',
+      severityLevel: 'clear',
+      strikeDelta: 0,
+      propertyStatus: null,
+      propertyReason: null,
+      pausedUntil: null,
+      hiddenAt: null,
+      accountLimitedUntil: null,
+      accountBlockedUntil: null,
+      eventType: 'report_dismissed',
+    };
+  }
+
+  if (action === 'confirm_medium') {
+    return {
+      reportStatus: 'action_taken',
+      severityLevel: 'medium',
+      strikeDelta: normalizedStrikeDelta,
+      propertyStatus: 'paused',
+      propertyReason: `Revision interna: ${reasonLabel}`,
+      pausedUntil: getDatePlusHours(MODERATION_LIMIT_HOURS),
+      hiddenAt: null,
+      accountLimitedUntil: getDatePlusHours(MODERATION_LIMIT_HOURS),
+      accountBlockedUntil: null,
+      eventType: 'report_confirmed_medium',
+    };
+  }
+
+  if (action === 'confirm_high') {
+    return {
+      reportStatus: 'action_taken',
+      severityLevel: 'high',
+      strikeDelta: normalizedStrikeDelta,
+      propertyStatus: 'hidden',
+      propertyReason: `Revision interna: ${reasonLabel}`,
+      pausedUntil: null,
+      hiddenAt: new Date().toISOString(),
+      accountLimitedUntil: null,
+      accountBlockedUntil: getDatePlusHours(MODERATION_BLOCK_HOURS),
+      eventType: 'report_confirmed_high',
+    };
+  }
+
+  return {
+    reportStatus: 'reviewed',
+    severityLevel: 'low',
+    strikeDelta: normalizedStrikeDelta,
+    propertyStatus: null,
+    propertyReason: null,
+    pausedUntil: null,
+    hiddenAt: null,
+    accountLimitedUntil: null,
+    accountBlockedUntil: null,
+    eventType: 'report_confirmed_low',
+  };
+};
+
+const parseRecentModerationEvents = (value: unknown) => {
+  if (Array.isArray(value)) {
+    return value;
+  }
+
+  if (typeof value === 'string' && value.trim()) {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+
+  return [];
+};
+
+const parseCategoryScores = (value: unknown): ReviewCategoryScore[] => {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => {
+        if (!item || typeof item !== 'object') {
+          return null;
+        }
+
+        const key = typeof (item as { key?: unknown }).key === 'string' ? (item as { key: string }).key : '';
+        const label = typeof (item as { label?: unknown }).label === 'string' ? (item as { label: string }).label : '';
+        const score = Number((item as { score?: unknown }).score);
+
+        if (!key || !label || !Number.isFinite(score)) {
+          return null;
+        }
+
+        return {
+          key,
+          label,
+          score: Math.max(1, Math.min(5, Math.round(score))),
+        } satisfies ReviewCategoryScore;
+      })
+      .filter((item): item is ReviewCategoryScore => item !== null);
+  }
+
+  if (typeof value === 'string' && value.trim()) {
+    try {
+      return parseCategoryScores(JSON.parse(value));
+    } catch {
+      return [];
+    }
+  }
+
+  return [];
+};
+
+const normalizeReviewCategoryScores = (input: unknown, storedType: StoredReviewType): ReviewCategoryScore[] | null => {
+  const parsedScores = parseCategoryScores(input);
+
+  if (parsedScores.length === 0) {
+    return null;
+  }
+
+  const definitions = REVIEW_CATEGORY_DEFINITIONS[storedType];
+  const scoreMap = new Map(parsedScores.map((item) => [item.key, item]));
+
+  if (definitions.some((definition) => !scoreMap.has(definition.key)) || parsedScores.length !== definitions.length) {
+    return null;
+  }
+
+  return definitions.map((definition) => ({
+    key: definition.key,
+    label: definition.label,
+    score: scoreMap.get(definition.key)?.score ?? 0,
+  }));
+};
+
+const scoreFromBoolean = (value: boolean | null | undefined, options?: {
+  trueScore?: number;
+  falseScore?: number;
+  fallbackScore?: number;
+}) => {
+  if (value === true) {
+    return options?.trueScore ?? 5;
+  }
+
+  if (value === false) {
+    return options?.falseScore ?? 2;
+  }
+
+  return options?.fallbackScore ?? 4;
+};
+
+const buildLegacyReviewCategoryScores = (params: {
+  storedType: StoredReviewType;
+  agreementKept: boolean;
+  wouldInteractAgain: boolean;
+  hadIncident: boolean;
+  photosMatchReality?: boolean;
+}) => {
+  if (params.storedType === 'guest_to_host') {
+    return [
+      { key: 'communication', label: 'Comunicación', score: scoreFromBoolean(params.wouldInteractAgain, { falseScore: 3 }) },
+      { key: 'listing_clarity', label: 'Claridad del aviso', score: scoreFromBoolean(params.photosMatchReality, { falseScore: 1 }) },
+      { key: 'agreement_fulfillment', label: 'Cumplimiento de lo acordado', score: scoreFromBoolean(params.agreementKept, { falseScore: 2 }) },
+      { key: 'overall_experience', label: 'Experiencia general', score: params.hadIncident ? 2 : scoreFromBoolean(params.wouldInteractAgain) },
+    ] satisfies ReviewCategoryScore[];
+  }
+
+  return [
+    { key: 'respectful_treatment', label: 'Trato respetuoso', score: params.hadIncident ? 2 : 5 },
+    { key: 'agreement_fulfillment', label: 'Cumplimiento de acuerdos', score: scoreFromBoolean(params.agreementKept, { falseScore: 2 }) },
+    { key: 'property_care', label: 'Cuidado del lugar', score: params.hadIncident ? 2 : 5 },
+    { key: 'platform_history', label: 'Historial en la plataforma', score: scoreFromBoolean(params.wouldInteractAgain, { falseScore: 3 }) },
+  ] satisfies ReviewCategoryScore[];
+};
+
+const buildReviewSignalsFromCategoryScores = (storedType: StoredReviewType, categoryScores: ReviewCategoryScore[]) => {
+  const scoreByKey = new Map(categoryScores.map((item) => [item.key, item.score]));
+  const averageRating = categoryScores.reduce((sum, item) => sum + item.score, 0) / Math.max(categoryScores.length, 1);
+
+  if (storedType === 'guest_to_host') {
+    const agreementScore = scoreByKey.get('agreement_fulfillment') ?? 0;
+    const clarityScore = scoreByKey.get('listing_clarity') ?? 0;
+    const overallScore = scoreByKey.get('overall_experience') ?? 0;
+    const communicationScore = scoreByKey.get('communication') ?? 0;
+
+    return {
+      rating: Math.max(1, Math.min(5, Math.round(averageRating))),
+      agreementKept: agreementScore >= 4,
+      wouldInteractAgain: overallScore >= 4,
+      hadIncident: agreementScore <= 2 || clarityScore <= 2 || overallScore <= 2 || communicationScore <= 2,
+      photosMatchReality: clarityScore >= 4,
+    };
+  }
+
+  const agreementScore = scoreByKey.get('agreement_fulfillment') ?? 0;
+  const respectScore = scoreByKey.get('respectful_treatment') ?? 0;
+  const careScore = scoreByKey.get('property_care') ?? 0;
+  const historyScore = scoreByKey.get('platform_history') ?? 0;
+
+  return {
+    rating: Math.max(1, Math.min(5, Math.round(averageRating))),
+    agreementKept: agreementScore >= 4,
+    wouldInteractAgain: historyScore >= 4,
+    hadIncident: agreementScore <= 2 || respectScore <= 2 || careScore <= 2,
+    photosMatchReality: true,
+  };
+};
+
+const mapPublicReviewRecord = <T extends Record<string, unknown>>(row: T) => {
+  const createdAt = typeof row.createdAt === 'string'
+    ? row.createdAt
+    : typeof row.created_at === 'string'
+      ? row.created_at
+      : typeof row.date === 'string'
+        ? row.date
+        : undefined;
+  const reviewerId = typeof row.reviewerId === 'string'
+    ? row.reviewerId
+    : typeof row.reviewer_id === 'string'
+      ? row.reviewer_id
+      : typeof row.userId === 'string'
+        ? row.userId
+        : undefined;
+  const categoryScores = parseCategoryScores(row.categoryScores ?? row.category_scores);
+
+  return {
+    ...row,
+    reviewerId,
+    userId: reviewerId,
+    createdAt,
+    date: createdAt,
+    type: toCanonicalReviewType(row.type),
+    categories: categoryScores,
+    categoryScores,
+  };
 };
 
 const deriveReviewRating = (params: {
@@ -3612,6 +4515,7 @@ app.get('/api/host/dashboard', async (req, res) => {
           COALESCE(b.total_price, 0)::int as "totalPrice",
               b.cancellation_actor as "cancellationActor",
           c.id as "conversationId",
+          c.request_status as "requestStatus",
           COALESCE(c.deposit_status, b.deposit_status) as "depositStatus",
           COALESCE(c.deposit_type, b.deposit_type) as "depositType",
           COALESCE(c.deposit_amount_ars, b.deposit_amount_ars) as "depositAmountArs",
@@ -3640,7 +4544,7 @@ app.get('/api/host/dashboard', async (req, res) => {
          LEFT JOIN conversations c ON c.booking_id = b.id
          LEFT JOIN users guest ON guest.id = b."userId"
          WHERE p."hostId" = $1
-           AND b.status <> 'cancelled'
+           AND (b.status <> 'cancelled' OR c.request_status = 'not_advanced')
          ORDER BY b.start_date DESC NULLS LAST, b.created_at DESC
          LIMIT 5`,
         [req.session.userId],
@@ -4125,9 +5029,11 @@ app.get('/api/properties', async (req, res) => {
         ${PROPERTY_LIST_SELECT}
       FROM properties p
       ${PROPERTY_HOST_TRUST_JOINS}
+      ${PROPERTY_REPORT_STATS_JOINS}
       ${PROPERTY_VERIFICATION_FILE_SUMMARY_JOINS}
       WHERE status = 'active'
-        AND COALESCE(u.internal_manual_review_required, FALSE) = FALSE
+        AND ${PUBLIC_PROPERTY_VISIBILITY_WHERE}
+        AND COALESCE(property_report_stats."confirmedSevereReportsCount", 0) = 0
     `;
 
     const params: any[] = [];
@@ -4163,7 +5069,12 @@ app.get('/api/properties', async (req, res) => {
           listingQualityScore: getPropertyListingQualityScore(mappedProperty),
         };
       })
-      .filter(({ property }) => verifiedOnly === 'true' ? hasPresencialVerificationSeal(property) : true)
+      .filter(({ property }) => Number(property.confirmedSevereReportsCount ?? 0) === 0)
+      .filter(({ property }) => (
+        verifiedOnly === 'true'
+          ? hasPresencialVerificationSeal(property as Parameters<typeof hasPresencialVerificationSeal>[0])
+          : true
+      ))
       .sort((left, right) => (
         left.internalVisibilityPenalty - right.internalVisibilityPenalty
         || right.hostVisibilityBoost - left.hostVisibilityBoost
@@ -4265,17 +5176,20 @@ app.get('/api/properties/:id', async (req, res) => {
       `SELECT p.*,
               ${PROPERTY_AVAILABILITY_VALIDATED_SELECT},
               ${PROPERTY_VERIFICATION_FILE_SUMMARY_SELECT},
+              ${PROPERTY_REPORT_STATS_SELECT},
               ${PROPERTY_HOST_TRUST_SELECT}
        FROM properties p
        ${PROPERTY_HOST_TRUST_JOINS}
+       ${PROPERTY_REPORT_STATS_JOINS}
        ${PROPERTY_VERIFICATION_FILE_SUMMARY_JOINS}
        WHERE p.id = $1
-         AND COALESCE(u.internal_manual_review_required, FALSE) = FALSE`,
+         AND ${PUBLIC_PROPERTY_VISIBILITY_WHERE}`,
       [req.params.id]
     );
     if (result.rows.length === 0) return res.status(404).json({ error: 'No encontramos esa propiedad.' });
 
     const property = mapPropertyRecord(result.rows[0]);
+
     const viewerId = req.session.userId;
     const hostId = typeof result.rows[0]?.hostId === 'string' ? result.rows[0].hostId : null;
     const isOwnedByViewer = Boolean(viewerId && hostId && viewerId === hostId);
@@ -4330,6 +5244,7 @@ const BOOKING_SELECT_QUERY = `SELECT b.id, b."propertyId", b."userId", b.status,
   b.cancellation_actor as "cancellationActor",
   p."hostId" as "hostId",
   c.id as "conversationId",
+  c.request_status as "requestStatus",
   COALESCE(c.deposit_status, b.deposit_status) as "depositStatus",
   COALESCE(c.deposit_type, b.deposit_type) as "depositType",
   COALESCE(c.deposit_amount_ars, b.deposit_amount_ars) as "depositAmountArs",
@@ -4394,7 +5309,10 @@ const getEnrichedConversationById = async (conversationId: string) => {
   const result = await db.query(
     `SELECT c.*, 
             u_tenant.name as "tenantName", u_host.name as "hostName",
-            p.title as "propertyTitle", p."imageUrl" as "propertyImage",
+            p.title as "propertyTitle", p."imageUrl" as "propertyImage", p.price as "propertyPrice",
+            last_message_row.sender_id as "lastMessageSenderId",
+            last_message_row.read_at as "lastMessageReadAt",
+            last_message_row.created_at as "lastMessageCreatedAt",
             ${CONVERSATION_HOST_TRUST_SELECT},
           ${CONVERSATION_GUEST_PROFILE_SELECT},
             b.status as "bookingStatus", b.start_date as "startDate", b.end_date as "endDate",
@@ -4417,6 +5335,14 @@ const getEnrichedConversationById = async (conversationId: string) => {
      JOIN users u_tenant ON c.tenant_id = u_tenant.id
      JOIN users u_host ON c.host_id = u_host.id
      JOIN properties p ON c.property_id = p.id
+     LEFT JOIN LATERAL (
+       SELECT m.sender_id, m.read_at, m.created_at
+       FROM messages m
+       WHERE m.conversation_id = c.id
+         AND COALESCE(m.is_system, FALSE) = FALSE
+       ORDER BY m.created_at DESC
+       LIMIT 1
+     ) last_message_row ON TRUE
     ${CONVERSATION_HOST_TRUST_JOINS}
     ${CONVERSATION_GUEST_PROFILE_JOINS}
      LEFT JOIN bookings b ON c.booking_id = b.id
@@ -4561,6 +5487,10 @@ const normalizeBookingRecord = <T extends { startDate?: unknown; endDate?: unkno
 
 const normalizeConversationRecord = <T extends {
   tenant_id?: unknown;
+  propertyPrice?: unknown;
+  lastMessageSenderId?: unknown;
+  lastMessageReadAt?: unknown;
+  lastMessageCreatedAt?: unknown;
   startDate?: unknown;
   endDate?: unknown;
   requestStartDate?: unknown;
@@ -4604,6 +5534,10 @@ const normalizeConversationRecord = <T extends {
   totalPrice?: unknown;
 }>(conversation: T) => {
   const {
+    propertyPrice,
+    lastMessageSenderId,
+    lastMessageReadAt,
+    lastMessageCreatedAt,
     hostIdentityValidated,
     hostIdentityVerified,
     hostMemberSince,
@@ -4770,6 +5704,33 @@ const normalizeConversationRecord = <T extends {
     ...(conversation.depositPaymentReference !== undefined
       ? { depositPaymentReference: typeof conversation.depositPaymentReference === 'string' ? conversation.depositPaymentReference : null }
       : {}),
+    ...(propertyPrice !== undefined && propertyPrice !== null
+      ? { propertyPrice: Number.isFinite(Number(propertyPrice)) ? Number(propertyPrice) : undefined }
+      : {}),
+    ...(typeof lastMessageSenderId === 'string' ? { lastMessageSenderId } : {}),
+    ...(lastMessageReadAt !== undefined
+      ? {
+          lastMessageReadAt: lastMessageReadAt instanceof Date
+            ? lastMessageReadAt.toISOString()
+            : typeof lastMessageReadAt === 'string'
+              ? lastMessageReadAt
+              : null,
+        }
+      : {}),
+    ...(lastMessageCreatedAt !== undefined
+      ? {
+          lastMessageCreatedAt: lastMessageCreatedAt instanceof Date
+            ? lastMessageCreatedAt.toISOString()
+            : typeof lastMessageCreatedAt === 'string'
+              ? lastMessageCreatedAt
+              : null,
+        }
+      : {}),
+    ...(hostMemberSince instanceof Date
+      ? { hostMemberSince: hostMemberSince.toISOString() }
+      : typeof hostMemberSince === 'string'
+        ? { hostMemberSince }
+        : {}),
     ...(hasHostTrustData
       ? buildHostTrust({
           identityValidated: Boolean(hostIdentityValidated) || Boolean(hostIdentityVerified),
@@ -5017,6 +5978,7 @@ const getUserBookingById = async (userId: string, bookingId: string) => {
           b.cancellation_actor as "cancellationActor",
             p."hostId" as "hostId",
             c.id as "conversationId",
+            c.request_status as "requestStatus",
             COALESCE(c.deposit_status, b.deposit_status) as "depositStatus",
             COALESCE(c.deposit_type, b.deposit_type) as "depositType",
             COALESCE(c.deposit_amount_ars, b.deposit_amount_ars) as "depositAmountArs",
@@ -5059,6 +6021,7 @@ const getHostBookingById = async (hostId: string, bookingId: string) => {
             b.cancellation_actor as "cancellationActor",
           p."hostId" as "hostId",
             c.id as "conversationId",
+            c.request_status as "requestStatus",
             COALESCE(c.deposit_status, b.deposit_status) as "depositStatus",
             COALESCE(c.deposit_type, b.deposit_type) as "depositType",
             COALESCE(c.deposit_amount_ars, b.deposit_amount_ars) as "depositAmountArs",
@@ -5101,6 +6064,7 @@ const getBookingByDepositPaymentReference = async (depositPaymentReference: stri
             b.cancellation_actor as "cancellationActor",
             p."hostId" as "hostId",
             c.id as "conversationId",
+          c.request_status as "requestStatus",
             COALESCE(c.deposit_status, b.deposit_status) as "depositStatus",
             COALESCE(c.deposit_type, b.deposit_type) as "depositType",
             COALESCE(c.deposit_amount_ars, b.deposit_amount_ars) as "depositAmountArs",
@@ -5590,9 +6554,11 @@ app.post('/api/bookings', async (req, res) => {
     await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [propertyId]);
 
     const propertyResult = await client.query(
-      `SELECT id, title, location, price, status, "hostName", "hostId", "maxGuests"
-       FROM properties
-       WHERE id = $1`,
+      `SELECT p.id, p.title, p.location, p.price, p.status, p."hostName", p."hostId", p."maxGuests"
+       FROM properties p
+       JOIN users u ON u.id = p."hostId"
+       WHERE p.id = $1
+         AND ${PUBLIC_PROPERTY_VISIBILITY_WHERE}`,
       [propertyId]
     );
 
@@ -5991,7 +6957,10 @@ app.get('/api/conversations', async (req, res) => {
       db.query(
         `SELECT c.*, 
                 u_tenant.name as "tenantName", u_host.name as "hostName",
-                p.title as "propertyTitle", p."imageUrl" as "propertyImage",
+                p.title as "propertyTitle", p."imageUrl" as "propertyImage", p.price as "propertyPrice",
+                last_message_row.sender_id as "lastMessageSenderId",
+                last_message_row.read_at as "lastMessageReadAt",
+                last_message_row.created_at as "lastMessageCreatedAt",
                 ${CONVERSATION_HOST_TRUST_SELECT},
                 ${CONVERSATION_GUEST_PROFILE_SELECT},
                 b.status as "bookingStatus", b.start_date as "startDate", b.end_date as "endDate",
@@ -6014,6 +6983,14 @@ app.get('/api/conversations', async (req, res) => {
          JOIN users u_tenant ON c.tenant_id = u_tenant.id
          JOIN users u_host ON c.host_id = u_host.id
          JOIN properties p ON c.property_id = p.id
+         LEFT JOIN LATERAL (
+           SELECT m.sender_id, m.read_at, m.created_at
+           FROM messages m
+           WHERE m.conversation_id = c.id
+             AND COALESCE(m.is_system, FALSE) = FALSE
+           ORDER BY m.created_at DESC
+           LIMIT 1
+         ) last_message_row ON TRUE
         ${CONVERSATION_HOST_TRUST_JOINS}
         ${CONVERSATION_GUEST_PROFILE_JOINS}
          LEFT JOIN bookings b ON c.booking_id = b.id
@@ -6043,6 +7020,16 @@ app.get('/api/conversations/:id/messages', async (req, res) => {
   try {
     await syncConversationSystemMessages(req.params.id);
 
+    await db.query(
+      `UPDATE messages
+       SET read_at = COALESCE(read_at, NOW())
+       WHERE conversation_id = $1
+         AND receiver_id = $2
+         AND COALESCE(is_system, FALSE) = FALSE
+         AND read_at IS NULL`,
+      [req.params.id, userId],
+    );
+
     const messageQuery = `SELECT id,
                                  conversation_id,
                                  sender_id,
@@ -6052,6 +7039,7 @@ app.get('/api/conversations/:id/messages', async (req, res) => {
                                  system_key,
                                  is_suspicious,
                                  is_optimistic,
+                                 read_at as "readAt",
                                  created_at
                           FROM messages
                           WHERE conversation_id = $1
@@ -6074,12 +7062,20 @@ app.post('/api/messages', filterChatMiddleware, async (req, res) => {
   const userId = req.session.userId;
   if (!userId) return res.status(401).json({ error: AUTH_REQUIRED_ERROR });
 
-  const { conversation_id, content, receiver_id } = req.body;
+  const rawConversationId = typeof req.body?.conversation_id === 'string' ? req.body.conversation_id.trim() : '';
+  const rawContent = typeof req.body?.content === 'string' ? req.body.content.trim() : '';
+  const rawReceiverId = typeof req.body?.receiver_id === 'string' ? req.body.receiver_id.trim() : '';
+
+  if (!rawConversationId || !rawContent || !rawReceiverId) {
+    return res.status(400).json({ error: 'Completá la conversación, el mensaje y el destinatario para enviarlo.' });
+  }
 
   const risk = await checkUserRisk(userId, 'send_message');
   if (risk.blocked) {
     return res.status(403).json({ error: risk.reason || 'No pudimos validar esta acción.' });
   }
+
+  const chatSafetyWarning = (req as any).chatSafetyWarning ?? null;
   
   try {
     const conversationResult = await db.query(
@@ -6087,7 +7083,7 @@ app.post('/api/messages', filterChatMiddleware, async (req, res) => {
        FROM conversations
        WHERE id = $1
        LIMIT 1`,
-      [conversation_id],
+      [rawConversationId],
     );
 
     const conversation = conversationResult.rows[0];
@@ -6101,22 +7097,22 @@ app.post('/api/messages', filterChatMiddleware, async (req, res) => {
        FROM messages
        WHERE conversation_id = $1
          AND COALESCE(is_system, FALSE) = FALSE`,
-      [conversation_id],
+      [rawConversationId],
     );
 
     const isFirstTenantMessage = toSafeNumber(priorMessageCountResult.rows[0]?.count) === 0 && conversation.tenant_id === userId;
     const id = `msg_${Date.now()}`;
     await db.query(
-      `INSERT INTO messages (id, conversation_id, sender_id, receiver_id, content)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [id, conversation_id, userId, receiver_id, content]
+      `INSERT INTO messages (id, conversation_id, sender_id, receiver_id, content, is_suspicious)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [id, rawConversationId, userId, rawReceiverId, rawContent, Boolean(chatSafetyWarning)]
     );
 
-    await db.query(`UPDATE conversations SET last_message = $1, updated_at = NOW() WHERE id = $2`, [content, conversation_id]);
+    await db.query(`UPDATE conversations SET last_message = $1, updated_at = NOW() WHERE id = $2`, [rawContent, rawConversationId]);
 
     if (isFirstTenantMessage) {
       await logFunnelActivity(req, FUNNEL_CHAT_FIRST_MESSAGE_SENT_ACTION, {
-        conversationId: conversation_id,
+        conversationId: rawConversationId,
         propertyId: conversation.property_id,
         hostId: conversation.host_id,
       });
@@ -6124,11 +7120,14 @@ app.post('/api/messages', filterChatMiddleware, async (req, res) => {
 
     res.status(201).json({
       id,
-      conversation_id,
+      conversation_id: rawConversationId,
       sender_id: userId,
-      receiver_id,
-      content,
+      receiver_id: rawReceiverId,
+      content: rawContent,
+      is_suspicious: Boolean(chatSafetyWarning),
+      readAt: null,
       created_at: new Date().toISOString(),
+      ...(chatSafetyWarning ? { warning: chatSafetyWarning } : {}),
     });
   } catch (err) {
     res.status(500).json({ error: 'No pudimos enviar el mensaje. Intentá de nuevo.' });
@@ -6165,9 +7164,11 @@ app.post('/api/conversations', async (req, res) => {
 
   try {
     const propertyResult = await db.query(
-      `SELECT id, "hostId"
-       FROM properties
-       WHERE id = $1
+      `SELECT p.id, p."hostId"
+       FROM properties p
+       JOIN users u ON u.id = p."hostId"
+       WHERE p.id = $1
+         AND ${PUBLIC_PROPERTY_VISIBILITY_WHERE}
        LIMIT 1`,
       [propertyId],
     );
@@ -7157,11 +8158,12 @@ app.get('/api/reviews/:propertyId', async (req, res) => {
               r.type,
               r.rating,
               r.comment,
+              r.category_scores as "categoryScores",
               r.agreement_kept as "agreementKept",
               r.would_interact_again as "wouldInteractAgain",
               r.had_incident as "hadIncident",
               r.photos_match_reality as "photosMatchReality",
-              r.created_at as date,
+              r.created_at as "createdAt",
               u.name as "userName"
        FROM reviews r
        LEFT JOIN users u ON r.reviewer_id = u.id
@@ -7170,7 +8172,7 @@ app.get('/api/reviews/:propertyId', async (req, res) => {
        ORDER BY r.created_at DESC`,
       [req.params.propertyId]
     );
-    res.json(result.rows);
+    res.json(result.rows.map((row) => mapPublicReviewRecord(row)));
   } catch (err) {
     res.status(500).json({ error: 'No pudimos cargar las reseñas.' });
   }
@@ -7179,9 +8181,10 @@ app.get('/api/reviews/:propertyId', async (req, res) => {
 app.post('/api/reviews', async (req, res) => {
   if (!req.session.userId) return res.status(401).json({ error: AUTH_REQUIRED_ERROR });
   const bookingId = typeof req.body?.bookingId === 'string' ? req.body.bookingId : req.body?.booking_id;
+  const conversationId = typeof req.body?.conversationId === 'string' ? req.body.conversationId : req.body?.conversation_id;
   const reviewedUserId = typeof req.body?.reviewedUserId === 'string' ? req.body.reviewedUserId : req.body?.reviewed_user_id;
   const comment = typeof req.body?.comment === 'string' ? req.body.comment.trim() : '';
-  const type = req.body?.type;
+  const storedType = normalizeStoredReviewType(req.body?.type);
   const agreementKept = typeof req.body?.agreementKept === 'boolean'
     ? req.body.agreementKept
     : typeof req.body?.agreement_kept === 'boolean'
@@ -7202,100 +8205,153 @@ app.post('/api/reviews', async (req, res) => {
     : typeof req.body?.photos_match_reality === 'boolean'
       ? req.body.photos_match_reality
       : null;
+  const categoryScores = storedType ? normalizeReviewCategoryScores(
+    req.body?.categories ?? req.body?.categoryScores ?? req.body?.category_scores,
+    storedType,
+  ) : null;
 
   if (
-    !bookingId
+    (!bookingId && !conversationId)
     || !reviewedUserId
-    || (type !== 'host_to_guest' && type !== 'guest_to_host')
-    || agreementKept === null
-    || wouldInteractAgain === null
-    || hadIncident === null
-    || (type === 'guest_to_host' && photosMatchReality === null)
+    || !storedType
+    || (categoryScores === null && (
+      agreementKept === null
+      || wouldInteractAgain === null
+      || hadIncident === null
+      || (storedType === 'guest_to_host' && photosMatchReality === null)
+    ))
   ) {
     return res.status(422).json({ error: 'Revisá los datos de la reseña antes de enviarla.' });
   }
   
   try {
-    // Verificar que exista la reserva y el usuario sea parte
-    const booking = await db.query(
-      `SELECT b.id, b.status, b."propertyId", b."userId", p."hostId"
-       FROM bookings b
-       JOIN properties p ON p.id = b."propertyId"
-       WHERE b.id = $1`,
-      [bookingId],
-    );
-    if (booking.rows.length === 0) return res.status(404).json({ error: 'No encontramos esa reserva.' });
+    let interactionRow: Record<string, unknown> | null = null;
+    let interactionMode: 'booking' | 'conversation' = 'booking';
 
-    const bookingRow = booking.rows[0];
-    const expectedReviewerId = type === 'host_to_guest' ? bookingRow.hostId : bookingRow.userId;
-    const normalizedReviewedUserId = type === 'host_to_guest' ? bookingRow.userId : bookingRow.hostId;
+    if (bookingId) {
+      const booking = await db.query(
+        `SELECT b.id, b.status, b."propertyId", b."userId", p."hostId"
+         FROM bookings b
+         JOIN properties p ON p.id = b."propertyId"
+         WHERE b.id = $1`,
+        [bookingId],
+      );
+
+      if (booking.rows.length === 0) {
+        return res.status(404).json({ error: 'No encontramos esa reserva.' });
+      }
+
+      interactionRow = booking.rows[0];
+    } else if (conversationId) {
+      interactionMode = 'conversation';
+      const conversation = await db.query(
+        `SELECT c.id, c.property_id as "propertyId", c.tenant_id as "userId", c.host_id as "hostId"
+         FROM conversations c
+         WHERE c.id = $1`,
+        [conversationId],
+      );
+
+      if (conversation.rows.length === 0) {
+        return res.status(404).json({ error: 'No encontramos ese contacto registrado.' });
+      }
+
+      interactionRow = conversation.rows[0];
+    }
+
+    if (!interactionRow) {
+      return res.status(404).json({ error: 'No encontramos una interacción registrada para esta reseña.' });
+    }
+
+    const expectedReviewerId = storedType === 'host_to_guest' ? interactionRow.hostId : interactionRow.userId;
+    const normalizedReviewedUserId = storedType === 'host_to_guest' ? interactionRow.userId : interactionRow.hostId;
 
     if (req.session.userId !== expectedReviewerId) {
-      return res.status(403).json({ error: 'No podés dejar una reseña para esta reserva.' });
+      return res.status(403).json({ error: 'No podés dejar una reseña para esta interacción.' });
     }
 
     if (normalizedReviewedUserId !== reviewedUserId) {
-      return res.status(422).json({ error: 'La reseña no coincide con las personas involucradas en la reserva.' });
+      return res.status(422).json({ error: 'La reseña no coincide con las personas involucradas en la interacción.' });
     }
 
-    if (bookingRow.status !== 'completed') {
+    if (interactionMode === 'booking' && interactionRow.status !== 'completed') {
       return res.status(409).json({ error: 'El cierre de la estadía se comparte cuando la reserva ya figura como finalizada.' });
     }
 
     const existingReview = await db.query(
       `SELECT id
        FROM reviews
-       WHERE booking_id = $1
-         AND reviewer_id = $2
-         AND type = $3
+       WHERE reviewer_id = $1
+         AND type = $2
+         AND (
+           ($3::text IS NOT NULL AND booking_id = $3)
+           OR ($4::text IS NOT NULL AND conversation_id = $4)
+         )
        LIMIT 1`,
-      [bookingId, req.session.userId, type],
+      [req.session.userId, storedType, bookingId || null, conversationId || null],
     );
 
     if (existingReview.rows.length > 0) {
-      return res.status(409).json({ error: 'Ya dejaste tu cierre para esta estadía.' });
+      return res.status(409).json({ error: 'Ya dejaste tu cierre para esta interacción.' });
     }
 
-    const rating = deriveReviewRating({
-      agreementKept,
-      wouldInteractAgain,
-      hadIncident,
-      photosMatchReality: type === 'guest_to_host' ? photosMatchReality ?? undefined : undefined,
+    const normalizedCategoryScores = categoryScores ?? buildLegacyReviewCategoryScores({
+      storedType,
+      agreementKept: agreementKept ?? true,
+      wouldInteractAgain: wouldInteractAgain ?? true,
+      hadIncident: hadIncident ?? false,
+      photosMatchReality: storedType === 'guest_to_host' ? photosMatchReality ?? true : true,
     });
+
+    const derivedSignals = buildReviewSignalsFromCategoryScores(storedType, normalizedCategoryScores);
+
+    const rating = categoryScores
+      ? derivedSignals.rating
+      : deriveReviewRating({
+          agreementKept: agreementKept ?? derivedSignals.agreementKept,
+          wouldInteractAgain: wouldInteractAgain ?? derivedSignals.wouldInteractAgain,
+          hadIncident: hadIncident ?? derivedSignals.hadIncident,
+          photosMatchReality: storedType === 'guest_to_host'
+            ? photosMatchReality ?? derivedSignals.photosMatchReality
+            : undefined,
+        });
     
     const id = `rev_${Date.now()}`;
     const result = await db.query(
       `INSERT INTO reviews (
-         id, booking_id, reviewer_id, reviewed_user_id, property_id,
-         rating, comment, type, agreement_kept, would_interact_again, had_incident,
+         id, booking_id, conversation_id, reviewer_id, reviewed_user_id, property_id,
+         rating, comment, type, category_scores, agreement_kept, would_interact_again, had_incident,
          photos_match_reality, pressure_to_book_fast
        )
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11, $12, $13, $14, $15)
        RETURNING *`,
       [
         id,
-        bookingId,
+        bookingId || null,
+        conversationId || null,
         req.session.userId,
         normalizedReviewedUserId,
-        bookingRow.propertyId,
+        interactionRow.propertyId,
         rating,
         comment,
-        type,
-        agreementKept,
-        wouldInteractAgain,
-        hadIncident,
-        type === 'guest_to_host' ? photosMatchReality : true,
+        storedType,
+        JSON.stringify(normalizedCategoryScores),
+        categoryScores ? derivedSignals.agreementKept : agreementKept,
+        categoryScores ? derivedSignals.wouldInteractAgain : wouldInteractAgain,
+        categoryScores ? derivedSignals.hadIncident : hadIncident,
+        storedType === 'guest_to_host'
+          ? (categoryScores ? derivedSignals.photosMatchReality : photosMatchReality)
+          : true,
         false,
       ]
     );
     
     // Mantenemos el promedio interno para compatibilidad, pero la app ya no lo usa como reputación pública.
-    const updateField = type === 'host_to_guest' ? 'rating' : 'host_rating';
+    const updateField = storedType === 'host_to_guest' ? 'rating' : 'host_rating';
     await db.query(
       `UPDATE users SET ${updateField} = COALESCE((SELECT ROUND(AVG(rating)::numeric, 1) FROM reviews WHERE reviewed_user_id = $1 AND type = $2), 0),
        total_reviews = COALESCE((SELECT COUNT(*) FROM reviews WHERE reviewed_user_id = $1), 0)
        WHERE id = $1`,
-      [normalizedReviewedUserId, type]
+      [normalizedReviewedUserId, storedType]
     );
 
     await db.query(
@@ -7303,10 +8359,10 @@ app.post('/api/reviews', async (req, res) => {
        SET rating = COALESCE((SELECT ROUND(AVG(rating)::numeric, 1) FROM reviews WHERE property_id = $1 AND type = 'guest_to_host'), 0),
            "reviewsCount" = COALESCE((SELECT COUNT(*) FROM reviews WHERE property_id = $1 AND type = 'guest_to_host'), 0)
        WHERE id = $1`,
-      [bookingRow.propertyId],
+      [interactionRow.propertyId],
     );
 
-    res.status(201).json(result.rows[0]);
+    res.status(201).json(mapPublicReviewRecord(result.rows[0]));
   } catch (err) {
     res.status(500).json({ error: 'No pudimos guardar tu reseña. Intentá de nuevo.' });
   }
@@ -7340,9 +8396,10 @@ app.get('/api/favorites', async (req, res) => {
        FROM favorites f
        JOIN properties p ON p.id = f.property_id
        ${PROPERTY_HOST_TRUST_JOINS}
+       ${PROPERTY_REPORT_STATS_JOINS}
        ${PROPERTY_VERIFICATION_FILE_SUMMARY_JOINS}
        WHERE f.user_id = $1
-         AND COALESCE(u.internal_manual_review_required, FALSE) = FALSE
+         AND ${PUBLIC_PROPERTY_VISIBILITY_WHERE}
        ORDER BY f.created_at DESC`,
       [userId]
     );
@@ -7363,9 +8420,10 @@ app.post('/api/favorites/:propertyId', async (req, res) => {
       `SELECT ${PROPERTY_LIST_SELECT}
        FROM properties p
        ${PROPERTY_HOST_TRUST_JOINS}
+       ${PROPERTY_REPORT_STATS_JOINS}
        ${PROPERTY_VERIFICATION_FILE_SUMMARY_JOINS}
        WHERE p.id = $1
-         AND COALESCE(u.internal_manual_review_required, FALSE) = FALSE
+         AND ${PUBLIC_PROPERTY_VISIBILITY_WHERE}
        LIMIT 1`,
       [propertyId],
     );
@@ -7451,12 +8509,14 @@ app.get('/api/properties/:id/reviews', async (req, res) => {
               reviews.reviewer_id as "reviewerId",
               reviews.rating,
               reviews.comment,
+              reviews.type,
+              reviews.category_scores as "categoryScores",
               reviews.agreement_kept as "agreementKept",
               reviews.would_interact_again as "wouldInteractAgain",
               reviews.had_incident as "hadIncident",
               reviews.photos_match_reality as "photosMatchReality",
               reviewer.name as "userName",
-              reviews.created_at as date
+              reviews.created_at as "createdAt"
        FROM reviews
        LEFT JOIN users reviewer ON reviewer.id = reviews.reviewer_id
        WHERE reviews.property_id = $1
@@ -7466,7 +8526,7 @@ app.get('/api/properties/:id/reviews', async (req, res) => {
       [req.params.id]
     );
     res.set('Cache-Control', 'public, max-age=60, s-maxage=60, stale-while-revalidate=300');
-    res.json(result.rows);
+    res.json(result.rows.map((row) => mapPublicReviewRecord(row)));
   } catch (err) {
     console.error('Error fetching reviews:', err);
     res.status(500).json({ error: 'No pudimos cargar las reseñas.' });

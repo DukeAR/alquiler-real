@@ -8,9 +8,15 @@ const PROPERTY_COORDINATE_FALLBACK = {
 };
 
 type PropertyQueryRow = Record<string, unknown> & {
+  createdAt?: unknown;
+  created_at?: unknown;
   price?: unknown;
   rating?: unknown;
   reviewsCount?: unknown;
+  reportsCount?: unknown;
+  pendingReportsCount?: unknown;
+  confirmedReportsCount?: unknown;
+  confirmedSevereReportsCount?: unknown;
   lat?: unknown;
   lng?: unknown;
   images?: unknown;
@@ -125,6 +131,26 @@ const getResolvedIdentityValidated = (row: PropertyQueryRow) => {
 
 const getResolvedHostSince = (row: PropertyQueryRow) => toDateString(row.hostSince) || toDateString(row.hostMemberSince);
 
+const buildPropertyVerificationAliases = (property: {
+  identityValidated?: boolean;
+  hasPresencialVerification?: boolean;
+  onsiteVerifiedAt?: string;
+}) => {
+  const isPresentiallyVerified = Boolean(property.hasPresencialVerification || property.onsiteVerifiedAt);
+  const isIdentityVerified = isPresentiallyVerified || property.identityValidated === true;
+  const verificationLevel = isPresentiallyVerified
+    ? 'presencial'
+    : isIdentityVerified
+      ? 'identity'
+      : 'none';
+
+  return {
+    verificationLevel,
+    isIdentityVerified,
+    isPresentiallyVerified,
+  };
+};
+
 export const mapPropertyRecord = (row: PropertyQueryRow) => {
   const {
     internalVisibilityPenalty: _internalVisibilityPenalty,
@@ -139,9 +165,14 @@ export const mapPropertyRecord = (row: PropertyQueryRow) => {
 
   const normalizedProperty = {
     ...safeRow,
+    createdAt: toDateString(row.createdAt) || toDateString(row.created_at),
     price: toSafeNumber(row.price),
     rating: toSafeNumber(row.rating),
     reviewsCount: toSafeInteger(row.reviewsCount),
+    reportsCount: toSafeInteger(row.reportsCount),
+    pendingReportsCount: toSafeInteger(row.pendingReportsCount),
+    confirmedReportsCount: toSafeInteger(row.confirmedReportsCount),
+    confirmedSevereReportsCount: toSafeInteger(row.confirmedSevereReportsCount),
     beds: hasOwn(row, 'beds') ? toSafeInteger(row.beds) : undefined,
     identityValidated: getResolvedIdentityValidated(row),
     locationVerified: toBoolean(row.locationVerified),
@@ -200,6 +231,7 @@ export const mapPropertyRecord = (row: PropertyQueryRow) => {
   return {
     ...normalizedProperty,
     ...buildPropertyVerification(normalizedProperty),
+    ...buildPropertyVerificationAliases(normalizedProperty),
     ...buildHostTrust({
       identityValidated: normalizedProperty.identityValidated,
       hostCompletedReservationsCount: normalizedProperty.hostCompletedReservationsCount,

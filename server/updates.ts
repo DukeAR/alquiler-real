@@ -607,6 +607,10 @@ export const initDB = async () => {
       BEGIN ALTER TABLE users ADD COLUMN internal_action_limited BOOLEAN DEFAULT FALSE; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE users ADD COLUMN internal_manual_review_required BOOLEAN DEFAULT FALSE; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE users ADD COLUMN internal_risk_updated_at TIMESTAMP; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE users ADD COLUMN internal_strikes_count INTEGER DEFAULT 0; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE users ADD COLUMN internal_moderation_status TEXT DEFAULT 'clear'; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE users ADD COLUMN internal_account_limited_until TIMESTAMP; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE users ADD COLUMN internal_account_blocked_until TIMESTAMP; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE users ADD COLUMN is_email_verified BOOLEAN DEFAULT FALSE; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE users ADD COLUMN is_phone_verified BOOLEAN DEFAULT FALSE; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE users ADD COLUMN is_identity_verified BOOLEAN DEFAULT FALSE; EXCEPTION WHEN duplicate_column THEN NULL; END;
@@ -644,7 +648,9 @@ export const initDB = async () => {
         internal_visibility_penalty = COALESCE(internal_visibility_penalty, 0),
         internal_requires_additional_verification = COALESCE(internal_requires_additional_verification, FALSE),
         internal_action_limited = COALESCE(internal_action_limited, FALSE),
-        internal_manual_review_required = COALESCE(internal_manual_review_required, FALSE);
+          internal_manual_review_required = COALESCE(internal_manual_review_required, FALSE),
+          internal_strikes_count = COALESCE(internal_strikes_count, 0),
+          internal_moderation_status = COALESCE(NULLIF(internal_moderation_status, ''), 'clear');
   `);
 
   await db.query(`
@@ -831,7 +837,22 @@ export const initDB = async () => {
       BEGIN ALTER TABLE properties ADD COLUMN "materialVerified" INTEGER DEFAULT 0; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE properties ADD COLUMN "onsiteVerifiedAt" TIMESTAMP; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE properties ADD COLUMN manual_blocked_dates TEXT DEFAULT '[]'; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE properties ADD COLUMN internal_moderation_status TEXT DEFAULT 'clear'; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE properties ADD COLUMN internal_moderation_reason TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE properties ADD COLUMN internal_paused_until TIMESTAMP; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE properties ADD COLUMN internal_hidden_at TIMESTAMP; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE properties ADD COLUMN internal_moderation_updated_at TIMESTAMP; EXCEPTION WHEN duplicate_column THEN NULL; END;
     END $$;
+  `);
+
+  await db.query(`
+    UPDATE properties
+    SET internal_moderation_status = COALESCE(NULLIF(internal_moderation_status, ''), 'clear');
+  `);
+
+  await db.query(`
+    CREATE INDEX IF NOT EXISTS properties_internal_moderation_idx
+      ON properties (internal_moderation_status, internal_paused_until, internal_hidden_at);
   `);
 
   await db.query(`
@@ -962,6 +983,8 @@ export const initDB = async () => {
       is_system BOOLEAN DEFAULT FALSE,
       system_key TEXT,
       is_suspicious BOOLEAN DEFAULT FALSE,
+      is_optimistic BOOLEAN DEFAULT FALSE,
+      read_at TIMESTAMP,
       created_at TIMESTAMP DEFAULT NOW()
     );
   `);
@@ -975,6 +998,9 @@ export const initDB = async () => {
   await db.query(`
     DO $$ BEGIN
       BEGIN ALTER TABLE messages ADD COLUMN system_key TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE messages ADD COLUMN is_suspicious BOOLEAN DEFAULT FALSE; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE messages ADD COLUMN is_optimistic BOOLEAN DEFAULT FALSE; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE messages ADD COLUMN read_at TIMESTAMP; EXCEPTION WHEN duplicate_column THEN NULL; END;
     END $$;
   `);
 
@@ -1004,12 +1030,14 @@ export const initDB = async () => {
     CREATE TABLE IF NOT EXISTS reviews (
       id TEXT PRIMARY KEY,
       booking_id TEXT,
+      conversation_id TEXT,
       reviewer_id TEXT,
       reviewed_user_id TEXT,
       property_id TEXT,
       rating INTEGER CHECK (rating >= 1 AND rating <= 5),
       comment TEXT,
       type TEXT CHECK (type IN ('host_to_guest', 'guest_to_host')),
+      category_scores JSONB DEFAULT '[]'::jsonb,
       agreement_kept BOOLEAN,
       would_interact_again BOOLEAN,
       had_incident BOOLEAN,
@@ -1021,10 +1049,18 @@ export const initDB = async () => {
 
   await db.query(`
     DO $$ BEGIN
+      BEGIN ALTER TABLE reviews ADD COLUMN conversation_id TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE reviews ADD COLUMN category_scores JSONB DEFAULT '[]'::jsonb; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE reviews ADD COLUMN agreement_kept BOOLEAN; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE reviews ADD COLUMN would_interact_again BOOLEAN; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE reviews ADD COLUMN had_incident BOOLEAN; EXCEPTION WHEN duplicate_column THEN NULL; END;
     END $$;
+  `);
+
+  await db.query(`
+    UPDATE reviews
+    SET category_scores = COALESCE(category_scores, '[]'::jsonb)
+    WHERE category_scores IS NULL;
   `);
 
   await db.query(`
@@ -1069,13 +1105,87 @@ export const initDB = async () => {
   await db.query(`
     CREATE TABLE IF NOT EXISTS reports (
       id TEXT PRIMARY KEY,
+      property_id TEXT REFERENCES properties(id) ON DELETE CASCADE,
       reported_user_id TEXT REFERENCES users(id) ON DELETE CASCADE,
       reported_by_user_id TEXT REFERENCES users(id) ON DELETE CASCADE,
       reason TEXT,
       description TEXT,
-      status TEXT DEFAULT 'pending',
+      reporter_weight REAL DEFAULT 1,
+      severity TEXT DEFAULT 'standard',
+      status TEXT CHECK (status IN ('pending', 'reviewed', 'dismissed', 'action_taken')) DEFAULT 'pending',
+      review_notes TEXT,
+      reviewed_by TEXT,
+      strike_delta INTEGER DEFAULT 0,
+      reviewed_at TIMESTAMP,
       created_at TIMESTAMP DEFAULT NOW()
     );
+  `);
+
+  await db.query(`
+    DO $$ BEGIN
+      BEGIN ALTER TABLE reports ADD COLUMN property_id TEXT REFERENCES properties(id) ON DELETE CASCADE; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE reports ADD COLUMN severity TEXT DEFAULT 'standard'; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE reports ADD COLUMN reviewed_at TIMESTAMP; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE reports ADD COLUMN status TEXT DEFAULT 'pending'; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE reports ADD COLUMN reporter_weight REAL DEFAULT 1; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE reports ADD COLUMN review_notes TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE reports ADD COLUMN reviewed_by TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE reports ADD COLUMN strike_delta INTEGER DEFAULT 0; EXCEPTION WHEN duplicate_column THEN NULL; END;
+    END $$;
+  `);
+
+  await db.query(`
+    UPDATE reports
+    SET reporter_weight = COALESCE(reporter_weight, 1),
+        strike_delta = COALESCE(strike_delta, 0);
+  `);
+
+  await db.query(`
+    CREATE INDEX IF NOT EXISTS idx_reports_property_status
+      ON reports (property_id, status, created_at DESC);
+  `);
+
+  await db.query(`
+    CREATE INDEX IF NOT EXISTS idx_reports_reported_user_status
+      ON reports (reported_user_id, status, created_at DESC);
+  `);
+
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS moderation_events (
+      id TEXT PRIMARY KEY,
+      report_id TEXT REFERENCES reports(id) ON DELETE SET NULL,
+      user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+      property_id TEXT REFERENCES properties(id) ON DELETE SET NULL,
+      event_type TEXT NOT NULL,
+      severity TEXT DEFAULT 'standard',
+      reason TEXT,
+      notes TEXT,
+      strike_delta INTEGER DEFAULT 0,
+      created_by TEXT,
+      metadata JSONB DEFAULT '{}'::jsonb,
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
+
+  await db.query(`
+    DO $$ BEGIN
+      BEGIN ALTER TABLE moderation_events ADD COLUMN severity TEXT DEFAULT 'standard'; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE moderation_events ADD COLUMN reason TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE moderation_events ADD COLUMN notes TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE moderation_events ADD COLUMN strike_delta INTEGER DEFAULT 0; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE moderation_events ADD COLUMN created_by TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE moderation_events ADD COLUMN metadata JSONB DEFAULT '{}'::jsonb; EXCEPTION WHEN duplicate_column THEN NULL; END;
+    END $$;
+  `);
+
+  await db.query(`
+    CREATE INDEX IF NOT EXISTS moderation_events_user_created_at_idx
+      ON moderation_events (user_id, created_at DESC);
+  `);
+
+  await db.query(`
+    CREATE INDEX IF NOT EXISTS moderation_events_property_created_at_idx
+      ON moderation_events (property_id, created_at DESC);
   `);
 
   // ============================================================

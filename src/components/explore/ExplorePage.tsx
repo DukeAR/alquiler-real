@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { apiJson } from '../../lib/apiConfig';
 import { useFavorites } from '../../hooks/useFavorites';
 import type { Property } from '../../services/geminiService';
 import {
+  buildPropertyCatalogSections,
   meetsRealVerificationFilter,
   sortPropertiesByCatalogOrder,
 } from '../../lib/propertyVerification';
@@ -30,6 +31,44 @@ const defaultFilters: ExploreFilters = {
   type: '',
   verifiedOnly: false,
 };
+
+const normalizePropertyVerificationDefaults = (property: Property) => {
+  const isPresentiallyVerified = Boolean(
+    property.hasPresencialVerification
+    || property.isPresentiallyVerified
+    || property.onsiteVerifiedAt
+    || property.verificationLevel === 'presencial',
+  );
+  const isIdentityVerified = Boolean(
+    isPresentiallyVerified
+    || property.identityValidated
+    || property.isIdentityVerified
+    || property.verificationLevel === 'identity',
+  );
+  const verificationLevel = isPresentiallyVerified
+    ? 'presencial'
+    : isIdentityVerified
+      ? 'identity'
+      : 'none';
+
+  return {
+    ...property,
+    identityValidated: isIdentityVerified,
+    hasPresencialVerification: isPresentiallyVerified,
+    verificationLevel,
+    isIdentityVerified,
+    isPresentiallyVerified,
+  };
+};
+
+const normalizeExploreProperties = (items: Array<Property | null | undefined>) => items.reduce<Property[]>((accumulator, property) => {
+  if (!property) {
+    return accumulator;
+  }
+
+  accumulator.push(normalizePropertyVerificationDefaults(property));
+  return accumulator;
+}, []);
 
 const hasCatalogSuggestionContext = (filters: ExploreFilters, searchQuery: string) => (
   !searchQuery &&
@@ -85,7 +124,11 @@ export const ExplorePage = ({
   disableAutoLoad = false,
 }: ExplorePageProps = {}) => {
   const { toggleFavorite, isFavorite } = useFavorites();
-  const [properties, setProperties] = useState<Property[]>(initialProperties);
+  const normalizedInitialProperties = useMemo(
+    () => normalizeExploreProperties(initialProperties),
+    [initialProperties],
+  );
+  const [properties, setProperties] = useState<Property[]>(normalizedInitialProperties);
   const [verificationPreference, setVerificationPreference] = useState(() => getVerificationPreferenceState());
   const [loading, setLoading] = useState(() => !disableAutoLoad);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -100,7 +143,7 @@ export const ExplorePage = ({
       return initialLocationSuggestions;
     }
 
-    return buildLocationSuggestions(initialProperties);
+    return buildLocationSuggestions(normalizedInitialProperties);
   });
   const [refreshToken, setRefreshToken] = useState(0);
 
@@ -110,8 +153,8 @@ export const ExplorePage = ({
 
       if (initialLocationSuggestions) {
         setLocationSuggestions(initialLocationSuggestions);
-      } else if (initialProperties.length > 0) {
-        setLocationSuggestions(buildLocationSuggestions(initialProperties));
+      } else if (normalizedInitialProperties.length > 0) {
+        setLocationSuggestions(buildLocationSuggestions(normalizedInitialProperties));
       }
 
       return;
@@ -130,8 +173,8 @@ export const ExplorePage = ({
         if (filters.verifiedOnly) params.append('verifiedOnly', 'true');
         if (searchQuery) params.append('location', searchQuery);
 
-        const data = await apiJson<Property[]>(`/api/properties?${params.toString()}`);
-        const nextProperties = data || [];
+        const data = await apiJson<Array<Property | null | undefined>>(`/api/properties?${params.toString()}`);
+        const nextProperties = normalizeExploreProperties(Array.isArray(data) ? data : []);
         setProperties(nextProperties);
 
         if (hasCatalogSuggestionContext(filters, searchQuery)) {
@@ -148,19 +191,25 @@ export const ExplorePage = ({
     };
 
     void fetchProperties();
-  }, [disableAutoLoad, filters, initialLocationSuggestions, initialProperties, refreshToken, searchQuery]);
+  }, [disableAutoLoad, filters, initialLocationSuggestions, normalizedInitialProperties, refreshToken, searchQuery]);
 
   useEffect(() => {
     setVisibleCount(9);
   }, [filters, searchQuery, sortBy]);
 
-  const sortContext = { searchQuery, filters };
   const hasActiveFilters = Boolean(searchQuery || filters.minPrice || filters.maxPrice || filters.type || filters.verifiedOnly);
+  const sortContext = useMemo(() => ({ searchQuery, filters }), [searchQuery, filters]);
   const orderedProperties = sortPropertiesByCatalogOrder(properties, sortBy, sortContext);
   const filteredProperties = filters.verifiedOnly
     ? orderedProperties.filter((property) => meetsRealVerificationFilter(property))
     : orderedProperties;
-  const featuredProperties: Property[] = [];
+  const showSectionedCatalog = viewMode === 'grid' && !filters.verifiedOnly && !hasActiveFilters;
+  const sectionedCatalog = useMemo(
+    () => showSectionedCatalog ? buildPropertyCatalogSections(filteredProperties, sortBy, sortContext) : null,
+    [filteredProperties, showSectionedCatalog, sortBy, sortContext],
+  );
+  const featuredProperties = sectionedCatalog?.topVerified ?? [];
+  const newlyListedProperties = sectionedCatalog?.newListings ?? [];
   const appliedFilterCount = [
     Boolean(searchQuery),
     Boolean(filters.minPrice),
@@ -169,7 +218,7 @@ export const ExplorePage = ({
     Boolean(filters.type),
     filters.verifiedOnly,
   ].filter(Boolean).length;
-  const listingProperties = filteredProperties;
+  const listingProperties = sectionedCatalog?.comparison ?? filteredProperties;
   const visibleProperties = listingProperties.slice(0, visibleCount);
   const hasMoreResults = visibleProperties.length < listingProperties.length;
 
@@ -259,7 +308,9 @@ export const ExplorePage = ({
           searchQuery={searchQuery}
           appliedFilterCount={appliedFilterCount}
           filteredProperties={filteredProperties}
+          showSectionedCatalog={showSectionedCatalog}
           featuredProperties={featuredProperties}
+          newlyListedProperties={newlyListedProperties}
           listingProperties={listingProperties}
           visibleProperties={visibleProperties}
           hasMoreResults={hasMoreResults}

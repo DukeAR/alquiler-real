@@ -38,3 +38,5 @@ Antes de subir cambios o preparar deploy:
 1. `npm run lint`
 2. `npm test -- --run`
 3. `npm run build`
+
+El smoke test manual de moderacion, el flujo `pending_only` y las notas de seguridad para secretos quedaron documentados en [MODERATION_ROLLOUT_CHECKLIST.md](./MODERATION_ROLLOUT_CHECKLIST.md).

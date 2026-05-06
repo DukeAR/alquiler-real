@@ -93,9 +93,11 @@ const renderSection = (props?: Partial<React.ComponentProps<typeof ExploreResult
     searchQuery: '',
     appliedFilterCount: 0,
     filteredProperties: sampleProperties,
-    featuredProperties: [],
-    listingProperties: sampleProperties,
-    visibleProperties: sampleProperties,
+    showSectionedCatalog: true,
+    featuredProperties: [sampleProperties[0]],
+    newlyListedProperties: [],
+    listingProperties: sampleProperties.slice(1),
+    visibleProperties: sampleProperties.slice(1),
     hasMoreResults: false,
     onLoadMore: vi.fn(),
     onRetry: vi.fn(),
@@ -112,53 +114,71 @@ const renderSection = (props?: Partial<React.ComponentProps<typeof ExploreResult
 };
 
 describe('ExploreResultsSection', () => {
-  test('shows a neutral context block when all properties remain visible', () => {
+  test('shows a plain text context when all properties remain visible', () => {
     renderSection();
 
     const contextBlock = screen.getByTestId('explore-verification-context');
+    const title = screen.getByText('Mostrando todas las propiedades');
+    const subtitle = screen.getByText('Algunas pueden no estar verificadas');
 
-    expect(screen.getByText('Mostrando todas las propiedades')).toBeInTheDocument();
-    expect(screen.getByText('Algunas pueden no estar verificadas')).toBeInTheDocument();
-    expect(contextBlock).toHaveClass('border-slate-200/80', 'bg-slate-50/82', 'results-filter-context-fade');
+    expect(title).toBeInTheDocument();
+    expect(subtitle).toBeInTheDocument();
+    expect(contextBlock).toHaveClass('results-filter-context-fade', 'space-y-1', 'py-1');
+    expect(contextBlock).not.toHaveClass('border', 'rounded-[20px]', 'bg-slate-50/82');
+    expect(title).toHaveClass('font-semibold', 'text-slate-950');
+    expect(subtitle).toHaveClass('text-slate-500');
   });
 
-  test('shows a highlighted green context block when only presencial properties are visible', () => {
+  test('shows the verified-only context as plain text without a highlighted container', () => {
     renderSection({ verifiedOnly: true, hasActiveFilters: true, appliedFilterCount: 1 });
 
     const contextBlock = screen.getByTestId('explore-verification-context');
+    const title = screen.getByText('Mostrando solo propiedades verificadas');
+    const subtitle = screen.getByText('Identidad, ubicación y acceso confirmados');
 
-    expect(screen.getByText('Mostrando solo propiedades verificadas')).toBeInTheDocument();
-    expect(screen.getByText('Identidad, ubicación y acceso confirmados')).toBeInTheDocument();
-    expect(contextBlock).toHaveClass('border-emerald-200/80', 'bg-emerald-50/85', 'results-filter-context-fade');
+    expect(title).toBeInTheDocument();
+    expect(subtitle).toBeInTheDocument();
+    expect(contextBlock).toHaveClass('results-filter-context-fade', 'space-y-1', 'py-1');
+    expect(contextBlock).not.toHaveClass('border', 'rounded-[20px]', 'bg-emerald-50/85', 'shadow-[0_16px_30px_-26px_rgba(22,163,74,0.22)]');
+    expect(title).toHaveClass('font-semibold', 'text-slate-950');
+    expect(subtitle).toHaveClass('text-slate-500');
+    expect(screen.queryByRole('heading', { name: 'Empezá por los más verificados' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Más para comparar' })).toBeNull();
   });
 
-  test('renders a single verification-first grid without rigid featured blocks', () => {
+  test('renders the verification-first home sections with verified properties first', () => {
     renderSection();
 
-    const heading = screen.getByRole('heading', { name: 'Más verificados primero' });
-    const resultsSection = heading.closest('section');
-    const listingGrid = screen.getByText('Casa frente al mar').closest('div')?.parentElement;
+    const featuredHeading = screen.getByRole('heading', { name: 'Empezá por los más verificados' });
+    const comparisonHeading = screen.getByRole('heading', { name: 'Más para comparar' });
 
-    expect(heading).toBeInTheDocument();
-    expect(screen.getByText('Priorizamos la verificación presencial sin perder diversidad de oferta.')).toBeInTheDocument();
-    expect(resultsSection).not.toBeNull();
-    expect(resultsSection).toHaveClass('space-y-5');
-    expect(screen.queryByRole('heading', { name: 'Más para comparar' })).toBeNull();
-    expect(screen.queryByText('Propiedades con menor nivel de validación')).toBeNull();
+    expect(featuredHeading).toBeInTheDocument();
+    expect(comparisonHeading).toBeInTheDocument();
+    expect(screen.getByText('Propiedades con verificación presencial y señales más sólidas de confianza.')).toBeInTheDocument();
+    expect(screen.getByText('El resto del catálogo sigue ordenado por confianza para comparar con más contexto.')).toBeInTheDocument();
     expect(screen.getAllByText('Más verificado')).toHaveLength(1);
     expect(screen.getByText('Casa frente al mar')).toBeInTheDocument();
     expect(screen.getByText('Departamento luminoso')).toBeInTheDocument();
     expect(screen.queryByText('Cabaña entre pinos')).toBeInTheDocument();
-
-    expect(listingGrid).not.toBeNull();
-    expect(listingGrid).toHaveClass('grid-cols-1', 'auto-rows-fr', 'items-stretch', 'md:grid-cols-2', 'lg:grid-cols-3');
   });
 
-  test('updates the home heading when sorting by the highest prices first', () => {
+  test('renders a recent-publications section without duplicating the verified hero listings', () => {
+    renderSection({
+      listingProperties: [sampleProperties[1]],
+      visibleProperties: [sampleProperties[1]],
+      newlyListedProperties: [sampleProperties[2]],
+    });
+
+    expect(screen.getByRole('heading', { name: 'Nuevas publicaciones' })).toBeInTheDocument();
+    expect(screen.getByText('Avisos recientes que mantienen el catálogo vivo sin duplicar lo que ya viste arriba.')).toBeInTheDocument();
+    expect(screen.getByText('Cabaña entre pinos')).toBeInTheDocument();
+  });
+
+  test('keeps the comparison section aligned with the selected price sort', () => {
     renderSection({ sortBy: 'price-desc' });
 
-    expect(screen.getByRole('heading', { name: 'Precio más alto primero' })).toBeInTheDocument();
-    expect(screen.getByText('Las opciones de mayor precio aparecen primero.')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Más para comparar' })).toBeInTheDocument();
+    expect(screen.getByText('El resto del catálogo se ordena por precio más alto sin perder sus señales de confianza.')).toBeInTheDocument();
   });
 
   test('shows the subtle verification hint and emphasizes cards when the preference is active', () => {
@@ -182,7 +202,7 @@ describe('ExploreResultsSection', () => {
     expect(screen.getAllByRole('heading', { name: 'Resultados para revisar' })).toHaveLength(1);
     expect(screen.getByText('3 propiedades en esta búsqueda.')).toBeInTheDocument();
     expect(screen.getByText('2 visibles en esta búsqueda.')).toBeInTheDocument();
-    expect(screen.getByText('Más verificados primero')).toBeInTheDocument();
+    expect(screen.getByText('Más verificadas primero')).toBeInTheDocument();
     expect(screen.queryByText('Resaltando las comprobaciones reales')).toBeNull();
     expect(screen.getByText('Villa Gesell')).toBeInTheDocument();
     expect(screen.queryByText('Estás priorizando avisos con más información comprobada')).toBeNull();

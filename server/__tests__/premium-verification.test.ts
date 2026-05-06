@@ -10,6 +10,29 @@ vi.mock('../config/db', () => ({
   },
 }));
 
+vi.mock('../internalRisk', () => ({
+  evaluateInternalRisk: vi.fn(),
+  getInternalRiskDecision: vi.fn().mockResolvedValue({
+    blocked: false,
+    evaluation: {
+      userContext: {
+        emailVerified: true,
+        phoneVerified: true,
+        phone: '+5491112345678',
+        bio: 'Perfil completo',
+        zone: 'Pinamar',
+        profilePhoto: null,
+        totalReviews: 0,
+        documentaryVerified: false,
+      },
+      snapshot: {
+        riskScore: 0,
+        trustScore: 100,
+      },
+    },
+  }),
+}));
+
 vi.mock('express-session', () => ({
   default: ((_options?: unknown) => (req: { headers: Record<string, string | string[] | undefined>; session?: { userId?: string } }, _res: unknown, next: () => void) => {
     const testUserId = req.headers['x-test-user-id'];

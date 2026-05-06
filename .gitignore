@@ -12,3 +12,5 @@ coverage/
 .env.*.local
 !.env.example
 !.env.production
+review-artifacts/*.local.postman_environment.json
+moderation-smoke*.cookies.txt

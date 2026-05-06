@@ -66,15 +66,18 @@ export type ActivityData = {
 };
 
 export type ProfileReview = {
-  type?: 'host_to_guest' | 'guest_to_host';
+  type?: 'host_review' | 'guest_review' | 'host_to_guest' | 'guest_to_host';
   propertyTitle?: string;
   userName?: string;
   rating?: number;
   comment?: string;
+  categories?: Array<{ key: string; label: string; score: number }>;
+  categoryScores?: Array<{ key: string; label: string; score: number }>;
   agreementKept?: boolean;
   wouldInteractAgain?: boolean;
   hadIncident?: boolean;
   photosMatchReality?: boolean;
+  createdAt?: string;
   created_at?: string;
 };
 

@@ -22,11 +22,12 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   const reasons = [
-    'Fraude o estafa',
-    'Información engañosa',
-    'Mensajes agresivos',
-    'Pedido de pago por fuera de la plataforma',
-    'Otro'
+    { value: 'suspicious_listing', label: 'Publicación sospechosa' },
+    { value: 'false_information', label: 'Datos falsos' },
+    { value: 'off_platform_attempt', label: 'Intento de operar por fuera' },
+    { value: 'inappropriate_conduct', label: 'Maltrato o conducta inapropiada' },
+    { value: 'not_as_listed', label: 'No coincidencia con lo publicado' },
+    { value: 'other', label: 'Otro' },
   ];
 
   const handleSubmit = async () => {
@@ -70,7 +71,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
             <Icons.AlertTriangle className="w-10 h-10 text-red-600" />
           </div>
           <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">
-            Reportar un problema
+            Reportar publicación
           </h3>
           <p className="text-slate-500 text-sm max-w-xs mx-auto">
             Ayudanos a cuidar la comunidad. Tu reporte es confidencial y lo revisa nuestro equipo.
@@ -82,16 +83,17 @@ export const ReportModal: React.FC<ReportModalProps> = ({
           <div className="grid grid-cols-1 gap-2">
             {reasons.map((r) => (
               <button
-                key={r}
-                onClick={() => setReason(r)}
+                key={r.value}
+                type="button"
+                onClick={() => setReason(r.value)}
                 className={cn(
                   "p-4 rounded-2xl text-left text-sm font-bold transition-all border",
-                  reason === r 
+                  reason === r.value 
                     ? "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-900/50 text-red-700 dark:text-red-400"
                     : "bg-slate-50 dark:bg-slate-900 border-slate-100 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100"
                 )}
               >
-                {r}
+                {r.label}
               </button>
             ))}
           </div>
@@ -99,7 +101,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Contanos qué pasó..."
+            placeholder="Contanos qué pasó para que podamos revisarlo..."
             rows={3}
             className="w-full bg-slate-50 dark:bg-slate-800/50 border-none rounded-2xl px-5 py-4 text-sm font-medium focus:ring-2 focus:ring-red-500/20 outline-none resize-none dark:text-white"
           />

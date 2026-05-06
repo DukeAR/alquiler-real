@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import {
+  buildPropertyCatalogSections,
   getPropertyVerificationDetails,
   getPropertyVerificationBadge,
   getPropertyVerificationGuidanceLabel,
@@ -206,7 +207,7 @@ describe('propertyVerification', () => {
     expect(sorted.map((property) => property.id)).toEqual(['presencial', 'identity', 'none']);
   });
 
-  test('mixes lower visible verification levels into the verification-first catalog without rigid blocks', () => {
+  test('keeps higher visible verification levels ahead of lower ones in verification-first sorting', () => {
     const sorted = sortPropertiesByCatalogOrder([
       { id: 'presencial-3', hasPresencialVerification: true, price: 80_000 },
       { id: 'identity-2', identityValidated: true, price: 55_000 },
@@ -219,11 +220,113 @@ describe('propertyVerification', () => {
     expect(sorted.map((property) => property.id)).toEqual([
       'presencial-1',
       'presencial-2',
-      'identity-1',
       'presencial-3',
-      'none-1',
+      'identity-1',
       'identity-2',
+      'none-1',
     ]);
+  });
+
+  test('prioritizes the trust score before the older secondary tie breakers', () => {
+    const sorted = sortPropertiesByCatalogOrder([
+      {
+        id: 'fast-host',
+        title: 'Casa con anfitrión activo',
+        location: 'Pinamar centro',
+        description: 'Casa con fotos, descripción completa y buen ritmo de respuesta.',
+        imageUrl: 'https://example.com/cover-1.jpg',
+        images: [
+          'https://example.com/cover-1.jpg',
+          'https://example.com/cover-1b.jpg',
+          'https://example.com/cover-1c.jpg',
+          'https://example.com/cover-1d.jpg',
+        ],
+        identityValidated: true,
+        price: 120_000,
+        hostInteractionHistory: {
+          completedReservationsCount: 3,
+          feedbackCount: 2,
+          incidentsCount: 0,
+          avgResponseTimeMinutes: 24,
+        },
+        rating: 4.7,
+        reviewsCount: 6,
+      },
+      {
+        id: 'slow-host',
+        title: 'Casa con menos señales',
+        location: 'Pinamar',
+        description: 'Casa con menos respaldo cargado.',
+        imageUrl: 'https://example.com/cover-2.jpg',
+        identityValidated: true,
+        price: 120_000,
+        hostInteractionHistory: {
+          completedReservationsCount: 0,
+          feedbackCount: 0,
+          incidentsCount: 0,
+          avgResponseTimeMinutes: 180,
+        },
+        rating: 4.1,
+        reviewsCount: 1,
+      },
+    ], 'verification');
+
+    expect(sorted.map((property) => property.id)).toEqual(['fast-host', 'slow-host']);
+  });
+
+  test('builds section buckets without duplicating recent verified listings', () => {
+    const sections = buildPropertyCatalogSections([
+      {
+        id: 'presencial-top',
+        title: 'Casa verificada',
+        location: 'Costa del Este, frente al mar',
+        description: 'Casa completa, con varias fotos y buena descripción.',
+        imageUrl: 'https://example.com/presencial-cover.jpg',
+        images: [
+          'https://example.com/presencial-cover.jpg',
+          'https://example.com/presencial-1.jpg',
+          'https://example.com/presencial-2.jpg',
+          'https://example.com/presencial-3.jpg',
+        ],
+        identityValidated: true,
+        hasPresencialVerification: true,
+        price: 110_000,
+        rating: 4.9,
+        reviewsCount: 10,
+        createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+      },
+      {
+        id: 'identity-recent',
+        title: 'Depto recién publicado',
+        location: 'Pinamar centro',
+        description: 'Departamento nuevo en catálogo, con información completa.',
+        imageUrl: 'https://example.com/recent-cover.jpg',
+        images: [
+          'https://example.com/recent-cover.jpg',
+          'https://example.com/recent-1.jpg',
+          'https://example.com/recent-2.jpg',
+          'https://example.com/recent-3.jpg',
+        ],
+        identityValidated: true,
+        price: 95_000,
+        rating: 4.6,
+        reviewsCount: 4,
+        createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+      },
+      {
+        id: 'comparison-base',
+        title: 'Casa para comparar',
+        location: 'Villa Gesell',
+        description: 'Una opción adicional para comparar.',
+        imageUrl: 'https://example.com/compare-cover.jpg',
+        identityValidated: false,
+        price: 88_000,
+      },
+    ], 'verification');
+
+    expect(sections.topVerified.map((property) => property.id)).toEqual(['presencial-top']);
+    expect(sections.newListings.map((property) => property.id)).toEqual(['identity-recent']);
+    expect(sections.comparison.map((property) => property.id)).toEqual(['comparison-base']);
   });
 
   test('uses host confirmation after location when the score is tied', () => {
@@ -324,5 +427,52 @@ describe('propertyVerification', () => {
     ], 'verification');
 
     expect(sorted.map((property) => property.id)).toEqual(['p2', 'p1']);
+  });
+
+  test('does not demote a stable listing for one isolated pending report', () => {
+    const sorted = sortPropertiesByCatalogOrder([
+      {
+        id: 'fresh-clean',
+        identityValidated: true,
+        createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+        price: 100_000,
+      },
+      {
+        id: 'pending-stable',
+        identityValidated: true,
+        hostSince: new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString(),
+        pendingReportsCount: 1,
+        price: 100_000,
+      },
+    ], 'verification');
+
+    expect(sorted.map((property) => property.id)).toEqual(['pending-stable', 'fresh-clean']);
+  });
+
+  test('keeps confirmed reports below otherwise healthy listings', () => {
+    const sorted = sortPropertiesByCatalogOrder([
+      {
+        id: 'reported-history',
+        identityValidated: true,
+        hostSince: new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString(),
+        rating: 4.9,
+        reviewsCount: 8,
+        confirmedReportsCount: 1,
+        hostInteractionHistory: {
+          completedReservationsCount: 4,
+          feedbackCount: 4,
+          incidentsCount: 0,
+          avgResponseTimeMinutes: 30,
+        },
+        price: 120_000,
+      },
+      {
+        id: 'clean-neutral',
+        identityValidated: true,
+        price: 120_000,
+      },
+    ], 'verification');
+
+    expect(sorted.map((property) => property.id)).toEqual(['clean-neutral', 'reported-history']);
   });
 });

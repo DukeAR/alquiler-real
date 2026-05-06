@@ -133,6 +133,48 @@ describe('Bookings and availability endpoints', () => {
     getClientMock.mockReset();
   });
 
+  test('GET /api/bookings/all includes requestStatus from the linked conversation', async () => {
+    queryMock.mockImplementation(async (text: string) => {
+      if (text.includes(BOOKING_LOOKUP_QUERY_SNIPPET) && text.includes('ORDER BY b.created_at DESC')) {
+        expect(text).toContain('c.request_status as "requestStatus"');
+
+        return {
+          rows: [
+            {
+              id: 'booking-1',
+              propertyId: 'prop-1',
+              userId: 'user-1',
+              status: 'cancelled',
+              requestStatus: 'not_advanced',
+              requestMode: 'protected',
+              conversationId: 'conv-1',
+              startDate: '2099-09-20',
+              endDate: '2099-09-23',
+              totalPrice: 360000,
+              guests: 2,
+              propertyTitle: 'Casa del bosque',
+              hostName: 'Mariana',
+            },
+          ],
+        };
+      }
+
+      throw new Error(`Unexpected query: ${text}`);
+    });
+
+    const res = await request(app)
+      .get('/api/bookings/all')
+      .set('x-test-user-id', 'user-1');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveLength(1);
+    expect(res.body[0]).toMatchObject({
+      id: 'booking-1',
+      requestStatus: 'not_advanced',
+      status: 'cancelled',
+    });
+  });
+
   test('POST /api/funnel/events stores the availability CTA click with host context', async () => {
     queryMock.mockImplementation(async (text: string, params?: unknown[]) => {
       if (text.includes(LOG_ACTIVITY_QUERY_SNIPPET)) {
@@ -203,7 +245,7 @@ describe('Bookings and availability endpoints', () => {
         return { rows: [] };
       }
 
-      if (text.includes('FROM properties') && text.includes('WHERE id = $1')) {
+      if (text.includes('FROM properties') && (text.includes('WHERE id = $1') || text.includes('WHERE p.id = $1'))) {
         return {
           rows: [
             {
@@ -329,7 +371,7 @@ describe('Bookings and availability endpoints', () => {
         };
       }
 
-      if (text.includes('FROM properties') && text.includes('WHERE id = $1')) {
+      if (text.includes('FROM properties') && (text.includes('WHERE id = $1') || text.includes('WHERE p.id = $1'))) {
         return {
           rows: [
             {
@@ -539,6 +581,9 @@ describe('Bookings and availability endpoints', () => {
       }
 
       if (text.includes('FROM conversations c') && text.includes('ORDER BY c.updated_at DESC')) {
+        expect(text).toContain('p.price as "propertyPrice"');
+        expect(text).toContain('last_message_row.read_at as "lastMessageReadAt"');
+
         return {
           rows: [
             {
@@ -551,6 +596,10 @@ describe('Bookings and availability endpoints', () => {
               hostName: 'Mariana',
               propertyTitle: 'Casa del bosque',
               propertyImage: 'https://example.com/property.jpg',
+              propertyPrice: 120000,
+              last_message: '¿Sigue disponible?',
+              lastMessageSenderId: 'tenant-1',
+              lastMessageReadAt: null,
               bookingStatus: null,
               startDate: null,
               endDate: null,
@@ -603,6 +652,10 @@ describe('Bookings and availability endpoints', () => {
 
     expect(res.status).toBe(200);
     expect(res.body[0]).not.toHaveProperty('guestPositiveReviewsCount');
+    expect(res.body[0].propertyPrice).toBe(120000);
+    expect(res.body[0].lastMessageSenderId).toBe('tenant-1');
+    expect(res.body[0].lastMessageReadAt).toBeNull();
+    expect(res.body[0].hostMemberSince).toBe('2023-02-01');
     expect(res.body[0].interactionContinuity).toEqual({
       label: 'Ya interactuaron antes sin inconvenientes',
       detail: 'Ya tuvieron una coordinación cerrada sin incidentes y pueden retomar desde una base conocida.',
@@ -639,6 +692,7 @@ describe('Bookings and availability endpoints', () => {
 
   test('GET /api/conversations/:id/messages injects the first reservation guidance messages into the chat', async () => {
     const insertedSystemKeys: string[] = [];
+    let readMarkerParams: unknown[] | undefined;
 
     queryMock.mockImplementation(async (text: string, params?: unknown[]) => {
       if (text.includes('JOIN users u_tenant') && text.includes('WHERE c.id = $1')) {
@@ -678,7 +732,13 @@ describe('Bookings and availability endpoints', () => {
         return { rows: [] };
       }
 
+      if (text.includes('UPDATE messages') && text.includes('SET read_at = COALESCE(read_at, NOW())')) {
+        readMarkerParams = params;
+        return { rows: [] };
+      }
+
       if (text.includes('FROM messages') && text.includes('WHERE conversation_id = $1')) {
+        expect(text).toContain('read_at as "readAt"');
         return {
           rows: [
             {
@@ -688,6 +748,7 @@ describe('Bookings and availability endpoints', () => {
               receiver_id: 'tenant-1',
               content: 'Podés hacer todas las preguntas necesarias antes de avanzar.',
               is_system: true,
+              readAt: null,
               created_at: '2099-09-01T10:00:00.000Z',
             },
             {
@@ -697,6 +758,7 @@ describe('Bookings and availability endpoints', () => {
               receiver_id: 'tenant-1',
               content: 'Tu propuesta fue enviada por chat. El anfitrión puede responder por acá.',
               is_system: true,
+              readAt: null,
               created_at: '2099-09-01T10:01:00.000Z',
             },
           ],
@@ -712,10 +774,196 @@ describe('Bookings and availability endpoints', () => {
 
     expect(res.status).toBe(200);
     expect(insertedSystemKeys).toEqual(['conversation-start', 'request-sent']);
+    expect(readMarkerParams).toEqual(['conv-1', 'tenant-1']);
     expect(res.body.map((message: { content: string }) => message.content)).toEqual([
       'Podés hacer todas las preguntas necesarias antes de avanzar.',
       'Tu propuesta fue enviada por chat. El anfitrión puede responder por acá.',
     ]);
+  });
+
+  test('GET /api/conversations/:id/messages marks incoming unread messages as read and exposes readAt', async () => {
+    let readMarkerParams: unknown[] | undefined;
+
+    queryMock.mockImplementation(async (text: string, params?: unknown[]) => {
+      if (text.includes('JOIN users u_tenant') && text.includes('WHERE c.id = $1')) {
+        return {
+          rows: [
+            {
+              id: 'conv-1',
+              property_id: 'prop-1',
+              booking_id: null,
+              tenant_id: 'tenant-1',
+              host_id: 'host-1',
+              tenantName: 'Lucía',
+              hostName: 'Mariana',
+              propertyTitle: 'Casa del bosque',
+              propertyImage: 'https://example.com/property.jpg',
+              bookingStatus: null,
+              startDate: null,
+              endDate: null,
+              guests: null,
+              totalPrice: null,
+              requestMode: null,
+              requestStatus: null,
+              requestStartDate: null,
+              requestEndDate: null,
+              requestGuests: null,
+              requestTotalPrice: null,
+              depositStatus: null,
+              created_at: '2099-09-01T10:00:00.000Z',
+              updated_at: '2099-09-01T10:15:00.000Z',
+            },
+          ],
+        };
+      }
+
+      if (text.includes('INSERT INTO messages') && text.includes('system_key')) {
+        return { rows: [] };
+      }
+
+      if (text.includes('UPDATE messages') && text.includes('SET read_at = COALESCE(read_at, NOW())')) {
+        readMarkerParams = params;
+        return { rows: [] };
+      }
+
+      if (text.includes('FROM messages') && text.includes('WHERE conversation_id = $1')) {
+        expect(text).toContain('read_at as "readAt"');
+
+        return {
+          rows: [
+            {
+              id: 'msg-1',
+              conversation_id: 'conv-1',
+              sender_id: 'host-1',
+              receiver_id: 'tenant-1',
+              content: 'Hola, sigue disponible.',
+              is_system: false,
+              system_key: null,
+              is_suspicious: false,
+              is_optimistic: false,
+              readAt: '2099-09-01T10:02:00.000Z',
+              created_at: '2099-09-01T10:00:00.000Z',
+            },
+          ],
+        };
+      }
+
+      throw new Error(`Unexpected query: ${text}`);
+    });
+
+    const res = await request(app)
+      .get('/api/conversations/conv-1/messages')
+      .set('x-test-user-id', 'tenant-1');
+
+    expect(res.status).toBe(200);
+    expect(readMarkerParams).toEqual(['conv-1', 'tenant-1']);
+    expect(res.body[0]).toMatchObject({
+      id: 'msg-1',
+      readAt: '2099-09-01T10:02:00.000Z',
+    });
+  });
+
+  test('POST /api/messages returns a soft warning when the message includes external contact data', async () => {
+    const activityActions: string[] = [];
+
+    queryMock.mockImplementation(async (text: string, params?: unknown[]) => {
+      if (matchesInternalRiskProfileQuery(text)) {
+        return {
+          rows: [
+            buildInternalRiskRow({
+              phone: '+5491122334455',
+              bio: 'Perfil activo para reservar.',
+              zone: 'Pinamar',
+              profilePhoto: 'https://example.com/avatar.jpg',
+              totalReviews: 5,
+              totalProperties: 0,
+              totalBookingsHosted: 0,
+              createdAt: '2023-01-10T00:00:00.000Z',
+              memberSince: '2023-01-10',
+              emailVerified: true,
+              phoneVerified: true,
+              documentaryVerified: true,
+              identityVerificationStatus: 'verified',
+              dniNumber: '12345678',
+              recentPropertiesCount: 0,
+              activePropertiesCount: 0,
+              duplicateListingClusters: 0,
+              sentMessagesLast24h: 0,
+            }),
+          ],
+        };
+      }
+
+      if (matchesInternalRiskResponseQuery(text)) {
+        return { rows: [] };
+      }
+
+      if (text.includes('UPDATE users') && text.includes('internal_trust_score')) {
+        return { rows: [] };
+      }
+
+      if (text.includes(LOG_ACTIVITY_QUERY_SNIPPET)) {
+        activityActions.push(String(params?.[2] ?? ''));
+        return { rows: [] };
+      }
+
+      if (text.includes('FROM conversations') && text.includes('WHERE id = $1') && text.includes('LIMIT 1')) {
+        expect(params).toEqual(['conv-1']);
+        return {
+          rows: [
+            {
+              tenant_id: 'tenant-1',
+              host_id: 'host-1',
+              property_id: 'prop-1',
+            },
+          ],
+        };
+      }
+
+      if (text.includes('SELECT COUNT(*)::int as count') && text.includes('FROM messages')) {
+        return { rows: [{ count: 1 }] };
+      }
+
+      if (text.includes('INSERT INTO messages') && text.includes('is_suspicious')) {
+        expect(params?.[1]).toBe('conv-1');
+        expect(params?.[2]).toBe('tenant-1');
+        expect(params?.[3]).toBe('host-1');
+        expect(params?.[4]).toBe('Escribime por WhatsApp al 11 5555 4444');
+        expect(params?.[5]).toBe(true);
+        return { rows: [] };
+      }
+
+      if (text.includes('UPDATE conversations SET last_message = $1')) {
+        expect(params).toEqual(['Escribime por WhatsApp al 11 5555 4444', 'conv-1']);
+        return { rows: [] };
+      }
+
+      throw new Error(`Unexpected query: ${text}`);
+    });
+
+    const res = await request(app)
+      .post('/api/messages')
+      .set('x-test-user-id', 'tenant-1')
+      .send({
+        conversation_id: 'conv-1',
+        receiver_id: 'host-1',
+        content: 'Escribime por WhatsApp al 11 5555 4444',
+      });
+
+    expect(res.status).toBe(201);
+    expect(activityActions).toContain('SUSPICIOUS_MESSAGE_BLOCKED');
+    expect(res.body).toMatchObject({
+      conversation_id: 'conv-1',
+      sender_id: 'tenant-1',
+      receiver_id: 'host-1',
+      content: 'Escribime por WhatsApp al 11 5555 4444',
+      is_suspicious: true,
+      readAt: null,
+      warning: {
+        type: 'external_contact',
+        message: 'Parece que este mensaje incluye datos de contacto externos. Te recomendamos mantener la conversación dentro de la plataforma.',
+      },
+    });
   });
 
   test('POST /api/conversations/:id/accept-request accepts the request and confirms a protected booking', async () => {

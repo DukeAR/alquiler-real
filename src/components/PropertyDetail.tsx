@@ -30,6 +30,7 @@ import { SectionTitle } from './ui/SectionTitle';
 import { TrustSignalsInline, getTrustSignalsFromInteractionHistory, getTrustSignalsFromItems, type TrustSignal } from './ui/TrustSignalsInline';
 import { PropertyVerificationPanel } from './verification/PropertyVerificationPanel';
 import { VerificationInfoPanel } from './verification/VerificationInfoPanel';
+import { ReportModal } from './ReportModal';
 
 const FALLBACK = 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=1200&q=80&auto=format&fit=crop';
 
@@ -57,10 +58,15 @@ type PropertyDetailData = Partial<AppProperty> & {
 
 type PropertyReviewItem = {
   id: string;
+  reviewerId?: string;
   reviewer_id?: string;
   userName?: string;
   rating: number;
   comment: string;
+  type?: 'host_review' | 'guest_review';
+  categories?: Array<{ key: string; label: string; score: number }>;
+  categoryScores?: Array<{ key: string; label: string; score: number }>;
+  createdAt?: string;
   agreementKept?: boolean;
   wouldInteractAgain?: boolean;
   hadIncident?: boolean;
@@ -490,6 +496,7 @@ export const PropertyDetailShell: React.FC<{
   const [availabilityRefreshToken, setAvailabilityRefreshToken] = useState(0);
   const [isMobileBookingLayout, setIsMobileBookingLayout] = useState(getIsMobileBookingLayout);
   const [isPrimaryBookingCtaVisible, setIsPrimaryBookingCtaVisible] = useState(true);
+  const [showReportModal, setShowReportModal] = useState(false);
   const [hasScrolledPastStickyIntro, setHasScrolledPastStickyIntro] = useState(false);
   const [hasScrolledPastStickyDeepThreshold, setHasScrolledPastStickyDeepThreshold] = useState(false);
   const [hasEngagedWithDecisionContent, setHasEngagedWithDecisionContent] = useState(false);
@@ -527,7 +534,10 @@ export const PropertyDetailShell: React.FC<{
     : null;
   const bookingEntryCtaLabel = getBookingEntryCtaLabel(detailVerificationState.publicLevel);
   const bookingCtaSupportCopy = getBookingCtaSupportCopy(detailVerificationState.publicLevel);
-  const visibleReviews = reviews.slice(0, 2);
+  const visibleReviews = reviews.slice(0, 3);
+  const reviewAverage = reviewCount > 0
+    ? ((Number(property.rating) || 0) > 0 ? Number(property.rating) : reviews.reduce((sum, review) => sum + Number(review.rating || 0), 0) / Math.max(reviews.length, 1))
+    : 0;
   const hostTrustSignals = (() => {
     const mergedSignals: TrustSignal[] = [];
     const seenLabels = new Set<string>();
@@ -1599,11 +1609,39 @@ export const PropertyDetailShell: React.FC<{
 
           <Card data-motion-block className="app-card-hover app-motion-block rounded-[32px] border-slate-200/80 bg-white p-6 shadow-[0_28px_70px_-50px_rgba(15,23,42,0.25)] sm:p-7">
             <div className="space-y-5">
-              <SectionTitle
-                eyebrow="Opiniones"
-                heading="Opiniones reales"
-                description="Experiencias de huéspedes en esta propiedad"
-              />
+              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                <div className="space-y-4">
+                  <SectionTitle
+                    eyebrow="Opiniones"
+                    heading="Opiniones reales"
+                    description="Promedio, cantidad y comentarios visibles de interacciones reales en esta propiedad."
+                  />
+
+                  <div className="flex flex-wrap gap-2">
+                    <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm font-semibold text-slate-700">
+                      <Icons.Star className="h-4 w-4 text-amber-500" />
+                      <span>{reviewCount > 0 ? reviewAverage.toFixed(1).replace('.', ',') : 'Sin promedio'}</span>
+                    </div>
+                    <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm font-semibold text-slate-700">
+                      <Icons.MessageSquare className="h-4 w-4 text-slate-500" />
+                      <span>{reviewCount} {reviewCount === 1 ? 'opinión' : 'opiniones'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setShowReportModal(true)}
+                  className="rounded-full border-red-200/70 bg-red-50/80 text-red-700 hover:border-red-300 hover:bg-red-50 hover:text-red-800"
+                >
+                  <>
+                    <Icons.AlertTriangle className="h-4 w-4" />
+                    Reportar publicación
+                  </>
+                </Button>
+              </div>
 
               {visibleReviews.length > 0 ? (
                 <ul className="grid gap-3 lg:grid-cols-2">
@@ -1620,6 +1658,16 @@ export const PropertyDetailShell: React.FC<{
                         </div>
                       </div>
                       <p className="mt-3 text-sm leading-6 text-slate-600">{review.comment}</p>
+                      {(review.categories?.length || review.categoryScores?.length) ? (
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {(review.categories ?? review.categoryScores ?? []).slice(0, 2).map((category) => (
+                            <span key={`${review.id}-${category.key}`} className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-500">
+                              <Icons.Star className="h-3 w-3 text-amber-500" />
+                              {category.label}: {category.score}/5
+                            </span>
+                          ))}
+                        </div>
+                      ) : null}
                     </li>
                   ))}
                 </ul>
@@ -1632,6 +1680,18 @@ export const PropertyDetailShell: React.FC<{
           </Card>
         </main>
       </div>
+
+      {showReportModal ? (
+        <ReportModal
+          reportedUserId={property.hostId}
+          propertyId={property.id}
+          onClose={() => setShowReportModal(false)}
+          onSuccess={() => {
+            setShowReportModal(false);
+            showToast('Reporte enviado', 'Recibimos el reporte y lo vamos a revisar.', 'success');
+          }}
+        />
+      ) : null}
 
       {bookingFlowOpen ? (
         <div className="fixed inset-0 z-50 p-0 sm:p-4" role="presentation">

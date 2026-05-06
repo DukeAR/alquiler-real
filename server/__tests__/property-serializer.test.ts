@@ -34,6 +34,9 @@ describe('mapPropertyRecord', () => {
       score: 4,
       level: 'high',
     });
+    expect(property.verificationLevel).toBe('identity');
+    expect(property.isIdentityVerified).toBe(true);
+    expect(property.isPresentiallyVerified).toBe(false);
     expect(property.hostTrust.items).toEqual(expect.arrayContaining([
       expect.objectContaining({ key: 'identity', status: 'complete' }),
       expect.objectContaining({ key: 'reservations', status: 'complete' }),
@@ -43,14 +46,14 @@ describe('mapPropertyRecord', () => {
     expect(property.verificationItems).toEqual([
       {
         key: 'identity',
-        label: 'Identidad del anfitrión validada',
+        label: 'Identidad del anfitrión validada en la plataforma',
         description: 'La identidad del anfitrión ya quedó validada dentro de la plataforma.',
         status: 'complete',
       },
       {
         key: 'location',
-        label: 'Ubicación confirmada',
-        description: 'La ubicación del aviso ya quedó confirmada dentro de la plataforma.',
+        label: 'Ubicación del aviso cargada',
+        description: 'La ubicación del aviso ya quedó cargada dentro de la plataforma.',
         status: 'complete',
       },
       {
@@ -102,6 +105,9 @@ describe('mapPropertyRecord', () => {
     });
 
     expect(property.identityValidated).toBe(false);
+    expect(property.verificationLevel).toBe('none');
+    expect(property.isIdentityVerified).toBe(false);
+    expect(property.isPresentiallyVerified).toBe(false);
     expect(property.verificationScore).toBe(1);
     expect(property.hostTrustScore).toBe(0);
     expect(property.hostTrust).toMatchObject({
@@ -110,7 +116,7 @@ describe('mapPropertyRecord', () => {
     });
     expect(property.verificationItems?.find((item) => item.key === 'identity')).toEqual({
       key: 'identity',
-      label: 'Identidad del anfitrión validada',
+      label: 'Identidad del anfitrión validada en la plataforma',
       description: 'Todavía falta validar la identidad del anfitrión.',
       status: 'pending',
     });
@@ -137,5 +143,8 @@ describe('mapPropertyRecord', () => {
       'https://example.com/room.jpg',
     ]);
     expect(property.beds).toBe(2);
+    expect(property.verificationLevel).toBe('none');
+    expect(property.isIdentityVerified).toBe(false);
+    expect(property.isPresentiallyVerified).toBe(false);
   });
 });

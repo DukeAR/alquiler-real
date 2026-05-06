@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { apiFetch } from '../lib/apiConfig';
 import { Icons } from './Icons';
 import { cn } from '../lib/utils';
+import type { ReviewType } from '../types';
 
 interface ReviewModalProps {
   bookingId: string;
   reviewedUserId: string;
   reviewedUserName: string;
-  type: 'host_to_guest' | 'guest_to_host';
+  type: ReviewType;
   onClose: () => void;
   onComplete: () => void;
 }
@@ -20,51 +21,60 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
   onClose,
   onComplete
 }) => {
-  const [agreementKept, setAgreementKept] = useState<boolean | null>(null);
-  const [wouldInteractAgain, setWouldInteractAgain] = useState<boolean | null>(null);
-  const [hadIncident, setHadIncident] = useState<boolean | null>(null);
-  const [photosMatchReality, setPhotosMatchReality] = useState<boolean | null>(type === 'guest_to_host' ? null : true);
+  const activeCategories = type === 'guest_review'
+    ? [
+        { key: 'communication', label: 'Comunicación' },
+        { key: 'listing_clarity', label: 'Claridad del aviso' },
+        { key: 'agreement_fulfillment', label: 'Cumplimiento de lo acordado' },
+        { key: 'overall_experience', label: 'Experiencia general' },
+      ]
+    : [
+        { key: 'respectful_treatment', label: 'Trato respetuoso' },
+        { key: 'agreement_fulfillment', label: 'Cumplimiento de acuerdos' },
+        { key: 'property_care', label: 'Cuidado del lugar' },
+        { key: 'platform_history', label: 'Historial en la plataforma' },
+      ];
+  const [scores, setScores] = useState<Record<string, number>>({});
   const [comment, setComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const isGuestToHost = type === 'guest_to_host';
+  const isComplete = activeCategories.every((category) => Number.isFinite(scores[category.key]));
+  const averageScore = activeCategories.reduce((sum, category) => sum + (scores[category.key] ?? 0), 0) / Math.max(activeCategories.length, 1);
 
-  const QuestionBlock = ({
-    question,
-    value,
+  const ScoreBlock = ({
+    label,
+    score,
     onChange,
-    yesLabel = 'Sí',
-    noLabel = 'No',
   }: {
-    question: string;
-    value: boolean | null;
-    onChange: (nextValue: boolean) => void;
-    yesLabel?: string;
-    noLabel?: string;
+    label: string;
+    score?: number;
+    onChange: (nextScore: number) => void;
   }) => (
     <div className="space-y-3 rounded-[24px] border border-slate-200/80 bg-slate-50/90 px-4 py-4 dark:border-slate-800 dark:bg-slate-800/60">
-      <p className="text-sm font-semibold leading-6 text-slate-900 dark:text-slate-50">{question}</p>
-      <div className="flex gap-2">
-        {[
-          { label: yesLabel, nextValue: true },
-          { label: noLabel, nextValue: false },
-        ].map((option) => {
-          const selected = value === option.nextValue;
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm font-semibold leading-6 text-slate-900 dark:text-slate-50">{label}</p>
+        <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+          {score ? `${score}/5` : 'Sin puntuar'}
+        </span>
+      </div>
+      <div className="grid grid-cols-5 gap-2">
+        {[1, 2, 3, 4, 5].map((value) => {
+          const selected = score === value;
 
           return (
             <button
-              key={option.label}
+              key={value}
               type="button"
-              onClick={() => onChange(option.nextValue)}
+              onClick={() => onChange(value)}
               className={cn(
-                'flex-1 rounded-full border px-4 py-2.5 text-sm font-semibold transition-colors',
+                'rounded-2xl border px-0 py-2.5 text-sm font-semibold transition-colors',
                 selected
                   ? 'border-brand bg-brand text-white'
                   : 'border-slate-200 bg-white text-slate-600 hover:border-brand/20 hover:text-brand dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-brand/30 dark:hover:text-brand-light',
               )}
             >
-              {option.label}
+              {value}
             </button>
           );
         })}
@@ -73,8 +83,8 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
   );
 
   const handleSubmit = async () => {
-    if (agreementKept === null || wouldInteractAgain === null || hadIncident === null || (isGuestToHost && photosMatchReality === null)) {
-      setError('Respondé las preguntas obligatorias antes de guardar el cierre.');
+    if (!isComplete) {
+      setError('Puntuá cada categoría antes de guardar la reseña.');
       return;
     }
 
@@ -90,10 +100,11 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
           reviewed_user_id: reviewedUserId,
           comment,
           type,
-          agreement_kept: agreementKept,
-          would_interact_again: wouldInteractAgain,
-          had_incident: hadIncident,
-          ...(isGuestToHost ? { photos_match_reality: photosMatchReality } : {}),
+          categories: activeCategories.map((category) => ({
+            key: category.key,
+            label: category.label,
+            score: scores[category.key],
+          })),
         }),
       });
 
@@ -118,27 +129,39 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
             <Icons.MessageSquare className="w-8 h-8 text-brand" />
           </div>
           <h3 className="text-2xl font-black text-slate-900 dark:text-white">
-            Cierre de la estadía con {reviewedUserName}
+            {type === 'guest_review' ? 'Contá tu experiencia' : 'Dejá una referencia'} con {reviewedUserName}
           </h3>
           <p className="text-slate-500 text-sm">
-            Este historial se muestra con señales suaves, sin estrellas ni puntajes públicos.
+            Tu opinión solo se habilita sobre interacciones reales y ayuda a ordenar mejor futuras decisiones.
           </p>
         </div>
 
         <div className="space-y-4">
-          <QuestionBlock question="¿Se cumplió lo acordado?" value={agreementKept} onChange={setAgreementKept} />
-          <QuestionBlock question="¿Volverías a interactuar?" value={wouldInteractAgain} onChange={setWouldInteractAgain} />
-          <QuestionBlock question="¿Hubo inconvenientes?" value={hadIncident} onChange={setHadIncident} yesLabel="Sí, hubo" noLabel="No hubo" />
-          {isGuestToHost ? (
-            <QuestionBlock question="¿El aviso coincidió con lo publicado?" value={photosMatchReality} onChange={setPhotosMatchReality} />
-          ) : null}
+          <div className="rounded-[24px] border border-slate-200/80 bg-slate-50/80 px-4 py-4 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-300">
+            <div className="flex items-center justify-between gap-3">
+              <span className="font-semibold text-slate-900 dark:text-slate-50">Promedio general</span>
+              <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
+                <Icons.Star className="h-4 w-4 text-amber-500" />
+                {isComplete ? averageScore.toFixed(1).replace('.', ',') : 'Completá las categorías'}
+              </span>
+            </div>
+          </div>
+
+          {activeCategories.map((category) => (
+            <ScoreBlock
+              key={category.key}
+              label={category.label}
+              score={scores[category.key]}
+              onChange={(nextScore) => setScores((current) => ({ ...current, [category.key]: nextScore }))}
+            />
+          ))}
 
           <textarea
             value={comment}
             onChange={(e) => setComment(e.target.value)}
             rows={4}
             className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-4 py-4 font-medium focus:ring-2 focus:ring-brand outline-none resize-none text-slate-900 dark:text-white placeholder:text-slate-400"
-            placeholder="Si querés, dejá contexto breve para recordar cómo cerró la estadía (opcional)..."
+            placeholder="Si querés, dejá contexto breve para complementar la reseña..."
           />
           {error && <p className="text-red-500 text-xs font-bold text-center mt-2">{error}</p>}
         </div>
@@ -160,7 +183,7 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
         </div>
 
         <p className="text-[10px] text-slate-400 text-center italic">
-          * La app resume estas respuestas en líneas suaves del historial, sin exponer detalles sensibles del cierre.
+          * La plataforma usa esta información para ordenar mejor, moderar casos sensibles y mostrar contexto útil sin exponer señales internas.
         </p>
       </div>
     </div>

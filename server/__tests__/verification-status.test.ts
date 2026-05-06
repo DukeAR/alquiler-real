@@ -110,7 +110,7 @@ describe('Verification status endpoint', () => {
     });
     expect(res.body.verificationItems).toHaveLength(5);
     expect(res.body.verificationSummary.items).toEqual(res.body.verificationItems);
-    expect(res.body.nextStep).toContain('comprobación documental adicional');
-    expect(res.body.optionalUpgrade).toContain('comprobación documental adicional');
+    expect(res.body.nextStep).toContain('validación documental adicional');
+    expect(res.body.optionalUpgrade).toContain('validación documental adicional');
   });
 });

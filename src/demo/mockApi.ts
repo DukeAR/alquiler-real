@@ -135,6 +135,35 @@ const cloneValue = <T,>(value: T): T => {
   return JSON.parse(JSON.stringify(value)) as T;
 };
 
+const withPropertyVerificationDefaults = <T extends Property>(property: T) => {
+  const isPresentiallyVerified = Boolean(
+    property.hasPresencialVerification
+    || property.isPresentiallyVerified
+    || property.onsiteVerifiedAt
+    || property.verificationLevel === 'presencial',
+  );
+  const isIdentityVerified = Boolean(
+    isPresentiallyVerified
+    || property.identityValidated
+    || property.isIdentityVerified
+    || property.verificationLevel === 'identity',
+  );
+  const verificationLevel = isPresentiallyVerified
+    ? 'presencial'
+    : isIdentityVerified
+      ? 'identity'
+      : 'none';
+
+  return {
+    ...property,
+    identityValidated: isIdentityVerified,
+    hasPresencialVerification: isPresentiallyVerified,
+    verificationLevel,
+    isIdentityVerified,
+    isPresentiallyVerified,
+  };
+};
+
 const jsonResponse = (payload: unknown, status = 200) => new Response(JSON.stringify(payload), {
   status,
   headers: {
@@ -255,7 +284,7 @@ const createDemoStore = (): DemoStore => {
     activeMode: 'guest',
   };
 
-  const publicProperties = demoProperties.map((property) => ({
+  const publicProperties = demoProperties.map((property) => withPropertyVerificationDefaults({
     ...cloneValue(property),
     hostId: property.id === '1' || property.id === '4' ? DEMO_USER_ID : property.hostId,
     hostName: property.id === '1' || property.id === '4' ? user.name : property.hostName,
@@ -266,7 +295,7 @@ const createDemoStore = (): DemoStore => {
     nextArrivalDate: property.id === '1' ? '2026-05-12' : property.id === '4' ? '2026-05-28' : null,
   }));
 
-  const publishingProperty: DemoManagedProperty = {
+  const publishingProperty: DemoManagedProperty = withPropertyVerificationDefaults({
     ...cloneValue(publicProperties[3]),
     id: '5',
     title: 'Casa amplia con patio interno y garaje cubierto',
@@ -306,7 +335,7 @@ const createDemoStore = (): DemoStore => {
       propertyId: '5',
       propertyTitle: 'Casa amplia con patio interno y garaje cubierto',
     },
-  };
+  });
 
   const properties = [...publicProperties, publishingProperty];
 
@@ -1086,7 +1115,7 @@ const buildPropertySearchResults = (searchParams: URLSearchParams) => {
       return false;
     }
 
-    if (verifiedOnly && !property.identityValidated) {
+    if (verifiedOnly && !property.isPresentiallyVerified) {
       return false;
     }
 

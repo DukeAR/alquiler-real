@@ -63,6 +63,8 @@ export interface Property {
   id: string;
   title: string;
   location: string;
+  createdAt?: string;
+  created_at?: string;
   propertyType?: string;
   images?: string[];
   verificationScore?: number;
@@ -80,7 +82,12 @@ export interface Property {
   hostExperienceYears: number;
   historicalConsistency: number;
   unresolvedReviewsCount: number;
+  reportsCount?: number;
+  pendingReportsCount?: number;
+  confirmedReportsCount?: number;
+  confirmedSevereReportsCount?: number;
   identityValidated: boolean;
+  isIdentityVerified?: boolean;
   locationVerified: boolean;
   materialVerified?: boolean;
   videoValidated: boolean;
@@ -108,7 +115,9 @@ export interface Property {
   manualReviewCompleted?: boolean;
   availabilityValidated?: boolean;
   propertyRelationshipVerified?: boolean;
+  verificationLevel?: 'none' | 'identity' | 'presencial';
   hasPresencialVerification?: boolean;
+  isPresentiallyVerified?: boolean;
   onsiteVerifiedAt?: string;
   hasDigitalVerification?: boolean;
   hostPremiumDocumentaryVerified?: boolean;
@@ -137,19 +146,67 @@ export interface VerificationAsset {
   mimeType?: string | null;
 }
 
+export type ReviewType = 'host_review' | 'guest_review';
+
+export type LegacyReviewType = 'host_to_guest' | 'guest_to_host';
+
+export type ReviewCategoryKey =
+  | 'communication'
+  | 'listing_clarity'
+  | 'agreement_fulfillment'
+  | 'overall_experience'
+  | 'respectful_treatment'
+  | 'property_care'
+  | 'platform_history';
+
+export interface ReviewCategoryScore {
+  key: ReviewCategoryKey;
+  label: string;
+  score: number;
+}
+
 export interface Review {
   id: string;
+  bookingId?: string;
+  conversationId?: string;
+  reviewerId?: string;
+  reviewedUserId?: string;
   propertyId: string;
   userId: string;
   userName: string;
   rating: number;
   comment: string;
+  createdAt?: string;
   date: string;
+  type?: ReviewType | LegacyReviewType;
+  categories?: ReviewCategoryScore[];
+  categoryScores?: ReviewCategoryScore[];
   agreementKept?: boolean;
   wouldInteractAgain?: boolean;
   hadIncident?: boolean;
   photosMatchReality: boolean;
   pressureToBookFast: boolean;
+}
+
+export type ReportReason =
+  | 'suspicious_listing'
+  | 'false_information'
+  | 'off_platform_attempt'
+  | 'inappropriate_conduct'
+  | 'not_as_listed'
+  | 'other';
+
+export type ReportStatus = 'pending' | 'reviewed' | 'dismissed' | 'action_taken';
+
+export interface Report {
+  id: string;
+  reporterId: string;
+  reportedUserId?: string;
+  propertyId?: string;
+  reason: ReportReason;
+  description?: string;
+  status: ReportStatus;
+  createdAt: string;
 }
 
 export interface GuestPlatformHistory {
@@ -251,6 +308,7 @@ export interface Booking {
   hostId?: string;
   conversationId?: string;
   status: BookingStatus;
+  requestStatus?: ReservationRequestStatus;
   userName?: string;
   hostName?: string;
   propertyTitle?: string;
@@ -287,7 +345,11 @@ export interface Conversation {
   hostName?: string;
   propertyTitle?: string;
   propertyImage?: string;
+  propertyPrice?: number;
   last_message?: string;
+  lastMessageSenderId?: string;
+  lastMessageReadAt?: string | null;
+  lastMessageCreatedAt?: string | null;
   bookingStatus?: BookingStatus;
   startDate?: string;
   endDate?: string;
@@ -305,6 +367,7 @@ export interface Conversation {
   requestEndDate?: string;
   requestGuests?: number;
   requestTotalPrice?: number;
+  hostMemberSince?: string;
   hostTrustScore?: number;
   hostTrust?: HostTrustSummary;
   hostInteractionHistory?: HostInteractionHistory;
@@ -325,6 +388,7 @@ export interface Message {
   system_key?: string;
   is_suspicious?: boolean;
   is_optimistic?: boolean;
+  readAt?: string | null;
   created_at: string;
 }
 

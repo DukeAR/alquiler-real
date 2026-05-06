@@ -277,6 +277,10 @@ const isResolvedConversation = (value: unknown): value is Conversation => {
 };
 
 const getBookingRequestStatus = (booking: Booking) => {
+  if (booking.requestStatus) {
+    return booking.requestStatus;
+  }
+
   if (booking.requestMode !== 'protected') {
     return undefined;
   }
@@ -1685,7 +1689,7 @@ export const MyBookings = () => {
           bookingId={reviewingBooking.id}
           reviewedUserId={reviewingBooking.hostId || ''}
           reviewedUserName={reviewingBooking.hostName || 'Anfitrión'}
-          type="guest_to_host"
+          type="guest_review"
           onClose={() => setReviewingBooking(null)}
           onComplete={() => {
             setReviewingBooking(null);

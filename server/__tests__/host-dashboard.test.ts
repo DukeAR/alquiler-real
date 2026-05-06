@@ -95,6 +95,35 @@ describe('Host dashboard endpoint', () => {
         return { rows: [] };
       }
 
+      if (text.includes('COALESCE(u.member_since, u.created_at) as "memberSince"')) {
+        return {
+          rows: [
+            {
+              id: 'guest-1',
+              identityVerified: true,
+              memberSince: '2022-02-10T00:00:00.000Z',
+              emailVerified: true,
+              phoneVerified: true,
+              completedStays: 0,
+              cancellationsCount: 0,
+              conflictsCount: 0,
+              feedbackCount: 0,
+              agreementsKeptCount: 0,
+              wouldInteractAgainCount: 0,
+              incidentsCount: 0,
+            },
+          ],
+        };
+      }
+
+      if (text.includes("WHERE r.type = 'host_to_guest'")) {
+        return { rows: [] };
+      }
+
+      if (text.includes('consultedBeforeReserve')) {
+        return { rows: [] };
+      }
+
       if (text.includes('FUNNEL_PROPERTY_DETAIL_VIEWED')) {
         return {
           rows: [
@@ -425,5 +454,85 @@ describe('Host dashboard endpoint', () => {
       },
     });
     expect(res.body.contactedGuests[0].guestProfile).not.toHaveProperty('operationSignals');
+  });
+
+  test('GET /api/host/dashboard keeps not advanced requests in recent activity with requestStatus', async () => {
+    queryMock.mockImplementation(async (text: string) => {
+      if (text.includes('SELECT host_rating, host_verified, badge')) {
+        return { rows: [{ host_rating: 4.8, host_verified: true, badge: 'Verificado' }] };
+      }
+
+      if (text.includes('SELECT DISTINCT ON (property_id)')) {
+        return { rows: [] };
+      }
+
+      if (text.includes('FROM premium_verification_orders') && text.includes('is_promotional = TRUE')) {
+        return { rows: [] };
+      }
+
+      if (text.includes('FROM properties p') && text.includes('LEFT JOIN users u ON u.id = p."hostId"')) {
+        return { rows: [] };
+      }
+
+      if (text.includes('FROM bookings b') && text.includes('LIMIT 5')) {
+        expect(text).toContain('c.request_status as "requestStatus"');
+        expect(text).toContain("AND (b.status <> 'cancelled' OR c.request_status = 'not_advanced')");
+
+        return {
+          rows: [
+            {
+              id: 'booking-not-advanced',
+              status: 'cancelled',
+              requestStatus: 'not_advanced',
+              date: '12/10/2026',
+              startDate: '12/10/2026',
+              endDate: '15/10/2026',
+              guests: 2,
+              totalPrice: 320000,
+              userId: null,
+              userName: 'Marina',
+              propertyTitle: 'Casa del bosque',
+            },
+          ],
+        };
+      }
+
+      if (text.includes('total_bookings_hosted')) {
+        return { rows: [{ total_bookings_hosted: 4, estimated_income: 250000 }] };
+      }
+
+      if (text.includes('recent_guests')) {
+        return { rows: [] };
+      }
+
+      if (text.includes('FUNNEL_PROPERTY_DETAIL_VIEWED')) {
+        return {
+          rows: [
+            {
+              detailViews: 0,
+              availabilityClicks: 0,
+              chatStarts: 0,
+              chatsWithFirstMessage: 0,
+              acceptedRequests: 0,
+              depositsCompleted: 0,
+            },
+          ],
+        };
+      }
+
+      throw new Error(`Unexpected query: ${text}`);
+    });
+
+    const res = await request(app)
+      .get('/api/host/dashboard')
+      .set('x-test-user-id', 'host-1');
+
+    expect(res.status).toBe(200);
+    expect(res.body.recentBookings).toHaveLength(1);
+    expect(res.body.recentBookings[0]).toMatchObject({
+      id: 'booking-not-advanced',
+      status: 'cancelled',
+      requestStatus: 'not_advanced',
+    });
   });
 });

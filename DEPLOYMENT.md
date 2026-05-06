@@ -47,6 +47,7 @@ NODE_ENV=production
 DATABASE_URL=postgres://...
 DATABASE_SSL=true
 SESSION_SECRET=un-secreto-largo-y-seguro
+INTERNAL_OPS_SECRET=un-secreto-distinto-para-rutas-internas
 FRONTEND_URL=https://tu-frontend.vercel.app
 CORS_ALLOWED_ORIGINS=https://tu-frontend.vercel.app
 SESSION_COOKIE_SECURE=true
@@ -63,6 +64,7 @@ Notas prácticas:
 - `SESSION_COOKIE_SECURE=true` es obligatorio junto con `sameSite=none`
 - `SESSION_COOKIE_DOMAIN` normalmente debe quedar vacio si frontend y backend viven en hosts distintos; solo definilo si compartis un dominio padre real
 - `TRUST_PROXY=true` evita problemas de cookies seguras detrás de Render/Railway
+- `INTERNAL_OPS_SECRET` se usa para las rutas internas de moderación y no conviene que reaproveche el mismo valor que `SESSION_SECRET`
 
 ## Pasos de deploy
 
@@ -81,6 +83,11 @@ Deploy recomendado: Render web service o Railway service.
 - Build/start command: `npm run start`
 - Runtime: Node 18+
 - Variables: las listadas arriba
+
+Nota para este rollout:
+
+- las migraciones nuevas corren dentro del boot del backend mediante `initDB()`
+- hacé el primer deploy de esta versión con una sola instancia o un release canary antes de escalar horizontalmente
 
 Cuando quede online, anotá la URL pública. Ejemplo:
 
@@ -130,6 +137,7 @@ npm run build
 - Frontend con `VITE_BACKEND_URL` real
 - Backend con `FRONTEND_URL` y `CORS_ALLOWED_ORIGINS` reales
 - `SESSION_SECRET` real y largo
+- `INTERNAL_OPS_SECRET` real, distinto de `SESSION_SECRET`
 - `DATABASE_URL` real
 - `DATABASE_SSL=true` en cloud
 - `SESSION_COOKIE_SECURE=true`

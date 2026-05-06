@@ -7,7 +7,7 @@ import { resolveGuestRequestProfile } from '../lib/guestRequestProfile';
 import { formatPremiumPriceLabel } from '../lib/premiumVerification';
 import { getPropertyVerificationDetails, getPropertyVerificationItems, getPropertyVerificationProgress } from '../lib/propertyVerification';
 import { getReservationFlowCopy, getReservationNextActorDisplayLabel, getReservationNextStepDisplayLabel } from '../lib/reservationFlow';
-import { acceptConversationRequest, confirmDirectDeposit } from '../services/geminiService';
+import { acceptConversationRequest, confirmDirectDeposit, notAdvanceConversationRequest } from '../services/geminiService';
 import { showToast } from '../lib/toast';
 import { cn } from '../lib/utils';
 import { AccountModeSwitch } from './ui/AccountModeSwitch';
@@ -105,11 +105,13 @@ const scrollToSection = (sectionId: string) => {
 const getBookingFlow = (booking: any) => getReservationFlowCopy({
   mode: booking.requestMode,
   depositType: booking.depositType,
-  requestStatus: booking.requestMode === 'protected'
-    ? booking.depositStatus === 'held' || booking.depositStatus === 'released' || booking.status === 'confirmed'
-      ? 'accepted'
-      : 'pending'
-    : undefined,
+  requestStatus: typeof booking.requestStatus === 'string'
+    ? booking.requestStatus
+    : booking.requestMode === 'protected'
+      ? booking.depositStatus === 'held' || booking.depositStatus === 'released' || booking.status === 'confirmed'
+        ? 'accepted'
+        : 'pending'
+      : undefined,
   bookingStatus: booking.status,
   depositStatus: booking.depositStatus,
   cancellationActor: booking.cancellationActor,
@@ -377,6 +379,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
         ...booking,
         conversationId: updatedConversation.id,
         requestMode: updatedConversation.requestMode ?? booking.requestMode,
+        requestStatus: updatedConversation.requestStatus ?? 'accepted',
         depositStatus: updatedConversation.depositStatus ?? booking.depositStatus,
         status: updatedConversation.bookingStatus ?? (acceptedMode === 'protected' ? 'confirmed' : booking.status),
       });
@@ -390,6 +393,44 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
       );
     } catch (err) {
       showToast('Solicitud', err instanceof Error ? err.message : 'No pudimos aceptar la solicitud desde el panel.', 'error');
+    } finally {
+      setProcessingBookingAction(null);
+    }
+  };
+
+  const handleNotAdvanceRequest = async (booking: any) => {
+    if (!booking.conversationId) {
+      return;
+    }
+
+    const requestLabel = booking.requestMode === 'direct' ? 'propuesta' : 'solicitud';
+    if (!window.confirm(`¿Querés marcar que no podés avanzar con esta ${requestLabel}?`)) {
+      return;
+    }
+
+    setProcessingBookingAction({ bookingId: booking.id, action: 'not-advance-request' });
+
+    try {
+      const updatedConversation = await notAdvanceConversationRequest(booking.conversationId);
+
+      updateRecentBooking({
+        ...booking,
+        conversationId: updatedConversation.id,
+        requestMode: updatedConversation.requestMode ?? booking.requestMode,
+        requestStatus: updatedConversation.requestStatus ?? 'not_advanced',
+        depositType: updatedConversation.depositType ?? null,
+        depositStatus: updatedConversation.depositStatus ?? null,
+        status: updatedConversation.bookingStatus ?? 'cancelled',
+        cancellationActor: updatedConversation.cancellationActor ?? booking.cancellationActor,
+      });
+
+      showToast(
+        'Estado actualizado',
+        'Quedó marcado que no se pudo avanzar. El chat sigue abierto por si quieren recoordinar.',
+        'success',
+      );
+    } catch (err) {
+      showToast('Reserva', err instanceof Error ? err.message : 'No pudimos actualizar este estado. Intentá de nuevo.', 'error');
     } finally {
       setProcessingBookingAction(null);
     }
@@ -631,7 +672,10 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
   }, [dashboardData?.properties, derivedPropertyStatsByTitle]);
 
   const pendingRequestBookings = useMemo(
-    () => recentBookings.filter((booking: any) => booking.status === 'pending'),
+    () => recentBookings.filter((booking: any) => {
+      const stage = getBookingFlow(booking).stage;
+      return stage === 'request-pending' || (!stage && booking.status === 'pending');
+    }),
     [recentBookings],
   );
 
@@ -811,15 +855,18 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
     const arrivalActionsAvailable = isBookingCheckInReached(booking.startDate);
     const showBookingFlowPanel = booking.status !== 'completed' && Boolean(booking.requestMode && bookingFlow.stage && bookingFlow.stage !== 'reservation-confirmed');
     const canAcceptRequest = Boolean(booking.conversationId && bookingFlow.stage === 'request-pending');
+    const canNotAdvanceRequest = Boolean(booking.conversationId && bookingFlow.stage === 'request-pending');
     const canConfirmDirectDeposit = Boolean(booking.conversationId && bookingFlow.stage === 'direct-deposit-reported');
     const canOpenChat = Boolean(booking.conversationId);
     const canCancelAsHost = (booking.status === 'pending' || booking.status === 'confirmed')
+      && bookingFlow.stage !== 'request-pending'
       && bookingFlow.stage !== 'host-cancelled'
       && bookingFlow.stage !== 'guest-cancelled'
       && bookingFlow.stage !== 'protected-deposit-review'
       && bookingFlow.stage !== 'protected-no-show-pending';
     const canReportProtectedNoShow = bookingFlow.stage === 'protected-deposit-held' && arrivalActionsAvailable;
     const isAcceptingRequest = processingBookingAction?.bookingId === booking.id && processingBookingAction?.action === 'accept-request';
+    const isNotAdvancingRequest = processingBookingAction?.bookingId === booking.id && processingBookingAction?.action === 'not-advance-request';
     const isConfirmingDirectDeposit = processingBookingAction?.bookingId === booking.id && processingBookingAction?.action === 'confirm-direct-deposit';
     const isCancelingAsHost = processingBookingAction?.bookingId === booking.id && processingBookingAction?.action === 'cancel-host';
     const isReportingNoShow = processingBookingAction?.bookingId === booking.id && processingBookingAction?.action === 'report-no-show';
@@ -879,6 +926,23 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
                     <>
                       <Icons.CheckCircle2 className="h-4 w-4" />
                       {bookingFlow.primaryActionLabel}
+                    </>
+                  </Button>
+                ) : null}
+
+                {canNotAdvanceRequest ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void handleNotAdvanceRequest(booking)}
+                    loading={isNotAdvancingRequest}
+                    loadingLabel="Actualizando..."
+                    className="rounded-full"
+                  >
+                    <>
+                      <Icons.X className="h-4 w-4" />
+                      No avanzar
                     </>
                   </Button>
                 ) : null}
@@ -1401,7 +1465,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
             bookingId={reviewingBooking.id}
             reviewedUserId={reviewingBooking.userId}
             reviewedUserName={reviewingBooking.userName || 'Huésped'}
-            type="host_to_guest"
+            type="host_review"
             onClose={() => setReviewingBooking(null)}
             onComplete={() => {
               if (reviewingBooking?.id) {

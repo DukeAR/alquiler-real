@@ -1,0 +1,268 @@
+{
+  "info": {
+    "name": "Alquiler Real - Moderation Staging",
+    "description": "Coleccion para smoke test de moderacion en staging. Orden sugerido: Login Guest, List Public Properties, Get Public Property Detail, Create Property Report, Review Queue Pending y luego una sola accion de revision interna (Confirm Low, Confirm Medium o Confirm High).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "backendUrl",
+      "value": "https://tu-backend-staging.onrender.com"
+    },
+    {
+      "key": "guestEmail",
+      "value": "guest.staging@example.com"
+    },
+    {
+      "key": "guestPassword",
+      "value": "super-secret"
+    },
+    {
+      "key": "internalOpsSecret",
+      "value": "internal-ops-secret"
+    },
+    {
+      "key": "propertyId",
+      "value": "prop_test_1"
+    },
+    {
+      "key": "reportedUserId",
+      "value": "host_test_1"
+    },
+    {
+      "key": "reason",
+      "value": "not_as_listed"
+    },
+    {
+      "key": "reviewedBy",
+      "value": "ops_smoke_test"
+    },
+    {
+      "key": "reportId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Login Guest",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('login responde 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "const body = pm.response.json();",
+              "if (body && body.user && body.user.id) {",
+              "  pm.collectionVariables.set('authUserId', body.user.id);",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{guestEmail}}\",\n  \"password\": \"{{guestPassword}}\"\n}"
+        },
+        "url": "{{backendUrl}}/api/auth/login",
+        "description": "Inicia sesion como huesped y deja la cookie de sesion en Postman."
+      }
+    },
+    {
+      "name": "List Public Properties",
+      "request": {
+        "method": "GET",
+        "url": "{{backendUrl}}/api/properties",
+        "description": "Snapshot publico previo o posterior a la revision de moderacion."
+      }
+    },
+    {
+      "name": "Get Public Property Detail",
+      "request": {
+        "method": "GET",
+        "url": "{{backendUrl}}/api/properties/{{propertyId}}",
+        "description": "Detalle publico de la propiedad objetivo. Antes de la revision deberia responder 200. Despues de confirm_medium o confirm_high deberia pasar a 404."
+      }
+    },
+    {
+      "name": "Create Property Report",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('reporte responde 201', function () {",
+              "  pm.response.to.have.status(201);",
+              "});",
+              "const body = pm.response.json();",
+              "pm.test('el reporte devuelve id', function () {",
+              "  pm.expect(body).to.have.property('report');",
+              "  pm.expect(body.report).to.have.property('id');",
+              "});",
+              "if (body && body.report && body.report.id) {",
+              "  pm.collectionVariables.set('reportId', body.report.id);",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"property_id\": \"{{propertyId}}\",\n  \"reported_user_id\": \"{{reportedUserId}}\",\n  \"reason\": \"{{reason}}\",\n  \"description\": \"Smoke test {{$timestamp}}: las fotos no coinciden con el estado actual del lugar.\"\n}"
+        },
+        "url": "{{backendUrl}}/api/reports",
+        "description": "Crea un reporte pending y guarda reportId como variable de coleccion."
+      }
+    },
+    {
+      "name": "Review Queue Pending",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('cola interna responde 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "const body = pm.response.json();",
+              "const reportId = pm.collectionVariables.get('reportId');",
+              "if (reportId && body && Array.isArray(body.items)) {",
+              "  const match = body.items.find((item) => item.id === reportId);",
+              "  pm.test('la cola pending contiene el reporte creado', function () {",
+              "    pm.expect(Boolean(match)).to.eql(true);",
+              "  });",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-internal-ops-secret",
+            "value": "{{internalOpsSecret}}"
+          }
+        ],
+        "url": "{{backendUrl}}/api/internal/moderation/review-queue?status=pending",
+        "description": "Valida que el reporte aparezca en la cola interna antes de revisar manualmente."
+      }
+    },
+    {
+      "name": "Confirm Low",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "x-internal-ops-secret",
+            "value": "{{internalOpsSecret}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"action\": \"confirm_low\",\n  \"notes\": \"Smoke test confirm_low\",\n  \"reviewedBy\": \"{{reviewedBy}}\"\n}"
+        },
+        "url": "{{backendUrl}}/api/internal/reports/{{reportId}}/review",
+        "description": "Aplica un strike bajo. La propiedad deberia seguir visible publicamente."
+      }
+    },
+    {
+      "name": "Confirm Medium",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "x-internal-ops-secret",
+            "value": "{{internalOpsSecret}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"action\": \"confirm_medium\",\n  \"notes\": \"Smoke test confirm_medium\",\n  \"reviewedBy\": \"{{reviewedBy}}\"\n}"
+        },
+        "url": "{{backendUrl}}/api/internal/reports/{{reportId}}/review",
+        "description": "Pausa la publicacion. El detalle publico deberia pasar a 404 y la propiedad deberia desaparecer del listado."
+      }
+    },
+    {
+      "name": "Confirm High",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "x-internal-ops-secret",
+            "value": "{{internalOpsSecret}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"action\": \"confirm_high\",\n  \"notes\": \"Smoke test confirm_high\",\n  \"reviewedBy\": \"{{reviewedBy}}\"\n}"
+        },
+        "url": "{{backendUrl}}/api/internal/reports/{{reportId}}/review",
+        "description": "Oculta la publicacion y bloquea temporalmente la cuenta. El detalle publico deberia pasar a 404."
+      }
+    },
+    {
+      "name": "Review Queue All",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-internal-ops-secret",
+            "value": "{{internalOpsSecret}}"
+          }
+        ],
+        "url": "{{backendUrl}}/api/internal/moderation/review-queue?status=all",
+        "description": "Sirve para verificar el status final del reporte despues de la revision."
+      }
+    },
+    {
+      "name": "Get Public Property After Review",
+      "request": {
+        "method": "GET",
+        "url": "{{backendUrl}}/api/properties/{{propertyId}}",
+        "description": "Usalo despues de confirm_low, confirm_medium o confirm_high. Con confirm_low deberia seguir en 200; con confirm_medium o confirm_high deberia responder 404."
+      }
+    },
+    {
+      "name": "List Public Properties After Review",
+      "request": {
+        "method": "GET",
+        "url": "{{backendUrl}}/api/properties",
+        "description": "Usalo para comparar si la propiedad sigue visible despues de la accion elegida."
+      }
+    }
+  ]
+}

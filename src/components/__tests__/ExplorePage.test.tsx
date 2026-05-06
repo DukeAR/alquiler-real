@@ -80,6 +80,85 @@ describe('ExplorePage', () => {
     });
   });
 
+  test('normalizes missing verification data and ignores null properties before applying the verified-only filter', async () => {
+    apiJsonMock.mockResolvedValue([
+      null,
+      {
+        id: 'p1',
+        title: 'Departamento básico',
+        location: 'Pinamar',
+        price: 65000,
+        description: 'Sin datos de verificación cargados.',
+        propertyType: 'apartment',
+        maxGuests: 2,
+        rating: 4.2,
+        reviewsCount: 3,
+        coordinates: { lat: -37.11, lng: -56.86 },
+      },
+    ]);
+
+    render(<ExplorePage />);
+
+    await waitFor(() => {
+      expect(exploreResultsSectionMock).toHaveBeenCalled();
+    });
+
+    await waitFor(() => {
+      const latestCall = exploreResultsSectionMock.mock.calls.at(-1)?.[0];
+
+      expect(latestCall?.filteredProperties).toHaveLength(1);
+      expect(latestCall?.filteredProperties[0]).toMatchObject({
+        id: 'p1',
+        verificationLevel: 'none',
+        identityValidated: false,
+        isIdentityVerified: false,
+        hasPresencialVerification: false,
+        isPresentiallyVerified: false,
+      });
+    });
+
+    fireEvent.click(screen.getByRole('checkbox', { name: /Solo verificados presencialmente/i }));
+
+    await waitFor(() => {
+      const latestCall = exploreResultsSectionMock.mock.calls.at(-1)?.[0];
+
+      expect(latestCall?.verifiedOnly).toBe(true);
+      expect(latestCall?.filteredProperties).toEqual([]);
+      expect(latestCall?.listingProperties).toEqual([]);
+    });
+  });
+
+  test('does not refetch properties on unrelated rerenders', async () => {
+    apiJsonMock.mockResolvedValue([
+      {
+        id: 'p1',
+        title: 'Departamento básico',
+        location: 'Pinamar',
+        price: 65000,
+        description: 'Sin datos de verificación cargados.',
+        propertyType: 'apartment',
+        maxGuests: 2,
+        rating: 4.2,
+        reviewsCount: 3,
+        coordinates: { lat: -37.11, lng: -56.86 },
+      },
+    ]);
+
+    const { rerender } = render(<ExplorePage />);
+
+    await waitFor(() => {
+      expect(apiJsonMock).toHaveBeenCalledTimes(1);
+    });
+
+    rerender(<ExplorePage />);
+
+    await waitFor(() => {
+      expect(exploreResultsSectionMock).toHaveBeenCalled();
+    });
+
+    expect(apiJsonMock).toHaveBeenCalledTimes(1);
+  });
+
   test('activates the local verification preference after saving a highly verified property', async () => {
     const toggleFavorite = vi.fn().mockResolvedValue('added');
 
@@ -122,7 +201,7 @@ describe('ExplorePage', () => {
     });
   });
 
-  test('keeps verification-first home results in a single mixed grid without rigid featured blocks', async () => {
+  test('keeps verification-first home results ordered from the highest visible verification level', async () => {
     apiJsonMock.mockResolvedValue([
       {
         id: 'presencial-1',
@@ -228,15 +307,18 @@ describe('ExplorePage', () => {
 
     const latestCall = exploreResultsSectionMock.mock.calls.at(-1)?.[0];
 
-    expect(latestCall.featuredProperties).toEqual([]);
-    expect(latestCall.listingProperties.map((property: { id: string }) => property.id)).toEqual([
+    expect(latestCall.showSectionedCatalog).toBe(true);
+    expect(latestCall.featuredProperties.map((property: { id: string }) => property.id)).toEqual([
       'presencial-1',
       'presencial-2',
-      'identity-1',
       'presencial-3',
-      'none-1',
-      'identity-2',
     ]);
+    expect(latestCall.listingProperties.map((property: { id: string }) => property.id)).toEqual([
+      'identity-1',
+      'identity-2',
+      'none-1',
+    ]);
+    expect(latestCall.newlyListedProperties).toEqual([]);
   });
 
   test('keeps a single presencial result at the front of the main verification-first grid', async () => {
@@ -297,8 +379,9 @@ describe('ExplorePage', () => {
 
     const latestCall = exploreResultsSectionMock.mock.calls.at(-1)?.[0];
 
-    expect(latestCall.featuredProperties).toEqual([]);
-    expect(latestCall.listingProperties.map((property: { id: string }) => property.id)).toEqual(['presencial-1', 'identity-1', 'none-1']);
-    expect(latestCall.visibleProperties.map((property: { id: string }) => property.id)).toEqual(['presencial-1', 'identity-1', 'none-1']);
+    expect(latestCall.showSectionedCatalog).toBe(true);
+    expect(latestCall.featuredProperties.map((property: { id: string }) => property.id)).toEqual(['presencial-1']);
+    expect(latestCall.listingProperties.map((property: { id: string }) => property.id)).toEqual(['identity-1', 'none-1']);
+    expect(latestCall.visibleProperties.map((property: { id: string }) => property.id)).toEqual(['identity-1', 'none-1']);
   });
 });

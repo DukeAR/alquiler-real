@@ -109,12 +109,18 @@ export type DemoBooking = {
 export type DemoReview = {
   id: string;
   bookingId: string;
+  conversationId?: string;
   reviewerId: string;
   reviewedUserId: string;
   propertyId: string;
   rating: number;
   comment: string;
   type: DemoReviewType;
+  categoryScores?: Array<{
+    key: string;
+    label: string;
+    score: number;
+  }>;
   agreementKept: boolean;
   wouldInteractAgain: boolean;
   hadIncident: boolean;

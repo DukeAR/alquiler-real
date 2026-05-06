@@ -285,19 +285,24 @@ describe('Properties endpoints', () => {
       {
         id: 'review-1',
         reviewerId: 'guest-1',
+        userId: 'guest-1',
         rating: 5,
         comment: 'Todo coincidia con las fotos y la coordinacion fue clara.',
+        type: 'guest_review',
+        categories: [],
+        categoryScores: [],
         agreementKept: true,
         wouldInteractAgain: true,
         hadIncident: false,
         photosMatchReality: true,
         userName: 'Lucia',
+        createdAt: '2026-04-01T12:00:00.000Z',
         date: '2026-04-01T12:00:00.000Z',
       },
     ]);
     expect(queryMock).toHaveBeenCalledTimes(1);
     expect(queryMock.mock.calls[0]?.[0]).toContain('SELECT reviews.id');
-    expect(queryMock.mock.calls[0]?.[0]).toContain('reviews.created_at as date');
+    expect(queryMock.mock.calls[0]?.[0]).toContain('reviews.created_at as "createdAt"');
     expect(queryMock.mock.calls[0]?.[0]).toContain('ORDER BY reviews.created_at DESC');
   });
 

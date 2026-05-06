@@ -746,11 +746,47 @@ describe('PropertyDetail', () => {
     const reviewsHeading = screen.getByRole('heading', { name: 'Opiniones reales' });
     expect(screen.getByText('Quién publica')).toBeDefined();
     expect(screen.getByText('Identidad confirmada dentro de la plataforma')).toBeDefined();
-    expect(screen.getByText('Experiencias de huéspedes en esta propiedad')).toBeDefined();
+    expect(screen.getByText('Promedio, cantidad y comentarios visibles de interacciones reales en esta propiedad.')).toBeDefined();
+    expect(screen.getByText('4,5')).toBeDefined();
+    expect(screen.getByText('5 opiniones')).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Reportar publicación' })).toBeDefined();
     expect(bookingContext.compareDocumentPosition(verificationPreview) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(verificationPreview.compareDocumentPosition(essentialsHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(essentialsHeading.compareDocumentPosition(hostHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(hostHeading.compareDocumentPosition(reviewsHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  test('opens the property report modal and sends the canonical report payload', async () => {
+    renderPropertyDetail();
+
+    await waitForPropertyHeading();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reportar publicación' }));
+
+    expect(screen.getByRole('heading', { name: 'Reportar publicación' })).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: 'No coincidencia con lo publicado' }));
+    fireEvent.change(screen.getByPlaceholderText('Contanos qué pasó para que podamos revisarlo...'), {
+      target: { value: 'Las fotos no coinciden con el estado actual del lugar.' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Enviar reporte' }));
+
+    await waitFor(() => {
+      expect(apiFetch).toHaveBeenCalledWith(
+        '/api/reports',
+        expect.objectContaining({
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            reported_user_id: 'h1',
+            property_id: 'p1',
+            reason: 'not_as_listed',
+            description: 'Las fotos no coinciden con el estado actual del lugar.',
+          }),
+        }),
+      );
+    });
   });
 
   test('does not render verification chip tooltips or process explainer blocks', async () => {

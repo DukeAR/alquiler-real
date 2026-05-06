@@ -29,7 +29,11 @@ export const REAL_VERIFICATION_FILTER_MIN_SCORE = 3;
 
 export const HIGH_VERIFICATION_HIGHLIGHT_MIN_SCORE = 4;
 
-export const TOP_VERIFIED_RESULTS_COUNT = 3;
+export const TOP_VERIFIED_RESULTS_COUNT = 6;
+
+const NEW_PUBLICATIONS_RESULTS_COUNT = 4;
+
+const NEW_PUBLICATION_WINDOW_DAYS = 30;
 
 export type PropertyVerificationStatus = 'complete' | 'pending';
 
@@ -42,11 +46,25 @@ type PropertyVerificationSummaryInput = Partial<PropertyVerificationSummary> & {
 };
 
 type PropertyVerificationLike = {
+  id?: string;
   verificationSummary?: PropertyVerificationSummaryInput | null;
   verificationScore?: number;
   verificationItems?: PropertyVerificationItemInput[];
   verificationProgress?: PropertyVerificationProgress | null;
   advancedVerificationItems?: PropertyAdvancedVerificationItem[];
+  hostInteractionHistory?: {
+    completedReservationsCount?: number | string | null;
+    feedbackCount?: number | string | null;
+    incidentsCount?: number | string | null;
+    avgResponseTimeMinutes?: number | string | null;
+  } | null;
+  unresolvedReviewsCount?: number | string | null;
+  pendingReportsCount?: number | string | null;
+  confirmedReportsCount?: number | string | null;
+  confirmedSevereReportsCount?: number | string | null;
+  hostSince?: string | Date | null;
+  createdAt?: string | Date | null;
+  created_at?: string | Date | null;
   identityValidated?: boolean;
   title?: string | null;
   location?: string | null;
@@ -104,6 +122,13 @@ type PropertySortLike = Omit<PropertyVerificationLike, 'title' | 'location' | 'd
 };
 
 export type PropertyCatalogSort = 'verification' | 'price' | 'price-desc';
+
+export type PropertyCatalogSections<T> = {
+  ordered: T[];
+  topVerified: T[];
+  comparison: T[];
+  newListings: T[];
+};
 
 export type PropertyCatalogSortContext = {
   searchQuery?: string;
@@ -756,7 +781,131 @@ const compareNullableAscending = (left: number | null, right: number | null) => 
   return left - right;
 };
 
-const VERIFICATION_VISIBLE_LEVEL_SEQUENCE: Array<0 | 1 | 2> = [2, 2, 1, 2, 0, 1];
+const COMPLETE_PUBLICATION_MIN_SCORE = 60;
+
+const getPropertyCatalogKey = (property: Pick<PropertySortLike, 'id' | 'title' | 'location' | 'price'>) => (
+  property.id
+  || `${String(property.title || '').trim()}::${String(property.location || '').trim()}::${String(property.price || '')}`
+);
+
+const toTimestamp = (value?: string | Date | null) => {
+  if (!value) {
+    return null;
+  }
+
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value.getTime();
+  }
+
+  const timestamp = Date.parse(value);
+  return Number.isNaN(timestamp) ? null : timestamp;
+};
+
+const hasCompletePublication = (property: PropertySortLike) => (
+  getPropertyListingQualityScore(property) >= COMPLETE_PUBLICATION_MIN_SCORE
+);
+
+const hasGoodHistory = (property: PropertySortLike) => {
+  const completedReservationsCount = parsePositiveNumber(property.hostInteractionHistory?.completedReservationsCount);
+  const feedbackCount = parsePositiveNumber(property.hostInteractionHistory?.feedbackCount);
+  const rating = parseFiniteNumber(property.rating);
+  const reviewsCount = parsePositiveNumber(property.reviewsCount);
+
+  return (rating !== null && rating >= 4.5 && reviewsCount !== null)
+    || completedReservationsCount !== null
+    || feedbackCount !== null;
+};
+
+const hasPendingReports = (property: PropertySortLike) => parsePositiveNumber(property.pendingReportsCount) !== null;
+
+const hasConfirmedReports = (property: PropertySortLike) => parsePositiveNumber(property.confirmedReportsCount) !== null;
+
+const hasStableHostAccount = (property: PropertySortLike, now = Date.now()) => {
+  const hostSinceTimestamp = toTimestamp(property.hostSince ?? null);
+  const incidentsCount = parsePositiveNumber(property.hostInteractionHistory?.incidentsCount);
+
+  if (hostSinceTimestamp === null) {
+    return false;
+  }
+
+  const accountAgeInMilliseconds = now - hostSinceTimestamp;
+
+  if (accountAgeInMilliseconds < 90 * 24 * 60 * 60 * 1000) {
+    return false;
+  }
+
+  return incidentsCount === null && !hasConfirmedReports(property);
+};
+
+const hasLegacyProblems = (property: PropertySortLike) => {
+  const unresolvedReviewsCount = parsePositiveNumber(property.unresolvedReviewsCount);
+  const incidentsCount = parsePositiveNumber(property.hostInteractionHistory?.incidentsCount);
+
+  return unresolvedReviewsCount !== null || incidentsCount !== null;
+};
+
+const hasReportsOrProblems = (property: PropertySortLike) => {
+  return hasLegacyProblems(property)
+    || hasPendingReports(property)
+    || hasConfirmedReports(property);
+};
+
+const isRecentlyPublished = (property: PropertySortLike, now = Date.now()) => {
+  const createdTimestamp = toTimestamp(property.createdAt || property.created_at);
+
+  if (createdTimestamp === null) {
+    return false;
+  }
+
+  const ageInMilliseconds = now - createdTimestamp;
+
+  if (ageInMilliseconds < 0) {
+    return true;
+  }
+
+  return ageInMilliseconds <= NEW_PUBLICATION_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+};
+
+const getPropertyCatalogPriorityScore = (property: PropertySortLike) => {
+  const hasPresencialVerification = hasPropertyPresencialVerificationSeal(property);
+  const hasIdentityValidation = property.identityValidated === true
+    || hasExplicitIdentityVerification(property.verificationSummary?.items)
+    || hasExplicitIdentityVerification(property.verificationItems);
+
+  let score = 0;
+
+  if (hasPresencialVerification) {
+    score += 40;
+  }
+
+  if (hasIdentityValidation) {
+    score += 15;
+  }
+
+  if (hasCompletePublication(property)) {
+    score += 10;
+  }
+
+  if (hasGoodHistory(property)) {
+    score += 15;
+  }
+
+  if (hasStableHostAccount(property)) {
+    score += 10;
+  }
+
+  if (isRecentlyPublished(property)) {
+    score += 5;
+  }
+
+  if (hasConfirmedReports(property)) {
+    score -= 40;
+  } else if (hasLegacyProblems(property)) {
+    score -= 40;
+  }
+
+  return score;
+};
 
 const getVisibleVerificationLevelRank = (property: PropertySortLike) => {
   if (Boolean(property.hasPresencialVerification || property.onsiteVerifiedAt)) {
@@ -768,6 +917,16 @@ const getVisibleVerificationLevelRank = (property: PropertySortLike) => {
     || hasExplicitIdentityVerification(property.verificationItems);
 
   return hasIdentityValidation ? 1 : 0;
+};
+
+const comparePropertiesByCatalogPriority = (left: PropertySortLike, right: PropertySortLike) => {
+  const priorityScoreDifference = getPropertyCatalogPriorityScore(right) - getPropertyCatalogPriorityScore(left);
+
+  if (priorityScoreDifference !== 0) {
+    return priorityScoreDifference;
+  }
+
+  return 0;
 };
 
 const comparePropertiesByVerificationSignals = (left: PropertySortLike, right: PropertySortLike) => {
@@ -823,6 +982,12 @@ const comparePropertiesByVerificationCatalogOrder = (
   right: PropertySortLike,
   context?: PropertyCatalogSortContext,
 ) => {
+  const priorityDifference = comparePropertiesByCatalogPriority(left, right);
+
+  if (priorityDifference !== 0) {
+    return priorityDifference;
+  }
+
   const verificationDifference = comparePropertiesByVerificationSignals(left, right);
 
   if (verificationDifference !== 0) {
@@ -868,40 +1033,38 @@ const comparePropertiesByVerificationCatalogOrder = (
   return String(left.title || '').localeCompare(String(right.title || ''), 'es');
 };
 
-const mixPropertiesByVisibleVerificationLevel = <T extends PropertySortLike>(items: T[]) => {
-  if (items.length <= 2) {
-    return items;
-  }
+export const buildPropertyCatalogSections = <T extends PropertySortLike>(
+  items: T[],
+  sortBy: PropertyCatalogSort,
+  context?: PropertyCatalogSortContext,
+): PropertyCatalogSections<T> => {
+  const ordered = sortPropertiesByCatalogOrder(items, sortBy, context);
+  const topVerified = ordered.filter((property) => meetsRealVerificationFilter(property)).slice(0, TOP_VERIFIED_RESULTS_COUNT);
+  const topVerifiedKeys = new Set(topVerified.map((property) => getPropertyCatalogKey(property)));
 
-  const groupedItems: Record<0 | 1 | 2, T[]> = {
-    0: [],
-    1: [],
-    2: [],
-  };
+  const orderedNewListings = sortPropertiesByCatalogOrder(
+    items.filter((property) => isRecentlyPublished(property)),
+    sortBy,
+    context,
+  );
 
-  items.forEach((item) => {
-    groupedItems[getVisibleVerificationLevelRank(item) as 0 | 1 | 2].push(item);
+  let newListings = orderedNewListings
+    .filter((property) => !topVerifiedKeys.has(getPropertyCatalogKey(property)))
+    .slice(0, NEW_PUBLICATIONS_RESULTS_COUNT);
+
+  const newListingKeys = new Set(newListings.map((property) => getPropertyCatalogKey(property)));
+  const comparison = ordered.filter((property) => {
+    const propertyKey = getPropertyCatalogKey(property);
+
+    return !topVerifiedKeys.has(propertyKey) && !newListingKeys.has(propertyKey);
   });
 
-  const mixedItems: T[] = [];
-  let sequenceIndex = 0;
-
-  while (groupedItems[2].length > 0 || groupedItems[1].length > 0 || groupedItems[0].length > 0) {
-    const preferredLevel = VERIFICATION_VISIBLE_LEVEL_SEQUENCE[sequenceIndex % VERIFICATION_VISIBLE_LEVEL_SEQUENCE.length];
-    const nextItem = groupedItems[preferredLevel].shift()
-      ?? groupedItems[2].shift()
-      ?? groupedItems[1].shift()
-      ?? groupedItems[0].shift();
-
-    if (!nextItem) {
-      break;
-    }
-
-    mixedItems.push(nextItem);
-    sequenceIndex += 1;
-  }
-
-  return mixedItems;
+  return {
+    ordered,
+    topVerified,
+    comparison,
+    newListings,
+  };
 };
 
 export const getPropertyVerificationGuidanceLabel = (
@@ -1222,10 +1385,6 @@ export const sortPropertiesByCatalogOrder = <T extends PropertySortLike>(
 
     return comparePropertiesByVerificationCatalogOrder(left, right, context);
   });
-
-  if (sortBy === 'verification') {
-    return mixPropertiesByVisibleVerificationLevel(sortedItems);
-  }
 
   return sortedItems;
 };

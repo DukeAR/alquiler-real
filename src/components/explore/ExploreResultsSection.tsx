@@ -75,7 +75,7 @@ const getActiveSortLabel = (sortBy: PropertyCatalogSort) => {
     return 'Precio más alto primero';
   }
 
-  return 'Más verificados primero';
+  return 'Más verificadas primero';
 };
 
 const getVerificationFilterContextCopy = (verifiedOnly: boolean) => {
@@ -83,18 +83,12 @@ const getVerificationFilterContextCopy = (verifiedOnly: boolean) => {
     return {
       title: 'Mostrando solo propiedades verificadas',
       description: 'Identidad, ubicación y acceso confirmados',
-      containerClassName: 'border-emerald-200/80 bg-emerald-50/85 shadow-[0_16px_30px_-26px_rgba(22,163,74,0.22)]',
-      titleClassName: 'text-emerald-950',
-      descriptionClassName: 'text-emerald-900/80',
     };
   }
 
   return {
     title: 'Mostrando todas las propiedades',
     description: 'Algunas pueden no estar verificadas',
-    containerClassName: 'border-slate-200/80 bg-slate-50/82 shadow-[0_14px_28px_-28px_rgba(15,23,42,0.12)]',
-    titleClassName: 'text-slate-900',
-    descriptionClassName: 'text-slate-600',
   };
 };
 
@@ -109,7 +103,9 @@ type ExploreResultsSectionProps = {
   searchQuery: string;
   appliedFilterCount: number;
   filteredProperties: Property[];
+  showSectionedCatalog: boolean;
   featuredProperties: Property[];
+  newlyListedProperties: Property[];
   listingProperties: Property[];
   visibleProperties: Property[];
   hasMoreResults: boolean;
@@ -132,7 +128,9 @@ export const ExploreResultsSection = ({
   searchQuery,
   appliedFilterCount,
   filteredProperties,
+  showSectionedCatalog,
   featuredProperties,
+  newlyListedProperties,
   listingProperties,
   visibleProperties,
   hasMoreResults,
@@ -150,13 +148,13 @@ export const ExploreResultsSection = ({
   const hasAnyResults = totalResults > 0;
   const failedToLoadResults = Boolean(loadError) && !loading && !hasAnyResults;
   const showingStaleResults = Boolean(loadError) && !loading && hasAnyResults;
-  const showHomeBlocks = !hasActiveFilters && viewMode === 'grid';
+  const showHomeBlocks = showSectionedCatalog && !hasActiveFilters && !verifiedOnly && viewMode === 'grid';
   const showSummaryCard = viewMode === 'map' || failedToLoadResults || (hasActiveFilters && !hasAnyResults);
   const useCompactWideCards = showHomeBlocks;
   const showListingHeader = !hasActiveFilters || loading || hasAnyResults;
   const sectionSpacingClass = showHomeBlocks ? 'space-y-5 md:space-y-6' : 'space-y-6 md:space-y-8';
   const listingSectionClass = 'space-y-5 md:space-y-6';
-  const firstVisibleResult = listingProperties[0] ?? null;
+  const firstVisibleResult = (showHomeBlocks ? featuredProperties[0] ?? listingProperties[0] : listingProperties[0]) ?? null;
   const activeSortLabel = getActiveSortLabel(sortBy);
   const verificationFilterContext = getVerificationFilterContextCopy(verifiedOnly);
   const highlightedVerificationResultId = !loading && sortBy === 'verification' && firstVisibleResult
@@ -173,13 +171,14 @@ export const ExploreResultsSection = ({
       ? `${formatPropertyCount(listingProperties.length)} en esta búsqueda.`
       : listingProperties.length > 0
         ? sortBy === 'verification'
-          ? 'Priorizamos la verificación presencial sin perder diversidad de oferta.'
+          ? 'Las propiedades con mayor verificación aparecen primero.'
           : sortBy === 'price'
             ? 'Las opciones más accesibles aparecen primero.'
             : 'Las opciones de mayor precio aparecen primero.'
         : 'No hay más propiedades por ahora.';
   const filteredResultsDescription = `${formatPropertyCount(totalResults)} en esta búsqueda.`;
   const filteredVisibleResultsLabel = `${visibleCount} ${visibleCount === 1 ? 'visible' : 'visibles'} en esta búsqueda.`;
+        const homeHasResults = featuredProperties.length > 0 || listingProperties.length > 0 || newlyListedProperties.length > 0;
 
   const handlePropertyClick = (property: Property) => {
     if (onPropertyClick) {
@@ -200,6 +199,31 @@ export const ExploreResultsSection = ({
 
     handlePropertyClick(property);
   };
+
+  const renderPropertyCards = (
+    properties: Property[],
+    options?: {
+      density?: 'default' | 'compact';
+      highlightPropertyId?: string | null;
+    },
+  ) => properties.map((property) => (
+    <PropertyCard
+      key={property.id}
+      property={property}
+      density={options?.density ?? (useCompactWideCards ? 'compact' : 'default')}
+      verificationGuidanceLabel={sortBy === 'verification'
+        ? getPropertyVerificationGuidanceLabel(property, {
+            isTopResult: options?.highlightPropertyId === property.id,
+          })
+        : null}
+      emphasizeVerification={caresAboutVerification}
+      decisionFeatured={options?.highlightPropertyId === property.id}
+      decisionSupportLabel={null}
+      onClick={() => handlePropertyClick(property)}
+      isFavorite={isFavorite(property.id)}
+      onFavoriteToggle={onFavoriteToggle}
+    />
+  ));
 
   const summaryEyebrow = viewMode === 'map'
     ? 'Mapa'
@@ -416,6 +440,127 @@ export const ExploreResultsSection = ({
     );
   }
 
+  if (showHomeBlocks) {
+    return (
+      <section className={sectionSpacingClass}>
+        {showingStaleResults ? (
+          <NoticeBanner
+            tone="warning"
+            heading="Mostrando la última versión disponible"
+            description="Volvé a intentar en unos segundos si querés actualizar los resultados."
+          />
+        ) : null}
+
+        <div
+          key="all-results"
+          data-testid="explore-verification-context"
+          aria-live="polite"
+          className="results-filter-context-fade space-y-1 py-1"
+        >
+          <p className="text-[1rem] font-semibold leading-6 tracking-[-0.02em] text-slate-950">
+            {verificationFilterContext.title}
+          </p>
+          <p className="text-[0.88rem] leading-5 text-slate-500">
+            {verificationFilterContext.description}
+          </p>
+        </div>
+
+        {loading ? (
+          <section className="space-y-4 md:space-y-5">
+            <SectionTitle
+              heading="Empezá por los más verificados"
+              description="Estamos ordenando el catálogo para mostrar primero las opciones con más respaldo."
+              className="max-w-2xl"
+            />
+            <div className="grid grid-cols-1 auto-rows-fr items-stretch gap-5 md:grid-cols-2 md:gap-6 lg:grid-cols-3">
+              {renderSkeletons()}
+            </div>
+          </section>
+        ) : !homeHasResults ? (
+          <EmptyState
+            tone="soft"
+            eyebrow="Resultados"
+            icon={<Icons.Search className="h-10 w-10 text-slate-400" />}
+            title="No hay propiedades disponibles ahora"
+            description="Volvé a revisar más tarde para ver nuevas opciones."
+          />
+        ) : (
+          <>
+            {featuredProperties.length > 0 ? (
+              <section className="space-y-4 md:space-y-5">
+                <SectionTitle
+                  heading="Empezá por los más verificados"
+                  description="Propiedades con verificación presencial y señales más sólidas de confianza."
+                  className="max-w-2xl"
+                />
+                <div className="grid grid-cols-1 auto-rows-fr items-stretch gap-5 md:grid-cols-2 md:gap-6 lg:grid-cols-3">
+                  {renderPropertyCards(featuredProperties, {
+                    density: 'compact',
+                    highlightPropertyId: highlightedVerificationResultId,
+                  })}
+                </div>
+              </section>
+            ) : null}
+
+            {listingProperties.length > 0 ? (
+              <section className={listingSectionClass}>
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+                  <div className="max-w-2xl">
+                    <SectionTitle
+                      heading="Más para comparar"
+                      description={sortBy === 'verification'
+                        ? 'El resto del catálogo sigue ordenado por confianza para comparar con más contexto.'
+                        : sortBy === 'price'
+                          ? 'El resto del catálogo se ordena por precio más bajo sin perder sus señales de confianza.'
+                          : 'El resto del catálogo se ordena por precio más alto sin perder sus señales de confianza.'}
+                      className="max-w-2xl"
+                    />
+                  </div>
+
+                  <p className="text-sm text-slate-500">
+                    {remainingResults > 0
+                      ? `Mostrando ${visibleCount}. Quedan ${remainingResults} para revisar.`
+                      : `${visibleCount} visibles en esta búsqueda.`}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 auto-rows-fr items-stretch gap-5 md:grid-cols-2 md:gap-6 lg:grid-cols-3">
+                  {renderPropertyCards(visibleProperties, {
+                    density: 'default',
+                  })}
+                </div>
+
+                {hasMoreResults ? (
+                  <div className="flex flex-col items-center gap-4 pt-3 md:pt-4">
+                    <p className="text-sm text-slate-500">Mostrando {visibleCount} de {listingProperties.length} propiedades.</p>
+                    <Button type="button" className="rounded-full px-6 md:px-8" onClick={onLoadMore}>
+                      Ver más propiedades
+                    </Button>
+                  </div>
+                ) : null}
+              </section>
+            ) : null}
+
+            {newlyListedProperties.length > 0 ? (
+              <section className="space-y-4 md:space-y-5">
+                <SectionTitle
+                  heading="Nuevas publicaciones"
+                  description="Avisos recientes que mantienen el catálogo vivo sin duplicar lo que ya viste arriba."
+                  className="max-w-2xl"
+                />
+                <div className="grid grid-cols-1 auto-rows-fr items-stretch gap-5 md:grid-cols-2 md:gap-6 lg:grid-cols-3">
+                  {renderPropertyCards(newlyListedProperties, {
+                    density: 'default',
+                  })}
+                </div>
+              </section>
+            ) : null}
+          </>
+        )}
+      </section>
+    );
+  }
+
   return (
     <section className={sectionSpacingClass}>
       {showSummaryCard ? summaryCard : null}
@@ -434,15 +579,12 @@ export const ExploreResultsSection = ({
             key={verifiedOnly ? 'verified-only-results' : 'all-results'}
             data-testid="explore-verification-context"
             aria-live="polite"
-            className={cn(
-              'results-filter-context-fade rounded-[20px] border px-5 py-4 transition-[background-color,border-color,color,opacity,transform] duration-150',
-              verificationFilterContext.containerClassName,
-            )}
+            className="results-filter-context-fade space-y-1 py-1"
           >
-            <p className={cn('text-[1rem] font-semibold leading-6 tracking-[-0.02em]', verificationFilterContext.titleClassName)}>
+            <p className="text-[1rem] font-semibold leading-6 tracking-[-0.02em] text-slate-950">
               {verificationFilterContext.title}
             </p>
-            <p className={cn('mt-1 text-[0.88rem] leading-5', verificationFilterContext.descriptionClassName)}>
+            <p className="text-[0.88rem] leading-5 text-slate-500">
               {verificationFilterContext.description}
             </p>
           </div>
@@ -502,10 +644,12 @@ export const ExploreResultsSection = ({
             />
           ) : null}
 
-          <div className="grid grid-cols-1 auto-rows-fr items-stretch gap-5 md:grid-cols-2 md:gap-6 lg:grid-cols-3">
-            {loading ? (
-              renderSkeletons()
-            ) : listingProperties.length === 0 ? (
+          {loading ? (
+            <div className="grid grid-cols-1 auto-rows-fr items-stretch gap-5 md:grid-cols-2 md:gap-6 lg:grid-cols-3">
+              {renderSkeletons()}
+            </div>
+          ) : listingProperties.length === 0 ? (
+            <div className="grid grid-cols-1 auto-rows-fr items-stretch gap-5 md:grid-cols-2 md:gap-6 lg:grid-cols-3">
               <div className="col-span-full">
                 <EmptyState
                   tone={hasActiveFilters ? 'default' : 'soft'}
@@ -516,27 +660,14 @@ export const ExploreResultsSection = ({
                   action={hasActiveFilters ? { label: 'Limpiar filtros', onClick: onClearFilters } : undefined}
                 />
               </div>
-            ) : (
-              visibleProperties.map((property) => (
-                <PropertyCard
-                  key={property.id}
-                  property={property}
-                  density={useCompactWideCards ? 'compact' : 'default'}
-                  verificationGuidanceLabel={sortBy === 'verification'
-                    ? getPropertyVerificationGuidanceLabel(property, {
-                        isTopResult: highlightedVerificationResultId === property.id,
-                      })
-                    : null}
-                  emphasizeVerification={caresAboutVerification}
-                  decisionFeatured={highlightedVerificationResultId === property.id}
-                  decisionSupportLabel={null}
-                  onClick={() => handlePropertyClick(property)}
-                  isFavorite={isFavorite(property.id)}
-                  onFavoriteToggle={onFavoriteToggle}
-                />
-              ))
-            )}
-          </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 auto-rows-fr items-stretch gap-5 md:grid-cols-2 md:gap-6 lg:grid-cols-3">
+              {renderPropertyCards(visibleProperties, {
+                highlightPropertyId: highlightedVerificationResultId,
+              })}
+            </div>
+          )}
 
           {!loading && hasMoreResults ? (
             <div className="flex flex-col items-center gap-4 pt-3 md:pt-4">
