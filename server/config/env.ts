@@ -82,6 +82,16 @@ const parseOrigins = (value?: string) => value
 const isProduction = process.env.NODE_ENV === 'production';
 const isTest = process.env.NODE_ENV === 'test';
 const localFrontendOrigins = isProduction ? [] : ['http://localhost:3000', 'http://127.0.0.1:3000'];
+const productionFrontendOrigins = isProduction
+  ? [
+      'https://alquiler-real.vercel.app',
+      'https://alquiler-real-dukears-projects.vercel.app',
+      'https://alquiler-real-git-main-dukears-projects.vercel.app',
+      'https://alquiler-real-ujwa.vercel.app',
+      'https://alquiler-real-ujwa-dukears-projects.vercel.app',
+      'https://alquiler-real-ujwa-git-main-dukears-projects.vercel.app',
+    ]
+  : [];
 
 const databaseUrl = process.env.DATABASE_URL?.trim() || (isProduction ? '' : LOCAL_DATABASE_URL);
 if (!databaseUrl) {
@@ -97,6 +107,7 @@ const frontendUrl = normalizeUrl(process.env.FRONTEND_URL);
 const backendPublicUrl = normalizeUrl(process.env.BACKEND_PUBLIC_URL || process.env.PUBLIC_BACKEND_URL);
 const corsAllowedOrigins = Array.from(new Set([
   ...localFrontendOrigins,
+  ...productionFrontendOrigins,
   ...parseOrigins(process.env.CORS_ALLOWED_ORIGINS),
   ...(frontendUrl ? [frontendUrl] : []),
 ]));
