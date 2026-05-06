@@ -13,7 +13,6 @@ import {
   type PropertyVerificationProgress,
   type PropertyVerificationSummary,
 } from './verificationModel';
-import { getVerificationCountLabel } from './verificationPresentation';
 
 export type {
   PropertyAdvancedVerificationItem,
@@ -816,8 +815,6 @@ const hasGoodHistory = (property: PropertySortLike) => {
     || feedbackCount !== null;
 };
 
-const hasPendingReports = (property: PropertySortLike) => parsePositiveNumber(property.pendingReportsCount) !== null;
-
 const hasConfirmedReports = (property: PropertySortLike) => parsePositiveNumber(property.confirmedReportsCount) !== null;
 
 const hasStableHostAccount = (property: PropertySortLike, now = Date.now()) => {
@@ -842,12 +839,6 @@ const hasLegacyProblems = (property: PropertySortLike) => {
   const incidentsCount = parsePositiveNumber(property.hostInteractionHistory?.incidentsCount);
 
   return unresolvedReviewsCount !== null || incidentsCount !== null;
-};
-
-const hasReportsOrProblems = (property: PropertySortLike) => {
-  return hasLegacyProblems(property)
-    || hasPendingReports(property)
-    || hasConfirmedReports(property);
 };
 
 const isRecentlyPublished = (property: PropertySortLike, now = Date.now()) => {
@@ -1069,7 +1060,7 @@ export const buildPropertyCatalogSections = <T extends PropertySortLike>(
 
 export const getPropertyVerificationGuidanceLabel = (
   property: PropertyVerificationLike,
-  options?: { isTopResult?: boolean },
+  _options?: { isTopResult?: boolean },
 ) => {
   const verificationState = getPropertyVerificationPresentationState(property);
 
@@ -1176,7 +1167,8 @@ export type PropertyCardVerificationState = {
   countLabel: string | null;
 };
 
-type PropertyVerificationPresentationState = PropertyCardVerificationState & {
+type PropertyVerificationPresentationState = Omit<PropertyCardVerificationState, 'publicLevel'> & {
+  publicLevel: PublicPropertyVerificationLevel;
   verificationSummary: PropertyVerificationSummary;
   rankingScore: number;
   score: number;
@@ -1241,6 +1233,7 @@ const getPropertyVerificationPresentationState = (property: PropertyVerification
       return {
         key: normalizedKey,
         label: PROPERTY_VERIFICATION_DISPLAY_LABELS[normalizedKey],
+        description: item.description,
         complete: item.status === 'complete',
       };
     })

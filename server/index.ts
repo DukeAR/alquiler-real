@@ -726,7 +726,7 @@ const getExternalContactSignals = (value: string) => {
 };
 
 // Chat Filter Middleware
-const filterChatMiddleware = async (req: any, res: any, next: any) => {
+const filterChatMiddleware = async (req: any, _res: any, next: any) => {
   const rawMessage = typeof req.body?.text === 'string'
     ? req.body.text
     : typeof req.body?.content === 'string'
