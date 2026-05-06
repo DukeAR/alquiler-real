@@ -132,6 +132,40 @@ npm test -- --run
 npm run build
 ```
 
+## Smoke post deploy
+
+Para repetir una verificación automática del deploy productivo sin depender del navegador integrado de VS Code, corré:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\production-smoke-test.ps1
+```
+
+El script valida:
+
+- que `https://alquiler-real.vercel.app` responda `200`
+- que el bundle live apunte al backend esperado
+- que el backend responda con CORS correcto para el origen configurado
+- catálogo público, detalle, disponibilidad y reviews
+- login demo de guest y host
+- `auth/me`, favoritos, reservas, conversaciones y mensajes en modo lectura
+
+Si necesitás probar otro entorno, podés sobrescribir URLs o credenciales. Si no pasás `-BackendUrl`, el script intenta detectarlo desde el bundle del frontend:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\production-smoke-test.ps1 `
+	-FrontendUrl 'https://mi-frontend.vercel.app'
+```
+
+Para un alias publico tipo preview/custom domain en Vercel que use el mismo backend productivo, podés separar el frontend target del origin usado en los requests de API:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\production-smoke-test.ps1 `
+	-FrontendUrl 'https://mi-preview-publica.vercel.app' `
+	-ApiOrigin 'https://alquiler-real.vercel.app'
+```
+
+Nota: los deployment URLs crudos de Vercel o previews protegidas por autenticacion pueden devolver `401/403`; en ese caso este smoke no puede abrir el HTML sin una sesion autenticada externa, asi que conviene usar una alias publica o hacer el pass visual fuera de VS Code.
+
 ## Checklist corto
 
 - Frontend con `VITE_BACKEND_URL` real
