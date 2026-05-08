@@ -44,6 +44,7 @@ import { PropertyVerificationChecklist } from './ui/PropertyVerificationChecklis
 import { VerificationSeal } from './ui/VerificationSeal';
 import { DepositChoiceBlock } from './ui/DepositChoiceBlock';
 import { PlatformTermsQuickGuide } from './ui/PlatformTermsQuickGuide';
+import { ProtectedDepositRefundRules } from './ui/ProtectedDepositRefundRules';
 import { ReservationConfirmedState } from './ui/ReservationConfirmedState';
 import { ReviewModal } from './ReviewModal';
 import { SectionTitle } from './ui/SectionTitle';
@@ -1100,6 +1101,7 @@ export const MyBookings = () => {
                 <div className="flex flex-wrap gap-2 lg:justify-end">
                   {bookingFlow.stage === 'deposit-choice' ? (
                     <div className="w-full lg:max-w-[38rem]">
+                      <ProtectedDepositRefundRules className="mb-4" />
                       <DepositChoiceBlock
                         title="Elegí cómo querés avanzar"
                         description="Las dos opciones siguen por chat. Elegí la que mejor les cierre."
@@ -1160,6 +1162,7 @@ export const MyBookings = () => {
 
                   {bookingFlow.stage === 'external-deposit-pending' ? (
                     <div className="w-full lg:max-w-[27rem]">
+                      <ProtectedDepositRefundRules className="mb-4" />
                       <DepositChoiceBlock
                         options={[
                           {

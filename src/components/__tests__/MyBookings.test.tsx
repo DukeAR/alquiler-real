@@ -494,6 +494,7 @@ describe('MyBookings', () => {
     );
 
     expect(await screen.findByRole('button', { name: /Usar Seña Protegida/i })).toBeInTheDocument();
+    expect(screen.getByText('La seña protegida se devuelve solo si la propiedad no existe o si el huésped no puede ingresar.')).toBeInTheDocument();
     expect(
       await screen.findByText(
         'Hoy siguen coordinando por chat. Si cambiás de idea antes de pagar, todavía podés usar Seña Protegida.',

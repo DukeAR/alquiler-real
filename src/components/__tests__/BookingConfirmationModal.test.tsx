@@ -34,6 +34,8 @@ describe('BookingConfirmationModal', () => {
     expect(screen.getByRole('heading', { name: 'Elegí cómo querés avanzar', level: 3 })).toBeInTheDocument();
     expect(screen.getByText('Coordinar directamente')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /usar seña protegida/i })).toBeInTheDocument();
+    expect(screen.getByText('La seña protegida se devuelve solo si la propiedad no existe o si el huésped no puede ingresar.')).toBeInTheDocument();
+    expect(screen.getByText('Ver detalle de devolución y alcance')).toBeInTheDocument();
     expect(screen.getByText(/La información del aviso la carga el anfitrión/i)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /usar seña protegida/i }));

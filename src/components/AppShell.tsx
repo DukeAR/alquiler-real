@@ -124,7 +124,7 @@ const getDesktopNavItemClassName = (
   }
 
   return cn(
-    'group relative inline-flex items-center gap-2 px-0 py-2 text-[0.92rem] font-semibold tracking-[-0.01em] transition-[color,transform] duration-200 ease-out motion-reduce:transform-none hover:-translate-y-px active:translate-y-0 lg:gap-1.5 lg:text-[0.9rem] xl:gap-2 xl:text-[0.95rem]',
+    'group relative inline-flex shrink-0 items-center gap-2 whitespace-nowrap px-0 py-2 text-[0.92rem] font-semibold tracking-[-0.01em] transition-[color,transform] duration-200 ease-out motion-reduce:transform-none hover:-translate-y-px active:translate-y-0 lg:gap-1.5 lg:text-[0.9rem] xl:gap-2 xl:text-[0.95rem]',
     'after:absolute after:bottom-0 after:left-0 after:h-px after:w-full after:origin-left after:scale-x-0 after:transition-transform after:duration-200 hover:after:scale-x-100',
     inverted
       ? 'text-white/78 hover:text-white after:bg-white/38'
@@ -177,8 +177,8 @@ const DesktopNavButton = ({ action, active, inverted = false, onSelect }: { acti
         <span className="hidden xl:inline">{action.label}</span>
       ) : action.shortLabel !== action.label ? (
         <>
-          <span className="hidden xl:inline">{action.label}</span>
-          <span className="xl:hidden">{action.shortLabel}</span>
+          <span className="hidden min-[1850px]:inline">{action.label}</span>
+          <span className="min-[1850px]:hidden">{action.shortLabel}</span>
         </>
       ) : (
         <span>{action.label}</span>
@@ -197,8 +197,8 @@ const DesktopNavButton = ({ action, active, inverted = false, onSelect }: { acti
         <span className="hidden xl:inline">{action.label}</span>
       ) : action.shortLabel !== action.label ? (
         <>
-          <span className="hidden xl:inline">{action.label}</span>
-          <span className="xl:hidden">{action.shortLabel}</span>
+          <span className="hidden min-[1850px]:inline">{action.label}</span>
+          <span className="min-[1850px]:hidden">{action.shortLabel}</span>
         </>
       ) : (
         <span>{action.label}</span>
@@ -368,9 +368,9 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   const headerLayoutClass = usesExploreLayoutWidth ? 'app-page-explore' : 'app-page';
   const headerOnHero = isPropertyDetailRoute && isPropertyHeroVisible;
   const useSymmetricGuestHeader = showGuestAuthActions;
-  const desktopHeaderPrimaryClass = 'flex min-w-0 flex-1 items-center justify-between gap-6 sm:gap-7 lg:gap-8 xl:gap-10';
+  const desktopHeaderPrimaryClass = 'flex min-w-0 flex-1 items-center justify-start gap-5 sm:gap-6 lg:gap-7 xl:gap-8';
   const desktopHeaderNavigationClass = cn(
-    'hidden min-w-0 flex-1 items-center justify-between gap-5 rounded-[1.9rem] px-5 py-1.5 lg:flex lg:justify-start lg:gap-3 lg:px-3.5 xl:justify-between xl:gap-6 xl:px-8',
+    'hidden min-w-0 flex-1 items-center justify-start gap-3 rounded-[1.9rem] px-4 py-1.5 lg:flex lg:gap-3 lg:px-3.5 xl:gap-4 xl:px-5',
     headerOnHero
       ? 'border border-white/14 bg-black/12 shadow-[0_22px_46px_-36px_rgba(0,0,0,0.46)] backdrop-blur-[14px]'
       : 'border border-slate-200/80 bg-white/72 shadow-[0_22px_46px_-38px_rgba(15,23,42,0.16)] backdrop-blur-[14px]',
@@ -458,7 +458,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
           ? '!border-white/16 !bg-black/18 !shadow-[0_18px_34px_-28px_rgba(0,0,0,0.34)]'
           : '!border-slate-200/90 !bg-white/96 !shadow-[0_18px_34px_-28px_rgba(15,23,42,0.18)]',
       )} buttonClassName={cn(
-        '!h-11 !rounded-[0.9rem] !px-3 !text-[0.86rem] !font-semibold !shadow-none transition-[transform,box-shadow] duration-200 ease-out motion-reduce:transform-none hover:-translate-y-px active:translate-y-0 xl:!h-12 xl:!rounded-[0.95rem] xl:!px-4 xl:!text-[0.92rem]',
+        '!h-11 !rounded-[0.9rem] !px-2.5 !text-[0.82rem] !font-semibold !shadow-none transition-[transform,box-shadow] duration-200 ease-out motion-reduce:transform-none hover:-translate-y-px active:translate-y-0 xl:!h-12 xl:!rounded-[0.95rem] xl:!px-3 xl:!text-[0.88rem]',
         headerOnHero
           ? '[&:not([data-loading=true])]:!text-white/82 [&:not([data-loading=true])]:hover:!text-white'
           : '[&:not([data-loading=true])]:!text-slate-600 [&:not([data-loading=true])]:hover:!text-slate-950',
@@ -497,14 +497,14 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
             type="button"
             onClick={() => navigate('/profile')}
             className={cn(
-              'flex h-[3.25rem] items-center gap-3.5 rounded-full px-4.5 transition-[background-color,border-color,box-shadow,transform,color] duration-200 ease-out motion-reduce:transform-none hover:-translate-y-px active:translate-y-0 sm:h-[3.35rem] lg:h-14 lg:px-[1.2rem]',
+              'flex h-[3.25rem] items-center gap-2.5 rounded-full px-3.5 transition-[background-color,border-color,box-shadow,transform,color] duration-200 ease-out motion-reduce:transform-none hover:-translate-y-px active:translate-y-0 sm:h-[3.35rem] sm:gap-3 sm:px-4 lg:h-14 lg:px-[1.05rem]',
               headerOnHero
                 ? 'border border-white/18 bg-black/20 text-white shadow-[0_18px_35px_-28px_rgba(0,0,0,0.32)] backdrop-blur-[12px] hover:border-white/26 hover:bg-black/28 hover:shadow-[0_22px_40px_-28px_rgba(0,0,0,0.34)]'
                 : 'border border-slate-200/90 bg-white/98 shadow-[0_18px_35px_-28px_rgba(15,23,42,0.22)] hover:border-slate-300 hover:bg-white hover:shadow-[0_22px_40px_-28px_rgba(15,23,42,0.22)]',
             )}
             aria-label="Ir al perfil"
           >
-            <div className="hidden text-right xl:block">
+            <div className="hidden text-right min-[1800px]:block">
               <div className={cn('text-[10px] font-bold uppercase tracking-[0.16em]', headerOnHero ? 'text-white/62' : 'text-slate-400')}>Cuenta</div>
               <div className={cn('text-[0.96rem] font-bold leading-tight', headerOnHero ? 'text-white' : 'text-slate-900')}>{user.name}</div>
             </div>

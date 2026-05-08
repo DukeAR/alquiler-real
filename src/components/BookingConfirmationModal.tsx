@@ -6,6 +6,7 @@ import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 import { NoticeBanner } from './ui/NoticeBanner';
+import { ProtectedDepositRefundRules } from './ui/ProtectedDepositRefundRules';
 import { SectionTitle } from './ui/SectionTitle';
 import { formatBookingDateOnly } from '../lib/bookingDates';
 import { PLATFORM_PROPERTY_DISCLAIMER } from '../lib/platformTerms';
@@ -212,6 +213,8 @@ const BookingConfirmationModal: React.FC<Props> = ({
           </div>
 
           <NoticeBanner tone={activeNotice.tone} heading={activeNotice.heading} description={activeNotice.description} />
+
+          <ProtectedDepositRefundRules />
 
           <div className="grid gap-3 sm:grid-cols-2">
             <Card padding="md" variant="muted" className="rounded-[28px] border-slate-200/80 bg-white">

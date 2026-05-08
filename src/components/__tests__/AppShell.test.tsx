@@ -236,15 +236,15 @@ describe('AppShell', () => {
     expect(headerRow).toHaveClass('justify-between');
     expect(leftGroup).not.toBeNull();
     expect(leftGroup).toHaveClass('flex-1');
-    expect(leftGroup).toHaveClass('justify-between');
-    expect(leftGroup).toHaveClass('lg:gap-8');
-    expect(leftGroup).toHaveClass('xl:gap-10');
+    expect(leftGroup).toHaveClass('justify-start');
+    expect(leftGroup).toHaveClass('lg:gap-7');
+    expect(leftGroup).toHaveClass('xl:gap-8');
     expect(desktopNav).toHaveClass('flex-1');
-    expect(desktopNav).toHaveClass('justify-between');
-    expect(desktopNav).toHaveClass('gap-5');
-    expect(desktopNav).toHaveClass('xl:gap-6');
-    expect(desktopNav).toHaveClass('px-5');
-    expect(desktopNav).toHaveClass('xl:px-8');
+    expect(desktopNav).toHaveClass('justify-start');
+    expect(desktopNav).toHaveClass('gap-3');
+    expect(desktopNav).toHaveClass('xl:gap-4');
+    expect(desktopNav).toHaveClass('px-4');
+    expect(desktopNav).toHaveClass('xl:px-5');
     expect(desktopNav).not.toHaveClass('lg:ml-auto');
     expect(desktopNav).not.toHaveClass('lg:pl-6');
 
@@ -280,7 +280,7 @@ describe('AppShell', () => {
     const actionsGroup = screen.getByRole('button', { name: 'Ir al perfil' }).parentElement;
 
     expect(desktopNav).toHaveClass('flex-1');
-    expect(desktopNav).toHaveClass('justify-between');
+    expect(desktopNav).toHaveClass('justify-start');
     expect(actionsGroup).not.toBeNull();
     expect(actionsGroup).toHaveClass('justify-end');
     expect(actionsGroup).toHaveClass('lg:pl-3');

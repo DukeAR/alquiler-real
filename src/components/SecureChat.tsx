@@ -16,6 +16,7 @@ import { getReservationFlowCopy, getReservationVisibleStatus } from '../lib/rese
 import { getHostTrust } from '../lib/hostTrust';
 import { trackFrontendFunnelEvent } from '../lib/funnelTracking';
 import { DepositChoiceBlock } from './ui/DepositChoiceBlock';
+import { ProtectedDepositRefundRules } from './ui/ProtectedDepositRefundRules';
 import { ReservationConfirmedState } from './ui/ReservationConfirmedState';
 import { SystemEventMessage } from './ui/SystemEventMessage';
 import type { TrustSignal } from './ui/TrustSignalsInline';
@@ -2341,6 +2342,10 @@ export const SecureChat: React.FC<SecureChatProps> = ({
 
                 {showDepositChoiceBlock || hasInlineComposerActions ? (
                   <div className="space-y-3">
+                    {showDepositChoiceComposer ? (
+                      <ProtectedDepositRefundRules />
+                    ) : null}
+
                     {showDepositChoiceBlock ? (
                       <DepositChoiceBlock
                         eyebrow="Modalidad"

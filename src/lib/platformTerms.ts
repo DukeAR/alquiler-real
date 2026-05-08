@@ -184,6 +184,16 @@ export const BOOKING_CONTRACT_PLATFORM_TERMS: BookingContractPlatformTerm[] = PL
 
 export const PLATFORM_PROPERTY_DISCLAIMER = 'La información del aviso la carga el anfitrión. La verificación presencial ayuda a decidir mejor, pero no evaluamos estado ni calidad del inmueble.';
 
+export const PROTECTED_DEPOSIT_REFUND_PRIMARY = 'La seña protegida se devuelve solo si la propiedad no existe o si el huésped no puede ingresar.';
+
+export const PROTECTED_DEPOSIT_REFUND_EXCLUSIONS = [
+  'el huésped cambia de opinión',
+  'el huésped no se presenta',
+  'el estado, amenities o calidad del inmueble no cumplen expectativas',
+] as const;
+
+export const PROTECTED_DEPOSIT_REFUND_SCOPE_NOTE = 'Alquiler Real verifica existencia, identidad, ubicación y acceso. No evalúa estado, calidad ni amenities del inmueble.';
+
 export const PLATFORM_PUBLISHING_RESPONSIBILITY_NOTE = 'Al publicar, confirmás que las fotos, la descripción, los servicios, las reglas y las condiciones reales del alojamiento dependen de vos como anfitrión.';
 
 export const PLATFORM_DIRECT_FLOW_NOTE = 'Si después coordinan la seña o el pago por fuera, la app no registra ese movimiento ni interviene sobre esa parte del acuerdo.';
