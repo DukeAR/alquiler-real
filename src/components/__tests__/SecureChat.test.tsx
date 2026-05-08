@@ -786,10 +786,10 @@ describe('SecureChat', () => {
     expect(screen.getByText(/La reserva ya quedó marcada con seña protegida\./i)).toBeInTheDocument();
     expect(screen.getByText(/Por ahora no procesamos el cobro dentro de la app\./i)).toBeInTheDocument();
     expect(screen.getByText('Estado: Seña pendiente')).toBeInTheDocument();
-    expect(screen.queryByText('Cómo querés avanzar con la seña')).not.toBeInTheDocument();
+    expect(screen.queryByText('Elegí cómo querés avanzar')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Pagar seña/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Dejarla registrada acá/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Coordinarla por fuera/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Usar Seña Protegida/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Coordinar por chat/i })).not.toBeInTheDocument();
   });
 
   test('keeps a protected return action visible after the guest chooses external coordination', async () => {
@@ -824,9 +824,9 @@ describe('SecureChat', () => {
     renderChat();
 
     expect(await screen.findByText('La coordinación sigue por chat y la app no interviene en pagos externos.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Dejarla registrada acá/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Usar Seña Protegida/i })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /Dejarla registrada acá/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Usar Seña Protegida/i }));
 
     await waitFor(() => {
       expect(selectProtectedDepositMock).toHaveBeenCalledWith('booking-external-1');

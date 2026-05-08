@@ -120,8 +120,8 @@ const BookingConfirmationModal: React.FC<Props> = ({
 
   const activeNotice = submitNotice ?? {
     tone: 'info' as const,
-    heading: 'Elegí cómo querés operar esta reserva',
-    description: 'Podés abrir una operación libre para coordinar por chat o dejar marcada una seña protegida. Por ahora solo mostramos la estructura y el estado base: todavía no procesamos pagos dentro de la app.',
+    heading: 'Elegí cómo querés avanzar',
+    description: 'Las dos opciones siguen por chat. Seña Protegida suma retención de la seña hasta el check-in y un costo por operación.',
   };
 
   useEffect(() => {
@@ -190,8 +190,8 @@ const BookingConfirmationModal: React.FC<Props> = ({
               <SectionTitle
                 as="h3"
                 visualLevel="h3"
-                heading="Elegí cómo querés operar esta estadía"
-                description="Las fechas, huéspedes y total ya reflejan tu selección actual. Ahora definí si querés coordinar libremente por chat o dejar la reserva marcada con seña protegida."
+                heading="Elegí cómo querés avanzar"
+                description="Las fechas, huéspedes y total ya reflejan tu selección actual. Ahora elegí la modalidad con la que quieren seguir."
                 headingClassName="font-semibold tracking-tight"
                 className="pr-2"
               />
@@ -219,11 +219,11 @@ const BookingConfirmationModal: React.FC<Props> = ({
                 <div className="space-y-2">
                   <Badge variant="neutral" size="md" className="gap-2">
                     <Icons.MessageSquare className="h-3.5 w-3.5" />
-                    <span>Operación libre</span>
+                    <span>Opción 1</span>
                   </Badge>
-                  <p className="text-base font-semibold text-slate-950">Coordinan por chat</p>
+                  <p className="text-base font-semibold text-slate-950">Coordinar directamente</p>
                   <p className="text-sm leading-6 text-slate-600">
-                    Sirve si quieren conversar primero. Las fechas no se bloquean, la app no retiene dinero y no interviene sobre pagos o señas coordinados por fuera.
+                    Podés acordar la seña y los detalles directamente con el anfitrión. En este caso, Alquiler Real no interviene en el pago.
                   </p>
                 </div>
 
@@ -236,7 +236,7 @@ const BookingConfirmationModal: React.FC<Props> = ({
                   loadingLabel="Abriendo chat..."
                   disabled={isBusy && actionLoadingMode !== 'direct'}
                 >
-                  Iniciar operación libre
+                  Coordinar por chat
                 </Button>
               </div>
             </Card>
@@ -246,11 +246,11 @@ const BookingConfirmationModal: React.FC<Props> = ({
                 <div className="space-y-2">
                   <Badge variant="brand" size="md" className="gap-2">
                     <Icons.ShieldCheck className="h-3.5 w-3.5" />
-                    <span>Seña protegida</span>
+                    <span>Opción 2 · Premium opcional</span>
                   </Badge>
-                  <p className="text-base font-semibold text-slate-950">La app deja la reserva marcada con seña protegida</p>
+                  <p className="text-base font-semibold text-slate-950">Usar Seña Protegida</p>
                   <p className="text-sm leading-6 text-slate-600">
-                    Conviene si querés dejar la protección elegida desde ahora. La app va a retener la seña solo en este modo, suma un costo por operación y prevé liberarla después del check-in doble o pasarla a revisión manual si hace falta.
+                    La seña queda retenida por Alquiler Real hasta el check-in. Tiene un costo por operación.
                   </p>
                 </div>
 
@@ -263,7 +263,7 @@ const BookingConfirmationModal: React.FC<Props> = ({
                   loadingLabel="Armando seña protegida..."
                   disabled={isBusy && actionLoadingMode !== 'protected'}
                 >
-                  Elegir seña protegida
+                  Usar Seña Protegida
                 </Button>
               </div>
             </Card>

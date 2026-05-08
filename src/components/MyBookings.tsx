@@ -13,8 +13,6 @@ import {
 import { navigateToExternalUrl } from '../lib/browserNavigation';
 import {
   BOOKING_CONTRACT_PLATFORM_TERMS,
-  PLATFORM_DIRECT_FLOW_NOTE,
-  PLATFORM_PROTECTED_FLOW_NOTE,
   type BookingContractPlatformTerm,
 } from '../lib/platformTerms';
 import { getPropertyVerificationDetails, sortPropertiesByCatalogOrder } from '../lib/propertyVerification';
@@ -689,7 +687,7 @@ export const MyBookings = () => {
       const nextBooking = await selectExternalDeposit(bookingId);
       updateBookingState(nextBooking);
       setExternalDepositChoiceBookingId((currentBookingId) => (currentBookingId === bookingId ? null : currentBookingId));
-      showToast('Seña externa', 'Quedó como coordinación por fuera. Si cambiás de idea antes de informarla, podés dejarla registrada desde esta reserva.', 'success');
+      showToast('Coordinación directa', 'Quedó en coordinación directa por chat. Si cambiás de idea antes de cerrar la seña, podés usar Seña Protegida desde esta reserva.', 'success');
     } catch (error) {
       showToast('Seña', error instanceof Error ? error.message : 'No pudimos registrar esta elección.', 'error');
     } finally {
@@ -704,7 +702,7 @@ export const MyBookings = () => {
       const nextBooking = await selectProtectedDeposit(bookingId);
       updateBookingState(nextBooking);
       setExternalDepositChoiceBookingId((currentBookingId) => (currentBookingId === bookingId ? null : currentBookingId));
-      showToast('Seña en la app', 'La seña quedó lista para registrarse acá. Vas a ver el fee antes de pagar.', 'success');
+      showToast('Seña Protegida', 'La reserva quedó lista para usar Seña Protegida. Vas a ver el costo por operación antes de pagar.', 'success');
     } catch (error) {
       showToast('Seña', error instanceof Error ? error.message : 'No pudimos registrar esta elección.', 'error');
     } finally {
@@ -1103,38 +1101,22 @@ export const MyBookings = () => {
                   {bookingFlow.stage === 'deposit-choice' ? (
                     <div className="w-full lg:max-w-[38rem]">
                       <DepositChoiceBlock
-                        title="Cómo querés avanzar con la seña"
-                        description="Elegí la opción que mejor les cierre. La diferencia importante es qué queda registrado en la app y hasta dónde puede ayudar la plataforma."
+                        title="Elegí cómo querés avanzar"
+                        description="Las dos opciones siguen por chat. Elegí la que mejor les cierre."
                         options={[
                           {
-                            key: 'protected',
-                            eyebrow: '1. Resolverla acá con claridad',
-                            title: 'Dejarla registrada acá',
-                            description: PLATFORM_PROTECTED_FLOW_NOTE,
-                            icon: <Icons.ShieldCheck className="h-5 w-5" />,
-                            tone: 'brand',
-                            priceLines: protectedDepositPriceLines,
-                            action: {
-                              label: 'Dejarla registrada acá',
-                              onClick: () => void handleSelectProtectedDeposit(booking.id),
-                              loading: isSelectingProtectedDeposit,
-                              loadingLabel: 'Guardando...',
-                              icon: <Icons.ShieldCheck className="h-4 w-4" />,
-                            },
-                          },
-                          {
                             key: 'external',
-                            eyebrow: '2. Coordinarla por fuera',
-                            title: 'Coordinarla por fuera (más manual)',
-                            description: PLATFORM_DIRECT_FLOW_NOTE,
+                            eyebrow: 'Opción 1',
+                            title: 'Coordinar directamente',
+                            description: 'Podés acordar la seña y los detalles directamente con el anfitrión. En este caso, Alquiler Real no interviene en el pago.',
                             icon: <Icons.MessageSquare className="h-5 w-5" />,
                             tone: 'neutral',
                             helper: isReviewingExternalDepositChoice
-                              ? 'Seguís por chat y, si cambiás de idea antes de informarla, podés volver a dejarla registrada acá.'
+                              ? 'Seguís por chat y, si cambiás de idea antes de cerrar la seña, todavía podés usar Seña Protegida.'
                               : undefined,
                             action: isReviewingExternalDepositChoice
                               ? {
-                                  label: 'Seguir por fuera',
+                                  label: 'Coordinar por chat',
                                   onClick: () => void handleSelectExternalDeposit(booking.id),
                                   loading: isSelectingExternalDeposit,
                                   loadingLabel: 'Guardando...',
@@ -1142,7 +1124,7 @@ export const MyBookings = () => {
                                   variant: 'outline',
                                 }
                               : {
-                                  label: 'Coordinarla por fuera',
+                                  label: 'Coordinar por chat',
                                   onClick: () => setExternalDepositChoiceBookingId(booking.id),
                                   icon: <Icons.MessageSquare className="h-4 w-4" />,
                                   variant: 'outline',
@@ -1155,6 +1137,22 @@ export const MyBookings = () => {
                                 }
                               : undefined,
                           },
+                          {
+                            key: 'protected',
+                            eyebrow: 'Opción 2 · Premium opcional',
+                            title: 'Usar Seña Protegida',
+                            description: 'La seña queda retenida por Alquiler Real hasta el check-in. Tiene un costo por operación.',
+                            icon: <Icons.ShieldCheck className="h-5 w-5" />,
+                            tone: 'brand',
+                            priceLines: protectedDepositPriceLines,
+                            action: {
+                              label: 'Usar Seña Protegida',
+                              onClick: () => void handleSelectProtectedDeposit(booking.id),
+                              loading: isSelectingProtectedDeposit,
+                              loadingLabel: 'Guardando...',
+                              icon: <Icons.ShieldCheck className="h-4 w-4" />,
+                            },
+                          },
                         ]}
                       />
                     </div>
@@ -1166,13 +1164,14 @@ export const MyBookings = () => {
                         options={[
                           {
                             key: 'switch-to-protected',
-                            eyebrow: 'Coordinación por fuera',
-                            title: 'Seguís coordinando por chat',
-                            description: `Hoy siguen por fuera. ${PLATFORM_PROTECTED_FLOW_NOTE}`,
-                            icon: <Icons.MessageSquare className="h-5 w-5" />,
-                            tone: 'neutral',
+                            eyebrow: 'Opción 2 · Premium opcional',
+                            title: 'Usar Seña Protegida',
+                            description: 'La seña queda retenida por Alquiler Real hasta el check-in. Tiene un costo por operación.',
+                            icon: <Icons.ShieldCheck className="h-5 w-5" />,
+                            tone: 'brand',
+                            helper: 'Hoy siguen coordinando por chat. Si cambiás de idea antes de pagar, todavía podés usar Seña Protegida.',
                             action: {
-                              label: 'Dejarla registrada acá',
+                              label: 'Usar Seña Protegida',
                               onClick: () => void handleSelectProtectedDeposit(booking.id),
                               loading: isSelectingProtectedDeposit,
                               loadingLabel: 'Guardando...',
@@ -1239,14 +1238,14 @@ export const MyBookings = () => {
               {bookingFlow.stage === 'protected-checkout-pending' && protectedDepositPricing && PROTECTED_DEPOSIT_PAYMENT_ENABLED ? (
                 <DepositChoiceBlock
                   className="mt-4"
-                  title="Cómo querés avanzar con la seña"
-                  description="Si prefieren resolverla acá, la seña queda registrada y todo queda claro entre ambas partes dentro de la app."
+                  title="Usar Seña Protegida"
+                  description="La modalidad ya quedó elegida. Revisá el costo por operación antes de continuar."
                   options={[
                     {
                       key: 'pay-protected-deposit',
-                      eyebrow: 'Resolverla acá con claridad',
-                      title: 'Pagarla ahora',
-                      description: 'La seña queda registrada en la app y después puede liberarse o revisarse según cómo cierre la reserva.',
+                      eyebrow: 'Opción 2 · Premium opcional',
+                      title: 'Continuar con Seña Protegida',
+                      description: 'La seña queda retenida por Alquiler Real hasta el check-in. Tiene un costo por operación.',
                       icon: <Icons.ShieldCheck className="h-5 w-5" />,
                       tone: 'brand',
                       priceLines: protectedDepositPriceLines,

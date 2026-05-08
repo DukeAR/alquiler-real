@@ -11,7 +11,6 @@ import {
 import { useAuth } from '../hooks/useAuth';
 import { type ReservationRequestContext } from '../types';
 import { formatBookingDateShort, getBookingDateOnlyValue, isBookingCheckInReached } from '../lib/bookingDates';
-import { PLATFORM_DIRECT_FLOW_NOTE, PLATFORM_PROTECTED_FLOW_NOTE } from '../lib/platformTerms';
 import { getProtectedDepositPricingFromBooking } from '../lib/protectedDeposit';
 import { getReservationFlowCopy, getReservationVisibleStatus } from '../lib/reservationFlow';
 import { getHostTrust } from '../lib/hostTrust';
@@ -1742,7 +1741,7 @@ export const SecureChat: React.FC<SecureChatProps> = ({
       const supplementaryContent = flowCopy?.stage === 'deposit-choice'
         ? isHostConversation
           ? 'Ahora el huésped define cómo avanzar con la seña.'
-          : 'Ahora elegí cómo querés avanzar con la seña.'
+          : 'Ahora elegí cómo querés avanzar.'
         : activeRequestContext?.mode === 'protected'
             ? protectedDepositPreview
               ? `La reserva ya quedó marcada con seña protegida. Costo estimado: ${currencyFormatter.format(protectedDepositPreview.depositAmount)} + fee ${currencyFormatter.format(protectedDepositPreview.serviceFee)} = ${currencyFormatter.format(protectedDepositPreview.totalCharge)}. Por ahora no procesamos el cobro dentro de la app.`
@@ -1778,7 +1777,7 @@ export const SecureChat: React.FC<SecureChatProps> = ({
         action: canReturnToProtectedDeposit
           ? {
               kind: 'select-protected-deposit',
-              label: 'Dejarla registrada acá',
+              label: 'Usar Seña Protegida',
               loading: processingFlowAction === 'select-protected-deposit',
               onClick: () => {
                 if (activeRequestContext?.bookingId) {
@@ -2344,17 +2343,36 @@ export const SecureChat: React.FC<SecureChatProps> = ({
                   <div className="space-y-3">
                     {showDepositChoiceBlock ? (
                       <DepositChoiceBlock
-                        eyebrow="Seña"
-                        title={showDepositChoiceComposer ? 'Cómo querés avanzar con la seña' : 'Cómo sigue la seña'}
+                        eyebrow="Modalidad"
+                        title={showDepositChoiceComposer ? 'Elegí cómo querés avanzar' : 'Cómo sigue la seña'}
                         description={showDepositChoiceComposer
-                          ? 'Elegí la opción que mejor les cierre. La diferencia importante es qué queda registrado dentro de la app.'
-                          : 'La elección del huésped queda visible dentro de este chat.'}
+                          ? 'Las dos opciones siguen por chat. Elegí la que mejor les cierre.'
+                          : 'La modalidad elegida queda visible dentro de este chat.'}
                         options={[
                           {
+                            key: 'external',
+                            eyebrow: 'Opción 1',
+                            title: 'Coordinar directamente',
+                            description: 'Podés acordar la seña y los detalles directamente con el anfitrión. En este caso, Alquiler Real no interviene en el pago.',
+                            icon: <Icons.MessageSquare className="h-5 w-5" />,
+                            tone: 'neutral',
+                            helper: showDepositChoiceComposer ? undefined : 'La coordinación sigue por este chat.',
+                            action: showDepositChoiceComposer
+                              ? {
+                                  label: 'Coordinar por chat',
+                                  onClick: () => activeRequestContext?.bookingId && void handleSelectExternalDeposit(activeRequestContext.bookingId),
+                                  loading: processingFlowAction === 'select-external-deposit',
+                                  loadingLabel: 'Guardando...',
+                                  icon: <Icons.MessageSquare className="h-4 w-4" />,
+                                  variant: 'outline',
+                                }
+                              : undefined,
+                          },
+                          {
                             key: 'protected',
-                            eyebrow: '1. Resolverla acá con claridad',
-                            title: showDepositChoiceComposer ? 'Dejarla registrada acá' : 'Registrada acá',
-                            description: PLATFORM_PROTECTED_FLOW_NOTE,
+                            eyebrow: 'Opción 2 · Premium opcional',
+                            title: 'Usar Seña Protegida',
+                            description: 'La seña queda retenida por Alquiler Real hasta el check-in. Tiene un costo por operación.',
                             icon: <Icons.ShieldCheck className="h-5 w-5" />,
                             tone: 'brand',
                             priceLines: protectedDepositPreview ? [
@@ -2364,30 +2382,11 @@ export const SecureChat: React.FC<SecureChatProps> = ({
                             ] : undefined,
                             action: showDepositChoiceComposer
                               ? {
-                                  label: 'Dejarla registrada acá',
+                                  label: 'Usar Seña Protegida',
                                   onClick: () => activeRequestContext?.bookingId && void handleSelectProtectedDeposit(activeRequestContext.bookingId),
                                   loading: processingFlowAction === 'select-protected-deposit',
                                   loadingLabel: 'Guardando...',
                                   icon: <Icons.ShieldCheck className="h-4 w-4" />,
-                                }
-                              : undefined,
-                          },
-                          {
-                            key: 'external',
-                            eyebrow: '2. Coordinarla por fuera',
-                            title: showDepositChoiceComposer ? 'Coordinarla por fuera (más manual)' : 'Por fuera (más manual)',
-                            description: PLATFORM_DIRECT_FLOW_NOTE,
-                            icon: <Icons.MessageSquare className="h-5 w-5" />,
-                            tone: 'neutral',
-                            helper: showDepositChoiceComposer ? undefined : 'Esta elección también queda registrada en el chat.',
-                            action: showDepositChoiceComposer
-                              ? {
-                                  label: 'Coordinarla por fuera',
-                                  onClick: () => activeRequestContext?.bookingId && void handleSelectExternalDeposit(activeRequestContext.bookingId),
-                                  loading: processingFlowAction === 'select-external-deposit',
-                                  loadingLabel: 'Guardando...',
-                                  icon: <Icons.MessageSquare className="h-4 w-4" />,
-                                  variant: 'outline',
                                 }
                               : undefined,
                           },

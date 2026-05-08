@@ -1028,7 +1028,7 @@ describe('PropertyDetail', () => {
     });
 
     fireEvent.click(screen.getByRole('button', { name: /^elegir modalidad$/i }));
-    fireEvent.click(screen.getByRole('button', { name: /iniciar operación libre/i }));
+    fireEvent.click(screen.getByRole('button', { name: /coordinar por chat/i }));
 
     await waitFor(() => {
       expect(apiJsonCalls).toEqual(
@@ -1124,7 +1124,7 @@ describe('PropertyDetail', () => {
 
     const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
     fireEvent.click(screen.getByRole('button', { name: /^elegir modalidad$/i }));
-    fireEvent.click(screen.getByRole('button', { name: /elegir seña protegida/i }));
+    fireEvent.click(screen.getByRole('button', { name: /usar seña protegida/i }));
 
     await waitFor(() => expect(dispatchSpy).toHaveBeenCalled());
     expect(bookingCalls).toHaveLength(1);
@@ -1188,7 +1188,7 @@ describe('PropertyDetail', () => {
 
     await advanceToConfirmationStep();
     fireEvent.click(screen.getByRole('button', { name: /^elegir modalidad$/i }));
-    fireEvent.click(screen.getByRole('button', { name: /elegir seña protegida/i }));
+    fireEvent.click(screen.getByRole('button', { name: /usar seña protegida/i }));
 
     await waitFor(() => expect(showLoginModal).toHaveBeenCalledTimes(1));
   });

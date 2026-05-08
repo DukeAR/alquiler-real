@@ -31,12 +31,12 @@ describe('BookingConfirmationModal', () => {
     expect(screen.getByText('Modalidad lista para elegir')).toBeInTheDocument();
     expect(screen.getAllByText('Casa frente al mar').length).toBeGreaterThan(0);
     expect(screen.getByText('Laura')).toBeInTheDocument();
-    expect(screen.getByText('Elegí cómo querés operar esta estadía')).toBeInTheDocument();
-    expect(screen.getByText('Operación libre')).toBeInTheDocument();
-    expect(screen.getByText('Seña protegida')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Elegí cómo querés avanzar', level: 3 })).toBeInTheDocument();
+    expect(screen.getByText('Coordinar directamente')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /usar seña protegida/i })).toBeInTheDocument();
     expect(screen.getByText(/La información del aviso la carga el anfitrión/i)).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /elegir seña protegida/i }));
+    fireEvent.click(screen.getByRole('button', { name: /usar seña protegida/i }));
     expect(onStartProtected).toHaveBeenCalledTimes(1);
     expect(onStartDirect).not.toHaveBeenCalled();
   });
@@ -73,7 +73,7 @@ describe('BookingConfirmationModal', () => {
     fireEvent.click(screen.getByRole('button', { name: /seguir revisando/i }));
     expect(onClose).toHaveBeenCalledTimes(2);
 
-    fireEvent.click(screen.getByRole('button', { name: /iniciar operación libre/i }));
+    fireEvent.click(screen.getByRole('button', { name: /coordinar por chat/i }));
     expect(onStartDirect).toHaveBeenCalledTimes(1);
   });
 });
