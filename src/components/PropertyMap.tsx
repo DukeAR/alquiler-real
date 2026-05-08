@@ -4,8 +4,8 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import * as L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { Property } from '../services/geminiService';
-import { getPropertyVerificationDetails, REAL_VERIFICATION_FILTER_MIN_SCORE } from '../lib/propertyVerification';
-import { cn, formatCurrency } from '../lib/utils';
+import { getPropertyVerificationDetails } from '../lib/propertyVerification';
+import { formatCurrency } from '../lib/utils';
 import { Icons } from './Icons';
 import { VerificationBadgePremium } from './ui/VerificationBadgePremium';
 

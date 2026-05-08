@@ -45,7 +45,7 @@ const normalizePropertyVerificationDefaults = (property: Property) => {
     || property.isIdentityVerified
     || property.verificationLevel === 'identity',
   );
-  const verificationLevel = isPresentiallyVerified
+  const verificationLevel: Property['verificationLevel'] = isPresentiallyVerified
     ? 'presencial'
     : isIdentityVerified
       ? 'identity'

@@ -66,6 +66,7 @@ export type ActivityData = {
 };
 
 export type ProfileReview = {
+  id?: string;
   type?: 'host_review' | 'guest_review' | 'host_to_guest' | 'guest_to_host';
   propertyTitle?: string;
   userName?: string;

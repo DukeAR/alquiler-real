@@ -123,6 +123,9 @@ const buildAuditUser = (snapshot: DemoAuditSnapshot, activeMode: User['activeMod
 
 const normalizeConversation = (conversation: DemoAuditSnapshot['conversations'][number]): Conversation => ({
   ...conversation,
+  booking_id: conversation.booking_id ?? undefined,
+  depositType: conversation.depositType ?? undefined,
+  depositStatus: conversation.depositStatus ?? undefined,
   propertyImage: conversation.propertyImageUrl,
   created_at: conversation.updated_at,
 });

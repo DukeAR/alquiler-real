@@ -10,7 +10,7 @@ import {
 import { withDemoQuery } from '../lib/demoMode';
 import type { ActivityData, ReviewsData, ValidationData } from '../hooks/useUserProfile';
 import type { HostProfile } from '../services/geminiService';
-import type { Property } from '../types';
+import type { BookingStatus, Property, ReservationDepositStatus } from '../types';
 
 type DemoUser = {
   id: string;
@@ -55,9 +55,9 @@ type DemoConversation = {
   hostName: string;
   requestMode: 'direct' | 'protected';
   requestStatus: 'pending' | 'accepted' | 'not_advanced';
-  bookingStatus: string;
+  bookingStatus: BookingStatus;
   depositType: 'external' | 'protected' | null;
-  depositStatus: string | null;
+  depositStatus: ReservationDepositStatus | null;
   startDate: string;
   endDate: string;
   guests: number;
@@ -83,10 +83,10 @@ type DemoBooking = {
   date?: string;
   guests: number;
   totalPrice: number;
-  status: string;
+  status: BookingStatus;
   requestMode: 'direct' | 'protected';
   depositType: 'external' | 'protected' | null;
-  depositStatus: string | null;
+  depositStatus: ReservationDepositStatus | null;
   protectedDepositPricing?: ReturnType<typeof getProtectedDepositPricing> | null;
   contractAccepted?: boolean;
   cancellationActor?: 'guest' | 'host' | null;
@@ -821,7 +821,7 @@ const createDemoStore = (): DemoStore => {
           description: 'Hay datos suficientes para entender quién usa la cuenta.',
         },
         {
-          key: 'activity',
+          key: 'history',
           label: 'Actividad registrada',
           status: 'complete',
           description: 'Ya existe actividad real visible dentro de la app.',
@@ -1145,6 +1145,8 @@ const markNotificationsAsRead = () => {
 };
 
 const updateValidationAfterDocumentaryCompletion = () => {
+  const currentChecks = store.validationData.checks;
+
   store.validationData = {
     ...store.validationData,
     progress: 100,
@@ -1159,7 +1161,12 @@ const updateValidationAfterDocumentaryCompletion = () => {
     optionalUpgrade: null,
     missingRequirements: [],
     checks: {
-      ...store.validationData.checks,
+      emailVerified: Boolean(currentChecks?.emailVerified),
+      phoneVerified: Boolean(currentChecks?.phoneVerified),
+      profileComplete: Boolean(currentChecks?.profileComplete),
+      platformActivity: Boolean(currentChecks?.platformActivity),
+      historyVerified: Boolean(currentChecks?.historyVerified),
+      reviewsVerified: Boolean(currentChecks?.reviewsVerified),
       documentarySubmitted: true,
       documentaryVerified: true,
     },
@@ -1707,12 +1714,19 @@ export const getMockApiResponse = async (
 
   if (path === '/api/verification/confirm-contact' && method === 'POST') {
     const field = body.field === 'phone' ? 'phone' : 'email';
+    const currentChecks = store.validationData.checks;
+
     store.validationData = {
       ...store.validationData,
       checks: {
-        ...store.validationData.checks,
-        emailVerified: field === 'email' ? true : Boolean(store.validationData.checks?.emailVerified),
-        phoneVerified: field === 'phone' ? true : Boolean(store.validationData.checks?.phoneVerified),
+        emailVerified: field === 'email' ? true : Boolean(currentChecks?.emailVerified),
+        phoneVerified: field === 'phone' ? true : Boolean(currentChecks?.phoneVerified),
+        profileComplete: Boolean(currentChecks?.profileComplete),
+        platformActivity: Boolean(currentChecks?.platformActivity),
+        historyVerified: Boolean(currentChecks?.historyVerified),
+        reviewsVerified: Boolean(currentChecks?.reviewsVerified),
+        documentarySubmitted: Boolean(currentChecks?.documentarySubmitted),
+        documentaryVerified: Boolean(currentChecks?.documentaryVerified),
       },
     };
 
@@ -1894,8 +1908,7 @@ export const getMockApiResponse = async (
 
     if (action === 'report-no-show') {
       const nextBooking = updateBooking(bookingId, {
-        status: 'no_show',
-        depositStatus: booking.depositType === 'protected' ? 'review' : booking.depositStatus,
+        depositStatus: booking.depositType === 'protected' ? 'pending_confirmation' : booking.depositStatus,
       });
 
       appendSystemMessage(booking.conversationId || '', 'Se marcó un no show.');
