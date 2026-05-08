@@ -281,7 +281,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
   const [reviewingBooking, setReviewingBooking] = useState<any>(null);
   const [availabilityPropertyId, setAvailabilityPropertyId] = useState<string | null>(null);
   const [expandedBookingId, setExpandedBookingId] = useState<string | null>(null);
-  const [processingBookingAction, setProcessingBookingAction] = useState<{ bookingId: string; action: 'accept-request' | 'confirm-direct-deposit' | 'cancel-host' | 'report-no-show' } | null>(null);
+  const [processingBookingAction, setProcessingBookingAction] = useState<{ bookingId: string; action: 'accept-request' | 'not-advance-request' | 'confirm-direct-deposit' | 'cancel-host' | 'report-no-show' } | null>(null);
   const [activePremiumOffer, setActivePremiumOffer] = useState<any>(null);
   const [processingPremiumOffer, setProcessingPremiumOffer] = useState(false);
 
@@ -385,10 +385,10 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
       });
 
       showToast(
-        acceptedMode === 'direct' ? 'Propuesta aceptada' : 'Solicitud aceptada',
+        acceptedMode === 'direct' ? 'Operación libre aceptada' : 'Seña protegida aceptada',
         acceptedMode === 'direct'
-          ? 'La propuesta quedó aceptada. Seguí por el chat para cerrar la seña.'
-          : 'La solicitud quedó aceptada. Ahora el huésped puede definir la seña desde el chat.',
+          ? 'La operación libre quedó abierta. Sigan por chat: la app no interviene en pagos externos.'
+          : 'La solicitud quedó aceptada y la reserva ya quedó marcada con seña protegida. El seguimiento sigue por chat.',
         'success',
       );
     } catch (err) {
@@ -403,7 +403,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
       return;
     }
 
-    const requestLabel = booking.requestMode === 'direct' ? 'propuesta' : 'solicitud';
+    const requestLabel = booking.requestMode === 'direct' ? 'operación libre' : 'solicitud con seña protegida';
     if (!window.confirm(`¿Querés marcar que no podés avanzar con esta ${requestLabel}?`)) {
       return;
     }

@@ -49,4 +49,33 @@ describe('reservationFlow milestones', () => {
     expect(flow.description).toBe('No se pudo avanzar con esta reserva.');
     expect(flow.supportText).toBe('El anfitrión no puede avanzar en este momento. Podés seguir conversando o buscar otras opciones.');
   });
+
+  test('treats an accepted protected reservation without a stored deposit type as the protected base state', () => {
+    const flow = getReservationFlowCopy({
+      mode: 'protected',
+      requestStatus: 'accepted',
+      bookingStatus: 'confirmed',
+      viewerRole: 'guest',
+    });
+
+    expect(flow.stage).toBe('protected-checkout-pending');
+    expect(flow.modelLabel).toBe('Seña protegida');
+    expect(flow.statusLabel).toBe('Seña protegida');
+    expect(flow.nextActorLabel).toBe('Plataforma');
+    expect(flow.trackingHint).toBe('Por ahora solo mostramos la estructura y el estado base: el cobro todavía no se procesa dentro de la app.');
+  });
+
+  test('shows operation-free copy once a direct request is accepted', () => {
+    const flow = getReservationFlowCopy({
+      mode: 'direct',
+      requestStatus: 'accepted',
+      viewerRole: 'guest',
+    });
+
+    expect(flow.stage).toBe('request-accepted');
+    expect(flow.modelLabel).toBe('Operación libre');
+    expect(flow.statusLabel).toBe('Operación libre');
+    expect(flow.supportText).toBe('Desde acá coordinan por chat. La app no retiene dinero, no protege la seña ni interviene en pagos externos.');
+    expect(flow.nextStepLabel).toBe('Coordinar todo por chat');
+  });
 });

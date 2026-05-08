@@ -5,13 +5,12 @@ import { showToast } from '../lib/toast';
 import { LoadingState } from './LoadingState';
 import { cn } from '../lib/utils';
 import { 
-  acceptConversationRequest, confirmArrival, confirmDirectDeposit, confirmProtectedDepositPayment, fetchConversations, fetchMessages, notAdvanceConversationRequest, payProtectedDeposit, reportArrivalProblem, reportDirectDeposit, selectExternalDeposit, selectProtectedDeposit, sendMessage,
+  acceptConversationRequest, confirmArrival, confirmDirectDeposit, confirmProtectedDepositPayment, fetchConversations, fetchMessages, notAdvanceConversationRequest, reportArrivalProblem, reportDirectDeposit, selectExternalDeposit, selectProtectedDeposit, sendMessage,
   Conversation, Message 
 } from '../services/geminiService';
 import { useAuth } from '../hooks/useAuth';
 import { type ReservationRequestContext } from '../types';
 import { formatBookingDateShort, getBookingDateOnlyValue, isBookingCheckInReached } from '../lib/bookingDates';
-import { navigateToExternalUrl } from '../lib/browserNavigation';
 import { PLATFORM_DIRECT_FLOW_NOTE, PLATFORM_PROTECTED_FLOW_NOTE } from '../lib/platformTerms';
 import { getProtectedDepositPricingFromBooking } from '../lib/protectedDeposit';
 import { getReservationFlowCopy, getReservationVisibleStatus } from '../lib/reservationFlow';
@@ -61,6 +60,7 @@ const compactReservationStatusToneClasses: Record<CompactReservationStatusTone, 
   success: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-900/20 dark:text-emerald-300',
   warning: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/30 dark:bg-amber-900/20 dark:text-amber-300',
 };
+const PROTECTED_DEPOSIT_PAYMENT_ENABLED = false;
 
 const normalizeSafetyText = (value: string) => value
   .normalize('NFD')
@@ -387,7 +387,13 @@ const formatNightlyPriceLabel = (value?: number | null) => {
   return `${currencyFormatter.format(value)}/noche`;
 };
 
-const getHostVerificationSummary = (conversation: Conversation | null) => {
+type HostVerificationSummary = {
+  level: 'low' | 'medium' | 'high';
+  label: string;
+  tone: NonNullable<TrustSignal['tone']>;
+};
+
+const getHostVerificationSummary = (conversation: Conversation | null): HostVerificationSummary | null => {
   if (!conversation || (!conversation.hostTrust && typeof conversation.hostTrustScore !== 'number')) {
     return null;
   }
@@ -406,7 +412,7 @@ const getHostVerificationSummary = (conversation: Conversation | null) => {
   return {
     level: hostTrust.level,
     label: `Verificación ${levelLabel}`,
-    tone: hostTrust.level === 'high' ? 'success' : hostTrust.level === 'medium' ? 'brand' : 'neutral' as const,
+    tone: hostTrust.level === 'high' ? 'success' : hostTrust.level === 'medium' ? 'brand' : 'neutral',
   };
 };
 
@@ -847,11 +853,11 @@ export const SecureChat: React.FC<SecureChatProps> = ({
       applyConversationUpdate(updatedConversation);
       await loadMessages(activeConv.id);
       showToast(
-        successTitle ?? (acceptedMode === 'protected' ? 'Solicitud aceptada' : 'Propuesta aceptada'),
+        successTitle ?? (acceptedMode === 'protected' ? 'Seña protegida aceptada' : 'Operación libre aceptada'),
         successDescription ?? (
           acceptedMode === 'protected'
-            ? 'Ya quedó acordado. Ahora el huésped puede definir la seña desde este chat.'
-            : 'Ya quedó acordado. Ahora falta registrar la seña para dejarlo confirmado.'
+            ? 'Ya quedó acordado. La reserva quedó marcada con seña protegida y el seguimiento sigue por este chat.'
+            : 'Ya quedó acordado. Siguen coordinando por este chat y la app no interviene en pagos externos.'
         ),
         'success',
       );
@@ -928,10 +934,7 @@ export const SecureChat: React.FC<SecureChatProps> = ({
       setPendingHostCloseIntent(null);
 
       if (shouldAdvanceReservationAfterSend) {
-        await acceptActiveRequest({
-          successTitle: 'Cierre enviado',
-          successDescription: 'El chat ya quedó listo para definir la seña y seguir con la reserva.',
-        });
+        await acceptActiveRequest({ successTitle: 'Cierre enviado' });
       }
     } catch (err: any) {
       const errorMessage = err?.message || 'No pudimos enviar el mensaje. Intentá de nuevo.';
@@ -1120,7 +1123,7 @@ export const SecureChat: React.FC<SecureChatProps> = ({
         depositPaymentReference: booking.depositPaymentReference,
       });
       await loadMessages(activeConv.id);
-      showToast('Seña en la app', 'La seña quedó lista para registrarse acá. Vas a ver el fee antes de pagar.', 'success');
+      showToast('Seña protegida', 'La reserva volvió a quedar marcada con seña protegida. Por ahora no procesamos pagos dentro de la app.', 'success');
     } catch (err) {
       showToast('Seña', err instanceof Error ? err.message : 'No pudimos registrar esta elección.', 'error');
     } finally {
@@ -1161,32 +1164,6 @@ export const SecureChat: React.FC<SecureChatProps> = ({
       showToast('Reserva confirmada', 'La reserva ya quedó confirmada. Ahora solo falta coordinar la llegada.', 'success');
     } catch (err) {
       showToast('Reserva', err instanceof Error ? err.message : 'No pudimos confirmar la recepción de la seña.', 'error');
-    } finally {
-      setProcessingFlowAction(null);
-    }
-  };
-
-  const handlePayProtectedDeposit = async (bookingId: string) => {
-    if (!activeConv) {
-      return;
-    }
-
-    setProcessingFlowAction('pay-protected-deposit');
-
-    try {
-      const checkoutSession = await payProtectedDeposit(bookingId, `/chat/${activeConv.id}`);
-      applyBookingUpdate({
-        id: checkoutSession.booking.id,
-        status: checkoutSession.booking.status,
-        depositType: checkoutSession.booking.depositType,
-        depositStatus: checkoutSession.booking.depositStatus,
-        protectedDepositPricing: checkoutSession.booking.protectedDepositPricing,
-        depositPaymentReference: checkoutSession.booking.depositPaymentReference,
-      });
-      showToast('Pago de seña', 'Vas a Mercado Pago para dejar la seña registrada. Cuando se confirme, volvés a este chat.', 'info');
-      navigateToExternalUrl(checkoutSession.checkoutUrl);
-    } catch (err) {
-      showToast('Seña', err instanceof Error ? err.message : 'No pudimos abrir el pago de la seña.', 'error');
     } finally {
       setProcessingFlowAction(null);
     }
@@ -1424,6 +1401,7 @@ export const SecureChat: React.FC<SecureChatProps> = ({
   );
   const canReportDirectDeposit = Boolean(
     isTenantConversation
+    && activeRequestContext?.bookingId
     && (
       (activeRequestContext?.mode === 'direct' && flowCopy?.stage === 'request-accepted')
       || (activeRequestContext?.depositType === 'external' && flowCopy?.stage === 'external-deposit-pending')
@@ -1431,7 +1409,8 @@ export const SecureChat: React.FC<SecureChatProps> = ({
   );
   const canConfirmDirectDeposit = Boolean(isHostConversation && flowCopy?.stage === 'direct-deposit-reported');
   const canPayProtectedDeposit = Boolean(
-    isTenantConversation
+    PROTECTED_DEPOSIT_PAYMENT_ENABLED
+    && isTenantConversation
     && activeRequestContext?.bookingId
     && activeRequestContext.depositType === 'protected'
     && flowCopy?.stage === 'protected-checkout-pending',
@@ -1554,7 +1533,7 @@ export const SecureChat: React.FC<SecureChatProps> = ({
   const noAdvanceReactivationText = 'Cuando lo tengan definido, pueden dejar la reserva confirmada.';
   const derivedSafetyMessages: Message[] = (() => {
     const reminders: Message[] = [];
-    const softerChatStartText = 'Podés hablar y cerrar todo por acá. Cuando lo acuerden, después pueden avanzar con la seña.';
+    const softerChatStartText = 'Podés hablar y coordinar todo por acá sin salir de Alquiler Real.';
     const currentMessages = [...messages, ...fallbackSystemMessages];
     const existingSystemTexts = new Set(
       currentMessages
@@ -1611,6 +1590,14 @@ export const SecureChat: React.FC<SecureChatProps> = ({
   const inlineThreadNotices: InlineThreadNotice[] = [];
   const showReservationConfirmedState = isReservationConfirmedStage;
   const getSystemMessagePresentation = (message: Message): ThreadSystemMessagePresentation => {
+    if (message.system_key === 'conversation-start' && flowCopy?.stage && flowCopy.stage !== 'request-pending') {
+      return {
+        content: message.content,
+        emphasis: 'pill',
+        hidden: true,
+      };
+    }
+
     if (message.system_key === 'request-sent' && flowCopy?.stage && flowCopy.stage !== 'request-pending') {
       return {
         content: message.content,
@@ -1700,32 +1687,19 @@ export const SecureChat: React.FC<SecureChatProps> = ({
           ? 'Ahora el huésped define cómo avanzar con la seña.'
           : 'Ahora elegí cómo querés avanzar con la seña.'
         : activeRequestContext?.mode === 'protected'
-          ? canPayProtectedDeposit
             ? protectedDepositPreview
-              ? `Podés dejar la seña registrada acá: ${currencyFormatter.format(protectedDepositPreview.depositAmount)} + fee ${currencyFormatter.format(protectedDepositPreview.serviceFee)} = ${currencyFormatter.format(protectedDepositPreview.totalCharge)}.`
-              : 'Podés dejar la seña registrada acá cuando quieran cerrarlo.'
-            : 'Podés avanzar con la seña cuando lo acuerden.'
+              ? `La reserva ya quedó marcada con seña protegida. Costo estimado: ${currencyFormatter.format(protectedDepositPreview.depositAmount)} + fee ${currencyFormatter.format(protectedDepositPreview.serviceFee)} = ${currencyFormatter.format(protectedDepositPreview.totalCharge)}. Por ahora no procesamos el cobro dentro de la app.`
+              : 'La reserva ya quedó marcada con seña protegida. Por ahora solo mostramos el estado base, sin procesar pagos dentro de la app.'
           : canReportDirectDeposit
-            ? 'Cuando registres la seña, avisalo por acá para dejarlo confirmado.'
-            : 'Podés avanzar con la seña cuando lo acuerden.';
+              ? 'Si ya resolvieron algo por fuera dentro de un flujo viejo, podés dejarlo asentado por acá.'
+              : 'Siguen coordinando por este chat. La app no retiene dinero ni interviene en pagos externos.';
 
       return {
         content: 'Ya están de acuerdo.',
         emphasis: 'card',
         tone: 'brand',
         supplementaryContent,
-        action: canPayProtectedDeposit
-          ? {
-              kind: 'pay-protected-deposit',
-              label: 'Pagar seña',
-              loading: processingFlowAction === 'pay-protected-deposit',
-              onClick: () => {
-                if (activeRequestContext?.bookingId) {
-                  void handlePayProtectedDeposit(activeRequestContext.bookingId);
-                }
-              },
-            }
-          : canReportDirectDeposit
+          action: canReportDirectDeposit
             ? {
                 kind: 'report-direct-deposit',
                 label: 'Registrar seña',
@@ -1738,12 +1712,12 @@ export const SecureChat: React.FC<SecureChatProps> = ({
 
     if (message.system_key === 'external-deposit' && flowCopy?.stage === 'external-deposit-pending') {
       return {
-        content: 'Seña por fuera',
+        content: 'Operación libre',
         emphasis: 'card',
         tone: 'neutral',
         supplementaryContent: isHostConversation
-          ? 'Si cambian de idea antes de informarla, el huésped puede dejarla registrada acá.'
-          : 'La coordinan por chat. Si cambiás de idea, todavía podés dejarla registrada acá.',
+          ? 'La coordinación sigue por chat y la app no interviene en pagos externos.'
+          : 'La coordinación sigue por chat y la app no interviene en pagos externos.',
         action: canReturnToProtectedDeposit
           ? {
               kind: 'select-protected-deposit',

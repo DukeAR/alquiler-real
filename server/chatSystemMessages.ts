@@ -43,14 +43,14 @@ export type ChatSystemMessageContext = {
 };
 
 export const CHAT_SYSTEM_MESSAGE_COPY: Record<ChatSystemMessageKey, string> = {
-  'conversation-start': 'Podés hablar y cerrar todo por acá. Cuando lo acuerden, después pueden avanzar con la seña.',
+  'conversation-start': 'Podés hablar y coordinar todo por acá sin salir de Alquiler Real.',
   'request-sent': 'La propuesta ya quedó enviada en el chat.',
   'request-not-advanced': 'No se pudo avanzar con esta reserva.',
   'request-accepted': 'Ya están de acuerdo. Falta resolver la seña.',
   'before-payment': 'Antes de transferir, verificá que el titular coincida.',
   'deposit-choice': 'Cómo querés avanzar con la seña.',
-  'protected-payment': 'Si elegís dejarla acá, queda registrada dentro de la app.',
-  'external-deposit': 'Eligieron coordinar la seña por fuera. Si cambian de idea, todavía pueden resolverla acá.',
+  'protected-payment': 'La reserva quedó marcada con seña protegida. Por ahora no procesamos pagos dentro de la app.',
+  'external-deposit': 'Esta reserva quedó en operación libre. Toda la coordinación sigue por chat y la app no interviene en pagos externos.',
   'direct-after-payment': 'Seña registrada. Falta confirmar la recepción.',
   'protected-after-payment': 'Seña registrada. Ya pueden coordinar la llegada por el chat.',
   'before-arrival': 'Ya pueden coordinar horario y llegada por acá.',
@@ -146,15 +146,15 @@ export const getRequestSentMessage = (mode: ReservationRequestMode) => (
 );
 
 export const getRequestAcceptedMessage = (mode: ReservationRequestMode, depositType?: ReservationDepositType | null) => {
-  if (mode === 'protected' && depositType !== 'protected') {
-    return 'Ya están de acuerdo. Ahora falta definir la seña.';
+  if (mode === 'protected' && depositType === 'external') {
+    return 'Ya están de acuerdo. La coordinación sigue como operación libre por este chat.';
   }
 
   if (mode === 'protected') {
-    return 'Ya están de acuerdo. Ahora falta dejar la seña registrada.';
+    return 'Ya están de acuerdo. La reserva quedó marcada con seña protegida.';
   }
 
-  return 'Ya están de acuerdo. Ahora falta registrar la seña.';
+  return 'Ya están de acuerdo. Siguen coordinando por este chat.';
 };
 
 export const getRequestNotAdvancedMessage = () => CHAT_SYSTEM_MESSAGE_COPY['request-not-advanced'];
@@ -205,16 +205,10 @@ export const getChatSystemMessages = (context: ChatSystemMessageContext): ChatSy
   const externalDepositCoordination = depositType === 'external' && depositStatus !== null && EXTERNAL_COORDINATION_STATUSES.has(depositStatus);
   const hasDirectArrivalCoordinationStage = mode === 'direct' && depositStatus === 'confirmed' && context.bookingStatus === 'confirmed';
   const hasProtectedArrivalCoordinationStage = depositType === 'protected' && depositStatus === 'held' && context.bookingStatus === 'confirmed';
-  const hasDepositChoiceStage = mode === 'protected'
+  const hasProtectedSetupStage = mode === 'protected'
     && requestStatus === 'accepted'
     && context.bookingStatus === 'confirmed'
-    && depositType === null
-    && depositStatus === null;
-  const isBeforePaymentStage = requestStatus === 'accepted'
-    && context.bookingStatus !== 'cancelled'
-    && context.bookingStatus !== 'completed'
-    && !directAfterPayment
-    && !externalDepositCoordination
+    && depositType !== 'external'
     && !protectedAfterPayment;
   const hasArrivalCoordinationStage = hasDirectArrivalCoordinationStage || hasProtectedArrivalCoordinationStage;
   const hasProtectedArrivalConfirmationStage = depositType === 'protected'
@@ -243,23 +237,11 @@ export const getChatSystemMessages = (context: ChatSystemMessageContext): ChatSy
     });
   }
 
-  if (isBeforePaymentStage) {
+  if (hasProtectedSetupStage) {
     messages.push({
-      key: 'before-payment',
-      content: CHAT_SYSTEM_MESSAGE_COPY['before-payment'],
+      key: 'protected-payment',
+      content: CHAT_SYSTEM_MESSAGE_COPY['protected-payment'],
     });
-
-    if (hasDepositChoiceStage) {
-      messages.push({
-        key: 'deposit-choice',
-        content: CHAT_SYSTEM_MESSAGE_COPY['deposit-choice'],
-      });
-    } else if (depositType === 'protected') {
-      messages.push({
-        key: 'protected-payment',
-        content: CHAT_SYSTEM_MESSAGE_COPY['protected-payment'],
-      });
-    }
   }
 
   if (externalDepositCoordination) {

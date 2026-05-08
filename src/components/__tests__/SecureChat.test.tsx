@@ -203,11 +203,13 @@ describe('SecureChat', () => {
     expect(setIntervalSpy).toHaveBeenCalledWith(expect.any(Function), 15_000);
   });
 
-  test('lets the guest report a direct deposit from an inline system message in the thread', async () => {
+  test('lets the guest report a direct deposit from an inline system message in a legacy booking-backed flow', async () => {
     useAuthMock.mockReturnValue({ user: { id: 'tenant-1' } });
     fetchConversationsMock.mockResolvedValue([
       {
         ...baseConversation,
+        booking_id: 'booking-direct-legacy-1',
+        bookingStatus: 'confirmed',
         requestMode: 'direct',
         requestStatus: 'accepted',
         requestStartDate: '2026-05-10',
@@ -219,6 +221,8 @@ describe('SecureChat', () => {
     fetchMessagesMock.mockResolvedValue([]);
     reportDirectDepositMock.mockResolvedValue({
       ...baseConversation,
+      booking_id: 'booking-direct-legacy-1',
+      bookingStatus: 'confirmed',
       requestMode: 'direct',
       requestStatus: 'accepted',
       depositStatus: 'reported',
@@ -231,8 +235,8 @@ describe('SecureChat', () => {
     renderChat();
 
     expect(await screen.findByText('Ya están de acuerdo.')).toBeInTheDocument();
-    expect(screen.getByText('Cuando registres la seña, avisalo por acá para dejarlo confirmado.')).toBeInTheDocument();
-    expect(screen.getByText('Estado: Pendiente seña')).toBeInTheDocument();
+    expect(screen.getByText('Si ya resolvieron algo por fuera dentro de un flujo viejo, podés dejarlo asentado por acá.')).toBeInTheDocument();
+    expect(screen.getByText('Estado: Operación libre')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Registrar seña/i }));
 
@@ -308,12 +312,24 @@ describe('SecureChat', () => {
         requestTotalPrice: 320000,
       },
     ]);
-    fetchMessagesMock.mockResolvedValue([]);
+    fetchMessagesMock.mockResolvedValue([
+      {
+        id: 'msg-system-conversation-start',
+        conversation_id: 'conv-1',
+        sender_id: 'host-1',
+        receiver_id: 'tenant-1',
+        content: 'Podés hablar y cerrar todo por acá. Cuando lo acuerden, después pueden avanzar con la seña.',
+        is_system: true,
+        system_key: 'conversation-start',
+        created_at: '2026-04-06T11:05:00.000Z',
+      },
+    ]);
 
     renderChat();
 
     expect(await screen.findByText('Estado: Confirmada')).toBeInTheDocument();
     expect(screen.getByText('Todo listo para esas fechas')).toBeInTheDocument();
+    expect(screen.queryByText('Podés hablar y cerrar todo por acá. Cuando lo acuerden, después pueden avanzar con la seña.')).not.toBeInTheDocument();
     expect(screen.queryByText('Estado: Pendiente seña')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Registrar seña/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Pagar seña/i })).not.toBeInTheDocument();
@@ -386,10 +402,10 @@ describe('SecureChat', () => {
     expect(screen.getByText('Sin mensajes')).toBeInTheDocument();
     expect(screen.getByText('Responde en ~18 min')).toBeInTheDocument();
     expect(screen.getByText('En la plataforma desde feb 2022')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '¿Está disponible?' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '¿Aceptan mascotas?' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '¿Qué incluye?' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '¿Cómo es la zona?' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: '¿Está disponible?' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: '¿Aceptan mascotas?' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: '¿Qué incluye?' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: '¿Cómo es la zona?' })).toBeInTheDocument();
     expect(screen.queryByText('Ya interactuaron antes sin inconvenientes')).not.toBeInTheDocument();
     expect(screen.queryByText('Identidad confirmada')).not.toBeInTheDocument();
     expect(screen.queryByText('Historial de reservas')).not.toBeInTheDocument();
@@ -668,14 +684,15 @@ describe('SecureChat', () => {
     });
 
     expect(await screen.findByText('Ya están de acuerdo.')).toBeInTheDocument();
-    expect(screen.getByText('Ahora el huésped define cómo avanzar con la seña.')).toBeInTheDocument();
-    expect(screen.getByText('Cómo sigue la seña')).toBeInTheDocument();
-    expect(screen.getByText('La elección del huésped queda visible dentro de este chat.')).toBeInTheDocument();
-    expect(screen.getByText('Registrada acá')).toBeInTheDocument();
-    expect(screen.getByText('Por fuera (más manual)')).toBeInTheDocument();
+    expect(screen.getByText(/La reserva ya quedó marcada con seña protegida\./i)).toBeInTheDocument();
+    expect(screen.getByText(/Por ahora no procesamos el cobro dentro de la app\./i)).toBeInTheDocument();
+    expect(screen.getByText('Estado: Seña protegida')).toBeInTheDocument();
+    expect(screen.queryByText('Cómo sigue la seña')).not.toBeInTheDocument();
+    expect(screen.queryByText('Registrada acá')).not.toBeInTheDocument();
+    expect(screen.queryByText('Por fuera (más manual)')).not.toBeInTheDocument();
     expect(showToastMock).toHaveBeenCalledWith(
       'Cierre enviado',
-      'El chat ya quedó listo para definir la seña y seguir con la reserva.',
+      'Ya quedó acordado. La reserva quedó marcada con seña protegida y el seguimiento sigue por este chat.',
       'success',
     );
   });
@@ -740,7 +757,7 @@ describe('SecureChat', () => {
     expect(screen.queryByText('Elegí una conversación para ver el historial')).not.toBeInTheDocument();
   });
 
-  test('advances a protected reservation from an inline payment step in the thread', async () => {
+  test('shows the protected base state after a protected request is accepted', async () => {
     const arrivalDate = getRelativeArgentinaDate(0);
     const departureDate = getRelativeArgentinaDate(4);
 
@@ -759,106 +776,17 @@ describe('SecureChat', () => {
       },
     ]);
     fetchMessagesMock.mockResolvedValue([]);
-    selectProtectedDepositMock.mockResolvedValue({
-      id: 'booking-1',
-      status: 'confirmed',
-      requestMode: 'protected',
-      depositType: 'protected',
-      depositStatus: null,
-    });
-    payProtectedDepositMock.mockResolvedValue({
-      booking: {
-        id: 'booking-1',
-        status: 'confirmed',
-        requestMode: 'protected',
-        depositType: 'protected',
-        depositStatus: 'held',
-        protectedDepositPricing: null,
-        depositPaymentReference: 'checkout-1',
-      },
-      checkoutUrl: 'https://example.com/checkout/booking-1',
-    });
 
     renderChat();
 
     expect(await screen.findByText('Ya están de acuerdo.')).toBeInTheDocument();
-    expect(screen.getByText('Cómo querés avanzar con la seña')).toBeInTheDocument();
-    expect(
-      await screen.findByText(
-        'Elegí la opción que mejor les cierre. La diferencia importante es qué queda registrado dentro de la app.',
-        { selector: 'p' },
-      )
-    ).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Dejarla registrada acá/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Coordinarla por fuera/i })).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: /Dejarla registrada acá/i }));
-
-    await waitFor(() => {
-      expect(selectProtectedDepositMock).toHaveBeenCalledWith('booking-1');
-    });
-
-    expect(await screen.findByText('Ya están de acuerdo.')).toBeInTheDocument();
-    expect(screen.getByText(/Podés dejar la seña registrada acá/i)).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: /Pagar seña/i }));
-
-    await waitFor(() => {
-      expect(payProtectedDepositMock).toHaveBeenCalledWith('booking-1', '/chat/conv-1');
-    });
-
-    expect(await screen.findByText('Estado: Seña registrada')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Confirmar llegada/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Coordinar llegada/i })).toBeInTheDocument();
-  });
-
-  test('lets the guest choose external coordination in one step from the deposit chooser', async () => {
-    useAuthMock.mockReturnValue({ user: { id: 'tenant-1' } });
-    fetchConversationsMock.mockResolvedValue([
-      {
-        ...baseConversation,
-        booking_id: 'booking-direct-choice-1',
-        bookingStatus: 'confirmed',
-        requestMode: 'protected',
-        requestStatus: 'accepted',
-        requestStartDate: '2026-05-10',
-        requestEndDate: '2026-05-14',
-        requestGuests: 2,
-        requestTotalPrice: 410000,
-      },
-    ]);
-    fetchMessagesMock.mockResolvedValue([]);
-    selectExternalDepositMock.mockResolvedValue({
-      id: 'booking-direct-choice-1',
-      status: 'confirmed',
-      requestMode: 'protected',
-      depositType: 'external',
-      depositStatus: 'external_pending',
-    });
-
-    renderChat();
-
-    expect(await screen.findByText('Cómo querés avanzar con la seña')).toBeInTheDocument();
-    expect(
-      await screen.findByText(
-        'Elegí la opción que mejor les cierre. La diferencia importante es qué queda registrado dentro de la app.',
-        { selector: 'p' },
-      )
-    ).toBeInTheDocument();
-    expect(screen.getByText('Coordinarla por fuera (más manual)')).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: /Coordinarla por fuera/i }));
-
-    await waitFor(() => {
-      expect(selectExternalDepositMock).toHaveBeenCalledWith('booking-direct-choice-1');
-    });
-
-    expect(await screen.findByText('Seña por fuera')).toBeInTheDocument();
-    expect(showToastMock).toHaveBeenCalledWith(
-      'Seña externa',
-      'Quedó como coordinación por fuera. Si cambiás de idea antes de informarla, podés dejarla registrada desde esta conversación.',
-      'success',
-    );
+    expect(screen.getByText(/La reserva ya quedó marcada con seña protegida\./i)).toBeInTheDocument();
+    expect(screen.getByText(/Por ahora no procesamos el cobro dentro de la app\./i)).toBeInTheDocument();
+    expect(screen.getByText('Estado: Seña protegida')).toBeInTheDocument();
+    expect(screen.queryByText('Cómo querés avanzar con la seña')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Pagar seña/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Dejarla registrada acá/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Coordinarla por fuera/i })).not.toBeInTheDocument();
   });
 
   test('keeps a protected return action visible after the guest chooses external coordination', async () => {
@@ -892,7 +820,7 @@ describe('SecureChat', () => {
 
     renderChat();
 
-    expect(await screen.findByText('Seña por fuera')).toBeInTheDocument();
+    expect(await screen.findByText('La coordinación sigue por chat y la app no interviene en pagos externos.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Dejarla registrada acá/i })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Dejarla registrada acá/i }));
@@ -902,8 +830,8 @@ describe('SecureChat', () => {
     });
 
     expect(showToastMock).toHaveBeenCalledWith(
-      'Seña en la app',
-      'La seña quedó lista para registrarse acá. Vas a ver el fee antes de pagar.',
+      'Seña protegida',
+      'La reserva volvió a quedar marcada con seña protegida. Por ahora no procesamos pagos dentro de la app.',
       'success',
     );
   });
@@ -1176,11 +1104,11 @@ describe('SecureChat', () => {
       expect(acceptConversationRequestMock).toHaveBeenCalledWith('conv-1');
     });
 
-    expect(screen.getByText('Estado: Pendiente seña')).toBeInTheDocument();
+    expect(screen.getByText('Estado: Operación libre')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Aceptar propuesta/i })).not.toBeInTheDocument();
     expect(showToastMock).toHaveBeenCalledWith(
-      'Propuesta aceptada',
-      'Ya quedó acordado. Ahora falta registrar la seña para dejarlo confirmado.',
+      'Operación libre aceptada',
+      'Ya quedó acordado. Siguen coordinando por este chat y la app no interviene en pagos externos.',
       'success',
     );
   });

@@ -368,7 +368,7 @@ describe('MyBookings', () => {
     );
   });
 
-  test('shows the deposit choice step and lets the guest complete the protected path', async () => {
+  test('shows the protected base state without payment actions', async () => {
     apiJsonMock.mockResolvedValue([
       {
         id: 'booking-protected-1',
@@ -434,52 +434,17 @@ describe('MyBookings', () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findAllByText('Pendiente seña')).not.toHaveLength(0);
-    expect(screen.getByText('Ya acordaron seguir. Ahora podés elegir cómo avanzar con la seña.')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Antes de elegir la seña' })).toBeInTheDocument();
-    expect(screen.getByText('La app no registra ese pago ni interviene sobre conflictos, devoluciones o incumplimientos vinculados a ese tramo externo.')).toBeInTheDocument();
+    expect(await screen.findAllByText('Seña protegida')).not.toHaveLength(0);
+    expect(screen.queryByText('Pendiente seña')).not.toBeInTheDocument();
+    expect(screen.getByText('La reserva ya quedó marcada con seña protegida. Por ahora solo ves el costo por operación y el estado base: el cobro todavía no se procesa dentro de la app.')).toBeInTheDocument();
+    expect(screen.getByText('Qué implica la seña protegida')).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /Abrir chat/i }).length).toBeGreaterThan(0);
-    expect(screen.getByRole('button', { name: /Coordinarla por fuera/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Dejarla registrada acá/i })).toBeInTheDocument();
-    expect(screen.getByText('Coordinarla por fuera (más manual)')).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: /Coordinarla por fuera/i }));
-
     expect(selectExternalDepositMock).not.toHaveBeenCalled();
-    expect(screen.getByRole('button', { name: /Seguir por fuera/i })).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: /^Volver$/i }));
-
-    fireEvent.click(screen.getByRole('button', { name: /Dejarla registrada acá/i }));
-
-    await waitFor(() => {
-      expect(selectProtectedDepositMock).toHaveBeenCalledWith('booking-protected-1');
-    });
-
-    expect(await screen.findAllByText('Pendiente seña')).not.toHaveLength(0);
-    expect(
-      await screen.findByText(/Falta el pago para dejarla registrada\./i)
-    ).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Pagar seña/i })).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: /Pagar seña/i }));
-
-    await waitFor(() => {
-      expect(payProtectedDepositMock).toHaveBeenCalledWith('booking-protected-1', '/my-bookings');
-    });
-
-    expect(await screen.findAllByText('Seña registrada')).not.toHaveLength(0);
-    expect(screen.getAllByText('Ahora ya podés coordinar la llegada por el chat.')).not.toHaveLength(0);
-    expect(showToastMock).toHaveBeenCalledWith(
-      'Seña en la app',
-      'La seña quedó lista para registrarse acá. Vas a ver el fee antes de pagar.',
-      'success',
-    );
-    expect(showToastMock).toHaveBeenCalledWith(
-      'Pago de seña',
-      'Vas a Mercado Pago para dejar la seña registrada. Cuando se confirme, volvés a esta reserva.',
-      'info',
-    );
+    expect(selectProtectedDepositMock).not.toHaveBeenCalled();
+    expect(payProtectedDepositMock).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: /Coordinarla por fuera/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Dejarla registrada acá/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Pagar seña/i })).not.toBeInTheDocument();
   });
 
   test('keeps a visible return to protected deposit after external coordination is selected', async () => {

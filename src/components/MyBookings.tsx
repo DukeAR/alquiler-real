@@ -54,6 +54,7 @@ import { AccountModeSwitch } from './ui/AccountModeSwitch';
 const UPCOMING_STAY_WINDOW_DAYS = 21;
 const RECENT_CONVERSATION_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
+const PROTECTED_DEPOSIT_PAYMENT_ENABLED = false;
 
 const RESERVATIONS_SECTION_ID = 'guest-dashboard-reservations';
 const SAVED_SECTION_ID = 'guest-dashboard-saved';
@@ -802,7 +803,7 @@ export const MyBookings = () => {
   const contractActionBooking = bookings.find((booking) => Boolean(booking.contractJson) && !booking.contractAccepted) ?? null;
   const depositActionBooking = bookings.find((booking) => {
     const stage = getBookingFlow(booking).stage;
-    return stage === 'deposit-choice' || stage === 'protected-checkout-pending' || stage === 'request-accepted';
+    return booking.requestMode === 'protected' && (stage === 'deposit-choice' || stage === 'protected-checkout-pending' || stage === 'request-accepted');
   }) ?? null;
   const pendingResponseBooking = bookings.find((booking) => getBookingFlow(booking).stage === 'request-pending') ?? null;
 
@@ -830,11 +831,11 @@ export const MyBookings = () => {
     id: `deposit-${depositActionBooking.id}`,
     eyebrow: 'Tu paso pendiente',
     title: getBookingFlow(depositActionBooking).stage === 'deposit-choice'
-      ? `Elegí cómo resolver la seña de ${depositActionBooking.propertyTitle || 'esta reserva'}`
-      : `Pagá la seña de ${depositActionBooking.propertyTitle || 'esta reserva'}`,
+      ? `Revisá cómo sigue la seña de ${depositActionBooking.propertyTitle || 'esta reserva'}`
+      : `Seguimiento de seña protegida para ${depositActionBooking.propertyTitle || 'esta reserva'}`,
     description: getBookingFlow(depositActionBooking).stage === 'deposit-choice'
-      ? 'El anfitrión ya aceptó. Ahora definís si la seña queda registrada acá o si la coordinan por fuera.'
-      : 'Ya eligieron resolver la seña en la app. Falta el pago para dejarla registrada.',
+      ? 'La reserva sigue con la vieja elección de seña. Revisala desde la reserva para ver el estado actual.'
+      : 'La reserva ya quedó marcada con seña protegida y por ahora solo muestra el estado base, sin procesar pagos dentro de la app.',
     actionLabel: 'Ver solicitud',
     icon: <Icons.ShieldCheck className="h-5 w-5" />,
     onAction: () => scrollToBooking(depositActionBooking.id),
@@ -916,7 +917,7 @@ export const MyBookings = () => {
     const bookingFlow = getBookingFlow(booking);
     const protectedDepositPricing = booking.protectedDepositPricing ?? getProtectedDepositPricingFromBooking(booking);
     const showReservationFlowPanel = Boolean(booking.requestMode && bookingFlow.stage && bookingFlow.stage !== 'reservation-confirmed');
-    const showBookingQuickGuide = bookingFlow.stage === 'deposit-choice' || bookingFlow.stage === 'external-deposit-pending' || bookingFlow.stage === 'request-accepted' || bookingFlow.stage === 'protected-checkout-pending';
+    const showBookingQuickGuide = booking.requestMode === 'protected' && (bookingFlow.stage === 'deposit-choice' || bookingFlow.stage === 'external-deposit-pending' || bookingFlow.stage === 'request-accepted' || bookingFlow.stage === 'protected-checkout-pending');
     const isSelectingExternalDeposit = processingBookingAction?.bookingId === booking.id && processingBookingAction.action === 'select-external-deposit';
     const isSelectingProtectedDeposit = processingBookingAction?.bookingId === booking.id && processingBookingAction.action === 'select-protected-deposit';
     const isPayingDeposit = processingBookingAction?.bookingId === booking.id && processingBookingAction.action === 'pay-deposit';
@@ -950,13 +951,9 @@ export const MyBookings = () => {
                   <Badge variant={getBookingStatusVariant(booking)} size="md">{getBookingStatusText(booking)}</Badge>
                   {booking.requestMode ? (
                     <Badge variant="neutral" size="md">
-                      {booking.requestMode === 'direct'
-                        ? 'Acuerdo directo'
-                        : booking.depositType === 'external'
-                          ? 'Seña externa'
-                          : booking.depositType === 'protected'
-                            ? 'Seña en la app'
-                            : 'Solicitud registrada'}
+                      {booking.depositType === 'external' || booking.requestMode === 'direct'
+                        ? 'Operación libre'
+                        : 'Seña protegida'}
                     </Badge>
                   ) : null}
                   {booking.contractAccepted ? <Badge variant="success" size="md">Condiciones firmadas</Badge> : null}
@@ -1181,7 +1178,7 @@ export const MyBookings = () => {
                     </div>
                   ) : null}
 
-                  {bookingFlow.stage === 'protected-checkout-pending' && !protectedDepositPricing ? (
+                  {bookingFlow.stage === 'protected-checkout-pending' && !protectedDepositPricing && PROTECTED_DEPOSIT_PAYMENT_ENABLED ? (
                     <Button
                       type="button"
                       size="sm"
@@ -1232,7 +1229,7 @@ export const MyBookings = () => {
                 </div>
               </div>
 
-              {bookingFlow.stage === 'protected-checkout-pending' && protectedDepositPricing ? (
+              {bookingFlow.stage === 'protected-checkout-pending' && protectedDepositPricing && PROTECTED_DEPOSIT_PAYMENT_ENABLED ? (
                 <DepositChoiceBlock
                   className="mt-4"
                   title="Cómo querés avanzar con la seña"
@@ -1258,6 +1255,12 @@ export const MyBookings = () => {
                 />
               ) : null}
 
+              {bookingFlow.stage === 'protected-checkout-pending' && !PROTECTED_DEPOSIT_PAYMENT_ENABLED ? (
+                <div className="mt-4 rounded-[20px] border border-white/80 bg-white/80 px-4 py-3 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-300">
+                  La reserva ya quedó marcada con seña protegida. Por ahora solo ves el costo por operación y el estado base: el cobro todavía no se procesa dentro de la app.
+                </div>
+              ) : null}
+
               {bookingFlow.stage === 'protected-deposit-held' && !arrivalActionsAvailable ? (
                 <div className="mt-4 rounded-[20px] border border-white/80 bg-white/80 px-4 py-3 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-300">
                   {bookingFlow.pendingActionHint}
@@ -1267,8 +1270,8 @@ export const MyBookings = () => {
               {showBookingQuickGuide ? (
                 <PlatformTermsQuickGuide
                   eyebrow="Guía corta"
-                  title="Antes de elegir la seña"
-                  description="Lo esencial para saber qué queda dentro de la app, qué se coordina por fuera y en qué casos la plataforma puede revisar un problema."
+                  title="Qué implica la seña protegida"
+                  description="Lo esencial para entender cuándo la app protege la seña, qué sigue fuera de la plataforma y en qué casos puede intervenir una revisión manual."
                   density="compact"
                   showLink
                   className="mt-4"

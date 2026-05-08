@@ -8,7 +8,7 @@ import { Card } from './ui/Card';
 import { NoticeBanner } from './ui/NoticeBanner';
 import { SectionTitle } from './ui/SectionTitle';
 import { formatBookingDateOnly } from '../lib/bookingDates';
-import { PLATFORM_DIRECT_FLOW_NOTE, PLATFORM_PROTECTED_FLOW_NOTE, PLATFORM_PROPERTY_DISCLAIMER } from '../lib/platformTerms';
+import { PLATFORM_PROPERTY_DISCLAIMER } from '../lib/platformTerms';
 
 type DecisionItemProps = {
   icon: React.ComponentType<{ className?: string }>;
@@ -120,8 +120,8 @@ const BookingConfirmationModal: React.FC<Props> = ({
 
   const activeNotice = submitNotice ?? {
     tone: 'info' as const,
-    heading: 'Elegí cómo querés seguir con estas fechas',
-    description: 'Podés abrir un acuerdo directo por chat o dejar una solicitud en la app. La diferencia importante es qué queda registrado y hasta dónde puede ayudar la plataforma.',
+    heading: 'Elegí cómo querés operar esta reserva',
+    description: 'Podés abrir una operación libre para coordinar por chat o dejar marcada una seña protegida. Por ahora solo mostramos la estructura y el estado base: todavía no procesamos pagos dentro de la app.',
   };
 
   useEffect(() => {
@@ -146,7 +146,7 @@ const BookingConfirmationModal: React.FC<Props> = ({
   if (!shouldRender) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6">
       <div
         className={`absolute inset-0 bg-slate-950/60 backdrop-blur-sm transition-opacity duration-200 ease-out ${visible ? 'opacity-100' : 'opacity-0'}`}
         onClick={() => {
@@ -175,7 +175,7 @@ const BookingConfirmationModal: React.FC<Props> = ({
               <div className="flex flex-wrap gap-2">
                 <Badge variant="brand" size="md" className="gap-2">
                   <Icons.MessageSquare className="h-3.5 w-3.5" />
-                  <span>Propuesta lista para enviar</span>
+                  <span>Modalidad lista para elegir</span>
                 </Badge>
                 <Badge variant="neutral" size="md" className="gap-2">
                   <Icons.Clock className="h-3.5 w-3.5" />
@@ -190,8 +190,8 @@ const BookingConfirmationModal: React.FC<Props> = ({
               <SectionTitle
                 as="h3"
                 visualLevel="h3"
-                heading="Elegí cómo querés avanzar con esta estadía"
-                description="Las fechas, huéspedes y total ya reflejan tu selección actual. Ahora definí si querés abrir un acuerdo directo por chat o dejar una solicitud en la app."
+                heading="Elegí cómo querés operar esta estadía"
+                description="Las fechas, huéspedes y total ya reflejan tu selección actual. Ahora definí si querés coordinar libremente por chat o dejar la reserva marcada con seña protegida."
                 headingClassName="font-semibold tracking-tight"
                 className="pr-2"
               />
@@ -219,11 +219,11 @@ const BookingConfirmationModal: React.FC<Props> = ({
                 <div className="space-y-2">
                   <Badge variant="neutral" size="md" className="gap-2">
                     <Icons.MessageSquare className="h-3.5 w-3.5" />
-                    <span>Acuerdo directo</span>
+                    <span>Operación libre</span>
                   </Badge>
-                  <p className="text-base font-semibold text-slate-950">Mandás una propuesta por chat</p>
+                  <p className="text-base font-semibold text-slate-950">Coordinan por chat</p>
                   <p className="text-sm leading-6 text-slate-600">
-                    Sirve si querés conversar primero. Las fechas no se bloquean y {PLATFORM_DIRECT_FLOW_NOTE.toLowerCase()}
+                    Sirve si quieren conversar primero. Las fechas no se bloquean, la app no retiene dinero y no interviene sobre pagos o señas coordinados por fuera.
                   </p>
                 </div>
 
@@ -236,7 +236,7 @@ const BookingConfirmationModal: React.FC<Props> = ({
                   loadingLabel="Abriendo chat..."
                   disabled={isBusy && actionLoadingMode !== 'direct'}
                 >
-                  Enviar propuesta por chat
+                  Iniciar operación libre
                 </Button>
               </div>
             </Card>
@@ -246,11 +246,11 @@ const BookingConfirmationModal: React.FC<Props> = ({
                 <div className="space-y-2">
                   <Badge variant="brand" size="md" className="gap-2">
                     <Icons.ShieldCheck className="h-3.5 w-3.5" />
-                    <span>Solicitud en la app</span>
+                    <span>Seña protegida</span>
                   </Badge>
-                  <p className="text-base font-semibold text-slate-950">La solicitud queda pendiente en la app</p>
+                  <p className="text-base font-semibold text-slate-950">La app deja la reserva marcada con seña protegida</p>
                   <p className="text-sm leading-6 text-slate-600">
-                    Conviene si querés dejar fechas, huéspedes y total asentados desde ahora mientras esperás la respuesta del anfitrión. {PLATFORM_PROTECTED_FLOW_NOTE}
+                    Conviene si querés dejar la protección elegida desde ahora. La app va a retener la seña solo en este modo, suma un costo por operación y prevé liberarla después del check-in doble o pasarla a revisión manual si hace falta.
                   </p>
                 </div>
 
@@ -260,10 +260,10 @@ const BookingConfirmationModal: React.FC<Props> = ({
                   size="lg"
                   className="mt-auto rounded-2xl"
                   loading={actionLoadingMode === 'protected'}
-                  loadingLabel="Enviando solicitud..."
+                  loadingLabel="Armando seña protegida..."
                   disabled={isBusy && actionLoadingMode !== 'protected'}
                 >
-                  Enviar solicitud en la app
+                  Elegir seña protegida
                 </Button>
               </div>
             </Card>

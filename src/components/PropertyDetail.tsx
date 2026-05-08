@@ -31,6 +31,7 @@ import { TrustSignalsInline, getTrustSignalsFromInteractionHistory, getTrustSign
 import { PropertyVerificationPanel } from './verification/PropertyVerificationPanel';
 import { VerificationInfoPanel } from './verification/VerificationInfoPanel';
 import { ReportModal } from './ReportModal';
+import BookingConfirmationModal from './BookingConfirmationModal';
 
 const FALLBACK = 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=1200&q=80&auto=format&fit=crop';
 
@@ -76,7 +77,7 @@ type PropertyReviewItem = {
 
 type PropertyDetailFlowOverrides = {
   createBooking?: (payload: BookingCreatePayload) => Promise<BookingCreateResult>;
-  prepareConversationForRequest?: (requestContext: ReservationRequestContext, bookingId: string) => Promise<{
+  prepareConversationForRequest?: (requestContext: ReservationRequestContext, bookingId?: string) => Promise<{
     conversationId: string;
     requestCreatedAt: string;
   }>;
@@ -248,7 +249,7 @@ const BOOKING_STEP_CONFIG: BookingStepConfig[] = [
   {
     key: 'confirm',
     title: 'Revisá antes de enviarla',
-    description: 'Revisá el resumen y mandá la solicitud. La seña recién se define si el anfitrión acepta.',
+    description: 'Revisá el resumen y elegí si querés seguir con operación libre o con seña protegida.',
     shortLabel: 'Resumen',
     icon: Icons.CheckCircle2,
   },
@@ -258,8 +259,8 @@ const BOOKING_STEP_COUNT = BOOKING_STEP_CONFIG.length;
 
 const REQUEST_CONFIRMATION_NOTICE: BookingConfirmationNotice = {
   tone: 'info',
-  heading: 'La seña se define después',
-  description: 'Si el anfitrión acepta, elegís si la dejás registrada acá o si la coordinás por fuera.',
+  heading: 'La modalidad se elige en el siguiente paso',
+  description: 'Operación libre abre el chat sin bloquear fechas. Seña protegida deja la reserva marcada con el flujo protegido desde ahora, pero todavía sin procesar pagos dentro de la app.',
 };
 
 type DetailVerificationVisibleLevel = 'none' | 'identity' | 'presencial';
@@ -489,6 +490,7 @@ export const PropertyDetailShell: React.FC<{
   const [adults, setAdults] = useState<number>(1);
   const [childrenCount, setChildrenCount] = useState<number>(0);
   const [bookingFlowOpen, setBookingFlowOpen] = useState(false);
+  const [bookingDecisionOpen, setBookingDecisionOpen] = useState(false);
   const [bookingStep, setBookingStep] = useState<BookingStep>('dates');
   const [bookingError, setBookingError] = useState<BookingErrorState | null>(null);
   const [bookingSubmitMode, setBookingSubmitMode] = useState<ReservationRequestMode | null>(null);
@@ -627,7 +629,7 @@ export const PropertyDetailShell: React.FC<{
     : bookingStep === 'guests'
       ? 'Seguir al resumen'
       : bookingStep === 'confirm'
-        ? 'Enviar solicitud'
+        ? 'Elegir modalidad'
         : 'Continuar';
   const mobilePrimaryActionDisabled = bookingStep === 'confirm'
     ? !canReserve || bookingSubmitMode !== null
@@ -656,6 +658,7 @@ export const PropertyDetailShell: React.FC<{
     setCheckOut('');
     setAdults(1);
     setChildrenCount(0);
+    setBookingDecisionOpen(false);
     setBookingFlowOpen(false);
     setBookingStep('dates');
   };
@@ -667,6 +670,11 @@ export const PropertyDetailShell: React.FC<{
 
   const handleCloseBookingEntry = () => {
     if (bookingSubmitMode !== null) {
+      return;
+    }
+
+    if (bookingDecisionOpen) {
+      setBookingDecisionOpen(false);
       return;
     }
 
@@ -774,7 +782,7 @@ export const PropertyDetailShell: React.FC<{
       document.body.style.overflow = previousOverflow;
       window.removeEventListener('keydown', onKeyDown);
     };
-  }, [bookingFlowOpen, bookingSubmitMode]);
+  }, [bookingDecisionOpen, bookingFlowOpen, bookingSubmitMode]);
 
   useEffect(() => {
     if (!bookingFlowOpen || bookingStep !== 'dates' || !pendingDatePickerOpenRef.current) {
@@ -815,6 +823,7 @@ export const PropertyDetailShell: React.FC<{
   };
 
   const goToBookingStep = (nextStep: BookingStep) => {
+    setBookingDecisionOpen(false);
     setBookingStep(nextStep);
   };
 
@@ -920,41 +929,46 @@ export const PropertyDetailShell: React.FC<{
     }
   };
 
-  const submitReservationRequest = async () => {
-    if (bookingSubmitMode) {
-      return;
-    }
+  const validateReservationDraft = () => {
     if (!checkIn && !checkOut) {
       setBookingError({ field: 'dates', message: 'Elegí ingreso y salida para seguir.' });
-      return;
+      return false;
     }
     if (checkIn && !checkOut) {
       setBookingError({ field: 'dates', message: 'Elegí la salida para seguir.' });
-      return;
+      return false;
     }
     if (!checkIn) {
       setBookingError({ field: 'dates', message: 'Elegí el ingreso para seguir.' });
-      return;
+      return false;
     }
     if (parseLocalIso(checkOut) <= parseLocalIso(checkIn)) {
       setBookingError({ field: 'dates', message: 'La salida tiene que ser después del ingreso.' });
-      return;
+      return false;
     }
     if (parseLocalIso(checkIn) < parseLocalIso(todayISO)) {
       setBookingError({ field: 'dates', message: 'El ingreso no puede ser antes de hoy.' });
-      return;
+      return false;
     }
     if (maxGuestsNumber && guestCount > maxGuestsNumber) {
       setBookingError({
         field: 'guests',
         message: `Máximo ${maxGuestsNumber} ${maxGuestsNumber === 1 ? 'huésped' : 'huéspedes'}. Ajustá la cantidad para seguir.`,
       });
-      return;
+      return false;
     }
 
     setBookingError(null);
     resetBookingSubmitState();
-    await handleStartProtectedRequest();
+    return true;
+  };
+
+  const submitReservationRequest = () => {
+    if (bookingSubmitMode || !validateReservationDraft()) {
+      return;
+    }
+
+    setBookingDecisionOpen(true);
   };
 
   const handleMobilePrimaryAction = async () => {
@@ -969,16 +983,16 @@ export const PropertyDetailShell: React.FC<{
     }
 
     if (bookingStep === 'confirm') {
-      await submitReservationRequest();
+      submitReservationRequest();
       return;
     }
 
     handleAdvanceBookingStep();
   };
 
-  const handleReserve = async (e: React.FormEvent) => {
+  const handleReserve = (e: React.FormEvent) => {
     e.preventDefault();
-    await submitReservationRequest();
+    submitReservationRequest();
   };
 
   const buildReservationRequestContext = (
@@ -1048,6 +1062,49 @@ export const PropertyDetailShell: React.FC<{
     import('../lib/modal').then((m) => m.showLoginModal());
   };
 
+  const handleStartDirectRequest = async () => {
+    if (!property.id || !property.hostId) {
+      setBookingSubmitNotice({
+        tone: 'error',
+        heading: 'No pudimos abrir la operación libre',
+        description: 'Falta contexto de la propiedad para abrir este chat. Probá recargando la página.',
+      });
+      return;
+    }
+
+    if (!user) {
+      openLoginForRequest('Necesitás iniciar sesión', 'Iniciá sesión para abrir el chat y coordinar esta operación libre.');
+      return;
+    }
+
+    setBookingSubmitMode('direct');
+    setBookingSubmitNotice(null);
+
+    const requestContext = buildReservationRequestContext('direct');
+
+    try {
+      const { conversationId, requestCreatedAt } = await prepareConversation(requestContext);
+
+      resetBookingSubmitState();
+      setBookingDecisionOpen(false);
+      resetBookingDraft();
+      openConversation(conversationId, { ...requestContext, requestCreatedAt });
+      showToast(
+        'Operación libre iniciada',
+        'Abrimos el chat para que coordinen por acá. La app no retiene dinero ni interviene en pagos externos en esta modalidad.',
+        'success',
+      );
+    } catch (error) {
+      console.error('Direct request conversation error', error);
+      setBookingSubmitMode(null);
+      setBookingSubmitNotice({
+        tone: 'error',
+        heading: 'No pudimos abrir el chat',
+        description: 'Intentá de nuevo. Si el problema sigue, podés reabrir este flujo y elegir la modalidad otra vez.',
+      });
+    }
+  };
+
   const handleStartProtectedRequest = async () => {
     if (!property.id) {
       setBookingSubmitNotice({
@@ -1072,6 +1129,7 @@ export const PropertyDetailShell: React.FC<{
       endDate: checkOut,
       guests: guestCount,
       totalPrice: total,
+      requestMode: 'protected',
     });
 
     if (!result.ok) {
@@ -1106,6 +1164,7 @@ export const PropertyDetailShell: React.FC<{
 
     setBookingError(null);
     resetBookingSubmitState();
+    setBookingDecisionOpen(false);
     resetBookingDraft();
     setAvailabilityRefreshToken((currentValue) => currentValue + 1);
 
@@ -1114,8 +1173,8 @@ export const PropertyDetailShell: React.FC<{
 
       openConversation(conversationId, { ...requestContext, requestCreatedAt });
       showToast(
-        'Solicitud enviada',
-        `La solicitud quedó registrada por ${formatCurrency(bookedTotal)}. Abrimos el chat con un primer mensaje sugerido para que lo revises y lo envíes en un click.`,
+        'Seña protegida elegida',
+        `La solicitud quedó registrada por ${formatCurrency(bookedTotal)} y la reserva ya quedó marcada con seña protegida. Abrimos el chat para seguir desde ahí.`,
         'success',
       );
     } catch (error) {
@@ -1693,6 +1752,32 @@ export const PropertyDetailShell: React.FC<{
         />
       ) : null}
 
+      <BookingConfirmationModal
+        isOpen={bookingDecisionOpen}
+        onClose={() => {
+          if (bookingSubmitMode === null) {
+            setBookingDecisionOpen(false);
+          }
+        }}
+        onStartDirect={() => {
+          void handleStartDirectRequest();
+        }}
+        onStartProtected={() => {
+          void handleStartProtectedRequest();
+        }}
+        propertyTitle={property.title}
+        hostName={hostName}
+        checkIn={checkIn}
+        checkOut={checkOut}
+        nights={nights}
+        adults={adults}
+        children={childrenCount}
+        nightly={nightly}
+        total={total}
+        actionLoadingMode={bookingSubmitMode}
+        submitNotice={confirmationNotice}
+      />
+
       {bookingFlowOpen ? (
         <div className="fixed inset-0 z-50 p-0 sm:p-4" role="presentation">
           <div
@@ -1717,7 +1802,7 @@ export const PropertyDetailShell: React.FC<{
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Reserva</p>
                     <h2 id="booking-flow-title" className="text-2xl font-semibold tracking-tight text-slate-950">Consultar disponibilidad</h2>
                     <p id="booking-flow-description" className="text-sm leading-6 text-slate-600">
-                      Elegí fechas y huéspedes desde esta ficha. La seña se define recién si el anfitrión acepta.
+                      Elegí fechas y huéspedes desde esta ficha. Después definís si querés operar libremente por chat o dejar la reserva marcada con seña protegida.
                     </p>
                   </div>
                   <Button
@@ -1884,12 +1969,12 @@ export const PropertyDetailShell: React.FC<{
 
                               <div className="flex items-start justify-between gap-3 border-t border-slate-200/70 pt-3">
                                 <div>
-                                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Seña</p>
-                                  <p className="mt-1 font-semibold text-slate-950">Se define después</p>
-                                  <p className="mt-1">Si el anfitrión acepta, elegís si la dejás registrada acá o si la coordinás por fuera.</p>
+                                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Modalidad</p>
+                                  <p className="mt-1 font-semibold text-slate-950">La elegís en el siguiente paso</p>
+                                  <p className="mt-1">Operación libre abre chat sin bloquear fechas. Seña protegida deja el flujo protegido marcado, pero todavía sin pagos dentro de la app.</p>
                                 </div>
                                 <span className="rounded-full bg-brand/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-brand">
-                                  Sigue después
+                                  Elegís ahora
                                 </span>
                               </div>
                             </div>
@@ -1945,7 +2030,7 @@ export const PropertyDetailShell: React.FC<{
                             disabled={mobilePrimaryActionDisabled}
                             aria-disabled={mobilePrimaryActionDisabled}
                             loading={bookingStep === 'confirm' && bookingSubmitMode !== null}
-                            loadingLabel={bookingSubmitMode === 'protected' ? 'Enviando solicitud...' : 'Abriendo chat...'}
+                            loadingLabel={bookingSubmitMode === 'protected' ? 'Armando seña protegida...' : 'Abriendo chat...'}
                           >
                             <>
                               {bookingStep === 'dates' ? <Icons.Calendar className="h-4 w-4" /> : <Icons.ArrowRight className="h-4 w-4" />}
@@ -1987,11 +2072,11 @@ export const PropertyDetailShell: React.FC<{
                             aria-disabled={!canReserve || bookingSubmitMode !== null}
                             className="w-full rounded-2xl shadow-[0_24px_46px_-28px_rgba(67,56,202,0.42)] sm:w-auto sm:min-w-[220px]"
                             loading={bookingSubmitMode !== null}
-                            loadingLabel="Enviando solicitud..."
+                            loadingLabel={bookingSubmitMode === 'protected' ? 'Armando seña protegida...' : 'Abriendo chat...'}
                           >
                             <>
                               <Icons.ArrowRight className="h-4 w-4" />
-                              Enviar solicitud
+                              Elegir modalidad
                             </>
                           </Button>
                         )}

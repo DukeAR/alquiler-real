@@ -93,14 +93,14 @@ const getRequestStatusLabel = (mode: ReservationRequestMode, viewerRole: Reserva
 
 const getModelLabel = (mode: ReservationRequestMode, depositType?: ReservationDepositType | null) => {
   if (depositType === 'protected') {
-    return 'Seña en la app';
+    return 'Seña protegida';
   }
 
-  if (depositType === 'external' || mode === 'direct') {
-    return 'Seña externa';
+  if (depositType === 'external') {
+    return 'Operación libre';
   }
 
-  return 'Solicitud registrada';
+  return mode === 'protected' ? 'Seña protegida' : 'Operación libre';
 };
 
 const getDepositMilestoneLabel = (
@@ -110,6 +110,22 @@ const getDepositMilestoneLabel = (
 ) => {
   if (stage === 'deposit-choice') {
     return 'Elegir seña';
+  }
+
+  if (mode === 'protected') {
+    if (stage === 'protected-checkout-pending') {
+      return 'Seña protegida elegida';
+    }
+
+    if (stage === 'protected-deposit-review') {
+      return 'Seña en revisión';
+    }
+
+    if (stage === 'protected-no-show-pending') {
+      return 'Llegada en revisión';
+    }
+
+    return 'Seña protegida';
   }
 
   if (depositType === 'external' || mode === 'direct') {
@@ -264,7 +280,7 @@ export const getReservationFlowStage = ({
   }
 
   if (requestAccepted && !depositType) {
-    return 'deposit-choice';
+    return 'protected-checkout-pending';
   }
 
   if (requestAccepted) {
@@ -323,11 +339,21 @@ export const getReservationVisibleStatus = (
       };
     case 'deposit-choice':
     case 'request-accepted':
+      return {
+        key: input.mode === 'protected' ? 'pending-deposit' : 'in-conversation',
+        label: input.mode === 'protected' ? 'Seña protegida' : 'Operación libre',
+        tone: 'brand',
+      };
     case 'protected-checkout-pending':
-    case 'external-deposit-pending':
       return {
         key: 'pending-deposit',
-        label: 'Pendiente seña',
+        label: 'Seña protegida',
+        tone: 'brand',
+      };
+    case 'external-deposit-pending':
+      return {
+        key: 'in-conversation',
+        label: 'Operación libre',
         tone: 'brand',
       };
     case 'direct-deposit-reported':
@@ -395,11 +421,11 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
         statusLabel: visibleStatus?.label ?? getRequestStatusLabel(input.mode, viewerRole),
         description: input.mode === 'protected'
           ? viewerRole === 'host'
-            ? 'La solicitud ya quedó abierta en el chat. Cuando lo tengas claro, respondé por acá.'
-            : 'Tu solicitud ya quedó enviada. Si responden, siguen por acá sin salir del chat.'
+            ? 'La solicitud de seña protegida ya quedó abierta en el chat. Cuando lo tengas claro, respondé por acá.'
+            : 'Tu solicitud de seña protegida ya quedó enviada. Si responden, siguen por acá sin salir del chat.'
           : viewerRole === 'host'
-            ? 'La propuesta ya quedó abierta en el chat. Cuando lo tengas claro, respondé por acá.'
-            : 'Tu propuesta ya quedó enviada. Si responden, siguen por acá sin salir del chat.',
+            ? 'La operación libre ya quedó abierta en el chat. Cuando lo tengas claro, respondé por acá.'
+            : 'Tu operación libre ya quedó abierta por chat. Las fechas no se bloquean y, si responden, siguen coordinando desde acá.',
         nextActor: 'host',
         nextActorLabel: 'Anfitrión',
         nextStepLabel: viewerRole === 'host'
@@ -440,65 +466,58 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
         nextStepLabel: viewerRole === 'host' ? 'Esperar elección de seña' : 'Elegir cómo avanzar con la seña',
       };
     case 'request-accepted':
+      if (input.mode === 'direct') {
+        return {
+          stage,
+          modelLabel,
+          statusLabel: visibleStatus?.label ?? 'Operación libre',
+          description: viewerRole === 'host'
+            ? 'Ya aceptaste seguir por operación libre.'
+            : 'El anfitrión aceptó seguir por operación libre.',
+          supportText: 'Desde acá coordinan por chat. La app no retiene dinero, no protege la seña ni interviene en pagos externos.',
+          nextActor: 'none',
+          nextActorLabel: 'Sin acción pendiente',
+          nextStepLabel: 'Coordinar todo por chat',
+        };
+      }
+
       return {
         stage,
         modelLabel,
-        statusLabel: visibleStatus?.label ?? 'Pendiente seña',
-        description: input.mode === 'protected'
-          ? viewerRole === 'host'
-            ? 'Ya acordaron seguir. El huésped puede avanzar con la seña cuando lo acuerden.'
-            : 'El anfitrión ya aceptó. Podés avanzar con la seña cuando lo acuerden.'
-          : viewerRole === 'host'
-            ? 'Ya acordaron seguir. El huésped puede registrar la seña cuando la tenga definida.'
-            : 'La propuesta ya fue aceptada. Cuando registres la seña, esto queda listo para confirmar.',
-        supportText: input.mode === 'protected'
-          ? 'Cuando dejen la seña registrada, pueden dejar la reserva confirmada.'
-          : 'Cuando la seña quede registrada, ya pueden cerrar la reserva.',
-        nextActor: 'guest',
-        nextActorLabel: 'Huésped',
-        nextStepLabel: input.mode === 'protected'
-          ? viewerRole === 'host' ? 'Esperar seña' : 'Resolver seña'
-          : viewerRole === 'host' ? 'Esperar seña' : 'Registrar seña',
-        primaryActionLabel: viewerRole === 'guest'
-          ? input.mode === 'protected' ? 'Registrar seña' : 'Informar seña'
-          : undefined,
-        directDepositHint: input.mode === 'direct' ? 'Revisá que el titular coincida con quien publica antes de transferir.' : undefined,
+        statusLabel: visibleStatus?.label ?? 'Seña protegida',
+        description: viewerRole === 'host'
+          ? 'La reserva ya quedó marcada con seña protegida.'
+          : 'El anfitrión ya aceptó y la reserva quedó marcada con seña protegida.',
+        supportText: 'La app retiene la seña solo en este modo, suma un costo por operación y prevé liberarla después del check-in doble o pasarla a revisión manual si hace falta.',
+        nextActor: 'platform',
+        nextActorLabel: 'Plataforma',
+        nextStepLabel: 'Seguir el estado protegido',
+        trackingHint: 'Por ahora solo mostramos la estructura y el estado base: el cobro todavía no se procesa dentro de la app.',
       };
     case 'protected-checkout-pending':
       return {
         stage,
         modelLabel,
-        statusLabel: visibleStatus?.label ?? 'Pendiente seña',
-        description: viewerRole === 'host'
-          ? 'Ya eligieron dejar la seña en la app. Falta que el huésped complete el pago para que quede registrada.'
-          : 'Ya elegiste dejar la seña en la app. Falta completar el pago para que quede registrada.',
-        supportText: viewerRole === 'host'
-          ? 'Cuando se confirme el pago, la seña queda registrada y todo queda claro entre ambas partes.'
-          : 'La seña queda registrada dentro de la app y todo queda claro entre ambas partes.',
-        nextActor: 'guest',
-        nextActorLabel: 'Huésped',
-        nextStepLabel: viewerRole === 'host' ? 'Esperar pago de seña' : 'Pagar seña',
-        primaryActionLabel: viewerRole === 'guest' ? 'Pagar seña' : undefined,
-        trackingHint: viewerRole === 'guest'
-          ? 'Si el pago no se confirma ahora, podés volver a abrirlo desde esta reserva.'
-          : 'Cuando el pago se confirme, la reserva sigue por chat con la seña registrada.',
+        statusLabel: visibleStatus?.label ?? 'Seña protegida',
+        description: 'La reserva ya quedó dentro del modo de seña protegida.',
+        supportText: 'La app va a retener la seña solo en esta modalidad, con costo por operación, liberación después del check-in doble y revisión manual cuando haga falta.',
+        nextActor: 'platform',
+        nextActorLabel: 'Plataforma',
+        nextStepLabel: 'Esperar habilitación del cobro',
+        trackingHint: 'Por ahora solo mostramos la estructura y el estado base: el cobro todavía no se procesa dentro de la app.',
       };
     case 'external-deposit-pending':
       return {
         stage,
         modelLabel,
-        statusLabel: visibleStatus?.label ?? 'Pendiente seña',
+        statusLabel: visibleStatus?.label ?? 'Operación libre',
         description: viewerRole === 'host'
-          ? 'Eligieron coordinar la seña por fuera.'
-          : 'Elegiste coordinar la seña por fuera.',
-        supportText: viewerRole === 'host'
-          ? 'Si cambian de idea antes de informarla, el huésped puede dejarla registrada acá.'
-          : 'Coordinás la seña directo con el anfitrión. Si cambiás de idea, podés dejarla registrada acá desde este chat.',
+          ? 'La reserva quedó en operación libre y la coordinación sigue por chat.'
+          : 'La reserva quedó en operación libre y la coordinación sigue por chat.',
+        supportText: 'La app no retiene dinero ni interviene sobre pagos o señas coordinados por fuera.',
         nextActor: viewerRole === 'guest' ? 'guest' : 'none',
         nextActorLabel: viewerRole === 'guest' ? 'Huésped' : 'Sin acción pendiente',
-        nextStepLabel: viewerRole === 'guest' ? 'Coordinar seña por chat' : 'Seguir por chat si hace falta',
-        primaryActionLabel: viewerRole === 'guest' ? 'Informar seña' : undefined,
-        directDepositHint: 'Revisá que el titular coincida con quien publica antes de transferir.',
+        nextStepLabel: viewerRole === 'guest' ? 'Coordinar por chat' : 'Seguir por chat si hace falta',
       };
     case 'direct-deposit-reported':
       return {

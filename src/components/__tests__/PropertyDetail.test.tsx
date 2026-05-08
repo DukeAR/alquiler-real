@@ -471,7 +471,7 @@ describe('PropertyDetail', () => {
 
     expect(screen.queryByText('Elegí las fechas')).toBeNull();
     expect(screen.queryByText('Definí quiénes viajan')).toBeNull();
-    expect(screen.queryByText('Se define después')).toBeNull();
+    expect(screen.queryByText('La elegís en el siguiente paso')).toBeNull();
 
     await openBookingFlow();
 
@@ -486,7 +486,7 @@ describe('PropertyDetail', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /^siguiente$/i }));
     await waitFor(() => expect(screen.getByText('Revisá antes de enviarla')).toBeDefined());
-    expect(screen.getByText('Se define después')).toBeDefined();
+    expect(screen.getByText('La elegís en el siguiente paso')).toBeDefined();
   });
 
   test('uses a dominant availability CTA to open the calendar directly', async () => {
@@ -574,7 +574,7 @@ describe('PropertyDetail', () => {
 
     fireEvent.click(within(bookingFlow).getByRole('button', { name: /seguir al resumen/i }));
     await waitFor(() => expect(screen.getByText('Revisá antes de enviarla')).toBeDefined());
-    expect(within(bookingFlow).getByRole('button', { name: /enviar solicitud/i })).toBeDefined();
+    expect(within(bookingFlow).getByRole('button', { name: /elegir modalidad/i })).toBeDefined();
   });
 
   test('updates the sticky CTA copy after the user scrolls past the first viewport on mobile', async () => {
@@ -814,7 +814,7 @@ describe('PropertyDetail', () => {
     await waitFor(() => expect(screen.getByText('Ajustá cuántas personas viajan.')).toBeDefined());
 
     fireEvent.click(screen.getByRole('button', { name: /^siguiente$/i }));
-    await waitFor(() => expect(screen.getByText('Revisá el resumen y mandá la solicitud. La seña recién se define si el anfitrión acepta.')).toBeDefined());
+    await waitFor(() => expect(screen.getByText('Revisá el resumen y elegí si querés seguir con operación libre o con seña protegida.')).toBeDefined());
   });
 
   test('shows a compact presencial seal and a three-point confirmed list for presencial properties', async () => {
@@ -990,21 +990,20 @@ describe('PropertyDetail', () => {
     await advanceToConfirmationStep();
 
     expect(screen.getByText(/Revisá antes de enviarla/i)).toBeDefined();
-    expect(screen.getAllByText(/Se define después/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/La elegís en el siguiente paso/i).length).toBeGreaterThan(0);
     // Accept 1 or 2 edit buttons depending on UI
     const editButtons = screen.getAllByRole('button', { name: /editar/i });
     expect(editButtons.length === 1 || editButtons.length === 2).toBe(true);
-    expect(screen.getByRole('button', { name: /^enviar solicitud$/i })).toBeDefined();
+    expect(screen.getByRole('button', { name: /^elegir modalidad$/i })).toBeDefined();
   });
 
-  test('smoke: sends a neutral request and opens the contextual chat', async () => {
+  test('smoke: starts a free operation and opens the contextual chat without creating a booking', async () => {
     renderPropertyDetail();
 
     await waitForPropertyHeading();
 
     const { checkInIso, checkOutIso } = await advanceToConfirmationStep();
 
-    const bookingCalls: Array<{ url: string; options: RequestInit }> = [];
     const apiJsonCalls: Array<{ url: string; options?: RequestInit }> = [];
 
     (apiJson as any).mockImplementation(async (url: string, options?: RequestInit) => {
@@ -1016,7 +1015,6 @@ describe('PropertyDetail', () => {
         return {
           id: 'conv-1',
           property_id: 'p1',
-          booking_id: 'booking-1',
           tenant_id: 'u1',
           host_id: 'h1',
           hostName: 'Mariana',
@@ -1029,46 +1027,8 @@ describe('PropertyDetail', () => {
       return sampleProperty;
     });
 
-    (apiFetch as any).mockImplementation(async (url: string, options: RequestInit = {}) => {
-      if (url === '/api/auth/me') {
-        return {
-          ok: true,
-          status: 200,
-          json: async () => ({ user: { id: 'u1', name: 'Test User', email: 'test@test.com', role: 'tenant' } })
-        };
-      }
-
-      if (url === '/api/bookings' && options.method === 'POST') {
-        bookingCalls.push({ url, options });
-
-        return {
-          ok: true,
-          status: 201,
-          json: async () => ({
-            booking: {
-              id: 'booking-1',
-              propertyId: 'p1',
-              userId: 'u1',
-              status: 'pending',
-              requestMode: 'protected',
-              startDate: checkInIso,
-              endDate: checkOutIso,
-              guests: 1,
-              totalPrice: 360,
-              stay_code: 'AR1234',
-            },
-            contract: { propertyTitle: 'Casa de prueba' },
-            pricing: { nights: 3, nightly: 120, total: 360 },
-          }),
-        };
-      }
-
-      return { ok: true, status: 200, json: async () => ({}) };
-    });
-
-    fireEvent.click(screen.getByRole('button', { name: /^enviar solicitud$/i }));
-
-    await waitFor(() => expect(bookingCalls).toHaveLength(1));
+    fireEvent.click(screen.getByRole('button', { name: /^elegir modalidad$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /iniciar operación libre/i }));
 
     await waitFor(() => {
       expect(apiJsonCalls).toEqual(
@@ -1077,13 +1037,24 @@ describe('PropertyDetail', () => {
         ]),
       );
     });
+    const conversationCall = apiJsonCalls.find((call) => call.url === '/api/conversations');
+    expect(conversationCall).toBeDefined();
+    expect(JSON.parse(String(conversationCall?.options?.body))).toMatchObject({
+      propertyId: 'p1',
+      requestMode: 'direct',
+      requestStatus: 'pending',
+      startDate: checkInIso,
+      endDate: checkOutIso,
+      guests: 1,
+      totalPrice: 360,
+    });
     expect(apiJsonCalls.some((call) => call.url === '/api/messages')).toBe(false);
 
     await waitFor(() => expect(screen.getByText('Chat abierto conv-1')).toBeDefined());
-    expect(screen.getByText('Modo: protected')).toBeDefined();
+    expect(screen.getByText('Modo: direct')).toBeDefined();
   });
 
-  test('smoke: sends the booking request without forcing a mode in the payload', async () => {
+  test('smoke: sends the protected booking request with an explicit mode in the payload', async () => {
     renderPropertyDetail();
 
     await waitForPropertyHeading();
@@ -1152,7 +1123,8 @@ describe('PropertyDetail', () => {
     });
 
     const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
-    fireEvent.click(screen.getByRole('button', { name: /^enviar solicitud$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^elegir modalidad$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /elegir seña protegida/i }));
 
     await waitFor(() => expect(dispatchSpy).toHaveBeenCalled());
     expect(bookingCalls).toHaveLength(1);
@@ -1163,8 +1135,8 @@ describe('PropertyDetail', () => {
       endDate: checkOutIso,
       guests: 1,
       totalPrice: 360,
+      requestMode: 'protected',
     });
-    expect(bookingPayload).not.toHaveProperty('requestMode');
     expect(apiJsonCalls).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ url: '/api/conversations' }),
@@ -1215,7 +1187,8 @@ describe('PropertyDetail', () => {
     expect(screen.queryByRole('button', { name: /guardar en guardados/i })).toBeNull();
 
     await advanceToConfirmationStep();
-    fireEvent.click(screen.getByRole('button', { name: /^enviar solicitud$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^elegir modalidad$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /elegir seña protegida/i }));
 
     await waitFor(() => expect(showLoginModal).toHaveBeenCalledTimes(1));
   });

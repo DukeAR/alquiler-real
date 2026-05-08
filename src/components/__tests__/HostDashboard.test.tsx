@@ -507,12 +507,11 @@ describe('HostDashboard', () => {
       );
     });
 
-    expect(await screen.findAllByText('Pendiente seña')).not.toHaveLength(0);
-    expect(screen.getByText('Ya acordaron seguir. Ahora el huésped define cómo resolver la seña.')).toBeInTheDocument();
-    expect(screen.getByText('La opción que elija queda visible en el chat para que el cierre sea claro.')).toBeInTheDocument();
+    expect(await screen.findAllByText('Seña protegida')).not.toHaveLength(0);
+    expect(screen.queryByText('Pendiente seña')).not.toBeInTheDocument();
     expect(showToastMock).toHaveBeenCalledWith(
-      'Solicitud aceptada',
-      'La solicitud quedó aceptada. Ahora el huésped puede definir la seña desde el chat.',
+      'Seña protegida aceptada',
+      'La solicitud quedó aceptada y la reserva ya quedó marcada con seña protegida. El seguimiento sigue por chat.',
       'success',
     );
 
