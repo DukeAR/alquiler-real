@@ -164,7 +164,19 @@ const getDesktopNavIconClassName = (
   );
 };
 
-const DesktopNavButton = ({ action, active, inverted = false, onSelect }: { action: NavAction; active: boolean; inverted?: boolean; onSelect: (action: NavAction) => void; }) => (
+const DesktopNavButton = ({
+  action,
+  active,
+  inverted = false,
+  compactLabels = false,
+  onSelect,
+}: {
+  action: NavAction;
+  active: boolean;
+  inverted?: boolean;
+  compactLabels?: boolean;
+  onSelect: (action: NavAction) => void;
+}) => (
   action.path && !action.onClick && !action.protected ? (
     <Link
       to={action.path}
@@ -176,10 +188,17 @@ const DesktopNavButton = ({ action, active, inverted = false, onSelect }: { acti
       {action.path === '/favorites' ? (
         <span className="hidden xl:inline">{action.label}</span>
       ) : action.shortLabel !== action.label ? (
-        <>
-          <span className="hidden min-[1850px]:inline">{action.label}</span>
-          <span className="min-[1850px]:hidden">{action.shortLabel}</span>
-        </>
+        compactLabels ? (
+          <>
+            <span className="hidden min-[1850px]:inline">{action.label}</span>
+            <span className="min-[1850px]:hidden">{action.shortLabel}</span>
+          </>
+        ) : (
+          <>
+            <span className="hidden xl:inline">{action.label}</span>
+            <span className="xl:hidden">{action.shortLabel}</span>
+          </>
+        )
       ) : (
         <span>{action.label}</span>
       )}
@@ -196,10 +215,17 @@ const DesktopNavButton = ({ action, active, inverted = false, onSelect }: { acti
       {action.path === '/favorites' ? (
         <span className="hidden xl:inline">{action.label}</span>
       ) : action.shortLabel !== action.label ? (
-        <>
-          <span className="hidden min-[1850px]:inline">{action.label}</span>
-          <span className="min-[1850px]:hidden">{action.shortLabel}</span>
-        </>
+        compactLabels ? (
+          <>
+            <span className="hidden min-[1850px]:inline">{action.label}</span>
+            <span className="min-[1850px]:hidden">{action.shortLabel}</span>
+          </>
+        ) : (
+          <>
+            <span className="hidden xl:inline">{action.label}</span>
+            <span className="xl:hidden">{action.shortLabel}</span>
+          </>
+        )
       ) : (
         <span>{action.label}</span>
       )}
@@ -368,8 +394,15 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   const headerLayoutClass = usesExploreLayoutWidth ? 'app-page-explore' : 'app-page';
   const headerOnHero = isPropertyDetailRoute && isPropertyHeroVisible;
   const useSymmetricGuestHeader = showGuestAuthActions;
-  const desktopHeaderPrimaryClass = 'flex min-w-0 flex-1 items-center justify-start gap-5 sm:gap-6 lg:gap-7 xl:gap-8';
-  const desktopHeaderNavigationClass = cn(
+  const guestDesktopHeaderPrimaryClass = 'flex min-w-0 flex-1 items-center justify-between gap-6 sm:gap-7 lg:gap-8 xl:gap-10';
+  const accountDesktopHeaderPrimaryClass = 'flex min-w-0 flex-1 items-center justify-start gap-5 sm:gap-6 lg:gap-7 xl:gap-8';
+  const guestDesktopHeaderNavigationClass = cn(
+    'hidden min-w-0 flex-1 items-center justify-between gap-5 rounded-[1.9rem] px-5 py-1.5 lg:flex lg:justify-start lg:gap-3 lg:px-3.5 xl:justify-between xl:gap-6 xl:px-8',
+    headerOnHero
+      ? 'border border-white/14 bg-black/12 shadow-[0_22px_46px_-36px_rgba(0,0,0,0.46)] backdrop-blur-[14px]'
+      : 'border border-slate-200/80 bg-white/72 shadow-[0_22px_46px_-38px_rgba(15,23,42,0.16)] backdrop-blur-[14px]',
+  );
+  const accountDesktopHeaderNavigationClass = cn(
     'hidden min-w-0 flex-1 items-center justify-start gap-3 rounded-[1.9rem] px-4 py-1.5 lg:flex lg:gap-3 lg:px-3.5 xl:gap-4 xl:px-5',
     headerOnHero
       ? 'border border-white/14 bg-black/12 shadow-[0_22px_46px_-36px_rgba(0,0,0,0.46)] backdrop-blur-[14px]'
@@ -436,7 +469,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
     </button>
   );
 
-  const renderDesktopNavigation = (className: string) => (
+  const renderDesktopNavigation = (className: string, compactLabels = false) => (
     <nav aria-label="Navegación principal" className={className}>
       {desktopActions.map((action) => (
         <DesktopNavButton
@@ -444,6 +477,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
           action={action}
           active={!!action.path && matchesPath(location.pathname, action.path)}
           inverted={headerOnHero}
+          compactLabels={compactLabels}
           onSelect={onSelect}
         />
       ))}
@@ -580,18 +614,18 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
         <header className={cn('app-header z-50', isPropertyDetailRoute ? 'app-header-detail' : 'relative', headerOnHero && 'app-header-on-hero')}>
           {useSymmetricGuestHeader ? (
             <div className={cn(headerLayoutClass, 'flex items-center justify-between gap-5 py-4 sm:gap-6 sm:py-5 lg:gap-8 xl:gap-10')}>
-              <div className={desktopHeaderPrimaryClass}>
+              <div className={guestDesktopHeaderPrimaryClass}>
                 {brandHomeButton}
-                {renderDesktopNavigation(desktopHeaderNavigationClass)}
+                {renderDesktopNavigation(guestDesktopHeaderNavigationClass)}
               </div>
 
               {renderDesktopHeaderActions(guestDesktopActionsClass)}
             </div>
           ) : (
             <div className={cn(headerLayoutClass, 'flex items-center justify-between gap-5 py-4 sm:gap-6 sm:py-5 lg:gap-8 xl:gap-10')}>
-              <div className={desktopHeaderPrimaryClass}>
+              <div className={accountDesktopHeaderPrimaryClass}>
                 {brandHomeButton}
-                {renderDesktopNavigation(desktopHeaderNavigationClass)}
+                {renderDesktopNavigation(accountDesktopHeaderNavigationClass, true)}
               </div>
               {renderDesktopHeaderActions(accountDesktopActionsClass)}
             </div>
