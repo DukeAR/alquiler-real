@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { apiJson } from '../lib/apiConfig';
 import { isBookingCheckInReached } from '../lib/bookingDates';
+import { withDemoQuery } from '../lib/demoMode';
 import { resolveGuestRequestProfile } from '../lib/guestRequestProfile';
 import { formatPremiumPriceLabel } from '../lib/premiumVerification';
 import { getPropertyVerificationDetails, getPropertyVerificationItems, getPropertyVerificationProgress } from '../lib/propertyVerification';
@@ -1008,7 +1009,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
                 type="button"
                 variant="secondary"
                 size="sm"
-                onClick={() => navigate(`/chat/${booking.conversationId}`)}
+                onClick={() => navigate(withDemoQuery(`/chat/${booking.conversationId}`))}
                 className="btn-secondary rounded-full"
               >
                 <>

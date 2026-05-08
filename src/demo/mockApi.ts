@@ -58,6 +58,8 @@ type DemoConversation = {
   bookingStatus: BookingStatus;
   depositType: 'external' | 'protected' | null;
   depositStatus: ReservationDepositStatus | null;
+  guestCheckinConfirmed: boolean;
+  hostAccessConfirmed: boolean;
   startDate: string;
   endDate: string;
   guests: number;
@@ -87,6 +89,8 @@ type DemoBooking = {
   requestMode: 'direct' | 'protected';
   depositType: 'external' | 'protected' | null;
   depositStatus: ReservationDepositStatus | null;
+  guestCheckinConfirmed: boolean;
+  hostAccessConfirmed: boolean;
   protectedDepositPricing?: ReturnType<typeof getProtectedDepositPricing> | null;
   contractAccepted?: boolean;
   cancellationActor?: 'guest' | 'host' | null;
@@ -122,6 +126,26 @@ type DemoStore = {
 };
 
 const PLACEHOLDER_PROPERTY_IMAGE = 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=1200&q=80';
+const ARGENTINA_TIME_ZONE = 'America/Argentina/Buenos_Aires';
+
+const getRelativeArgentinaDate = (offsetDays: number) => {
+  const date = new Date(Date.now() + offsetDays * 24 * 60 * 60 * 1000);
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: ARGENTINA_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+
+  const year = parts.find((part) => part.type === 'year')?.value ?? '';
+  const month = parts.find((part) => part.type === 'month')?.value ?? '';
+  const day = parts.find((part) => part.type === 'day')?.value ?? '';
+
+  return `${year}-${month}-${day}`;
+};
+
+const protectedArrivalSeedStartDate = getRelativeArgentinaDate(0);
+const protectedArrivalSeedEndDate = getRelativeArgentinaDate(3);
 
 const cloneValue = <T,>(value: T): T => {
   if (typeof structuredClone === 'function') {
@@ -515,6 +539,8 @@ const createDemoStore = (): DemoStore => {
       requestMode: 'direct',
       depositType: 'external',
       depositStatus: 'confirmed',
+      guestCheckinConfirmed: false,
+      hostAccessConfirmed: false,
       protectedDepositPricing: null,
       contractAccepted: true,
       cancellationActor: null,
@@ -539,10 +565,42 @@ const createDemoStore = (): DemoStore => {
       requestMode: 'protected',
       depositType: 'protected',
       depositStatus: 'checkout_pending',
+      guestCheckinConfirmed: false,
+      hostAccessConfirmed: false,
       protectedDepositPricing: getProtectedDepositPricing({
         nights: 4,
         nightlyPrice: 54000,
         totalPrice: 216000,
+      }),
+      contractAccepted: true,
+      cancellationActor: null,
+    },
+    {
+      id: 'booking-guest-3',
+      conversationId: 'conv-guest-3',
+      propertyId: '1',
+      propertyTitle: 'Casa frente al mar con galería y parrilla',
+      imageUrl: properties.find((property) => property.id === '1')?.imageUrl || PLACEHOLDER_PROPERTY_IMAGE,
+      location: 'Costa del Este',
+      userId: DEMO_USER_ID,
+      userName: user.name,
+      hostId: DEMO_USER_ID,
+      hostName: user.name,
+      startDate: protectedArrivalSeedStartDate,
+      endDate: protectedArrivalSeedEndDate,
+      date: protectedArrivalSeedStartDate,
+      guests: 2,
+      totalPrice: 276000,
+      status: 'confirmed',
+      requestMode: 'protected',
+      depositType: 'protected',
+      depositStatus: 'held',
+      guestCheckinConfirmed: true,
+      hostAccessConfirmed: false,
+      protectedDepositPricing: getProtectedDepositPricing({
+        nights: 3,
+        nightlyPrice: 92000,
+        totalPrice: 276000,
       }),
       contractAccepted: true,
       cancellationActor: null,
@@ -570,6 +628,8 @@ const createDemoStore = (): DemoStore => {
       requestMode: 'protected',
       depositType: 'protected',
       depositStatus: 'checkout_pending',
+      guestCheckinConfirmed: false,
+      hostAccessConfirmed: false,
       protectedDepositPricing: getProtectedDepositPricing({
         nights: 4,
         nightlyPrice: 92000,
@@ -598,7 +658,39 @@ const createDemoStore = (): DemoStore => {
       requestMode: 'direct',
       depositType: 'external',
       depositStatus: 'confirmed',
+      guestCheckinConfirmed: false,
+      hostAccessConfirmed: false,
       protectedDepositPricing: null,
+      contractAccepted: true,
+      cancellationActor: null,
+    },
+    {
+      id: 'booking-guest-3',
+      conversationId: 'conv-guest-3',
+      propertyId: '1',
+      propertyTitle: 'Casa frente al mar con galería y parrilla',
+      imageUrl: properties.find((property) => property.id === '1')?.imageUrl || PLACEHOLDER_PROPERTY_IMAGE,
+      location: 'Costa del Este',
+      userId: DEMO_USER_ID,
+      userName: user.name,
+      hostId: DEMO_USER_ID,
+      hostName: user.name,
+      startDate: protectedArrivalSeedStartDate,
+      endDate: protectedArrivalSeedEndDate,
+      date: protectedArrivalSeedStartDate,
+      guests: 2,
+      totalPrice: 276000,
+      status: 'confirmed',
+      requestMode: 'protected',
+      depositType: 'protected',
+      depositStatus: 'held',
+      guestCheckinConfirmed: true,
+      hostAccessConfirmed: false,
+      protectedDepositPricing: getProtectedDepositPricing({
+        nights: 3,
+        nightlyPrice: 92000,
+        totalPrice: 276000,
+      }),
       contractAccepted: true,
       cancellationActor: null,
     },
@@ -620,6 +712,8 @@ const createDemoStore = (): DemoStore => {
       bookingStatus: 'confirmed',
       depositType: 'external',
       depositStatus: 'confirmed',
+      guestCheckinConfirmed: false,
+      hostAccessConfirmed: false,
       startDate: '2026-06-10',
       endDate: '2026-06-14',
       guests: 2,
@@ -643,6 +737,8 @@ const createDemoStore = (): DemoStore => {
       bookingStatus: 'pending',
       depositType: 'protected',
       depositStatus: 'checkout_pending',
+      guestCheckinConfirmed: false,
+      hostAccessConfirmed: false,
       startDate: '2026-07-02',
       endDate: '2026-07-06',
       guests: 3,
@@ -666,6 +762,8 @@ const createDemoStore = (): DemoStore => {
       bookingStatus: 'pending',
       depositType: 'protected',
       depositStatus: 'checkout_pending',
+      guestCheckinConfirmed: false,
+      hostAccessConfirmed: false,
       startDate: '2026-05-12',
       endDate: '2026-05-16',
       guests: 4,
@@ -689,6 +787,8 @@ const createDemoStore = (): DemoStore => {
       bookingStatus: 'confirmed',
       depositType: 'external',
       depositStatus: 'confirmed',
+      guestCheckinConfirmed: false,
+      hostAccessConfirmed: false,
       startDate: '2026-05-28',
       endDate: '2026-06-01',
       guests: 2,
@@ -696,6 +796,31 @@ const createDemoStore = (): DemoStore => {
       last_message: 'Gracias por la coordinación, te aviso cuando salga para allá.',
       unread_count: 0,
       updated_at: '2026-04-04T09:10:00.000Z',
+    },
+    {
+      id: 'conv-guest-3',
+      booking_id: 'booking-guest-3',
+      property_id: '1',
+      propertyTitle: 'Casa frente al mar con galería y parrilla',
+      propertyImageUrl: properties.find((property) => property.id === '1')?.imageUrl || PLACEHOLDER_PROPERTY_IMAGE,
+      tenant_id: DEMO_USER_ID,
+      tenantName: user.name,
+      host_id: DEMO_USER_ID,
+      hostName: user.name,
+      requestMode: 'protected',
+      requestStatus: 'accepted',
+      bookingStatus: 'confirmed',
+      depositType: 'protected',
+      depositStatus: 'held',
+      guestCheckinConfirmed: true,
+      hostAccessConfirmed: false,
+      startDate: protectedArrivalSeedStartDate,
+      endDate: protectedArrivalSeedEndDate,
+      guests: 2,
+      totalPrice: 276000,
+      last_message: 'Tu llegada ya quedó confirmada. Falta confirmar el acceso para liberar la seña.',
+      unread_count: 0,
+      updated_at: '2026-05-08T12:00:00.000Z',
     },
   ];
 
@@ -770,6 +895,34 @@ const createDemoStore = (): DemoStore => {
         sender_name: 'Nicolás Vega',
         content: 'Gracias por la coordinación, te aviso cuando salga para allá.',
         created_at: '2026-04-04T09:10:00.000Z',
+      },
+    ],
+    'conv-guest-3': [
+      {
+        id: 'msg-guest-3-1',
+        conversation_id: 'conv-guest-3',
+        sender_id: 'system',
+        sender_name: 'Sistema',
+        content: 'La seña protegida quedó confirmada.',
+        created_at: '2026-05-07T17:40:00.000Z',
+        kind: 'system',
+      },
+      {
+        id: 'msg-guest-3-2',
+        conversation_id: 'conv-guest-3',
+        sender_id: DEMO_USER_ID,
+        sender_name: user.name,
+        content: 'Ya estoy en la propiedad.',
+        created_at: '2026-05-08T11:55:00.000Z',
+      },
+      {
+        id: 'msg-guest-3-3',
+        conversation_id: 'conv-guest-3',
+        sender_id: 'system',
+        sender_name: 'Sistema',
+        content: 'La llegada quedó confirmada. Falta confirmar el acceso para liberar la seña.',
+        created_at: '2026-05-08T12:00:00.000Z',
+        kind: 'system',
       },
     ],
   };
@@ -1033,6 +1186,8 @@ const updateConversationFromBooking = (booking: DemoBooking) => {
   conversation.bookingStatus = booking.status;
   conversation.depositType = booking.depositType;
   conversation.depositStatus = booking.depositStatus;
+  conversation.guestCheckinConfirmed = booking.guestCheckinConfirmed;
+  conversation.hostAccessConfirmed = booking.hostAccessConfirmed;
   conversation.startDate = booking.startDate;
   conversation.endDate = booking.endDate;
   conversation.guests = booking.guests;
@@ -1059,6 +1214,31 @@ const appendSystemMessage = (conversationId: string, content: string) => {
   store.messagesByConversationId[conversationId] = [...(store.messagesByConversationId[conversationId] ?? []), nextMessage];
   conversation.last_message = content;
   conversation.updated_at = nextMessage.created_at;
+};
+
+const getProtectedArrivalReleaseState = (booking: DemoBooking, updates: Partial<DemoBooking>) => {
+  const guestCheckinConfirmed = updates.guestCheckinConfirmed ?? booking.guestCheckinConfirmed;
+  const hostAccessConfirmed = updates.hostAccessConfirmed ?? booking.hostAccessConfirmed;
+
+  if (booking.depositType !== 'protected') {
+    return {
+      guestCheckinConfirmed,
+      hostAccessConfirmed,
+      depositStatus: updates.depositStatus ?? booking.depositStatus,
+      status: updates.status ?? booking.status,
+    };
+  }
+
+  return {
+    guestCheckinConfirmed,
+    hostAccessConfirmed,
+    depositStatus: guestCheckinConfirmed && hostAccessConfirmed
+      ? 'released'
+      : updates.depositStatus ?? booking.depositStatus,
+    status: guestCheckinConfirmed && hostAccessConfirmed
+      ? 'completed'
+      : updates.status ?? booking.status,
+  };
 };
 
 const buildPropertyDetail = (property: DemoManagedProperty) => ({
@@ -1397,6 +1577,8 @@ const handleBookingCreate = (body: Record<string, unknown>) => {
     requestMode,
     depositType: requestMode === 'protected' ? 'protected' : 'external',
     depositStatus: requestMode === 'protected' ? 'checkout_pending' : 'external_pending',
+    guestCheckinConfirmed: false,
+    hostAccessConfirmed: false,
     protectedDepositPricing,
     contractAccepted: true,
     cancellationActor: null,
@@ -1417,6 +1599,8 @@ const handleBookingCreate = (body: Record<string, unknown>) => {
     bookingStatus: booking.status,
     depositType: booking.depositType,
     depositStatus: booking.depositStatus,
+    guestCheckinConfirmed: booking.guestCheckinConfirmed,
+    hostAccessConfirmed: booking.hostAccessConfirmed,
     startDate,
     endDate,
     guests: booking.guests,
@@ -1881,6 +2065,8 @@ export const getMockApiResponse = async (
         depositType: 'protected',
         depositStatus: 'held',
         status: 'confirmed',
+        guestCheckinConfirmed: false,
+        hostAccessConfirmed: false,
       });
 
       appendSystemMessage(booking.conversationId || '', 'La seña protegida quedó confirmada.');
@@ -1889,11 +2075,29 @@ export const getMockApiResponse = async (
 
     if (action === 'confirm-arrival') {
       const nextBooking = updateBooking(bookingId, {
-        status: 'completed',
-        depositStatus: booking.depositType === 'protected' ? 'released' : booking.depositStatus,
+        ...getProtectedArrivalReleaseState(booking, { guestCheckinConfirmed: true }),
       });
 
-      appendSystemMessage(booking.conversationId || '', 'La llegada quedó confirmada.');
+      appendSystemMessage(
+        booking.conversationId || '',
+        booking.depositType === 'protected'
+          ? 'La llegada quedó confirmada. Falta confirmar el acceso para liberar la seña.'
+          : 'La llegada quedó confirmada.',
+      );
+      return jsonResponse({ booking: cloneValue(nextBooking) });
+    }
+
+    if (action === 'confirm-access') {
+      const nextBooking = updateBooking(bookingId, {
+        ...getProtectedArrivalReleaseState(booking, { hostAccessConfirmed: true }),
+      });
+
+      appendSystemMessage(
+        booking.conversationId || '',
+        booking.depositType === 'protected'
+          ? 'El acceso quedó confirmado y la seña ya fue liberada.'
+          : 'El acceso quedó confirmado.',
+      );
       return jsonResponse({ booking: cloneValue(nextBooking) });
     }
 

@@ -172,6 +172,36 @@ HTTP/1.1 200 OK  o  HTTP/1.1 401 Unauthorized
 
 ---
 
+## 🔐 Flujo Protegido Repetible
+
+Si querés preparar o recorrer el flujo protegido nuevo contra un backend local o desplegado, usá:
+
+```powershell
+.\scripts\protected-flow-rehearsal.ps1 `
+  -FrontendUrl http://localhost:3000 `
+  -PropertyId 1 `
+  -StartDate 2026-05-08 `
+  -EndDate 2026-05-10 `
+  -SkipPayment
+```
+
+Si ya tenés un `paymentId`, el mismo runner puede continuar hasta `confirm-arrival` y `confirm-access`:
+
+```powershell
+.\scripts\protected-flow-rehearsal.ps1 `
+  -FrontendUrl https://alquiler-real.vercel.app `
+  -PropertyId demo_prop_depto_visible_2 `
+  -StartDate 2026-05-08 `
+  -EndDate 2026-05-10 `
+  -PaymentId 123456789
+```
+
+Notas:
+- Si devuelve `BOOKING_BLOCKED`, el freno viene del risk gate del backend y no del flujo de check-in doble.
+- Si devuelve `checkout-ready`, el booking, la conversación y el checkout ya quedaron preparados y solo falta retomar con `-PaymentId`.
+
+---
+
 ## 🐛 Errores Comunes y Soluciones
 
 ### ❌ Error: "Failed to fetch"

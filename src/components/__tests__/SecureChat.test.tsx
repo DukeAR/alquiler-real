@@ -454,7 +454,7 @@ describe('SecureChat', () => {
 
     const composer = screen.getByPlaceholderText('Escribí tu consulta...') as HTMLInputElement;
 
-    fireEvent.click(screen.getByRole('button', { name: '¿Aceptan mascotas?' }));
+    fireEvent.click(await screen.findByRole('button', { name: '¿Aceptan mascotas?' }));
     expect(composer.value).toBe('¿Aceptan mascotas?');
 
     fireEvent.change(composer, { target: { value: '¿Aceptan mascotas? Tengo una perra chica.' } });
@@ -1026,6 +1026,40 @@ describe('SecureChat', () => {
     );
   });
 
+  test('uses the active host mode to hide guest-only protected check-in actions in unified demo conversations', async () => {
+    const arrivalDate = getRelativeArgentinaDate(0);
+    const departureDate = getRelativeArgentinaDate(4);
+
+    useAuthMock.mockReturnValue({ user: { id: 'demo-user', activeMode: 'host' } });
+    fetchConversationsMock.mockResolvedValue([
+      {
+        ...baseConversation,
+        tenant_id: 'demo-user',
+        host_id: 'demo-user',
+        tenantName: 'Valentina Ríos',
+        hostName: 'Valentina Ríos',
+        booking_id: 'booking-demo-access',
+        bookingStatus: 'confirmed',
+        requestMode: 'protected',
+        requestStatus: 'accepted',
+        depositStatus: 'held',
+        guestCheckinConfirmed: false,
+        hostAccessConfirmed: false,
+        requestStartDate: arrivalDate,
+        requestEndDate: departureDate,
+        requestGuests: 2,
+        requestTotalPrice: 430000,
+      },
+    ]);
+    fetchMessagesMock.mockResolvedValue([]);
+
+    renderChat();
+
+    expect(await screen.findByRole('button', { name: /Coordinar llegada/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Confirmar llegada/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Reportar un problema/i })).not.toBeInTheDocument();
+  });
+
   test('lets the host mark a request as not advanced with an optional reason and keeps the chat open', async () => {
     useAuthMock.mockReturnValue({ user: { id: 'host-1' } });
     fetchConversationsMock.mockResolvedValue([
@@ -1101,7 +1135,9 @@ describe('SecureChat', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Enviar nueva propuesta/i }));
 
-    expect(screen.getByRole('textbox')).toHaveValue('Si te parece, te mando una nueva propuesta con otras fechas.');
+    await waitFor(() => {
+      expect(screen.getByRole('textbox')).toHaveValue('Si te parece, te mando una nueva propuesta con otras fechas.');
+    });
 
     fireEvent.click(screen.getByRole('button', { name: /Modificar fechas/i }));
 

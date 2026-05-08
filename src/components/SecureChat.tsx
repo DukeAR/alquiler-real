@@ -1329,8 +1329,17 @@ export const SecureChat: React.FC<SecureChatProps> = ({
   };
 
   const activeRequestContext = getActiveRequestContext(activeConv, initialConversationId, initialRequestContext);
-  const isTenantConversation = Boolean(user && activeConv && user.id === activeConv.tenant_id);
-  const isHostConversation = Boolean(user && activeConv && user.id === activeConv.host_id);
+  const isTenantParticipant = Boolean(user && activeConv && user.id === activeConv.tenant_id);
+  const isHostParticipant = Boolean(user && activeConv && user.id === activeConv.host_id);
+  const viewerRole: 'guest' | 'host' = isTenantParticipant && isHostParticipant
+    ? user?.activeMode === 'host' ? 'host' : 'guest'
+    : isTenantParticipant
+      ? 'guest'
+      : isHostParticipant
+        ? 'host'
+        : 'guest';
+  const isTenantConversation = isTenantParticipant && viewerRole === 'guest';
+  const isHostConversation = isHostParticipant && viewerRole === 'host';
   const flowCopy = activeRequestContext
     ? getReservationFlowCopy({
         mode: activeRequestContext.mode,
@@ -1342,7 +1351,7 @@ export const SecureChat: React.FC<SecureChatProps> = ({
         startDate: activeRequestContext.startDate,
         guestCheckinConfirmed: activeRequestContext.guestCheckinConfirmed,
         hostAccessConfirmed: activeRequestContext.hostAccessConfirmed,
-        viewerRole: isTenantConversation ? 'guest' : 'host',
+        viewerRole,
       })
     : null;
   const counterpartyName = user && activeConv
@@ -1399,7 +1408,7 @@ export const SecureChat: React.FC<SecureChatProps> = ({
       bookingStatus: activeRequestContext?.bookingStatus,
       depositStatus: activeRequestContext?.depositStatus,
       cancellationActor: activeRequestContext?.cancellationActor,
-      viewerRole: isTenantConversation ? 'guest' : 'host',
+      viewerRole,
     },
     {
       hasConversation: flowCopy?.stage === 'request-pending' && hasBackAndForthConversation,
