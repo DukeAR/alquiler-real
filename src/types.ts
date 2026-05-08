@@ -299,6 +299,8 @@ export interface ReservationRequestContext {
   cancellationActor?: ReservationCancellationActor;
   bookingId?: string;
   bookingStatus?: BookingStatus;
+  guestCheckinConfirmed?: boolean;
+  hostAccessConfirmed?: boolean;
 }
 
 export interface Booking {
@@ -324,6 +326,8 @@ export interface Booking {
   protectedDepositPricing?: ProtectedDepositPricing | null;
   depositPaymentReference?: string | null;
   cancellationActor?: ReservationCancellationActor;
+  guestCheckinConfirmed?: boolean;
+  hostAccessConfirmed?: boolean;
   cancellationDeadline?: string | null;
   date?: string;
   contractAccepted?: boolean;
@@ -363,6 +367,8 @@ export interface Conversation {
   protectedDepositPricing?: ProtectedDepositPricing | null;
   depositPaymentReference?: string | null;
   cancellationActor?: ReservationCancellationActor;
+  guestCheckinConfirmed?: boolean;
+  hostAccessConfirmed?: boolean;
   requestStartDate?: string;
   requestEndDate?: string;
   requestGuests?: number;

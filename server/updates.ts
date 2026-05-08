@@ -918,6 +918,8 @@ export const initDB = async () => {
       BEGIN ALTER TABLE bookings ADD COLUMN deposit_total_charge_ars INTEGER; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE bookings ADD COLUMN deposit_payment_reference TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE bookings ADD COLUMN cancellation_actor TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE bookings ADD COLUMN guest_checkin_confirmed BOOLEAN DEFAULT FALSE; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE bookings ADD COLUMN host_access_confirmed BOOLEAN DEFAULT FALSE; EXCEPTION WHEN duplicate_column THEN NULL; END;
     END $$;
   `);
 

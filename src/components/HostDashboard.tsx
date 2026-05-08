@@ -7,7 +7,7 @@ import { resolveGuestRequestProfile } from '../lib/guestRequestProfile';
 import { formatPremiumPriceLabel } from '../lib/premiumVerification';
 import { getPropertyVerificationDetails, getPropertyVerificationItems, getPropertyVerificationProgress } from '../lib/propertyVerification';
 import { getReservationFlowCopy, getReservationNextActorDisplayLabel, getReservationNextStepDisplayLabel } from '../lib/reservationFlow';
-import { acceptConversationRequest, confirmDirectDeposit, notAdvanceConversationRequest } from '../services/geminiService';
+import { acceptConversationRequest, confirmAccess, confirmDirectDeposit, notAdvanceConversationRequest } from '../services/geminiService';
 import { showToast } from '../lib/toast';
 import { cn } from '../lib/utils';
 import { AccountModeSwitch } from './ui/AccountModeSwitch';
@@ -115,6 +115,9 @@ const getBookingFlow = (booking: any) => getReservationFlowCopy({
   bookingStatus: booking.status,
   depositStatus: booking.depositStatus,
   cancellationActor: booking.cancellationActor,
+  startDate: booking.startDate,
+  guestCheckinConfirmed: booking.guestCheckinConfirmed,
+  hostAccessConfirmed: booking.hostAccessConfirmed,
   viewerRole: 'host',
 });
 
@@ -281,7 +284,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
   const [reviewingBooking, setReviewingBooking] = useState<any>(null);
   const [availabilityPropertyId, setAvailabilityPropertyId] = useState<string | null>(null);
   const [expandedBookingId, setExpandedBookingId] = useState<string | null>(null);
-  const [processingBookingAction, setProcessingBookingAction] = useState<{ bookingId: string; action: 'accept-request' | 'not-advance-request' | 'confirm-direct-deposit' | 'cancel-host' | 'report-no-show' } | null>(null);
+  const [processingBookingAction, setProcessingBookingAction] = useState<{ bookingId: string; action: 'accept-request' | 'not-advance-request' | 'confirm-direct-deposit' | 'confirm-access' | 'cancel-host' | 'report-no-show' } | null>(null);
   const [activePremiumOffer, setActivePremiumOffer] = useState<any>(null);
   const [processingPremiumOffer, setProcessingPremiumOffer] = useState(false);
 
@@ -480,6 +483,20 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
       showToast('Reserva confirmada', 'La seña ya quedó confirmada y la reserva sigue por chat con los últimos detalles.', 'success');
     } catch (err) {
       showToast('Reserva', err instanceof Error ? err.message : 'No pudimos confirmar la recepción de la seña desde el panel.', 'error');
+    } finally {
+      setProcessingBookingAction(null);
+    }
+  };
+
+  const handleConfirmProtectedAccess = async (booking: any) => {
+    setProcessingBookingAction({ bookingId: booking.id, action: 'confirm-access' });
+
+    try {
+      const nextBooking = await confirmAccess(booking.id);
+      updateRecentBooking(nextBooking);
+      showToast('Acceso confirmado', 'El acceso quedó confirmado y la seña ya salió de custodia.', 'success');
+    } catch (err) {
+      showToast('Acceso', err instanceof Error ? err.message : 'No pudimos confirmar el acceso.', 'error');
     } finally {
       setProcessingBookingAction(null);
     }
@@ -857,6 +874,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
     const canAcceptRequest = Boolean(booking.conversationId && bookingFlow.stage === 'request-pending');
     const canNotAdvanceRequest = Boolean(booking.conversationId && bookingFlow.stage === 'request-pending');
     const canConfirmDirectDeposit = Boolean(booking.conversationId && bookingFlow.stage === 'direct-deposit-reported');
+    const canConfirmProtectedAccess = bookingFlow.state === 'guest_checkin_confirmed' && arrivalActionsAvailable;
     const canOpenChat = Boolean(booking.conversationId);
     const canCancelAsHost = (booking.status === 'pending' || booking.status === 'confirmed')
       && bookingFlow.stage !== 'request-pending'
@@ -864,10 +882,11 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
       && bookingFlow.stage !== 'guest-cancelled'
       && bookingFlow.stage !== 'protected-deposit-review'
       && bookingFlow.stage !== 'protected-no-show-pending';
-    const canReportProtectedNoShow = bookingFlow.stage === 'protected-deposit-held' && arrivalActionsAvailable;
+    const canReportProtectedNoShow = bookingFlow.stage === 'protected-deposit-held' && bookingFlow.state !== 'guest_checkin_confirmed' && arrivalActionsAvailable;
     const isAcceptingRequest = processingBookingAction?.bookingId === booking.id && processingBookingAction?.action === 'accept-request';
     const isNotAdvancingRequest = processingBookingAction?.bookingId === booking.id && processingBookingAction?.action === 'not-advance-request';
     const isConfirmingDirectDeposit = processingBookingAction?.bookingId === booking.id && processingBookingAction?.action === 'confirm-direct-deposit';
+    const isConfirmingProtectedAccess = processingBookingAction?.bookingId === booking.id && processingBookingAction?.action === 'confirm-access';
     const isCancelingAsHost = processingBookingAction?.bookingId === booking.id && processingBookingAction?.action === 'cancel-host';
     const isReportingNoShow = processingBookingAction?.bookingId === booking.id && processingBookingAction?.action === 'report-no-show';
 
@@ -982,7 +1001,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
           </div>
         ) : null}
 
-        {!isDecisionStage || canReviewBooking || canCancelAsHost || canReportProtectedNoShow || canOpenChat ? (
+        {!isDecisionStage || canReviewBooking || canCancelAsHost || canConfirmProtectedAccess || canReportProtectedNoShow || canOpenChat ? (
           <div className="flex flex-wrap gap-2 pt-1 lg:justify-end">
             {canOpenChat ? (
               <Button
@@ -1007,6 +1026,21 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
                 className="rounded-full"
               >
                 {isExpanded ? 'Ocultar ficha' : 'Ver ficha del huésped'}
+              </Button>
+            ) : null}
+            {canConfirmProtectedAccess ? (
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => void handleConfirmProtectedAccess(booking)}
+                loading={isConfirmingProtectedAccess}
+                loadingLabel="Confirmando acceso..."
+                className="rounded-full"
+              >
+                <>
+                  <Icons.CheckCircle2 className="h-4 w-4" />
+                  Confirmar acceso
+                </>
               </Button>
             ) : null}
             {canReportProtectedNoShow ? (

@@ -1476,13 +1476,65 @@ describe('Bookings and availability endpoints', () => {
     expect(res.body.booking).toHaveProperty('depositStatus', 'checkout_pending');
   });
 
-  test('POST /api/bookings/:id/confirm-arrival releases a protected deposit after arrival', async () => {
+  test('POST /api/bookings/:id/confirm-arrival records the guest check-in without releasing the deposit yet', async () => {
     let bookingLookupCount = 0;
     const arrivalDate = getDateInArgentina(0);
     const departureDate = getDateInArgentina(3);
 
     queryMock.mockImplementation(async (text: string, params?: unknown[]) => {
-      if (text.includes(BOOKING_LOOKUP_QUERY_SNIPPET) && text.includes('LIMIT 1')) {
+      if (text.includes(BOOKING_LOOKUP_QUERY_SNIPPET) && text.includes('WHERE b."userId" = $1 AND b.id = $2')) {
+        bookingLookupCount += 1;
+
+        return {
+          rows: [
+            {
+              id: 'booking-1',
+              propertyId: 'prop-1',
+              userId: 'user-1',
+              status: 'confirmed',
+              startDate: arrivalDate,
+              endDate: departureDate,
+              totalPrice: 360000,
+              guests: 2,
+              contractAccepted: false,
+              contractJson: '{}',
+              requestMode: 'protected',
+              depositStatus: 'held',
+              guestCheckinConfirmed: bookingLookupCount > 1,
+              hostAccessConfirmed: false,
+              propertyTitle: 'Casa del bosque',
+              imageUrl: 'https://example.com/property.jpg',
+              location: 'Pinamar',
+            },
+          ],
+        };
+      }
+
+      if (text.includes('UPDATE bookings') && text.includes('guest_checkin_confirmed = TRUE')) {
+        expect(params).toEqual(['booking-1', 'user-1', false]);
+        return { rows: [] };
+      }
+
+      throw new Error(`Unexpected query: ${text}`);
+    });
+
+    const res = await request(app)
+      .post('/api/bookings/booking-1/confirm-arrival')
+      .set('x-test-user-id', 'user-1');
+
+    expect(res.status).toBe(200);
+    expect(res.body.booking.depositStatus).toBe('held');
+    expect(res.body.booking.guestCheckinConfirmed).toBe(true);
+    expect(res.body.booking.hostAccessConfirmed).toBe(false);
+  });
+
+  test('POST /api/bookings/:id/confirm-access releases a protected deposit after both confirmations', async () => {
+    let bookingLookupCount = 0;
+    const arrivalDate = getDateInArgentina(0);
+    const departureDate = getDateInArgentina(3);
+
+    queryMock.mockImplementation(async (text: string, params?: unknown[]) => {
+      if (text.includes(BOOKING_LOOKUP_QUERY_SNIPPET) && text.includes('WHERE p."hostId" = $1 AND b.id = $2')) {
         bookingLookupCount += 1;
 
         return {
@@ -1500,6 +1552,8 @@ describe('Bookings and availability endpoints', () => {
               contractJson: '{}',
               requestMode: 'protected',
               depositStatus: bookingLookupCount === 1 ? 'held' : 'released',
+              guestCheckinConfirmed: true,
+              hostAccessConfirmed: bookingLookupCount > 1,
               propertyTitle: 'Casa del bosque',
               imageUrl: 'https://example.com/property.jpg',
               location: 'Pinamar',
@@ -1508,8 +1562,8 @@ describe('Bookings and availability endpoints', () => {
         };
       }
 
-      if (text.includes('UPDATE bookings') && text.includes("deposit_status = 'released'")) {
-        expect(params).toEqual(['booking-1', 'user-1']);
+      if (text.includes('UPDATE bookings') && text.includes('host_access_confirmed = TRUE')) {
+        expect(params).toEqual(['booking-1', true]);
         return { rows: [] };
       }
 
@@ -1522,11 +1576,13 @@ describe('Bookings and availability endpoints', () => {
     });
 
     const res = await request(app)
-      .post('/api/bookings/booking-1/confirm-arrival')
-      .set('x-test-user-id', 'user-1');
+      .post('/api/bookings/booking-1/confirm-access')
+      .set('x-test-user-id', 'host-1');
 
     expect(res.status).toBe(200);
     expect(res.body.booking.depositStatus).toBe('released');
+    expect(res.body.booking.guestCheckinConfirmed).toBe(true);
+    expect(res.body.booking.hostAccessConfirmed).toBe(true);
   });
 
   test('POST /api/bookings/:id/confirm-arrival rejects confirmations before the check-in day', async () => {

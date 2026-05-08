@@ -298,6 +298,9 @@ const getBookingFlow = (booking: Booking) => getReservationFlowCopy({
   bookingStatus: booking.status,
   depositStatus: booking.depositStatus,
   cancellationActor: booking.cancellationActor,
+  startDate: booking.startDate,
+  guestCheckinConfirmed: booking.guestCheckinConfirmed,
+  hostAccessConfirmed: booking.hostAccessConfirmed,
   viewerRole: 'guest',
 });
 
@@ -308,6 +311,9 @@ const getConversationFlow = (conversation: Conversation, relatedBooking?: Bookin
   bookingStatus: relatedBooking?.status ?? conversation.bookingStatus,
   depositStatus: relatedBooking?.depositStatus ?? conversation.depositStatus,
   cancellationActor: relatedBooking?.cancellationActor ?? conversation.cancellationActor,
+  startDate: relatedBooking?.startDate ?? conversation.startDate,
+  guestCheckinConfirmed: relatedBooking?.guestCheckinConfirmed ?? conversation.guestCheckinConfirmed,
+  hostAccessConfirmed: relatedBooking?.hostAccessConfirmed ?? conversation.hostAccessConfirmed,
   viewerRole: 'guest',
 });
 
@@ -712,7 +718,7 @@ export const MyBookings = () => {
     try {
       const nextBooking = await confirmArrival(bookingId);
       updateBookingState(nextBooking);
-      showToast('Seña liberada', 'La llegada ya quedó confirmada y la seña salió de custodia.', 'success');
+      showToast('Ingreso confirmado', 'Tu confirmación ya quedó registrada. Ahora falta que el anfitrión confirme el acceso para liberar la seña.', 'success');
     } catch (error) {
       showToast('Llegada', error instanceof Error ? error.message : 'No pudimos confirmar la llegada.', 'error');
     } finally {
@@ -1194,7 +1200,7 @@ export const MyBookings = () => {
                     </Button>
                   ) : null}
 
-                  {bookingFlow.stage === 'protected-deposit-held' && arrivalActionsAvailable ? (
+                  {bookingFlow.stage === 'protected-deposit-held' && arrivalActionsAvailable && bookingFlow.state !== 'guest_checkin_confirmed' ? (
                     <Button
                       type="button"
                       size="sm"
@@ -1210,7 +1216,7 @@ export const MyBookings = () => {
                     </Button>
                   ) : null}
 
-                  {bookingFlow.stage === 'protected-deposit-held' && arrivalActionsAvailable ? (
+                  {bookingFlow.stage === 'protected-deposit-held' && arrivalActionsAvailable && bookingFlow.state !== 'guest_checkin_confirmed' ? (
                     <Button
                       type="button"
                       variant="outline"
@@ -1226,6 +1232,7 @@ export const MyBookings = () => {
                       </>
                     </Button>
                   ) : null}
+
                 </div>
               </div>
 

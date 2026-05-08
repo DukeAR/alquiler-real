@@ -5,7 +5,7 @@ import { showToast } from '../lib/toast';
 import { LoadingState } from './LoadingState';
 import { cn } from '../lib/utils';
 import { 
-  acceptConversationRequest, confirmArrival, confirmDirectDeposit, confirmProtectedDepositPayment, fetchConversations, fetchMessages, notAdvanceConversationRequest, reportArrivalProblem, reportDirectDeposit, selectExternalDeposit, selectProtectedDeposit, sendMessage,
+  acceptConversationRequest, confirmAccess, confirmArrival, confirmDirectDeposit, confirmProtectedDepositPayment, fetchConversations, fetchMessages, notAdvanceConversationRequest, reportArrivalProblem, reportDirectDeposit, selectExternalDeposit, selectProtectedDeposit, sendMessage,
   Conversation, Message 
 } from '../services/geminiService';
 import { useAuth } from '../hooks/useAuth';
@@ -279,6 +279,7 @@ const getConversationListPreview = (
     bookingStatus: requestContext?.bookingStatus,
     depositStatus: requestContext?.depositStatus,
     cancellationActor: requestContext?.cancellationActor,
+    startDate: requestContext?.startDate,
     viewerRole,
   });
   const requestDeadline = flowCopy.stage === 'request-pending'
@@ -627,6 +628,8 @@ const getActiveRequestContext = (
       cancellationActor: activeConversation.cancellationActor,
       bookingId: activeConversation.booking_id,
       bookingStatus: activeConversation.bookingStatus,
+      guestCheckinConfirmed: activeConversation.guestCheckinConfirmed,
+      hostAccessConfirmed: activeConversation.hostAccessConfirmed,
     };
   }
 
@@ -1032,6 +1035,8 @@ export const SecureChat: React.FC<SecureChatProps> = ({
     protectedDepositPricing?: Conversation['protectedDepositPricing'];
     depositPaymentReference?: Conversation['depositPaymentReference'];
     cancellationActor?: Conversation['cancellationActor'];
+    guestCheckinConfirmed?: Conversation['guestCheckinConfirmed'];
+    hostAccessConfirmed?: Conversation['hostAccessConfirmed'];
   }) => {
     setConversations((current) => current.map((conversation) => (
       conversation.booking_id === booking.id
@@ -1043,6 +1048,8 @@ export const SecureChat: React.FC<SecureChatProps> = ({
             protectedDepositPricing: booking.protectedDepositPricing ?? conversation.protectedDepositPricing,
             depositPaymentReference: booking.depositPaymentReference ?? conversation.depositPaymentReference,
             cancellationActor: booking.cancellationActor ?? conversation.cancellationActor,
+            guestCheckinConfirmed: booking.guestCheckinConfirmed ?? conversation.guestCheckinConfirmed,
+            hostAccessConfirmed: booking.hostAccessConfirmed ?? conversation.hostAccessConfirmed,
           }
         : conversation
     )));
@@ -1056,6 +1063,8 @@ export const SecureChat: React.FC<SecureChatProps> = ({
             protectedDepositPricing: booking.protectedDepositPricing ?? current.protectedDepositPricing,
             depositPaymentReference: booking.depositPaymentReference ?? current.depositPaymentReference,
             cancellationActor: booking.cancellationActor ?? current.cancellationActor,
+            guestCheckinConfirmed: booking.guestCheckinConfirmed ?? current.guestCheckinConfirmed,
+            hostAccessConfirmed: booking.hostAccessConfirmed ?? current.hostAccessConfirmed,
           }
         : current
     ));
@@ -1211,6 +1220,8 @@ export const SecureChat: React.FC<SecureChatProps> = ({
           protectedDepositPricing: confirmation.booking.protectedDepositPricing,
           depositPaymentReference: confirmation.booking.depositPaymentReference,
           cancellationActor: confirmation.booking.cancellationActor,
+          guestCheckinConfirmed: confirmation.booking.guestCheckinConfirmed,
+          hostAccessConfirmed: confirmation.booking.hostAccessConfirmed,
         });
 
         await loadConversations();
@@ -1250,11 +1261,41 @@ export const SecureChat: React.FC<SecureChatProps> = ({
         depositStatus: booking.depositStatus,
         protectedDepositPricing: booking.protectedDepositPricing,
         depositPaymentReference: booking.depositPaymentReference,
+        guestCheckinConfirmed: booking.guestCheckinConfirmed,
+        hostAccessConfirmed: booking.hostAccessConfirmed,
       });
       await loadMessages(activeConv.id);
-      showToast('Seña liberada', 'La llegada ya quedó confirmada y la seña salió de custodia.', 'success');
+      showToast('Ingreso confirmado', 'Tu confirmación ya quedó registrada. Ahora falta que el anfitrión confirme el acceso para liberar la seña.', 'success');
     } catch (err) {
       showToast('Llegada', err instanceof Error ? err.message : 'No pudimos confirmar la llegada.', 'error');
+    } finally {
+      setProcessingFlowAction(null);
+    }
+  };
+
+  const handleConfirmAccess = async (bookingId: string) => {
+    if (!activeConv) {
+      return;
+    }
+
+    setProcessingFlowAction('confirm-access');
+
+    try {
+      const booking = await confirmAccess(bookingId);
+      applyBookingUpdate({
+        id: booking.id,
+        status: booking.status,
+        depositType: booking.depositType,
+        depositStatus: booking.depositStatus,
+        protectedDepositPricing: booking.protectedDepositPricing,
+        depositPaymentReference: booking.depositPaymentReference,
+        guestCheckinConfirmed: booking.guestCheckinConfirmed,
+        hostAccessConfirmed: booking.hostAccessConfirmed,
+      });
+      await loadMessages(activeConv.id);
+      showToast('Acceso confirmado', 'El acceso quedó confirmado y la seña ya salió de custodia.', 'success');
+    } catch (err) {
+      showToast('Acceso', err instanceof Error ? err.message : 'No pudimos confirmar el acceso.', 'error');
     } finally {
       setProcessingFlowAction(null);
     }
@@ -1298,6 +1339,9 @@ export const SecureChat: React.FC<SecureChatProps> = ({
         bookingStatus: activeRequestContext.bookingStatus,
         depositStatus: activeRequestContext.depositStatus,
         cancellationActor: activeRequestContext.cancellationActor,
+        startDate: activeRequestContext.startDate,
+        guestCheckinConfirmed: activeRequestContext.guestCheckinConfirmed,
+        hostAccessConfirmed: activeRequestContext.hostAccessConfirmed,
         viewerRole: isTenantConversation ? 'guest' : 'host',
       })
     : null;
@@ -1416,8 +1460,9 @@ export const SecureChat: React.FC<SecureChatProps> = ({
     && flowCopy?.stage === 'protected-checkout-pending',
   );
   const arrivalActionsAvailable = isBookingCheckInReached(activeRequestContext?.startDate);
-  const canConfirmArrival = Boolean(isTenantConversation && activeRequestContext?.depositType === 'protected' && flowCopy?.stage === 'protected-deposit-held' && activeRequestContext.bookingId && arrivalActionsAvailable);
-  const canReportArrivalProblem = Boolean(isTenantConversation && activeRequestContext?.depositType === 'protected' && flowCopy?.stage === 'protected-deposit-held' && activeRequestContext.bookingId && arrivalActionsAvailable);
+  const canConfirmArrival = Boolean(isTenantConversation && activeRequestContext?.depositType === 'protected' && flowCopy?.stage === 'protected-deposit-held' && flowCopy?.state !== 'guest_checkin_confirmed' && activeRequestContext.bookingId && arrivalActionsAvailable);
+  const canConfirmAccess = Boolean(isHostConversation && activeRequestContext?.depositType === 'protected' && flowCopy?.state === 'guest_checkin_confirmed' && activeRequestContext.bookingId && arrivalActionsAvailable);
+  const canReportArrivalProblem = Boolean(isTenantConversation && activeRequestContext?.depositType === 'protected' && flowCopy?.stage === 'protected-deposit-held' && flowCopy?.state !== 'guest_checkin_confirmed' && activeRequestContext.bookingId && arrivalActionsAvailable);
   const canCoordinateArrival = Boolean(
     activeRequestContext
     && (flowCopy?.stage === 'protected-deposit-held'
@@ -1450,12 +1495,15 @@ export const SecureChat: React.FC<SecureChatProps> = ({
     || canAcceptRequest
     || canNotAdvanceRequest
     || canConfirmArrival
+    || canConfirmAccess
     || canReportArrivalProblem
     || canCoordinateArrival,
   );
   const chatContextHelper = isReservationConfirmedStage || canCoordinateArrival
     ? 'La reserva ya está cerrada. Usá este chat para coordinar llegada, acceso y últimos detalles.'
-    : canConfirmArrival || canReportArrivalProblem
+    : canConfirmAccess
+      ? 'El huésped ya confirmó la llegada. Si todo salió bien, ahora podés confirmar el acceso.'
+      : canConfirmArrival || canReportArrivalProblem
       ? 'Hoy ya podés confirmar cómo salió el ingreso o avisar si hubo un problema.'
       : canPayProtectedDeposit
         ? 'Si quieren cerrarlo ahora, la seña queda registrada desde esta conversación.'
@@ -2392,6 +2440,17 @@ export const SecureChat: React.FC<SecureChatProps> = ({
                             >
                               {processingFlowAction === 'confirm-arrival' ? <Icons.Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Icons.CheckCircle2 className="h-3.5 w-3.5" />}
                               <span>{processingFlowAction === 'confirm-arrival' ? 'Confirmando...' : flowCopy?.primaryActionLabel}</span>
+                            </button>
+                          ) : null}
+                          {canConfirmAccess ? (
+                            <button
+                              type="button"
+                              onClick={() => activeRequestContext?.bookingId && void handleConfirmAccess(activeRequestContext.bookingId)}
+                              disabled={processingFlowAction !== null}
+                              className="inline-flex items-center gap-2 rounded-full bg-brand px-3.5 py-2 text-xs font-semibold text-white shadow-[0_18px_34px_-28px_rgba(67,56,202,0.4)] transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-70"
+                            >
+                              {processingFlowAction === 'confirm-access' ? <Icons.Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Icons.CheckCircle2 className="h-3.5 w-3.5" />}
+                              <span>{processingFlowAction === 'confirm-access' ? 'Confirmando acceso...' : 'Confirmar acceso'}</span>
                             </button>
                           ) : null}
                           {canReportArrivalProblem ? (

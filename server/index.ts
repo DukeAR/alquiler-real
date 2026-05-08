@@ -4514,6 +4514,8 @@ app.get('/api/host/dashboard', async (req, res) => {
           COALESCE(b.guests, 1)::int as guests,
           COALESCE(b.total_price, 0)::int as "totalPrice",
               b.cancellation_actor as "cancellationActor",
+            b.guest_checkin_confirmed as "guestCheckinConfirmed",
+            b.host_access_confirmed as "hostAccessConfirmed",
           c.id as "conversationId",
           c.request_status as "requestStatus",
           COALESCE(c.deposit_status, b.deposit_status) as "depositStatus",
@@ -5242,6 +5244,8 @@ const BOOKING_SELECT_QUERY = `SELECT b.id, b."propertyId", b."userId", b.status,
   b.start_date as "startDate", b.end_date as "endDate", b.total_price as "totalPrice",
   b.guests, b.contract_accepted as "contractAccepted", b.contract_json as "contractJson",
   b.cancellation_actor as "cancellationActor",
+  b.guest_checkin_confirmed as "guestCheckinConfirmed",
+  b.host_access_confirmed as "hostAccessConfirmed",
   p."hostId" as "hostId",
   c.id as "conversationId",
   c.request_status as "requestStatus",
@@ -5318,6 +5322,8 @@ const getEnrichedConversationById = async (conversationId: string) => {
             b.status as "bookingStatus", b.start_date as "startDate", b.end_date as "endDate",
             b.guests, b.total_price as "totalPrice",
           b.cancellation_actor as "cancellationActor",
+            b.guest_checkin_confirmed as "guestCheckinConfirmed",
+            b.host_access_confirmed as "hostAccessConfirmed",
             COALESCE(c.request_mode, b.request_mode, CASE WHEN c.booking_id IS NOT NULL THEN 'protected' ELSE NULL END) as "requestMode",
             c.request_status as "requestStatus",
             c.request_created_at as "requestCreatedAt",
@@ -5455,6 +5461,8 @@ const normalizeBookingRecord = <T extends { startDate?: unknown; endDate?: unkno
     depositTotalChargeArs?: unknown;
     depositPaymentReference?: unknown;
     totalPrice?: unknown;
+    guestCheckinConfirmed?: unknown;
+    hostAccessConfirmed?: unknown;
   };
   const normalizedStartDate = normalizeDateOnlyValue(booking.startDate);
   const normalizedEndDate = normalizeDateOnlyValue(booking.endDate);
@@ -5481,6 +5489,12 @@ const normalizeBookingRecord = <T extends { startDate?: unknown; endDate?: unkno
     ...(hasProtectedDepositFields ? { protectedDepositPricing } : {}),
     ...(bookingRecord.depositPaymentReference !== undefined
       ? { depositPaymentReference: typeof bookingRecord.depositPaymentReference === 'string' ? bookingRecord.depositPaymentReference : null }
+      : {}),
+    ...(bookingRecord.guestCheckinConfirmed !== undefined
+      ? { guestCheckinConfirmed: Boolean(bookingRecord.guestCheckinConfirmed) }
+      : {}),
+    ...(bookingRecord.hostAccessConfirmed !== undefined
+      ? { hostAccessConfirmed: Boolean(bookingRecord.hostAccessConfirmed) }
       : {}),
   };
 };
@@ -5531,6 +5545,8 @@ const normalizeConversationRecord = <T extends {
   serviceFeeArs?: unknown;
   depositTotalChargeArs?: unknown;
   depositPaymentReference?: unknown;
+  guestCheckinConfirmed?: unknown;
+  hostAccessConfirmed?: unknown;
   totalPrice?: unknown;
 }>(conversation: T) => {
   const {
@@ -5703,6 +5719,12 @@ const normalizeConversationRecord = <T extends {
     ...(hasProtectedDepositFields ? { protectedDepositPricing } : {}),
     ...(conversation.depositPaymentReference !== undefined
       ? { depositPaymentReference: typeof conversation.depositPaymentReference === 'string' ? conversation.depositPaymentReference : null }
+      : {}),
+    ...(conversation.guestCheckinConfirmed !== undefined
+      ? { guestCheckinConfirmed: Boolean(conversation.guestCheckinConfirmed) }
+      : {}),
+    ...(conversation.hostAccessConfirmed !== undefined
+      ? { hostAccessConfirmed: Boolean(conversation.hostAccessConfirmed) }
       : {}),
     ...(propertyPrice !== undefined && propertyPrice !== null
       ? { propertyPrice: Number.isFinite(Number(propertyPrice)) ? Number(propertyPrice) : undefined }
@@ -5976,6 +5998,8 @@ const getUserBookingById = async (userId: string, bookingId: string) => {
             b.start_date as "startDate", b.end_date as "endDate", b.total_price as "totalPrice",
             b.guests, b.contract_accepted as "contractAccepted", b.contract_json as "contractJson",
           b.cancellation_actor as "cancellationActor",
+            b.guest_checkin_confirmed as "guestCheckinConfirmed",
+            b.host_access_confirmed as "hostAccessConfirmed",
             p."hostId" as "hostId",
             c.id as "conversationId",
             c.request_status as "requestStatus",
@@ -6019,6 +6043,8 @@ const getHostBookingById = async (hostId: string, bookingId: string) => {
             b.start_date as "startDate", b.end_date as "endDate", b.total_price as "totalPrice",
             b.guests, b.contract_accepted as "contractAccepted", b.contract_json as "contractJson",
             b.cancellation_actor as "cancellationActor",
+          b.guest_checkin_confirmed as "guestCheckinConfirmed",
+          b.host_access_confirmed as "hostAccessConfirmed",
           p."hostId" as "hostId",
             c.id as "conversationId",
             c.request_status as "requestStatus",
@@ -6062,6 +6088,8 @@ const getBookingByDepositPaymentReference = async (depositPaymentReference: stri
             b.start_date as "startDate", b.end_date as "endDate", b.total_price as "totalPrice",
             b.guests, b.contract_accepted as "contractAccepted", b.contract_json as "contractJson",
             b.cancellation_actor as "cancellationActor",
+          b.guest_checkin_confirmed as "guestCheckinConfirmed",
+          b.host_access_confirmed as "hostAccessConfirmed",
             p."hostId" as "hostId",
             c.id as "conversationId",
           c.request_status as "requestStatus",
@@ -8121,25 +8149,86 @@ app.post('/api/bookings/:id/confirm-arrival', async (req, res) => {
       return sendBookingError(res, 422, 'BOOKING_ARRIVAL_TOO_EARLY', 'Vas a poder confirmar la llegada desde el día del ingreso.');
     }
 
-    await db.query(
-      `UPDATE bookings
-       SET deposit_status = 'released'
-       WHERE id = $1 AND "userId" = $2`,
-      [req.params.id, userId],
-    );
+    if (booking.guestCheckinConfirmed && !booking.hostAccessConfirmed) {
+      return res.json({ booking });
+    }
 
     await db.query(
-      `UPDATE conversations
-       SET deposit_status = 'released', updated_at = NOW()
-       WHERE booking_id = $1`,
-      [req.params.id],
+      `UPDATE bookings
+       SET guest_checkin_confirmed = TRUE,
+           deposit_status = CASE WHEN $3 THEN 'released' ELSE deposit_status END
+       WHERE id = $1 AND "userId" = $2`,
+      [req.params.id, userId, Boolean(booking.hostAccessConfirmed)],
     );
+
+    if (booking.hostAccessConfirmed) {
+      await db.query(
+        `UPDATE conversations
+         SET deposit_status = 'released', updated_at = NOW()
+         WHERE booking_id = $1`,
+        [req.params.id],
+      );
+    }
 
     const updatedBooking = await getUserBookingById(userId, req.params.id);
     return res.json({ booking: updatedBooking });
   } catch (err) {
     console.error('Error al confirmar la llegada:', err);
     return sendBookingError(res, 500, 'BOOKING_ARRIVAL_CONFIRM_FAILED', 'No pudimos registrar la llegada. Intentá de nuevo.');
+  }
+});
+
+app.post('/api/bookings/:id/confirm-access', async (req, res) => {
+  const userId = req.session.userId;
+  if (!userId) {
+    return sendBookingError(res, 401, 'AUTH_REQUIRED', AUTH_REQUIRED_ERROR);
+  }
+
+  try {
+    const booking = await getHostBookingById(userId, req.params.id);
+
+    if (!booking) {
+      return sendBookingError(res, 404, 'BOOKING_NOT_FOUND', 'No encontramos esa reserva.');
+    }
+
+    if (!isProtectedDepositBooking(booking)) {
+      return sendBookingError(res, 422, 'INVALID_ACCESS_FLOW', 'Esta acción solo aplica a reservas con seña gestionada en la app.');
+    }
+
+    if (booking.depositStatus !== 'held') {
+      return sendBookingError(res, 422, 'BOOKING_NOT_IN_CUSTODY', 'Primero necesitás tener la seña en custodia para confirmar el acceso.');
+    }
+
+    if (!hasBookingReachedStartDate(booking.startDate)) {
+      return sendBookingError(res, 422, 'BOOKING_ACCESS_TOO_EARLY', 'Vas a poder confirmar el acceso desde el día del ingreso.');
+    }
+
+    if (booking.hostAccessConfirmed && !booking.guestCheckinConfirmed) {
+      return res.json({ booking });
+    }
+
+    await db.query(
+      `UPDATE bookings
+       SET host_access_confirmed = TRUE,
+           deposit_status = CASE WHEN $2 THEN 'released' ELSE deposit_status END
+       WHERE id = $1`,
+      [req.params.id, Boolean(booking.guestCheckinConfirmed)],
+    );
+
+    if (booking.guestCheckinConfirmed) {
+      await db.query(
+        `UPDATE conversations
+         SET deposit_status = 'released', updated_at = NOW()
+         WHERE booking_id = $1`,
+        [req.params.id],
+      );
+    }
+
+    const updatedBooking = await getHostBookingById(userId, req.params.id);
+    return res.json({ booking: updatedBooking });
+  } catch (err) {
+    console.error('Error al confirmar el acceso:', err);
+    return sendBookingError(res, 500, 'BOOKING_ACCESS_CONFIRM_FAILED', 'No pudimos registrar el acceso. Intentá de nuevo.');
   }
 });
 

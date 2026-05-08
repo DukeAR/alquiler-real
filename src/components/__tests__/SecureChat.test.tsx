@@ -13,6 +13,7 @@ const confirmDirectDepositMock = vi.fn();
 const selectExternalDepositMock = vi.fn();
 const selectProtectedDepositMock = vi.fn();
 const payProtectedDepositMock = vi.fn();
+const confirmAccessMock = vi.fn();
 const confirmArrivalMock = vi.fn();
 const reportArrivalProblemMock = vi.fn();
 const showToastMock = vi.fn();
@@ -50,6 +51,7 @@ vi.mock('../../services/geminiService', () => ({
   selectExternalDeposit: (...args: unknown[]) => selectExternalDepositMock(...args),
   selectProtectedDeposit: (...args: unknown[]) => selectProtectedDepositMock(...args),
   payProtectedDeposit: (...args: unknown[]) => payProtectedDepositMock(...args),
+  confirmAccess: (...args: unknown[]) => confirmAccessMock(...args),
   confirmArrival: (...args: unknown[]) => confirmArrivalMock(...args),
   reportArrivalProblem: (...args: unknown[]) => reportArrivalProblemMock(...args),
 }));
@@ -167,6 +169,7 @@ describe('SecureChat', () => {
     selectExternalDepositMock.mockReset();
     selectProtectedDepositMock.mockReset();
     payProtectedDepositMock.mockReset();
+    confirmAccessMock.mockReset();
     confirmArrivalMock.mockReset();
     reportArrivalProblemMock.mockReset();
     showToastMock.mockReset();
@@ -686,7 +689,7 @@ describe('SecureChat', () => {
     expect(await screen.findByText('Ya están de acuerdo.')).toBeInTheDocument();
     expect(screen.getByText(/La reserva ya quedó marcada con seña protegida\./i)).toBeInTheDocument();
     expect(screen.getByText(/Por ahora no procesamos el cobro dentro de la app\./i)).toBeInTheDocument();
-    expect(screen.getByText('Estado: Seña protegida')).toBeInTheDocument();
+    expect(screen.getByText('Estado: Seña pendiente')).toBeInTheDocument();
     expect(screen.queryByText('Cómo sigue la seña')).not.toBeInTheDocument();
     expect(screen.queryByText('Registrada acá')).not.toBeInTheDocument();
     expect(screen.queryByText('Por fuera (más manual)')).not.toBeInTheDocument();
@@ -782,7 +785,7 @@ describe('SecureChat', () => {
     expect(await screen.findByText('Ya están de acuerdo.')).toBeInTheDocument();
     expect(screen.getByText(/La reserva ya quedó marcada con seña protegida\./i)).toBeInTheDocument();
     expect(screen.getByText(/Por ahora no procesamos el cobro dentro de la app\./i)).toBeInTheDocument();
-    expect(screen.getByText('Estado: Seña protegida')).toBeInTheDocument();
+    expect(screen.getByText('Estado: Seña pendiente')).toBeInTheDocument();
     expect(screen.queryByText('Cómo querés avanzar con la seña')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Pagar seña/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Dejarla registrada acá/i })).not.toBeInTheDocument();
@@ -856,9 +859,8 @@ describe('SecureChat', () => {
 
     renderChat();
 
-    expect(await screen.findByText('Estado: Seña registrada')).toBeInTheDocument();
-    expect(screen.getByText('Si hace falta intervención más adelante, también queda registrada desde esta reserva.')).toBeInTheDocument();
-    expect(screen.getAllByText('Coordinar llegada').length).toBeGreaterThan(0);
+    expect(await screen.findByText('Estado: Seña confirmada')).toBeInTheDocument();
+    expect(screen.getByText('La reserva ya está cerrada. Usá este chat para coordinar llegada, acceso y últimos detalles.')).toBeInTheDocument();
   });
 
   test('shows the 24 hour response deadline and inactivity guidance when a pending protected request expires', async () => {
@@ -943,7 +945,7 @@ describe('SecureChat', () => {
       expect(reportArrivalProblemMock).toHaveBeenCalledWith('booking-2');
     });
 
-    expect(await screen.findByText('Estado: Problema reportado')).toBeInTheDocument();
+    expect(await screen.findByText('Estado: Revisión manual')).toBeInTheDocument();
     expect(showToastMock).toHaveBeenCalledWith(
       'Seña en revisión',
       'El problema quedó informado y la seña pasó a revisión.',
@@ -971,10 +973,57 @@ describe('SecureChat', () => {
 
     renderChat();
 
-    expect(await screen.findByText('Estado: Seña registrada')).toBeInTheDocument();
-    expect(screen.getByText('Confirmar llegada o reportar un problema se habilitan el día del ingreso.')).toBeInTheDocument();
+    expect(await screen.findByText('Estado: Seña confirmada')).toBeInTheDocument();
+    expect(screen.getByText('Las confirmaciones del ingreso se habilitan desde el día del check-in.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Confirmar llegada/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Reportar un problema/i })).not.toBeInTheDocument();
+  });
+
+  test('lets the host confirm access after the guest already confirmed the protected check-in', async () => {
+    const arrivalDate = getRelativeArgentinaDate(0);
+    const departureDate = getRelativeArgentinaDate(4);
+
+    useAuthMock.mockReturnValue({ user: { id: 'host-1' } });
+    fetchConversationsMock.mockResolvedValue([
+      {
+        ...baseConversation,
+        booking_id: 'booking-access-1',
+        bookingStatus: 'confirmed',
+        requestMode: 'protected',
+        requestStatus: 'accepted',
+        depositStatus: 'held',
+        guestCheckinConfirmed: true,
+        hostAccessConfirmed: false,
+        requestStartDate: arrivalDate,
+        requestEndDate: departureDate,
+        requestGuests: 2,
+        requestTotalPrice: 430000,
+      },
+    ]);
+    fetchMessagesMock.mockResolvedValue([]);
+    confirmAccessMock.mockResolvedValue({
+      id: 'booking-access-1',
+      status: 'confirmed',
+      depositType: 'protected',
+      depositStatus: 'released',
+      guestCheckinConfirmed: true,
+      hostAccessConfirmed: true,
+    });
+
+    renderChat();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Confirmar acceso/i }));
+
+    await waitFor(() => {
+      expect(confirmAccessMock).toHaveBeenCalledWith('booking-access-1');
+    });
+
+    expect(await screen.findByText('Estado: Seña liberada')).toBeInTheDocument();
+    expect(showToastMock).toHaveBeenCalledWith(
+      'Acceso confirmado',
+      'El acceso quedó confirmado y la seña ya salió de custodia.',
+      'success',
+    );
   });
 
   test('lets the host mark a request as not advanced with an optional reason and keeps the chat open', async () => {

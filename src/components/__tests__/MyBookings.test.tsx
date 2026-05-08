@@ -575,7 +575,9 @@ describe('MyBookings', () => {
       userId: 'user-1',
       status: 'confirmed',
       requestMode: 'protected',
-      depositStatus: 'released',
+      depositStatus: 'held',
+      guestCheckinConfirmed: true,
+      hostAccessConfirmed: false,
       propertyTitle: 'Departamento luminoso',
       location: 'Belgrano',
       startDate: arrivalDate,
@@ -597,8 +599,14 @@ describe('MyBookings', () => {
       expect(confirmArrivalMock).toHaveBeenCalledWith('booking-protected-2');
     });
 
-    expect(await screen.findAllByText('Confirmada')).not.toHaveLength(0);
-    expect(screen.getAllByText('Todo listo para esas fechas.')).not.toHaveLength(0);
+    expect(await screen.findAllByText('Check-in confirmado')).not.toHaveLength(0);
+    expect(screen.getAllByText('Ya registraste que llegaste a la propiedad.')).not.toHaveLength(0);
+    expect(screen.getAllByText('Ahora falta que el anfitrión confirme el acceso para liberar la seña.')).not.toHaveLength(0);
+    expect(showToastMock).toHaveBeenCalledWith(
+      'Ingreso confirmado',
+      'Tu confirmación ya quedó registrada. Ahora falta que el anfitrión confirme el acceso para liberar la seña.',
+      'success',
+    );
   });
 
   test('lets the guest report an arrival problem while the protected deposit is in custody', async () => {
@@ -650,7 +658,7 @@ describe('MyBookings', () => {
       expect(reportArrivalProblemMock).toHaveBeenCalledWith('booking-protected-3');
     });
 
-    expect(await screen.findAllByText('Problema reportado')).not.toHaveLength(0);
+    expect(await screen.findAllByText('Revisión manual')).not.toHaveLength(0);
     expect(screen.getAllByText('Quedó reportado un problema en esta reserva.')).not.toHaveLength(0);
     expect(screen.getByText('La plataforma está revisando qué pasó antes de definir cómo sigue.')).toBeInTheDocument();
     expect(showToastMock).toHaveBeenCalledWith(
@@ -685,8 +693,8 @@ describe('MyBookings', () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findAllByText('Seña registrada')).not.toHaveLength(0);
-    expect(screen.getByText('Confirmar llegada o reportar un problema se habilitan el día del ingreso.')).toBeInTheDocument();
+    expect(await screen.findAllByText('Seña confirmada')).not.toHaveLength(0);
+    expect(screen.getByText('Las confirmaciones del ingreso se habilitan desde el día del check-in.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Confirmar llegada/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Reportar problema/i })).not.toBeInTheDocument();
   });

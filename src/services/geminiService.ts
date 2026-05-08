@@ -232,6 +232,14 @@ export async function confirmArrival(bookingId: string): Promise<Booking> {
   return response.booking;
 }
 
+export async function confirmAccess(bookingId: string): Promise<Booking> {
+  const response = await apiJson<{ booking: Booking }>(`/api/bookings/${bookingId}/confirm-access`, {
+    method: 'POST'
+  });
+
+  return response.booking;
+}
+
 export async function reportArrivalProblem(bookingId: string): Promise<Booking> {
   const response = await apiJson<{ booking: Booking }>(`/api/bookings/${bookingId}/report-arrival-problem`, {
     method: 'POST'

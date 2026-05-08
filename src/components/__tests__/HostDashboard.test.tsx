@@ -507,7 +507,7 @@ describe('HostDashboard', () => {
       );
     });
 
-    expect(await screen.findAllByText('Seña protegida')).not.toHaveLength(0);
+    expect(await screen.findAllByText('Seña pendiente')).not.toHaveLength(0);
     expect(screen.queryByText('Pendiente seña')).not.toBeInTheDocument();
     expect(showToastMock).toHaveBeenCalledWith(
       'Seña protegida aceptada',
@@ -847,7 +847,7 @@ describe('HostDashboard', () => {
 
     renderDashboard();
 
-    fireEvent.click(await screen.findByRole('button', { name: /Reportar un problema/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Informar no show/i }));
 
     await waitFor(() => {
       expect(apiJsonMock).toHaveBeenCalledWith(
@@ -856,7 +856,7 @@ describe('HostDashboard', () => {
       );
     });
 
-    expect(await screen.findAllByText('Problema reportado')).not.toHaveLength(0);
+    expect(await screen.findAllByText('Revisión manual')).not.toHaveLength(0);
     expect(screen.getByText('Quedó reportado un problema con la llegada.')).toBeInTheDocument();
     expect(screen.getByText('La plataforma está revisando qué pasó antes de decidir cómo sigue.')).toBeInTheDocument();
     expect(showToastMock).toHaveBeenCalledWith(
@@ -911,7 +911,7 @@ describe('HostDashboard', () => {
 
     renderDashboard();
 
-    expect(await screen.findAllByText('Seña registrada')).not.toHaveLength(0);
+    expect(await screen.findAllByText('Seña confirmada')).not.toHaveLength(0);
     expect(screen.getByText('Informar no show se habilita el día del ingreso.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Informar no show/i })).not.toBeInTheDocument();
   });
@@ -961,10 +961,93 @@ describe('HostDashboard', () => {
 
     renderDashboard();
 
-    expect(await screen.findAllByText('Seña registrada')).not.toHaveLength(0);
-    expect(screen.getByText('La seña ya quedó registrada.')).toBeInTheDocument();
-    expect(screen.getByText('Ahora pueden coordinar la llegada por el chat.')).toBeInTheDocument();
-    expect(screen.getByText('Si hace falta intervención más adelante, también queda registrada desde esta reserva.')).toBeInTheDocument();
+    expect(await screen.findAllByText('Seña confirmada')).not.toHaveLength(0);
+    expect(screen.getByText('La seña ya quedó confirmada dentro de la app.')).toBeInTheDocument();
+    expect(screen.getByText('El siguiente paso es validar el ingreso cuando llegue la fecha de check-in.')).toBeInTheDocument();
+  });
+
+  test('lets the host confirm access after the guest already confirmed the protected check-in', async () => {
+    apiJsonMock.mockImplementation(async (url: string, options?: RequestInit) => {
+      if (url === '/api/host/dashboard') {
+        return {
+          stats: {
+            host_rating: 4.9,
+            total_bookings_hosted: 3,
+            trust_score: 88,
+            badge: 'Verificado',
+            host_verified: true,
+          },
+          properties: [
+            {
+              id: 'prop-1',
+              title: 'Casa del bosque',
+              location: 'Pinamar',
+              price: 150000,
+              status: 'active',
+              reviewsCount: 8,
+              rating: 4.9,
+              imageUrl: 'https://example.com/property.jpg',
+              verificationScore: 4,
+              verificationItems: [
+                { key: 'identity', label: 'Identidad confirmada', description: 'La identidad del anfitrión ya fue confirmada.', status: 'complete' },
+              ],
+            },
+          ],
+          recentBookings: [
+            {
+              id: 'booking-access-message',
+              status: 'confirmed',
+              requestMode: 'protected',
+              depositStatus: 'held',
+              guestCheckinConfirmed: true,
+              hostAccessConfirmed: false,
+              userId: 'guest-7',
+              userName: 'Nora',
+              propertyTitle: 'Casa del bosque',
+              startDate: getRelativeArgentinaDate(0),
+              endDate: getRelativeArgentinaDate(4),
+              guests: 2,
+              totalPrice: 540000,
+            },
+          ],
+          estimatedIncome: 250000,
+        };
+      }
+
+      if (url === '/api/bookings/booking-access-message/confirm-access') {
+        expect(options?.method).toBe('POST');
+        return {
+          booking: {
+            id: 'booking-access-message',
+            status: 'confirmed',
+            requestMode: 'protected',
+            depositStatus: 'released',
+            guestCheckinConfirmed: true,
+            hostAccessConfirmed: true,
+            userId: 'guest-7',
+            userName: 'Nora',
+            propertyTitle: 'Casa del bosque',
+            startDate: getRelativeArgentinaDate(0),
+            endDate: getRelativeArgentinaDate(4),
+            guests: 2,
+            totalPrice: 540000,
+          },
+        };
+      }
+
+      throw new Error(`Unexpected request: ${url}`);
+    });
+
+    renderDashboard();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Confirmar acceso/i }));
+
+    expect(await screen.findAllByText('Seña liberada')).not.toHaveLength(0);
+    expect(showToastMock).toHaveBeenCalledWith(
+      'Acceso confirmado',
+      'El acceso quedó confirmado y la seña ya salió de custodia.',
+      'success',
+    );
   });
 
   test('lets the host cancel a protected reservation and shows the automatic refund state', async () => {

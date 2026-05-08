@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { getReservationFlowCopy, getReservationFlowMilestones } from '../reservationFlow';
+import { getReservationFlowCopy, getReservationFlowMilestones, getReservationFlowState } from '../reservationFlow';
 
 describe('reservationFlow milestones', () => {
   test('shows review as the current protected deposit milestone when an arrival problem is reported', () => {
@@ -45,6 +45,7 @@ describe('reservationFlow milestones', () => {
     });
 
     expect(flow.stage).toBe('request-not-advanced');
+    expect(flow.state).toBe('cancelled');
     expect(flow.statusLabel).toBe('No avanzó');
     expect(flow.description).toBe('No se pudo avanzar con esta reserva.');
     expect(flow.supportText).toBe('El anfitrión no puede avanzar en este momento. Podés seguir conversando o buscar otras opciones.');
@@ -59,6 +60,7 @@ describe('reservationFlow milestones', () => {
     });
 
     expect(flow.stage).toBe('protected-checkout-pending');
+    expect(flow.state).toBe('deposit_pending');
     expect(flow.modelLabel).toBe('Seña protegida');
     expect(flow.statusLabel).toBe('Seña protegida');
     expect(flow.nextActorLabel).toBe('Plataforma');
@@ -73,9 +75,59 @@ describe('reservationFlow milestones', () => {
     });
 
     expect(flow.stage).toBe('request-accepted');
+    expect(flow.state).toBe('free_operation_selected');
     expect(flow.modelLabel).toBe('Operación libre');
     expect(flow.statusLabel).toBe('Operación libre');
     expect(flow.supportText).toBe('Desde acá coordinan por chat. La app no retiene dinero, no protege la seña ni interviene en pagos externos.');
     expect(flow.nextStepLabel).toBe('Coordinar todo por chat');
+  });
+
+  test('maps a protected checkout flow to deposit_pending', () => {
+    expect(getReservationFlowState({
+      mode: 'protected',
+      requestStatus: 'accepted',
+      bookingStatus: 'pending',
+      depositStatus: 'checkout_pending',
+    })).toBe('deposit_pending');
+  });
+
+  test('maps a held protected deposit before check-in to deposit_confirmed', () => {
+    expect(getReservationFlowState({
+      mode: 'protected',
+      requestStatus: 'accepted',
+      bookingStatus: 'confirmed',
+      depositStatus: 'held',
+      startDate: '2099-01-01',
+    })).toBe('deposit_confirmed');
+  });
+
+  test('maps a held protected deposit on or after check-in to checkin_pending', () => {
+    expect(getReservationFlowState({
+      mode: 'protected',
+      requestStatus: 'accepted',
+      bookingStatus: 'confirmed',
+      depositStatus: 'held',
+      startDate: '2000-01-01',
+    })).toBe('checkin_pending');
+  });
+
+  test('supports explicit guest and host confirmation states when those signals exist', () => {
+    expect(getReservationFlowState({
+      mode: 'protected',
+      requestStatus: 'accepted',
+      bookingStatus: 'confirmed',
+      depositStatus: 'held',
+      startDate: '2000-01-01',
+      guestCheckinConfirmed: true,
+    })).toBe('guest_checkin_confirmed');
+
+    expect(getReservationFlowState({
+      mode: 'protected',
+      requestStatus: 'accepted',
+      bookingStatus: 'confirmed',
+      depositStatus: 'held',
+      startDate: '2000-01-01',
+      hostAccessConfirmed: true,
+    })).toBe('host_access_confirmed');
   });
 });
