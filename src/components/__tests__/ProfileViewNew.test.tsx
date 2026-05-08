@@ -35,6 +35,13 @@ vi.mock('../ui/AccountModeSwitch', () => ({
 
 import { ProfileViewNew } from '../ProfileViewNew';
 
+const jsonResponse = (body: unknown) => new Response(JSON.stringify(body), {
+  status: 200,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
 describe('ProfileViewNew', () => {
   beforeEach(() => {
     logoutMock.mockReset();
@@ -44,9 +51,7 @@ describe('ProfileViewNew', () => {
       const url = String(input);
 
       if (url.includes('/api/verification/status')) {
-        return {
-          ok: true,
-          json: async () => ({
+        return jsonResponse({
             level: 'NIVEL_1',
             levelLabel: 'Base de contacto lista',
             verificationScore: 34,
@@ -98,44 +103,34 @@ describe('ProfileViewNew', () => {
               current: ['Ya completaste una parte del perfil base.'],
               next: ['Confirmá contacto para habilitar la base de reservas más exigentes.'],
             },
-          }),
-        } as Response;
+          });
       }
 
       if (url.includes('/api/users/preferences')) {
-        return {
-          ok: true,
-          json: async () => ({
+        return jsonResponse({
             preferred_zone: 'Santa Teresita',
             max_price: 120000,
             preferred_property_type: 'Departamento',
-          }),
-        } as Response;
+          });
       }
 
       if (url.includes('/api/users/activity')) {
-        return {
-          ok: true,
-          json: async () => ({
+        return jsonResponse({
             total_bookings: 4,
             total_reviews_written: 2,
             total_reviews_received: 1,
             last_booking_date: '2026-03-18T00:00:00.000Z',
-          }),
-        } as Response;
+          });
       }
 
       if (url.includes('/api/users/reviews')) {
-        return {
-          ok: true,
-          json: async () => ({
+        return jsonResponse({
             written: [{ userName: 'Anfitrión Norte', rating: 5, comment: 'Todo claro.', created_at: '2026-03-20T00:00:00.000Z' }],
             received: [{ propertyTitle: 'Casa test', rating: 4, comment: 'Muy respetuoso.', created_at: '2026-03-21T00:00:00.000Z' }],
-          }),
-        } as Response;
+          });
       }
 
-      return { ok: true, json: async () => ({}) } as Response;
+      return jsonResponse({});
     }) as typeof fetch;
   });
 
