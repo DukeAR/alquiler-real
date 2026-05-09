@@ -1,10 +1,14 @@
 import React, { useEffect, useId, useState } from 'react';
+import { getBookingFlowOnboardingTip } from '../lib/contextualOnboarding';
+import { buildProtectedOperationMonetizationPlan, formatMarketplaceMonetizationPriceLabel } from '../lib/marketplaceMonetization';
+import { getProtectedDepositPricing } from '../lib/protectedDeposit';
 import { formatCurrency } from '../lib/utils';
 import { type ReservationRequestMode } from '../types';
 import { Icons } from './Icons';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
+import { ContextualTip } from './ui/ContextualTip';
 import { NoticeBanner } from './ui/NoticeBanner';
 import { ProtectedDepositRefundRules } from './ui/ProtectedDepositRefundRules';
 import { SectionTitle } from './ui/SectionTitle';
@@ -118,11 +122,17 @@ const BookingConfirmationModal: React.FC<Props> = ({
     },
   ];
   const isBusy = actionLoadingMode !== null;
+  const protectedOperationPlan = buildProtectedOperationMonetizationPlan(getProtectedDepositPricing({
+    nights,
+    nightlyPrice: nightly,
+    totalPrice: total,
+  }));
+  const bookingFlowTip = getBookingFlowOnboardingTip();
 
   const activeNotice = submitNotice ?? {
     tone: 'info' as const,
     heading: 'Elegí cómo querés avanzar',
-    description: 'Las dos opciones siguen por chat. Seña Protegida suma retención de la seña hasta el check-in y un costo por operación.',
+    description: 'Las dos opciones siguen por chat. Con Seña Protegida, vas a ver el costo por protección de operación antes de confirmar y la seña queda retenida hasta check-in.',
   };
 
   useEffect(() => {
@@ -214,6 +224,13 @@ const BookingConfirmationModal: React.FC<Props> = ({
 
           <NoticeBanner tone={activeNotice.tone} heading={activeNotice.heading} description={activeNotice.description} />
 
+          <ContextualTip
+            eyebrow={bookingFlowTip.eyebrow}
+            body={bookingFlowTip.body}
+            tone={bookingFlowTip.tone}
+            className="shadow-none"
+          />
+
           <ProtectedDepositRefundRules />
 
           <div className="grid gap-3 sm:grid-cols-2">
@@ -249,13 +266,28 @@ const BookingConfirmationModal: React.FC<Props> = ({
                 <div className="space-y-2">
                   <Badge variant="brand" size="md" className="gap-2">
                     <Icons.ShieldCheck className="h-3.5 w-3.5" />
-                    <span>Opción 2 · Premium opcional</span>
+                    <span>Opción 2 · Retenida hasta check-in</span>
                   </Badge>
                   <p className="text-base font-semibold text-slate-950">Usar Seña Protegida</p>
                   <p className="text-sm leading-6 text-slate-600">
-                    La seña queda retenida por Alquiler Real hasta el check-in. Tiene un costo por operación.
+                    La seña queda retenida hasta check-in. Tiene un costo por protección de operación y puede pasar a revisión manual si hace falta revisar existencia y acceso.
                   </p>
                 </div>
+
+                {protectedOperationPlan?.price ? (
+                  <div className="rounded-[20px] border border-brand/10 bg-white/85 px-4 py-3 text-sm leading-6 text-slate-600">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-brand">{protectedOperationPlan.price.label}</p>
+                    <p className="mt-2 text-sm font-semibold text-slate-950">
+                      {formatMarketplaceMonetizationPriceLabel(protectedOperationPlan.price)}
+                      {typeof protectedOperationPlan.price.percentageRate === 'number'
+                        ? ` · ${Math.round(protectedOperationPlan.price.percentageRate * 100)}% sobre la seña`
+                        : ''}
+                    </p>
+                    {protectedOperationPlan.note ? (
+                      <p className="mt-1 text-xs leading-5 text-slate-500">{protectedOperationPlan.note}</p>
+                    ) : null}
+                  </div>
+                ) : null}
 
                 <Button
                   onClick={onStartProtected}

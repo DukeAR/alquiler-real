@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { apiJson } from '../lib/apiConfig';
+import { getGuestDetailOnboardingTip } from '../lib/contextualOnboarding';
 import { LoadingState } from './LoadingState';
 import { Icons } from './Icons';
 import DateRangePicker from './DateRangePicker';
@@ -24,6 +25,7 @@ import { startConversation } from '../services/geminiService';
 import { Button } from './ui/Button';
 import { Badge } from './ui/Badge';
 import { Card } from './ui/Card';
+import { ContextualTip } from './ui/ContextualTip';
 import { NoticeBanner } from './ui/NoticeBanner';
 import { PresencialVerificationSealMark } from './ui/PresencialVerificationSealMark';
 import { SectionTitle } from './ui/SectionTitle';
@@ -260,7 +262,7 @@ const BOOKING_STEP_COUNT = BOOKING_STEP_CONFIG.length;
 const REQUEST_CONFIRMATION_NOTICE: BookingConfirmationNotice = {
   tone: 'info',
   heading: 'La modalidad se elige en el siguiente paso',
-  description: 'Operación libre abre el chat sin bloquear fechas. Seña protegida deja la reserva marcada con el flujo protegido desde ahora, pero todavía sin procesar pagos dentro de la app.',
+  description: 'Operación libre abre el chat sin bloquear fechas. Seña protegida deja la reserva lista para una seña retenida hasta check-in, aunque por ahora no procesamos pagos dentro de la app.',
 };
 
 type DetailVerificationVisibleLevel = 'none' | 'identity' | 'presencial';
@@ -531,6 +533,7 @@ export const PropertyDetailShell: React.FC<{
   const isPresencialDetail = detailVerificationState.publicLevel === 'presencial';
   const isIdentityDetail = detailVerificationState.publicLevel === 'identity';
   const hostResponseSignal = getHostResponseSignal(property.hostInteractionHistory);
+  const detailOnboardingTip = getGuestDetailOnboardingTip(detailVerificationState.publicLevel);
   const completedReservationsLabel = property.hostInteractionHistory?.completedReservationsCount
     ? `${property.hostInteractionHistory.completedReservationsCount} ${property.hostInteractionHistory.completedReservationsCount === 1 ? 'reserva cerrada' : 'reservas cerradas'}`
     : null;
@@ -1513,6 +1516,13 @@ export const PropertyDetailShell: React.FC<{
                     {bookingCtaSupportCopy}
                   </p>
                 ) : null}
+
+                <ContextualTip
+                  eyebrow={detailOnboardingTip.eyebrow}
+                  body={detailOnboardingTip.body}
+                  tone={detailOnboardingTip.tone}
+                  className="shadow-none"
+                />
               </div>
             </div>
           </div>
@@ -1802,7 +1812,7 @@ export const PropertyDetailShell: React.FC<{
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Reserva</p>
                     <h2 id="booking-flow-title" className="text-2xl font-semibold tracking-tight text-slate-950">Consultar disponibilidad</h2>
                     <p id="booking-flow-description" className="text-sm leading-6 text-slate-600">
-                      Elegí fechas y huéspedes desde esta ficha. Después definís si querés operar libremente por chat o dejar la reserva marcada con seña protegida.
+                      Elegí fechas y huéspedes desde esta ficha. Después definís si querés operar libremente por chat o dejar la reserva lista para una seña protegida.
                     </p>
                   </div>
                   <Button
@@ -1971,7 +1981,7 @@ export const PropertyDetailShell: React.FC<{
                                 <div>
                                   <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Modalidad</p>
                                   <p className="mt-1 font-semibold text-slate-950">La elegís en el siguiente paso</p>
-                                  <p className="mt-1">Operación libre abre chat sin bloquear fechas. Seña protegida deja el flujo protegido marcado, pero todavía sin pagos dentro de la app.</p>
+                                  <p className="mt-1">Operación libre abre chat sin bloquear fechas. Seña protegida deja la reserva lista para una seña retenida hasta check-in, aunque por ahora sin pagos dentro de la app.</p>
                                 </div>
                                 <span className="rounded-full bg-brand/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-brand">
                                   Elegís ahora

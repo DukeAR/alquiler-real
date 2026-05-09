@@ -205,7 +205,7 @@ const PROPERTY_CARD_IDENTITY_VALIDATED_LABEL = 'Identidad verificada';
 
 export const HOST_PUBLISHED_INFO_LABEL = 'Información publicada por el anfitrión';
 
-export const PROPERTY_VERIFICATION_QUALITY_NOTE = 'No evaluamos estado ni calidad del inmueble.';
+export const PROPERTY_VERIFICATION_QUALITY_NOTE = 'No evaluamos estado, calidad ni amenities del inmueble.';
 
 type PublicPropertyVerificationLevel = 'none' | 'presencial';
 

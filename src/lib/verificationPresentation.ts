@@ -62,9 +62,7 @@ export const getVerificationIdentityLabel = (
   options?: { includeCount?: boolean },
 ) => {
   const levelLabel = getVerificationLevelLabel(score, maxScore);
-  const baseLabel = levelLabel === 'Media'
-    ? 'Confianza media'
-    : `${levelLabel} confianza`;
+  const baseLabel = `Verificación ${levelLabel.toLowerCase()}`;
 
   if (options?.includeCount === false) {
     return baseLabel;

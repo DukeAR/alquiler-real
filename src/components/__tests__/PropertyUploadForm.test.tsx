@@ -22,9 +22,9 @@ describe('PropertyUploadForm', () => {
   test('shows progressive steps and completion percentage', () => {
     render(<PropertyUploadForm onComplete={vi.fn()} />);
 
+    expect(screen.getByText('Alta guiada')).toBeInTheDocument();
     expect(screen.getByText('Publica tu propiedad en pocos pasos')).toBeInTheDocument();
-    expect(screen.getByText('Cómo se valida este aviso')).toBeInTheDocument();
-    expect(screen.getByText('Más comprobaciones, menos dudas al decidir')).toBeInTheDocument();
+    expect(screen.getByText('Te pedimos solo lo justo para activarla rapido. Despues la mejoras desde el panel para que el aviso sea mas claro y reciba mas consultas.')).toBeInTheDocument();
     expect(screen.getByText('14%')).toBeInTheDocument();
     expect(screen.getByText('6 pasos más hasta publicar.')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Fotos' })).toBeInTheDocument();

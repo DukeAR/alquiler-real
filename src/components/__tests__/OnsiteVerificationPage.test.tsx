@@ -19,7 +19,7 @@ describe('OnsiteVerificationPage', () => {
 
     expect(screen.getByRole('heading', { name: 'Verificación presencial' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'La verificación reduce dudas antes de reservar.' })).toBeInTheDocument();
-    expect(screen.getByText('Confirmamos que la propiedad existe y que hay una persona identificada con acceso al lugar.')).toBeInTheDocument();
+    expect(screen.getByText('La visita deja identidad, ubicación y acceso confirmados, con respaldo de existencia y vínculo con el lugar.')).toBeInTheDocument();
     expect(screen.getAllByText('Identidad del anfitrión verificada').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Acceso real a la propiedad confirmado').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Vínculo comprobable con el lugar').length).toBeGreaterThan(0);
@@ -30,8 +30,8 @@ describe('OnsiteVerificationPage', () => {
     expect(screen.getByText('Las propiedades verificadas se destacan automáticamente en los resultados.')).toBeInTheDocument();
 
     expect(screen.getByRole('heading', { name: 'Qué cambia cuando verificás' })).toBeInTheDocument();
-    expect(screen.getByText('La propiedad existe')).toBeInTheDocument();
-    expect(screen.getByText('Hay una persona identificada detrás')).toBeInTheDocument();
+    expect(screen.getByText('Existencia y acceso confirmados')).toBeInTheDocument();
+    expect(screen.getByText('Identidad registrada durante la visita')).toBeInTheDocument();
     expect(screen.getByText('Menor riesgo de fraude')).toBeInTheDocument();
     expect(screen.getByText('Mayor confianza para decidir')).toBeInTheDocument();
     expect(screen.getByText('Esto impacta directamente en cómo te contactan y qué tipo de consultas recibís.')).toBeInTheDocument();
@@ -44,16 +44,16 @@ describe('OnsiteVerificationPage', () => {
     expect(screen.getAllByText('Ubicación validada durante visita').length).toBeGreaterThan(0);
     expect(screen.getByRole('heading', { name: 'Qué no validamos' })).toBeInTheDocument();
     expect(screen.getByText('Estado del inmueble')).toBeInTheDocument();
-    expect(screen.getByText('Calidad de los servicios')).toBeInTheDocument();
-    expect(screen.getByText('Condiciones técnicas del lugar')).toBeInTheDocument();
-    expect(screen.getByText('No evaluamos estado ni calidad del inmueble.')).toBeInTheDocument();
+    expect(screen.getByText('Calidad general del lugar')).toBeInTheDocument();
+    expect(screen.getByText('Amenities y servicios del lugar')).toBeInTheDocument();
+    expect(screen.getAllByText('No evaluamos estado, calidad ni amenities del inmueble.').length).toBeGreaterThan(0);
 
     expect(screen.getByRole('heading', { name: 'Cómo es la visita' })).toBeInTheDocument();
     expect(screen.getAllByText('Identidad del anfitrión verificada').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Acceso real a la propiedad confirmado').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Vínculo comprobable con el lugar').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Ubicación validada durante visita').length).toBeGreaterThan(0);
-    expect(screen.getByText('No se realiza inspección técnica ni evaluación de condiciones del inmueble.')).toBeInTheDocument();
+    expect(screen.getByText('No se realiza inspección técnica ni evaluación de estado, calidad o amenities del inmueble.')).toBeInTheDocument();
     expect(screen.getByText('No necesitás preparar nada. Solo mostrar la propiedad y acreditar tu vínculo.')).toBeInTheDocument();
 
     expect(screen.getByRole('heading', { name: 'Quién verifica' })).toBeInTheDocument();
@@ -66,7 +66,7 @@ describe('OnsiteVerificationPage', () => {
     expect(screen.getByRole('heading', { name: 'Un respaldo visible desde el primer vistazo' })).toBeInTheDocument();
     expect(screen.getByText('Indica que la propiedad fue visitada en persona y que el anfitrión fue identificado.')).toBeInTheDocument();
     expect(screen.getByText('Es lo primero que ve un huésped al comparar opciones.')).toBeInTheDocument();
-    expect(screen.getByText('No certifica estado, calidad ni condiciones del inmueble.')).toBeInTheDocument();
+    expect(screen.getAllByText('No evaluamos estado, calidad ni amenities del inmueble.').length).toBeGreaterThan(0);
     expect(screen.getByAltText('Sello Verificado presencialmente')).toBeInTheDocument();
 
     expect(screen.getByRole('heading', { name: 'En cuatro pasos' })).toBeInTheDocument();

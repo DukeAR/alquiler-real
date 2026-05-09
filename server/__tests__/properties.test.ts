@@ -34,6 +34,57 @@ describe('Properties endpoints', () => {
     queryMock.mockReset();
   });
 
+  test('GET /api/properties allows project Vercel preview origins', async () => {
+    queryMock.mockResolvedValueOnce({
+      rows: [
+        {
+          id: 'prop-preview',
+          title: 'Casa lista para preview',
+          location: 'Pinamar',
+          price: '120000',
+          hostId: 'host-1',
+          hostName: 'Ana',
+          description: 'Lista para reservar.',
+          imageUrl: 'https://example.com/preview.jpg',
+          rating: '4.8',
+          reviewsCount: '10',
+          identityValidated: 0,
+          hostIdentityValidated: 1,
+          hostIdentityVerified: 0,
+          locationVerified: 1,
+          videoValidated: 1,
+          availabilityValidated: 1,
+          traceabilityLevel: 'medium',
+          maxGuests: 4,
+          hasPresencialVerification: 1,
+          hasDigitalVerification: 0,
+          hostCompletedReservationsCount: '5',
+          hostGuestReviewsCount: '3',
+          hostMemberSince: '2021-02-10T00:00:00.000Z',
+          lat: '-37.1',
+          lng: '-56.8',
+          bedrooms: 2,
+          bathrooms: 1,
+          propertyType: 'house',
+          isVerifiedProperty: false,
+          hostProfileName: 'Ana',
+        },
+      ],
+    });
+
+    const previewOrigin = 'https://alquiler-real-cxkcxeoo6-dukears-projects.vercel.app';
+
+    const res = await request(app)
+      .get('/api/properties?guests=1')
+      .set('Origin', previewOrigin);
+
+    expect(res.status).toBe(200);
+    expect(res.headers['access-control-allow-origin']).toBe(previewOrigin);
+    expect(res.headers['access-control-allow-credentials']).toBe('true');
+    expect(res.body).toHaveLength(1);
+    expect(res.body[0]).toMatchObject({ id: 'prop-preview' });
+  });
+
   test('GET /api/properties?verifiedOnly=true requires presencial verification with 5/5 and ignores the legacy flag', async () => {
     queryMock.mockResolvedValueOnce({
       rows: [
@@ -144,7 +195,6 @@ describe('Properties endpoints', () => {
       id: 'prop-onsite',
       verificationScore: 5,
       hasPresencialVerification: true,
-      hostTrustScore: 4,
       hostTrust: {
         score: 4,
         level: 'high',
@@ -158,8 +208,8 @@ describe('Properties endpoints', () => {
     ]));
     expect(res.body[0].hostTrust.items).toEqual(expect.arrayContaining([
       expect.objectContaining({ key: 'identity', status: 'complete' }),
-      expect.objectContaining({ key: 'reservations', status: 'complete' }),
-      expect.objectContaining({ key: 'reviews', status: 'complete' }),
+      expect.objectContaining({ key: 'onsite', status: 'complete' }),
+      expect.objectContaining({ key: 'operations', status: 'complete' }),
       expect.objectContaining({ key: 'tenure', status: 'complete' }),
     ]));
     expect(res.body.every((property: any) => property.verificationScore === 5 && property.hasPresencialVerification === true)).toBe(true);
@@ -429,6 +479,21 @@ describe('Properties endpoints', () => {
 
   test('PUT /api/properties/:id lets the host complete location data and persist the visible location flag', async () => {
     queryMock.mockImplementation(async (text: string, params?: unknown[]) => {
+      if (text.includes('SELECT id, location, lat, lng') && text.includes('LIMIT 1')) {
+        expect(params).toEqual(['prop-1', 'host-1']);
+
+        return {
+          rows: [
+            {
+              id: 'prop-1',
+              location: 'Pinamar',
+              lat: -37.220001,
+              lng: -56.778001,
+            },
+          ],
+        };
+      }
+
       if (text.includes('UPDATE properties SET') && text.includes('"locationVerified" = COALESCE($9, "locationVerified")')) {
         expect(params).toEqual([
           undefined,
@@ -455,6 +520,12 @@ describe('Properties endpoints', () => {
             },
           ],
         };
+      }
+
+      if (text.includes('INSERT INTO user_activity_logs')) {
+        expect(params?.[1]).toBe('host-1');
+        expect(params?.[2]).toBe('PROPERTY_LOCATION_CHANGED');
+        return { rows: [] };
       }
 
       throw new Error(`Unexpected query: ${text}`);

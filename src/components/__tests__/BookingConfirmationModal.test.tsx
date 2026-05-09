@@ -34,8 +34,9 @@ describe('BookingConfirmationModal', () => {
     expect(screen.getByRole('heading', { name: 'Elegí cómo querés avanzar', level: 3 })).toBeInTheDocument();
     expect(screen.getByText('Coordinar directamente')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /usar seña protegida/i })).toBeInTheDocument();
-    expect(screen.getByText('La seña protegida se devuelve solo si la propiedad no existe o si el huésped no puede ingresar.')).toBeInTheDocument();
-    expect(screen.getByText('Ver detalle de devolución y alcance')).toBeInTheDocument();
+    expect(screen.getByText('La plataforma deja registro del acuerdo y, si elegís Seña Protegida, retiene la seña hasta check-in. No evaluamos estado, calidad ni amenities.')).toBeInTheDocument();
+    expect(screen.getByText('Si se reporta que la propiedad no existe o que no hubo acceso, la seña protegida pasa a revisión manual.')).toBeInTheDocument();
+    expect(screen.getByText('Ver alcance y revisión manual')).toBeInTheDocument();
     expect(screen.getByText(/La información del aviso la carga el anfitrión/i)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /usar seña protegida/i }));

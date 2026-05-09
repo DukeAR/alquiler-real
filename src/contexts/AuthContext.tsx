@@ -248,6 +248,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const nextSession = await loadCurrentUser();
 
             if (nextSession.status === 'authenticated' && nextSession.user) {
+                userRef.current = nextSession.user;
                 setUser(nextSession.user);
                 setStatus('authenticated');
                 setSessionError(null);
@@ -255,6 +256,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             }
 
             if (nextSession.status === 'unauthenticated') {
+                userRef.current = null;
                 setUser(null);
                 setStatus('unauthenticated');
                 setSessionError(null);
@@ -272,6 +274,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 };
             }
 
+            userRef.current = null;
             setUser(null);
             setStatus('error');
 
@@ -291,6 +294,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const nextUser = await readUserFromResponse(response, source);
 
         if (nextUser) {
+            userRef.current = nextUser;
             setUser(nextUser);
             setStatus('authenticated');
             setSessionError(null);
@@ -442,6 +446,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         try {
             await apiFetch('/api/auth/logout', { method: 'POST', includeCredentials: true });
+            userRef.current = null;
             setUser(null);
             setStatus('unauthenticated');
             setSessionError(null);

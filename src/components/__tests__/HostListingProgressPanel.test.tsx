@@ -62,9 +62,9 @@ describe('HostListingProgressPanel', () => {
     );
 
     expect(screen.getByText('Estado de tu aviso')).toBeInTheDocument();
-    expect(screen.getByText('Verificación parcial (2/4)')).toBeInTheDocument();
-    expect(screen.getAllByText('Verificación parcial').length).toBeGreaterThan(0);
-    expect(screen.getByText('La verificación reduce dudas antes de reservar.')).toBeInTheDocument();
+    expect(screen.getByText('Pasos de respaldo del aviso')).toBeInTheDocument();
+    expect(screen.getAllByText('Pasos de respaldo').length).toBeGreaterThan(0);
+    expect(screen.getByText('Estos pasos internos ayudan a ordenar y respaldar tu publicación antes de solicitar la visita presencial.')).toBeInTheDocument();
     expect(screen.getByText('Te falta confirmar disponibilidad para aparecer entre los primeros resultados.')).toBeInTheDocument();
     expect(screen.getByText('Cómo impacta en tu publicación')).toBeInTheDocument();
 

@@ -34,6 +34,7 @@ type PropertyQueryRow = Record<string, unknown> & {
   hostGuestWouldInteractAgainCount?: unknown;
   hostGuestIncidentsCount?: unknown;
   hostAverageResponseTimeMinutes?: unknown;
+  hostCancellationsCount?: unknown;
   identityValidated?: unknown;
   hostIdentityValidated?: unknown;
   hostIdentityVerified?: unknown;
@@ -234,8 +235,17 @@ export const mapPropertyRecord = (row: PropertyQueryRow) => {
     ...buildPropertyVerificationAliases(normalizedProperty),
     ...buildHostTrust({
       identityValidated: normalizedProperty.identityValidated,
+      hasPresencialVerification: normalizedProperty.hasPresencialVerification,
       hostCompletedReservationsCount: normalizedProperty.hostCompletedReservationsCount,
       hostGuestReviewsCount: normalizedProperty.hostGuestReviewsCount,
+      hostGuestFeedbackCount: normalizedProperty.hostGuestFeedbackCount,
+      hostGuestAgreementsKeptCount: normalizedProperty.hostGuestAgreementsKeptCount,
+      hostGuestWouldInteractAgainCount: normalizedProperty.hostGuestWouldInteractAgainCount,
+      hostGuestIncidentsCount: normalizedProperty.hostGuestIncidentsCount,
+      hostAverageResponseTimeMinutes: normalizedProperty.hostAverageResponseTimeMinutes,
+      confirmedReportsCount: normalizedProperty.confirmedReportsCount,
+      confirmedSevereReportsCount: normalizedProperty.confirmedSevereReportsCount,
+      hostCancellationsCount: toSafeInteger(row.hostCancellationsCount),
       hostSince: normalizedProperty.hostSince,
     }),
     hostInteractionHistory: buildHostInteractionHistory({

@@ -146,6 +146,7 @@ describe('ProfileViewNew', () => {
     });
 
     expect(screen.getByText('Resolvé lo básico')).toBeInTheDocument();
+    expect(screen.getByText('Mis operaciones')).toBeInTheDocument();
     expect(screen.getByText('Lo que ajusta lo que ves')).toBeInTheDocument();
     expect(screen.getByText('Tu perfil tiene 1 de 5 validaciones')).toBeInTheDocument();
     expect(screen.getByText('Mostramos solo qué ya fue validado y qué falta completar en tu cuenta.')).toBeInTheDocument();

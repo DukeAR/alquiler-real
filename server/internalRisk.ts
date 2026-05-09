@@ -4,7 +4,7 @@ type InternalRiskSeverity = 'low' | 'medium' | 'high';
 
 export type InternalModerationStatus = 'clear' | 'warned' | 'limited' | 'suspended';
 
-export type InternalRiskLevel = 'none' | 'medium' | 'high' | 'critical';
+export type InternalRiskLevel = 'none' | 'low' | 'medium' | 'high';
 
 export type InternalRiskAction = 'publish_property' | 'create_booking' | 'start_conversation' | 'send_message' | 'access_boosts';
 
@@ -56,6 +56,10 @@ export type InternalRiskSnapshot = {
   activePropertiesCount: number;
   duplicateListingClusters: number;
   sentMessagesLast24h: number;
+  outsideCoordinationAttemptsCount: number;
+  abusiveMessagesCount: number;
+  suspiciousLocationChangesCount: number;
+  suspiciousPaymentProofsCount: number;
   confirmedReportsCount: number;
   confirmedSevereReportsCount: number;
   pendingReportScore: number;
@@ -95,6 +99,10 @@ type InternalRiskProfileRow = InternalRiskUserContext & {
   activePropertiesCount?: number | string | null;
   duplicateListingClusters?: number | string | null;
   sentMessagesLast24h?: number | string | null;
+  outsideCoordinationAttemptsCount?: number | string | null;
+  abusiveMessagesCount?: number | string | null;
+  suspiciousLocationChangesCount?: number | string | null;
+  suspiciousPaymentProofsCount?: number | string | null;
 };
 
 type InternalRiskResponseRow = {
@@ -110,8 +118,6 @@ const NEW_ACCOUNT_MESSAGE_LIMIT = 25;
 const BOOST_UNLOCK_MIN_ACCOUNT_AGE_DAYS = 14;
 const NEW_ACCOUNT_WINDOW_DAYS = 30;
 const STABLE_ACCOUNT_MIN_AGE_DAYS = 90;
-const AUTO_LIMIT_DURATION_HOURS = 48;
-const AUTO_BLOCK_DURATION_HOURS = 24 * 7;
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 
@@ -155,8 +161,6 @@ const getDaysSince = (value: unknown, fallbackDays = 365) => {
   return Math.max(0, Math.floor((Date.now() - timestamp) / (1000 * 60 * 60 * 24)));
 };
 
-const getFutureIso = (hours: number) => new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
-
 const getFutureIsoOrNull = (value: unknown) => {
   const timestamp = toTimestamp(value);
 
@@ -165,18 +169,6 @@ const getFutureIsoOrNull = (value: unknown) => {
   }
 
   return new Date(timestamp).toISOString();
-};
-
-const getLatestFutureIso = (currentValue: string | null, candidateValue: string | null) => {
-  if (!currentValue) {
-    return candidateValue;
-  }
-
-  if (!candidateValue) {
-    return currentValue;
-  }
-
-  return Date.parse(currentValue) >= Date.parse(candidateValue) ? currentValue : candidateValue;
 };
 
 const buildSignal = (
@@ -239,25 +231,33 @@ const getRiskLevel = (params: {
   riskScore: number;
   highSignalCount: number;
   mediumSignalCount: number;
+  lowSignalCount: number;
   blockedMessagesCount: number;
   pendingReportsCount: number;
+  confirmedSevereReportsCount: number;
   duplicateSignals: number;
 }) => {
   if (
-    params.riskScore >= 75
-    || params.highSignalCount >= 3
-    || (params.highSignalCount >= 2 && params.pendingReportsCount >= 1)
-    || (params.blockedMessagesCount > 0 && params.duplicateSignals > 0)
+    params.confirmedSevereReportsCount > 0
+    || params.riskScore >= 52
+    || params.highSignalCount >= 2
+    || (params.highSignalCount >= 1 && params.mediumSignalCount >= 1)
+    || (params.blockedMessagesCount >= 3 && params.duplicateSignals > 0)
   ) {
-    return 'critical' as const;
-  }
-
-  if (params.riskScore >= 45 || params.highSignalCount >= 1) {
     return 'high' as const;
   }
 
-  if (params.riskScore >= 20 || params.mediumSignalCount >= 1) {
+  if (params.riskScore >= 24 || params.highSignalCount >= 1 || params.mediumSignalCount >= 1) {
     return 'medium' as const;
+  }
+
+  if (
+    params.riskScore > 0
+    || params.lowSignalCount >= 1
+    || params.pendingReportsCount >= 1
+    || params.blockedMessagesCount >= 1
+  ) {
+    return 'low' as const;
   }
 
   return 'none' as const;
@@ -331,6 +331,10 @@ export const evaluateInternalRisk = async (userId: string): Promise<InternalRisk
             COALESCE(cancel_stats.guest_cancellations, 0)::int as "guestCancellationsCount",
             COALESCE(cancel_stats.host_cancellations, 0)::int as "hostCancellationsCount",
             COALESCE(activity_stats.blocked_messages, 0)::int as "blockedMessagesCount",
+            COALESCE(activity_stats.outside_coordination_attempts, 0)::int as "outsideCoordinationAttemptsCount",
+            COALESCE(activity_stats.abusive_messages, 0)::int as "abusiveMessagesCount",
+            COALESCE(activity_stats.suspicious_location_changes, 0)::int as "suspiciousLocationChangesCount",
+            COALESCE(activity_stats.suspicious_payment_proofs, 0)::int as "suspiciousPaymentProofsCount",
             COALESCE(activity_stats.not_advanced_requests, 0)::int as "notAdvancedRequestsCount",
             COALESCE(phone_dup.matches, 0)::int as "phoneMatchesCount",
             COALESCE(dni_dup.matches, 0)::int as "dniMatchesCount",
@@ -377,6 +381,25 @@ export const evaluateInternalRisk = async (userId: string): Promise<InternalRisk
      LEFT JOIN (
        SELECT user_id,
               COUNT(*) FILTER (WHERE action = 'SUSPICIOUS_MESSAGE_BLOCKED' AND created_at >= NOW() - INTERVAL '90 days')::int as blocked_messages,
+              COUNT(*) FILTER (
+                WHERE action = 'SUSPICIOUS_MESSAGE_BLOCKED'
+                  AND created_at >= NOW() - INTERVAL '90 days'
+                  AND COALESCE(metadata::jsonb ->> 'outsideIntent', 'false') = 'true'
+              )::int as outside_coordination_attempts,
+              COUNT(*) FILTER (
+                WHERE action = 'SUSPICIOUS_MESSAGE_BLOCKED'
+                  AND created_at >= NOW() - INTERVAL '90 days'
+                  AND COALESCE(metadata::jsonb ->> 'abusiveLanguage', 'false') = 'true'
+              )::int as abusive_messages,
+              COUNT(*) FILTER (
+                WHERE action = 'PROPERTY_LOCATION_CHANGED'
+                  AND created_at >= NOW() - INTERVAL '120 days'
+                  AND COALESCE(metadata::jsonb ->> 'suspicious', 'false') = 'true'
+              )::int as suspicious_location_changes,
+              COUNT(*) FILTER (
+                WHERE action = 'PROTECTED_DEPOSIT_PAYMENT_PROOF_FLAGGED'
+                  AND created_at >= NOW() - INTERVAL '180 days'
+              )::int as suspicious_payment_proofs,
               COUNT(*) FILTER (WHERE action = 'BOOKING_REQUEST_NOT_ADVANCED' AND created_at >= NOW() - INTERVAL '90 days')::int as not_advanced_requests
        FROM user_activity_logs
        WHERE user_id = $1
@@ -450,6 +473,10 @@ export const evaluateInternalRisk = async (userId: string): Promise<InternalRisk
   const guestCancellationsCount = toSafeNumber(profile.guestCancellationsCount);
   const hostCancellationsCount = toSafeNumber(profile.hostCancellationsCount);
   const blockedMessagesCount = toSafeNumber(profile.blockedMessagesCount);
+  const outsideCoordinationAttemptsCount = toSafeNumber(profile.outsideCoordinationAttemptsCount);
+  const abusiveMessagesCount = toSafeNumber(profile.abusiveMessagesCount);
+  const suspiciousLocationChangesCount = toSafeNumber(profile.suspiciousLocationChangesCount);
+  const suspiciousPaymentProofsCount = toSafeNumber(profile.suspiciousPaymentProofsCount);
   const notAdvancedRequestsCount = toSafeNumber(profile.notAdvancedRequestsCount);
   const phoneMatchesCount = toSafeNumber(profile.phoneMatchesCount);
   const dniMatchesCount = toSafeNumber(profile.dniMatchesCount);
@@ -460,7 +487,7 @@ export const evaluateInternalRisk = async (userId: string): Promise<InternalRisk
   const activePropertiesCount = toSafeNumber(profile.activePropertiesCount);
   const duplicateListingClusters = toSafeNumber(profile.duplicateListingClusters);
   const sentMessagesLast24h = toSafeNumber(profile.sentMessagesLast24h);
-  const totalChangeEvents = guestCancellationsCount + hostCancellationsCount + notAdvancedRequestsCount;
+  const totalChangeEvents = guestCancellationsCount + hostCancellationsCount + notAdvancedRequestsCount + suspiciousLocationChangesCount;
   const duplicateSignals = Number(phoneMatchesCount > 0) + Number(dniMatchesCount > 0);
   const accountAgeDays = getDaysSince(profile.memberSince ?? profile.createdAt);
   const newAccount = accountAgeDays < NEW_ACCOUNT_WINDOW_DAYS && totalProperties < 4 && toSafeNumber(profile.totalReviews) < 4;
@@ -484,16 +511,32 @@ export const evaluateInternalRisk = async (userId: string): Promise<InternalRisk
   const frictionDetails: string[] = [];
 
   if (blockedMessagesCount > 0) {
+    const offPlatformAttemptCount = Math.max(blockedMessagesCount, outsideCoordinationAttemptsCount);
+    const blockedMessageSeverity: InternalRiskSeverity = offPlatformAttemptCount >= 3
+      ? 'high'
+      : outsideCoordinationAttemptsCount >= 1 || blockedMessagesCount >= 2
+        ? 'medium'
+        : 'low';
+    const blockedMessageWeight = blockedMessageSeverity === 'high'
+      ? clamp(28 + ((offPlatformAttemptCount - 3) * 6), 28, 46)
+      : blockedMessageSeverity === 'medium'
+        ? 18
+        : 8;
+
     signals.push(
       buildSignal(
-        'off_platform_payment_attempt',
-        'high',
+        'off_platform_coordination_attempt',
+        blockedMessageSeverity,
         'messaging',
-        blockedMessagesCount === 1
-          ? 'Se bloqueo un intento de compartir datos o cobros por fuera de la plataforma.'
-          : `Se bloquearon ${blockedMessagesCount} intentos de compartir datos o cobros por fuera de la plataforma.`,
-        clamp(35 + ((blockedMessagesCount - 1) * 10), 35, 55),
-        blockedMessagesCount,
+        outsideCoordinationAttemptsCount > 0
+          ? offPlatformAttemptCount === 1
+            ? 'Registramos un pedido reciente de coordinar o pagar por fuera de la plataforma.'
+            : `Registramos ${offPlatformAttemptCount} pedidos recientes de coordinar o pagar por fuera de la plataforma.`
+          : blockedMessagesCount === 1
+            ? 'Registramos un mensaje reciente con datos de contacto externos.'
+            : `Registramos ${blockedMessagesCount} mensajes recientes con datos de contacto externos.`,
+        blockedMessageWeight,
+        offPlatformAttemptCount,
       ),
     );
   }
@@ -549,15 +592,19 @@ export const evaluateInternalRisk = async (userId: string): Promise<InternalRisk
   }
 
   if (confirmedReportsCount >= 1) {
+    const confirmedReportSeverity: InternalRiskSeverity = confirmedSevereReportsCount > 0 || confirmedReportsCount >= 2
+      ? 'high'
+      : 'medium';
+
     signals.push(
       buildSignal(
         confirmedSevereReportsCount > 0 ? 'confirmed_severe_report' : 'confirmed_report',
-        'high',
+        confirmedReportSeverity,
         'reports',
         confirmedSevereReportsCount > 0
           ? `Hay ${confirmedSevereReportsCount} reporte${confirmedSevereReportsCount === 1 ? '' : 's'} grave${confirmedSevereReportsCount === 1 ? '' : 's'} confirmado${confirmedSevereReportsCount === 1 ? '' : 's'} y ${confirmedReportsCount} revision${confirmedReportsCount === 1 ? '' : 'es'} confirmada${confirmedReportsCount === 1 ? '' : 's'} en total.`
           : `Hay ${confirmedReportsCount} reporte${confirmedReportsCount === 1 ? '' : 's'} confirmado${confirmedReportsCount === 1 ? '' : 's'} con revision interna completada.`,
-        confirmedSevereReportsCount > 0 ? 48 : 34,
+        confirmedSevereReportsCount > 0 ? 48 : confirmedReportsCount >= 2 ? 34 : 22,
         confirmedReportsCount,
       ),
     );
@@ -602,7 +649,31 @@ export const evaluateInternalRisk = async (userId: string): Promise<InternalRisk
     );
   }
 
-  if (newAccount && recentPropertiesCount > NEW_ACCOUNT_PROPERTY_LIMIT) {
+  if (suspiciousLocationChangesCount >= 2) {
+    signals.push(
+      buildSignal(
+        'suspicious_location_changes',
+        'high',
+        'operations',
+        `Detectamos ${suspiciousLocationChangesCount} cambios de ubicación con salto relevante en poco tiempo.`,
+        26,
+        suspiciousLocationChangesCount,
+      ),
+    );
+  } else if (suspiciousLocationChangesCount === 1) {
+    signals.push(
+      buildSignal(
+        'suspicious_location_changes',
+        'medium',
+        'operations',
+        'Detectamos un cambio reciente de ubicación con variación relevante para la misma publicación.',
+        16,
+        suspiciousLocationChangesCount,
+      ),
+    );
+  }
+
+  if (newAccount && recentPropertiesCount >= NEW_ACCOUNT_PROPERTY_LIMIT + 2) {
     signals.push(
       buildSignal(
         'new_account_publication_burst',
@@ -613,11 +684,22 @@ export const evaluateInternalRisk = async (userId: string): Promise<InternalRisk
         recentPropertiesCount,
       ),
     );
+  } else if (newAccount && recentPropertiesCount > NEW_ACCOUNT_PROPERTY_LIMIT) {
+    signals.push(
+      buildSignal(
+        'new_account_publication_burst',
+        'medium',
+        'operations',
+        `La cuenta es reciente y ya publico ${recentPropertiesCount} avisos en poco tiempo.`,
+        16,
+        recentPropertiesCount,
+      ),
+    );
   } else if (newAccount && recentPropertiesCount === NEW_ACCOUNT_PROPERTY_LIMIT) {
     frictionDetails.push('la cuenta nueva ya alcanzo su cupo inicial de publicaciones');
   }
 
-  if (newAccount && sentMessagesLast24h >= NEW_ACCOUNT_MESSAGE_LIMIT + 10) {
+  if (sentMessagesLast24h >= 60 || (newAccount && sentMessagesLast24h >= NEW_ACCOUNT_MESSAGE_LIMIT + 10)) {
     signals.push(
       buildSignal(
         'message_spam_burst',
@@ -628,7 +710,7 @@ export const evaluateInternalRisk = async (userId: string): Promise<InternalRisk
         sentMessagesLast24h,
       ),
     );
-  } else if (newAccount && sentMessagesLast24h >= NEW_ACCOUNT_MESSAGE_LIMIT) {
+  } else if (sentMessagesLast24h >= 40 || (newAccount && sentMessagesLast24h >= NEW_ACCOUNT_MESSAGE_LIMIT)) {
     signals.push(
       buildSignal(
         'message_rate_limit',
@@ -641,30 +723,123 @@ export const evaluateInternalRisk = async (userId: string): Promise<InternalRisk
     );
   }
 
-  if (totalChangeEvents >= 4) {
+  if (hostCancellationsCount >= 4) {
     signals.push(
       buildSignal(
-        'suspicious_cancellations',
+        'host_cancellation_pattern',
         'high',
         'bookings',
-        `Se detectaron ${totalChangeEvents} cancelaciones o cambios repetidos en los ultimos meses.`,
-        30,
-        totalChangeEvents,
+        `El anfitrion acumulo ${hostCancellationsCount} cancelaciones recientes iniciadas por su lado.`,
+        28,
+        hostCancellationsCount,
       ),
     );
-  } else if (totalChangeEvents >= 2) {
+  } else if (hostCancellationsCount >= 2) {
     signals.push(
       buildSignal(
-        'constant_changes',
+        'host_cancellation_pattern',
         'medium',
-        'operations',
-        `Hubo ${totalChangeEvents} cambios de rumbo entre cancelaciones o solicitudes frenadas recientemente.`,
-        18,
-        totalChangeEvents,
+        'bookings',
+        `El anfitrion acumulo ${hostCancellationsCount} cancelaciones recientes iniciadas por su lado.`,
+        16,
+        hostCancellationsCount,
       ),
     );
-  } else if (totalChangeEvents === 1) {
-    frictionDetails.push('una friccion puntual entre cancelaciones o cambios de solicitud');
+  } else if (hostCancellationsCount === 1) {
+    frictionDetails.push('una cancelacion reciente iniciada por el anfitrion');
+  }
+
+  if (guestCancellationsCount >= 4) {
+    signals.push(
+      buildSignal(
+        'guest_abandoned_reservations',
+        'high',
+        'bookings',
+        `El huesped acumulo ${guestCancellationsCount} reservas canceladas o abandonadas recientemente.`,
+        28,
+        guestCancellationsCount,
+      ),
+    );
+  } else if (guestCancellationsCount >= 2) {
+    signals.push(
+      buildSignal(
+        'guest_abandoned_reservations',
+        'medium',
+        'bookings',
+        `El huesped acumulo ${guestCancellationsCount} reservas canceladas o abandonadas recientemente.`,
+        16,
+        guestCancellationsCount,
+      ),
+    );
+  } else if (guestCancellationsCount === 1) {
+    frictionDetails.push('una reserva cancelada recientemente por el huesped');
+  }
+
+  if (suspiciousPaymentProofsCount >= 2) {
+    signals.push(
+      buildSignal(
+        'suspicious_payment_proof',
+        'high',
+        'bookings',
+        `Detectamos ${suspiciousPaymentProofsCount} comprobantes o referencias de pago inconsistentes en poco tiempo.`,
+        30,
+        suspiciousPaymentProofsCount,
+      ),
+    );
+  } else if (suspiciousPaymentProofsCount === 1) {
+    signals.push(
+      buildSignal(
+        'suspicious_payment_proof',
+        'medium',
+        'bookings',
+        'Detectamos un comprobante o referencia de pago inconsistente asociado a la cuenta.',
+        18,
+        suspiciousPaymentProofsCount,
+      ),
+    );
+  }
+
+  if (abusiveMessagesCount >= 2) {
+    signals.push(
+      buildSignal(
+        'abusive_behavior',
+        'high',
+        'messaging',
+        `Registramos ${abusiveMessagesCount} mensajes recientes con lenguaje abusivo o intimidante.`,
+        30,
+        abusiveMessagesCount,
+      ),
+    );
+  } else if (abusiveMessagesCount === 1) {
+    signals.push(
+      buildSignal(
+        'abusive_behavior',
+        'medium',
+        'messaging',
+        'Registramos un mensaje reciente con lenguaje abusivo o intimidante.',
+        18,
+        abusiveMessagesCount,
+      ),
+    );
+  }
+
+  if (notAdvancedRequestsCount >= 4) {
+    signals.push(
+      buildSignal(
+        'multiple_conflicts',
+        'medium',
+        'bookings',
+        `Se acumularon ${notAdvancedRequestsCount} coordinaciones que se frenaron antes de cerrar la operación.`,
+        16,
+        notAdvancedRequestsCount,
+      ),
+    );
+  } else if (notAdvancedRequestsCount >= 1) {
+    frictionDetails.push(
+      notAdvancedRequestsCount === 1
+        ? 'una coordinacion reciente que no avanzo'
+        : `${notAdvancedRequestsCount} coordinaciones recientes que no avanzaron`,
+    );
   }
 
   if (responseMetrics.sampleCount >= 2 && responseMetrics.averageMinutes >= 360) {
@@ -684,9 +859,14 @@ export const evaluateInternalRisk = async (userId: string): Promise<InternalRisk
 
   const volatileDimensions = [
     blockedMessagesCount > 0,
+    outsideCoordinationAttemptsCount > 0,
+    abusiveMessagesCount > 0,
     confirmedReportsCount > 0,
     pendingReportsCount >= 2,
-    totalChangeEvents >= 2,
+    guestCancellationsCount >= 2,
+    hostCancellationsCount >= 2,
+    suspiciousLocationChangesCount > 0,
+    suspiciousPaymentProofsCount > 0,
     responseMetrics.sampleCount >= 2 && responseMetrics.averageMinutes >= 360,
     duplicateSignals > 0,
     duplicateListingClusters > 0,
@@ -727,21 +907,22 @@ export const evaluateInternalRisk = async (userId: string): Promise<InternalRisk
   const trustScore = clamp(100 - riskScore, 0, 100);
   const highSignalCount = signals.filter((signal) => signal.severity === 'high').length;
   const mediumSignalCount = signals.filter((signal) => signal.severity === 'medium').length;
+  const lowSignalCount = signals.filter((signal) => signal.severity === 'low').length;
   const level = getRiskLevel({
     riskScore,
     highSignalCount,
     mediumSignalCount,
+    lowSignalCount,
     blockedMessagesCount,
     pendingReportsCount,
+    confirmedSevereReportsCount,
     duplicateSignals,
   });
-  const visibilityPenalty = level === 'critical' ? 100 : level === 'high' ? 36 : level === 'medium' ? 18 : 0;
+  const visibilityPenalty = level === 'high' ? 36 : level === 'medium' ? 18 : 0;
   const currentLimitedUntil = getFutureIsoOrNull(profile.accountLimitedUntil);
   const currentBlockedUntil = getFutureIsoOrNull(profile.accountBlockedUntil);
-  const autoLimitedUntil = level === 'high' && !currentLimitedUntil ? getFutureIso(AUTO_LIMIT_DURATION_HOURS) : null;
-  const autoBlockedUntil = level === 'critical' && !currentBlockedUntil ? getFutureIso(AUTO_BLOCK_DURATION_HOURS) : null;
-  const accountLimitedUntil = getLatestFutureIso(currentLimitedUntil, autoLimitedUntil);
-  const accountBlockedUntil = getLatestFutureIso(currentBlockedUntil, autoBlockedUntil);
+  const accountLimitedUntil = currentLimitedUntil;
+  const accountBlockedUntil = currentBlockedUntil;
   const moderationStatus = resolveModerationStatus({
     strikesCount,
     accountLimitedUntil,
@@ -749,14 +930,16 @@ export const evaluateInternalRisk = async (userId: string): Promise<InternalRisk
   });
   const requiresAdditionalVerification = moderationStatus === 'limited'
     || moderationStatus === 'suspended'
-    || level === 'high'
-    || level === 'critical';
+    || level === 'high';
   const actionLimited = moderationStatus === 'limited'
-    || moderationStatus === 'suspended'
-    || level === 'high'
-    || level === 'critical';
-  const manualReviewRequired = moderationStatus === 'suspended' || level === 'critical' || confirmedSevereReportsCount > 0;
-  const riskFlags = Array.from(new Set(signals.map((signal) => signal.code)));
+    || moderationStatus === 'suspended';
+  const manualReviewRequired = moderationStatus === 'suspended' || level === 'high';
+  const riskFlags = Array.from(new Set([
+    ...signals.map((signal) => signal.code),
+    ...(level === 'low' ? ['risk_low'] : []),
+    ...(level === 'medium' ? ['risk_medium'] : []),
+    ...(level === 'high' ? ['risk_high'] : []),
+  ]));
 
   await db.query(
     `UPDATE users
@@ -829,6 +1012,10 @@ export const evaluateInternalRisk = async (userId: string): Promise<InternalRisk
       activePropertiesCount,
       duplicateListingClusters,
       sentMessagesLast24h,
+      outsideCoordinationAttemptsCount,
+      abusiveMessagesCount,
+      suspiciousLocationChangesCount,
+      suspiciousPaymentProofsCount,
       confirmedReportsCount,
       confirmedSevereReportsCount,
       pendingReportScore,
@@ -867,30 +1054,6 @@ export const getInternalRiskDecision = async (
     return {
       blocked: true,
       reason: MANUAL_REVIEW_MESSAGE,
-      evaluation,
-    };
-  }
-
-  if (action === 'publish_property' && evaluation.snapshot.duplicateListingClusters >= 1) {
-    return {
-      blocked: true,
-      reason: 'Detectamos publicaciones muy parecidas en esta cuenta. Revisalas antes de crear un nuevo aviso.',
-      evaluation,
-    };
-  }
-
-  if (action === 'publish_property' && evaluation.snapshot.newAccount && evaluation.snapshot.recentPropertiesCount >= NEW_ACCOUNT_PROPERTY_LIMIT) {
-    return {
-      blocked: true,
-      reason: `Las cuentas nuevas pueden publicar hasta ${NEW_ACCOUNT_PROPERTY_LIMIT} avisos al inicio. Suma historial real para ampliar ese cupo.`,
-      evaluation,
-    };
-  }
-
-  if (action === 'send_message' && evaluation.snapshot.newAccount && evaluation.snapshot.sentMessagesLast24h >= NEW_ACCOUNT_MESSAGE_LIMIT) {
-    return {
-      blocked: true,
-      reason: 'Esta cuenta nueva ya alcanzo el limite diario de mensajes. Retoma manana o consolida mas historial en la plataforma.',
       evaluation,
     };
   }

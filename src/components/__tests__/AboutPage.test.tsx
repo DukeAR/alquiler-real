@@ -39,7 +39,7 @@ describe('AboutPage', () => {
     expect(screen.getByText('Si hubo verificación presencial')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Qué sigue dependiendo de vos' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Qué significa cada nivel de respaldo' })).toBeInTheDocument();
-    expect(screen.getByText('La visita confirma identidad del anfitrión, acceso real, vínculo con el lugar y ubicación durante la visita.')).toBeInTheDocument();
+    expect(screen.getByText('La visita deja identidad, ubicación y acceso confirmados, con respaldo de vínculo real con el lugar.')).toBeInTheDocument();
     expect(screen.getByText('El aviso muestra datos cargados por quien publica, sin checks presenciales.')).toBeInTheDocument();
     expect(screen.getByText('Aunque un aviso tenga verificación presencial, hay cosas que siguen siendo decisión tuya: precio, reglas y experiencias de otros.')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Alquilar debería ser simple.' })).toBeInTheDocument();
@@ -71,16 +71,16 @@ describe('AboutPage', () => {
     expect(screen.getByText('Ver historial del usuario')).toBeInTheDocument();
     expect(screen.getByText('Decidir con más contexto')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'La verificación reduce dudas antes de reservar.' })).toBeInTheDocument();
-    expect(screen.getByText('Confirmamos que la propiedad existe y que hay una persona identificada con acceso al lugar.')).toBeInTheDocument();
+    expect(screen.getByText('La visita deja identidad, ubicación y acceso confirmados, con respaldo de existencia y vínculo con el lugar.')).toBeInTheDocument();
     expect(screen.getByText('Identidad del anfitrión verificada')).toBeInTheDocument();
     expect(screen.getByText('Acceso real a la propiedad confirmado')).toBeInTheDocument();
     expect(screen.getByText('Vínculo comprobable con el lugar')).toBeInTheDocument();
     expect(screen.getByText('Ubicación validada durante visita')).toBeInTheDocument();
-    expect(screen.getByText('No evaluamos estado ni calidad del inmueble.')).toBeInTheDocument();
+    expect(screen.getByText('No evaluamos estado, calidad ni amenities del inmueble.')).toBeInTheDocument();
     expect(screen.getByText('Más visibilidad, mejores consultas y menos dudas antes de aceptar.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Entender cómo funciona la verificación' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Cómo lograr la verificación máxima' })).toBeInTheDocument();
-    expect(screen.getByText('Próximamente: guía paso a paso para publicar con verificación completa y mejorar tu exposición.')).toBeInTheDocument();
+    expect(screen.getByText('Próximamente: guía paso a paso para publicar con verificación presencial y mejorar tu exposición.')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'No solo publicás mejor. También elegís con más información.' })).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Publicar mejor no es publicar más. Es publicar con información real.' })).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Acá no publicás más. Publicás mejor.' })).not.toBeInTheDocument();
@@ -101,7 +101,7 @@ describe('AboutPage', () => {
     expect(screen.getAllByText('Verificado presencialmente').length).toBeGreaterThan(0);
     expect(screen.getAllByRole('img', { name: 'Verificado presencialmente' }).length).toBeGreaterThan(0);
     expect(screen.getByText('Identidad, ubicación y acceso confirmados durante una visita.')).toBeInTheDocument();
-    expect(screen.getByText('*No evaluamos estado ni calidad del inmueble*')).toBeInTheDocument();
+    expect(screen.getByText('*No evaluamos estado, calidad ni amenities del inmueble*')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Antes de reservar, sabé qué es real.' })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Proyecto' }));

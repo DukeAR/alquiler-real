@@ -371,7 +371,7 @@ export const buildPropertyVerificationProgress = (
   if (mediumReady) {
     return {
       level: 'medium',
-      label: allVisibleChecksReady ? 'Verificación completa' : 'Verificación en progreso',
+      label: allVisibleChecksReady ? 'Verificación lista para coordinar' : 'Verificación en progreso',
       summary: decisionSummary,
       nextStep: advancedChecks[0]?.status === 'pending'
         ? getPropertyVerificationNextStep(input)

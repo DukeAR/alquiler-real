@@ -8,6 +8,7 @@ import {
   type PremiumVerificationOffer,
 } from '../lib/premiumVerification';
 import { withDemoQuery } from '../lib/demoMode';
+import type { ProtectedDepositManualReviewReason } from '../lib/protectedDepositManualReview';
 import type { ActivityData, ReviewsData, ValidationData } from '../hooks/useUserProfile';
 import type { HostProfile } from '../services/geminiService';
 import type { BookingStatus, Property, ReservationDepositStatus } from '../types';
@@ -58,8 +59,15 @@ type DemoConversation = {
   bookingStatus: BookingStatus;
   depositType: 'external' | 'protected' | null;
   depositStatus: ReservationDepositStatus | null;
+  manualReviewReason?: ProtectedDepositManualReviewReason | null;
+  manualReviewOpenedAt?: string | null;
   guestCheckinConfirmed: boolean;
+  guestCheckinConfirmedAt?: string | null;
+  guestCheckinLatitude?: number | null;
+  guestCheckinLongitude?: number | null;
+  guestCheckinAccuracyMeters?: number | null;
   hostAccessConfirmed: boolean;
+  hostAccessConfirmedAt?: string | null;
   startDate: string;
   endDate: string;
   guests: number;
@@ -89,8 +97,15 @@ type DemoBooking = {
   requestMode: 'direct' | 'protected';
   depositType: 'external' | 'protected' | null;
   depositStatus: ReservationDepositStatus | null;
+  manualReviewReason?: ProtectedDepositManualReviewReason | null;
+  manualReviewOpenedAt?: string | null;
   guestCheckinConfirmed: boolean;
+  guestCheckinConfirmedAt?: string | null;
+  guestCheckinLatitude?: number | null;
+  guestCheckinLongitude?: number | null;
+  guestCheckinAccuracyMeters?: number | null;
   hostAccessConfirmed: boolean;
+  hostAccessConfirmedAt?: string | null;
   protectedDepositPricing?: ReturnType<typeof getProtectedDepositPricing> | null;
   contractAccepted?: boolean;
   cancellationActor?: 'guest' | 'host' | null;
@@ -818,7 +833,7 @@ const createDemoStore = (): DemoStore => {
       endDate: protectedArrivalSeedEndDate,
       guests: 2,
       totalPrice: 276000,
-      last_message: 'Tu llegada ya quedó confirmada. Falta confirmar el acceso para liberar la seña.',
+      last_message: 'Tu llegada ya quedó confirmada. Falta confirmar el acceso para dejar la seña lista para liberarse al anfitrión.',
       unread_count: 0,
       updated_at: '2026-05-08T12:00:00.000Z',
     },
@@ -920,7 +935,7 @@ const createDemoStore = (): DemoStore => {
         conversation_id: 'conv-guest-3',
         sender_id: 'system',
         sender_name: 'Sistema',
-        content: 'La llegada quedó confirmada. Falta confirmar el acceso para liberar la seña.',
+        content: 'La llegada quedó confirmada. Falta confirmar el acceso para dejar la seña lista para liberarse al anfitrión.',
         created_at: '2026-05-08T12:00:00.000Z',
         kind: 'system',
       },
@@ -1186,8 +1201,15 @@ const updateConversationFromBooking = (booking: DemoBooking) => {
   conversation.bookingStatus = booking.status;
   conversation.depositType = booking.depositType;
   conversation.depositStatus = booking.depositStatus;
+  conversation.manualReviewReason = booking.manualReviewReason;
+  conversation.manualReviewOpenedAt = booking.manualReviewOpenedAt;
   conversation.guestCheckinConfirmed = booking.guestCheckinConfirmed;
+  conversation.guestCheckinConfirmedAt = booking.guestCheckinConfirmedAt ?? null;
+  conversation.guestCheckinLatitude = booking.guestCheckinLatitude ?? null;
+  conversation.guestCheckinLongitude = booking.guestCheckinLongitude ?? null;
+  conversation.guestCheckinAccuracyMeters = booking.guestCheckinAccuracyMeters ?? null;
   conversation.hostAccessConfirmed = booking.hostAccessConfirmed;
+  conversation.hostAccessConfirmedAt = booking.hostAccessConfirmedAt ?? null;
   conversation.startDate = booking.startDate;
   conversation.endDate = booking.endDate;
   conversation.guests = booking.guests;
@@ -1233,11 +1255,13 @@ const getProtectedArrivalReleaseState = (booking: DemoBooking, updates: Partial<
     guestCheckinConfirmed,
     hostAccessConfirmed,
     depositStatus: guestCheckinConfirmed && hostAccessConfirmed
-      ? 'released'
-      : updates.depositStatus ?? booking.depositStatus,
-    status: guestCheckinConfirmed && hostAccessConfirmed
-      ? 'completed'
-      : updates.status ?? booking.status,
+      ? 'deposit_released'
+      : guestCheckinConfirmed
+        ? 'guest_checkin_confirmed'
+        : hostAccessConfirmed
+          ? 'host_access_confirmed'
+          : updates.depositStatus ?? booking.depositStatus,
+    status: updates.status ?? booking.status,
   };
 };
 
@@ -2076,12 +2100,15 @@ export const getMockApiResponse = async (
     if (action === 'confirm-arrival') {
       const nextBooking = updateBooking(bookingId, {
         ...getProtectedArrivalReleaseState(booking, { guestCheckinConfirmed: true }),
+        guestCheckinConfirmedAt: booking.guestCheckinConfirmedAt ?? new Date().toISOString(),
       });
 
       appendSystemMessage(
         booking.conversationId || '',
         booking.depositType === 'protected'
-          ? 'La llegada quedó confirmada. Falta confirmar el acceso para liberar la seña.'
+          ? nextBooking.depositStatus === 'deposit_released'
+            ? 'Las dos confirmaciones ya quedaron registradas. La seña queda lista para liberarse al anfitrión.'
+            : 'La llegada quedó confirmada. Falta confirmar el acceso para dejar la seña lista para liberarse al anfitrión.'
           : 'La llegada quedó confirmada.',
       );
       return jsonResponse({ booking: cloneValue(nextBooking) });
@@ -2090,20 +2117,29 @@ export const getMockApiResponse = async (
     if (action === 'confirm-access') {
       const nextBooking = updateBooking(bookingId, {
         ...getProtectedArrivalReleaseState(booking, { hostAccessConfirmed: true }),
+        hostAccessConfirmedAt: booking.hostAccessConfirmedAt ?? new Date().toISOString(),
       });
 
       appendSystemMessage(
         booking.conversationId || '',
         booking.depositType === 'protected'
-          ? 'El acceso quedó confirmado y la seña ya fue liberada.'
+          ? nextBooking.depositStatus === 'deposit_released'
+            ? 'Las dos confirmaciones ya quedaron registradas. La seña queda lista para liberarse al anfitrión.'
+            : 'El acceso quedó confirmado. Falta que el huésped confirme la llegada para dejar la seña lista para liberarse al anfitrión.'
           : 'El acceso quedó confirmado.',
       );
       return jsonResponse({ booking: cloneValue(nextBooking) });
     }
 
     if (action === 'report-arrival-problem') {
+      const manualReviewReason: ProtectedDepositManualReviewReason = booking.hostAccessConfirmed
+        ? 'guest_reported_no_access_after_host_confirmation'
+        : 'guest_checkin_without_host_access_confirmation';
+      const manualReviewOpenedAt = new Date().toISOString();
       const nextBooking = updateBooking(bookingId, {
-        depositStatus: booking.depositType === 'protected' ? 'review' : booking.depositStatus,
+        depositStatus: booking.depositType === 'protected' ? 'manual_review' : booking.depositStatus,
+        manualReviewReason: booking.depositType === 'protected' ? manualReviewReason : booking.manualReviewReason,
+        manualReviewOpenedAt: booking.depositType === 'protected' ? manualReviewOpenedAt : booking.manualReviewOpenedAt,
       });
 
       appendSystemMessage(booking.conversationId || '', 'Se registró un problema de llegada para revisión.');
@@ -2111,11 +2147,14 @@ export const getMockApiResponse = async (
     }
 
     if (action === 'report-no-show') {
+      const manualReviewOpenedAt = new Date().toISOString();
       const nextBooking = updateBooking(bookingId, {
-        depositStatus: booking.depositType === 'protected' ? 'pending_confirmation' : booking.depositStatus,
+        depositStatus: booking.depositType === 'protected' ? 'manual_review' : booking.depositStatus,
+        manualReviewReason: booking.depositType === 'protected' ? 'host_reported_no_show' : booking.manualReviewReason,
+        manualReviewOpenedAt: booking.depositType === 'protected' ? manualReviewOpenedAt : booking.manualReviewOpenedAt,
       });
 
-      appendSystemMessage(booking.conversationId || '', 'Se marcó un no show.');
+      appendSystemMessage(booking.conversationId || '', 'Se registró un no show para revisión manual.');
       return jsonResponse({ booking: cloneValue(nextBooking) });
     }
 

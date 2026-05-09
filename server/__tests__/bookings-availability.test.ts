@@ -81,15 +81,19 @@ const matchesGuestPositiveBookingStatsQuery = (text: string) => (
 const matchesConversationDepositStateSyncQuery = (text: string) => (
   text.includes('UPDATE conversations')
   && text.includes('deposit_status = CASE')
-  && text.includes('WHERE booking_id = $13')
+  && text.includes('WHERE booking_id = $17')
 );
 
 const expectConversationDepositStatusSyncParams = (
   params: unknown[] | undefined,
   depositStatus: string | null,
   bookingId: string,
+  options: {
+    manualReviewReason?: string;
+    expectManualReviewOpenedAt?: boolean;
+  } = {},
 ) => {
-  expect(params).toHaveLength(13);
+  expect(params).toHaveLength(17);
   expect(params?.[0]).toBe(depositStatus);
   expect(params?.[1]).toBe(true);
   expect(params?.[2]).toBeNull();
@@ -102,7 +106,24 @@ const expectConversationDepositStatusSyncParams = (
   expect(params?.[9]).toBe(false);
   expect(params?.[10]).toBeNull();
   expect(params?.[11]).toBe(false);
-  expect(params?.[12]).toBe(bookingId);
+
+  if (options.manualReviewReason) {
+    expect(params?.[12]).toBe(options.manualReviewReason);
+    expect(params?.[13]).toBe(true);
+  } else {
+    expect(params?.[12]).toBeNull();
+    expect(params?.[13]).toBe(false);
+  }
+
+  if (options.expectManualReviewOpenedAt) {
+    expect(typeof params?.[14]).toBe('string');
+    expect(params?.[15]).toBe(true);
+  } else {
+    expect(params?.[14]).toBeNull();
+    expect(params?.[15]).toBe(false);
+  }
+
+  expect(params?.[16]).toBe(bookingId);
 };
 
 const buildInternalRiskRow = (overrides: Record<string, unknown> = {}) => ({
@@ -966,6 +987,105 @@ describe('Bookings and availability endpoints', () => {
     });
   });
 
+  test('POST /api/messages also flags explicit off-platform coordination without blocking the send', async () => {
+    const activityActions: string[] = [];
+
+    queryMock.mockImplementation(async (text: string, params?: unknown[]) => {
+      if (matchesInternalRiskProfileQuery(text)) {
+        return {
+          rows: [
+            buildInternalRiskRow({
+              phone: '+5491122334455',
+              bio: 'Perfil activo para reservar.',
+              zone: 'Pinamar',
+              profilePhoto: 'https://example.com/avatar.jpg',
+              totalReviews: 5,
+              totalProperties: 0,
+              totalBookingsHosted: 0,
+              createdAt: '2023-01-10T00:00:00.000Z',
+              memberSince: '2023-01-10',
+              emailVerified: true,
+              phoneVerified: true,
+              documentaryVerified: true,
+              identityVerificationStatus: 'verified',
+              dniNumber: '12345678',
+              recentPropertiesCount: 0,
+              activePropertiesCount: 0,
+              duplicateListingClusters: 0,
+              sentMessagesLast24h: 0,
+            }),
+          ],
+        };
+      }
+
+      if (matchesInternalRiskResponseQuery(text)) {
+        return { rows: [] };
+      }
+
+      if (text.includes('UPDATE users') && text.includes('internal_trust_score')) {
+        return { rows: [] };
+      }
+
+      if (text.includes(LOG_ACTIVITY_QUERY_SNIPPET)) {
+        activityActions.push(String(params?.[2] ?? ''));
+        return { rows: [] };
+      }
+
+      if (text.includes('FROM conversations') && text.includes('WHERE id = $1') && text.includes('LIMIT 1')) {
+        expect(params).toEqual(['conv-1']);
+        return {
+          rows: [
+            {
+              tenant_id: 'tenant-1',
+              host_id: 'host-1',
+              property_id: 'prop-1',
+            },
+          ],
+        };
+      }
+
+      if (text.includes('SELECT COUNT(*)::int as count') && text.includes('FROM messages')) {
+        return { rows: [{ count: 1 }] };
+      }
+
+      if (text.includes('INSERT INTO messages') && text.includes('is_suspicious')) {
+        expect(params?.[4]).toBe('Si querés coordinamos por fuera de la app y cerramos directo.');
+        expect(params?.[5]).toBe(true);
+        return { rows: [] };
+      }
+
+      if (text.includes('UPDATE conversations SET last_message = $1')) {
+        expect(params).toEqual(['Si querés coordinamos por fuera de la app y cerramos directo.', 'conv-1']);
+        return { rows: [] };
+      }
+
+      throw new Error(`Unexpected query: ${text}`);
+    });
+
+    const res = await request(app)
+      .post('/api/messages')
+      .set('x-test-user-id', 'tenant-1')
+      .send({
+        conversation_id: 'conv-1',
+        receiver_id: 'host-1',
+        content: 'Si querés coordinamos por fuera de la app y cerramos directo.',
+      });
+
+    expect(res.status).toBe(201);
+    expect(activityActions).toContain('SUSPICIOUS_MESSAGE_BLOCKED');
+    expect(res.body).toMatchObject({
+      conversation_id: 'conv-1',
+      sender_id: 'tenant-1',
+      receiver_id: 'host-1',
+      content: 'Si querés coordinamos por fuera de la app y cerramos directo.',
+      is_suspicious: true,
+      warning: {
+        type: 'external_contact',
+        message: 'Parece que este mensaje incluye datos de contacto externos. Te recomendamos mantener la conversación dentro de la plataforma.',
+      },
+    });
+  });
+
   test('POST /api/conversations/:id/accept-request accepts the request and confirms a protected booking', async () => {
     const acceptanceMessage = getRequestAcceptedMessage('protected');
 
@@ -1476,10 +1596,11 @@ describe('Bookings and availability endpoints', () => {
     expect(res.body.booking).toHaveProperty('depositStatus', 'checkout_pending');
   });
 
-  test('POST /api/bookings/:id/confirm-arrival records the guest check-in without releasing the deposit yet', async () => {
+  test('POST /api/bookings/:id/confirm-arrival records the guest check-in and persists the explicit guest confirmation status', async () => {
     let bookingLookupCount = 0;
     const arrivalDate = getDateInArgentina(0);
     const departureDate = getDateInArgentina(3);
+    const guestCheckinConfirmedAt = '2026-09-14T14:35:00.000Z';
 
     queryMock.mockImplementation(async (text: string, params?: unknown[]) => {
       if (text.includes(BOOKING_LOOKUP_QUERY_SNIPPET) && text.includes('WHERE b."userId" = $1 AND b.id = $2')) {
@@ -1501,7 +1622,12 @@ describe('Bookings and availability endpoints', () => {
               requestMode: 'protected',
               depositStatus: 'held',
               guestCheckinConfirmed: bookingLookupCount > 1,
+              guestCheckinConfirmedAt: bookingLookupCount > 1 ? guestCheckinConfirmedAt : null,
+              guestCheckinLatitude: bookingLookupCount > 1 ? -37.1234 : null,
+              guestCheckinLongitude: bookingLookupCount > 1 ? -56.9876 : null,
+              guestCheckinAccuracyMeters: bookingLookupCount > 1 ? 18 : null,
               hostAccessConfirmed: false,
+              hostAccessConfirmedAt: null,
               propertyTitle: 'Casa del bosque',
               imageUrl: 'https://example.com/property.jpg',
               location: 'Pinamar',
@@ -1511,7 +1637,16 @@ describe('Bookings and availability endpoints', () => {
       }
 
       if (text.includes('UPDATE bookings') && text.includes('guest_checkin_confirmed = TRUE')) {
-        expect(params).toEqual(['booking-1', 'user-1', false]);
+        expect(params).toEqual(['booking-1', 'user-1', 'guest_checkin_confirmed', -37.1234, -56.9876, 18]);
+        return { rows: [] };
+      }
+
+      if (matchesConversationDepositStateSyncQuery(text)) {
+        expectConversationDepositStatusSyncParams(params, 'guest_checkin_confirmed', 'booking-1');
+        return { rows: [] };
+      }
+
+      if (text.includes(LOG_ACTIVITY_QUERY_SNIPPET)) {
         return { rows: [] };
       }
 
@@ -1520,18 +1655,30 @@ describe('Bookings and availability endpoints', () => {
 
     const res = await request(app)
       .post('/api/bookings/booking-1/confirm-arrival')
+      .send({
+        geolocation: {
+          latitude: -37.1234,
+          longitude: -56.9876,
+          accuracyMeters: 18,
+        },
+      })
       .set('x-test-user-id', 'user-1');
 
     expect(res.status).toBe(200);
-    expect(res.body.booking.depositStatus).toBe('held');
+    expect(res.body.booking.depositStatus).toBe('guest_checkin_confirmed');
     expect(res.body.booking.guestCheckinConfirmed).toBe(true);
+    expect(res.body.booking.guestCheckinConfirmedAt).toBe(guestCheckinConfirmedAt);
+    expect(res.body.booking.guestCheckinLatitude).toBe(-37.1234);
+    expect(res.body.booking.guestCheckinLongitude).toBe(-56.9876);
+    expect(res.body.booking.guestCheckinAccuracyMeters).toBe(18);
     expect(res.body.booking.hostAccessConfirmed).toBe(false);
   });
 
-  test('POST /api/bookings/:id/confirm-access releases a protected deposit after both confirmations', async () => {
+  test('POST /api/bookings/:id/confirm-access marks the deposit as ready to release after both confirmations', async () => {
     let bookingLookupCount = 0;
     const arrivalDate = getDateInArgentina(0);
     const departureDate = getDateInArgentina(3);
+    const hostAccessConfirmedAt = '2026-09-14T15:10:00.000Z';
 
     queryMock.mockImplementation(async (text: string, params?: unknown[]) => {
       if (text.includes(BOOKING_LOOKUP_QUERY_SNIPPET) && text.includes('WHERE p."hostId" = $1 AND b.id = $2')) {
@@ -1551,9 +1698,10 @@ describe('Bookings and availability endpoints', () => {
               contractAccepted: false,
               contractJson: '{}',
               requestMode: 'protected',
-              depositStatus: bookingLookupCount === 1 ? 'held' : 'released',
+              depositStatus: bookingLookupCount === 1 ? 'guest_checkin_confirmed' : 'deposit_released',
               guestCheckinConfirmed: true,
               hostAccessConfirmed: bookingLookupCount > 1,
+              hostAccessConfirmedAt: bookingLookupCount > 1 ? hostAccessConfirmedAt : null,
               propertyTitle: 'Casa del bosque',
               imageUrl: 'https://example.com/property.jpg',
               location: 'Pinamar',
@@ -1563,12 +1711,16 @@ describe('Bookings and availability endpoints', () => {
       }
 
       if (text.includes('UPDATE bookings') && text.includes('host_access_confirmed = TRUE')) {
-        expect(params).toEqual(['booking-1', true]);
+        expect(params).toEqual(['booking-1', 'deposit_released']);
         return { rows: [] };
       }
 
-      if (text.includes('UPDATE conversations') && text.includes("deposit_status = 'released'")) {
-        expect(params).toEqual(['booking-1']);
+      if (matchesConversationDepositStateSyncQuery(text)) {
+        expectConversationDepositStatusSyncParams(params, 'deposit_released', 'booking-1');
+        return { rows: [] };
+      }
+
+      if (text.includes(LOG_ACTIVITY_QUERY_SNIPPET)) {
         return { rows: [] };
       }
 
@@ -1580,9 +1732,10 @@ describe('Bookings and availability endpoints', () => {
       .set('x-test-user-id', 'host-1');
 
     expect(res.status).toBe(200);
-    expect(res.body.booking.depositStatus).toBe('released');
+    expect(res.body.booking.depositStatus).toBe('deposit_released');
     expect(res.body.booking.guestCheckinConfirmed).toBe(true);
     expect(res.body.booking.hostAccessConfirmed).toBe(true);
+    expect(res.body.booking.hostAccessConfirmedAt).toBe(hostAccessConfirmedAt);
   });
 
   test('POST /api/bookings/:id/confirm-arrival rejects confirmations before the check-in day', async () => {
@@ -1868,7 +2021,7 @@ describe('Bookings and availability endpoints', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.booking.status).toBe('cancelled');
-    expect(res.body.booking.depositStatus).toBe('review');
+    expect(res.body.booking.depositStatus).toBe('manual_review');
     expect(res.body.booking.cancellationActor).toBe('guest');
   });
 
@@ -1942,10 +2095,11 @@ describe('Bookings and availability endpoints', () => {
     expect(res.body.booking.cancellationActor).toBe('host');
   });
 
-  test('POST /api/bookings/:id/report-arrival-problem moves the protected deposit into review', async () => {
+  test('POST /api/bookings/:id/report-arrival-problem moves the protected deposit into manual review', async () => {
     let bookingLookupCount = 0;
     const arrivalDate = getDateInArgentina(0);
     const departureDate = getDateInArgentina(3);
+    const manualReviewOpenedAt = '2026-09-14T14:35:00.000Z';
 
     queryMock.mockImplementation(async (text: string, params?: unknown[]) => {
       if (matchesInternalRiskProfileQuery(text)) {
@@ -1977,7 +2131,9 @@ describe('Bookings and availability endpoints', () => {
               contractAccepted: true,
               contractJson: null,
               requestMode: 'protected',
-              depositStatus: bookingLookupCount === 1 ? 'held' : 'review',
+              depositStatus: bookingLookupCount === 1 ? 'held' : 'manual_review',
+              manualReviewReason: bookingLookupCount === 1 ? null : 'guest_checkin_without_host_access_confirmation',
+              manualReviewOpenedAt: bookingLookupCount === 1 ? null : manualReviewOpenedAt,
               cancellationActor: null,
               propertyTitle: 'Depto céntrico',
               imageUrl: 'https://example.com/property.jpg',
@@ -1987,13 +2143,25 @@ describe('Bookings and availability endpoints', () => {
         };
       }
 
-      if (text.includes('UPDATE bookings') && text.includes("SET deposit_status = 'review'")) {
-        expect(params).toEqual(['booking-arrival-problem', 'user-1']);
+      if (text.includes('UPDATE bookings') && text.includes("SET deposit_status = 'manual_review'")) {
+        expect(params).toEqual([
+          'booking-arrival-problem',
+          'user-1',
+          'guest_checkin_without_host_access_confirmation',
+          expect.any(String),
+        ]);
         return { rows: [] };
       }
 
       if (matchesConversationDepositStateSyncQuery(text)) {
-        expectConversationDepositStatusSyncParams(params, 'review', 'booking-arrival-problem');
+        expectConversationDepositStatusSyncParams(params, 'manual_review', 'booking-arrival-problem', {
+          manualReviewReason: 'guest_checkin_without_host_access_confirmation',
+          expectManualReviewOpenedAt: true,
+        });
+        return { rows: [] };
+      }
+
+      if (text.includes(LOG_ACTIVITY_QUERY_SNIPPET)) {
         return { rows: [] };
       }
 
@@ -2005,7 +2173,9 @@ describe('Bookings and availability endpoints', () => {
       .set('x-test-user-id', 'user-1');
 
     expect(res.status).toBe(200);
-    expect(res.body.booking.depositStatus).toBe('review');
+    expect(res.body.booking.depositStatus).toBe('manual_review');
+    expect(res.body.booking.manualReviewReason).toBe('guest_checkin_without_host_access_confirmation');
+    expect(res.body.booking.manualReviewOpenedAt).toBe(manualReviewOpenedAt);
   });
 
   test('POST /api/bookings/:id/report-arrival-problem rejects reports before the check-in day', async () => {
@@ -2047,10 +2217,11 @@ describe('Bookings and availability endpoints', () => {
     expect(res.body.message).toBe('Vas a poder reportar un problema desde el día del ingreso.');
   });
 
-  test('POST /api/bookings/:id/report-no-show keeps the protected deposit pending confirmation', async () => {
+  test('POST /api/bookings/:id/report-no-show moves the protected deposit into manual review', async () => {
     let bookingLookupCount = 0;
     const arrivalDate = getDateInArgentina(0);
     const departureDate = getDateInArgentina(3);
+    const manualReviewOpenedAt = '2026-09-14T14:35:00.000Z';
 
     queryMock.mockImplementation(async (text: string, params?: unknown[]) => {
       if (matchesInternalRiskProfileQuery(text)) {
@@ -2082,7 +2253,9 @@ describe('Bookings and availability endpoints', () => {
               contractAccepted: true,
               contractJson: null,
               requestMode: 'protected',
-              depositStatus: bookingLookupCount === 1 ? 'held' : 'pending_confirmation',
+              depositStatus: bookingLookupCount === 1 ? 'held' : 'manual_review',
+              manualReviewReason: bookingLookupCount === 1 ? null : 'host_reported_no_show',
+              manualReviewOpenedAt: bookingLookupCount === 1 ? null : manualReviewOpenedAt,
               cancellationActor: null,
               propertyTitle: 'Casa en la sierra',
               imageUrl: 'https://example.com/property.jpg',
@@ -2092,13 +2265,24 @@ describe('Bookings and availability endpoints', () => {
         };
       }
 
-      if (text.includes('UPDATE bookings') && text.includes("SET deposit_status = 'pending_confirmation'")) {
-        expect(params).toEqual(['booking-no-show']);
+      if (text.includes('UPDATE bookings') && text.includes("SET deposit_status = 'manual_review'")) {
+        expect(params).toEqual([
+          'booking-no-show',
+          'host_reported_no_show',
+          expect.any(String),
+        ]);
         return { rows: [] };
       }
 
       if (matchesConversationDepositStateSyncQuery(text)) {
-        expectConversationDepositStatusSyncParams(params, 'pending_confirmation', 'booking-no-show');
+        expectConversationDepositStatusSyncParams(params, 'manual_review', 'booking-no-show', {
+          manualReviewReason: 'host_reported_no_show',
+          expectManualReviewOpenedAt: true,
+        });
+        return { rows: [] };
+      }
+
+      if (text.includes(LOG_ACTIVITY_QUERY_SNIPPET)) {
         return { rows: [] };
       }
 
@@ -2110,7 +2294,9 @@ describe('Bookings and availability endpoints', () => {
       .set('x-test-user-id', 'host-1');
 
     expect(res.status).toBe(200);
-    expect(res.body.booking.depositStatus).toBe('pending_confirmation');
+    expect(res.body.booking.depositStatus).toBe('manual_review');
+    expect(res.body.booking.manualReviewReason).toBe('host_reported_no_show');
+    expect(res.body.booking.manualReviewOpenedAt).toBe(manualReviewOpenedAt);
   });
 
   test('POST /api/bookings/:id/report-no-show rejects no-show reports before the check-in day', async () => {

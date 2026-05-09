@@ -919,7 +919,14 @@ export const initDB = async () => {
       BEGIN ALTER TABLE bookings ADD COLUMN deposit_payment_reference TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE bookings ADD COLUMN cancellation_actor TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE bookings ADD COLUMN guest_checkin_confirmed BOOLEAN DEFAULT FALSE; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE bookings ADD COLUMN guest_checkin_confirmed_at TIMESTAMP; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE bookings ADD COLUMN guest_checkin_latitude DOUBLE PRECISION; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE bookings ADD COLUMN guest_checkin_longitude DOUBLE PRECISION; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE bookings ADD COLUMN guest_checkin_accuracy_meters DOUBLE PRECISION; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE bookings ADD COLUMN host_access_confirmed BOOLEAN DEFAULT FALSE; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE bookings ADD COLUMN host_access_confirmed_at TIMESTAMP; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE bookings ADD COLUMN manual_review_reason TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE bookings ADD COLUMN manual_review_opened_at TIMESTAMP; EXCEPTION WHEN duplicate_column THEN NULL; END;
     END $$;
   `);
 
@@ -968,6 +975,8 @@ export const initDB = async () => {
       BEGIN ALTER TABLE conversations ADD COLUMN service_fee_ars INTEGER; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE conversations ADD COLUMN deposit_total_charge_ars INTEGER; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE conversations ADD COLUMN deposit_payment_reference TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE conversations ADD COLUMN manual_review_reason TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE conversations ADD COLUMN manual_review_opened_at TIMESTAMP; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE conversations ADD COLUMN request_start_date DATE; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE conversations ADD COLUMN request_end_date DATE; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE conversations ADD COLUMN request_guests INTEGER; EXCEPTION WHEN duplicate_column THEN NULL; END;

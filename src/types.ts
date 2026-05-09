@@ -6,9 +6,13 @@ import type {
 } from './lib/propertyVerification';
 import type { GuestVerificationItem, GuestVerificationSummary } from './lib/guestVerification';
 import type { HostTrustSummary } from './lib/hostTrust';
+import type { ProtectedDepositManualReviewReason } from './lib/protectedDepositManualReview';
+import type { ReservationDepositStatus } from './lib/protectedDepositStatus';
 import type { ProtectedDepositPricing } from './lib/protectedDeposit';
 import type { PremiumVerificationOffer } from './lib/premiumVerification';
 import type { UserIdentityVerification } from './lib/verificationModel';
+
+export type { ReservationDepositStatus } from './lib/protectedDepositStatus';
 
 export type TraceabilityLevel = 'low' | 'medium' | 'high';
 
@@ -72,7 +76,6 @@ export interface Property {
   verificationItems?: PropertyVerificationItem[];
   advancedVerificationItems?: PropertyAdvancedVerificationItem[];
   verificationProgress?: PropertyVerificationProgress;
-  hostTrustScore?: number;
   hostTrust?: HostTrustSummary;
   hostInteractionHistory?: HostInteractionHistory;
   price: number;
@@ -273,8 +276,6 @@ export type ReservationDepositType = 'external' | 'protected';
 
 export type ReservationRequestStatus = 'pending' | 'accepted' | 'not_advanced';
 
-export type ReservationDepositStatus = 'external_pending' | 'reported' | 'confirmed' | 'checkout_pending' | 'held' | 'review' | 'pending_confirmation' | 'released' | 'refunded';
-
 export type ReservationCancellationActor = 'guest' | 'host';
 
 export interface ReservationRequestContext {
@@ -296,11 +297,18 @@ export interface ReservationRequestContext {
   depositStatus?: ReservationDepositStatus;
   protectedDepositPricing?: ProtectedDepositPricing | null;
   depositPaymentReference?: string | null;
+  manualReviewReason?: ProtectedDepositManualReviewReason | null;
+  manualReviewOpenedAt?: string | null;
   cancellationActor?: ReservationCancellationActor;
   bookingId?: string;
   bookingStatus?: BookingStatus;
   guestCheckinConfirmed?: boolean;
+  guestCheckinConfirmedAt?: string | null;
+  guestCheckinLatitude?: number | null;
+  guestCheckinLongitude?: number | null;
+  guestCheckinAccuracyMeters?: number | null;
   hostAccessConfirmed?: boolean;
+  hostAccessConfirmedAt?: string | null;
 }
 
 export interface Booking {
@@ -325,9 +333,16 @@ export interface Booking {
   depositStatus?: ReservationDepositStatus;
   protectedDepositPricing?: ProtectedDepositPricing | null;
   depositPaymentReference?: string | null;
+  manualReviewReason?: ProtectedDepositManualReviewReason | null;
+  manualReviewOpenedAt?: string | null;
   cancellationActor?: ReservationCancellationActor;
   guestCheckinConfirmed?: boolean;
+  guestCheckinConfirmedAt?: string | null;
+  guestCheckinLatitude?: number | null;
+  guestCheckinLongitude?: number | null;
+  guestCheckinAccuracyMeters?: number | null;
   hostAccessConfirmed?: boolean;
+  hostAccessConfirmedAt?: string | null;
   cancellationDeadline?: string | null;
   date?: string;
   contractAccepted?: boolean;
@@ -366,15 +381,21 @@ export interface Conversation {
   depositStatus?: ReservationDepositStatus;
   protectedDepositPricing?: ProtectedDepositPricing | null;
   depositPaymentReference?: string | null;
+  manualReviewReason?: ProtectedDepositManualReviewReason | null;
+  manualReviewOpenedAt?: string | null;
   cancellationActor?: ReservationCancellationActor;
   guestCheckinConfirmed?: boolean;
+  guestCheckinConfirmedAt?: string | null;
+  guestCheckinLatitude?: number | null;
+  guestCheckinLongitude?: number | null;
+  guestCheckinAccuracyMeters?: number | null;
   hostAccessConfirmed?: boolean;
+  hostAccessConfirmedAt?: string | null;
   requestStartDate?: string;
   requestEndDate?: string;
   requestGuests?: number;
   requestTotalPrice?: number;
   hostMemberSince?: string;
-  hostTrustScore?: number;
   hostTrust?: HostTrustSummary;
   hostInteractionHistory?: HostInteractionHistory;
   guestProfile?: GuestRequestProfile;
@@ -445,6 +466,7 @@ export interface HostProfile {
   agreementsFinalizedCount: number;
   avgResponseTimeMinutes: number;
   hostCancellationsCount: number;
+  hostTrust?: HostTrustSummary;
 
   interactionHistory: HostInteractionHistory;
 

@@ -110,7 +110,7 @@ const projectScopeCards: ScopeCard[] = [
 const verificationLevels: VerificationLevel[] = [
   {
     title: 'Verificación presencial',
-    description: 'La visita confirma identidad del anfitrión, acceso real, vínculo con el lugar y ubicación durante la visita.',
+    description: 'La visita deja identidad, ubicación y acceso confirmados, con respaldo de vínculo real con el lugar.',
     icon: Icons.Home,
     cardClassName: 'rounded-[24px] border border-brand/15 bg-brand/[0.06] p-5 shadow-[0_16px_34px_-28px_rgba(67,56,202,0.14)] dark:border-brand/20 dark:bg-brand/10',
     accentClassName: 'hidden',
@@ -682,7 +682,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                         La verificación reduce dudas antes de reservar.
                       </h3>
                       <p className="w-full text-[1.02rem] leading-8 text-slate-700 dark:text-slate-300">
-                        Confirmamos que la propiedad existe y que hay una persona identificada con acceso al lugar.
+                        La visita deja identidad, ubicación y acceso confirmados, con respaldo de existencia y vínculo con el lugar.
                       </p>
                     </div>
 
@@ -698,7 +698,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                     </div>
 
                     <p className="text-[0.94rem] leading-7 text-slate-500 dark:text-slate-400">
-                      No evaluamos estado ni calidad del inmueble.
+                      No evaluamos estado, calidad ni amenities del inmueble.
                     </p>
 
                   </div>
@@ -744,7 +744,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                   </div>
 
                   <p className="max-w-2xl text-[0.98rem] leading-7 text-slate-600 dark:text-slate-400">
-                    Próximamente: guía paso a paso para publicar con verificación completa y mejorar tu exposición.
+                    Próximamente: guía paso a paso para publicar con verificación presencial y mejorar tu exposición.
                   </p>
                 </div>
               </section>
@@ -798,7 +798,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                   </div>
 
                   <p className="text-xs leading-6 text-slate-500 dark:text-slate-400">
-                    *No evaluamos estado ni calidad del inmueble*
+                    *No evaluamos estado, calidad ni amenities del inmueble*
                   </p>
                 </div>
               </section>

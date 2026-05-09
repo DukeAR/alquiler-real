@@ -1,11 +1,13 @@
 import React from 'react';
 import { useAuth } from '../hooks/useAuth';
+import { getGuestCardOnboardingTip } from '../lib/contextualOnboarding';
 import { Icons } from './Icons';
 import { cn, formatCurrency } from '../lib/utils';
 import { getPropertyCardVerificationState } from '../lib/propertyVerification';
 import { Property } from '../services/geminiService';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
+import { ContextualTip } from './ui/ContextualTip';
 
 const normalizePropertyText = (value?: string) => (value ?? '')
   .normalize('NFD')
@@ -82,6 +84,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   const guestCapacityLabel = getGuestCapacityLabel(Number(property.maxGuests) || null);
   const propertyCardCtaLabel = 'Ver propiedad';
   const isCompactCard = density === 'compact';
+  const onboardingTip = getGuestCardOnboardingTip(verificationState.publicLevel);
   const [isNavigating, setIsNavigating] = React.useState(false);
   const navigationTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -264,6 +267,14 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
                 ) : null}
               </div>
             </div>
+
+            <ContextualTip
+              compact={isCompactCard}
+              tone={onboardingTip.tone}
+              eyebrow={onboardingTip.eyebrow}
+              body={onboardingTip.body}
+              className="shadow-none"
+            />
           </div>
         </div>
       </div>

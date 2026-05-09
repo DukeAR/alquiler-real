@@ -20,12 +20,17 @@
     "src/lib/userVerification.ts",
     "src/lib/guestVerification.ts",
     "src/lib/hostTrust.ts",
+    "src/lib/bookingDates.ts",
     "src/lib/protectedDeposit.ts",
+    "src/lib/marketplaceMonetization.ts",
+    "src/lib/protectedDepositStatus.ts",
+    "src/lib/protectedDepositManualReview.ts",
     "src/lib/platformTerms.ts",
     "src/lib/premiumVerification.ts",
     "src/lib/positiveIncentives.ts",
     "src/lib/propertyListingQuality.ts",
     "src/lib/propertyVerification.ts",
+    "src/lib/reservationFlow.ts",
     "src/lib/verificationPresentation.ts",
     "src/lib/verificationModel.ts"
   ]

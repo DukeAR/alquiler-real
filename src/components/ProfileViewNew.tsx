@@ -5,6 +5,7 @@ import { useUserPreferences, type UserPreferences } from '../hooks/useUserPrefer
 import { useUserProfile, type ValidationChecks } from '../hooks/useUserProfile';
 import { apiJson } from '../lib/apiConfig';
 import { VALID_ZONES } from '../lib/constants';
+import { formatMarketplaceMonetizationPriceLabel } from '../lib/marketplaceMonetization';
 import { formatPremiumPriceLabel } from '../lib/premiumVerification';
 import { getReviewInteractionSignals } from '../lib/interactionHistory';
 import { showToast } from '../lib/toast';
@@ -277,6 +278,7 @@ export const ProfileViewNew = ({ initialData, disableAutoLoad = false }: Profile
   const validationLevel = validationData?.level ?? 'INICIAL';
   const verificationSummary = validationData?.summary ?? 'Mostramos qué ya fue validado y qué falta completar en tu cuenta.';
   const premiumDocumentaryOffer = validationData?.premiumDocumentaryOffer ?? null;
+  const professionalProfilePlan = validationData?.professionalProfilePlan ?? null;
   const canConfirmEmail = Boolean(validationData?.checks && !validationData.checks.emailVerified);
   const canConfirmPhone = Boolean(validationData?.checks && !validationData.checks.phoneVerified && user.phone);
   const needsPhone = Boolean(validationData?.checks && !validationData.checks.phoneVerified && !user.phone);
@@ -449,10 +451,10 @@ export const ProfileViewNew = ({ initialData, disableAutoLoad = false }: Profile
                     onClick={() => navigate('/change-password')}
                   />
                   <ActionRow
-                    icon={<Icons.Calendar className="h-5 w-5" />}
-                    label="Mis reservas"
-                    description="Revisá tus próximas estadías y el historial."
-                    onClick={() => navigate('/my-bookings')}
+                    icon={<Icons.Activity className="h-5 w-5" />}
+                    label="Mis operaciones"
+                    description="Centralizá reservas, conversaciones y próximos pasos en una sola vista."
+                    onClick={() => navigate('/operations')}
                   />
                   <ActionRow
                     icon={<Icons.LayoutDashboard className="h-5 w-5" />}
@@ -571,6 +573,37 @@ export const ProfileViewNew = ({ initialData, disableAutoLoad = false }: Profile
                           <Icons.ShieldCheck className="h-5 w-5" />
                           {premiumDocumentaryOffer.ctaLabel}
                         </Button>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {professionalProfilePlan ? (
+                    <div className="rounded-[var(--app-radius-control)] border border-slate-200/80 bg-white/92 p-4 dark:border-slate-800 dark:bg-slate-900/80">
+                      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                        <div className="space-y-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="app-form-label">{professionalProfilePlan.title}</p>
+                            <Badge variant="neutral" size="md">{professionalProfilePlan.stateLabel}</Badge>
+                          </div>
+                          <p className="text-sm leading-6 text-slate-700 dark:text-slate-200">{professionalProfilePlan.summary}</p>
+                          {professionalProfilePlan.note ? (
+                            <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">{professionalProfilePlan.note}</p>
+                          ) : null}
+                        </div>
+                        <div className="rounded-2xl border border-slate-200/80 bg-slate-50/90 px-4 py-3 text-sm leading-6 text-slate-600 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-300">
+                          {professionalProfilePlan.price
+                            ? `${professionalProfilePlan.price.label}: ${formatMarketplaceMonetizationPriceLabel(professionalProfilePlan.price)}`
+                            : 'Sin precio activo todavía'}
+                        </div>
+                      </div>
+                      <div className="mt-4 grid gap-3 md:grid-cols-3">
+                        {professionalProfilePlan.featurePreview.map((feature) => (
+                          <div key={feature.key} className="rounded-2xl border border-slate-200/80 bg-slate-50/90 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/50">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">{feature.state === 'coming_soon' ? 'Próximo' : 'Incluido'}</p>
+                            <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-100">{feature.label}</p>
+                            <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">{feature.description}</p>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   ) : null}

@@ -50,7 +50,7 @@ describe('chatSystemMessages', () => {
       'protected-payment',
     ]);
     expect(messages[2]?.content).toBe('Ya están de acuerdo. La reserva quedó marcada con seña protegida.');
-    expect(messages[3]?.content).toBe('La reserva quedó marcada con seña protegida. Por ahora no procesamos pagos dentro de la app.');
+    expect(messages[3]?.content).toBe('La reserva quedó marcada con seña protegida. Cuando la seña se registre, queda retenida hasta check-in. Por ahora no procesamos pagos dentro de la app.');
   });
 
   test('adds the external coordination message with a return path to protected deposit', () => {
@@ -139,7 +139,7 @@ describe('chatSystemMessages', () => {
       'protected-arrival',
       'problem',
     ]);
-    expect(messages[3]?.content).toBe('Seña registrada. Ya pueden coordinar la llegada por el chat.');
+    expect(messages[3]?.content).toBe('Seña registrada y retenida hasta check-in. Ya pueden coordinar la llegada por el chat.');
   });
 
   test('adds the review prompt after the stay is completed', () => {
@@ -147,7 +147,7 @@ describe('chatSystemMessages', () => {
       requestMode: 'protected',
       requestStatus: 'accepted',
       bookingStatus: 'completed',
-      depositStatus: 'released',
+      depositStatus: 'deposit_released',
       requestStartDate: '2026-09-02',
       requestEndDate: '2026-09-07',
       bookingStartDate: '2026-09-02',

@@ -67,7 +67,6 @@ const sampleProperty = {
     bio: 'Responde rápido y mantiene la información al día.',
     avatarUrl: 'https://example.com/host.jpg'
   },
-  hostTrustScore: 4,
   hostTrust: {
     score: 4,
     level: 'high',
@@ -724,6 +723,7 @@ describe('PropertyDetail', () => {
     expect(within(bookingContext).getByText('Identidad verificada')).toBeDefined();
     expect(within(bookingContext).getByText('Anfitrión confirmado')).toBeDefined();
     expect(within(bookingContext).getByText('La identidad del anfitrión fue confirmada')).toBeDefined();
+    expect(within(bookingContext).getByText('La ficha ya muestra identidad validada del anfitrión. Ubicación, acceso y reglas conviene confirmarlos leyendo la publicación y preguntando por chat.')).toBeDefined();
     const verificationPreview = screen.getByTestId('property-verification-preview');
     expect(within(verificationPreview).getByRole('heading', { name: 'Qué está confirmado' })).toBeDefined();
     expect(within(verificationPreview).getByText('Identidad del anfitrión')).toBeDefined();

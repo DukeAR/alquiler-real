@@ -42,7 +42,6 @@ const buildDemoProperty = (overrides: Partial<Property> & Pick<Property, 'id' | 
     verificationItems: overrides.verificationItems,
     advancedVerificationItems: overrides.advancedVerificationItems,
     verificationProgress: overrides.verificationProgress,
-    hostTrustScore: overrides.hostTrustScore,
     hostTrust: overrides.hostTrust,
     hostInteractionHistory: overrides.hostInteractionHistory,
     price: overrides.price,

@@ -11,7 +11,7 @@ import { initDB } from './updates';
 import { createMercadoPagoPreference, getMercadoPagoPaymentDetails, isMercadoPagoConfigured } from './mercadoPago';
 import { mapPropertyRecord } from './propertySerializer';
 import { buildGuestVerification } from './guestVerification';
-import { buildHostTrust } from './hostTrust';
+import { buildHostTrust, buildHostTrustInternalRanking } from './hostTrust';
 import { buildGuestInteractionHistory, buildHostInteractionHistory } from './interactionHistory';
 import { evaluateInternalRisk, getInternalRiskDecision, type InternalRiskAction } from './internalRisk';
 import { getChatSystemMessages, getRequestAcceptedMessage, getRequestNotAdvancedMessage, type ChatSystemMessageKey } from './chatSystemMessages';
@@ -24,7 +24,23 @@ import {
 import { hasPropertyPresencialVerificationSeal as hasPresencialVerificationSeal } from '../src/lib/propertyVerification';
 import { getPropertyListingQualityScore } from '../src/lib/propertyListingQuality';
 import { BOOKING_CONTRACT_PLATFORM_TERMS } from '../src/lib/platformTerms';
+import {
+  buildProfessionalProfileMonetizationPlan,
+  buildSoftBoostMonetizationPlan,
+  buildVerificationMonetizationPlan,
+} from '../src/lib/marketplaceMonetization';
 import { getProtectedDepositPricingFromBooking } from '../src/lib/protectedDeposit';
+import {
+  EXTERNAL_DEPOSIT_STATUS_SET,
+  PROTECTED_DEPOSIT_REVIEWABLE_STATUS_SET,
+  PROTECTED_DEPOSIT_STATUS_SET,
+  isProtectedDepositSettledStatus,
+  normalizeReservationDepositStatus,
+} from '../src/lib/protectedDepositStatus';
+import {
+  normalizeProtectedDepositManualReviewReason,
+  type ProtectedDepositManualReviewReason,
+} from '../src/lib/protectedDepositManualReview';
 import { buildUserVerificationStatus } from '../src/lib/userVerification';
 import {
   PREMIUM_DOCUMENTARY_OFFER_TYPE,
@@ -96,11 +112,24 @@ if (serverEnv.trustProxy) {
 
 // Configure CORS FIRST - before any other middleware
 const allowedOrigins = serverEnv.corsAllowedOrigins;
+const projectPreviewOriginPattern = /^https:\/\/alquiler-real(?:-[a-z0-9-]+)?-dukears-projects\.vercel\.app$/i;
+const normalizeRequestOrigin = (origin?: string | null) => typeof origin === 'string'
+  ? origin.trim().replace(/\/+$/, '')
+  : '';
+const isAllowedOrigin = (origin?: string | null) => {
+  const normalizedOrigin = normalizeRequestOrigin(origin);
+
+  if (!normalizedOrigin) {
+    return true;
+  }
+
+  return allowedOrigins.includes(normalizedOrigin) || projectPreviewOriginPattern.test(normalizedOrigin);
+};
 
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (mobile apps, curl requests, etc)
-    if (!origin || allowedOrigins.includes(origin)) {
+    if (isAllowedOrigin(origin)) {
       callback(null, true);
     } else {
       console.log(`[CORS] Rejected origin: ${origin}`);
@@ -381,6 +410,37 @@ const buildDocumentaryPremiumOffer = (input: {
   const pricing = getPremiumOfferPricing(PREMIUM_DOCUMENTARY_OFFER_TYPE, input.usageRows, input.order);
   const purchased = input.documentaryVerified || isPremiumOrderUnlocked(input.order);
   const completed = input.documentaryVerified || isPremiumOrderCompleted(input.order);
+  const monetization = buildVerificationMonetizationPlan({
+    key: 'documentary-verification',
+    title: 'Validación documental adicional',
+    summary: 'Refuerza la identidad visible de tu cuenta sin volver obligatoria la documentación para usar la plataforma.',
+    priceArs: pricing.priceArs,
+    isComplimentary: pricing.isComplimentary,
+    complimentaryReason: pricing.complimentaryReason,
+    state: completed || purchased ? 'active' : 'available',
+    stateLabel: completed ? 'Activa' : purchased ? 'En curso' : 'Disponible ahora',
+    featurePreview: [
+      {
+        key: 'identity-context',
+        label: 'Respaldo adicional de identidad',
+        description: 'Suma una capa visible extra para que otros entiendan mejor con quién interactúan.',
+        state: 'included',
+      },
+      {
+        key: 'optional-upgrade',
+        label: 'Refuerzo opcional',
+        description: 'No reemplaza tu historial ni vuelve obligatoria la documentación para operar.',
+        state: 'included',
+      },
+      {
+        key: 'future-controls',
+        label: 'Más control documental a futuro',
+        description: 'La estructura queda lista para sumar más herramientas sin tocar el score interno.',
+        state: 'coming_soon',
+      },
+    ],
+    note: 'Se mantiene como capa secundaria de confianza: la reputación y las operaciones reales siguen pesando más.',
+  });
 
   return {
     offerType: PREMIUM_DOCUMENTARY_OFFER_TYPE,
@@ -404,6 +464,7 @@ const buildDocumentaryPremiumOffer = (input: {
     complimentaryReason: pricing.complimentaryReason,
     purchased,
     completed,
+    monetization,
     redirectTo: buildPremiumRedirectPath({
       offerType: PREMIUM_DOCUMENTARY_OFFER_TYPE,
       orderId: input.order?.id ?? null,
@@ -424,6 +485,65 @@ const buildOnsitePremiumOffer = (input: {
   const pricing = getPremiumOfferPricing(PREMIUM_ONSITE_OFFER_TYPE, input.usageRows, input.order);
   const purchased = input.onsiteVerified || isPremiumOrderUnlocked(input.order);
   const completed = input.onsiteVerified || isPremiumOrderCompleted(input.order);
+  const monetization = buildVerificationMonetizationPlan({
+    key: 'onsite-verification',
+    title: 'Validación presencial adicional',
+    summary: 'Activa una visita para dejar identidad, acceso y ubicación confirmados en el aviso sin reemplazar el ranking de confianza.',
+    priceArs: pricing.priceArs,
+    isComplimentary: pricing.isComplimentary,
+    complimentaryReason: pricing.complimentaryReason,
+    state: completed || purchased ? 'active' : 'available',
+    stateLabel: completed ? 'Activa' : purchased ? 'En coordinación' : 'Disponible ahora',
+    featurePreview: [
+      {
+        key: 'request',
+        label: 'Solicitud de verificación',
+        description: 'El anfitrión confirma el servicio desde el dashboard y la publicación entra en flujo de coordinación.',
+        state: 'included',
+      },
+      {
+        key: 'agenda',
+        label: 'Agenda de visita',
+        description: 'La visita conserva su propio estado para saber si falta coordinar o si ya quedó completada.',
+        state: 'included',
+      },
+      {
+        key: 'renewal',
+        label: 'Renovación opcional',
+        description: 'Más adelante se podrá revalidar la visita si querés actualizar el respaldo del aviso.',
+        state: 'coming_soon',
+      },
+    ],
+    schedule: completed
+      ? {
+          state: 'completed',
+          label: 'Agenda cerrada',
+          detail: 'La visita ya se completó y el sello quedó visible en la publicación.',
+        }
+      : input.order?.verificationStatus === 'in_progress'
+        ? {
+            state: 'scheduled',
+            label: 'Agenda en coordinación',
+            detail: 'La solicitud ya está abierta y falta cerrar día y horario de la visita.',
+          }
+        : purchased
+          ? {
+              state: 'pending_schedule',
+              label: 'Agenda pendiente',
+              detail: 'Después de confirmar el servicio, la visita queda lista para coordinar.',
+            }
+          : {
+              state: 'not_requested',
+              label: 'Sin agenda todavía',
+              detail: 'La agenda aparece recién cuando confirmás esta validación.',
+            },
+    renewal: {
+      optional: true,
+      label: 'Renovación futura opcional',
+      detail: 'La estructura queda lista para ofrecer una nueva visita sin volver obligatoria la renovación.',
+    },
+    note: 'La exposición adicional que trae esta validación siempre acompaña al ranking principal; no lo reemplaza.',
+  });
 
   return {
     offerType: PREMIUM_ONSITE_OFFER_TYPE,
@@ -447,6 +567,7 @@ const buildOnsitePremiumOffer = (input: {
     complimentaryReason: pricing.complimentaryReason,
     purchased,
     completed,
+    monetization,
     redirectTo: buildPremiumRedirectPath({
       offerType: PREMIUM_ONSITE_OFFER_TYPE,
       orderId: input.order?.id ?? null,
@@ -690,17 +811,95 @@ const mapActivityLogToNotification = (row: any) => {
 // ==========================================
 
 const EXTERNAL_CONTACT_WARNING_MESSAGE = 'Parece que este mensaje incluye datos de contacto externos. Te recomendamos mantener la conversación dentro de la plataforma.';
+const CHAT_EXTERNAL_WARNING_SIGNALS = new Set(['phone', 'email', 'link', 'instagram', 'whatsapp', 'outside_request', 'outside_payment']);
+const CHAT_OFF_PLATFORM_PATTERNS = [
+  /\b(?:por fuera|fuera de la app|fuera de alquiler real|sin la app|por privado|en privado)\b/,
+  /\b(?:cerramos afuera|arreglamos afuera|seguimos afuera|coordinamos afuera|operamos afuera)\b/,
+  /\b(?:pasame tu numero|te paso mi numero|hablame por|escribime por)\b/,
+  /\b(?:sin comision|sin comisiones)\b/,
+];
+const CHAT_ABUSIVE_LANGUAGE_PATTERNS = [
+  /\b(?:idiota|imbecil|pelotud[oa]|forr[oa]|bolud[oa]|mierda|te voy a|te cago)\b/,
+];
 
 const normalizeChatSafetyText = (value: string) => value
   .toLowerCase()
   .normalize('NFD')
   .replace(/[\u0300-\u036f]/g, '');
 
-const getExternalContactSignals = (value: string) => {
+const toFiniteCoordinate = (value: unknown) => {
+  const parsed = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const getDistanceKmBetweenCoordinates = (fromLat: number, fromLng: number, toLat: number, toLng: number) => {
+  const toRadians = (candidate: number) => candidate * (Math.PI / 180);
+  const earthRadiusKm = 6371;
+  const deltaLat = toRadians(toLat - fromLat);
+  const deltaLng = toRadians(toLng - fromLng);
+  const lat1 = toRadians(fromLat);
+  const lat2 = toRadians(toLat);
+  const a = Math.sin(deltaLat / 2) ** 2
+    + Math.cos(lat1) * Math.cos(lat2) * Math.sin(deltaLng / 2) ** 2;
+
+  return earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+};
+
+const buildPropertyLocationChangeMetadata = (params: {
+  propertyId: string;
+  previousLocation: unknown;
+  previousLat: unknown;
+  previousLng: unknown;
+  nextLocation: unknown;
+  nextLat: unknown;
+  nextLng: unknown;
+}) => {
+  const previousLocation = typeof params.previousLocation === 'string' ? params.previousLocation : null;
+  const nextLocation = typeof params.nextLocation === 'string' ? params.nextLocation : null;
+  const previousLocationKey = previousLocation ? normalizeChatSafetyText(previousLocation).trim() : '';
+  const nextLocationKey = nextLocation ? normalizeChatSafetyText(nextLocation).trim() : '';
+  const previousLat = toFiniteCoordinate(params.previousLat);
+  const previousLng = toFiniteCoordinate(params.previousLng);
+  const nextLat = toFiniteCoordinate(params.nextLat);
+  const nextLng = toFiniteCoordinate(params.nextLng);
+  const locationChanged = Boolean(nextLocationKey && nextLocationKey !== previousLocationKey);
+  const hasCoordinateJump = previousLat !== null
+    && previousLng !== null
+    && nextLat !== null
+    && nextLng !== null;
+  const distanceKm = hasCoordinateJump
+    ? Number(getDistanceKmBetweenCoordinates(previousLat, previousLng, nextLat, nextLng).toFixed(1))
+    : null;
+  const suspicious = Boolean(
+    (distanceKm !== null && distanceKm >= 8)
+    || (locationChanged && distanceKm !== null && distanceKm >= 3),
+  );
+
+  if (!locationChanged && distanceKm === null) {
+    return null;
+  }
+
+  return {
+    propertyId: params.propertyId,
+    previousLocation,
+    nextLocation,
+    previousLat,
+    previousLng,
+    nextLat,
+    nextLng,
+    locationChanged,
+    distanceKm,
+    suspicious,
+  };
+};
+
+const getChatRiskAnalysis = (value: string) => {
   const normalizedValue = normalizeChatSafetyText(value);
   const signals = new Set<string>();
   const phoneMatches = value.match(/(?:\+?\d{1,4}[\s.-]?)?(?:\(?\d{2,4}\)?[\s.-]?)?\d{3,4}[\s.-]?\d{4}\b/g) ?? [];
   const linkMatches = value.match(/\b(?:https?:\/\/|www\.)\S+/gi) ?? [];
+  const outsideIntent = CHAT_OFF_PLATFORM_PATTERNS.some((pattern) => pattern.test(normalizedValue));
+  const abusiveLanguage = CHAT_ABUSIVE_LANGUAGE_PATTERNS.some((pattern) => pattern.test(normalizedValue));
 
   if (phoneMatches.some((candidate) => candidate.replace(/\D/g, '').length >= 8)) {
     signals.add('phone');
@@ -722,7 +921,23 @@ const getExternalContactSignals = (value: string) => {
     signals.add('whatsapp');
   }
 
-  return Array.from(signals);
+  if (outsideIntent) {
+    signals.add('outside_request');
+  }
+
+  if (outsideIntent && /\b(?:transferencia|transferir|alias|cbu|mercado pago)\b/.test(normalizedValue)) {
+    signals.add('outside_payment');
+  }
+
+  if (abusiveLanguage) {
+    signals.add('abusive_language');
+  }
+
+  return {
+    signals: Array.from(signals),
+    outsideIntent,
+    abusiveLanguage,
+  };
 };
 
 // Chat Filter Middleware
@@ -737,17 +952,24 @@ const filterChatMiddleware = async (req: any, _res: any, next: any) => {
 
   if (!rawMessage) return next();
 
-  const signals = getExternalContactSignals(rawMessage);
+  const { signals, outsideIntent, abusiveLanguage } = getChatRiskAnalysis(rawMessage);
 
   if (signals.length > 0) {
-    req.chatSafetyWarning = {
-      type: 'external_contact',
-      message: EXTERNAL_CONTACT_WARNING_MESSAGE,
-      signals,
-    };
+    if (signals.some((signal) => CHAT_EXTERNAL_WARNING_SIGNALS.has(signal))) {
+      req.chatSafetyWarning = {
+        type: 'external_contact',
+        message: EXTERNAL_CONTACT_WARNING_MESSAGE,
+        signals,
+      };
+    }
 
     const userId = req.session.userId;
-    await logActivity(userId || 'anonymous', 'SUSPICIOUS_MESSAGE_BLOCKED', { text: rawMessage, signals }, req.ip);
+    await logActivity(
+      userId || 'anonymous',
+      'SUSPICIOUS_MESSAGE_BLOCKED',
+      { text: rawMessage, signals, outsideIntent, abusiveLanguage },
+      req.ip,
+    );
 
     if (userId) {
       await evaluateInternalRisk(userId);
@@ -945,6 +1167,7 @@ const PROPERTY_HOST_TRUST_SELECT = `u.identity_validated as "hostIdentityValidat
         COALESCE(u.member_since, u.created_at) as "hostMemberSince",
         COALESCE(host_premium_documentary."hostPremiumDocumentaryVerified", FALSE) as "hostPremiumDocumentaryVerified",
         COALESCE(host_completed_reservations."completedReservationsCount", 0) as "hostCompletedReservationsCount",
+  COALESCE(host_cancellation_stats."hostCancellationsCount", 0) as "hostCancellationsCount",
   COALESCE(host_guest_reviews."guestReviewsCount", 0) as "hostGuestReviewsCount",
   COALESCE(host_feedback_stats."feedbackCount", 0) as "hostGuestFeedbackCount",
   COALESCE(host_feedback_stats."agreementsKeptCount", 0) as "hostGuestAgreementsKeptCount",
@@ -974,6 +1197,13 @@ const PROPERTY_HOST_TRUST_JOINS = `
         WHERE hb.status = 'completed'
         GROUP BY hp."hostId"
       ) host_completed_reservations ON host_completed_reservations.host_id = p."hostId"
+            LEFT JOIN (
+         SELECT hp."hostId" as host_id,
+           COUNT(*) FILTER (WHERE hb.cancellation_actor = 'host')::int as "hostCancellationsCount"
+         FROM bookings hb
+         JOIN properties hp ON hp.id = hb."propertyId"
+         GROUP BY hp."hostId"
+            ) host_cancellation_stats ON host_cancellation_stats.host_id = p."hostId"
       LEFT JOIN (
         SELECT hp."hostId" as host_id,
                COUNT(*)::int as "guestReviewsCount"
@@ -1489,6 +1719,7 @@ const buildPropertyVerificationMedia = async (propertyId: string, includePrivate
 const CONVERSATION_HOST_TRUST_SELECT = `u_host.identity_validated as "hostIdentityValidated",
             u_host.is_identity_verified as "hostIdentityVerified",
             COALESCE(u_host.member_since, u_host.created_at) as "hostMemberSince",
+            CASE WHEN COALESCE(p."hasPresencialVerification", 0) = 1 THEN TRUE ELSE FALSE END as "propertyHasPresencialVerification",
             COALESCE(host_completed_reservations."completedReservationsCount", 0) as "hostCompletedReservationsCount",
             COALESCE(host_guest_reviews."guestReviewsCount", 0) as "hostGuestReviewsCount",
             COALESCE(host_feedback_stats."feedbackCount", 0) as "hostGuestFeedbackCount",
@@ -2420,6 +2651,10 @@ app.get('/api/internal/moderation/review-queue', async (req, res) => {
               target.id as "reportedUserId",
               COALESCE(target.name, 'Usuario') as "reportedUserName",
               COALESCE(target.internal_strikes_count, 0)::int as "strikesCount",
+              COALESCE(NULLIF(target.internal_risk_level, ''), 'none') as "internalRiskLevel",
+              COALESCE(target.internal_risk_flags, '[]'::jsonb) as "internalRiskFlags",
+              COALESCE(target.internal_manual_review_required, FALSE) as "internalManualReviewRequired",
+              COALESCE(target.internal_visibility_penalty, 0)::int as "internalVisibilityPenalty",
               COALESCE(report_history."recentReportsCount", 0)::int as "recentReportsCount",
               COALESCE(report_history."confirmedReportsCount", 0)::int as "confirmedReportsCount",
               COALESCE(moderation_history."recentModerationEvents", '[]'::json) as "recentModerationEvents"
@@ -2484,6 +2719,12 @@ app.get('/api/internal/moderation/review-queue', async (req, res) => {
           recentReportsCount: Number(row.recentReportsCount ?? 0),
           confirmedReportsCount: Number(row.confirmedReportsCount ?? 0),
           recentModerationEvents: parseRecentModerationEvents(row.recentModerationEvents),
+        },
+        risk: {
+          level: typeof row.internalRiskLevel === 'string' ? row.internalRiskLevel : 'none',
+          flags: parseStringArray(row.internalRiskFlags),
+          manualReviewRequired: Boolean(row.internalManualReviewRequired),
+          visibilityPenalty: Number(row.internalVisibilityPenalty ?? 0),
         },
         strikes: Number(row.strikesCount ?? 0),
         appliedStrikeDelta: Number(row.appliedStrikeDelta ?? 0),
@@ -3119,6 +3360,7 @@ app.get('/api/verification/status', async (req, res) => {
         ? verificationStatus.optionalUpgrade
         : 'Podés sumar una validación documental adicional para dar más contexto. Sigue siendo opcional.',
       premiumDocumentaryOffer,
+      professionalProfilePlan: buildProfessionalProfileMonetizationPlan(),
       nextLevel: verificationStatus.levelNumber < 4 ? `NIVEL_${verificationStatus.levelNumber + 1}` : null,
     });
   } catch (err) {
@@ -3700,6 +3942,23 @@ const parseRecentModerationEvents = (value: unknown) => {
   return [];
 };
 
+const parseStringArray = (value: unknown) => {
+  if (Array.isArray(value)) {
+    return value.filter((item): item is string => typeof item === 'string');
+  }
+
+  if (typeof value === 'string' && value.trim()) {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string') : [];
+    } catch {
+      return [];
+    }
+  }
+
+  return [];
+};
+
 const parseCategoryScores = (value: unknown): ReviewCategoryScore[] => {
   if (Array.isArray(value)) {
     return value
@@ -4083,6 +4342,19 @@ const getHostProfileData = async (hostId: string) => {
     agreementsFinalizedCount,
     avgResponseTimeMinutes,
     hostCancellationsCount,
+    hostTrust: buildHostTrust({
+      identityValidated: !!host.identityValidated,
+      hasPresencialVerification: properties.some((property) => !!property.hasPresencialVerification),
+      hostCompletedReservationsCount: completedStaysCount,
+      hostGuestReviewsCount: guestReviews.length,
+      hostGuestFeedbackCount: interactionHistory.feedbackCount,
+      hostGuestAgreementsKeptCount: interactionHistory.agreementsKeptCount,
+      hostGuestWouldInteractAgainCount: interactionHistory.wouldInteractAgainCount,
+      hostGuestIncidentsCount: interactionHistory.incidentsCount,
+      hostAverageResponseTimeMinutes: avgResponseTimeMinutes,
+      hostMemberSince: host.memberSince,
+      hostCancellationsCount,
+    }).hostTrust,
     interactionHistory,
     reputation: {
       photosMatchRealityRate,
@@ -4515,7 +4787,12 @@ app.get('/api/host/dashboard', async (req, res) => {
           COALESCE(b.total_price, 0)::int as "totalPrice",
               b.cancellation_actor as "cancellationActor",
             b.guest_checkin_confirmed as "guestCheckinConfirmed",
+            b.guest_checkin_confirmed_at as "guestCheckinConfirmedAt",
+            b.guest_checkin_latitude as "guestCheckinLatitude",
+            b.guest_checkin_longitude as "guestCheckinLongitude",
+            b.guest_checkin_accuracy_meters as "guestCheckinAccuracyMeters",
             b.host_access_confirmed as "hostAccessConfirmed",
+            b.host_access_confirmed_at as "hostAccessConfirmedAt",
           c.id as "conversationId",
           c.request_status as "requestStatus",
           COALESCE(c.deposit_status, b.deposit_status) as "depositStatus",
@@ -4524,6 +4801,8 @@ app.get('/api/host/dashboard', async (req, res) => {
           COALESCE(c.service_fee_ars, b.service_fee_ars) as "serviceFeeArs",
           COALESCE(c.deposit_total_charge_ars, b.deposit_total_charge_ars) as "depositTotalChargeArs",
           COALESCE(c.deposit_payment_reference, b.deposit_payment_reference) as "depositPaymentReference",
+          COALESCE(c.manual_review_reason, b.manual_review_reason) as "manualReviewReason",
+          COALESCE(c.manual_review_opened_at, b.manual_review_opened_at) as "manualReviewOpenedAt",
           COALESCE(b.request_mode, CASE WHEN c.booking_id IS NOT NULL THEN 'protected' ELSE 'direct' END) as "requestMode",
           b."userId",
           EXISTS(
@@ -4801,6 +5080,7 @@ app.get('/api/host/dashboard', async (req, res) => {
         };
       }),
       estimatedIncome: toSafeNumber(totals.estimated_income),
+      softBoostPlan: buildSoftBoostMonetizationPlan(),
       funnelMetrics: {
         windowDays: FUNNEL_METRICS_WINDOW_DAYS,
         detailViews,
@@ -4985,12 +5265,45 @@ app.put('/api/properties/:id', async (req, res) => {
       ? 0
       : null;
   try {
+    const existingPropertyResult = await db.query(
+      `SELECT id, location, lat, lng
+       FROM properties
+       WHERE id = $1 AND "hostId" = $2
+       LIMIT 1`,
+      [req.params.id, req.session.userId],
+    );
+
+    const existingProperty = existingPropertyResult.rows[0];
+
+    if (!existingProperty) {
+      return res.status(404).json({ error: 'No encontramos esa propiedad o no tenés permiso para editarla.' });
+    }
+
     const result = await db.query(
       `UPDATE properties SET title = COALESCE($1, title), location = COALESCE($2, location), price = COALESCE($3, price), description = COALESCE($4, description), "imageUrl" = COALESCE($5, "imageUrl"), lat = COALESCE($6, lat), lng = COALESCE($7, lng), status = COALESCE($8, status), "locationVerified" = COALESCE($9, "locationVerified")
        WHERE id = $10 AND "hostId" = $11 RETURNING *`,
       [title, location, price, description, imageUrl, lat, lng, status, normalizedLocationVerified, req.params.id, req.session.userId]
     );
     if (result.rows.length === 0) return res.status(404).json({ error: 'No encontramos esa propiedad o no tenés permiso para editarla.' });
+
+    const locationChangeMetadata = buildPropertyLocationChangeMetadata({
+      propertyId: req.params.id,
+      previousLocation: existingProperty.location,
+      previousLat: existingProperty.lat,
+      previousLng: existingProperty.lng,
+      nextLocation: result.rows[0]?.location,
+      nextLat: result.rows[0]?.lat,
+      nextLng: result.rows[0]?.lng,
+    });
+
+    if (locationChangeMetadata) {
+      await logActivity(req.session.userId, 'PROPERTY_LOCATION_CHANGED', locationChangeMetadata, req.ip);
+
+      if (locationChangeMetadata.suspicious) {
+        await evaluateInternalRisk(req.session.userId);
+      }
+    }
+
     res.json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ error: 'No pudimos actualizar la propiedad. Intentá de nuevo.' });
@@ -5063,10 +5376,25 @@ app.get('/api/properties', async (req, res) => {
     const properties = result.rows
       .map((property) => {
         const mappedProperty = mapPropertyRecord(property);
+        const hostReputationScore = buildHostTrustInternalRanking({
+          identityValidated: Boolean(property.hostIdentityValidated) || Boolean(property.hostIdentityVerified),
+          hasPresencialVerification: property.hasPresencialVerification === true || property.hasPresencialVerification === 1 || property.hasPresencialVerification === '1',
+          hostCompletedReservationsCount: Number(property.hostCompletedReservationsCount ?? 0),
+          hostGuestReviewsCount: Number(property.hostGuestReviewsCount ?? 0),
+          hostGuestFeedbackCount: Number(property.hostGuestFeedbackCount ?? 0),
+          hostGuestAgreementsKeptCount: Number(property.hostGuestAgreementsKeptCount ?? 0),
+          hostGuestWouldInteractAgainCount: Number(property.hostGuestWouldInteractAgainCount ?? 0),
+          hostGuestIncidentsCount: Number(property.hostGuestIncidentsCount ?? 0),
+          hostAverageResponseTimeMinutes: Number(property.hostAverageResponseTimeMinutes ?? 0),
+          confirmedReportsCount: Number(property.confirmedReportsCount ?? 0),
+          confirmedSevereReportsCount: Number(property.confirmedSevereReportsCount ?? 0),
+          hostCancellationsCount: Number(property.hostCancellationsCount ?? 0),
+        }).score;
 
         return {
           property: mappedProperty,
           internalVisibilityPenalty: Number(property.internalVisibilityPenalty ?? 0),
+          hostReputationScore,
           hostVisibilityBoost: getHostVisibilityBoost(mappedProperty.hostInteractionHistory),
           listingQualityScore: getPropertyListingQualityScore(mappedProperty),
         };
@@ -5079,6 +5407,7 @@ app.get('/api/properties', async (req, res) => {
       ))
       .sort((left, right) => (
         left.internalVisibilityPenalty - right.internalVisibilityPenalty
+        || right.hostReputationScore - left.hostReputationScore
         || right.hostVisibilityBoost - left.hostVisibilityBoost
         || right.listingQualityScore - left.listingQualityScore
         || Number(right.property.rating ?? 0) - Number(left.property.rating ?? 0)
@@ -5245,7 +5574,12 @@ const BOOKING_SELECT_QUERY = `SELECT b.id, b."propertyId", b."userId", b.status,
   b.guests, b.contract_accepted as "contractAccepted", b.contract_json as "contractJson",
   b.cancellation_actor as "cancellationActor",
   b.guest_checkin_confirmed as "guestCheckinConfirmed",
+  b.guest_checkin_confirmed_at as "guestCheckinConfirmedAt",
+  b.guest_checkin_latitude as "guestCheckinLatitude",
+  b.guest_checkin_longitude as "guestCheckinLongitude",
+  b.guest_checkin_accuracy_meters as "guestCheckinAccuracyMeters",
   b.host_access_confirmed as "hostAccessConfirmed",
+  b.host_access_confirmed_at as "hostAccessConfirmedAt",
   p."hostId" as "hostId",
   c.id as "conversationId",
   c.request_status as "requestStatus",
@@ -5255,6 +5589,8 @@ const BOOKING_SELECT_QUERY = `SELECT b.id, b."propertyId", b."userId", b.status,
   COALESCE(c.service_fee_ars, b.service_fee_ars) as "serviceFeeArs",
   COALESCE(c.deposit_total_charge_ars, b.deposit_total_charge_ars) as "depositTotalChargeArs",
   COALESCE(c.deposit_payment_reference, b.deposit_payment_reference) as "depositPaymentReference",
+  COALESCE(c.manual_review_reason, b.manual_review_reason) as "manualReviewReason",
+  COALESCE(c.manual_review_opened_at, b.manual_review_opened_at) as "manualReviewOpenedAt",
   COALESCE(b.request_mode, CASE WHEN c.booking_id IS NOT NULL THEN 'protected' ELSE 'direct' END) as "requestMode",
   EXISTS(
     SELECT 1
@@ -5323,7 +5659,12 @@ const getEnrichedConversationById = async (conversationId: string) => {
             b.guests, b.total_price as "totalPrice",
           b.cancellation_actor as "cancellationActor",
             b.guest_checkin_confirmed as "guestCheckinConfirmed",
+            b.guest_checkin_confirmed_at as "guestCheckinConfirmedAt",
+            b.guest_checkin_latitude as "guestCheckinLatitude",
+            b.guest_checkin_longitude as "guestCheckinLongitude",
+            b.guest_checkin_accuracy_meters as "guestCheckinAccuracyMeters",
             b.host_access_confirmed as "hostAccessConfirmed",
+            b.host_access_confirmed_at as "hostAccessConfirmedAt",
             COALESCE(c.request_mode, b.request_mode, CASE WHEN c.booking_id IS NOT NULL THEN 'protected' ELSE NULL END) as "requestMode",
             c.request_status as "requestStatus",
             c.request_created_at as "requestCreatedAt",
@@ -5333,6 +5674,8 @@ const getEnrichedConversationById = async (conversationId: string) => {
             COALESCE(c.service_fee_ars, b.service_fee_ars) as "serviceFeeArs",
             COALESCE(c.deposit_total_charge_ars, b.deposit_total_charge_ars) as "depositTotalChargeArs",
             COALESCE(c.deposit_payment_reference, b.deposit_payment_reference) as "depositPaymentReference",
+            COALESCE(c.manual_review_reason, b.manual_review_reason) as "manualReviewReason",
+            COALESCE(c.manual_review_opened_at, b.manual_review_opened_at) as "manualReviewOpenedAt",
             c.request_start_date as "requestStartDate",
             c.request_end_date as "requestEndDate",
             c.request_guests as "requestGuests",
@@ -5453,8 +5796,126 @@ const hasBookingReachedStartDate = (value: unknown, now = new Date()) => {
   return Boolean(normalizedStartDate && normalizedStartDate <= today);
 };
 
+const normalizeOptionalFiniteNumber = (value: unknown) => {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : null;
+  }
+
+  if (typeof value === 'string' && value.trim()) {
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) ? numericValue : null;
+  }
+
+  return null;
+};
+
+const normalizeOptionalTimestampValue = (value: unknown) => {
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+
+  return typeof value === 'string' ? value : null;
+};
+
+type ArrivalGeolocationPayload = {
+  latitude: number;
+  longitude: number;
+  accuracyMeters: number | null;
+};
+
+const parseArrivalGeolocationPayload = (value: unknown): ArrivalGeolocationPayload | null => {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const geolocationRecord = value as Record<string, unknown>;
+  const latitude = normalizeOptionalFiniteNumber(geolocationRecord.latitude);
+  const longitude = normalizeOptionalFiniteNumber(geolocationRecord.longitude);
+
+  if (latitude === null || longitude === null) {
+    return null;
+  }
+
+  if (Math.abs(latitude) > 90 || Math.abs(longitude) > 180) {
+    return null;
+  }
+
+  const accuracyMeters = normalizeOptionalFiniteNumber(
+    geolocationRecord.accuracyMeters ?? geolocationRecord.accuracy,
+  );
+
+  return {
+    latitude,
+    longitude,
+    accuracyMeters: accuracyMeters !== null && accuracyMeters >= 0 ? accuracyMeters : null,
+  };
+};
+
+const buildProtectedDepositAuditMetadata = (
+  booking: {
+    id?: unknown;
+    propertyId?: unknown;
+    userId?: unknown;
+    hostId?: unknown;
+    conversationId?: unknown;
+    requestMode?: unknown;
+    depositType?: unknown;
+    depositStatus?: unknown;
+    guestCheckinConfirmed?: unknown;
+    guestCheckinConfirmedAt?: unknown;
+    guestCheckinLatitude?: unknown;
+    guestCheckinLongitude?: unknown;
+    guestCheckinAccuracyMeters?: unknown;
+    hostAccessConfirmed?: unknown;
+    hostAccessConfirmedAt?: unknown;
+    manualReviewReason?: unknown;
+    manualReviewOpenedAt?: unknown;
+  },
+  extra: Record<string, unknown> = {},
+) => ({
+  bookingId: typeof booking.id === 'string' ? booking.id : null,
+  propertyId: typeof booking.propertyId === 'string' ? booking.propertyId : null,
+  guestUserId: typeof booking.userId === 'string' ? booking.userId : null,
+  hostId: typeof booking.hostId === 'string' ? booking.hostId : null,
+  conversationId: typeof booking.conversationId === 'string' ? booking.conversationId : null,
+  requestMode: typeof booking.requestMode === 'string' ? booking.requestMode : null,
+  depositType: typeof booking.depositType === 'string' ? booking.depositType : null,
+  depositStatus: normalizeReservationDepositStatus(booking.depositStatus, booking) ?? null,
+  guestCheckinConfirmed: Boolean(booking.guestCheckinConfirmed),
+  guestCheckinConfirmedAt: normalizeOptionalTimestampValue(booking.guestCheckinConfirmedAt),
+  guestCheckinLatitude: normalizeOptionalFiniteNumber(booking.guestCheckinLatitude),
+  guestCheckinLongitude: normalizeOptionalFiniteNumber(booking.guestCheckinLongitude),
+  guestCheckinAccuracyMeters: normalizeOptionalFiniteNumber(booking.guestCheckinAccuracyMeters),
+  hostAccessConfirmed: Boolean(booking.hostAccessConfirmed),
+  hostAccessConfirmedAt: normalizeOptionalTimestampValue(booking.hostAccessConfirmedAt),
+  manualReviewReason: normalizeProtectedDepositManualReviewReason(booking.manualReviewReason),
+  manualReviewOpenedAt: normalizeOptionalTimestampValue(booking.manualReviewOpenedAt),
+  ...extra,
+});
+
+const resolveArrivalProblemManualReviewReason = (booking: {
+  depositStatus?: unknown;
+  guestCheckinConfirmed?: unknown;
+  hostAccessConfirmed?: unknown;
+}): ProtectedDepositManualReviewReason => {
+  const normalizedDepositStatus = normalizeReservationDepositStatus(booking.depositStatus, booking);
+
+  if (
+    normalizedDepositStatus === 'host_access_confirmed'
+    || normalizedDepositStatus === 'deposit_released'
+    || Boolean(booking.hostAccessConfirmed)
+  ) {
+    return 'guest_reported_no_access_after_host_confirmation';
+  }
+
+  return 'guest_checkin_without_host_access_confirmation';
+};
+
+const resolveNoShowManualReviewReason = (): ProtectedDepositManualReviewReason => 'host_reported_no_show';
+
 const normalizeBookingRecord = <T extends { startDate?: unknown; endDate?: unknown }>(booking: T) => {
   const bookingRecord = booking as T & {
+    depositStatus?: unknown;
     depositType?: unknown;
     depositAmountArs?: unknown;
     serviceFeeArs?: unknown;
@@ -5463,10 +5924,19 @@ const normalizeBookingRecord = <T extends { startDate?: unknown; endDate?: unkno
     totalPrice?: unknown;
     guestCheckinConfirmed?: unknown;
     hostAccessConfirmed?: unknown;
+    guestCheckinConfirmedAt?: unknown;
+    guestCheckinLatitude?: unknown;
+    guestCheckinLongitude?: unknown;
+    guestCheckinAccuracyMeters?: unknown;
+    hostAccessConfirmedAt?: unknown;
+    manualReviewReason?: unknown;
+    manualReviewOpenedAt?: unknown;
   };
   const normalizedStartDate = normalizeDateOnlyValue(booking.startDate);
   const normalizedEndDate = normalizeDateOnlyValue(booking.endDate);
+  const normalizedDepositStatus = normalizeReservationDepositStatus(bookingRecord.depositStatus, bookingRecord);
   const normalizedDepositType = normalizeReservationDepositType(bookingRecord.depositType);
+  const normalizedManualReviewReason = normalizeProtectedDepositManualReviewReason(bookingRecord.manualReviewReason);
   const hasProtectedDepositFields = bookingRecord.depositType !== undefined
     || bookingRecord.depositAmountArs !== undefined
     || bookingRecord.serviceFeeArs !== undefined
@@ -5485,6 +5955,7 @@ const normalizeBookingRecord = <T extends { startDate?: unknown; endDate?: unkno
     ...booking,
     ...(booking.startDate !== undefined ? { startDate: normalizedStartDate ?? booking.startDate } : {}),
     ...(booking.endDate !== undefined ? { endDate: normalizedEndDate ?? booking.endDate } : {}),
+    ...(bookingRecord.depositStatus !== undefined ? { depositStatus: normalizedDepositStatus } : {}),
     ...(bookingRecord.depositType !== undefined ? { depositType: normalizedDepositType } : {}),
     ...(hasProtectedDepositFields ? { protectedDepositPricing } : {}),
     ...(bookingRecord.depositPaymentReference !== undefined
@@ -5495,6 +5966,27 @@ const normalizeBookingRecord = <T extends { startDate?: unknown; endDate?: unkno
       : {}),
     ...(bookingRecord.hostAccessConfirmed !== undefined
       ? { hostAccessConfirmed: Boolean(bookingRecord.hostAccessConfirmed) }
+      : {}),
+    ...(bookingRecord.guestCheckinConfirmedAt !== undefined
+      ? { guestCheckinConfirmedAt: normalizeOptionalTimestampValue(bookingRecord.guestCheckinConfirmedAt) }
+      : {}),
+    ...(bookingRecord.guestCheckinLatitude !== undefined
+      ? { guestCheckinLatitude: normalizeOptionalFiniteNumber(bookingRecord.guestCheckinLatitude) }
+      : {}),
+    ...(bookingRecord.guestCheckinLongitude !== undefined
+      ? { guestCheckinLongitude: normalizeOptionalFiniteNumber(bookingRecord.guestCheckinLongitude) }
+      : {}),
+    ...(bookingRecord.guestCheckinAccuracyMeters !== undefined
+      ? { guestCheckinAccuracyMeters: normalizeOptionalFiniteNumber(bookingRecord.guestCheckinAccuracyMeters) }
+      : {}),
+    ...(bookingRecord.hostAccessConfirmedAt !== undefined
+      ? { hostAccessConfirmedAt: normalizeOptionalTimestampValue(bookingRecord.hostAccessConfirmedAt) }
+      : {}),
+    ...(bookingRecord.manualReviewReason !== undefined
+      ? { manualReviewReason: normalizedManualReviewReason }
+      : {}),
+    ...(bookingRecord.manualReviewOpenedAt !== undefined
+      ? { manualReviewOpenedAt: normalizeOptionalTimestampValue(bookingRecord.manualReviewOpenedAt) }
       : {}),
   };
 };
@@ -5513,6 +6005,7 @@ const normalizeConversationRecord = <T extends {
   hostIdentityValidated?: unknown;
   hostIdentityVerified?: unknown;
   hostMemberSince?: unknown;
+  propertyHasPresencialVerification?: unknown;
   hostCompletedReservationsCount?: unknown;
   hostGuestReviewsCount?: unknown;
   hostGuestFeedbackCount?: unknown;
@@ -5540,13 +6033,21 @@ const normalizeConversationRecord = <T extends {
   tenantWouldInteractAgainCount?: unknown;
   tenantIncidentsCount?: unknown;
   tenantPositiveReviewsCount?: unknown;
+  depositStatus?: unknown;
   depositType?: unknown;
   depositAmountArs?: unknown;
   serviceFeeArs?: unknown;
   depositTotalChargeArs?: unknown;
   depositPaymentReference?: unknown;
+  manualReviewReason?: unknown;
+  manualReviewOpenedAt?: unknown;
   guestCheckinConfirmed?: unknown;
   hostAccessConfirmed?: unknown;
+  guestCheckinConfirmedAt?: unknown;
+  guestCheckinLatitude?: unknown;
+  guestCheckinLongitude?: unknown;
+  guestCheckinAccuracyMeters?: unknown;
+  hostAccessConfirmedAt?: unknown;
   totalPrice?: unknown;
 }>(conversation: T) => {
   const {
@@ -5557,6 +6058,7 @@ const normalizeConversationRecord = <T extends {
     hostIdentityValidated,
     hostIdentityVerified,
     hostMemberSince,
+    propertyHasPresencialVerification,
     hostCompletedReservationsCount,
     hostGuestReviewsCount,
     hostGuestFeedbackCount,
@@ -5590,7 +6092,9 @@ const normalizeConversationRecord = <T extends {
   const normalizedEndDate = normalizeDateOnlyValue(conversation.endDate);
   const normalizedRequestStartDate = normalizeDateOnlyValue(conversation.requestStartDate);
   const normalizedRequestEndDate = normalizeDateOnlyValue(conversation.requestEndDate);
+  const normalizedDepositStatus = normalizeReservationDepositStatus(conversation.depositStatus, conversation);
   const normalizedDepositType = normalizeReservationDepositType(conversation.depositType);
+  const normalizedManualReviewReason = normalizeProtectedDepositManualReviewReason(conversation.manualReviewReason);
   const hasProtectedDepositFields = conversation.depositType !== undefined
     || conversation.depositAmountArs !== undefined
     || conversation.serviceFeeArs !== undefined
@@ -5612,6 +6116,7 @@ const normalizeConversationRecord = <T extends {
     hostIdentityValidated,
     hostIdentityVerified,
     hostMemberSince,
+    propertyHasPresencialVerification,
     hostCompletedReservationsCount,
     hostGuestReviewsCount,
     hostGuestFeedbackCount,
@@ -5715,6 +6220,7 @@ const normalizeConversationRecord = <T extends {
     ...(conversation.endDate !== undefined ? { endDate: normalizedEndDate ?? conversation.endDate } : {}),
     ...(conversation.requestStartDate !== undefined ? { requestStartDate: normalizedRequestStartDate ?? conversation.requestStartDate } : {}),
     ...(conversation.requestEndDate !== undefined ? { requestEndDate: normalizedRequestEndDate ?? conversation.requestEndDate } : {}),
+    ...(conversation.depositStatus !== undefined ? { depositStatus: normalizedDepositStatus } : {}),
     ...(conversation.depositType !== undefined ? { depositType: normalizedDepositType } : {}),
     ...(hasProtectedDepositFields ? { protectedDepositPricing } : {}),
     ...(conversation.depositPaymentReference !== undefined
@@ -5725,6 +6231,27 @@ const normalizeConversationRecord = <T extends {
       : {}),
     ...(conversation.hostAccessConfirmed !== undefined
       ? { hostAccessConfirmed: Boolean(conversation.hostAccessConfirmed) }
+      : {}),
+    ...(conversation.guestCheckinConfirmedAt !== undefined
+      ? { guestCheckinConfirmedAt: normalizeOptionalTimestampValue(conversation.guestCheckinConfirmedAt) }
+      : {}),
+    ...(conversation.guestCheckinLatitude !== undefined
+      ? { guestCheckinLatitude: normalizeOptionalFiniteNumber(conversation.guestCheckinLatitude) }
+      : {}),
+    ...(conversation.guestCheckinLongitude !== undefined
+      ? { guestCheckinLongitude: normalizeOptionalFiniteNumber(conversation.guestCheckinLongitude) }
+      : {}),
+    ...(conversation.guestCheckinAccuracyMeters !== undefined
+      ? { guestCheckinAccuracyMeters: normalizeOptionalFiniteNumber(conversation.guestCheckinAccuracyMeters) }
+      : {}),
+    ...(conversation.hostAccessConfirmedAt !== undefined
+      ? { hostAccessConfirmedAt: normalizeOptionalTimestampValue(conversation.hostAccessConfirmedAt) }
+      : {}),
+    ...(conversation.manualReviewReason !== undefined
+      ? { manualReviewReason: normalizedManualReviewReason }
+      : {}),
+    ...(conversation.manualReviewOpenedAt !== undefined
+      ? { manualReviewOpenedAt: normalizeOptionalTimestampValue(conversation.manualReviewOpenedAt) }
       : {}),
     ...(propertyPrice !== undefined && propertyPrice !== null
       ? { propertyPrice: Number.isFinite(Number(propertyPrice)) ? Number(propertyPrice) : undefined }
@@ -5756,9 +6283,15 @@ const normalizeConversationRecord = <T extends {
     ...(hasHostTrustData
       ? buildHostTrust({
           identityValidated: Boolean(hostIdentityValidated) || Boolean(hostIdentityVerified),
+          hasPresencialVerification: Boolean(propertyHasPresencialVerification),
           hostMemberSince: typeof hostMemberSince === 'string' ? hostMemberSince : undefined,
           hostCompletedReservationsCount: typeof hostCompletedReservationsCount === 'number' ? hostCompletedReservationsCount : Number(hostCompletedReservationsCount ?? 0),
           hostGuestReviewsCount: typeof hostGuestReviewsCount === 'number' ? hostGuestReviewsCount : Number(hostGuestReviewsCount ?? 0),
+          hostGuestFeedbackCount: typeof hostGuestFeedbackCount === 'number' ? hostGuestFeedbackCount : Number(hostGuestFeedbackCount ?? 0),
+          hostGuestAgreementsKeptCount: typeof hostGuestAgreementsKeptCount === 'number' ? hostGuestAgreementsKeptCount : Number(hostGuestAgreementsKeptCount ?? 0),
+          hostGuestWouldInteractAgainCount: typeof hostGuestWouldInteractAgainCount === 'number' ? hostGuestWouldInteractAgainCount : Number(hostGuestWouldInteractAgainCount ?? 0),
+          hostGuestIncidentsCount: typeof hostGuestIncidentsCount === 'number' ? hostGuestIncidentsCount : Number(hostGuestIncidentsCount ?? 0),
+          hostAverageResponseTimeMinutes: typeof hostAverageResponseTimeMinutes === 'number' ? hostAverageResponseTimeMinutes : Number(hostAverageResponseTimeMinutes ?? 0),
         })
       : {}),
     ...(hostInteractionHistory ? { hostInteractionHistory } : {}),
@@ -5999,7 +6532,12 @@ const getUserBookingById = async (userId: string, bookingId: string) => {
             b.guests, b.contract_accepted as "contractAccepted", b.contract_json as "contractJson",
           b.cancellation_actor as "cancellationActor",
             b.guest_checkin_confirmed as "guestCheckinConfirmed",
+            b.guest_checkin_confirmed_at as "guestCheckinConfirmedAt",
+            b.guest_checkin_latitude as "guestCheckinLatitude",
+            b.guest_checkin_longitude as "guestCheckinLongitude",
+            b.guest_checkin_accuracy_meters as "guestCheckinAccuracyMeters",
             b.host_access_confirmed as "hostAccessConfirmed",
+            b.host_access_confirmed_at as "hostAccessConfirmedAt",
             p."hostId" as "hostId",
             c.id as "conversationId",
             c.request_status as "requestStatus",
@@ -6009,6 +6547,8 @@ const getUserBookingById = async (userId: string, bookingId: string) => {
             COALESCE(c.service_fee_ars, b.service_fee_ars) as "serviceFeeArs",
             COALESCE(c.deposit_total_charge_ars, b.deposit_total_charge_ars) as "depositTotalChargeArs",
             COALESCE(c.deposit_payment_reference, b.deposit_payment_reference) as "depositPaymentReference",
+            COALESCE(c.manual_review_reason, b.manual_review_reason) as "manualReviewReason",
+            COALESCE(c.manual_review_opened_at, b.manual_review_opened_at) as "manualReviewOpenedAt",
             COALESCE(b.request_mode, CASE WHEN c.booking_id IS NOT NULL THEN 'protected' ELSE 'direct' END) as "requestMode",
             EXISTS(
               SELECT 1
@@ -6044,7 +6584,12 @@ const getHostBookingById = async (hostId: string, bookingId: string) => {
             b.guests, b.contract_accepted as "contractAccepted", b.contract_json as "contractJson",
             b.cancellation_actor as "cancellationActor",
           b.guest_checkin_confirmed as "guestCheckinConfirmed",
+          b.guest_checkin_confirmed_at as "guestCheckinConfirmedAt",
+          b.guest_checkin_latitude as "guestCheckinLatitude",
+          b.guest_checkin_longitude as "guestCheckinLongitude",
+          b.guest_checkin_accuracy_meters as "guestCheckinAccuracyMeters",
           b.host_access_confirmed as "hostAccessConfirmed",
+          b.host_access_confirmed_at as "hostAccessConfirmedAt",
           p."hostId" as "hostId",
             c.id as "conversationId",
             c.request_status as "requestStatus",
@@ -6054,6 +6599,8 @@ const getHostBookingById = async (hostId: string, bookingId: string) => {
             COALESCE(c.service_fee_ars, b.service_fee_ars) as "serviceFeeArs",
             COALESCE(c.deposit_total_charge_ars, b.deposit_total_charge_ars) as "depositTotalChargeArs",
             COALESCE(c.deposit_payment_reference, b.deposit_payment_reference) as "depositPaymentReference",
+            COALESCE(c.manual_review_reason, b.manual_review_reason) as "manualReviewReason",
+            COALESCE(c.manual_review_opened_at, b.manual_review_opened_at) as "manualReviewOpenedAt",
             COALESCE(b.request_mode, CASE WHEN c.booking_id IS NOT NULL THEN 'protected' ELSE 'direct' END) as "requestMode",
             EXISTS(
               SELECT 1
@@ -6089,7 +6636,12 @@ const getBookingByDepositPaymentReference = async (depositPaymentReference: stri
             b.guests, b.contract_accepted as "contractAccepted", b.contract_json as "contractJson",
             b.cancellation_actor as "cancellationActor",
           b.guest_checkin_confirmed as "guestCheckinConfirmed",
+          b.guest_checkin_confirmed_at as "guestCheckinConfirmedAt",
+          b.guest_checkin_latitude as "guestCheckinLatitude",
+          b.guest_checkin_longitude as "guestCheckinLongitude",
+          b.guest_checkin_accuracy_meters as "guestCheckinAccuracyMeters",
           b.host_access_confirmed as "hostAccessConfirmed",
+          b.host_access_confirmed_at as "hostAccessConfirmedAt",
             p."hostId" as "hostId",
             c.id as "conversationId",
           c.request_status as "requestStatus",
@@ -6099,6 +6651,8 @@ const getBookingByDepositPaymentReference = async (depositPaymentReference: stri
             COALESCE(c.service_fee_ars, b.service_fee_ars) as "serviceFeeArs",
             COALESCE(c.deposit_total_charge_ars, b.deposit_total_charge_ars) as "depositTotalChargeArs",
             COALESCE(c.deposit_payment_reference, b.deposit_payment_reference) as "depositPaymentReference",
+            COALESCE(c.manual_review_reason, b.manual_review_reason) as "manualReviewReason",
+            COALESCE(c.manual_review_opened_at, b.manual_review_opened_at) as "manualReviewOpenedAt",
             COALESCE(b.request_mode, CASE WHEN c.booking_id IS NOT NULL THEN 'protected' ELSE 'direct' END) as "requestMode",
             EXISTS(
               SELECT 1
@@ -6129,28 +6683,23 @@ const getBookingByDepositPaymentReference = async (depositPaymentReference: stri
 
 const PROTECTED_DEPOSIT_CHECKOUT_PENDING_STATUS = 'checkout_pending';
 
-const isProtectedDepositInPlatform = (depositStatus?: string | null) => (
-  depositStatus === PROTECTED_DEPOSIT_CHECKOUT_PENDING_STATUS
-  || depositStatus === 'held'
-  || depositStatus === 'review'
-  || depositStatus === 'pending_confirmation'
-);
+const isProtectedDepositInPlatform = (depositStatus?: string | null) => {
+  const normalizedDepositStatus = normalizeReservationDepositStatus(depositStatus);
 
-const EXTERNAL_DEPOSIT_STATUSES = new Set(['external_pending', 'reported', 'confirmed']);
+  return Boolean(
+    normalizedDepositStatus
+    && normalizedDepositStatus !== 'deposit_released'
+    && normalizedDepositStatus !== 'refunded'
+    && PROTECTED_DEPOSIT_STATUS_SET.has(normalizedDepositStatus),
+  );
+};
 
-const PROTECTED_DEPOSIT_FLOW_STATUSES = new Set([
-  PROTECTED_DEPOSIT_CHECKOUT_PENDING_STATUS,
-  'held',
-  'review',
-  'pending_confirmation',
-  'released',
-  'refunded',
-]);
+const EXTERNAL_DEPOSIT_STATUSES = EXTERNAL_DEPOSIT_STATUS_SET;
 
-const PROTECTED_DEPOSIT_SETTLED_STATUSES = new Set(['held', 'review', 'pending_confirmation', 'released', 'refunded']);
+const PROTECTED_DEPOSIT_FLOW_STATUSES = PROTECTED_DEPOSIT_STATUS_SET;
 
 const isProtectedDepositSettled = (depositStatus?: string | null) => (
-  Boolean(depositStatus && PROTECTED_DEPOSIT_SETTLED_STATUSES.has(depositStatus))
+  isProtectedDepositSettledStatus(depositStatus)
 );
 
 const getEffectiveDepositTypeForRecord = (record: {
@@ -6164,7 +6713,10 @@ const getEffectiveDepositTypeForRecord = (record: {
     return depositType;
   }
 
-  const depositStatus = typeof record.depositStatus === 'string' ? record.depositStatus : null;
+  const depositStatus = normalizeReservationDepositStatus(record.depositStatus, {
+    guestCheckinConfirmed: (record as { guestCheckinConfirmed?: unknown }).guestCheckinConfirmed,
+    hostAccessConfirmed: (record as { hostAccessConfirmed?: unknown }).hostAccessConfirmed,
+  });
 
   if (depositStatus && PROTECTED_DEPOSIT_FLOW_STATUSES.has(depositStatus)) {
     return 'protected' as const;
@@ -6239,9 +6791,9 @@ const getProtectedDepositReturnPath = (booking: { conversationId?: unknown }, re
 };
 
 const getFrontendBaseUrlFromRequest = (req: express.Request) => {
-  const requestOrigin = typeof req.get('origin') === 'string' ? req.get('origin')?.trim().replace(/\/+$/, '') : '';
+  const requestOrigin = normalizeRequestOrigin(req.get('origin'));
 
-  if (requestOrigin && allowedOrigins.includes(requestOrigin)) {
+  if (requestOrigin && isAllowedOrigin(requestOrigin)) {
     return requestOrigin;
   }
 
@@ -6368,6 +6920,21 @@ const finalizeProtectedDepositPayment = async (
   }
 
   if (payment.externalReference !== booking.depositPaymentReference) {
+    if (request) {
+      await logActivity(booking.userId, 'PROTECTED_DEPOSIT_PAYMENT_PROOF_FLAGGED', {
+        bookingId: booking.id,
+        propertyId: booking.propertyId ?? null,
+        conversationId: booking.conversationId ?? null,
+        reason: 'PAYMENT_REFERENCE_MISMATCH',
+        depositPaymentReference: booking.depositPaymentReference,
+        externalReference: payment.externalReference,
+        transactionAmount: payment.transactionAmount,
+        paymentStatus: payment.status,
+        paymentStatusDetail: payment.statusDetail,
+      }, request.ip);
+      await evaluateInternalRisk(booking.userId);
+    }
+
     return {
       confirmed: false as const,
       reason: 'PAYMENT_REFERENCE_MISMATCH' as const,
@@ -6398,6 +6965,22 @@ const finalizeProtectedDepositPayment = async (
     normalizedTransactionAmount === null
     || Math.abs(normalizedTransactionAmount - protectedDeposit.depositTotalChargeArs) > 1
   ) {
+    if (request) {
+      await logActivity(booking.userId, 'PROTECTED_DEPOSIT_PAYMENT_PROOF_FLAGGED', {
+        bookingId: booking.id,
+        propertyId: booking.propertyId ?? null,
+        conversationId: booking.conversationId ?? null,
+        reason: 'PAYMENT_AMOUNT_MISMATCH',
+        depositPaymentReference: booking.depositPaymentReference,
+        externalReference: payment.externalReference,
+        transactionAmount: payment.transactionAmount,
+        expectedAmount: protectedDeposit.depositTotalChargeArs,
+        paymentStatus: payment.status,
+        paymentStatusDetail: payment.statusDetail,
+      }, request.ip);
+      await evaluateInternalRisk(booking.userId);
+    }
+
     return {
       confirmed: false as const,
       reason: 'PAYMENT_AMOUNT_MISMATCH' as const,
@@ -6440,12 +7023,16 @@ const syncConversationDepositState = async (
     depositType?: 'external' | 'protected' | null;
     protectedDepositPricing?: ReturnType<typeof getProtectedDepositPricingFromBooking> | null;
     depositPaymentReference?: string | null;
+    manualReviewReason?: ProtectedDepositManualReviewReason | null;
+    manualReviewOpenedAt?: string | null;
   },
 ) => {
   const hasDepositStatus = Object.prototype.hasOwnProperty.call(state, 'depositStatus');
   const hasDepositType = Object.prototype.hasOwnProperty.call(state, 'depositType');
   const hasProtectedDepositPricing = Object.prototype.hasOwnProperty.call(state, 'protectedDepositPricing');
   const hasDepositPaymentReference = Object.prototype.hasOwnProperty.call(state, 'depositPaymentReference');
+  const hasManualReviewReason = Object.prototype.hasOwnProperty.call(state, 'manualReviewReason');
+  const hasManualReviewOpenedAt = Object.prototype.hasOwnProperty.call(state, 'manualReviewOpenedAt');
   const protectedDepositPricing = state.protectedDepositPricing ?? null;
 
   await db.query(
@@ -6474,8 +7061,16 @@ const syncConversationDepositState = async (
            WHEN $12 THEN $11
            ELSE deposit_payment_reference
          END,
+         manual_review_reason = CASE
+           WHEN $14 THEN $13
+           ELSE manual_review_reason
+         END,
+         manual_review_opened_at = CASE
+           WHEN $16 THEN $15
+           ELSE manual_review_opened_at
+         END,
          updated_at = NOW()
-     WHERE booking_id = $13`,
+     WHERE booking_id = $17`,
     [
       hasDepositStatus ? state.depositStatus ?? null : null,
       hasDepositStatus,
@@ -6489,6 +7084,10 @@ const syncConversationDepositState = async (
       hasProtectedDepositPricing,
       hasDepositPaymentReference ? state.depositPaymentReference ?? null : null,
       hasDepositPaymentReference,
+      hasManualReviewReason ? state.manualReviewReason ?? null : null,
+      hasManualReviewReason,
+      hasManualReviewOpenedAt ? state.manualReviewOpenedAt ?? null : null,
+      hasManualReviewOpenedAt,
       bookingId,
     ],
   );
@@ -6889,11 +7488,13 @@ app.post('/api/bookings/:id/report-arrival-problem', async (req, res) => {
       return sendBookingError(res, 422, 'BOOKING_NOT_ACTIVE', 'La reserva tiene que seguir activa para reportar un problema al llegar.');
     }
 
-    if (booking.depositStatus === 'review') {
+    const normalizedDepositStatus = normalizeReservationDepositStatus(booking.depositStatus, booking);
+
+    if (normalizedDepositStatus === 'manual_review') {
       return res.json({ booking });
     }
 
-    if (booking.depositStatus !== 'held') {
+    if (!normalizedDepositStatus || !PROTECTED_DEPOSIT_REVIEWABLE_STATUS_SET.has(normalizedDepositStatus)) {
       return sendBookingError(res, 422, 'BOOKING_NOT_IN_CUSTODY', 'Primero necesitás tener la seña en custodia para reportar este problema.');
     }
 
@@ -6901,16 +7502,48 @@ app.post('/api/bookings/:id/report-arrival-problem', async (req, res) => {
       return sendBookingError(res, 422, 'BOOKING_ARRIVAL_PROBLEM_TOO_EARLY', 'Vas a poder reportar un problema desde el día del ingreso.');
     }
 
+    const manualReviewReason = resolveArrivalProblemManualReviewReason(booking);
+    const manualReviewOpenedAt = new Date().toISOString();
+
     await db.query(
       `UPDATE bookings
-       SET deposit_status = 'review'
+       SET deposit_status = 'manual_review',
+           manual_review_reason = $3,
+           manual_review_opened_at = COALESCE(manual_review_opened_at, $4)
        WHERE id = $1 AND "userId" = $2`,
-      [req.params.id, userId],
+      [req.params.id, userId, manualReviewReason, manualReviewOpenedAt],
     );
 
-    await syncConversationDepositStatus(req.params.id, 'review');
+    await syncConversationDepositState(req.params.id, {
+      depositStatus: 'manual_review',
+      manualReviewReason,
+      manualReviewOpenedAt,
+    });
 
     const updatedBooking = await getUserBookingById(userId, req.params.id);
+
+    await logActivity(
+      userId,
+      'PROTECTED_DEPOSIT_ARRIVAL_PROBLEM_REPORTED',
+      buildProtectedDepositAuditMetadata(updatedBooking ?? booking, {
+        reviewReason: manualReviewReason,
+        resultingDepositStatus: updatedBooking?.depositStatus ?? 'manual_review',
+        resultingReservationState: 'manual_review',
+      }),
+      req.ip,
+    );
+
+    await logActivity(
+      'system',
+      'PROTECTED_DEPOSIT_MANUAL_REVIEW_REQUIRED',
+      buildProtectedDepositAuditMetadata(updatedBooking ?? booking, {
+        reviewReason: manualReviewReason,
+        resultingDepositStatus: updatedBooking?.depositStatus ?? 'manual_review',
+        resultingReservationState: 'manual_review',
+      }),
+      req.ip,
+    );
+
     return res.json({ booking: updatedBooking });
   } catch (err) {
     console.error('Error al reportar problema al llegar:', err);
@@ -6939,11 +7572,13 @@ app.post('/api/bookings/:id/report-no-show', async (req, res) => {
       return sendBookingError(res, 422, 'BOOKING_NOT_ACTIVE', 'La reserva tiene que seguir activa para informar un no show.');
     }
 
-    if (booking.depositStatus === 'pending_confirmation') {
+    const normalizedDepositStatus = normalizeReservationDepositStatus(booking.depositStatus, booking);
+
+    if (normalizedDepositStatus === 'manual_review') {
       return res.json({ booking });
     }
 
-    if (booking.depositStatus !== 'held') {
+    if (!normalizedDepositStatus || !PROTECTED_DEPOSIT_REVIEWABLE_STATUS_SET.has(normalizedDepositStatus)) {
       return sendBookingError(res, 422, 'BOOKING_NOT_IN_CUSTODY', 'Primero necesitás tener la seña en custodia para informar este no show.');
     }
 
@@ -6951,16 +7586,48 @@ app.post('/api/bookings/:id/report-no-show', async (req, res) => {
       return sendBookingError(res, 422, 'BOOKING_NO_SHOW_TOO_EARLY', 'Vas a poder informar un no show desde el día del ingreso.');
     }
 
+    const manualReviewReason = resolveNoShowManualReviewReason();
+    const manualReviewOpenedAt = new Date().toISOString();
+
     await db.query(
       `UPDATE bookings
-       SET deposit_status = 'pending_confirmation'
+       SET deposit_status = 'manual_review',
+           manual_review_reason = $2,
+           manual_review_opened_at = COALESCE(manual_review_opened_at, $3)
        WHERE id = $1`,
-      [req.params.id],
+      [req.params.id, manualReviewReason, manualReviewOpenedAt],
     );
 
-    await syncConversationDepositStatus(req.params.id, 'pending_confirmation');
+    await syncConversationDepositState(req.params.id, {
+      depositStatus: 'manual_review',
+      manualReviewReason,
+      manualReviewOpenedAt,
+    });
 
     const updatedBooking = await getHostBookingById(userId, req.params.id);
+
+    await logActivity(
+      userId,
+      'PROTECTED_DEPOSIT_NO_SHOW_REPORTED',
+      buildProtectedDepositAuditMetadata(updatedBooking ?? booking, {
+        reviewReason: manualReviewReason,
+        resultingDepositStatus: updatedBooking?.depositStatus ?? 'manual_review',
+        resultingReservationState: 'manual_review',
+      }),
+      req.ip,
+    );
+
+    await logActivity(
+      'system',
+      'PROTECTED_DEPOSIT_MANUAL_REVIEW_REQUIRED',
+      buildProtectedDepositAuditMetadata(updatedBooking ?? booking, {
+        reviewReason: manualReviewReason,
+        resultingDepositStatus: updatedBooking?.depositStatus ?? 'manual_review',
+        resultingReservationState: 'manual_review',
+      }),
+      req.ip,
+    );
+
     return res.json({ booking: updatedBooking });
   } catch (err) {
     console.error('Error al informar no show:', err);
@@ -7003,6 +7670,8 @@ app.get('/api/conversations', async (req, res) => {
                 COALESCE(c.service_fee_ars, b.service_fee_ars) as "serviceFeeArs",
                 COALESCE(c.deposit_total_charge_ars, b.deposit_total_charge_ars) as "depositTotalChargeArs",
                 COALESCE(c.deposit_payment_reference, b.deposit_payment_reference) as "depositPaymentReference",
+                COALESCE(c.manual_review_reason, b.manual_review_reason) as "manualReviewReason",
+                COALESCE(c.manual_review_opened_at, b.manual_review_opened_at) as "manualReviewOpenedAt",
                 c.request_start_date as "requestStartDate",
                 c.request_end_date as "requestEndDate",
                 c.request_guests as "requestGuests",
@@ -8141,7 +8810,21 @@ app.post('/api/bookings/:id/confirm-arrival', async (req, res) => {
       return sendBookingError(res, 422, 'INVALID_ARRIVAL_FLOW', 'Esta acción solo aplica a reservas con seña gestionada en la app.');
     }
 
-    if (booking.depositStatus !== 'held') {
+    const normalizedDepositStatus = normalizeReservationDepositStatus(booking.depositStatus, booking);
+
+    if (normalizedDepositStatus === 'deposit_released') {
+      return res.json({ booking });
+    }
+
+    if (normalizedDepositStatus === 'manual_review') {
+      return sendBookingError(res, 422, 'BOOKING_CHECKIN_UNDER_REVIEW', 'Esta seña quedó en revisión manual y no se libera automáticamente.');
+    }
+
+    if (normalizedDepositStatus === 'guest_checkin_confirmed') {
+      return res.json({ booking });
+    }
+
+    if (normalizedDepositStatus !== 'held' && normalizedDepositStatus !== 'host_access_confirmed') {
       return sendBookingError(res, 422, 'BOOKING_NOT_IN_CUSTODY', 'Primero necesitás tener la seña en custodia para confirmar la llegada.');
     }
 
@@ -8149,28 +8832,55 @@ app.post('/api/bookings/:id/confirm-arrival', async (req, res) => {
       return sendBookingError(res, 422, 'BOOKING_ARRIVAL_TOO_EARLY', 'Vas a poder confirmar la llegada desde el día del ingreso.');
     }
 
-    if (booking.guestCheckinConfirmed && !booking.hostAccessConfirmed) {
-      return res.json({ booking });
-    }
+    const arrivalGeolocation = parseArrivalGeolocationPayload(req.body?.geolocation);
+    const releaseReady = Boolean(booking.hostAccessConfirmed) || normalizedDepositStatus === 'host_access_confirmed';
+    const nextDepositStatus = releaseReady ? 'deposit_released' : 'guest_checkin_confirmed';
 
     await db.query(
       `UPDATE bookings
        SET guest_checkin_confirmed = TRUE,
-           deposit_status = CASE WHEN $3 THEN 'released' ELSE deposit_status END
+           guest_checkin_confirmed_at = COALESCE(guest_checkin_confirmed_at, NOW()),
+           guest_checkin_latitude = COALESCE($4, guest_checkin_latitude),
+           guest_checkin_longitude = COALESCE($5, guest_checkin_longitude),
+           guest_checkin_accuracy_meters = COALESCE($6, guest_checkin_accuracy_meters),
+           deposit_status = $3
        WHERE id = $1 AND "userId" = $2`,
-      [req.params.id, userId, Boolean(booking.hostAccessConfirmed)],
+      [
+        req.params.id,
+        userId,
+        nextDepositStatus,
+        arrivalGeolocation?.latitude ?? null,
+        arrivalGeolocation?.longitude ?? null,
+        arrivalGeolocation?.accuracyMeters ?? null,
+      ],
     );
 
-    if (booking.hostAccessConfirmed) {
-      await db.query(
-        `UPDATE conversations
-         SET deposit_status = 'released', updated_at = NOW()
-         WHERE booking_id = $1`,
-        [req.params.id],
+    await syncConversationDepositStatus(req.params.id, nextDepositStatus);
+
+    const updatedBooking = await getUserBookingById(userId, req.params.id);
+
+    await logActivity(
+      userId,
+      'PROTECTED_DEPOSIT_GUEST_CHECKIN_CONFIRMED',
+      buildProtectedDepositAuditMetadata(updatedBooking ?? booking, {
+        confirmationActor: 'guest',
+        guestCheckinGeolocation: arrivalGeolocation,
+        resultingDepositStatus: updatedBooking?.depositStatus ?? nextDepositStatus,
+      }),
+      req.ip,
+    );
+
+    if (updatedBooking?.depositStatus === 'deposit_released' && updatedBooking.guestCheckinConfirmed && updatedBooking.hostAccessConfirmed) {
+      await logActivity(
+        'system',
+        'PROTECTED_DEPOSIT_RELEASE_READY',
+        buildProtectedDepositAuditMetadata(updatedBooking, {
+          triggeredBy: 'guest_checkin_confirmed',
+        }),
+        req.ip,
       );
     }
 
-    const updatedBooking = await getUserBookingById(userId, req.params.id);
     return res.json({ booking: updatedBooking });
   } catch (err) {
     console.error('Error al confirmar la llegada:', err);
@@ -8195,7 +8905,21 @@ app.post('/api/bookings/:id/confirm-access', async (req, res) => {
       return sendBookingError(res, 422, 'INVALID_ACCESS_FLOW', 'Esta acción solo aplica a reservas con seña gestionada en la app.');
     }
 
-    if (booking.depositStatus !== 'held') {
+    const normalizedDepositStatus = normalizeReservationDepositStatus(booking.depositStatus, booking);
+
+    if (normalizedDepositStatus === 'deposit_released') {
+      return res.json({ booking });
+    }
+
+    if (normalizedDepositStatus === 'manual_review') {
+      return sendBookingError(res, 422, 'BOOKING_CHECKIN_UNDER_REVIEW', 'Esta seña quedó en revisión manual y no se libera automáticamente.');
+    }
+
+    if (normalizedDepositStatus === 'host_access_confirmed') {
+      return res.json({ booking });
+    }
+
+    if (normalizedDepositStatus !== 'held' && normalizedDepositStatus !== 'guest_checkin_confirmed') {
       return sendBookingError(res, 422, 'BOOKING_NOT_IN_CUSTODY', 'Primero necesitás tener la seña en custodia para confirmar el acceso.');
     }
 
@@ -8203,28 +8927,43 @@ app.post('/api/bookings/:id/confirm-access', async (req, res) => {
       return sendBookingError(res, 422, 'BOOKING_ACCESS_TOO_EARLY', 'Vas a poder confirmar el acceso desde el día del ingreso.');
     }
 
-    if (booking.hostAccessConfirmed && !booking.guestCheckinConfirmed) {
-      return res.json({ booking });
-    }
+    const releaseReady = Boolean(booking.guestCheckinConfirmed) || normalizedDepositStatus === 'guest_checkin_confirmed';
+    const nextDepositStatus = releaseReady ? 'deposit_released' : 'host_access_confirmed';
 
     await db.query(
       `UPDATE bookings
        SET host_access_confirmed = TRUE,
-           deposit_status = CASE WHEN $2 THEN 'released' ELSE deposit_status END
+           host_access_confirmed_at = COALESCE(host_access_confirmed_at, NOW()),
+           deposit_status = $2
        WHERE id = $1`,
-      [req.params.id, Boolean(booking.guestCheckinConfirmed)],
+      [req.params.id, nextDepositStatus],
     );
 
-    if (booking.guestCheckinConfirmed) {
-      await db.query(
-        `UPDATE conversations
-         SET deposit_status = 'released', updated_at = NOW()
-         WHERE booking_id = $1`,
-        [req.params.id],
+    await syncConversationDepositStatus(req.params.id, nextDepositStatus);
+
+    const updatedBooking = await getHostBookingById(userId, req.params.id);
+
+    await logActivity(
+      userId,
+      'PROTECTED_DEPOSIT_HOST_ACCESS_CONFIRMED',
+      buildProtectedDepositAuditMetadata(updatedBooking ?? booking, {
+        confirmationActor: 'host',
+        resultingDepositStatus: updatedBooking?.depositStatus ?? nextDepositStatus,
+      }),
+      req.ip,
+    );
+
+    if (updatedBooking?.depositStatus === 'deposit_released' && updatedBooking.guestCheckinConfirmed && updatedBooking.hostAccessConfirmed) {
+      await logActivity(
+        'system',
+        'PROTECTED_DEPOSIT_RELEASE_READY',
+        buildProtectedDepositAuditMetadata(updatedBooking, {
+          triggeredBy: 'host_access_confirmed',
+        }),
+        req.ip,
       );
     }
 
-    const updatedBooking = await getHostBookingById(userId, req.params.id);
     return res.json({ booking: updatedBooking });
   } catch (err) {
     console.error('Error al confirmar el acceso:', err);

@@ -14,3 +14,6 @@ coverage/
 !.env.production
 review-artifacts/*.local.postman_environment.json
 moderation-smoke*.cookies.txt
+
+.vercel
+.env*.local

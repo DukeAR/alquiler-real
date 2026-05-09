@@ -1,3 +1,5 @@
+import type { MarketplaceMonetizationPlan } from './marketplaceMonetization';
+
 export const PREMIUM_DOCUMENTARY_OFFER_TYPE = 'documentary-user' as const;
 
 export const PREMIUM_ONSITE_OFFER_TYPE = 'onsite-property' as const;
@@ -33,6 +35,7 @@ export interface PremiumVerificationOffer {
   purchased: boolean;
   completed: boolean;
   redirectTo: string;
+  monetization?: MarketplaceMonetizationPlan | null;
   orderId?: string | null;
   propertyId?: string | null;
   propertyTitle?: string | null;

@@ -21,6 +21,7 @@ const LazyFAQPage = lazy(() => import('./components/FAQPage').then((module) => (
 const LazyHostDashboard = lazy(() => import('./components/HostDashboard').then((module) => ({ default: module.HostDashboard })));
 const LazyHostProfileView = lazy(() => import('./components/HostProfileView').then((module) => ({ default: module.HostProfileView })));
 const LazyMyBookings = lazy(() => import('./components/MyBookings').then((module) => ({ default: module.MyBookings })));
+const LazyMyOperations = lazy(() => import('./components/MyOperations').then((module) => ({ default: module.MyOperations })));
 const LazyOnsiteVerificationPage = lazy(() => import('./components/OnsiteVerificationPage').then((module) => ({ default: module.OnsiteVerificationPage })));
 const LazyPrivacyPage = lazy(() => import('./components/PrivacyPage').then((module) => ({ default: module.PrivacyPage })));
 const LazyProfileViewNew = lazy(() => import('./components/ProfileViewNew.tsx'));
@@ -99,6 +100,7 @@ export default function App() {
               <Route path="/verification" element={<RequireAuth><DocumentVerificationFlowWrapper /></RequireAuth>} />
               <Route path="/verify" element={<Navigate to="/verification" replace />} />
               <Route path="/chat/:id" element={<RequireAuth><SecureChatWrapper /></RequireAuth>} />
+              <Route path="/operations" element={<RequireAuth><LazyMyOperations /></RequireAuth>} />
               <Route path="/my-bookings" element={<RequireAuth><LazyMyBookings /></RequireAuth>} />
               <Route path="/host-dashboard" element={<RequireAuth><HostDashboardWrapper /></RequireAuth>} />
               <Route path="/tenant-profile" element={<Navigate to="/profile" replace />} />

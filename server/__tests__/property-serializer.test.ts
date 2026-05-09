@@ -23,13 +23,13 @@ describe('mapPropertyRecord', () => {
       isVerifiedProperty: true,
       hostCompletedReservationsCount: '6',
       hostGuestReviewsCount: '4',
+      hostAverageResponseTimeMinutes: '18',
       hostMemberSince: '2021-01-10T00:00:00.000Z',
       lat: '-36.7',
       lng: '-56.7',
     });
 
     expect(property.verificationScore).toBe(4);
-    expect(property.hostTrustScore).toBe(4);
     expect(property.hostTrust).toMatchObject({
       score: 4,
       level: 'high',
@@ -39,8 +39,8 @@ describe('mapPropertyRecord', () => {
     expect(property.isPresentiallyVerified).toBe(false);
     expect(property.hostTrust.items).toEqual(expect.arrayContaining([
       expect.objectContaining({ key: 'identity', status: 'complete' }),
-      expect.objectContaining({ key: 'reservations', status: 'complete' }),
-      expect.objectContaining({ key: 'reviews', status: 'complete' }),
+      expect.objectContaining({ key: 'response', status: 'complete' }),
+      expect.objectContaining({ key: 'operations', status: 'complete' }),
       expect.objectContaining({ key: 'tenure', status: 'complete' }),
     ]));
     expect(property.verificationItems).toEqual([
@@ -109,7 +109,6 @@ describe('mapPropertyRecord', () => {
     expect(property.isIdentityVerified).toBe(false);
     expect(property.isPresentiallyVerified).toBe(false);
     expect(property.verificationScore).toBe(1);
-    expect(property.hostTrustScore).toBe(0);
     expect(property.hostTrust).toMatchObject({
       score: 0,
       level: 'low',

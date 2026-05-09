@@ -7,6 +7,7 @@ import {
   type ReservationRequestStatus,
 } from '../types';
 import { isBookingCheckInReached } from './bookingDates';
+import { normalizeReservationDepositStatus } from './protectedDepositStatus';
 
 export type ReservationFlowStage =
   | 'request-pending'
@@ -43,7 +44,7 @@ export type ReservationFlowState =
 
 export type ReservationFlowActor = 'guest' | 'host' | 'platform' | 'none';
 export type ReservationFlowViewerRole = 'guest' | 'host';
-export type ReservationFlowMilestoneKey = 'request' | 'accepted' | 'deposit' | 'confirmed';
+export type ReservationFlowMilestoneKey = 'inquiry' | 'request' | 'deposit' | 'confirmation' | 'checkin' | 'completed';
 export type ReservationFlowMilestoneState = 'completed' | 'current' | 'upcoming';
 export type ReservationVisibleStatusKey =
   | 'proposal-sent'
@@ -61,6 +62,17 @@ export type ReservationVisibleStatus = {
   tone: ReservationVisibleStatusTone;
 };
 
+export type ReservationFlowTimelineStatus = {
+  label: string;
+  tone: ReservationVisibleStatusTone;
+};
+
+export type ReservationFlowTimeline = {
+  currentStepKey: ReservationFlowMilestoneKey;
+  status: ReservationFlowTimelineStatus;
+  steps: ReservationFlowMilestone[];
+};
+
 type ReservationFlowInput = {
   mode?: ReservationRequestMode | null;
   depositType?: ReservationDepositType | null;
@@ -72,6 +84,7 @@ type ReservationFlowInput = {
   guestCheckinConfirmed?: boolean | null;
   hostAccessConfirmed?: boolean | null;
   viewerRole?: ReservationFlowViewerRole;
+  isExpiredPendingRequest?: boolean;
 };
 
 type ReservationVisibleStatusOptions = {
@@ -102,6 +115,15 @@ export type ReservationFlowMilestone = {
   state: ReservationFlowMilestoneState;
 };
 
+const RESERVATION_FLOW_MILESTONE_CONFIG: ReadonlyArray<Pick<ReservationFlowMilestone, 'key' | 'label'>> = [
+  { key: 'inquiry', label: 'Consulta iniciada' },
+  { key: 'request', label: 'Reserva solicitada' },
+  { key: 'deposit', label: 'Seña reportada' },
+  { key: 'confirmation', label: 'Confirmación pendiente' },
+  { key: 'checkin', label: 'Check-in pendiente' },
+  { key: 'completed', label: 'Operación completada' },
+];
+
 const getRequestStatusLabel = (mode: ReservationRequestMode, viewerRole: ReservationFlowViewerRole) => {
   if (mode === 'protected') {
     return viewerRole === 'host' ? 'Solicitud recibida' : 'Solicitud enviada';
@@ -122,103 +144,190 @@ const getModelLabel = (mode: ReservationRequestMode, depositType?: ReservationDe
   return mode === 'protected' ? 'Seña protegida' : 'Operación libre';
 };
 
-const getDepositMilestoneLabel = (
-  mode: ReservationRequestMode,
-  depositType: ReservationDepositType | null | undefined,
-  stage: ReservationFlowStageWithIssues | null,
+const getCancelledMilestoneIndex = (
+  input: ReservationFlowInput,
+  normalizedDepositStatus: ReservationDepositStatus | null,
 ) => {
-  if (stage === 'deposit-choice') {
-    return 'Elegir seña';
+  if (input.bookingStatus === 'completed' || normalizedDepositStatus === 'deposit_released') {
+    return 5;
   }
 
-  if (mode === 'protected') {
-    if (stage === 'protected-checkout-pending') {
-      return 'Seña protegida elegida';
-    }
-
-    if (stage === 'protected-deposit-review') {
-      return 'Seña en revisión';
-    }
-
-    if (stage === 'protected-no-show-pending') {
-      return 'Llegada en revisión';
-    }
-
-    return 'Seña protegida';
+  if (
+    normalizedDepositStatus === 'manual_review'
+    || normalizedDepositStatus === 'held'
+    || normalizedDepositStatus === 'guest_checkin_confirmed'
+    || normalizedDepositStatus === 'host_access_confirmed'
+    || input.bookingStatus === 'confirmed'
+  ) {
+    return 4;
   }
 
-  if (depositType === 'external' || mode === 'direct') {
-    if (stage === 'direct-deposit-reported') {
-      return 'Seña informada';
-    }
-
-    if (stage === 'external-deposit-pending') {
-      return 'Seña por coordinar';
-    }
-
-    return 'Seña confirmada';
+  if (normalizedDepositStatus === 'reported' || normalizedDepositStatus === 'confirmed') {
+    return 3;
   }
 
-  if (stage === 'protected-checkout-pending') {
-    return 'Seña por registrar';
+  if (
+    input.requestStatus === 'accepted'
+    || input.depositType === 'protected'
+    || input.depositType === 'external'
+    || normalizedDepositStatus === 'checkout_pending'
+    || normalizedDepositStatus === 'external_pending'
+  ) {
+    return 2;
   }
 
-  if (stage === 'protected-deposit-review') {
-    return 'Seña en revisión';
-  }
-
-  if (stage === 'protected-no-show-pending') {
-    return 'Llegada en revisión';
-  }
-
-  return 'Seña en custodia';
+  return 1;
 };
 
-const getMilestoneIndex = (stage: ReservationFlowStageWithIssues | null) => {
+const getMilestoneIndex = (
+  input: ReservationFlowInput,
+  stage: ReservationFlowStageWithIssues | null,
+) => {
+  const normalizedDepositStatus = normalizeReservationDepositStatus(input.depositStatus, {
+    guestCheckinConfirmed: input.guestCheckinConfirmed,
+    hostAccessConfirmed: input.hostAccessConfirmed,
+  });
+
+  if (input.bookingStatus === 'completed') {
+    return 5;
+  }
+
   switch (stage) {
     case 'request-pending':
-      return 0;
     case 'request-not-advanced':
-    case 'request-accepted':
       return 1;
     case 'deposit-choice':
+    case 'request-accepted':
     case 'external-deposit-pending':
-    case 'direct-deposit-reported':
     case 'protected-checkout-pending':
+      return 2;
+    case 'direct-deposit-reported':
+      return 3;
+    case 'reservation-confirmed':
     case 'protected-deposit-held':
     case 'protected-deposit-review':
     case 'protected-no-show-pending':
-      return 2;
-    case 'reservation-confirmed':
+      return 4;
     case 'protected-deposit-released':
+      return 5;
     case 'guest-cancelled':
     case 'host-cancelled':
-      return 3;
+      return getCancelledMilestoneIndex(input, normalizedDepositStatus);
     default:
       return 0;
   }
 };
 
-export const getReservationFlowMilestones = (input: ReservationFlowInput): ReservationFlowMilestone[] => {
+const getTimelineStatus = (
+  input: ReservationFlowInput,
+  stage: ReservationFlowStageWithIssues | null,
+  state: ReservationFlowState | null,
+): ReservationFlowTimelineStatus | null => {
+  const viewerRole = input.viewerRole ?? 'guest';
+
+  if (!stage) {
+    return null;
+  }
+
+  if (input.bookingStatus === 'completed' || stage === 'protected-deposit-released') {
+    return {
+      label: 'Operación completada',
+      tone: 'success',
+    };
+  }
+
+  if (stage === 'protected-deposit-review' || stage === 'protected-no-show-pending') {
+    return {
+      label: 'En revisión manual',
+      tone: 'warning',
+    };
+  }
+
+  if (stage === 'guest-cancelled' || stage === 'host-cancelled') {
+    return {
+      label: 'Operación cancelada',
+      tone: 'neutral',
+    };
+  }
+
+  if (stage === 'request-pending') {
+    return {
+      label: input.isExpiredPendingRequest
+        ? 'No avanzó'
+        : viewerRole === 'guest'
+          ? 'Esperando respuesta del anfitrión'
+          : 'Reserva solicitada',
+      tone: input.isExpiredPendingRequest ? 'neutral' : 'brand',
+    };
+  }
+
+  if (stage === 'request-not-advanced') {
+    return {
+      label: 'No avanzó',
+      tone: 'neutral',
+    };
+  }
+
+  if (state === 'checkin_pending' && viewerRole === 'host') {
+    return {
+      label: 'Esperando confirmación del huésped',
+      tone: 'brand',
+    };
+  }
+
+  if (state === 'guest_checkin_confirmed' && viewerRole === 'guest') {
+    return {
+      label: 'Esperando confirmación del anfitrión',
+      tone: 'brand',
+    };
+  }
+
+  if (stage === 'direct-deposit-reported') {
+    return {
+      label: viewerRole === 'guest' ? 'Esperando confirmación del anfitrión' : 'Confirmación pendiente',
+      tone: 'brand',
+    };
+  }
+
+  const visibleStatus = getReservationVisibleStatus(input);
+
+  return visibleStatus
+    ? {
+        label: visibleStatus.label,
+        tone: visibleStatus.tone,
+      }
+    : null;
+};
+
+export const getReservationFlowTimeline = (input: ReservationFlowInput): ReservationFlowTimeline | null => {
   if (!input.mode) {
-    return [];
+    return null;
   }
 
   const stage = getReservationFlowStage(input);
-  const viewerRole = input.viewerRole ?? 'guest';
-  const currentIndex = getMilestoneIndex(stage);
-  const milestones = [
-    getRequestStatusLabel(input.mode, viewerRole),
-    stage === 'request-not-advanced' ? 'No avanzó' : 'Aceptada',
-    getDepositMilestoneLabel(input.mode, input.depositType, stage),
-    stage === 'guest-cancelled' || stage === 'host-cancelled' ? 'Cancelada' : 'Confirmada',
-  ] as const;
+  const state = getReservationFlowState(input);
+  const currentIndex = getMilestoneIndex(input, stage);
+  const status = getTimelineStatus(input, stage, state);
 
-  return milestones.map((label, index) => ({
-    key: (['request', 'accepted', 'deposit', 'confirmed'] as const)[index],
+  if (!stage || !status) {
+    return null;
+  }
+
+  const steps: ReservationFlowMilestone[] = RESERVATION_FLOW_MILESTONE_CONFIG.map(({ key, label }, index) => ({
+    key,
     label,
     state: index < currentIndex ? 'completed' : index === currentIndex ? 'current' : 'upcoming',
   }));
+
+  return {
+    currentStepKey: steps[currentIndex]?.key ?? 'inquiry',
+    status,
+    steps,
+  };
+};
+
+export const getReservationFlowMilestones = (input: ReservationFlowInput): ReservationFlowMilestone[] => {
+  return getReservationFlowTimeline(input)?.steps ?? [];
 };
 
 export const getReservationFlowStage = ({
@@ -228,14 +337,21 @@ export const getReservationFlowStage = ({
   bookingStatus,
   depositStatus,
   cancellationActor,
+  guestCheckinConfirmed,
+  hostAccessConfirmed,
 }: ReservationFlowInput): ReservationFlowStageWithIssues | null => {
   if (!mode) {
     return null;
   }
 
+  const normalizedDepositStatus = normalizeReservationDepositStatus(depositStatus, {
+    guestCheckinConfirmed,
+    hostAccessConfirmed,
+  });
+
   if (
     requestStatus === 'not_advanced'
-    || (bookingStatus === 'cancelled' && cancellationActor !== 'guest' && cancellationActor !== 'host' && !depositStatus)
+    || (bookingStatus === 'cancelled' && cancellationActor !== 'guest' && cancellationActor !== 'host' && !normalizedDepositStatus)
   ) {
     return 'request-not-advanced';
   }
@@ -251,15 +367,15 @@ export const getReservationFlowStage = ({
   const requestAccepted = requestStatus === 'accepted' || (mode === 'protected' && bookingStatus === 'confirmed');
 
   if (mode === 'direct') {
-    if (depositStatus === 'reported') {
+    if (normalizedDepositStatus === 'reported') {
       return 'direct-deposit-reported';
     }
 
-    if (depositStatus === 'confirmed' || (bookingStatus === 'confirmed' && requestStatus !== 'accepted' && depositStatus !== 'external_pending')) {
+    if (normalizedDepositStatus === 'confirmed' || (bookingStatus === 'confirmed' && requestStatus !== 'accepted' && normalizedDepositStatus !== 'external_pending')) {
       return 'reservation-confirmed';
     }
 
-    if (depositStatus === 'external_pending') {
+    if (normalizedDepositStatus === 'external_pending') {
       return 'external-deposit-pending';
     }
 
@@ -270,23 +386,23 @@ export const getReservationFlowStage = ({
     return 'request-pending';
   }
 
-  if (depositStatus === 'review') {
+  if (normalizedDepositStatus === 'manual_review') {
     return 'protected-deposit-review';
   }
 
-  if (depositStatus === 'pending_confirmation') {
-    return 'protected-no-show-pending';
-  }
-
-  if (depositStatus === 'released') {
+  if (normalizedDepositStatus === 'deposit_released') {
     return 'protected-deposit-released';
   }
 
-  if (depositStatus === 'checkout_pending') {
+  if (normalizedDepositStatus === 'checkout_pending') {
     return 'protected-checkout-pending';
   }
 
-  if (depositStatus === 'held') {
+  if (
+    normalizedDepositStatus === 'held'
+    || normalizedDepositStatus === 'guest_checkin_confirmed'
+    || normalizedDepositStatus === 'host_access_confirmed'
+  ) {
     return 'protected-deposit-held';
   }
 
@@ -311,6 +427,10 @@ export const getReservationFlowStage = ({
 
 export const getReservationFlowState = (input: ReservationFlowInput): ReservationFlowState | null => {
   const stage = getReservationFlowStage(input);
+  const normalizedDepositStatus = normalizeReservationDepositStatus(input.depositStatus, {
+    guestCheckinConfirmed: input.guestCheckinConfirmed,
+    hostAccessConfirmed: input.hostAccessConfirmed,
+  });
 
   if (!stage || !input.mode) {
     return null;
@@ -337,26 +457,26 @@ export const getReservationFlowState = (input: ReservationFlowInput): Reservatio
       return 'deposit_reported';
     }
 
-    if (input.depositStatus === 'confirmed') {
+    if (normalizedDepositStatus === 'confirmed') {
       return 'deposit_confirmed';
     }
 
     return 'free_operation_selected';
   }
 
-  if (input.hostAccessConfirmed) {
+  if (normalizedDepositStatus === 'host_access_confirmed') {
     return 'host_access_confirmed';
   }
 
-  if (input.guestCheckinConfirmed) {
+  if (normalizedDepositStatus === 'guest_checkin_confirmed') {
     return 'guest_checkin_confirmed';
   }
 
-  if (input.depositStatus === 'reported') {
+  if (normalizedDepositStatus === 'reported') {
     return 'deposit_reported';
   }
 
-  if (input.depositStatus === 'confirmed') {
+  if (normalizedDepositStatus === 'confirmed') {
     return 'deposit_confirmed';
   }
 
@@ -465,14 +585,14 @@ export const getReservationVisibleStatus = (
     case 'protected-deposit-released':
       return {
         key: 'confirmed',
-        label: state === 'deposit_released' ? 'Seña liberada' : 'Confirmada',
+        label: state === 'deposit_released' ? 'Lista para liberar' : 'Confirmada',
         tone: 'success',
       };
     case 'protected-deposit-review':
     case 'protected-no-show-pending':
       return {
         key: 'issue-reported',
-        label: state === 'manual_review' ? 'Revisión manual' : 'Problema reportado',
+        label: state === 'manual_review' ? 'En revisión manual' : 'Problema reportado',
         tone: 'warning',
       };
     default:
@@ -505,6 +625,10 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
   const modelLabel = getModelLabel(input.mode, input.depositType);
   const viewerRole = input.viewerRole ?? 'guest';
   const visibleStatus = getReservationVisibleStatus(input);
+  const normalizedDepositStatus = normalizeReservationDepositStatus(input.depositStatus, {
+    guestCheckinConfirmed: input.guestCheckinConfirmed,
+    hostAccessConfirmed: input.hostAccessConfirmed,
+  });
 
   if (input.bookingStatus === 'completed') {
     return buildFlowCopy({
@@ -577,7 +701,7 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
           description: viewerRole === 'host'
             ? 'Ya aceptaste seguir por operación libre.'
             : 'El anfitrión aceptó seguir por operación libre.',
-          supportText: 'Desde acá coordinan por chat. La app no retiene dinero, no protege la seña ni interviene en pagos externos.',
+          supportText: 'Desde acá coordinan por chat. La app no retiene dinero, no registra la seña dentro del flujo ni interviene en pagos externos.',
           nextActor: 'none',
           nextActorLabel: 'Sin acción pendiente',
           nextStepLabel: 'Coordinar todo por chat',
@@ -590,10 +714,10 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
         description: viewerRole === 'host'
           ? 'La reserva ya quedó marcada con seña protegida.'
           : 'El anfitrión ya aceptó y la reserva quedó marcada con seña protegida.',
-        supportText: 'La app retiene la seña solo en este modo, suma un costo por operación y prevé liberarla después del check-in doble o pasarla a revisión manual si hace falta.',
+        supportText: 'Cuando la seña se registre dentro de la app, queda retenida hasta check-in, suma un costo por operación y puede pasar a revisión manual si hace falta revisar existencia y acceso.',
         nextActor: 'platform',
         nextActorLabel: 'Plataforma',
-        nextStepLabel: 'Seguir el estado protegido',
+        nextStepLabel: 'Seguir el estado de la seña',
         trackingHint: 'Por ahora solo mostramos la estructura y el estado base: el cobro todavía no se procesa dentro de la app.',
       });
     case 'protected-checkout-pending':
@@ -601,7 +725,7 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
         modelLabel,
         statusLabel: visibleStatus?.label ?? 'Seña pendiente',
         description: 'La reserva ya quedó dentro del modo de seña protegida.',
-        supportText: 'Queda registrada la estructura del flujo protegido. La seña todavía no quedó confirmada dentro de la app.',
+        supportText: 'La seña todavía no quedó registrada dentro de la app. Cuando se registre, queda retenida hasta check-in.',
         nextActor: 'platform',
         nextActorLabel: 'Plataforma',
         nextStepLabel: 'Esperar confirmación de seña',
@@ -652,14 +776,16 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
             ? 'El huésped ya confirmó que llegó.'
             : 'Ya registraste que llegaste a la propiedad.',
           supportText: viewerRole === 'host'
-            ? 'Ahora falta que confirmes el acceso para liberar la seña.'
-            : 'Ahora falta que el anfitrión confirme el acceso para liberar la seña.',
+            ? 'Ahora falta que confirmes el acceso para dejar la seña lista para liberarse al anfitrión.'
+            : 'Ahora falta que el anfitrión confirme el acceso para dejar la seña lista para liberarse al anfitrión.',
           nextActor: 'host',
           nextActorLabel: 'Anfitrión',
           nextStepLabel: 'Confirmar acceso',
           primaryActionLabel: viewerRole === 'host' ? 'Confirmar acceso' : undefined,
           secondaryActionLabel: viewerRole === 'guest' ? 'Reportar un problema' : undefined,
-          pendingActionHint: viewerRole === 'guest' ? 'La seña se libera cuando el anfitrión confirma el acceso.' : undefined,
+          pendingActionHint: viewerRole === 'guest'
+            ? 'La seña queda lista para liberarse al anfitrión cuando el anfitrión confirma el acceso.'
+            : undefined,
         });
       }
 
@@ -671,12 +797,14 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
             ? 'El anfitrión ya confirmó el acceso a la propiedad.'
             : 'Ya registraste que el acceso quedó resuelto.',
           supportText: viewerRole === 'guest'
-            ? 'Ahora falta tu confirmación de llegada para liberar la seña.'
-            : 'Ahora falta que el huésped confirme la llegada para liberar la seña.',
+            ? 'Ahora falta tu confirmación de llegada para dejar la seña lista para liberarse al anfitrión.'
+            : 'Ahora falta que el huésped confirme la llegada para dejar la seña lista para liberarse al anfitrión.',
           nextActor: 'guest',
           nextActorLabel: 'Huésped',
           nextStepLabel: 'Confirmar llegada',
-          pendingActionHint: viewerRole === 'host' ? 'La seña se libera cuando el huésped confirma la llegada.' : undefined,
+          pendingActionHint: viewerRole === 'host'
+            ? 'La seña queda lista para liberarse al anfitrión cuando el huésped confirma la llegada.'
+            : undefined,
         });
       }
 
@@ -745,9 +873,9 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
     case 'protected-deposit-review':
       return buildFlowCopy({
         modelLabel,
-        statusLabel: visibleStatus?.label ?? 'Revisión manual',
-        description: 'Quedó reportado un problema en esta reserva.',
-        supportText: 'La plataforma está revisando qué pasó antes de definir cómo sigue.',
+        statusLabel: visibleStatus?.label ?? 'En revisión manual',
+        description: 'Vamos a revisar la información disponible: chat, comprobante, confirmaciones y ubicación registrada.',
+        supportText: 'La seña no se libera automáticamente mientras la revisión siga abierta.',
         nextActor: 'platform',
         nextActorLabel: 'Plataforma',
         nextStepLabel: 'Esperar revisión',
@@ -755,9 +883,9 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
     case 'protected-no-show-pending':
       return buildFlowCopy({
         modelLabel,
-        statusLabel: visibleStatus?.label ?? 'Revisión manual',
-        description: 'Quedó reportado un problema con la llegada.',
-        supportText: 'La plataforma está revisando qué pasó antes de decidir cómo sigue.',
+        statusLabel: visibleStatus?.label ?? 'En revisión manual',
+        description: 'Vamos a revisar la información disponible: chat, comprobante, confirmaciones y ubicación registrada.',
+        supportText: 'La seña no se libera automáticamente mientras la revisión siga abierta.',
         nextActor: 'platform',
         nextActorLabel: 'Plataforma',
         nextStepLabel: 'Esperar revisión',
@@ -765,9 +893,9 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
     case 'protected-deposit-released':
       return buildFlowCopy({
         modelLabel,
-        statusLabel: visibleStatus?.label ?? 'Seña liberada',
-        description: 'Las dos confirmaciones ya quedaron registradas.',
-        supportText: 'La seña ya salió de custodia y el chat sigue disponible para cualquier coordinación final.',
+        statusLabel: visibleStatus?.label ?? 'Lista para liberar',
+        description: 'La seña queda lista para liberarse al anfitrión.',
+        supportText: 'Las dos confirmaciones ya quedaron registradas y el chat sigue disponible para cualquier coordinación final.',
         nextActor: 'none',
         nextActorLabel: 'Sin acción pendiente',
         nextStepLabel: 'Seguir por chat si hace falta',
@@ -778,17 +906,32 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
         statusLabel: 'Cancelaste la reserva',
         description: 'La cancelación ya quedó registrada.',
         supportText: input.mode === 'protected' || input.depositType === 'protected'
-          ? input.depositStatus === 'review'
+          ? normalizedDepositStatus === 'manual_review'
             ? 'La devolución depende del momento de la cancelación y de cómo quedó la reserva. La seña está en revisión hasta cerrar qué corresponde.'
             : 'La devolución depende del momento de la cancelación y del estado de la reserva. Si la seña ya estaba en custodia, la plataforma revisa cómo cerrarla.'
           : 'La plataforma solo informa el estado. Si hubo una seña, la resolución queda entre ustedes.',
-        nextActor: (input.mode === 'protected' || input.depositType === 'protected') && (input.depositStatus === 'review' || input.depositStatus === 'held' || input.depositStatus === 'pending_confirmation')
+        nextActor: (input.mode === 'protected' || input.depositType === 'protected') && (
+          normalizedDepositStatus === 'manual_review'
+          || normalizedDepositStatus === 'held'
+          || normalizedDepositStatus === 'guest_checkin_confirmed'
+          || normalizedDepositStatus === 'host_access_confirmed'
+        )
           ? 'platform'
           : 'none',
-        nextActorLabel: (input.mode === 'protected' || input.depositType === 'protected') && (input.depositStatus === 'review' || input.depositStatus === 'held' || input.depositStatus === 'pending_confirmation')
+        nextActorLabel: (input.mode === 'protected' || input.depositType === 'protected') && (
+          normalizedDepositStatus === 'manual_review'
+          || normalizedDepositStatus === 'held'
+          || normalizedDepositStatus === 'guest_checkin_confirmed'
+          || normalizedDepositStatus === 'host_access_confirmed'
+        )
           ? 'Plataforma'
           : 'Sin acción pendiente',
-        nextStepLabel: (input.mode === 'protected' || input.depositType === 'protected') && (input.depositStatus === 'review' || input.depositStatus === 'held' || input.depositStatus === 'pending_confirmation')
+        nextStepLabel: (input.mode === 'protected' || input.depositType === 'protected') && (
+          normalizedDepositStatus === 'manual_review'
+          || normalizedDepositStatus === 'held'
+          || normalizedDepositStatus === 'guest_checkin_confirmed'
+          || normalizedDepositStatus === 'host_access_confirmed'
+        )
           ? 'Esperar revisión'
           : 'Seguir por chat si hace falta',
       });

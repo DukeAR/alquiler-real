@@ -1,4 +1,4 @@
-export const HOST_TRUST_SCORE_MAX = 4;
+export const HOST_TRUST_SCORE_MAX = 5;
 
 export type HostTrustLevel = 'low' | 'medium' | 'high';
 
@@ -21,10 +21,9 @@ type HostTrustLike = {
   hostTrust?: Partial<HostTrustSummary> & {
     items?: Array<Partial<HostTrustItem>>;
   };
-  hostTrustScore?: number;
 };
 
-const clampHostTrustScore = (score: number) => {
+const clampHostTrustSummaryScore = (score: number) => {
   if (!Number.isFinite(score)) {
     return 0;
   }
@@ -33,7 +32,7 @@ const clampHostTrustScore = (score: number) => {
 };
 
 const getHostTrustLevelFromScore = (score: number): HostTrustLevel => {
-  if (score >= HOST_TRUST_SCORE_MAX) {
+  if (score >= HOST_TRUST_SCORE_MAX - 1) {
     return 'high';
   }
 
@@ -67,12 +66,10 @@ export const getHostTrust = (property: HostTrustLike): HostTrustSummary => {
     : [];
 
   const fallbackScore = items.filter((item) => item.status === 'complete').length;
-  const score = clampHostTrustScore(
+  const score = clampHostTrustSummaryScore(
     typeof property.hostTrust?.score === 'number'
       ? property.hostTrust.score
-      : typeof property.hostTrustScore === 'number'
-        ? property.hostTrustScore
-        : fallbackScore,
+      : fallbackScore,
   );
 
   return {

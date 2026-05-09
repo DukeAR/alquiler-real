@@ -56,8 +56,8 @@ export const VerificationInfoPanel = ({ className }: VerificationInfoPanelProps)
       <div className="mt-6 border-t border-slate-200/80 pt-5">
         <div className="space-y-2">
           <p className="text-base font-semibold text-slate-900">La verificación reduce dudas antes de reservar.</p>
-          <p className="text-sm leading-6 text-slate-600">Confirmamos que la propiedad existe y que hay una persona identificada con acceso al lugar.</p>
-          <p className="text-sm leading-6 text-slate-600">No evaluamos estado ni calidad del inmueble.</p>
+          <p className="text-sm leading-6 text-slate-600">La visita deja identidad, ubicación y acceso confirmados, con respaldo de existencia y vínculo con el lugar.</p>
+          <p className="text-sm leading-6 text-slate-600">No evaluamos estado, calidad ni amenities del inmueble.</p>
         </div>
       </div>
     </section>

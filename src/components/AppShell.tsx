@@ -53,6 +53,7 @@ const hiddenHeaderPrefixes = [
   '/profile',
   '/edit-profile',
   '/change-password',
+  '/operations',
   '/my-bookings',
   '/host-dashboard',
   '/tenant-profile',
@@ -74,6 +75,7 @@ const hiddenMobileNavPrefixes = [
   '/terms',
   '/edit-profile',
   '/change-password',
+  '/operations',
   '/host-dashboard',
   '/tenant-profile',
   '/host'
@@ -89,6 +91,7 @@ const authGuardedPrefixes = [
   '/verification',
   '/verify',
   '/chat',
+  '/operations',
   '/my-bookings',
   '/host-dashboard',
   '/tenant-profile',
@@ -464,6 +467,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   const desktopActions: NavAction[] = [
     { label: 'Explorar', shortLabel: 'Explorar', path: '/', icon: Icons.Search },
     ...(isAuthenticated ? [favoritesAction] : []),
+    ...(isAuthenticated ? [{ label: 'Mis operaciones', shortLabel: 'Operaciones', path: '/operations', protected: true, icon: Icons.Activity }] : []),
     { label: 'Cómo funciona', shortLabel: 'Cómo', path: '/about', icon: Icons.Info, desktopAccent: !isAuthenticated },
     { label: 'Ayuda', shortLabel: 'Ayuda', path: '/faq', icon: Icons.Lightbulb, desktopAccent: !isAuthenticated }
   ];
@@ -472,7 +476,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
     ? [
         { label: 'Explorar', shortLabel: 'Explorar', path: '/', icon: Icons.Search },
         favoritesAction,
-        { label: 'Mis reservas', shortLabel: 'Mis reservas', path: '/my-bookings', protected: true, icon: Icons.Calendar },
+        { label: 'Mis operaciones', shortLabel: 'Operaciones', path: '/operations', protected: true, icon: Icons.Activity },
         { label: 'Cómo funciona', shortLabel: 'Cómo funciona', path: '/about', icon: Icons.Info },
         { label: 'Ayuda', shortLabel: 'Ayuda', path: '/faq', icon: Icons.Lightbulb },
       ]
@@ -482,7 +486,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
     ? [
         { label: 'Explorar', shortLabel: 'Explorar', path: '/', icon: Icons.Search },
         favoritesAction,
-        { label: 'Reservas', shortLabel: 'Reservas', path: '/my-bookings', protected: true, icon: Icons.Calendar },
+        { label: 'Operaciones', shortLabel: 'Operaciones', path: '/operations', protected: true, icon: Icons.Activity },
         { label: 'Perfil', shortLabel: 'Perfil', path: '/profile', protected: true, icon: Icons.User }
       ]
     : showGuestAuthActions

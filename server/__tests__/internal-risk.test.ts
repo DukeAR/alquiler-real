@@ -94,11 +94,12 @@ describe('internal risk moderation rules', () => {
     const decision = await getInternalRiskDecision('user-1', 'create_booking');
 
     expect(decision.blocked).toBe(false);
-    expect(decision.evaluation?.snapshot.level).toBe('none');
+    expect(decision.evaluation?.snapshot.level).toBe('low');
     expect(decision.evaluation?.snapshot.actionLimited).toBe(false);
+    expect(decision.evaluation?.snapshot.riskFlags).toContain('risk_low');
   });
 
-  test('blocks publishing when duplicate listing clusters are detected', async () => {
+  test('lowers exposure for duplicate listing clusters without auto-blocking publication', async () => {
     mockRiskQueries({
       duplicateListingClusters: 1,
       recentPropertiesCount: 1,
@@ -106,11 +107,13 @@ describe('internal risk moderation rules', () => {
 
     const decision = await getInternalRiskDecision('user-1', 'publish_property');
 
-    expect(decision.blocked).toBe(true);
-    expect(decision.reason).toContain('publicaciones muy parecidas');
+    expect(decision.blocked).toBe(false);
+    expect(decision.evaluation?.snapshot.level).toBe('medium');
+    expect(decision.evaluation?.snapshot.visibilityPenalty).toBeGreaterThan(0);
+    expect(decision.evaluation?.snapshot.riskFlags).toContain('risk_medium');
   });
 
-  test('limits new accounts that exceed the daily message cap', async () => {
+  test('records message spam risk for new accounts without immediately blocking chat', async () => {
     mockRiskQueries({
       totalReviews: 0,
       totalProperties: 0,
@@ -124,9 +127,26 @@ describe('internal risk moderation rules', () => {
 
     const decision = await getInternalRiskDecision('user-1', 'send_message');
 
-    expect(decision.blocked).toBe(true);
-    expect(decision.reason).toContain('limite diario de mensajes');
+    expect(decision.blocked).toBe(false);
     expect(decision.evaluation?.snapshot.newAccount).toBe(true);
+    expect(decision.evaluation?.snapshot.level).toBe('medium');
+    expect(decision.evaluation?.snapshot.riskFlags).toContain('risk_medium');
+  });
+
+  test('escalates to manual review only after multiple medium-strength signals accumulate', async () => {
+    mockRiskQueries({
+      duplicateListingClusters: 1,
+      hostCancellationsCount: 2,
+      suspiciousPaymentProofsCount: 1,
+    });
+
+    const decision = await getInternalRiskDecision('user-1', 'publish_property');
+
+    expect(decision.blocked).toBe(true);
+    expect(decision.reason).toBe('Necesitamos confirmar algunos datos antes de habilitar esta accion.');
+    expect(decision.evaluation?.snapshot.level).toBe('high');
+    expect(decision.evaluation?.snapshot.manualReviewRequired).toBe(true);
+    expect(decision.evaluation?.snapshot.riskFlags).toContain('risk_high');
   });
 
   test('keeps boosts locked for immature accounts and unlocks them for stable ones', async () => {

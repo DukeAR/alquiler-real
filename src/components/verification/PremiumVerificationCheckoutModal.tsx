@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import { formatMarketplaceMonetizationPriceLabel } from '../../lib/marketplaceMonetization';
 import {
   formatPremiumPriceLabel,
   type PremiumVerificationOffer,
@@ -22,7 +23,10 @@ export const PremiumVerificationCheckoutModal = ({
   processing = false,
 }: PremiumVerificationCheckoutModalProps) => {
   const [step, setStep] = useState<'details' | 'checkout'>(offer.purchased || offer.completed ? 'checkout' : 'details');
-  const priceLabel = formatPremiumPriceLabel(offer.priceArs, offer.isComplimentary);
+  const monetization = offer.monetization ?? null;
+  const priceLabel = monetization?.price
+    ? (formatMarketplaceMonetizationPriceLabel(monetization.price) ?? formatPremiumPriceLabel(offer.priceArs, offer.isComplimentary))
+    : formatPremiumPriceLabel(offer.priceArs, offer.isComplimentary);
 
   return (
     <motion.div
@@ -64,9 +68,13 @@ export const PremiumVerificationCheckoutModal = ({
 
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/50">
-                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Costo actual</p>
+                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">{monetization?.price?.label ?? 'Costo actual'}</p>
                 <p className="mt-2 text-lg font-semibold text-slate-900 dark:text-slate-100">{priceLabel}</p>
-                {offer.complimentaryReason ? <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">{offer.complimentaryReason}</p> : null}
+                {(monetization?.price?.complimentaryReason || offer.complimentaryReason || monetization?.price?.detail) ? (
+                  <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                    {monetization?.price?.complimentaryReason || offer.complimentaryReason || monetization?.price?.detail}
+                  </p>
+                ) : null}
               </div>
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/50">
                 <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Qué suma</p>
@@ -78,12 +86,32 @@ export const PremiumVerificationCheckoutModal = ({
               </div>
             </div>
 
+            {(monetization?.schedule || monetization?.renewal) ? (
+              <div className="grid gap-4 sm:grid-cols-2">
+                {monetization?.schedule ? (
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/50">
+                    <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Estado de agenda</p>
+                    <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-100">{monetization.schedule.label}</p>
+                    <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">{monetization.schedule.detail}</p>
+                  </div>
+                ) : null}
+                {monetization?.renewal ? (
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/50">
+                    <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Renovación</p>
+                    <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-100">{monetization.renewal.label}</p>
+                    <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">{monetization.renewal.detail}</p>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+
             <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-800/50">
               <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Cómo sigue</p>
               <div className="mt-3 space-y-3 text-sm leading-6 text-slate-700 dark:text-slate-200">
                 <p>1. Confirmás el costo o el cupo sin cargo.</p>
                 <p>2. Registramos esta validación adicional en tu cuenta o en tu aviso.</p>
                 <p>3. Te llevamos al paso necesario para completarla.</p>
+                {monetization?.note ? <p className="text-slate-500 dark:text-slate-400">{monetization.note}</p> : null}
               </div>
             </div>
 
@@ -104,7 +132,7 @@ export const PremiumVerificationCheckoutModal = ({
                   <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">{offer.purchased || offer.completed ? offer.processLabel : offer.checkoutLabel}</p>
                   <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">
                     {offer.purchased || offer.completed
-                      ? 'La validación ya está activa. Podés seguir directo al proceso correspondiente.'
+                      ? monetization?.schedule?.detail || 'La validación ya está activa. Podés seguir directo al proceso correspondiente.'
                       : 'Confirmamos el costo y te llevamos directo al proceso, sin pasos extra.'}
                   </p>
                 </div>

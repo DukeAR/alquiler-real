@@ -14,7 +14,7 @@ type ProtectedDepositRefundRulesProps = {
 
 export const ProtectedDepositRefundRules: React.FC<ProtectedDepositRefundRulesProps> = ({
   className,
-  detailLabel = 'Ver detalle de devolución y alcance',
+  detailLabel = 'Ver alcance y revisión manual',
 }) => {
   return (
     <div className={cn('rounded-[24px] border border-brand/15 bg-brand/5 p-4 text-slate-700', className)}>
@@ -23,7 +23,7 @@ export const ProtectedDepositRefundRules: React.FC<ProtectedDepositRefundRulesPr
           <Icons.ShieldAlert className="h-4 w-4" />
         </span>
         <div className="space-y-1.5">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-brand">Reglas de devolución</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-brand">Alcance de Seña Protegida</p>
           <p className="text-sm font-semibold leading-6 text-slate-950">{PROTECTED_DEPOSIT_REFUND_PRIMARY}</p>
         </div>
       </div>
@@ -36,7 +36,7 @@ export const ProtectedDepositRefundRules: React.FC<ProtectedDepositRefundRulesPr
 
         <div className="mt-3 space-y-3 border-t border-slate-200/80 pt-3 text-sm leading-6 text-slate-600">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">No corresponde devolución si</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">No abre devolución automática si</p>
             <ul className="mt-2 space-y-1.5">
               {PROTECTED_DEPOSIT_REFUND_EXCLUSIONS.map((item) => (
                 <li key={item} className="flex items-start gap-2">

@@ -435,9 +435,10 @@ describe('MyBookings', () => {
     );
 
     expect(await screen.findAllByText('Seña protegida')).not.toHaveLength(0);
+    expect(screen.getByText('Timeline operativo')).toBeInTheDocument();
     expect(screen.queryByText('Pendiente seña')).not.toBeInTheDocument();
-    expect(screen.getByText('La reserva ya quedó marcada con seña protegida. Por ahora solo ves el costo por operación y el estado base: el cobro todavía no se procesa dentro de la app.')).toBeInTheDocument();
-    expect(screen.getByText('Qué implica la seña protegida')).toBeInTheDocument();
+    expect(screen.getByText('La reserva ya quedó marcada con seña protegida. Cuando la seña se registre, queda retenida hasta check-in. Por ahora solo ves el costo por protección de operación y el estado base: el cobro todavía no se procesa dentro de la app.')).toBeInTheDocument();
+    expect(screen.getByText('Alcance de la seña protegida')).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /Abrir chat/i }).length).toBeGreaterThan(0);
     expect(selectExternalDepositMock).not.toHaveBeenCalled();
     expect(selectProtectedDepositMock).not.toHaveBeenCalled();
@@ -494,10 +495,10 @@ describe('MyBookings', () => {
     );
 
     expect(await screen.findByRole('button', { name: /Usar Seña Protegida/i })).toBeInTheDocument();
-    expect(screen.getByText('La seña protegida se devuelve solo si la propiedad no existe o si el huésped no puede ingresar.')).toBeInTheDocument();
+    expect(screen.getByText('Si se reporta que la propiedad no existe o que no hubo acceso, la seña protegida pasa a revisión manual.')).toBeInTheDocument();
     expect(
       await screen.findByText(
-        'Hoy siguen coordinando por chat. Si cambiás de idea antes de pagar, todavía podés usar Seña Protegida.',
+        'Solo aplica cuando elegís Seña Protegida y se muestra antes de confirmar.',
         { selector: 'p' },
       )
     ).toBeInTheDocument();
@@ -510,7 +511,7 @@ describe('MyBookings', () => {
 
     expect(showToastMock).toHaveBeenCalledWith(
       'Seña Protegida',
-      'La reserva quedó lista para usar Seña Protegida. Vas a ver el costo por operación antes de pagar.',
+      'La reserva quedó lista para registrar una seña protegida. Vas a ver el costo por protección de operación antes de pagar.',
       'success',
     );
   });
@@ -602,10 +603,10 @@ describe('MyBookings', () => {
 
     expect(await screen.findAllByText('Check-in confirmado')).not.toHaveLength(0);
     expect(screen.getAllByText('Ya registraste que llegaste a la propiedad.')).not.toHaveLength(0);
-    expect(screen.getAllByText('Ahora falta que el anfitrión confirme el acceso para liberar la seña.')).not.toHaveLength(0);
+    expect(screen.getAllByText('Ahora falta que el anfitrión confirme el acceso para dejar la seña lista para liberarse al anfitrión.')).not.toHaveLength(0);
     expect(showToastMock).toHaveBeenCalledWith(
       'Ingreso confirmado',
-      'Tu confirmación ya quedó registrada. Ahora falta que el anfitrión confirme el acceso para liberar la seña.',
+      'Tu confirmación ya quedó registrada. Ahora falta que el anfitrión confirme el acceso para dejar la seña lista para liberarse al anfitrión.',
       'success',
     );
   });
@@ -637,7 +638,16 @@ describe('MyBookings', () => {
       userId: 'user-1',
       status: 'confirmed',
       requestMode: 'protected',
-      depositStatus: 'review',
+      depositStatus: 'manual_review',
+      depositPaymentReference: 'dep-ref-123',
+      manualReviewReason: 'guest_checkin_without_host_access_confirmation',
+      manualReviewOpenedAt: '2026-09-14T14:35:00.000Z',
+      guestCheckinConfirmed: true,
+      guestCheckinConfirmedAt: '2026-09-14T14:10:00.000Z',
+      guestCheckinLatitude: -34.6037,
+      guestCheckinLongitude: -58.3816,
+      guestCheckinAccuracyMeters: 18,
+      hostAccessConfirmed: false,
       propertyTitle: 'Cabaña entre pinos',
       location: 'Villa La Angostura',
       startDate: arrivalDate,
@@ -659,12 +669,13 @@ describe('MyBookings', () => {
       expect(reportArrivalProblemMock).toHaveBeenCalledWith('booking-protected-3');
     });
 
-    expect(await screen.findAllByText('Revisión manual')).not.toHaveLength(0);
-    expect(screen.getAllByText('Quedó reportado un problema en esta reserva.')).not.toHaveLength(0);
-    expect(screen.getByText('La plataforma está revisando qué pasó antes de definir cómo sigue.')).toBeInTheDocument();
+    expect(await screen.findAllByText('En revisión manual')).not.toHaveLength(0);
+  expect(screen.getAllByText('Vamos a revisar la información disponible: chat, comprobante, confirmaciones y ubicación registrada.')).not.toHaveLength(0);
+    expect(screen.getByText('El huésped confirmó la llegada pero falta la confirmación de acceso del anfitrión')).toBeInTheDocument();
+    expect(screen.getByText('Referencia dep-ref-123')).toBeInTheDocument();
     expect(showToastMock).toHaveBeenCalledWith(
       'Seña en revisión',
-      'El problema quedó informado y la seña pasó a revisión.',
+      'El problema quedó informado y la seña pasó a revisión manual.',
       'success',
     );
   });
@@ -725,7 +736,7 @@ describe('MyBookings', () => {
         userId: 'user-1',
         status: 'cancelled',
         requestMode: 'protected',
-        depositStatus: 'review',
+        depositStatus: 'manual_review',
         cancellationActor: 'guest',
       },
     });

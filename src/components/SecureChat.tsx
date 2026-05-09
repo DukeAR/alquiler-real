@@ -11,15 +11,21 @@ import {
 import { useAuth } from '../hooks/useAuth';
 import { type ReservationRequestContext } from '../types';
 import { formatBookingDateShort, getBookingDateOnlyValue, isBookingCheckInReached } from '../lib/bookingDates';
+import { getContextualTrustLevelFromItems, getGuestChatOnboardingTip } from '../lib/contextualOnboarding';
+import { buildProtectedOperationMonetizationPlan, formatMarketplaceMonetizationPriceLabel } from '../lib/marketplaceMonetization';
 import { getProtectedDepositPricingFromBooking } from '../lib/protectedDeposit';
-import { getReservationFlowCopy, getReservationVisibleStatus } from '../lib/reservationFlow';
+import { normalizeReservationDepositStatus } from '../lib/protectedDepositStatus';
+import { getReservationFlowCopy, getReservationFlowTimeline, getReservationVisibleStatus } from '../lib/reservationFlow';
 import { getHostTrust } from '../lib/hostTrust';
 import { trackFrontendFunnelEvent } from '../lib/funnelTracking';
 import { DepositChoiceBlock } from './ui/DepositChoiceBlock';
+import { ContextualTip } from './ui/ContextualTip';
+import { ProtectedDepositManualReviewState } from './ui/ProtectedDepositManualReviewState';
 import { ProtectedDepositRefundRules } from './ui/ProtectedDepositRefundRules';
+import { ReservationOperationTimeline } from './ui/ReservationOperationTimeline';
 import { ReservationConfirmedState } from './ui/ReservationConfirmedState';
 import { SystemEventMessage } from './ui/SystemEventMessage';
-import type { TrustSignal } from './ui/TrustSignalsInline';
+import { getTrustSignalsFromItems, type TrustSignal } from './ui/TrustSignalsInline';
 
 type InlineThreadNoticeTone = 'neutral' | 'warning' | 'brand';
 
@@ -75,7 +81,20 @@ const containsTransferKeywords = (value?: string) => {
   return /\b(transferencia|transferir|cbu|alias)\b/.test(normalizeSafetyText(value));
 };
 
-const containsExternalContactData = (value?: string) => {
+const containsOffPlatformIntent = (value?: string) => {
+  if (!value) {
+    return false;
+  }
+
+  const normalizedValue = normalizeSafetyText(value);
+
+  return /\b(por fuera|fuera de la app|fuera de alquiler real|sin la app|por privado|en privado)\b/.test(normalizedValue)
+    || /\b(cerramos afuera|arreglamos afuera|seguimos afuera|coordinamos afuera|operamos afuera)\b/.test(normalizedValue)
+    || /\b(pasame tu numero|te paso mi numero|hablame por|escribime por)\b/.test(normalizedValue)
+    || /\b(sin comision|sin comisiones)\b/.test(normalizedValue);
+};
+
+const containsExternalCoordinationRisk = (value?: string) => {
   if (!value) {
     return false;
   }
@@ -89,7 +108,8 @@ const containsExternalContactData = (value?: string) => {
     || emailRegex.test(value)
     || linkRegex.test(value)
     || /\b(instagram|insta|ig)\b/.test(normalizedValue)
-    || /\b(whatsapp|whats|wsp|wpp|wa\.me)\b/.test(normalizedValue);
+    || /\b(whatsapp|whats|wsp|wpp|wa\.me)\b/.test(normalizedValue)
+    || containsOffPlatformIntent(value);
 };
 
 const sortThreadTimeline = (items: Message[]) => items
@@ -388,32 +408,24 @@ const formatNightlyPriceLabel = (value?: number | null) => {
   return `${currencyFormatter.format(value)}/noche`;
 };
 
-type HostVerificationSummary = {
-  level: 'low' | 'medium' | 'high';
-  label: string;
-  tone: NonNullable<TrustSignal['tone']>;
-};
-
-const getHostVerificationSummary = (conversation: Conversation | null): HostVerificationSummary | null => {
-  if (!conversation || (!conversation.hostTrust && typeof conversation.hostTrustScore !== 'number')) {
-    return null;
+const getHostTrustSignalMeta = (key: string) => {
+  if (key === 'identity' || key === 'onsite') {
+    return {
+      tone: 'success' as const,
+      icon: <Icons.BadgeCheck className="h-3.5 w-3.5" />,
+    };
   }
 
-  const hostTrust = getHostTrust({
-    hostTrust: conversation.hostTrust,
-    hostTrustScore: conversation.hostTrustScore,
-  });
-
-  if (!(hostTrust.score > 0 || (conversation.hostTrust?.items?.length ?? 0) > 0)) {
-    return null;
+  if (key === 'response') {
+    return {
+      tone: 'brand' as const,
+      icon: <Icons.Clock className="h-3.5 w-3.5" />,
+    };
   }
-
-  const levelLabel = hostTrust.level === 'high' ? 'alta' : hostTrust.level === 'medium' ? 'media' : 'baja';
 
   return {
-    level: hostTrust.level,
-    label: `Verificación ${levelLabel}`,
-    tone: hostTrust.level === 'high' ? 'success' : hostTrust.level === 'medium' ? 'brand' : 'neutral',
+    tone: 'neutral' as const,
+    icon: <Icons.Calendar className="h-3.5 w-3.5" />,
   };
 };
 
@@ -423,20 +435,33 @@ const buildHostContextSignals = (conversation: Conversation | null) => {
   }
 
   const signals: TrustSignal[] = [];
-  const hostVerificationSummary = getHostVerificationSummary(conversation);
+  const seenLabels = new Set<string>();
+  const pushSignal = (signal: TrustSignal | null) => {
+    if (!signal?.label || seenLabels.has(signal.label) || signals.length >= 3) {
+      return;
+    }
 
-  if (hostVerificationSummary) {
-    signals.push({
-      key: 'host-verification-level',
-      label: `Nivel de verificación: ${hostVerificationSummary.label.replace('Verificación ', '')}`,
-      tone: hostVerificationSummary.tone,
-      icon: <Icons.BadgeCheck className="h-3.5 w-3.5" />,
+    seenLabels.add(signal.label);
+    signals.push(signal);
+  };
+
+  const hostTrust = getHostTrust({
+    hostTrust: conversation.hostTrust,
+  });
+
+  getTrustSignalsFromItems(hostTrust.items, { limit: 3, tone: 'brand' }).forEach((signal) => {
+    const meta = getHostTrustSignalMeta(signal.key);
+
+    pushSignal({
+      ...signal,
+      tone: meta.tone,
+      icon: meta.icon,
     });
-  }
+  });
 
   const responseTimeLabel = formatHostResponseTimeLabel(conversation.hostInteractionHistory?.avgResponseTimeMinutes);
-  if (responseTimeLabel) {
-    signals.push({
+  if (responseTimeLabel && !hostTrust.items.some((item) => item.key === 'response' && item.status === 'complete')) {
+    pushSignal({
       key: 'host-response-time',
       label: responseTimeLabel,
       tone: 'neutral',
@@ -445,8 +470,8 @@ const buildHostContextSignals = (conversation: Conversation | null) => {
   }
 
   const memberSinceLabel = formatHostMemberSinceLabel(conversation.hostMemberSince);
-  if (memberSinceLabel) {
-    signals.push({
+  if (memberSinceLabel && !hostTrust.items.some((item) => item.key === 'tenure' && item.status === 'complete')) {
+    pushSignal({
       key: 'host-member-since',
       label: memberSinceLabel,
       tone: 'neutral',
@@ -551,26 +576,34 @@ const getEffectiveDepositType = (input: {
   mode?: ReservationRequestContext['mode'] | null;
   depositType?: ReservationRequestContext['depositType'] | Conversation['depositType'];
   depositStatus?: ReservationRequestContext['depositStatus'] | Conversation['depositStatus'];
+  guestCheckinConfirmed?: Conversation['guestCheckinConfirmed'];
+  hostAccessConfirmed?: Conversation['hostAccessConfirmed'];
 }) => {
+  const normalizedDepositStatus = normalizeReservationDepositStatus(input.depositStatus, {
+    guestCheckinConfirmed: input.guestCheckinConfirmed,
+    hostAccessConfirmed: input.hostAccessConfirmed,
+  });
+
   if (input.depositType === 'external' || input.depositType === 'protected') {
     return input.depositType;
   }
 
   if (
-    input.depositStatus === 'checkout_pending'
-    || input.depositStatus === 'held'
-    || input.depositStatus === 'review'
-    || input.depositStatus === 'pending_confirmation'
-    || input.depositStatus === 'released'
-    || input.depositStatus === 'refunded'
+    normalizedDepositStatus === 'checkout_pending'
+    || normalizedDepositStatus === 'held'
+    || normalizedDepositStatus === 'guest_checkin_confirmed'
+    || normalizedDepositStatus === 'host_access_confirmed'
+    || normalizedDepositStatus === 'manual_review'
+    || normalizedDepositStatus === 'deposit_released'
+    || normalizedDepositStatus === 'refunded'
   ) {
     return 'protected' as const;
   }
 
   if (
-    input.depositStatus === 'external_pending'
-    || input.depositStatus === 'reported'
-    || input.depositStatus === 'confirmed'
+    normalizedDepositStatus === 'external_pending'
+    || normalizedDepositStatus === 'reported'
+    || normalizedDepositStatus === 'confirmed'
   ) {
     return 'external' as const;
   }
@@ -603,6 +636,8 @@ const getActiveRequestContext = (
     mode: requestMode,
     depositType: activeConversation.depositType,
     depositStatus: activeConversation.depositStatus,
+    guestCheckinConfirmed: activeConversation.guestCheckinConfirmed,
+    hostAccessConfirmed: activeConversation.hostAccessConfirmed,
   });
 
   if (requestMode && startDate && endDate) {
@@ -879,12 +914,6 @@ export const SecureChat: React.FC<SecureChatProps> = ({
 
     if (!messageText || !activeConv || !user) return;
 
-    if (containsExternalContactData(messageText)) {
-      setComposerWarning(EXTERNAL_CONTACT_WARNING);
-      setError(null);
-      return;
-    }
-
     const receiverId = user.id === activeConv.tenant_id ? activeConv.host_id : activeConv.tenant_id;
     const optimisticId = `opt-${Date.now()}`;
     const previousConversationPreview = {
@@ -1034,9 +1063,16 @@ export const SecureChat: React.FC<SecureChatProps> = ({
     depositStatus?: Conversation['depositStatus'];
     protectedDepositPricing?: Conversation['protectedDepositPricing'];
     depositPaymentReference?: Conversation['depositPaymentReference'];
+    manualReviewReason?: Conversation['manualReviewReason'];
+    manualReviewOpenedAt?: Conversation['manualReviewOpenedAt'];
     cancellationActor?: Conversation['cancellationActor'];
     guestCheckinConfirmed?: Conversation['guestCheckinConfirmed'];
+    guestCheckinConfirmedAt?: Conversation['guestCheckinConfirmedAt'];
+    guestCheckinLatitude?: Conversation['guestCheckinLatitude'];
+    guestCheckinLongitude?: Conversation['guestCheckinLongitude'];
+    guestCheckinAccuracyMeters?: Conversation['guestCheckinAccuracyMeters'];
     hostAccessConfirmed?: Conversation['hostAccessConfirmed'];
+    hostAccessConfirmedAt?: Conversation['hostAccessConfirmedAt'];
   }) => {
     setConversations((current) => current.map((conversation) => (
       conversation.booking_id === booking.id
@@ -1047,9 +1083,16 @@ export const SecureChat: React.FC<SecureChatProps> = ({
             depositStatus: booking.depositStatus ?? conversation.depositStatus,
             protectedDepositPricing: booking.protectedDepositPricing ?? conversation.protectedDepositPricing,
             depositPaymentReference: booking.depositPaymentReference ?? conversation.depositPaymentReference,
+            manualReviewReason: booking.manualReviewReason ?? conversation.manualReviewReason,
+            manualReviewOpenedAt: booking.manualReviewOpenedAt ?? conversation.manualReviewOpenedAt,
             cancellationActor: booking.cancellationActor ?? conversation.cancellationActor,
             guestCheckinConfirmed: booking.guestCheckinConfirmed ?? conversation.guestCheckinConfirmed,
+            guestCheckinConfirmedAt: booking.guestCheckinConfirmedAt ?? conversation.guestCheckinConfirmedAt,
+            guestCheckinLatitude: booking.guestCheckinLatitude ?? conversation.guestCheckinLatitude,
+            guestCheckinLongitude: booking.guestCheckinLongitude ?? conversation.guestCheckinLongitude,
+            guestCheckinAccuracyMeters: booking.guestCheckinAccuracyMeters ?? conversation.guestCheckinAccuracyMeters,
             hostAccessConfirmed: booking.hostAccessConfirmed ?? conversation.hostAccessConfirmed,
+            hostAccessConfirmedAt: booking.hostAccessConfirmedAt ?? conversation.hostAccessConfirmedAt,
           }
         : conversation
     )));
@@ -1062,9 +1105,16 @@ export const SecureChat: React.FC<SecureChatProps> = ({
             depositStatus: booking.depositStatus ?? current.depositStatus,
             protectedDepositPricing: booking.protectedDepositPricing ?? current.protectedDepositPricing,
             depositPaymentReference: booking.depositPaymentReference ?? current.depositPaymentReference,
+            manualReviewReason: booking.manualReviewReason ?? current.manualReviewReason,
+            manualReviewOpenedAt: booking.manualReviewOpenedAt ?? current.manualReviewOpenedAt,
             cancellationActor: booking.cancellationActor ?? current.cancellationActor,
             guestCheckinConfirmed: booking.guestCheckinConfirmed ?? current.guestCheckinConfirmed,
+            guestCheckinConfirmedAt: booking.guestCheckinConfirmedAt ?? current.guestCheckinConfirmedAt,
+            guestCheckinLatitude: booking.guestCheckinLatitude ?? current.guestCheckinLatitude,
+            guestCheckinLongitude: booking.guestCheckinLongitude ?? current.guestCheckinLongitude,
+            guestCheckinAccuracyMeters: booking.guestCheckinAccuracyMeters ?? current.guestCheckinAccuracyMeters,
             hostAccessConfirmed: booking.hostAccessConfirmed ?? current.hostAccessConfirmed,
+            hostAccessConfirmedAt: booking.hostAccessConfirmedAt ?? current.hostAccessConfirmedAt,
           }
         : current
     ));
@@ -1132,7 +1182,7 @@ export const SecureChat: React.FC<SecureChatProps> = ({
         depositPaymentReference: booking.depositPaymentReference,
       });
       await loadMessages(activeConv.id);
-      showToast('Seña protegida', 'La reserva volvió a quedar marcada con seña protegida. Por ahora no procesamos pagos dentro de la app.', 'success');
+      showToast('Seña protegida', 'La reserva volvió a quedar marcada con seña protegida. Cuando la seña se registre, queda retenida hasta check-in.', 'success');
     } catch (err) {
       showToast('Seña', err instanceof Error ? err.message : 'No pudimos registrar esta elección.', 'error');
     } finally {
@@ -1231,7 +1281,7 @@ export const SecureChat: React.FC<SecureChatProps> = ({
         }
 
         if (confirmation.confirmed) {
-          showToast('Seña registrada', 'La seña quedó registrada y ya pueden seguir por este chat.', 'success');
+          showToast('Seña registrada', 'La seña quedó registrada y retenida hasta check-in. Ya pueden seguir por este chat.', 'success');
         } else {
           showToast('Pago pendiente', 'Mercado Pago todavía no terminó de confirmar la seña. Si hace falta, podés reabrir el pago desde este chat.', 'info');
         }
@@ -1265,7 +1315,13 @@ export const SecureChat: React.FC<SecureChatProps> = ({
         hostAccessConfirmed: booking.hostAccessConfirmed,
       });
       await loadMessages(activeConv.id);
-      showToast('Ingreso confirmado', 'Tu confirmación ya quedó registrada. Ahora falta que el anfitrión confirme el acceso para liberar la seña.', 'success');
+      showToast(
+        'Ingreso confirmado',
+        booking.depositStatus === 'deposit_released' && booking.guestCheckinConfirmed && booking.hostAccessConfirmed
+          ? 'La seña queda lista para liberarse al anfitrión.'
+          : 'Tu confirmación ya quedó registrada. Ahora falta que el anfitrión confirme el acceso para dejar la seña lista para liberarse al anfitrión.',
+        'success',
+      );
     } catch (err) {
       showToast('Llegada', err instanceof Error ? err.message : 'No pudimos confirmar la llegada.', 'error');
     } finally {
@@ -1293,7 +1349,13 @@ export const SecureChat: React.FC<SecureChatProps> = ({
         hostAccessConfirmed: booking.hostAccessConfirmed,
       });
       await loadMessages(activeConv.id);
-      showToast('Acceso confirmado', 'El acceso quedó confirmado y la seña ya salió de custodia.', 'success');
+      showToast(
+        'Acceso confirmado',
+        booking.depositStatus === 'deposit_released' && booking.guestCheckinConfirmed && booking.hostAccessConfirmed
+          ? 'La seña queda lista para liberarse al anfitrión.'
+          : 'El acceso quedó confirmado. Ahora falta que el huésped confirme la llegada para dejar la seña lista para liberarse al anfitrión.',
+        'success',
+      );
     } catch (err) {
       showToast('Acceso', err instanceof Error ? err.message : 'No pudimos confirmar el acceso.', 'error');
     } finally {
@@ -1317,10 +1379,19 @@ export const SecureChat: React.FC<SecureChatProps> = ({
         depositStatus: booking.depositStatus,
         protectedDepositPricing: booking.protectedDepositPricing,
         depositPaymentReference: booking.depositPaymentReference,
+        manualReviewReason: booking.manualReviewReason,
+        manualReviewOpenedAt: booking.manualReviewOpenedAt,
         cancellationActor: booking.cancellationActor,
+        guestCheckinConfirmed: booking.guestCheckinConfirmed,
+        guestCheckinConfirmedAt: booking.guestCheckinConfirmedAt,
+        guestCheckinLatitude: booking.guestCheckinLatitude,
+        guestCheckinLongitude: booking.guestCheckinLongitude,
+        guestCheckinAccuracyMeters: booking.guestCheckinAccuracyMeters,
+        hostAccessConfirmed: booking.hostAccessConfirmed,
+        hostAccessConfirmedAt: booking.hostAccessConfirmedAt,
       });
       await loadMessages(activeConv.id);
-      showToast('Seña en revisión', 'El problema quedó informado y la seña pasó a revisión.', 'success');
+      showToast('Seña en revisión', 'El problema quedó informado y la seña pasó a revisión manual.', 'success');
     } catch (err) {
       showToast('Problema', err instanceof Error ? err.message : 'No pudimos registrar el problema. Intentá de nuevo.', 'error');
     } finally {
@@ -1375,7 +1446,7 @@ export const SecureChat: React.FC<SecureChatProps> = ({
         message: buildStarterQuestionMessage(question.key, activeRequestContext),
       }))
     : [];
-  const hostVerificationSummary = isTenantConversation ? getHostVerificationSummary(activeConv) : null;
+  const chatTrustLevel = getContextualTrustLevelFromItems(activeConv?.hostTrust?.items ?? null);
   const hostContextSignals = isTenantConversation ? buildHostContextSignals(activeConv) : [];
   const headerNightlyPrice = formatNightlyPriceLabel(activeConv?.propertyPrice ?? activeRequestContext?.nightly ?? null);
   const contextSummaryLine = activeRequestContext
@@ -1390,6 +1461,10 @@ export const SecureChat: React.FC<SecureChatProps> = ({
     : null;
   const isRequestExpired = Boolean(requestDeadline && Date.now() > requestDeadline.getTime());
   const isExpiredPendingRequest = Boolean(flowCopy?.stage === 'request-pending' && isRequestExpired);
+  const chatRequestMode = activeRequestContext?.mode ?? inferConversationMode(activeConv) ?? 'none';
+  const chatOnboardingTip = isTenantConversation
+    ? getGuestChatOnboardingTip(chatTrustLevel, chatRequestMode)
+    : null;
   const counterpartyId = user && activeConv
     ? user.id === activeConv.tenant_id
       ? activeConv.host_id
@@ -1415,6 +1490,22 @@ export const SecureChat: React.FC<SecureChatProps> = ({
       isExpiredPendingRequest,
     },
   );
+  const reservationTimeline = activeRequestContext
+    ? getReservationFlowTimeline({
+        mode: activeRequestContext.mode,
+        depositType: activeRequestContext.depositType,
+        requestStatus: activeRequestContext.requestStatus,
+        bookingStatus: activeRequestContext.bookingStatus,
+        depositStatus: activeRequestContext.depositStatus,
+        cancellationActor: activeRequestContext.cancellationActor,
+        startDate: activeRequestContext.startDate,
+        guestCheckinConfirmed: activeRequestContext.guestCheckinConfirmed,
+        hostAccessConfirmed: activeRequestContext.hostAccessConfirmed,
+        viewerRole,
+        isExpiredPendingRequest,
+      })
+    : null;
+  const headerReservationStatus = reservationTimeline?.status ?? compactReservationStatus;
   const shouldShowHostClosingChips = Boolean(
     isHostConversation
     && canAcceptRequest
@@ -1441,6 +1532,7 @@ export const SecureChat: React.FC<SecureChatProps> = ({
   const protectedDepositPreview = activeRequestContext
     ? activeRequestContext.protectedDepositPricing ?? getProtectedDepositPricingFromBooking(activeRequestContext)
     : null;
+  const protectedOperationPlan = buildProtectedOperationMonetizationPlan(protectedDepositPreview);
   const canChooseExternalDeposit = Boolean(isTenantConversation && flowCopy?.stage === 'deposit-choice' && activeRequestContext?.bookingId);
   const canChooseProtectedDeposit = Boolean(isTenantConversation && flowCopy?.stage === 'deposit-choice' && activeRequestContext?.bookingId);
   const showHostDepositChoicePreview = Boolean(isHostConversation && flowCopy?.stage === 'deposit-choice');
@@ -1515,7 +1607,7 @@ export const SecureChat: React.FC<SecureChatProps> = ({
       : canConfirmArrival || canReportArrivalProblem
       ? 'Hoy ya podés confirmar cómo salió el ingreso o avisar si hubo un problema.'
       : canPayProtectedDeposit
-        ? 'Si quieren cerrarlo ahora, la seña queda registrada desde esta conversación.'
+        ? 'Si quieren cerrarlo ahora, la seña queda registrada y retenida hasta check-in desde esta conversación.'
         : showDepositChoiceBlock
           ? 'Acá definen cómo sigue la seña y qué parte queda registrada dentro de la app.'
           : canAcceptRequest
@@ -1745,8 +1837,8 @@ export const SecureChat: React.FC<SecureChatProps> = ({
           : 'Ahora elegí cómo querés avanzar.'
         : activeRequestContext?.mode === 'protected'
             ? protectedDepositPreview
-              ? `La reserva ya quedó marcada con seña protegida. Costo estimado: ${currencyFormatter.format(protectedDepositPreview.depositAmount)} + fee ${currencyFormatter.format(protectedDepositPreview.serviceFee)} = ${currencyFormatter.format(protectedDepositPreview.totalCharge)}. Por ahora no procesamos el cobro dentro de la app.`
-              : 'La reserva ya quedó marcada con seña protegida. Por ahora solo mostramos el estado base, sin procesar pagos dentro de la app.'
+            ? `La reserva ya quedó marcada con seña protegida. Costo estimado: ${currencyFormatter.format(protectedDepositPreview.depositAmount)} + ${protectedOperationPlan?.price?.label?.toLowerCase() ?? 'costo por protección de operación'} ${formatMarketplaceMonetizationPriceLabel(protectedOperationPlan?.price ?? null) ?? currencyFormatter.format(protectedDepositPreview.serviceFee)} = ${currencyFormatter.format(protectedDepositPreview.totalCharge)}. Cuando la seña se registre, queda retenida hasta check-in. Por ahora no procesamos el cobro dentro de la app.`
+            : 'La reserva ya quedó marcada con seña protegida. Cuando la seña se registre, queda retenida hasta check-in. Por ahora solo mostramos el costo por protección de operación y el estado base, sin procesar pagos dentro de la app.'
           : canReportDirectDeposit
               ? 'Si ya resolvieron algo por fuera dentro de un flujo viejo, podés dejarlo asentado por acá.'
               : 'Siguen coordinando por este chat. La app no retiene dinero ni interviene en pagos externos.';
@@ -1895,103 +1987,89 @@ export const SecureChat: React.FC<SecureChatProps> = ({
           <h2 className="mt-1 text-xl font-black uppercase tracking-tight text-slate-950 dark:text-white">Mensajes</h2>
           <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">Seguí la consulta, verificá el contexto y cerrá todo sin salir de Alquiler Real.</p>
         </div>
-
-        {error && !activeConv && (
-          <div className="m-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/30 rounded-xl flex items-start gap-2">
-            <Icons.AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
-            <p className="text-xs text-red-600 dark:text-red-400 font-medium">{error}</p>
-          </div>
-        )}
-
         <div className="flex-1 space-y-2 overflow-y-auto p-3 sm:p-4">
-          {conversations.length === 0 && !error ? (
-            <div className="text-center py-12 text-slate-400 text-xs font-bold uppercase tracking-widest">Todavía no tenés conversaciones</div>
-          ) : (
-            conversations.map((c) => (
-              (() => {
-                const previewCounterpartyName = user?.id === c.tenant_id ? c.hostName : c.tenantName;
-                const preview = getConversationListPreview(
-                  c,
-                  user?.id === c.host_id ? 'host' : 'guest',
-                  initialConversationId,
-                  initialRequestContext,
-                );
-                const previewMeta = [preview.dateRange, preview.guestsLabel].filter(Boolean).join(' · ') || 'Chat dentro de Alquiler Real';
-                const previewLabel = [
-                  `Abrir conversacion sobre ${c.propertyTitle || 'esta propiedad'}`,
-                  previewCounterpartyName ? `Con ${previewCounterpartyName}` : null,
-                  preview.previewText,
-                  preview.readState.label,
-                  preview.status.label,
-                ].filter(Boolean).join(' · ');
+          {conversations.map((c) => {
+            const previewCounterpartyName = user?.id === c.tenant_id ? c.hostName : c.tenantName;
+            const preview = getConversationListPreview(
+              c,
+              user?.id === c.host_id ? 'host' : 'guest',
+              initialConversationId,
+              initialRequestContext,
+            );
+            const previewMeta = [preview.dateRange, preview.guestsLabel].filter(Boolean).join(' · ') || 'Chat dentro de Alquiler Real';
+            const previewLabel = [
+              `Abrir conversacion sobre ${c.propertyTitle || 'esta propiedad'}`,
+              previewCounterpartyName ? `Con ${previewCounterpartyName}` : null,
+              preview.previewText,
+              preview.readState.label,
+              preview.status.label,
+            ].filter(Boolean).join(' · ');
 
-                return (
-                  <button
-                    key={c.id}
-                    aria-label={previewLabel}
-                    onClick={() => setActiveConv(c)}
-                    className={cn(
-                      "flex w-full items-start gap-4 rounded-[28px] border p-3.5 text-left transition-all sm:p-4",
-                      activeConv?.id === c.id
-                        ? "border-brand/15 bg-brand/8 text-slate-900 shadow-[0_22px_46px_-36px_rgba(67,56,202,0.38)] dark:border-brand/20 dark:bg-brand/10 dark:text-white"
-                        : "border-slate-200/70 bg-white hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:hover:border-slate-700 dark:hover:bg-slate-900"
-                    )}
-                  >
-                    <div className="h-14 w-14 shrink-0 overflow-hidden rounded-[22px] bg-slate-100 dark:bg-slate-800">
-                      {c.propertyImage ? (
-                        <img src={c.propertyImage} alt={c.propertyTitle || 'Propiedad'} className="h-full w-full object-cover" />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center">
-                          <Icons.Home className="h-4 w-4 text-slate-400" />
-                        </div>
-                      )}
+            return (
+              <button
+                key={c.id}
+                aria-label={previewLabel}
+                onClick={() => setActiveConv(c)}
+                className={cn(
+                  'flex w-full items-start gap-4 rounded-[28px] border p-3.5 text-left transition-all sm:p-4',
+                  activeConv?.id === c.id
+                    ? 'border-brand/15 bg-brand/8 text-slate-900 shadow-[0_22px_46px_-36px_rgba(67,56,202,0.38)] dark:border-brand/20 dark:bg-brand/10 dark:text-white'
+                    : 'border-slate-200/70 bg-white hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:hover:border-slate-700 dark:hover:bg-slate-900',
+                )}
+              >
+                <div className="h-14 w-14 shrink-0 overflow-hidden rounded-[22px] bg-slate-100 dark:bg-slate-800">
+                  {c.propertyImage ? (
+                    <img src={c.propertyImage} alt={c.propertyTitle || 'Propiedad'} className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center">
+                      <Icons.Home className="h-4 w-4 text-slate-400" />
                     </div>
-                    <div className="min-w-0 flex-1 space-y-2">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 space-y-1">
-                          <p className="truncate text-sm font-semibold tracking-tight text-slate-950 dark:text-white">
-                            {c.propertyTitle || 'Propiedad'}
-                          </p>
-                          <p className={cn(
-                            "truncate text-[10px] font-black uppercase tracking-[0.16em] leading-tight",
-                            activeConv?.id === c.id ? "text-brand dark:text-brand-light" : "text-slate-400 dark:text-slate-500"
-                          )}>
-                            {previewCounterpartyName ? `Con ${previewCounterpartyName}` : 'Conversación abierta'}
-                          </p>
-                        </div>
-                        <span className={cn(
-                          'shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]',
-                          compactReservationStatusToneClasses[preview.status.tone],
-                        )}>
-                          {preview.status.label}
-                        </span>
-                      </div>
-                      <p className={cn(
-                        'truncate text-sm leading-6',
-                        preview.readState.unread
-                          ? 'font-semibold text-slate-900 dark:text-white'
-                          : 'text-slate-500 dark:text-slate-300',
-                      )}>
-                        {preview.previewText}
+                  )}
+                </div>
+                <div className="min-w-0 flex-1 space-y-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 space-y-1">
+                      <p className="truncate text-sm font-semibold tracking-tight text-slate-950 dark:text-white">
+                        {c.propertyTitle || 'Propiedad'}
                       </p>
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="truncate text-[11px] leading-5 text-slate-400 dark:text-slate-500">{previewMeta}</p>
-                        <span className={cn(
-                          'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]',
-                          preview.readState.unread
-                            ? 'border-brand/15 bg-brand/8 text-brand dark:border-brand/20 dark:bg-brand/10 dark:text-brand-light'
-                            : 'border-slate-200 bg-white text-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300',
-                        )}>
-                          <span className={cn('h-1.5 w-1.5 rounded-full', preview.readState.unread ? 'bg-brand' : 'bg-slate-300 dark:bg-slate-600')} />
-                          <span>{preview.readState.label}</span>
-                        </span>
-                      </div>
+                      <p className={cn(
+                        'truncate text-[10px] font-black uppercase tracking-[0.16em] leading-tight',
+                        activeConv?.id === c.id ? 'text-brand dark:text-brand-light' : 'text-slate-400 dark:text-slate-500',
+                      )}>
+                        {previewCounterpartyName ? `Con ${previewCounterpartyName}` : 'Conversación abierta'}
+                      </p>
                     </div>
-                  </button>
-                );
-              })()
-            ))
-          )}
+                    <span className={cn(
+                      'shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]',
+                      compactReservationStatusToneClasses[preview.status.tone],
+                    )}>
+                      {preview.status.label}
+                    </span>
+                  </div>
+                  <p className={cn(
+                    'truncate text-sm leading-6',
+                    preview.readState.unread
+                      ? 'font-semibold text-slate-900 dark:text-white'
+                      : 'text-slate-500 dark:text-slate-300',
+                  )}>
+                    {preview.previewText}
+                  </p>
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="truncate text-[11px] leading-5 text-slate-400 dark:text-slate-500">{previewMeta}</p>
+                    <span className={cn(
+                      'inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]',
+                      preview.readState.unread
+                        ? 'border-brand/15 bg-brand/8 text-brand dark:border-brand/20 dark:bg-brand/10 dark:text-brand-light'
+                        : 'border-slate-200 bg-white text-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300',
+                    )}>
+                      <span className={cn('h-1.5 w-1.5 rounded-full', preview.readState.unread ? 'bg-brand' : 'bg-slate-300 dark:bg-slate-600')} />
+                      <span>{preview.readState.label}</span>
+                    </span>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -2035,18 +2113,6 @@ export const SecureChat: React.FC<SecureChatProps> = ({
                           {headerNightlyPrice}
                         </span>
                       ) : null}
-                      {hostVerificationSummary ? (
-                        <span className={cn(
-                          'inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold',
-                          hostVerificationSummary.tone === 'success'
-                            ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-900/20 dark:text-emerald-300'
-                            : hostVerificationSummary.tone === 'brand'
-                              ? 'border-brand/15 bg-brand/8 text-brand dark:border-brand/20 dark:bg-brand/10 dark:text-brand-light'
-                              : 'border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300',
-                        )}>
-                          {hostVerificationSummary.label}
-                        </span>
-                      ) : null}
                     </div>
                   </div>
                 </div>
@@ -2074,11 +2140,20 @@ export const SecureChat: React.FC<SecureChatProps> = ({
                       {chatContextHelper ? (
                         <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">{chatContextHelper}</p>
                       ) : null}
+                      {chatOnboardingTip ? (
+                        <ContextualTip
+                          compact
+                          eyebrow={chatOnboardingTip.eyebrow}
+                          body={chatOnboardingTip.body}
+                          tone={chatOnboardingTip.tone}
+                          className="mt-3 shadow-none"
+                        />
+                      ) : null}
                     </div>
-                    {compactReservationStatus ? (
-                      <p className={cn('inline-flex items-center gap-2 self-start rounded-full border px-3 py-1.5 text-[11px] font-semibold', compactReservationStatusToneClasses[compactReservationStatus.tone])}>
-                        <span className={cn('h-1.5 w-1.5 rounded-full', compactReservationStatus.tone === 'brand' ? 'bg-brand' : compactReservationStatus.tone === 'success' ? 'bg-emerald-500' : compactReservationStatus.tone === 'warning' ? 'bg-amber-500' : 'bg-slate-400')} />
-                        <span>Estado: {compactReservationStatus.label}</span>
+                    {headerReservationStatus ? (
+                      <p className={cn('inline-flex items-center gap-2 self-start rounded-full border px-3 py-1.5 text-[11px] font-semibold', compactReservationStatusToneClasses[headerReservationStatus.tone])}>
+                        <span className={cn('h-1.5 w-1.5 rounded-full', headerReservationStatus.tone === 'brand' ? 'bg-brand' : headerReservationStatus.tone === 'success' ? 'bg-emerald-500' : headerReservationStatus.tone === 'warning' ? 'bg-amber-500' : 'bg-slate-400')} />
+                        <span>Estado: {headerReservationStatus.label}</span>
                       </p>
                     ) : null}
                   </div>
@@ -2102,6 +2177,13 @@ export const SecureChat: React.FC<SecureChatProps> = ({
                         </div>
                       ))}
                     </div>
+                  ) : null}
+
+                  {reservationTimeline ? (
+                    <ReservationOperationTimeline
+                      timeline={reservationTimeline}
+                      className="mt-4 border-slate-200/80 bg-white/82 dark:border-slate-800 dark:bg-slate-950/55"
+                    />
                   ) : null}
                 </div>
 
@@ -2284,6 +2366,24 @@ export const SecureChat: React.FC<SecureChatProps> = ({
                     nextStep="Seguí por este chat para coordinar horario, llegada y acceso."
                   />
                 ) : null}
+
+                {(flowCopy?.stage === 'protected-deposit-review' || flowCopy?.stage === 'protected-no-show-pending') ? (
+                  <ProtectedDepositManualReviewState
+                    stage={flowCopy.stage}
+                    viewerRole={viewerRole}
+                    conversationId={activeConv.id}
+                    depositPaymentReference={activeConv.depositPaymentReference ?? null}
+                    manualReviewReason={activeConv.manualReviewReason ?? null}
+                    manualReviewOpenedAt={activeConv.manualReviewOpenedAt ?? null}
+                    guestCheckinConfirmed={activeConv.guestCheckinConfirmed}
+                    guestCheckinConfirmedAt={activeConv.guestCheckinConfirmedAt ?? null}
+                    guestCheckinLatitude={activeConv.guestCheckinLatitude ?? null}
+                    guestCheckinLongitude={activeConv.guestCheckinLongitude ?? null}
+                    guestCheckinAccuracyMeters={activeConv.guestCheckinAccuracyMeters ?? null}
+                    hostAccessConfirmed={activeConv.hostAccessConfirmed}
+                    hostAccessConfirmedAt={activeConv.hostAccessConfirmedAt ?? null}
+                  />
+                ) : null}
               </div>
             </div>
 
@@ -2305,9 +2405,7 @@ export const SecureChat: React.FC<SecureChatProps> = ({
                         return;
                       }
 
-                      if (composerWarning && !containsExternalContactData(nextValue)) {
-                        setComposerWarning(null);
-                      }
+                      setComposerWarning(containsExternalCoordinationRisk(nextValue) ? EXTERNAL_CONTACT_WARNING : null);
                     }}
                     onKeyDown={(e) => e.key === 'Enter' && handleSend()}
                     placeholder="Escribí tu consulta..."
@@ -2375,16 +2473,20 @@ export const SecureChat: React.FC<SecureChatProps> = ({
                           },
                           {
                             key: 'protected',
-                            eyebrow: 'Opción 2 · Premium opcional',
+                            eyebrow: 'Opción 2 · Retenida hasta check-in',
                             title: 'Usar Seña Protegida',
-                            description: 'La seña queda retenida por Alquiler Real hasta el check-in. Tiene un costo por operación.',
+                            description: 'La seña queda retenida hasta check-in. Tiene un costo por protección de operación y puede pasar a revisión manual si hace falta revisar existencia y acceso.',
                             icon: <Icons.ShieldCheck className="h-5 w-5" />,
                             tone: 'brand',
                             priceLines: protectedDepositPreview ? [
                               { label: 'Seña', value: currencyFormatter.format(protectedDepositPreview.depositAmount) },
-                              { label: 'Fee', value: currencyFormatter.format(protectedDepositPreview.serviceFee) },
+                              {
+                                label: protectedOperationPlan?.price?.label ?? 'Costo por protección de operación',
+                                value: formatMarketplaceMonetizationPriceLabel(protectedOperationPlan?.price ?? null) ?? currencyFormatter.format(protectedDepositPreview.serviceFee),
+                              },
                               { label: 'Total', value: currencyFormatter.format(protectedDepositPreview.totalCharge), emphasize: true },
                             ] : undefined,
+                            helper: protectedOperationPlan?.note,
                             action: showDepositChoiceComposer
                               ? {
                                   label: 'Usar Seña Protegida',

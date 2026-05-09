@@ -3,7 +3,7 @@ import { Icons } from './Icons';
 import { HostProfile } from '../services/geminiService';
 import { getHostResponseSignal } from '../lib/positiveIncentives';
 import { InteractionHistorySignals } from './ui/InteractionHistorySignals';
-import { TrustSignalsInline, type TrustSignal } from './ui/TrustSignalsInline';
+import { TrustSignalsInline, getTrustSignalsFromItems, type TrustSignal } from './ui/TrustSignalsInline';
 
 interface HostProfileViewProps {
   profile: HostProfile;
@@ -54,21 +54,33 @@ export const HostProfileView: React.FC<HostProfileViewProps> = ({ profile, onBac
       : 'Dentro del día'
     : 'Sin dato';
   const headerSignals: TrustSignal[] = [];
+  const seenLabels = new Set<string>();
+  const pushHeaderSignal = (signal: TrustSignal | null) => {
+    if (!signal?.label || seenLabels.has(signal.label) || headerSignals.length >= 4) {
+      return;
+    }
 
-  if (profile.identityValidated) {
-    headerSignals.push({ key: 'identity', label: 'Identidad validada', tone: 'brand' });
-  }
+    seenLabels.add(signal.label);
+    headerSignals.push(signal);
+  };
+
+  getTrustSignalsFromItems(Array.isArray(profile.hostTrust?.items) ? profile.hostTrust.items : [], { limit: 4, tone: 'brand' }).forEach((signal) => {
+    pushHeaderSignal({
+      ...signal,
+      tone: signal.key === 'identity' || signal.key === 'onsite' ? 'success' : 'brand',
+    });
+  });
 
   if (profile.emailVerified) {
-    headerSignals.push({ key: 'email', label: 'Email confirmado', tone: 'neutral' });
+    pushHeaderSignal({ key: 'email', label: 'Email confirmado', tone: 'neutral' });
   }
 
   if (responseSignal?.label) {
-    headerSignals.push({ key: 'response', label: responseSignal.label, tone: 'neutral' });
+    pushHeaderSignal({ key: 'response', label: responseSignal.label, tone: 'neutral' });
   }
 
   if (profile.completedStaysCount > 0) {
-    headerSignals.push({
+    pushHeaderSignal({
       key: 'stays',
       label: formatCountLabel(profile.completedStaysCount, '1 estadía cerrada', `${profile.completedStaysCount} estadías cerradas`),
       tone: 'neutral',
@@ -244,7 +256,7 @@ export const HostProfileView: React.FC<HostProfileViewProps> = ({ profile, onBac
         </section>
 
         <div className="rounded-[32px] border border-slate-200/80 bg-slate-100/90 px-6 py-5 text-center text-sm leading-6 text-slate-500 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-400">
-          Alquiler Real valida información declarada por el anfitrión y registra historial de uso. No certifica titularidad, condiciones del inmueble ni servicios por fuera de la plataforma.
+          Alquiler Real valida información declarada por el anfitrión y registra historial de uso. No certifica titularidad y no evaluamos estado, calidad ni amenities del inmueble.
         </div>
       </main>
     </div>

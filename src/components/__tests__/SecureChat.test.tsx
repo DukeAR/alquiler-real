@@ -77,15 +77,15 @@ const baseConversation = {
   propertyImage: 'https://example.com/property.jpg',
   propertyPrice: 120000,
   hostMemberSince: '2022-02-10',
-  hostTrustScore: 3,
   hostTrust: {
-    score: 3,
-    level: 'medium',
+    score: 4,
+    level: 'high',
     items: [
-      { key: 'identity', label: 'Identidad confirmada', description: 'Identidad ya confirmada.', status: 'complete' },
-      { key: 'reservations', label: 'Historial de reservas', description: '6 reservas completadas.', status: 'complete' },
-      { key: 'reviews', label: 'Reseñas de huéspedes', description: '4 reseñas de huéspedes.', status: 'complete' },
-      { key: 'tenure', label: 'Antigüedad en la plataforma', description: 'Todavía no hay antigüedad suficiente para evaluarlo.', status: 'pending' },
+      { key: 'identity', label: 'Identidad validada', description: 'La identidad del anfitrión ya fue validada.', status: 'complete' },
+      { key: 'onsite', label: 'Verificación presencial', description: 'Todavía no hay una verificación presencial registrada.', status: 'pending' },
+      { key: 'response', label: 'Responde en ~18 min', description: 'Promedio de primera respuesta visible: ~18 min.', status: 'complete' },
+      { key: 'operations', label: '6 operaciones completadas', description: '6 operaciones completadas dentro de la plataforma.', status: 'complete' },
+      { key: 'tenure', label: '4 años en la plataforma', description: '4 años en la plataforma.', status: 'complete' },
     ],
   },
   hostInteractionHistory: {
@@ -247,7 +247,7 @@ describe('SecureChat', () => {
       expect(reportDirectDepositMock).toHaveBeenCalledWith('conv-1');
     });
 
-    expect(await screen.findByText('Estado: Seña registrada')).toBeInTheDocument();
+    expect(await screen.findByText('Estado: Esperando confirmación del anfitrión')).toBeInTheDocument();
     expect(screen.getByText('Ahora el anfitrión tiene que confirmar la recepción.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Registrar seña/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Coordinar llegada/i })).not.toBeInTheDocument();
@@ -397,20 +397,21 @@ describe('SecureChat', () => {
     expect((await screen.findAllByText('Consultá disponibilidad o hacé preguntas antes de decidir.')).length).toBeGreaterThan(0);
     expect(await screen.findByText('Conversación con Mariana')).toBeInTheDocument();
     expect(screen.getByText((content) => content.includes('Casa de prueba') && content.includes('2 huéspedes'))).toBeInTheDocument();
-    expect(screen.getByText('Estado: Propuesta enviada')).toBeInTheDocument();
+    expect(screen.getByText('Estado: Esperando respuesta del anfitrión')).toBeInTheDocument();
+    expect(screen.getByText('Timeline operativo')).toBeInTheDocument();
     expect(screen.getByText('Por seguridad, mantené la conversación dentro de Alquiler Real hasta confirmar la reserva.')).toBeInTheDocument();
-    expect(screen.getByText('Verificación media')).toBeInTheDocument();
+    expect(screen.getByText('La identidad del anfitrión ya está validada. Usá este chat para confirmar ubicación, acceso, reglas y cualquier detalle antes de avanzar.')).toBeInTheDocument();
+    expect(screen.getByText('Identidad validada')).toBeInTheDocument();
+    expect(screen.getByText('6 operaciones completadas')).toBeInTheDocument();
     expect(screen.getByText(/120\.000\/noche/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Ver propiedad' })).toBeInTheDocument();
     expect(screen.getByText('Sin mensajes')).toBeInTheDocument();
     expect(screen.getByText('Responde en ~18 min')).toBeInTheDocument();
-    expect(screen.getByText('En la plataforma desde feb 2022')).toBeInTheDocument();
     expect(await screen.findByRole('button', { name: '¿Está disponible?' })).toBeInTheDocument();
     expect(await screen.findByRole('button', { name: '¿Aceptan mascotas?' })).toBeInTheDocument();
     expect(await screen.findByRole('button', { name: '¿Qué incluye?' })).toBeInTheDocument();
     expect(await screen.findByRole('button', { name: '¿Cómo es la zona?' })).toBeInTheDocument();
     expect(screen.queryByText('Ya interactuaron antes sin inconvenientes')).not.toBeInTheDocument();
-    expect(screen.queryByText('Identidad confirmada')).not.toBeInTheDocument();
     expect(screen.queryByText('Historial de reservas')).not.toBeInTheDocument();
     expect(screen.queryByText('Reseñas de huéspedes')).not.toBeInTheDocument();
     expect(screen.getByText('Ahora le toca responder al anfitrión.')).toBeInTheDocument();
@@ -475,17 +476,30 @@ describe('SecureChat', () => {
       },
     ]);
     fetchMessagesMock.mockResolvedValue([]);
+    sendMessageMock.mockResolvedValue({
+      id: 'msg-risk-1',
+      conversation_id: 'conv-1',
+      sender_id: 'tenant-1',
+      receiver_id: 'host-1',
+      content: 'Escribime por WhatsApp al 11 5555 4444',
+      created_at: '2026-05-01T12:00:00.000Z',
+      readAt: null,
+    });
 
     renderChat();
 
     const composer = await screen.findByRole('textbox') as HTMLInputElement;
     fireEvent.change(composer, { target: { value: 'Escribime por WhatsApp al 11 5555 4444' } });
+
+    expect(screen.getByText('Parece que este mensaje incluye datos de contacto externos. Te recomendamos mantener la conversación dentro de la plataforma.')).toBeInTheDocument();
+
     fireEvent.click(screen.getByRole('button', { name: /Enviar mensaje/i }));
 
-    expect(sendMessageMock).not.toHaveBeenCalled();
-    expect(screen.getByText('Parece que este mensaje incluye datos de contacto externos. Te recomendamos mantener la conversación dentro de la plataforma.')).toBeInTheDocument();
-    expect(screen.getByText('Podés editarlo antes de enviarlo.')).toBeInTheDocument();
-    expect(composer.value).toBe('Escribime por WhatsApp al 11 5555 4444');
+    await waitFor(() => {
+      expect(sendMessageMock).toHaveBeenCalledWith('conv-1', 'Escribime por WhatsApp al 11 5555 4444', 'host-1');
+    });
+
+    expect(composer.value).toBe('');
 
     fireEvent.change(composer, { target: { value: '¿Está disponible?' } });
     expect(screen.queryByText('Parece que este mensaje incluye datos de contacto externos. Te recomendamos mantener la conversación dentro de la plataforma.')).not.toBeInTheDocument();
@@ -550,7 +564,8 @@ describe('SecureChat', () => {
 
     renderChat();
 
-    expect(await screen.findByText('Estado: Propuesta enviada')).toBeInTheDocument();
+    expect(await screen.findByText('Estado: Reserva solicitada')).toBeInTheDocument();
+    expect(screen.getByText('Timeline operativo')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Abrir conversacion sobre Casa de prueba .* Con Lucía .* Sin mensajes .* Propuesta enviada/i })).toBeInTheDocument();
     expect(screen.queryByText('Email verificado')).not.toBeInTheDocument();
     expect(screen.queryByText('Teléfono verificado')).not.toBeInTheDocument();
@@ -783,6 +798,7 @@ describe('SecureChat', () => {
     renderChat();
 
     expect(await screen.findByText('Ya están de acuerdo.')).toBeInTheDocument();
+    expect(screen.getByText('Timeline operativo')).toBeInTheDocument();
     expect(screen.getByText(/La reserva ya quedó marcada con seña protegida\./i)).toBeInTheDocument();
     expect(screen.getByText(/Por ahora no procesamos el cobro dentro de la app\./i)).toBeInTheDocument();
     expect(screen.getByText('Estado: Seña pendiente')).toBeInTheDocument();
@@ -834,7 +850,7 @@ describe('SecureChat', () => {
 
     expect(showToastMock).toHaveBeenCalledWith(
       'Seña protegida',
-      'La reserva volvió a quedar marcada con seña protegida. Por ahora no procesamos pagos dentro de la app.',
+      'La reserva volvió a quedar marcada con seña protegida. Cuando la seña se registre, queda retenida hasta check-in.',
       'success',
     );
   });
@@ -860,6 +876,7 @@ describe('SecureChat', () => {
     renderChat();
 
     expect(await screen.findByText('Estado: Seña confirmada')).toBeInTheDocument();
+    expect(screen.getByText('Timeline operativo')).toBeInTheDocument();
     expect(screen.getByText('La reserva ya está cerrada. Usá este chat para coordinar llegada, acceso y últimos detalles.')).toBeInTheDocument();
   });
 
@@ -934,7 +951,10 @@ describe('SecureChat', () => {
       id: 'booking-2',
       status: 'confirmed',
       requestMode: 'protected',
-      depositStatus: 'review',
+      depositStatus: 'manual_review',
+      depositPaymentReference: 'dep-ref-chat-1',
+      manualReviewReason: 'guest_checkin_without_host_access_confirmation',
+      manualReviewOpenedAt: '2026-09-14T14:35:00.000Z',
     });
 
     renderChat();
@@ -945,10 +965,13 @@ describe('SecureChat', () => {
       expect(reportArrivalProblemMock).toHaveBeenCalledWith('booking-2');
     });
 
-    expect(await screen.findByText('Estado: Revisión manual')).toBeInTheDocument();
+    expect(await screen.findAllByText('En revisión manual')).not.toHaveLength(0);
+    expect(screen.getByText('Vamos a revisar la información disponible: chat, comprobante, confirmaciones y ubicación registrada.')).toBeInTheDocument();
+    expect(screen.getByText('El huésped confirmó la llegada pero falta la confirmación de acceso del anfitrión')).toBeInTheDocument();
+    expect(screen.getByText('Referencia dep-ref-chat-1')).toBeInTheDocument();
     expect(showToastMock).toHaveBeenCalledWith(
       'Seña en revisión',
-      'El problema quedó informado y la seña pasó a revisión.',
+      'El problema quedó informado y la seña pasó a revisión manual.',
       'success',
     );
   });
@@ -1005,7 +1028,7 @@ describe('SecureChat', () => {
       id: 'booking-access-1',
       status: 'confirmed',
       depositType: 'protected',
-      depositStatus: 'released',
+      depositStatus: 'deposit_released',
       guestCheckinConfirmed: true,
       hostAccessConfirmed: true,
     });
@@ -1018,10 +1041,10 @@ describe('SecureChat', () => {
       expect(confirmAccessMock).toHaveBeenCalledWith('booking-access-1');
     });
 
-    expect(await screen.findByText('Estado: Seña liberada')).toBeInTheDocument();
+    expect(await screen.findByText('Estado: Operación completada')).toBeInTheDocument();
     expect(showToastMock).toHaveBeenCalledWith(
       'Acceso confirmado',
-      'El acceso quedó confirmado y la seña ya salió de custodia.',
+      'La seña queda lista para liberarse al anfitrión.',
       'success',
     );
   });

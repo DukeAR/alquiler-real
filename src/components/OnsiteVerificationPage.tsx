@@ -12,8 +12,8 @@ interface OnsiteVerificationPageProps {
 }
 
 const trustOutcomePoints = [
-  'La propiedad existe',
-  'Hay una persona identificada detrás',
+  'Existencia y acceso confirmados',
+  'Identidad registrada durante la visita',
   'Menor riesgo de fraude',
   'Mayor confianza para decidir',
 ];
@@ -27,8 +27,8 @@ const heroBenefitPoints = [
 
 const nonValidationItems = [
   'Estado del inmueble',
-  'Calidad de los servicios',
-  'Condiciones técnicas del lugar',
+  'Calidad general del lugar',
+  'Amenities y servicios del lugar',
 ];
 
 const validationItems = [
@@ -68,7 +68,7 @@ const flowSteps = [
     id: 'verify',
     label: 'Validamos identidad y acceso',
     title: 'Validamos identidad y acceso',
-    description: 'Confirmamos identidad del anfitrión, acceso real, vínculo comprobable con el lugar y ubicación durante la visita.',
+    description: 'Dejamos identidad, ubicación y acceso confirmados, con respaldo de vínculo comprobable con el lugar.',
   },
   {
     id: 'seal',
@@ -128,7 +128,7 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
               </h1>
 
               <p className="max-w-2xl text-[1rem] leading-7 text-slate-700 dark:text-slate-300 md:text-[1.05rem]">
-                Confirmamos que la propiedad existe y que hay una persona identificada con acceso al lugar.
+                La visita deja identidad, ubicación y acceso confirmados, con respaldo de existencia y vínculo con el lugar.
               </p>
 
               <div className="space-y-3">
@@ -249,7 +249,7 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
                     ))}
                   </ul>
                   <p className="text-[0.92rem] leading-6 text-slate-500 dark:text-slate-400">
-                    No evaluamos estado ni calidad del inmueble.
+                    No evaluamos estado, calidad ni amenities del inmueble.
                   </p>
                 </div>
               </div>
@@ -266,7 +266,7 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
                     ))}
                   </ul>
                   <p className="text-[0.92rem] leading-6 text-slate-500 dark:text-slate-400">
-                    No se realiza inspección técnica ni evaluación de condiciones del inmueble.
+                    No se realiza inspección técnica ni evaluación de estado, calidad o amenities del inmueble.
                   </p>
                 </div>
 
@@ -319,7 +319,7 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
                 Es lo primero que ve un huésped al comparar opciones.
               </p>
               <p className="text-[0.92rem] leading-6 text-slate-500 dark:text-slate-400">
-                No certifica estado, calidad ni condiciones del inmueble.
+                No evaluamos estado, calidad ni amenities del inmueble.
               </p>
             </div>
           </div>

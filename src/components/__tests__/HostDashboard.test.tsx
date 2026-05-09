@@ -180,6 +180,8 @@ describe('HostDashboard', () => {
     expect(screen.getAllByText('Identidad del anfitrión validada en la plataforma').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Pasos de respaldo del aviso').length).toBeGreaterThan(0);
     expect(screen.getByText('Te falta confirmar disponibilidad para aparecer entre los primeros resultados.')).toBeInTheDocument();
+    expect(screen.getByText('Cada señal visible reduce dudas antes de la reserva. La verificación suma contexto; no reemplaza tu historial real.')).toBeInTheDocument();
+    expect(screen.getByText('La verificación presencial baja dudas antes de reservar, ordena mejores consultas y deja más claro quién publica sin tocar reglas ocultas.')).toBeInTheDocument();
     expect(screen.getByText('Cómo impacta en tu publicación')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Solicitar verificación presencial/i })).toBeInTheDocument();
 
@@ -511,7 +513,7 @@ describe('HostDashboard', () => {
     expect(screen.queryByText('Pendiente seña')).not.toBeInTheDocument();
     expect(showToastMock).toHaveBeenCalledWith(
       'Seña protegida aceptada',
-      'La solicitud quedó aceptada y la reserva ya quedó marcada con seña protegida. El seguimiento sigue por chat.',
+      'La solicitud quedó aceptada y la reserva quedó marcada con seña protegida. Cuando la seña se registre, queda retenida hasta check-in.',
       'success',
     );
 
@@ -830,7 +832,10 @@ describe('HostDashboard', () => {
             id: 'booking-no-show',
             status: 'confirmed',
             requestMode: 'protected',
-            depositStatus: 'pending_confirmation',
+            depositStatus: 'manual_review',
+            depositPaymentReference: 'dep-ref-host-7',
+            manualReviewReason: 'host_reported_no_show',
+            manualReviewOpenedAt: '2026-09-14T14:35:00.000Z',
             userId: 'guest-4',
             userName: 'Sofía',
             propertyTitle: 'Casa del bosque',
@@ -856,9 +861,10 @@ describe('HostDashboard', () => {
       );
     });
 
-    expect(await screen.findAllByText('Revisión manual')).not.toHaveLength(0);
-    expect(screen.getByText('Quedó reportado un problema con la llegada.')).toBeInTheDocument();
-    expect(screen.getByText('La plataforma está revisando qué pasó antes de decidir cómo sigue.')).toBeInTheDocument();
+    expect(await screen.findAllByText('En revisión manual')).not.toHaveLength(0);
+  expect(screen.getAllByText('Vamos a revisar la información disponible: chat, comprobante, confirmaciones y ubicación registrada.')).not.toHaveLength(0);
+    expect(screen.getByText('El anfitrión reportó un no show y falta validar lo ocurrido')).toBeInTheDocument();
+    expect(screen.getByText('Referencia dep-ref-host-7')).toBeInTheDocument();
     expect(showToastMock).toHaveBeenCalledWith(
       'Llegada en revisión',
       'El no show quedó informado y la seña sigue en pausa mientras la plataforma revisa qué pasó.',
@@ -962,6 +968,7 @@ describe('HostDashboard', () => {
     renderDashboard();
 
     expect(await screen.findAllByText('Seña confirmada')).not.toHaveLength(0);
+    expect(screen.getByText('Timeline operativo')).toBeInTheDocument();
     expect(screen.getByText('La seña ya quedó confirmada dentro de la app.')).toBeInTheDocument();
     expect(screen.getByText('El siguiente paso es validar el ingreso cuando llegue la fecha de check-in.')).toBeInTheDocument();
   });
@@ -1021,7 +1028,7 @@ describe('HostDashboard', () => {
             id: 'booking-access-message',
             status: 'confirmed',
             requestMode: 'protected',
-            depositStatus: 'released',
+            depositStatus: 'deposit_released',
             guestCheckinConfirmed: true,
             hostAccessConfirmed: true,
             userId: 'guest-7',
@@ -1042,10 +1049,10 @@ describe('HostDashboard', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: /Confirmar acceso/i }));
 
-    expect(await screen.findAllByText('Seña liberada')).not.toHaveLength(0);
+    expect(await screen.findAllByText('Lista para liberar')).not.toHaveLength(0);
     expect(showToastMock).toHaveBeenCalledWith(
       'Acceso confirmado',
-      'El acceso quedó confirmado y la seña ya salió de custodia.',
+      'La seña queda lista para liberarse al anfitrión.',
       'success',
     );
   });

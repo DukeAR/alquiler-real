@@ -21,7 +21,9 @@ describe('FAQPage', () => {
     expect(screen.getByRole('link', { name: /Ver privacidad/i })).toBeInTheDocument();
     expect(screen.getByText('Elegí bien el modelo antes de aceptar')).toBeInTheDocument();
     expect(screen.getByText('Antes de pagar, revisá qué modelo elegiste')).toBeInTheDocument();
+    expect(screen.getByText('La seña protegida queda retenida hasta check-in')).toBeInTheDocument();
     expect(screen.getByText('¿Cómo se calcula la seña si la registrás en la app?')).toBeInTheDocument();
+    expect(screen.getByText('¿Qué pasa si cancela el anfitrión o hay un problema de existencia o acceso?')).toBeInTheDocument();
     expect(screen.getByText('¿Qué pasa con un cargo de servicio si existe?')).toBeInTheDocument();
     expect(screen.getByText('¿Qué hacen con los documentos o selfies que se cargan para validar?')).toBeInTheDocument();
 

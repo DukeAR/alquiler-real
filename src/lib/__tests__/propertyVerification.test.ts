@@ -66,7 +66,7 @@ describe('propertyVerification', () => {
     expect(details.summaryLabel).toBe('Información publicada por el anfitrión');
     expect(details.compactLabel).toBe('Información publicada por el anfitrión');
     expect(details.description).toBe('La información visible de este aviso fue publicada por el anfitrión.');
-    expect(details.helperText).toBe('No evaluamos estado ni calidad del inmueble.');
+    expect(details.helperText).toBe('No evaluamos estado, calidad ni amenities del inmueble.');
     expect(details.items).toEqual([]);
   });
 

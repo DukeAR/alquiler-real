@@ -15,9 +15,11 @@ import {
   BOOKING_CONTRACT_PLATFORM_TERMS,
   type BookingContractPlatformTerm,
 } from '../lib/platformTerms';
+import { buildProtectedOperationMonetizationPlan, formatMarketplaceMonetizationPriceLabel } from '../lib/marketplaceMonetization';
 import { getPropertyVerificationDetails, sortPropertiesByCatalogOrder } from '../lib/propertyVerification';
 import { getProtectedDepositPricingFromBooking } from '../lib/protectedDeposit';
-import { getReservationFlowCopy, getReservationNextActorDisplayLabel, getReservationNextStepDisplayLabel } from '../lib/reservationFlow';
+import { normalizeReservationDepositStatus } from '../lib/protectedDepositStatus';
+import { getReservationFlowCopy, getReservationFlowTimeline, getReservationNextActorDisplayLabel, getReservationNextStepDisplayLabel } from '../lib/reservationFlow';
 import { showToast } from '../lib/toast';
 import { cn } from '../lib/utils';
 import { useAuth } from '../hooks/useAuth';
@@ -44,8 +46,10 @@ import { PropertyVerificationChecklist } from './ui/PropertyVerificationChecklis
 import { VerificationSeal } from './ui/VerificationSeal';
 import { DepositChoiceBlock } from './ui/DepositChoiceBlock';
 import { PlatformTermsQuickGuide } from './ui/PlatformTermsQuickGuide';
+import { ProtectedDepositManualReviewState } from './ui/ProtectedDepositManualReviewState';
 import { ProtectedDepositRefundRules } from './ui/ProtectedDepositRefundRules';
 import { ReservationConfirmedState } from './ui/ReservationConfirmedState';
+import { ReservationOperationTimeline } from './ui/ReservationOperationTimeline';
 import { ReviewModal } from './ReviewModal';
 import { SectionTitle } from './ui/SectionTitle';
 import { AccountModeSwitch } from './ui/AccountModeSwitch';
@@ -276,6 +280,13 @@ const isResolvedConversation = (value: unknown): value is Conversation => {
     && typeof candidate.updated_at === 'string';
 };
 
+const getNormalizedBookingDepositStatus = (booking: Pick<Booking, 'depositStatus' | 'guestCheckinConfirmed' | 'hostAccessConfirmed'>) => (
+  normalizeReservationDepositStatus(booking.depositStatus, {
+    guestCheckinConfirmed: booking.guestCheckinConfirmed,
+    hostAccessConfirmed: booking.hostAccessConfirmed,
+  })
+);
+
 const getBookingRequestStatus = (booking: Booking) => {
   if (booking.requestStatus) {
     return booking.requestStatus;
@@ -285,12 +296,31 @@ const getBookingRequestStatus = (booking: Booking) => {
     return undefined;
   }
 
-  return booking.depositStatus === 'held' || booking.depositStatus === 'released' || booking.status === 'confirmed'
+  const normalizedDepositStatus = getNormalizedBookingDepositStatus(booking);
+
+  return normalizedDepositStatus === 'held'
+    || normalizedDepositStatus === 'guest_checkin_confirmed'
+    || normalizedDepositStatus === 'host_access_confirmed'
+    || normalizedDepositStatus === 'deposit_released'
+    || booking.status === 'confirmed'
     ? 'accepted'
     : 'pending';
 };
 
 const getBookingFlow = (booking: Booking) => getReservationFlowCopy({
+  mode: booking.requestMode,
+  requestStatus: getBookingRequestStatus(booking),
+  depositType: booking.depositType,
+  bookingStatus: booking.status,
+  depositStatus: booking.depositStatus,
+  cancellationActor: booking.cancellationActor,
+  startDate: booking.startDate,
+  guestCheckinConfirmed: booking.guestCheckinConfirmed,
+  hostAccessConfirmed: booking.hostAccessConfirmed,
+  viewerRole: 'guest',
+});
+
+const getBookingFlowTimeline = (booking: Booking) => getReservationFlowTimeline({
   mode: booking.requestMode,
   requestStatus: getBookingRequestStatus(booking),
   depositType: booking.depositType,
@@ -509,7 +539,7 @@ export const MyBookings = () => {
       return false;
     }
 
-    if (booking.depositStatus === 'review' || booking.depositStatus === 'pending_confirmation') {
+    if (getNormalizedBookingDepositStatus(booking) === 'manual_review') {
       return false;
     }
 
@@ -585,8 +615,16 @@ export const MyBookings = () => {
 
   const handleCancelBooking = async (booking: Booking) => {
     const cancellationDeadlineLabel = getCancellationDeadlineLabel(booking);
+    const normalizedDepositStatus = getNormalizedBookingDepositStatus(booking);
     const usesProtectedDeposit = booking.depositType === 'protected'
-      || (booking.requestMode === 'protected' && (booking.depositStatus === 'checkout_pending' || booking.depositStatus === 'held'));
+      || (booking.requestMode === 'protected' && (
+        normalizedDepositStatus === 'checkout_pending'
+        || normalizedDepositStatus === 'held'
+        || normalizedDepositStatus === 'guest_checkin_confirmed'
+        || normalizedDepositStatus === 'host_access_confirmed'
+        || normalizedDepositStatus === 'manual_review'
+        || normalizedDepositStatus === 'deposit_released'
+      ));
     const confirmMessage = usesProtectedDeposit
       ? cancellationDeadlineLabel
         ? `¿Querés cancelar esta reserva? Podés hacerlo hasta el ${cancellationDeadlineLabel}. La devolución depende del momento de la cancelación y del estado de la reserva. Si la seña ya estaba en custodia, puede quedar en revisión.`
@@ -703,7 +741,7 @@ export const MyBookings = () => {
       const nextBooking = await selectProtectedDeposit(bookingId);
       updateBookingState(nextBooking);
       setExternalDepositChoiceBookingId((currentBookingId) => (currentBookingId === bookingId ? null : currentBookingId));
-      showToast('Seña Protegida', 'La reserva quedó lista para usar Seña Protegida. Vas a ver el costo por operación antes de pagar.', 'success');
+      showToast('Seña Protegida', 'La reserva quedó lista para registrar una seña protegida. Vas a ver el costo por protección de operación antes de pagar.', 'success');
     } catch (error) {
       showToast('Seña', error instanceof Error ? error.message : 'No pudimos registrar esta elección.', 'error');
     } finally {
@@ -717,7 +755,13 @@ export const MyBookings = () => {
     try {
       const nextBooking = await confirmArrival(bookingId);
       updateBookingState(nextBooking);
-      showToast('Ingreso confirmado', 'Tu confirmación ya quedó registrada. Ahora falta que el anfitrión confirme el acceso para liberar la seña.', 'success');
+      showToast(
+        'Ingreso confirmado',
+        nextBooking.depositStatus === 'deposit_released' && nextBooking.guestCheckinConfirmed && nextBooking.hostAccessConfirmed
+          ? 'La seña queda lista para liberarse al anfitrión.'
+          : 'Tu confirmación ya quedó registrada. Ahora falta que el anfitrión confirme el acceso para dejar la seña lista para liberarse al anfitrión.',
+        'success',
+      );
     } catch (error) {
       showToast('Llegada', error instanceof Error ? error.message : 'No pudimos confirmar la llegada.', 'error');
     } finally {
@@ -731,7 +775,7 @@ export const MyBookings = () => {
     try {
       const nextBooking = await reportArrivalProblem(bookingId);
       updateBookingState(nextBooking);
-      showToast('Seña en revisión', 'El problema quedó informado y la seña pasó a revisión.', 'success');
+      showToast('Seña en revisión', 'El problema quedó informado y la seña pasó a revisión manual.', 'success');
     } catch (error) {
       showToast('Problema', error instanceof Error ? error.message : 'No pudimos registrar el problema. Intentá de nuevo.', 'error');
     } finally {
@@ -840,7 +884,7 @@ export const MyBookings = () => {
       : `Seguimiento de seña protegida para ${depositActionBooking.propertyTitle || 'esta reserva'}`,
     description: getBookingFlow(depositActionBooking).stage === 'deposit-choice'
       ? 'La reserva sigue con la vieja elección de seña. Revisala desde la reserva para ver el estado actual.'
-      : 'La reserva ya quedó marcada con seña protegida y por ahora solo muestra el estado base, sin procesar pagos dentro de la app.',
+      : 'La reserva ya quedó marcada con seña protegida y por ahora solo muestra el estado base. Cuando la seña se registre, queda retenida hasta check-in.',
     actionLabel: 'Ver solicitud',
     icon: <Icons.ShieldCheck className="h-5 w-5" />,
     onAction: () => scrollToBooking(depositActionBooking.id),
@@ -920,7 +964,9 @@ export const MyBookings = () => {
     const cancellationDeadlineLabel = getCancellationDeadlineLabel(booking);
     const isCancelable = canCancelBooking(booking);
     const bookingFlow = getBookingFlow(booking);
+    const bookingTimeline = getBookingFlowTimeline(booking);
     const protectedDepositPricing = booking.protectedDepositPricing ?? getProtectedDepositPricingFromBooking(booking);
+    const protectedOperationPlan = buildProtectedOperationMonetizationPlan(protectedDepositPricing);
     const showReservationFlowPanel = Boolean(booking.requestMode && bookingFlow.stage && bookingFlow.stage !== 'reservation-confirmed');
     const showBookingQuickGuide = booking.requestMode === 'protected' && (bookingFlow.stage === 'deposit-choice' || bookingFlow.stage === 'external-deposit-pending' || bookingFlow.stage === 'request-accepted' || bookingFlow.stage === 'protected-checkout-pending');
     const isSelectingExternalDeposit = processingBookingAction?.bookingId === booking.id && processingBookingAction.action === 'select-external-deposit';
@@ -933,7 +979,10 @@ export const MyBookings = () => {
     const canReviewBooking = booking.status === 'completed' && !booking.guestReviewSubmitted && Boolean(booking.hostId);
     const protectedDepositPriceLines = protectedDepositPricing ? [
       { label: 'Seña', value: formatCurrency(protectedDepositPricing.depositAmount) },
-      { label: 'Fee de servicio', value: formatCurrency(protectedDepositPricing.serviceFee) },
+      {
+        label: protectedOperationPlan?.price?.label ?? 'Costo por protección de operación',
+        value: formatMarketplaceMonetizationPriceLabel(protectedOperationPlan?.price ?? null) ?? formatCurrency(protectedDepositPricing.serviceFee),
+      },
       { label: 'Total', value: formatCurrency(protectedDepositPricing.totalCharge), emphasize: true },
     ] : undefined;
 
@@ -1141,12 +1190,13 @@ export const MyBookings = () => {
                           },
                           {
                             key: 'protected',
-                            eyebrow: 'Opción 2 · Premium opcional',
+                            eyebrow: 'Opción 2 · Retenida hasta check-in',
                             title: 'Usar Seña Protegida',
-                            description: 'La seña queda retenida por Alquiler Real hasta el check-in. Tiene un costo por operación.',
+                            description: 'La seña queda retenida hasta check-in. Tiene un costo por protección de operación y puede pasar a revisión manual si hace falta revisar existencia y acceso.',
                             icon: <Icons.ShieldCheck className="h-5 w-5" />,
                             tone: 'brand',
                             priceLines: protectedDepositPriceLines,
+                            helper: protectedOperationPlan?.note,
                             action: {
                               label: 'Usar Seña Protegida',
                               onClick: () => void handleSelectProtectedDeposit(booking.id),
@@ -1167,12 +1217,12 @@ export const MyBookings = () => {
                         options={[
                           {
                             key: 'switch-to-protected',
-                            eyebrow: 'Opción 2 · Premium opcional',
+                            eyebrow: 'Opción 2 · Retenida hasta check-in',
                             title: 'Usar Seña Protegida',
-                            description: 'La seña queda retenida por Alquiler Real hasta el check-in. Tiene un costo por operación.',
+                            description: 'La seña queda retenida hasta check-in. Tiene un costo por protección de operación y puede pasar a revisión manual si hace falta revisar existencia y acceso.',
                             icon: <Icons.ShieldCheck className="h-5 w-5" />,
                             tone: 'brand',
-                            helper: 'Hoy siguen coordinando por chat. Si cambiás de idea antes de pagar, todavía podés usar Seña Protegida.',
+                            helper: protectedOperationPlan?.note ?? 'Hoy siguen coordinando por chat. Si cambiás de idea antes de dejar una seña por fuera, todavía podés usar Seña Protegida.',
                             action: {
                               label: 'Usar Seña Protegida',
                               onClick: () => void handleSelectProtectedDeposit(booking.id),
@@ -1238,20 +1288,28 @@ export const MyBookings = () => {
                 </div>
               </div>
 
+              {bookingTimeline ? (
+                <ReservationOperationTimeline
+                  timeline={bookingTimeline}
+                  className="mt-4 border-white/80 bg-white/75 dark:border-slate-800 dark:bg-slate-900/60"
+                />
+              ) : null}
+
               {bookingFlow.stage === 'protected-checkout-pending' && protectedDepositPricing && PROTECTED_DEPOSIT_PAYMENT_ENABLED ? (
                 <DepositChoiceBlock
                   className="mt-4"
                   title="Usar Seña Protegida"
-                  description="La modalidad ya quedó elegida. Revisá el costo por operación antes de continuar."
+                  description="La modalidad ya quedó elegida. Revisá el costo por protección de operación antes de continuar."
                   options={[
                     {
                       key: 'pay-protected-deposit',
-                      eyebrow: 'Opción 2 · Premium opcional',
+                      eyebrow: 'Opción 2 · Retenida hasta check-in',
                       title: 'Continuar con Seña Protegida',
-                      description: 'La seña queda retenida por Alquiler Real hasta el check-in. Tiene un costo por operación.',
+                      description: 'La seña queda retenida hasta check-in. Tiene un costo por protección de operación y puede pasar a revisión manual si hace falta revisar existencia y acceso.',
                       icon: <Icons.ShieldCheck className="h-5 w-5" />,
                       tone: 'brand',
                       priceLines: protectedDepositPriceLines,
+                      helper: protectedOperationPlan?.note,
                       action: {
                         label: bookingFlow.primaryActionLabel,
                         onClick: () => void handlePayDeposit(booking.id),
@@ -1266,7 +1324,7 @@ export const MyBookings = () => {
 
               {bookingFlow.stage === 'protected-checkout-pending' && !PROTECTED_DEPOSIT_PAYMENT_ENABLED ? (
                 <div className="mt-4 rounded-[20px] border border-white/80 bg-white/80 px-4 py-3 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-300">
-                  La reserva ya quedó marcada con seña protegida. Por ahora solo ves el costo por operación y el estado base: el cobro todavía no se procesa dentro de la app.
+                  La reserva ya quedó marcada con seña protegida. Cuando la seña se registre, queda retenida hasta check-in. Por ahora solo ves el costo por protección de operación y el estado base: el cobro todavía no se procesa dentro de la app.
                 </div>
               ) : null}
 
@@ -1279,14 +1337,36 @@ export const MyBookings = () => {
               {showBookingQuickGuide ? (
                 <PlatformTermsQuickGuide
                   eyebrow="Guía corta"
-                  title="Qué implica la seña protegida"
-                  description="Lo esencial para entender cuándo la app protege la seña, qué sigue fuera de la plataforma y en qué casos puede intervenir una revisión manual."
+                  title="Alcance de la seña protegida"
+                  description="Lo esencial para entender cuándo la seña queda retenida hasta check-in, cuándo puede pasar a revisión manual y que no evaluamos estado, calidad ni amenities."
                   density="compact"
                   showLink
                   className="mt-4"
                 />
               ) : null}
             </div>
+          ) : null}
+
+          {bookingTimeline && !showReservationFlowPanel ? (
+            <ReservationOperationTimeline timeline={bookingTimeline} />
+          ) : null}
+
+          {(bookingFlow.stage === 'protected-deposit-review' || bookingFlow.stage === 'protected-no-show-pending') ? (
+            <ProtectedDepositManualReviewState
+              stage={bookingFlow.stage}
+              viewerRole="guest"
+              conversationId={booking.conversationId ?? null}
+              depositPaymentReference={booking.depositPaymentReference ?? null}
+              manualReviewReason={booking.manualReviewReason ?? null}
+              manualReviewOpenedAt={booking.manualReviewOpenedAt ?? null}
+              guestCheckinConfirmed={booking.guestCheckinConfirmed}
+              guestCheckinConfirmedAt={booking.guestCheckinConfirmedAt ?? null}
+              guestCheckinLatitude={booking.guestCheckinLatitude ?? null}
+              guestCheckinLongitude={booking.guestCheckinLongitude ?? null}
+              guestCheckinAccuracyMeters={booking.guestCheckinAccuracyMeters ?? null}
+              hostAccessConfirmed={booking.hostAccessConfirmed}
+              hostAccessConfirmedAt={booking.hostAccessConfirmedAt ?? null}
+            />
           ) : null}
 
           {(bookingFlow.stage === 'reservation-confirmed' || (!booking.requestMode && booking.status === 'confirmed')) ? (

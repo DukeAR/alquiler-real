@@ -224,9 +224,56 @@ export async function confirmProtectedDepositPayment(bookingId: string, paymentI
   });
 }
 
+const getArrivalGeolocationPayload = async () => {
+  if (typeof navigator === 'undefined' || !navigator.geolocation) {
+    return null;
+  }
+
+  const position = await new Promise<GeolocationPosition | null>((resolve) => {
+    let settled = false;
+
+    const finalize = (value: GeolocationPosition | null) => {
+      if (settled) {
+        return;
+      }
+
+      settled = true;
+      resolve(value);
+    };
+
+    try {
+      navigator.geolocation.getCurrentPosition(
+        (nextPosition) => finalize(nextPosition),
+        () => finalize(null),
+        {
+          enableHighAccuracy: true,
+          timeout: 6000,
+          maximumAge: 120000,
+        },
+      );
+    } catch {
+      finalize(null);
+    }
+  });
+
+  if (!position) {
+    return null;
+  }
+
+  return {
+    geolocation: {
+      latitude: position.coords.latitude,
+      longitude: position.coords.longitude,
+      accuracyMeters: Number.isFinite(position.coords.accuracy) ? position.coords.accuracy : null,
+    },
+  };
+};
+
 export async function confirmArrival(bookingId: string): Promise<Booking> {
+  const geolocationPayload = await getArrivalGeolocationPayload();
   const response = await apiJson<{ booking: Booking }>(`/api/bookings/${bookingId}/confirm-arrival`, {
-    method: 'POST'
+    method: 'POST',
+    ...(geolocationPayload ? { body: JSON.stringify(geolocationPayload) } : {}),
   });
 
   return response.booking;

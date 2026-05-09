@@ -178,8 +178,8 @@ describe('AppShell', () => {
     await renderShell();
 
     expect(screen.getAllByRole('button', { name: 'Guardados' })).not.toHaveLength(0);
+    expect(screen.getAllByRole('button', { name: 'Mis operaciones' })).not.toHaveLength(0);
     expect(screen.getAllByRole('button', { name: 'Guardados' })[0]).not.toHaveClass('rounded-full');
-    expect(screen.queryByRole('button', { name: 'Mis reservas' })).not.toBeInTheDocument();
     expect(screen.getByTestId('notifications-menu')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Publicar propiedad' })).not.toBeInTheDocument();
     expect(screen.getByTestId('account-mode-switch')).toBeInTheDocument();
@@ -350,8 +350,10 @@ describe('AppShell', () => {
     const menuButton = screen.getByRole('button', { name: 'Abrir menú' });
     fireEvent.click(menuButton);
 
-    expect(screen.getByRole('dialog', { name: 'Menú principal' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Mis reservas' })).toBeInTheDocument();
+    const mobileMenu = screen.getByRole('dialog', { name: 'Menú principal' });
+
+    expect(mobileMenu).toBeInTheDocument();
+    expect(within(mobileMenu).getByRole('button', { name: 'Mis operaciones' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Cómo funciona' })).toBeInTheDocument();
   });
 

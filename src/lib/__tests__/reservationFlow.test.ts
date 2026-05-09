@@ -1,39 +1,70 @@
 import { describe, expect, test } from 'vitest';
-import { getReservationFlowCopy, getReservationFlowMilestones, getReservationFlowState } from '../reservationFlow';
+import { getReservationFlowCopy, getReservationFlowMilestones, getReservationFlowState, getReservationFlowTimeline } from '../reservationFlow';
 
 describe('reservationFlow milestones', () => {
-  test('shows review as the current protected deposit milestone when an arrival problem is reported', () => {
-    const milestones = getReservationFlowMilestones({
+  test('shows manual review at the check-in stage of the operational timeline', () => {
+    const timeline = getReservationFlowTimeline({
       mode: 'protected',
       requestStatus: 'accepted',
       bookingStatus: 'confirmed',
-      depositStatus: 'review',
+      depositStatus: 'manual_review',
       viewerRole: 'guest',
     });
 
-    expect(milestones).toEqual([
-      { key: 'request', label: 'Solicitud enviada', state: 'completed' },
-      { key: 'accepted', label: 'Aceptada', state: 'completed' },
-      { key: 'deposit', label: 'Seña en revisión', state: 'current' },
-      { key: 'confirmed', label: 'Confirmada', state: 'upcoming' },
-    ]);
+    expect(timeline).toEqual({
+      currentStepKey: 'checkin',
+      status: { label: 'En revisión manual', tone: 'warning' },
+      steps: [
+        { key: 'inquiry', label: 'Consulta iniciada', state: 'completed' },
+        { key: 'request', label: 'Reserva solicitada', state: 'completed' },
+        { key: 'deposit', label: 'Seña reportada', state: 'completed' },
+        { key: 'confirmation', label: 'Confirmación pendiente', state: 'completed' },
+        { key: 'checkin', label: 'Check-in pendiente', state: 'current' },
+        { key: 'completed', label: 'Operación completada', state: 'upcoming' },
+      ],
+    });
   });
 
-  test('shows arrival review as the current protected deposit milestone for no-show reviews', () => {
+  test('keeps milestone consumers aligned with the shared 6-step timeline', () => {
     const milestones = getReservationFlowMilestones({
       mode: 'protected',
       requestStatus: 'accepted',
       bookingStatus: 'confirmed',
-      depositStatus: 'pending_confirmation',
+      depositStatus: 'manual_review',
       viewerRole: 'host',
     });
 
     expect(milestones).toEqual([
-      { key: 'request', label: 'Solicitud recibida', state: 'completed' },
-      { key: 'accepted', label: 'Aceptada', state: 'completed' },
-      { key: 'deposit', label: 'Llegada en revisión', state: 'current' },
-      { key: 'confirmed', label: 'Confirmada', state: 'upcoming' },
+      { key: 'inquiry', label: 'Consulta iniciada', state: 'completed' },
+      { key: 'request', label: 'Reserva solicitada', state: 'completed' },
+      { key: 'deposit', label: 'Seña reportada', state: 'completed' },
+      { key: 'confirmation', label: 'Confirmación pendiente', state: 'completed' },
+      { key: 'checkin', label: 'Check-in pendiente', state: 'current' },
+      { key: 'completed', label: 'Operación completada', state: 'upcoming' },
     ]);
+  });
+
+  test('surfaces the requested waiting variants for host response and guest confirmation', () => {
+    expect(getReservationFlowTimeline({
+      mode: 'protected',
+      requestStatus: 'pending',
+      viewerRole: 'guest',
+    })).toMatchObject({
+      currentStepKey: 'request',
+      status: { label: 'Esperando respuesta del anfitrión', tone: 'brand' },
+    });
+
+    expect(getReservationFlowTimeline({
+      mode: 'protected',
+      requestStatus: 'accepted',
+      bookingStatus: 'confirmed',
+      depositStatus: 'held',
+      startDate: '2000-01-01',
+      viewerRole: 'host',
+    })).toMatchObject({
+      currentStepKey: 'checkin',
+      status: { label: 'Esperando confirmación del huésped', tone: 'brand' },
+    });
   });
 
   test('prioritizes the neutral no-advance state over a cancelled protected placeholder booking', () => {
@@ -62,7 +93,7 @@ describe('reservationFlow milestones', () => {
     expect(flow.stage).toBe('protected-checkout-pending');
     expect(flow.state).toBe('deposit_pending');
     expect(flow.modelLabel).toBe('Seña protegida');
-    expect(flow.statusLabel).toBe('Seña protegida');
+    expect(flow.statusLabel).toBe('Seña pendiente');
     expect(flow.nextActorLabel).toBe('Plataforma');
     expect(flow.trackingHint).toBe('Por ahora solo mostramos la estructura y el estado base: el cobro todavía no se procesa dentro de la app.');
   });
@@ -78,7 +109,7 @@ describe('reservationFlow milestones', () => {
     expect(flow.state).toBe('free_operation_selected');
     expect(flow.modelLabel).toBe('Operación libre');
     expect(flow.statusLabel).toBe('Operación libre');
-    expect(flow.supportText).toBe('Desde acá coordinan por chat. La app no retiene dinero, no protege la seña ni interviene en pagos externos.');
+    expect(flow.supportText).toBe('Desde acá coordinan por chat. La app no retiene dinero, no registra la seña dentro del flujo ni interviene en pagos externos.');
     expect(flow.nextStepLabel).toBe('Coordinar todo por chat');
   });
 

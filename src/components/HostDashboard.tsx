@@ -3,16 +3,23 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { apiJson } from '../lib/apiConfig';
 import { isBookingCheckInReached } from '../lib/bookingDates';
+import { getHostPriorityActionTip, getHostVerificationOnboardingTip } from '../lib/contextualOnboarding';
 import { withDemoQuery } from '../lib/demoMode';
 import { resolveGuestRequestProfile } from '../lib/guestRequestProfile';
-import { formatPremiumPriceLabel } from '../lib/premiumVerification';
+import { formatMarketplaceMonetizationPriceLabel } from '../lib/marketplaceMonetization';
+import { formatPremiumPriceLabel, type PremiumVerificationOffer } from '../lib/premiumVerification';
 import { getPropertyVerificationDetails, getPropertyVerificationItems, getPropertyVerificationProgress } from '../lib/propertyVerification';
-import { getReservationFlowCopy, getReservationNextActorDisplayLabel, getReservationNextStepDisplayLabel } from '../lib/reservationFlow';
+import { normalizeReservationDepositStatus } from '../lib/protectedDepositStatus';
+import { getReservationFlowCopy, getReservationFlowTimeline, getReservationNextActorDisplayLabel, getReservationNextStepDisplayLabel } from '../lib/reservationFlow';
 import { acceptConversationRequest, confirmAccess, confirmDirectDeposit, notAdvanceConversationRequest } from '../services/geminiService';
 import { showToast } from '../lib/toast';
 import { cn } from '../lib/utils';
 import { AccountModeSwitch } from './ui/AccountModeSwitch';
+import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
+import { ContextualTip } from './ui/ContextualTip';
+import { ProtectedDepositManualReviewState } from './ui/ProtectedDepositManualReviewState';
+import { ReservationOperationTimeline } from './ui/ReservationOperationTimeline';
 import { EmptyState } from './EmptyState';
 import { ErrorState } from './ErrorState';
 import GuestRequestProfileCard from './GuestRequestProfileCard';
@@ -103,13 +110,49 @@ const scrollToSection = (sectionId: string) => {
   }
 };
 
+const getNormalizedBookingDepositStatus = (booking: {
+  depositStatus?: unknown;
+  guestCheckinConfirmed?: unknown;
+  hostAccessConfirmed?: unknown;
+}) => normalizeReservationDepositStatus(booking.depositStatus, {
+  guestCheckinConfirmed: booking.guestCheckinConfirmed,
+  hostAccessConfirmed: booking.hostAccessConfirmed,
+});
+
 const getBookingFlow = (booking: any) => getReservationFlowCopy({
   mode: booking.requestMode,
   depositType: booking.depositType,
   requestStatus: typeof booking.requestStatus === 'string'
     ? booking.requestStatus
     : booking.requestMode === 'protected'
-      ? booking.depositStatus === 'held' || booking.depositStatus === 'released' || booking.status === 'confirmed'
+      ? getNormalizedBookingDepositStatus(booking) === 'held'
+        || getNormalizedBookingDepositStatus(booking) === 'guest_checkin_confirmed'
+        || getNormalizedBookingDepositStatus(booking) === 'host_access_confirmed'
+        || getNormalizedBookingDepositStatus(booking) === 'deposit_released'
+        || booking.status === 'confirmed'
+        ? 'accepted'
+        : 'pending'
+      : undefined,
+  bookingStatus: booking.status,
+  depositStatus: booking.depositStatus,
+  cancellationActor: booking.cancellationActor,
+  startDate: booking.startDate,
+  guestCheckinConfirmed: booking.guestCheckinConfirmed,
+  hostAccessConfirmed: booking.hostAccessConfirmed,
+  viewerRole: 'host',
+});
+
+const getBookingFlowTimeline = (booking: any) => getReservationFlowTimeline({
+  mode: booking.requestMode,
+  depositType: booking.depositType,
+  requestStatus: typeof booking.requestStatus === 'string'
+    ? booking.requestStatus
+    : booking.requestMode === 'protected'
+      ? getNormalizedBookingDepositStatus(booking) === 'held'
+        || getNormalizedBookingDepositStatus(booking) === 'guest_checkin_confirmed'
+        || getNormalizedBookingDepositStatus(booking) === 'host_access_confirmed'
+        || getNormalizedBookingDepositStatus(booking) === 'deposit_released'
+        || booking.status === 'confirmed'
         ? 'accepted'
         : 'pending'
       : undefined,
@@ -131,14 +174,17 @@ const hasProtectedPlatformDeposit = (booking: {
     return true;
   }
 
+  const normalizedDepositStatus = getNormalizedBookingDepositStatus(booking);
+
   return booking.requestMode === 'protected'
     && (
-      booking.depositStatus === 'checkout_pending'
-      || booking.depositStatus === 'held'
-      || booking.depositStatus === 'review'
-      || booking.depositStatus === 'pending_confirmation'
-      || booking.depositStatus === 'released'
-      || booking.depositStatus === 'refunded'
+      normalizedDepositStatus === 'checkout_pending'
+      || normalizedDepositStatus === 'held'
+      || normalizedDepositStatus === 'guest_checkin_confirmed'
+      || normalizedDepositStatus === 'host_access_confirmed'
+      || normalizedDepositStatus === 'manual_review'
+      || normalizedDepositStatus === 'deposit_released'
+      || normalizedDepositStatus === 'refunded'
     );
 };
 
@@ -218,12 +264,13 @@ type PriorityActionRowProps = {
   eyebrow: string;
   title: string;
   description: string;
+  tip?: string | null;
   actionLabel: string;
   icon: React.ReactNode;
   onAction: () => void;
 };
 
-const PriorityActionRow = ({ eyebrow, title, description, actionLabel, icon, onAction }: PriorityActionRowProps) => (
+const PriorityActionRow = ({ eyebrow, title, description, tip, actionLabel, icon, onAction }: PriorityActionRowProps) => (
   <div className="flex flex-col gap-4 rounded-[28px] border border-slate-200/80 bg-white/94 p-5 shadow-[0_18px_42px_-36px_rgba(15,23,42,0.22)] dark:border-slate-800 dark:bg-slate-900/90 md:flex-row md:items-center md:justify-between">
     <div className="flex items-start gap-4">
       <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand/10 text-brand dark:bg-brand/15 dark:text-brand-light">
@@ -233,6 +280,7 @@ const PriorityActionRow = ({ eyebrow, title, description, actionLabel, icon, onA
         <p className="eyebrow">{eyebrow}</p>
         <p className="text-base font-semibold text-slate-950 dark:text-slate-50">{title}</p>
         <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">{description}</p>
+        {tip ? <ContextualTip compact tone="brand" body={tip} className="mt-3 shadow-none" /> : null}
       </div>
     </div>
     <Button type="button" variant="secondary" size="sm" onClick={onAction} className="shrink-0 rounded-full">
@@ -286,7 +334,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
   const [availabilityPropertyId, setAvailabilityPropertyId] = useState<string | null>(null);
   const [expandedBookingId, setExpandedBookingId] = useState<string | null>(null);
   const [processingBookingAction, setProcessingBookingAction] = useState<{ bookingId: string; action: 'accept-request' | 'not-advance-request' | 'confirm-direct-deposit' | 'confirm-access' | 'cancel-host' | 'report-no-show' } | null>(null);
-  const [activePremiumOffer, setActivePremiumOffer] = useState<any>(null);
+  const [activePremiumOffer, setActivePremiumOffer] = useState<PremiumVerificationOffer | null>(null);
   const [processingPremiumOffer, setProcessingPremiumOffer] = useState(false);
 
   const openPublishingFlow = () => {
@@ -392,7 +440,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
         acceptedMode === 'direct' ? 'Operación libre aceptada' : 'Seña protegida aceptada',
         acceptedMode === 'direct'
           ? 'La operación libre quedó abierta. Sigan por chat: la app no interviene en pagos externos.'
-          : 'La solicitud quedó aceptada y la reserva ya quedó marcada con seña protegida. El seguimiento sigue por chat.',
+          : 'La solicitud quedó aceptada y la reserva quedó marcada con seña protegida. Cuando la seña se registre, queda retenida hasta check-in.',
         'success',
       );
     } catch (err) {
@@ -495,7 +543,13 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
     try {
       const nextBooking = await confirmAccess(booking.id);
       updateRecentBooking(nextBooking);
-      showToast('Acceso confirmado', 'El acceso quedó confirmado y la seña ya salió de custodia.', 'success');
+      showToast(
+        'Acceso confirmado',
+        nextBooking.depositStatus === 'deposit_released' && nextBooking.guestCheckinConfirmed && nextBooking.hostAccessConfirmed
+          ? 'La seña queda lista para liberarse al anfitrión.'
+          : 'El acceso quedó confirmado. Ahora falta que el huésped confirme la llegada para dejar la seña lista para liberarse al anfitrión.',
+        'success',
+      );
     } catch (err) {
       showToast('Acceso', err instanceof Error ? err.message : 'No pudimos confirmar el acceso.', 'error');
     } finally {
@@ -776,6 +830,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
       eyebrow: string;
       title: string;
       description: string;
+      tip?: string | null;
       actionLabel: string;
       icon: React.ReactNode;
       kind: 'requests' | 'property' | 'availability';
@@ -788,6 +843,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
         eyebrow: 'Recibi mas consultas',
         title: `Responde ${formatCountLabel(dashboardOverview.pendingRequestsCount, 'la solicitud pendiente', 'las solicitudes pendientes')}`,
         description: 'Responder rapido evita que la conversacion se enfrie y te deja el panel mas ordenado.',
+        tip: getHostPriorityActionTip('pending-requests'),
         actionLabel: 'Ver solicitudes',
         icon: <Icons.MessageSquare className="h-5 w-5" />,
         kind: 'requests',
@@ -804,6 +860,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
         description: propertyNeedingVerification.pendingVerificationDetails.length === 1
           ? `Te falta ${propertyNeedingVerification.pendingVerificationDetails[0]?.label?.toLowerCase() || 'un paso de respaldo'} para que el aviso muestre mejor respaldo visible.`
           : `Te faltan ${propertyNeedingVerification.pendingVerificationDetails.length} pasos de respaldo para acercar el aviso a la verificación presencial.`,
+        tip: getHostPriorityActionTip('missing-verifications'),
         actionLabel: 'Mejorar aviso',
         icon: <Icons.Shield className="h-5 w-5" />,
         kind: 'property',
@@ -820,6 +877,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
         eyebrow: 'Mejora tu visibilidad',
         title: `Volve a activar ${pausedProperty.title}`,
         description: 'Hoy esta pausado. Cuando lo actives vuelve a mostrarse y puede recibir consultas de nuevo.',
+        tip: getHostPriorityActionTip('paused-property'),
         actionLabel: 'Revisar aviso',
         icon: <Icons.Home className="h-5 w-5" />,
         kind: 'property',
@@ -833,6 +891,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
         description: availabilityProperty.nextArrivalDate
           ? `Tu proxima llegada para este aviso esta marcada para el ${formatDashboardDate(availabilityProperty.nextArrivalDate)}.`
           : 'Deja claras las fechas disponibles para responder menos dudas y cerrar mas rapido.',
+        tip: getHostPriorityActionTip('availability'),
         actionLabel: 'Editar disponibilidad',
         icon: <Icons.Calendar className="h-5 w-5" />,
         kind: 'availability',
@@ -842,6 +901,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
 
     return actions.slice(0, 3);
   }, [dashboardOverview.pendingRequestsCount, hostProperties]);
+  const hostVerificationTip = getHostVerificationOnboardingTip();
 
   const handlePriorityAction = (action: { kind: 'requests' | 'property' | 'availability'; propertyId?: string }) => {
     if (action.kind === 'requests') {
@@ -870,6 +930,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
     const shouldShowGuestProfile = isDecisionStage || isExpanded;
     const bookingSummaryItems = getBookingSummaryItems(booking);
     const bookingFlow = getBookingFlow(booking);
+    const bookingTimeline = getBookingFlowTimeline(booking);
     const arrivalActionsAvailable = isBookingCheckInReached(booking.startDate);
     const showBookingFlowPanel = booking.status !== 'completed' && Boolean(booking.requestMode && bookingFlow.stage && bookingFlow.stage !== 'reservation-confirmed');
     const canAcceptRequest = Boolean(booking.conversationId && bookingFlow.stage === 'request-pending');
@@ -984,6 +1045,13 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
                 ) : null}
               </div>
 
+              {bookingTimeline ? (
+                <ReservationOperationTimeline
+                  timeline={bookingTimeline}
+                  className="border-white/80 bg-white/75 dark:border-slate-800 dark:bg-slate-900/60"
+                />
+              ) : null}
+
               <div className="grid gap-2 md:grid-cols-3">
                 <div className="rounded-2xl bg-white/80 px-3 py-3 text-sm dark:bg-slate-900/70">
                   <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Estado actual</p>
@@ -1000,6 +1068,28 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
               </div>
             </div>
           </div>
+        ) : null}
+
+        {bookingTimeline && !showBookingFlowPanel ? (
+          <ReservationOperationTimeline timeline={bookingTimeline} />
+        ) : null}
+
+        {(bookingFlow.stage === 'protected-deposit-review' || bookingFlow.stage === 'protected-no-show-pending') ? (
+          <ProtectedDepositManualReviewState
+            stage={bookingFlow.stage}
+            viewerRole="host"
+            conversationId={booking.conversationId ?? null}
+            depositPaymentReference={booking.depositPaymentReference ?? null}
+            manualReviewReason={booking.manualReviewReason ?? null}
+            manualReviewOpenedAt={booking.manualReviewOpenedAt ?? null}
+            guestCheckinConfirmed={booking.guestCheckinConfirmed}
+            guestCheckinConfirmedAt={booking.guestCheckinConfirmedAt ?? null}
+            guestCheckinLatitude={booking.guestCheckinLatitude ?? null}
+            guestCheckinLongitude={booking.guestCheckinLongitude ?? null}
+            guestCheckinAccuracyMeters={booking.guestCheckinAccuracyMeters ?? null}
+            hostAccessConfirmed={booking.hostAccessConfirmed}
+            hostAccessConfirmedAt={booking.hostAccessConfirmedAt ?? null}
+          />
         ) : null}
 
         {!isDecisionStage || canReviewBooking || canCancelAsHost || canConfirmProtectedAccess || canReportProtectedNoShow || canOpenChat ? (
@@ -1350,10 +1440,27 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
                           <p className="eyebrow text-indigo-700 dark:text-indigo-300">Validación adicional</p>
                           <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-100">Podés solicitar una verificación presencial para que el aviso muestre el sello completo cuando se confirme la visita.</p>
                           <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                            {property.premiumOnsiteOffer.complimentaryReason
-                              ? property.premiumOnsiteOffer.complimentaryReason
-                              : `Costo actual ${formatPremiumPriceLabel(property.premiumOnsiteOffer.priceArs, property.premiumOnsiteOffer.isComplimentary)}.`}
+                            {property.premiumOnsiteOffer.monetization?.price?.complimentaryReason
+                              || property.premiumOnsiteOffer.complimentaryReason
+                              || `${property.premiumOnsiteOffer.monetization?.price?.label ?? 'Costo actual'} ${formatMarketplaceMonetizationPriceLabel(property.premiumOnsiteOffer.monetization?.price ?? null) ?? formatPremiumPriceLabel(property.premiumOnsiteOffer.priceArs, property.premiumOnsiteOffer.isComplimentary)}.`}
                           </p>
+                          <ContextualTip
+                            compact
+                            eyebrow={hostVerificationTip.eyebrow}
+                            body={hostVerificationTip.body}
+                            tone={hostVerificationTip.tone}
+                            className="mt-3 shadow-none"
+                          />
+                          {property.premiumOnsiteOffer.monetization?.schedule ? (
+                            <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                              {property.premiumOnsiteOffer.monetization.schedule.label}. {property.premiumOnsiteOffer.monetization.schedule.detail}
+                            </p>
+                          ) : null}
+                          {property.premiumOnsiteOffer.monetization?.renewal ? (
+                            <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                              {property.premiumOnsiteOffer.monetization.renewal.label}. {property.premiumOnsiteOffer.monetization.renewal.detail}
+                            </p>
+                          ) : null}
                           <Button
                             type="button"
                             size="sm"
@@ -1482,6 +1589,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
                   eyebrow={action.eyebrow}
                   title={action.title}
                   description={action.description}
+                  tip={action.tip}
                   actionLabel={action.actionLabel}
                   icon={action.icon}
                   onAction={() => handlePriorityAction(action)}
@@ -1494,6 +1602,46 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
             </div>
           )}
         </section>
+
+        {dashboardData?.softBoostPlan ? (
+          <section className={dashboardSectionClass}>
+            <div className="space-y-2">
+              <p className="eyebrow">Crecimiento futuro</p>
+              <h2 className="section-title dark:text-white">Mayor exposición temporal</h2>
+              <p className="body-sm text-muted">Preparamos boosts suaves para dar más visibilidad temporal sin desplazar el ranking de confianza, reputación y operaciones exitosas.</p>
+            </div>
+
+            <div className="rounded-[28px] border border-slate-200/80 bg-white/92 p-5 shadow-[0_18px_46px_-38px_rgba(15,23,42,0.3)] dark:border-slate-800 dark:bg-slate-900/90">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-sm font-semibold text-slate-950 dark:text-slate-50">{dashboardData.softBoostPlan.title}</p>
+                    <Badge variant="neutral" size="md">{dashboardData.softBoostPlan.stateLabel}</Badge>
+                  </div>
+                  <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">{dashboardData.softBoostPlan.summary}</p>
+                  {dashboardData.softBoostPlan.note ? (
+                    <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">{dashboardData.softBoostPlan.note}</p>
+                  ) : null}
+                </div>
+                <div className="rounded-2xl border border-slate-200/80 bg-slate-50/90 px-4 py-3 text-sm leading-6 text-slate-600 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-300">
+                  {dashboardData.softBoostPlan.price
+                    ? `${dashboardData.softBoostPlan.price.label}: ${formatMarketplaceMonetizationPriceLabel(dashboardData.softBoostPlan.price)}`
+                    : 'Sin precio activo todavía'}
+                </div>
+              </div>
+
+              <div className="mt-4 grid gap-3 md:grid-cols-3">
+                {dashboardData.softBoostPlan.featurePreview.map((feature: any) => (
+                  <div key={feature.key} className="rounded-2xl border border-slate-200/80 bg-slate-50/90 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/50">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">{feature.state === 'coming_soon' ? 'Próximo' : 'Incluido'}</p>
+                    <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-100">{feature.label}</p>
+                    <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">{feature.description}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        ) : null}
 
         {reviewingBooking && (
           <ReviewModal

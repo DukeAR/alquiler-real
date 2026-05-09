@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { apiJson } from '../lib/apiConfig';
+import type { MarketplaceMonetizationPlan } from '../lib/marketplaceMonetization';
 import type { PremiumVerificationOffer } from '../lib/premiumVerification';
 import type {
   UserIdentityVerification,
@@ -52,6 +53,7 @@ export type ValidationData = {
   missingRequirements?: string[];
   categories?: ValidationCategory[];
   premiumDocumentaryOffer?: PremiumVerificationOffer | null;
+  professionalProfilePlan?: MarketplaceMonetizationPlan | null;
   benefits?: {
     current: string[];
     next: string[];

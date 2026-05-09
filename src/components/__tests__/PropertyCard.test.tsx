@@ -51,7 +51,6 @@ const sampleProperty = {
   propertyRelationshipVerified: true,
   hasPresencialVerification: false,
   isVerifiedProperty: true,
-  hostTrustScore: 4,
   hostTrust: highHostTrust,
   verificationPhotoCount: 3,
 };
@@ -94,6 +93,7 @@ describe('PropertyCard', () => {
     expect(screen.getByRole('button', { name: /Ver propiedad: Casa frente al mar/i })).toBeInTheDocument();
     expect(screen.getByTestId('property-card-price-row').firstElementChild).toHaveClass('text-[2.05rem]', 'text-slate-950');
     expect(screen.queryByText('Mejor información para decidir')).toBeNull();
+    expect(screen.getByText('La identidad de quien publica ya está validada. Abrí la ficha para revisar ubicación, fotos y reglas con más contexto.')).toBeInTheDocument();
   });
 
   test('example: a card with only identity validation keeps verification hidden', () => {
@@ -117,6 +117,7 @@ describe('PropertyCard', () => {
     expect(screen.queryByText('Identidad verificada')).toBeNull();
     expect(screen.queryByText('Anfitrión confirmado')).toBeNull();
     expect(screen.queryByRole('img', { name: 'Verificado presencialmente' })).toBeNull();
+    expect(screen.getByText('La identidad de quien publica ya está validada. Abrí la ficha para revisar ubicación, fotos y reglas con más contexto.')).toBeInTheDocument();
   });
 
   test('keeps compact cards free of verification badges without presencial verification', () => {
@@ -169,7 +170,6 @@ describe('PropertyCard', () => {
       <PropertyCard
         property={{
           ...sampleProperty,
-          hostTrustScore: 2,
           hostTrust: {
             score: 2,
             level: 'medium',

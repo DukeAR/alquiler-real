@@ -217,7 +217,7 @@ const OnsiteSchedulingStep: React.FC<{
       <div className="flex gap-3">
         <Icons.Info className="h-5 w-5 shrink-0 text-blue-600" />
         <p className="text-xs font-medium leading-relaxed text-blue-800 dark:text-blue-200">
-          Esta revisión suma una capa extra de contexto para el aviso. No reemplaza las otras verificaciones ni garantiza resultados concretos.
+          Esta revisión suma una capa extra de contexto para el aviso. No reemplaza las otras verificaciones y no evaluamos estado, calidad ni amenities.
         </p>
       </div>
     </div>

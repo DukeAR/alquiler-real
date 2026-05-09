@@ -68,6 +68,10 @@ describe('Internal moderation endpoints', () => {
             reportedUserId: 'host-1',
             reportedUserName: 'Mariana',
             strikesCount: 1,
+            internalRiskLevel: 'medium',
+            internalRiskFlags: JSON.stringify(['duplicate_listing_warning', 'risk_medium']),
+            internalManualReviewRequired: false,
+            internalVisibilityPenalty: 18,
             recentReportsCount: 3,
             confirmedReportsCount: 1,
             recentModerationEvents: JSON.stringify([
@@ -121,6 +125,12 @@ describe('Internal moderation endpoints', () => {
                 createdAt: '2026-04-25T09:00:00.000Z',
               },
             ],
+          },
+          risk: {
+            level: 'medium',
+            flags: ['duplicate_listing_warning', 'risk_medium'],
+            manualReviewRequired: false,
+            visibilityPenalty: 18,
           },
           strikes: 1,
           appliedStrikeDelta: 0,
