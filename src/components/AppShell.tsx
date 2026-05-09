@@ -24,6 +24,7 @@ export type NavAction = {
   protected?: boolean;
   desktopStyle?: 'default' | 'soft-pill';
   desktopProminent?: boolean;
+  desktopAccent?: boolean;
   onClick?: () => void;
 };
 
@@ -105,6 +106,7 @@ const getDesktopNavItemClassName = (
   inverted = false,
   style: NavAction['desktopStyle'] = 'default',
   prominent = false,
+  accent = false,
 ) => {
   if (style === 'soft-pill') {
     return cn(
@@ -128,7 +130,9 @@ const getDesktopNavItemClassName = (
     'after:absolute after:bottom-0 after:left-0 after:h-px after:w-full after:origin-left after:scale-x-0 after:transition-transform after:duration-200 hover:after:scale-x-100',
     inverted
       ? 'text-white/78 hover:text-white after:bg-white/38'
-      : 'text-slate-600 hover:text-slate-950 after:bg-slate-300',
+      : accent
+        ? 'text-slate-600 hover:text-slate-950 after:scale-x-100 after:bg-brand'
+        : 'text-slate-600 hover:text-slate-950 after:bg-slate-300',
     active && (inverted ? 'text-white after:scale-x-100 after:bg-white' : 'text-slate-950 after:scale-x-100 after:bg-brand'),
   );
 };
@@ -138,6 +142,7 @@ const getDesktopNavIconClassName = (
   inverted = false,
   style: NavAction['desktopStyle'] = 'default',
   prominent = false,
+  accent = false,
 ) => {
   if (style === 'soft-pill') {
     return cn(
@@ -160,7 +165,7 @@ const getDesktopNavIconClassName = (
     'h-4 w-4 transition-colors duration-150 lg:h-[0.95rem] lg:w-[0.95rem] xl:h-4 xl:w-4',
     inverted
       ? active ? 'text-white' : 'text-white/70 group-hover:text-white/92'
-      : active ? 'text-brand' : 'text-slate-400 group-hover:text-slate-500',
+      : active || accent ? 'text-brand group-hover:text-brand-dark' : 'text-slate-400 group-hover:text-slate-500',
   );
 };
 
@@ -169,12 +174,14 @@ const DesktopNavButton = ({
   active,
   inverted = false,
   compactLabels = false,
+  showIcon = true,
   onSelect,
 }: {
   action: NavAction;
   active: boolean;
   inverted?: boolean;
   compactLabels?: boolean;
+  showIcon?: boolean;
   onSelect: (action: NavAction) => void;
 }) => (
   action.path && !action.onClick && !action.protected ? (
@@ -182,9 +189,9 @@ const DesktopNavButton = ({
       to={action.path}
       aria-label={getNavAriaLabel(action)}
       aria-current={active ? 'page' : undefined}
-      className={getDesktopNavItemClassName(active, inverted, action.desktopStyle, action.desktopProminent)}
+      className={getDesktopNavItemClassName(active, inverted, action.desktopStyle, action.desktopProminent, action.desktopAccent)}
     >
-      <action.icon className={getDesktopNavIconClassName(active, inverted, action.desktopStyle, action.desktopProminent)} />
+      {showIcon ? <action.icon className={getDesktopNavIconClassName(active, inverted, action.desktopStyle, action.desktopProminent, action.desktopAccent)} /> : null}
       {action.path === '/favorites' ? (
         <span className="hidden xl:inline">{action.label}</span>
       ) : action.shortLabel !== action.label ? (
@@ -209,9 +216,9 @@ const DesktopNavButton = ({
       onClick={() => onSelect(action)}
       aria-label={getNavAriaLabel(action)}
       aria-current={active ? 'page' : undefined}
-      className={getDesktopNavItemClassName(active, inverted, action.desktopStyle, action.desktopProminent)}
+      className={getDesktopNavItemClassName(active, inverted, action.desktopStyle, action.desktopProminent, action.desktopAccent)}
     >
-      <action.icon className={getDesktopNavIconClassName(active, inverted, action.desktopStyle, action.desktopProminent)} />
+      {showIcon ? <action.icon className={getDesktopNavIconClassName(active, inverted, action.desktopStyle, action.desktopProminent, action.desktopAccent)} /> : null}
       {action.path === '/favorites' ? (
         <span className="hidden xl:inline">{action.label}</span>
       ) : action.shortLabel !== action.label ? (
@@ -286,6 +293,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   const isAuthenticated = authViewState === 'authenticated' && Boolean(user);
   const isUnauthenticated = authViewState === 'unauthenticated';
   const hasSessionError = authViewState === 'error';
+  const [isAuthenticatedMobileMenuOpen, setIsAuthenticatedMobileMenuOpen] = useState(false);
   const isAuthGuardedRoute = authGuardedPrefixes.some((prefix) => matchesPath(location.pathname, prefix));
   const showGuestAuthActions = !user && (isUnauthenticated || (hasSessionError && !isAuthGuardedRoute));
   const favoritesAction: NavAction = {
@@ -294,7 +302,6 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
     path: '/favorites',
     protected: true,
     icon: Icons.Heart,
-    desktopStyle: 'soft-pill',
     badge: getUnseenFavoritesCount(),
     badgeLabel: (count) => `${count} ${count === 1 ? 'guardado nuevo' : 'guardados nuevos'}`,
   };
@@ -338,6 +345,31 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
 
   const isPropertyDetailRoute = matchesPath(location.pathname, '/detail');
   const [isPropertyHeroVisible, setIsPropertyHeroVisible] = useState(() => isPropertyDetailRoute);
+
+  useEffect(() => {
+    setIsAuthenticatedMobileMenuOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!isAuthenticatedMobileMenuOpen) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsAuthenticatedMobileMenuOpen(false);
+      }
+    };
+
+    const { overflow } = document.body.style;
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = overflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isAuthenticatedMobileMenuOpen]);
 
   useEffect(() => {
     if (!isPropertyDetailRoute) {
@@ -389,13 +421,14 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
 
   const showHeader = !hiddenHeaderPrefixes.some((prefix) => matchesPath(location.pathname, prefix));
   const showMobileNav = !hiddenMobileNavPrefixes.some((prefix) => matchesPath(location.pathname, prefix));
+  const showAuthenticatedMobileMenu = showMobileNav && isAuthenticated && Boolean(user);
+  const showBottomMobileNav = showMobileNav && !showAuthenticatedMobileMenu;
   const showAssistant = !hiddenAssistantPrefixes.some((prefix) => matchesPath(location.pathname, prefix));
   const usesExploreLayoutWidth = location.pathname === '/' || matchesPath(location.pathname, '/explore');
   const headerLayoutClass = usesExploreLayoutWidth ? 'app-page-explore' : 'app-page';
   const headerOnHero = isPropertyDetailRoute && isPropertyHeroVisible;
   const useSymmetricGuestHeader = showGuestAuthActions;
   const guestDesktopHeaderPrimaryClass = 'flex min-w-0 flex-1 items-center justify-between gap-6 sm:gap-7 lg:gap-8 xl:gap-10';
-  const accountDesktopHeaderPrimaryClass = 'flex min-w-0 flex-1 items-center justify-start gap-5 sm:gap-6 lg:gap-7 xl:gap-8';
   const guestDesktopHeaderNavigationClass = cn(
     'hidden min-w-0 flex-1 items-center justify-between gap-5 rounded-[1.9rem] px-5 py-1.5 lg:flex lg:justify-start lg:gap-3 lg:px-3.5 xl:justify-between xl:gap-6 xl:px-8',
     headerOnHero
@@ -403,20 +436,47 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
       : 'border border-slate-200/80 bg-white/72 shadow-[0_22px_46px_-38px_rgba(15,23,42,0.16)] backdrop-blur-[14px]',
   );
   const accountDesktopHeaderNavigationClass = cn(
-    'hidden min-w-0 flex-1 items-center justify-start gap-3 rounded-[1.9rem] px-4 py-1.5 lg:flex lg:gap-3 lg:px-3.5 xl:gap-4 xl:px-5',
+    'hidden min-w-0 flex-1 items-center justify-center gap-4 rounded-[1.6rem] px-3.5 py-1 lg:flex xl:gap-5 xl:px-5',
     headerOnHero
       ? 'border border-white/14 bg-black/12 shadow-[0_22px_46px_-36px_rgba(0,0,0,0.46)] backdrop-blur-[14px]'
       : 'border border-slate-200/80 bg-white/72 shadow-[0_22px_46px_-38px_rgba(15,23,42,0.16)] backdrop-blur-[14px]',
   );
   const guestDesktopActionsClass = 'flex shrink-0 items-center justify-end gap-4 sm:gap-5 lg:pl-3 lg:gap-6 xl:pl-4 xl:gap-7';
-  const accountDesktopActionsClass = 'flex shrink-0 items-center justify-end gap-3.5 sm:gap-4.5 lg:pl-3 lg:gap-5 xl:pl-4 xl:gap-6';
+  const accountDesktopActionsClass = 'flex shrink-0 items-center justify-end gap-2 sm:gap-2.5 lg:gap-3 xl:gap-3.5';
+  const guestDesktopHeaderRowClass = 'flex items-center justify-between gap-5 py-4 sm:gap-6 sm:py-5 lg:gap-8 xl:gap-10';
+  const accountDesktopHeaderRowClass = 'flex items-center justify-between gap-4 py-3 sm:gap-5 sm:py-4 lg:gap-6 xl:gap-7';
+  const accountHeaderUtilityButtonClass = cn(
+    '!h-11 !w-11 !rounded-full !border !p-0 !shadow-none transition-[color,background-color,border-color] duration-150 ease-out hover:translate-y-0 active:translate-y-0',
+    headerOnHero
+      ? '!border-white/16 !bg-black/18 !text-white/84 hover:!border-white/24 hover:!bg-black/26 hover:!text-white'
+      : '!border-slate-200/90 !bg-white/96 !text-slate-500 hover:!border-slate-300 hover:!bg-white hover:!text-slate-900',
+  );
+  const accountModeSwitchClass = cn(
+    'hidden self-center !rounded-[0.95rem] !border !p-1 !shadow-none lg:inline-flex',
+    headerOnHero
+      ? '!border-white/16 !bg-black/18'
+      : '!border-slate-200/90 !bg-white/96',
+  );
+  const accountModeSwitchButtonClass = '!h-9 !min-w-[4.95rem] !rounded-[0.72rem] !px-2.5 !text-[0.78rem] !font-semibold !shadow-none transition-colors duration-150 ease-out hover:translate-y-0 active:translate-y-0';
+  const accountModeSwitchActiveClass = '!border-transparent !bg-brand !text-white !shadow-none hover:!bg-brand-dark hover:!text-white hover:!shadow-none dark:!border-transparent dark:!bg-brand dark:hover:!bg-brand-dark';
+  const accountModeSwitchInactiveClass = '!border-transparent !bg-transparent !text-slate-500 hover:!bg-slate-100/90 hover:!text-slate-900 dark:!text-slate-300 dark:hover:!bg-slate-800/80 dark:hover:!text-slate-50';
 
   const desktopActions: NavAction[] = [
-    { label: 'Explorar', shortLabel: 'Explorar', path: '/', icon: Icons.Search, desktopStyle: 'soft-pill', desktopProminent: true },
+    { label: 'Explorar', shortLabel: 'Explorar', path: '/', icon: Icons.Search },
     ...(isAuthenticated ? [favoritesAction] : []),
-    { label: 'Cómo funciona', shortLabel: 'Cómo', path: '/about', icon: Icons.Info },
-    { label: 'Ayuda', shortLabel: 'Ayuda', path: '/faq', icon: Icons.Lightbulb }
+    { label: 'Cómo funciona', shortLabel: 'Cómo', path: '/about', icon: Icons.Info, desktopAccent: !isAuthenticated },
+    { label: 'Ayuda', shortLabel: 'Ayuda', path: '/faq', icon: Icons.Lightbulb, desktopAccent: !isAuthenticated }
   ];
+
+  const authenticatedMobileMenuActions: NavAction[] = isAuthenticated
+    ? [
+        { label: 'Explorar', shortLabel: 'Explorar', path: '/', icon: Icons.Search },
+        favoritesAction,
+        { label: 'Mis reservas', shortLabel: 'Mis reservas', path: '/my-bookings', protected: true, icon: Icons.Calendar },
+        { label: 'Cómo funciona', shortLabel: 'Cómo funciona', path: '/about', icon: Icons.Info },
+        { label: 'Ayuda', shortLabel: 'Ayuda', path: '/faq', icon: Icons.Lightbulb },
+      ]
+    : [];
 
   const mobileActions: NavAction[] = isAuthenticated
     ? [
@@ -469,7 +529,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
     </button>
   );
 
-  const renderDesktopNavigation = (className: string, compactLabels = false) => (
+  const renderDesktopNavigation = (className: string, compactLabels = false, showIcon = true) => (
     <nav aria-label="Navegación principal" className={className}>
       {desktopActions.map((action) => (
         <DesktopNavButton
@@ -478,6 +538,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
           active={!!action.path && matchesPath(location.pathname, action.path)}
           inverted={headerOnHero}
           compactLabels={compactLabels}
+          showIcon={showIcon}
           onSelect={onSelect}
         />
       ))}
@@ -486,17 +547,20 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
 
   const renderDesktopHeaderActions = (className: string) => (
     <div className={className}>
-      {isAuthenticated && user ? <AccountModeSwitch className={cn(
-        'hidden self-center !rounded-[1.05rem] !p-0.5 lg:inline-flex xl:!rounded-[1.15rem] xl:!p-1',
-        headerOnHero
-          ? '!border-white/16 !bg-black/18 !shadow-[0_18px_34px_-28px_rgba(0,0,0,0.34)]'
-          : '!border-slate-200/90 !bg-white/96 !shadow-[0_18px_34px_-28px_rgba(15,23,42,0.18)]',
-      )} buttonClassName={cn(
-        '!h-11 !rounded-[0.9rem] !px-2.5 !text-[0.82rem] !font-semibold !shadow-none transition-[transform,box-shadow] duration-200 ease-out motion-reduce:transform-none hover:-translate-y-px active:translate-y-0 xl:!h-12 xl:!rounded-[0.95rem] xl:!px-3 xl:!text-[0.88rem]',
-        headerOnHero
-          ? '[&:not([data-loading=true])]:!text-white/82 [&:not([data-loading=true])]:hover:!text-white'
-          : '[&:not([data-loading=true])]:!text-slate-600 [&:not([data-loading=true])]:hover:!text-slate-950',
-      )} compact /> : null}
+      {isAuthenticated && user ? (
+        <button
+          type="button"
+          aria-label={isAuthenticatedMobileMenuOpen ? 'Cerrar menú' : 'Abrir menú'}
+          aria-controls="authenticated-mobile-menu"
+          aria-expanded={isAuthenticatedMobileMenuOpen}
+          onClick={() => setIsAuthenticatedMobileMenuOpen((current) => !current)}
+          className={cn(accountHeaderUtilityButtonClass, 'lg:hidden')}
+        >
+          {isAuthenticatedMobileMenuOpen ? <Icons.X className="h-[1.05rem] w-[1.05rem]" /> : <Icons.Menu className="h-[1.05rem] w-[1.05rem]" />}
+        </button>
+      ) : null}
+
+      {isAuthenticated && user ? <AccountModeSwitch className={accountModeSwitchClass} buttonClassName={accountModeSwitchButtonClass} activeButtonClassName={accountModeSwitchActiveClass} inactiveButtonClassName={accountModeSwitchInactiveClass} compact /> : null}
 
       {isAuthenticated && user ? (
         <NotificationsMenu
@@ -509,44 +573,21 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
           onMarkAllAsRead={notifications.markAllAsRead}
           onLoginRequired={openLoginModal}
           inverted={headerOnHero}
+          buttonClassName={accountHeaderUtilityButtonClass}
         />
       ) : null}
 
       {isAuthenticated && user ? (
-        <>
-          <button
-            type="button"
-            onClick={() => navigate('/my-bookings')}
-            className={cn(
-              'hidden h-[3.25rem] w-[3.25rem] items-center justify-center rounded-[1rem] border transition-[color,background-color,border-color,box-shadow,transform] duration-200 ease-out motion-reduce:transform-none hover:-translate-y-px active:translate-y-0 focus-visible:outline-none focus-visible:shadow-[var(--app-focus-ring)] md:inline-flex lg:h-14 lg:w-14',
-              headerOnHero
-                ? 'border-white/16 bg-black/16 text-white/84 shadow-[0_16px_30px_-26px_rgba(0,0,0,0.3)] backdrop-blur-[10px] hover:border-white/22 hover:bg-black/24 hover:text-white hover:shadow-[0_18px_32px_-24px_rgba(0,0,0,0.3)]'
-                : 'border-slate-200/88 bg-white/92 text-slate-500 shadow-[0_16px_30px_-28px_rgba(15,23,42,0.16)] hover:border-slate-300 hover:bg-white hover:text-slate-900 hover:shadow-[0_18px_32px_-24px_rgba(15,23,42,0.18)]',
-            )}
-            aria-label="Mis reservas"
-          >
-            <Icons.Calendar className="h-[1.05rem] w-[1.05rem] lg:h-[1.1rem] lg:w-[1.1rem]" />
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate('/profile')}
-            className={cn(
-              'flex h-[3.25rem] items-center gap-2.5 rounded-full px-3.5 transition-[background-color,border-color,box-shadow,transform,color] duration-200 ease-out motion-reduce:transform-none hover:-translate-y-px active:translate-y-0 sm:h-[3.35rem] sm:gap-3 sm:px-4 lg:h-14 lg:px-[1.05rem]',
-              headerOnHero
-                ? 'border border-white/18 bg-black/20 text-white shadow-[0_18px_35px_-28px_rgba(0,0,0,0.32)] backdrop-blur-[12px] hover:border-white/26 hover:bg-black/28 hover:shadow-[0_22px_40px_-28px_rgba(0,0,0,0.34)]'
-                : 'border border-slate-200/90 bg-white/98 shadow-[0_18px_35px_-28px_rgba(15,23,42,0.22)] hover:border-slate-300 hover:bg-white hover:shadow-[0_22px_40px_-28px_rgba(15,23,42,0.22)]',
-            )}
-            aria-label="Ir al perfil"
-          >
-            <div className="hidden text-right min-[1800px]:block">
-              <div className={cn('text-[10px] font-bold uppercase tracking-[0.16em]', headerOnHero ? 'text-white/62' : 'text-slate-400')}>Cuenta</div>
-              <div className={cn('text-[0.96rem] font-bold leading-tight', headerOnHero ? 'text-white' : 'text-slate-900')}>{user.name}</div>
-            </div>
-            <div className={cn('h-10 w-10 overflow-hidden rounded-full lg:h-11 lg:w-11', headerOnHero ? 'bg-white/16' : 'bg-slate-100')}>
-              <img src={user.profilePhoto || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`} alt={user.name} className="h-full w-full object-cover" />
-            </div>
-          </button>
-        </>
+        <button
+          type="button"
+          onClick={() => navigate('/profile')}
+          className={accountHeaderUtilityButtonClass}
+          aria-label="Ir al perfil"
+        >
+          <div className={cn('h-full w-full overflow-hidden rounded-full', headerOnHero ? 'bg-white/16' : 'bg-slate-100')}>
+            <img src={user.profilePhoto || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`} alt={user.name} className="h-full w-full object-cover" />
+          </div>
+        </button>
       ) : showGuestAuthActions ? (
         <>
           <button
@@ -613,7 +654,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
       {showHeader ? (
         <header className={cn('app-header z-50', isPropertyDetailRoute ? 'app-header-detail' : 'relative', headerOnHero && 'app-header-on-hero')}>
           {useSymmetricGuestHeader ? (
-            <div className={cn(headerLayoutClass, 'flex items-center justify-between gap-5 py-4 sm:gap-6 sm:py-5 lg:gap-8 xl:gap-10')}>
+            <div className={cn(headerLayoutClass, guestDesktopHeaderRowClass)}>
               <div className={guestDesktopHeaderPrimaryClass}>
                 {brandHomeButton}
                 {renderDesktopNavigation(guestDesktopHeaderNavigationClass)}
@@ -622,20 +663,93 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
               {renderDesktopHeaderActions(guestDesktopActionsClass)}
             </div>
           ) : (
-            <div className={cn(headerLayoutClass, 'flex items-center justify-between gap-5 py-4 sm:gap-6 sm:py-5 lg:gap-8 xl:gap-10')}>
-              <div className={accountDesktopHeaderPrimaryClass}>
-                {brandHomeButton}
-                {renderDesktopNavigation(accountDesktopHeaderNavigationClass, true)}
-              </div>
+            <div className={cn(headerLayoutClass, accountDesktopHeaderRowClass)}>
+              {brandHomeButton}
+              {renderDesktopNavigation(accountDesktopHeaderNavigationClass, false, false)}
               {renderDesktopHeaderActions(accountDesktopActionsClass)}
             </div>
           )}
         </header>
       ) : null}
 
-      <div className={cn('min-h-screen', showMobileNav ? 'pb-[calc(env(safe-area-inset-bottom)+5.75rem)] md:pb-10' : '')}>{children}</div>
+      {showAuthenticatedMobileMenu && isAuthenticated && user && isAuthenticatedMobileMenuOpen ? (
+        <div className="fixed inset-0 z-[60] lg:hidden">
+          <button
+            type="button"
+            aria-label="Cerrar menú"
+            onClick={() => setIsAuthenticatedMobileMenuOpen(false)}
+            className="absolute inset-0 bg-slate-950/24 backdrop-blur-[2px]"
+          />
 
-      {showMobileNav ? (
+          <div
+            id="authenticated-mobile-menu"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Menú principal"
+            className="absolute inset-x-4 top-[calc(env(safe-area-inset-top)+4.85rem)] rounded-[28px] border border-slate-200/90 bg-white/98 p-4 shadow-[0_28px_60px_-30px_rgba(15,23,42,0.26)] backdrop-blur-xl"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[0.7rem] font-bold uppercase tracking-[0.18em] text-slate-400">Tu cuenta</p>
+                <p className="truncate text-[1.02rem] font-semibold text-slate-950">{user.name}</p>
+              </div>
+
+              <button
+                type="button"
+                aria-label="Cerrar menú"
+                onClick={() => setIsAuthenticatedMobileMenuOpen(false)}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200/90 bg-white text-slate-500 transition-colors duration-150 hover:border-slate-300 hover:text-slate-900"
+              >
+                <Icons.X className="h-4.5 w-4.5" />
+              </button>
+            </div>
+
+            <div className="mt-4 rounded-[22px] border border-slate-200/90 bg-slate-50/80 p-1.5">
+              <AccountModeSwitch
+                compact
+                className="!flex !w-full !justify-center !border-transparent !bg-transparent !p-0 !shadow-none"
+                buttonClassName="!h-9 !min-w-[5rem] !flex-1 !rounded-[0.72rem] !px-2.5 !text-[0.8rem] !font-semibold !shadow-none transition-colors duration-150"
+                activeButtonClassName={accountModeSwitchActiveClass}
+                inactiveButtonClassName={accountModeSwitchInactiveClass}
+              />
+            </div>
+
+            <nav aria-label="Menú autenticado" className="mt-4 space-y-1.5">
+              {authenticatedMobileMenuActions.map((action) => (
+                <button
+                  key={action.label}
+                  type="button"
+                  onClick={() => {
+                    void onSelect(action);
+                    setIsAuthenticatedMobileMenuOpen(false);
+                  }}
+                  className="flex w-full items-center justify-between gap-3 rounded-[1.1rem] border border-slate-200/85 bg-white px-4 py-3 text-left shadow-[0_14px_28px_-24px_rgba(15,23,42,0.12)] transition-colors duration-150 hover:border-slate-300 hover:bg-slate-50"
+                  aria-label={getNavAriaLabel(action)}
+                >
+                  <span className="flex min-w-0 items-center gap-3">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600">
+                      <action.icon className="h-4.5 w-4.5" />
+                    </span>
+                    <span className="min-w-0 truncate text-[0.95rem] font-semibold text-slate-900">{action.label}</span>
+                  </span>
+                  <span className="flex items-center gap-2">
+                    {action.badge ? (
+                      <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-black text-white">
+                        {action.badge}
+                      </span>
+                    ) : null}
+                    <Icons.ChevronRight className="h-4 w-4 text-slate-400" />
+                  </span>
+                </button>
+              ))}
+            </nav>
+          </div>
+        </div>
+      ) : null}
+
+      <div className={cn('min-h-screen', showBottomMobileNav ? 'pb-[calc(env(safe-area-inset-bottom)+5.75rem)] md:pb-10' : '')}>{children}</div>
+
+      {showBottomMobileNav ? (
         <nav aria-label="Navegación principal" className="fixed inset-x-0 bottom-0 z-50 md:hidden">
           <div className="mx-auto flex max-w-md items-center gap-1 rounded-t-[30px] border border-b-0 border-slate-200/85 bg-white/95 px-4 pb-[calc(env(safe-area-inset-bottom)+0.8rem)] pt-3 shadow-[0_-18px_40px_-30px_rgba(15,23,42,0.22)] backdrop-blur-xl">
             {mobileActions.map((action) => (

@@ -1,4 +1,4 @@
-import { act, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { AppShell } from '../AppShell';
@@ -7,6 +7,24 @@ const useAuthMock = vi.fn();
 const getUnseenFavoritesCountMock = vi.fn();
 const markFavoritesAsSeenMock = vi.fn();
 const useNotificationsMock = vi.fn();
+const accountModeSwitchMock = vi.fn(({
+  buttonClassName,
+  activeButtonClassName,
+  inactiveButtonClassName,
+}: {
+  buttonClassName?: string;
+  activeButtonClassName?: string;
+  inactiveButtonClassName?: string;
+}) => (
+  <div
+    data-testid="account-mode-switch"
+    data-button-class-name={buttonClassName}
+    data-active-button-class-name={activeButtonClassName}
+    data-inactive-button-class-name={inactiveButtonClassName}
+  >
+    Mode switch
+  </div>
+));
 
 vi.mock('../../hooks/useAuth', () => ({
   useAuth: () => useAuthMock(),
@@ -44,7 +62,7 @@ vi.mock('../LoginModal', () => ({
 }));
 
 vi.mock('../ui/AccountModeSwitch', () => ({
-  AccountModeSwitch: () => <div data-testid="account-mode-switch">Mode switch</div>,
+  AccountModeSwitch: (props: { buttonClassName?: string }) => accountModeSwitchMock(props),
 }));
 
 const createDomRect = (bottom: number) => ({
@@ -95,6 +113,7 @@ describe('AppShell', () => {
     markFavoritesAsSeenMock.mockReset();
     useAuthMock.mockReset();
     useNotificationsMock.mockReset();
+    accountModeSwitchMock.mockClear();
     getUnseenFavoritesCountMock.mockReturnValue(0);
     useNotificationsMock.mockReturnValue({
       status: 'logged-out',
@@ -159,11 +178,12 @@ describe('AppShell', () => {
     await renderShell();
 
     expect(screen.getAllByRole('button', { name: 'Guardados' })).not.toHaveLength(0);
-    expect(screen.getAllByRole('button', { name: 'Guardados' })[0]).toHaveClass('rounded-full');
-    expect(screen.getAllByRole('button', { name: 'Guardados' })[0]).toHaveClass('border');
+    expect(screen.getAllByRole('button', { name: 'Guardados' })[0]).not.toHaveClass('rounded-full');
+    expect(screen.queryByRole('button', { name: 'Mis reservas' })).not.toBeInTheDocument();
     expect(screen.getByTestId('notifications-menu')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Publicar propiedad' })).not.toBeInTheDocument();
     expect(screen.getByTestId('account-mode-switch')).toBeInTheDocument();
+    expect(screen.queryByText('Ana')).not.toBeInTheDocument();
   });
 
   test('marks Guardados as seen when an authenticated user opens the section', async () => {
@@ -229,6 +249,11 @@ describe('AppShell', () => {
     const headerRow = header.firstElementChild;
     const homeButton = within(header).getByRole('button', { name: 'Ir al inicio de Alquiler Real' });
     const desktopNav = within(header).getByRole('navigation', { name: 'Navegación principal' });
+    const exploreLink = within(desktopNav).getByRole('link', { name: 'Explorar' });
+    const aboutLink = within(desktopNav).getByRole('link', { name: 'Cómo funciona' });
+    const helpLink = within(desktopNav).getByRole('link', { name: 'Ayuda' });
+    const aboutIcon = aboutLink.querySelector('svg');
+    const helpIcon = helpLink.querySelector('svg');
     const leftGroup = homeButton.parentElement;
     const guestActionsGroup = screen.getByRole('button', { name: 'Publicar propiedad' }).parentElement;
 
@@ -247,6 +272,14 @@ describe('AppShell', () => {
     expect(desktopNav).toHaveClass('xl:px-8');
     expect(desktopNav).not.toHaveClass('lg:ml-auto');
     expect(desktopNav).not.toHaveClass('lg:pl-6');
+    expect(exploreLink).not.toHaveClass('rounded-full');
+    expect(exploreLink).not.toHaveClass('border');
+    expect(aboutLink).toHaveClass('after:scale-x-100');
+    expect(helpLink).toHaveClass('after:scale-x-100');
+    expect(aboutIcon).not.toBeNull();
+    expect(helpIcon).not.toBeNull();
+    expect(aboutIcon).toHaveClass('text-brand');
+    expect(helpIcon).toHaveClass('text-brand');
 
     expect(guestActionsGroup).not.toBeNull();
     expect(guestActionsGroup).toHaveClass('justify-end');
@@ -277,16 +310,49 @@ describe('AppShell', () => {
 
     const header = screen.getByRole('banner');
     const desktopNav = within(header).getByRole('navigation', { name: 'Navegación principal' });
+    const aboutLink = within(desktopNav).getByRole('link', { name: 'Cómo funciona' });
     const actionsGroup = screen.getByRole('button', { name: 'Ir al perfil' }).parentElement;
+    const modeSwitch = screen.getByTestId('account-mode-switch');
 
     expect(desktopNav).toHaveClass('flex-1');
-    expect(desktopNav).toHaveClass('justify-start');
+    expect(desktopNav).toHaveClass('justify-center');
+    expect(within(aboutLink).getByText('Cómo funciona')).toBeInTheDocument();
+    expect(desktopNav.querySelector('svg')).toBeNull();
     expect(actionsGroup).not.toBeNull();
     expect(actionsGroup).toHaveClass('justify-end');
-    expect(actionsGroup).toHaveClass('lg:pl-3');
-    expect(actionsGroup).toHaveClass('xl:pl-4');
-    expect(actionsGroup).toHaveClass('lg:gap-5');
-    expect(actionsGroup).toHaveClass('xl:gap-6');
+    expect(actionsGroup).toHaveClass('lg:gap-3');
+    expect(actionsGroup).toHaveClass('xl:gap-3.5');
+    expect(modeSwitch.getAttribute('data-button-class-name') ?? '').toContain('!h-9');
+    expect(modeSwitch.getAttribute('data-active-button-class-name') ?? '').toContain('!bg-brand');
+    expect(modeSwitch.getAttribute('data-inactive-button-class-name') ?? '').toContain('!bg-transparent');
+  });
+
+  test('replaces the authenticated mobile bottom nav with a menu drawer', async () => {
+    useAuthMock.mockReturnValue({
+      user: {
+        id: 'u1',
+        name: 'Ana',
+        email: 'ana@test.com',
+        role: 'tenant',
+        canGuest: true,
+        canHost: false,
+        activeMode: 'guest',
+      },
+      loading: false,
+      status: 'authenticated',
+      refresh: vi.fn(async () => undefined),
+    });
+
+    await renderShell();
+
+    expect(screen.queryByRole('button', { name: 'Explorar' })).not.toBeInTheDocument();
+
+    const menuButton = screen.getByRole('button', { name: 'Abrir menú' });
+    fireEvent.click(menuButton);
+
+    expect(screen.getByRole('dialog', { name: 'Menú principal' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Mis reservas' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Cómo funciona' })).toBeInTheDocument();
   });
 
   test('hides the mobile navigation on detail routes to avoid stacked fixed bars', async () => {

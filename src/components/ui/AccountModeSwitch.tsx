@@ -8,6 +8,8 @@ type AccountModeSwitchProps = {
   className?: string;
   buttonClassName?: string;
   compact?: boolean;
+  activeButtonClassName?: string;
+  inactiveButtonClassName?: string;
 };
 
 const labels: Record<UserMode, string> = {
@@ -15,7 +17,13 @@ const labels: Record<UserMode, string> = {
   host: 'Modo anfitrión',
 };
 
-export const AccountModeSwitch = ({ className, buttonClassName, compact = false }: AccountModeSwitchProps) => {
+export const AccountModeSwitch = ({
+  className,
+  buttonClassName,
+  compact = false,
+  activeButtonClassName,
+  inactiveButtonClassName,
+}: AccountModeSwitchProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, setActiveMode } = useAuth();
@@ -81,12 +89,18 @@ export const AccountModeSwitch = ({ className, buttonClassName, compact = false 
             type="button"
             variant={isActive ? 'primary' : 'ghost'}
             size={compact ? 'sm' : 'md'}
+            aria-pressed={isActive}
             loading={isLoading}
             loadingLabel={compact ? (mode === 'guest' ? 'Huésped' : 'Anfitrión') : labels[mode]}
             className={cn(
               'rounded-full px-3',
-              !isActive && 'text-slate-500 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-50',
               buttonClassName,
+              isActive
+                ? cn(
+                    '!border-emerald-600 !bg-emerald-600 !text-white hover:!bg-emerald-700 hover:!text-white dark:!border-emerald-500 dark:!bg-emerald-500 dark:hover:!bg-emerald-400 dark:hover:!text-slate-950',
+                    activeButtonClassName,
+                  )
+                : cn('text-slate-500 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-50', inactiveButtonClassName),
             )}
             onClick={() => {
               void handleModeChange(mode);

@@ -9,7 +9,7 @@ import {
   UserCheck, LayoutDashboard, ListTodo, Lightbulb, ExternalLink, X, Minus, Loader2,
   Bell, ShieldAlert, Key, Users, ImagePlus, LogOut,
   Award, Crown, Circle, ChevronLeft, Phone,
-  FileText, FileSpreadsheet, Mail, Map, LayoutGrid, ChevronDown, BedDouble, Bath
+  FileText, FileSpreadsheet, Mail, Map, LayoutGrid, ChevronDown, BedDouble, Bath, Menu
 } from 'lucide-react';
 
 export const Icons = {
@@ -70,6 +70,7 @@ export const Icons = {
   Circle,
   ChevronLeft,
   ChevronDown,
+  Menu,
   Phone,
   FileText,
   FileSpreadsheet,

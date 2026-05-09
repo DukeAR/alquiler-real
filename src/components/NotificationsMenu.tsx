@@ -15,6 +15,8 @@ type NotificationsMenuProps = {
   onMarkAllAsRead: () => Promise<boolean>;
   onLoginRequired: () => Promise<void> | void;
   inverted?: boolean;
+  className?: string;
+  buttonClassName?: string;
 };
 
 const formatNotificationDate = (value: string) => {
@@ -41,6 +43,8 @@ export const NotificationsMenu: React.FC<NotificationsMenuProps> = ({
   onMarkAllAsRead,
   onLoginRequired,
   inverted = false,
+  className,
+  buttonClassName,
 }) => {
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
@@ -187,7 +191,7 @@ export const NotificationsMenu: React.FC<NotificationsMenuProps> = ({
   }, [errorMessage, notifications, onLoginRequired, onRefresh, status]);
 
   return (
-    <div ref={containerRef} className="relative">
+    <div ref={containerRef} className={cn('relative', className)}>
       <button
         ref={buttonRef}
         type="button"
@@ -198,6 +202,7 @@ export const NotificationsMenu: React.FC<NotificationsMenuProps> = ({
             ? 'border-white/16 bg-black/16 text-white/84 shadow-[0_16px_30px_-26px_rgba(0,0,0,0.3)] backdrop-blur-[10px] hover:border-white/22 hover:bg-black/24 hover:text-white hover:shadow-[0_18px_32px_-24px_rgba(0,0,0,0.3)]'
             : 'border-slate-200/88 bg-white/92 text-slate-500 shadow-[0_16px_30px_-28px_rgba(15,23,42,0.16)] hover:border-slate-300 hover:bg-white hover:text-slate-900 hover:shadow-[0_18px_32px_-24px_rgba(15,23,42,0.18)]',
           isOpen && (inverted ? 'border-white/24 bg-black/24 text-white' : 'border-slate-300 bg-white text-slate-950'),
+          buttonClassName,
         )}
         aria-label={buttonLabel}
         aria-expanded={isOpen}
