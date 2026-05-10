@@ -834,6 +834,7 @@ export const initDB = async () => {
       BEGIN ALTER TABLE properties ADD COLUMN bedrooms INTEGER DEFAULT 1; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE properties ADD COLUMN bathrooms INTEGER DEFAULT 1; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE properties ADD COLUMN property_type TEXT DEFAULT 'house'; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE properties ADD COLUMN created_at TIMESTAMP DEFAULT NOW(); EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE properties ADD COLUMN "materialVerified" INTEGER DEFAULT 0; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE properties ADD COLUMN "onsiteVerifiedAt" TIMESTAMP; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE properties ADD COLUMN manual_blocked_dates TEXT DEFAULT '[]'; EXCEPTION WHEN duplicate_column THEN NULL; END;
@@ -1003,6 +1004,11 @@ export const initDB = async () => {
   await db.query(`
     DO $$ BEGIN
       BEGIN ALTER TABLE messages ADD COLUMN conversation_id TEXT REFERENCES conversations(id) ON DELETE CASCADE; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE messages ADD COLUMN sender_id TEXT REFERENCES users(id); EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE messages ADD COLUMN receiver_id TEXT REFERENCES users(id); EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE messages ADD COLUMN content TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE messages ADD COLUMN is_system BOOLEAN DEFAULT FALSE; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE messages ADD COLUMN created_at TIMESTAMP DEFAULT NOW(); EXCEPTION WHEN duplicate_column THEN NULL; END;
     END $$;
   `);
 
@@ -1060,11 +1066,21 @@ export const initDB = async () => {
 
   await db.query(`
     DO $$ BEGIN
+      BEGIN ALTER TABLE reviews ADD COLUMN booking_id TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE reviews ADD COLUMN conversation_id TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE reviews ADD COLUMN reviewer_id TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE reviews ADD COLUMN reviewed_user_id TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE reviews ADD COLUMN property_id TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE reviews ADD COLUMN rating INTEGER; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE reviews ADD COLUMN comment TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE reviews ADD COLUMN type TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE reviews ADD COLUMN category_scores JSONB DEFAULT '[]'::jsonb; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE reviews ADD COLUMN agreement_kept BOOLEAN; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE reviews ADD COLUMN would_interact_again BOOLEAN; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE reviews ADD COLUMN had_incident BOOLEAN; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE reviews ADD COLUMN photos_match_reality BOOLEAN DEFAULT TRUE; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE reviews ADD COLUMN pressure_to_book_fast BOOLEAN DEFAULT FALSE; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE reviews ADD COLUMN created_at TIMESTAMP DEFAULT NOW(); EXCEPTION WHEN duplicate_column THEN NULL; END;
     END $$;
   `);
 
