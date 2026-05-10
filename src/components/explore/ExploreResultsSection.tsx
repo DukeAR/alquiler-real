@@ -15,6 +15,7 @@ import {
 } from '../../lib/propertyVerification';
 import type { Property } from '../../services/geminiService';
 import { cn } from '../../lib/utils';
+import type { ExploreFilters } from './ExploreFiltersBar';
 
 const LazyPropertyMap = lazy(() => import('../PropertyMap').then((module) => ({ default: module.PropertyMap })));
 
@@ -81,7 +82,7 @@ const getActiveSortLabel = (sortBy: PropertyCatalogSort) => {
 const getVerificationFilterContextCopy = (verifiedOnly: boolean) => {
   if (verifiedOnly) {
     return {
-      title: 'Mostrando solo propiedades verificadas',
+      title: 'Mostrando solo propiedades verificadas presencialmente',
       description: 'Identidad, ubicación y acceso confirmados',
     };
   }
@@ -92,8 +93,95 @@ const getVerificationFilterContextCopy = (verifiedOnly: boolean) => {
   };
 };
 
+const formatDateFilterLabel = (value: string) => {
+  const parts = value.split('-');
+
+  if (parts.length !== 3) {
+    return value;
+  }
+
+  const [, month, day] = parts;
+  return `${day}/${month}`;
+};
+
+const getDateRangeFilterLabel = (filters: ExploreFilters) => {
+  if (filters.checkIn && filters.checkOut) {
+    return `${formatDateFilterLabel(filters.checkIn)} al ${formatDateFilterLabel(filters.checkOut)}`;
+  }
+
+  if (filters.checkIn) {
+    return `Desde ${formatDateFilterLabel(filters.checkIn)}`;
+  }
+
+  if (filters.checkOut) {
+    return `Hasta ${formatDateFilterLabel(filters.checkOut)}`;
+  }
+
+  return null;
+};
+
+const getGuestsFilterLabel = (guests: string) => {
+  if (guests === '10') {
+    return '10 o más huéspedes';
+  }
+
+  const count = Number(guests);
+
+  if (!Number.isFinite(count) || count < 1) {
+    return null;
+  }
+
+  return `${count} ${count === 1 ? 'huésped' : 'huéspedes'}`;
+};
+
+const getResultsEmptyStateCopy = ({
+  verifiedOnly,
+  searchQuery,
+  filters,
+  availabilityFiltering,
+}: {
+  verifiedOnly: boolean;
+  searchQuery: string;
+  filters: ExploreFilters;
+  availabilityFiltering: boolean;
+}) => {
+  if (verifiedOnly) {
+    return {
+      title: searchQuery
+        ? 'No encontramos propiedades con verificación presencial en esta zona todavía.'
+        : 'No encontramos propiedades con verificación presencial para esta búsqueda.',
+      description: availabilityFiltering
+        ? 'Probá ampliar la zona, cambiar las fechas o desactivar el filtro de verificación presencial.'
+        : 'Probá ampliar la zona o desactivar el filtro de verificación presencial.',
+    };
+  }
+
+  if (availabilityFiltering) {
+    return {
+      title: 'No encontramos disponibilidad para esas fechas.',
+      description: searchQuery
+        ? 'Probá ampliar la zona o mover el rango para ver más opciones disponibles.'
+        : 'Probá cambiar el rango o limpiar los filtros para ver otras opciones.',
+    };
+  }
+
+  if (filters.guests !== '1') {
+    return {
+      title: `No encontramos opciones para ${getGuestsFilterLabel(filters.guests) ?? 'ese grupo'}.`,
+      description: 'Probá ampliar la zona o bajar la cantidad de huéspedes para sumar alternativas.',
+    };
+  }
+
+  return {
+    title: 'No encontramos propiedades para esa zona',
+    description: 'Probá con otra zona o limpiá los filtros.',
+  };
+};
+
 type ExploreResultsSectionProps = {
   loading: boolean;
+  filters: ExploreFilters;
+  availabilityFiltering: boolean;
   loadError: string | null;
   viewMode: 'grid' | 'map';
   sortBy: PropertyCatalogSort;
@@ -105,6 +193,9 @@ type ExploreResultsSectionProps = {
   filteredProperties: Property[];
   showSectionedCatalog: boolean;
   featuredProperties: Property[];
+  identityValidatedProperties: Property[];
+  nearSeaProperties: Property[];
+  largeGroupProperties: Property[];
   newlyListedProperties: Property[];
   listingProperties: Property[];
   visibleProperties: Property[];
@@ -119,6 +210,8 @@ type ExploreResultsSectionProps = {
 
 export const ExploreResultsSection = ({
   loading,
+  filters,
+  availabilityFiltering,
   loadError,
   viewMode,
   sortBy,
@@ -130,6 +223,9 @@ export const ExploreResultsSection = ({
   filteredProperties,
   showSectionedCatalog,
   featuredProperties,
+  identityValidatedProperties,
+  nearSeaProperties,
+  largeGroupProperties,
   newlyListedProperties,
   listingProperties,
   visibleProperties,
@@ -154,9 +250,14 @@ export const ExploreResultsSection = ({
   const showListingHeader = !hasActiveFilters || loading || hasAnyResults;
   const sectionSpacingClass = showHomeBlocks ? 'space-y-5 md:space-y-6' : 'space-y-6 md:space-y-8';
   const listingSectionClass = 'space-y-5 md:space-y-6';
-  const firstVisibleResult = (showHomeBlocks ? featuredProperties[0] ?? listingProperties[0] : listingProperties[0]) ?? null;
+  const firstVisibleResult = (showHomeBlocks
+    ? featuredProperties[0] ?? identityValidatedProperties[0] ?? nearSeaProperties[0] ?? largeGroupProperties[0] ?? listingProperties[0]
+    : listingProperties[0]) ?? null;
   const activeSortLabel = getActiveSortLabel(sortBy);
   const verificationFilterContext = getVerificationFilterContextCopy(verifiedOnly);
+  const emptyStateCopy = getResultsEmptyStateCopy({ verifiedOnly, searchQuery, filters, availabilityFiltering });
+  const dateRangeFilterLabel = getDateRangeFilterLabel(filters);
+  const guestsFilterLabel = filters.guests !== '1' ? getGuestsFilterLabel(filters.guests) : null;
   const highlightedVerificationResultId = !loading && sortBy === 'verification' && firstVisibleResult
     ? getPropertyVerificationGuidanceLabel(firstVisibleResult, { isTopResult: true })
       ? firstVisibleResult.id
@@ -166,9 +267,13 @@ export const ExploreResultsSection = ({
     ? 'Resultados para revisar'
     : activeSortLabel;
   const listingDescription = loading
-    ? 'Actualizando resultados.'
+    ? availabilityFiltering
+      ? 'Revisando disponibilidad real para esas fechas.'
+      : 'Actualizando resultados.'
     : hasActiveFilters
-      ? `${formatPropertyCount(listingProperties.length)} en esta búsqueda.`
+      ? availabilityFiltering
+        ? `${formatPropertyCount(listingProperties.length)} disponibles para esas fechas.`
+        : `${formatPropertyCount(listingProperties.length)} en esta búsqueda.`
       : listingProperties.length > 0
         ? sortBy === 'verification'
           ? 'Las propiedades con mayor verificación aparecen primero.'
@@ -176,9 +281,16 @@ export const ExploreResultsSection = ({
             ? 'Las opciones más accesibles aparecen primero.'
             : 'Las opciones de mayor precio aparecen primero.'
         : 'No hay más propiedades por ahora.';
-  const filteredResultsDescription = `${formatPropertyCount(totalResults)} en esta búsqueda.`;
+  const filteredResultsDescription = availabilityFiltering
+    ? `${formatPropertyCount(totalResults)} disponibles para esas fechas.`
+    : `${formatPropertyCount(totalResults)} en esta búsqueda.`;
   const filteredVisibleResultsLabel = `${visibleCount} ${visibleCount === 1 ? 'visible' : 'visibles'} en esta búsqueda.`;
-        const homeHasResults = featuredProperties.length > 0 || listingProperties.length > 0 || newlyListedProperties.length > 0;
+  const homeHasResults = featuredProperties.length > 0
+    || identityValidatedProperties.length > 0
+    || nearSeaProperties.length > 0
+    || largeGroupProperties.length > 0
+    || listingProperties.length > 0
+    || newlyListedProperties.length > 0;
 
   const handlePropertyClick = (property: Property) => {
     if (onPropertyClick) {
@@ -242,13 +354,15 @@ export const ExploreResultsSection = ({
         : 'No hay propiedades disponibles ahora.';
 
   const summaryDescription = loading
-    ? 'Actualizando resultados.'
+    ? availabilityFiltering
+      ? 'Estamos comparando las fechas elegidas con la disponibilidad real de cada aviso.'
+      : 'Actualizando resultados.'
     : failedToLoadResults
       ? 'Probá con otra zona o volvé a intentar en unos segundos.'
     : hasActiveFilters
       ? hasAnyResults
-        ? `${formatPropertyCount(totalResults)} en esta búsqueda.`
-        : 'Probá con otra zona o limpiá los filtros.'
+        ? filteredResultsDescription
+        : emptyStateCopy.description
       : hasAnyResults
         ? `${formatPropertyCount(totalResults)} para revisar.`
         : 'Volvé a revisar más tarde.';
@@ -274,6 +388,18 @@ export const ExploreResultsSection = ({
         <span>{searchQuery}</span>
       </Badge>
     ) : null,
+    dateRangeFilterLabel ? (
+      <Badge key="dates" variant="neutral" size="sm" className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10.75px] font-medium">
+        <Icons.Calendar className="h-3.5 w-3.5" />
+        <span>{dateRangeFilterLabel}</span>
+      </Badge>
+    ) : null,
+    guestsFilterLabel ? (
+      <Badge key="guests" variant="neutral" size="sm" className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10.75px] font-medium">
+        <Icons.Users className="h-3.5 w-3.5" />
+        <span>{guestsFilterLabel}</span>
+      </Badge>
+    ) : null,
     appliedFilterCount > 0 ? (
       <Badge key="filters" variant="brand" size="sm" className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10.75px] font-medium">
         <Icons.SlidersHorizontal className="h-3.5 w-3.5" />
@@ -287,6 +413,18 @@ export const ExploreResultsSection = ({
       <span key="search" className="inline-flex items-center gap-1.5">
         <Icons.MapPin className="h-3.5 w-3.5 text-slate-400" />
         <span>{searchQuery}</span>
+      </span>
+    ) : null,
+    dateRangeFilterLabel ? (
+      <span key="dates" className="inline-flex items-center gap-1.5">
+        <Icons.Calendar className="h-3.5 w-3.5 text-slate-400" />
+        <span>{dateRangeFilterLabel}</span>
+      </span>
+    ) : null,
+    guestsFilterLabel ? (
+      <span key="guests" className="inline-flex items-center gap-1.5">
+        <Icons.Users className="h-3.5 w-3.5 text-slate-400" />
+        <span>{guestsFilterLabel}</span>
       </span>
     ) : null,
     <span key="sort" className="inline-flex items-center gap-1.5">
@@ -399,7 +537,7 @@ export const ExploreResultsSection = ({
             eyebrow="Mapa"
             icon={<Icons.Map className="h-10 w-10 text-slate-400" />}
             title={hasActiveFilters ? 'No encontramos propiedades para esa zona' : 'No hay propiedades disponibles ahora.'}
-            description={hasActiveFilters ? 'Probá con otra zona o limpiá los filtros.' : 'Volvé a revisar más tarde.'}
+            description={hasActiveFilters ? emptyStateCopy.description : 'Volvé a revisar más tarde.'}
             action={hasActiveFilters ? { label: 'Limpiar filtros', onClick: onClearFilters } : undefined}
           />
         </section>
@@ -468,7 +606,7 @@ export const ExploreResultsSection = ({
         {loading ? (
           <section className="space-y-4 md:space-y-5">
             <SectionTitle
-              heading="Empezá por los más verificados"
+              heading="Más verificadas primero"
               description="Estamos ordenando el catálogo para mostrar primero las opciones con más respaldo."
               className="max-w-2xl"
             />
@@ -489,7 +627,7 @@ export const ExploreResultsSection = ({
             {featuredProperties.length > 0 ? (
               <section className="space-y-4 md:space-y-5">
                 <SectionTitle
-                  heading="Empezá por los más verificados"
+                  heading="Más verificadas primero"
                   description="Propiedades con verificación presencial y señales más sólidas de confianza."
                   className="max-w-2xl"
                 />
@@ -497,6 +635,51 @@ export const ExploreResultsSection = ({
                   {renderPropertyCards(featuredProperties, {
                     density: 'compact',
                     highlightPropertyId: highlightedVerificationResultId,
+                  })}
+                </div>
+              </section>
+            ) : null}
+
+            {identityValidatedProperties.length > 0 ? (
+              <section className="space-y-4 md:space-y-5">
+                <SectionTitle
+                  heading="Opciones con identidad validada"
+                  description="Avisos donde ya validamos quién publica, aunque todavía no tengan verificación presencial."
+                  className="max-w-2xl"
+                />
+                <div className="grid grid-cols-1 auto-rows-fr items-stretch gap-5 md:grid-cols-2 md:gap-6 lg:grid-cols-3">
+                  {renderPropertyCards(identityValidatedProperties, {
+                    density: 'compact',
+                  })}
+                </div>
+              </section>
+            ) : null}
+
+            {nearSeaProperties.length > 0 ? (
+              <section className="space-y-4 md:space-y-5">
+                <SectionTitle
+                  heading="Cerca del mar"
+                  description="Opciones ubicadas a pasos de playa, costanera o frente al mar para resolver rápido una escapada costera."
+                  className="max-w-2xl"
+                />
+                <div className="grid grid-cols-1 auto-rows-fr items-stretch gap-5 md:grid-cols-2 md:gap-6 lg:grid-cols-3">
+                  {renderPropertyCards(nearSeaProperties, {
+                    density: 'compact',
+                  })}
+                </div>
+              </section>
+            ) : null}
+
+            {largeGroupProperties.length > 0 ? (
+              <section className="space-y-4 md:space-y-5">
+                <SectionTitle
+                  heading="Para grupos grandes"
+                  description="Lugares con espacio suficiente para viajes en grupo, familias grandes o escapadas compartidas."
+                  className="max-w-2xl"
+                />
+                <div className="grid grid-cols-1 auto-rows-fr items-stretch gap-5 md:grid-cols-2 md:gap-6 lg:grid-cols-3">
+                  {renderPropertyCards(largeGroupProperties, {
+                    density: 'compact',
                   })}
                 </div>
               </section>
@@ -655,8 +838,8 @@ export const ExploreResultsSection = ({
                   tone={hasActiveFilters ? 'default' : 'soft'}
                   eyebrow="Resultados"
                   icon={<Icons.Search className="h-10 w-10 text-slate-400" />}
-                  title={hasActiveFilters ? 'No encontramos propiedades para esa zona' : 'No hay más propiedades por ahora'}
-                  description={hasActiveFilters ? 'Probá con otra zona o limpiá los filtros.' : 'Volvé a revisar más tarde para ver nuevas opciones.'}
+                  title={hasActiveFilters ? emptyStateCopy.title : 'No hay más propiedades por ahora'}
+                  description={hasActiveFilters ? emptyStateCopy.description : 'Volvé a revisar más tarde para ver nuevas opciones.'}
                   action={hasActiveFilters ? { label: 'Limpiar filtros', onClick: onClearFilters } : undefined}
                 />
               </div>

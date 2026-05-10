@@ -274,7 +274,7 @@ describe('propertyVerification', () => {
     expect(sorted.map((property) => property.id)).toEqual(['fast-host', 'slow-host']);
   });
 
-  test('builds section buckets without duplicating recent verified listings', () => {
+  test('builds contextual section buckets without duplicating listings across them', () => {
     const sections = buildPropertyCatalogSections([
       {
         id: 'presencial-top',
@@ -296,22 +296,52 @@ describe('propertyVerification', () => {
         createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
       },
       {
-        id: 'identity-recent',
-        title: 'Depto recién publicado',
+        id: 'identity-first',
+        title: 'Depto con identidad validada',
         location: 'Pinamar centro',
-        description: 'Departamento nuevo en catálogo, con información completa.',
-        imageUrl: 'https://example.com/recent-cover.jpg',
+        description: 'Departamento con identidad confirmada y buena información publicada.',
+        imageUrl: 'https://example.com/identity-cover.jpg',
         images: [
-          'https://example.com/recent-cover.jpg',
-          'https://example.com/recent-1.jpg',
-          'https://example.com/recent-2.jpg',
-          'https://example.com/recent-3.jpg',
+          'https://example.com/identity-cover.jpg',
+          'https://example.com/identity-1.jpg',
+          'https://example.com/identity-2.jpg',
+          'https://example.com/identity-3.jpg',
         ],
         identityValidated: true,
         price: 95_000,
         rating: 4.6,
         reviewsCount: 4,
         createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+      },
+      {
+        id: 'near-sea',
+        title: 'Casa a metros de la playa',
+        location: 'Villa Gesell norte',
+        description: 'Ideal para escapadas cortas cerca del mar.',
+        imageUrl: 'https://example.com/sea-cover.jpg',
+        identityValidated: false,
+        price: 102_000,
+        maxGuests: 4,
+      },
+      {
+        id: 'large-group',
+        title: 'Casa para familias grandes',
+        location: 'General Madariaga',
+        description: 'Espacio amplio para ir en grupo.',
+        imageUrl: 'https://example.com/group-cover.jpg',
+        identityValidated: false,
+        price: 140_000,
+        maxGuests: 8,
+      },
+      {
+        id: 'recent-only',
+        title: 'Aviso recién publicado',
+        location: 'San Bernardo',
+        description: 'Nueva publicación para revisar.',
+        imageUrl: 'https://example.com/recent-only-cover.jpg',
+        identityValidated: false,
+        price: 88_000,
+        createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
       },
       {
         id: 'comparison-base',
@@ -325,7 +355,10 @@ describe('propertyVerification', () => {
     ], 'verification');
 
     expect(sections.topVerified.map((property) => property.id)).toEqual(['presencial-top']);
-    expect(sections.newListings.map((property) => property.id)).toEqual(['identity-recent']);
+    expect(sections.identityValidated.map((property) => property.id)).toEqual(['identity-first']);
+    expect(sections.nearSea.map((property) => property.id)).toEqual(['near-sea']);
+    expect(sections.largeGroups.map((property) => property.id)).toEqual(['large-group']);
+    expect(sections.newListings.map((property) => property.id)).toEqual(['recent-only']);
     expect(sections.comparison.map((property) => property.id)).toEqual(['comparison-base']);
   });
 
@@ -384,6 +417,64 @@ describe('propertyVerification', () => {
     ], 'verification', { searchQuery: 'Villa Gesell' });
 
     expect(sorted.map((property) => property.id)).toEqual(['p2', 'p3', 'p1']);
+  });
+
+  test('prioritizes reputation before search relevance when verification ties', () => {
+    const sorted = sortPropertiesByCatalogOrder([
+      {
+        id: 'relevant-but-thin',
+        title: 'Casa en Villa Gesell centro',
+        location: 'Villa Gesell centro',
+        identityValidated: true,
+        price: 110_000,
+        rating: 4.1,
+        reviewsCount: 1,
+      },
+      {
+        id: 'trusted-history',
+        title: 'Casa cerca del bosque',
+        location: 'Pinamar norte',
+        identityValidated: true,
+        price: 110_000,
+        rating: 4.8,
+        reviewsCount: 8,
+        hostInteractionHistory: {
+          completedReservationsCount: 4,
+          feedbackCount: 4,
+          incidentsCount: 0,
+          avgResponseTimeMinutes: 20,
+        },
+      },
+    ], 'verification', { searchQuery: 'Villa Gesell' });
+
+    expect(sorted.map((property) => property.id)).toEqual(['trusted-history', 'relevant-but-thin']);
+  });
+
+  test('prioritizes recent activity before search relevance when reputation ties', () => {
+    const sorted = sortPropertiesByCatalogOrder([
+      {
+        id: 'relevant-only',
+        title: 'Departamento en Villa Gesell',
+        location: 'Villa Gesell centro',
+        identityValidated: true,
+        price: 95_000,
+        rating: 4.6,
+        reviewsCount: 4,
+      },
+      {
+        id: 'recent-active',
+        title: 'Departamento listo para este finde',
+        location: 'Mar de Ajó',
+        identityValidated: true,
+        price: 95_000,
+        rating: 4.6,
+        reviewsCount: 4,
+        availabilityValidated: true,
+        createdAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
+      },
+    ], 'verification', { searchQuery: 'Villa Gesell' });
+
+    expect(sorted.map((property) => property.id)).toEqual(['recent-active', 'relevant-only']);
   });
 
   test('uses rating and reviews as tie breakers when verification scores are equal', () => {

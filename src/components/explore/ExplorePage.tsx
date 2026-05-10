@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { apiJson } from '../../lib/apiConfig';
 import { useFavorites } from '../../hooks/useFavorites';
 import type { Property } from '../../services/geminiService';
@@ -25,11 +25,15 @@ type ExplorePageProps = {
 const EMPTY_INITIAL_PROPERTIES: Property[] = [];
 
 const defaultFilters: ExploreFilters = {
-  minPrice: '',
-  maxPrice: '',
+  checkIn: '',
+  checkOut: '',
   guests: '1',
-  type: '',
   verifiedOnly: false,
+};
+
+type AvailabilityRange = {
+  start: string;
+  end: string;
 };
 
 const normalizePropertyVerificationDefaults = (property: Property) => {
@@ -70,11 +74,41 @@ const normalizeExploreProperties = (items: Array<Property | null | undefined>) =
   return accumulator;
 }, []);
 
+const normalizeAvailabilityDate = (value: unknown) => {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const normalizedValue = value.trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(normalizedValue) ? normalizedValue : null;
+};
+
+const normalizeAvailabilityRanges = (items: unknown[]) => items.reduce<AvailabilityRange[]>((accumulator, item) => {
+  if (!item || typeof item !== 'object') {
+    return accumulator;
+  }
+
+  const range = item as { start?: unknown; end?: unknown };
+  const start = normalizeAvailabilityDate(range.start);
+  const end = normalizeAvailabilityDate(range.end) ?? start;
+
+  if (!start || !end) {
+    return accumulator;
+  }
+
+  accumulator.push(end < start ? { start: end, end: start } : { start, end });
+  return accumulator;
+}, []);
+
+const isPropertyAvailableForRange = (ranges: AvailabilityRange[], checkIn: string, checkOut: string) => (
+  !ranges.some((range) => checkIn < range.end && checkOut > range.start)
+);
+
 const hasCatalogSuggestionContext = (filters: ExploreFilters, searchQuery: string) => (
   !searchQuery &&
-  !filters.minPrice &&
-  !filters.maxPrice &&
-  !filters.type &&
+  !filters.checkIn &&
+  !filters.checkOut &&
+  filters.guests === defaultFilters.guests &&
   !filters.verifiedOnly
 );
 
@@ -138,6 +172,8 @@ export const ExplorePage = ({
   const [sortBy, setSortBy] = useState<ExploreSort>('verification');
   const [visibleCount, setVisibleCount] = useState(9);
   const [filters, setFilters] = useState<ExploreFilters>(defaultFilters);
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
+  const [availablePropertyIds, setAvailablePropertyIds] = useState<Set<string> | null>(null);
   const [locationSuggestions, setLocationSuggestions] = useState<LocationSuggestion[]>(() => {
     if (initialLocationSuggestions) {
       return initialLocationSuggestions;
@@ -146,6 +182,7 @@ export const ExplorePage = ({
     return buildLocationSuggestions(normalizedInitialProperties);
   });
   const [refreshToken, setRefreshToken] = useState(0);
+  const availabilityCacheRef = useRef(new Map<string, AvailabilityRange[] | null>());
 
   useEffect(() => {
     if (disableAutoLoad) {
@@ -166,10 +203,7 @@ export const ExplorePage = ({
 
       try {
         const params = new URLSearchParams();
-        if (filters.minPrice) params.append('minPrice', filters.minPrice);
-        if (filters.maxPrice) params.append('maxPrice', filters.maxPrice);
         if (filters.guests) params.append('guests', filters.guests);
-        if (filters.type) params.append('type', filters.type);
         if (filters.verifiedOnly) params.append('verifiedOnly', 'true');
         if (searchQuery) params.append('location', searchQuery);
 
@@ -197,25 +231,98 @@ export const ExplorePage = ({
     setVisibleCount(9);
   }, [filters, searchQuery, sortBy]);
 
-  const hasActiveFilters = Boolean(searchQuery || filters.minPrice || filters.maxPrice || filters.type || filters.verifiedOnly);
+  const shouldFilterByDates = Boolean(filters.checkIn && filters.checkOut && filters.checkOut > filters.checkIn);
+  const hasActiveFilters = Boolean(
+    searchQuery
+    || filters.checkIn
+    || filters.checkOut
+    || filters.guests !== defaultFilters.guests
+    || filters.verifiedOnly
+  );
   const sortContext = useMemo(() => ({ searchQuery, filters }), [searchQuery, filters]);
-  const orderedProperties = sortPropertiesByCatalogOrder(properties, sortBy, sortContext);
-  const filteredProperties = filters.verifiedOnly
-    ? orderedProperties.filter((property) => meetsRealVerificationFilter(property))
-    : orderedProperties;
+  const orderedProperties = useMemo(
+    () => sortPropertiesByCatalogOrder(properties, sortBy, sortContext),
+    [properties, sortBy, sortContext],
+  );
+  const verificationFilteredProperties = useMemo(
+    () => filters.verifiedOnly
+      ? orderedProperties.filter((property) => meetsRealVerificationFilter(property))
+      : orderedProperties,
+    [filters.verifiedOnly, orderedProperties],
+  );
+
+  useEffect(() => {
+    if (!shouldFilterByDates) {
+      setAvailabilityLoading(false);
+      setAvailablePropertyIds(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadAvailability = async () => {
+      setAvailabilityLoading(true);
+      setAvailablePropertyIds(null);
+
+      const missingProperties = verificationFilteredProperties.filter((property) => !availabilityCacheRef.current.has(property.id));
+
+      if (missingProperties.length > 0) {
+        await Promise.allSettled(missingProperties.map(async (property) => {
+          try {
+            const response = await apiJson<unknown[]>(`/api/properties/${property.id}/availability`);
+            availabilityCacheRef.current.set(property.id, normalizeAvailabilityRanges(Array.isArray(response) ? response : []));
+          } catch (error) {
+            console.error(error);
+            availabilityCacheRef.current.set(property.id, null);
+          }
+        }));
+      }
+
+      if (cancelled) {
+        return;
+      }
+
+      const nextAvailablePropertyIds = verificationFilteredProperties.reduce((accumulator, property) => {
+        const availabilityRanges = availabilityCacheRef.current.get(property.id);
+
+        if (availabilityRanges === undefined || availabilityRanges === null || isPropertyAvailableForRange(availabilityRanges, filters.checkIn, filters.checkOut)) {
+          accumulator.add(property.id);
+        }
+
+        return accumulator;
+      }, new Set<string>());
+
+      setAvailablePropertyIds(nextAvailablePropertyIds);
+      setAvailabilityLoading(false);
+    };
+
+    void loadAvailability();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [filters.checkIn, filters.checkOut, shouldFilterByDates, verificationFilteredProperties]);
+
+  const filteredProperties = useMemo(
+    () => shouldFilterByDates && availablePropertyIds
+      ? verificationFilteredProperties.filter((property) => availablePropertyIds.has(property.id))
+      : verificationFilteredProperties,
+    [availablePropertyIds, shouldFilterByDates, verificationFilteredProperties],
+  );
   const showSectionedCatalog = viewMode === 'grid' && !filters.verifiedOnly && !hasActiveFilters;
   const sectionedCatalog = useMemo(
     () => showSectionedCatalog ? buildPropertyCatalogSections(filteredProperties, sortBy, sortContext) : null,
     [filteredProperties, showSectionedCatalog, sortBy, sortContext],
   );
   const featuredProperties = sectionedCatalog?.topVerified ?? [];
+  const identityValidatedProperties = sectionedCatalog?.identityValidated ?? [];
+  const nearSeaProperties = sectionedCatalog?.nearSea ?? [];
+  const largeGroupProperties = sectionedCatalog?.largeGroups ?? [];
   const newlyListedProperties = sectionedCatalog?.newListings ?? [];
   const appliedFilterCount = [
     Boolean(searchQuery),
-    Boolean(filters.minPrice),
-    Boolean(filters.maxPrice),
+    Boolean(filters.checkIn || filters.checkOut),
     filters.guests !== defaultFilters.guests,
-    Boolean(filters.type),
     filters.verifiedOnly,
   ].filter(Boolean).length;
   const listingProperties = sectionedCatalog?.comparison ?? filteredProperties;
@@ -298,7 +405,9 @@ export const ExplorePage = ({
 
       <div className="app-page-explore pt-4 md:pt-5">
         <ExploreResultsSection
-          loading={loading}
+          filters={filters}
+          availabilityFiltering={shouldFilterByDates}
+          loading={loading || availabilityLoading}
           loadError={loadError}
           viewMode={viewMode}
           sortBy={sortBy}
@@ -310,6 +419,9 @@ export const ExplorePage = ({
           filteredProperties={filteredProperties}
           showSectionedCatalog={showSectionedCatalog}
           featuredProperties={featuredProperties}
+          identityValidatedProperties={identityValidatedProperties}
+          nearSeaProperties={nearSeaProperties}
+          largeGroupProperties={largeGroupProperties}
           newlyListedProperties={newlyListedProperties}
           listingProperties={listingProperties}
           visibleProperties={visibleProperties}

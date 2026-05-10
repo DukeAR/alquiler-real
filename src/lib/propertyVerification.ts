@@ -30,6 +30,12 @@ export const HIGH_VERIFICATION_HIGHLIGHT_MIN_SCORE = 4;
 
 export const TOP_VERIFIED_RESULTS_COUNT = 6;
 
+const IDENTITY_VALIDATED_RESULTS_COUNT = 4;
+
+const NEAR_SEA_RESULTS_COUNT = 4;
+
+const LARGE_GROUP_RESULTS_COUNT = 4;
+
 const NEW_PUBLICATIONS_RESULTS_COUNT = 4;
 
 const NEW_PUBLICATION_WINDOW_DAYS = 30;
@@ -125,6 +131,9 @@ export type PropertyCatalogSort = 'verification' | 'price' | 'price-desc';
 export type PropertyCatalogSections<T> = {
   ordered: T[];
   topVerified: T[];
+  identityValidated: T[];
+  nearSea: T[];
+  largeGroups: T[];
   comparison: T[];
   newListings: T[];
 };
@@ -787,6 +796,74 @@ const getPropertyCatalogKey = (property: Pick<PropertySortLike, 'id' | 'title' |
   || `${String(property.title || '').trim()}::${String(property.location || '').trim()}::${String(property.price || '')}`
 );
 
+const hasIdentityValidation = (property: PropertySortLike) => (
+  !hasPropertyPresencialVerificationSeal(property)
+  && (
+    property.identityValidated === true
+    || hasExplicitIdentityVerification(property.verificationSummary?.items)
+    || hasExplicitIdentityVerification(property.verificationItems)
+  )
+);
+
+const getPropertyCatalogText = (property: PropertySortLike) => normalizeCatalogText([
+  property.title,
+  property.location,
+  property.description,
+].filter(Boolean).join(' '));
+
+const isNearSeaProperty = (property: PropertySortLike) => {
+  const text = getPropertyCatalogText(property);
+
+  if (!text) {
+    return false;
+  }
+
+  return text.includes('frente al mar')
+    || text.includes('cerca del mar')
+    || text.includes('a metros del mar')
+    || text.includes('a pasos del mar')
+    || text.includes('cerca de la playa')
+    || text.includes('a metros de la playa')
+    || text.includes('playa')
+    || text.includes('costanera')
+    || text.includes('costa ')
+    || text.endsWith(' costa')
+    || text.includes(' mar ')
+    || text.startsWith('mar ');
+};
+
+const isLargeGroupProperty = (property: PropertySortLike) => {
+  const maxGuests = parsePositiveNumber(property.maxGuests);
+
+  return maxGuests !== null && maxGuests >= 6;
+};
+
+const takeSectionBucket = <T extends PropertySortLike>(
+  ordered: T[],
+  selectedKeys: Set<string>,
+  predicate: (property: T) => boolean,
+  limit: number,
+) => {
+  const bucket: T[] = [];
+
+  for (const property of ordered) {
+    if (bucket.length >= limit) {
+      break;
+    }
+
+    const propertyKey = getPropertyCatalogKey(property);
+
+    if (selectedKeys.has(propertyKey) || !predicate(property)) {
+      continue;
+    }
+
+    selectedKeys.add(propertyKey);
+    bucket.push(property);
+  }
+
+  return bucket;
+};
+
 const toTimestamp = (value?: string | Date | null) => {
   if (!value) {
     return null;
@@ -816,6 +893,18 @@ const hasGoodHistory = (property: PropertySortLike) => {
 };
 
 const hasConfirmedReports = (property: PropertySortLike) => parsePositiveNumber(property.confirmedReportsCount) !== null;
+
+const getPropertyRiskPenalty = (property: PropertySortLike) => {
+  if (hasConfirmedReports(property)) {
+    return 2;
+  }
+
+  if (hasLegacyProblems(property)) {
+    return 1;
+  }
+
+  return 0;
+};
 
 const hasStableHostAccount = (property: PropertySortLike, now = Date.now()) => {
   const hostSinceTimestamp = toTimestamp(property.hostSince ?? null);
@@ -858,36 +947,7 @@ const isRecentlyPublished = (property: PropertySortLike, now = Date.now()) => {
 };
 
 const getPropertyCatalogPriorityScore = (property: PropertySortLike) => {
-  const hasPresencialVerification = hasPropertyPresencialVerificationSeal(property);
-  const hasIdentityValidation = property.identityValidated === true
-    || hasExplicitIdentityVerification(property.verificationSummary?.items)
-    || hasExplicitIdentityVerification(property.verificationItems);
-
   let score = 0;
-
-  if (hasPresencialVerification) {
-    score += 40;
-  }
-
-  if (hasIdentityValidation) {
-    score += 15;
-  }
-
-  if (hasCompletePublication(property)) {
-    score += 10;
-  }
-
-  if (hasGoodHistory(property)) {
-    score += 15;
-  }
-
-  if (hasStableHostAccount(property)) {
-    score += 10;
-  }
-
-  if (isRecentlyPublished(property)) {
-    score += 5;
-  }
 
   if (hasConfirmedReports(property)) {
     score -= 40;
@@ -911,6 +971,12 @@ const getVisibleVerificationLevelRank = (property: PropertySortLike) => {
 };
 
 const comparePropertiesByCatalogPriority = (left: PropertySortLike, right: PropertySortLike) => {
+  const riskPenaltyDifference = getPropertyRiskPenalty(left) - getPropertyRiskPenalty(right);
+
+  if (riskPenaltyDifference !== 0) {
+    return riskPenaltyDifference;
+  }
+
   const priorityScoreDifference = getPropertyCatalogPriorityScore(right) - getPropertyCatalogPriorityScore(left);
 
   if (priorityScoreDifference !== 0) {
@@ -918,6 +984,51 @@ const comparePropertiesByCatalogPriority = (left: PropertySortLike, right: Prope
   }
 
   return 0;
+};
+
+const getPropertyReputationScore = (property: PropertySortLike) => {
+  const completedReservationsCount = parsePositiveNumber(property.hostInteractionHistory?.completedReservationsCount) ?? 0;
+  const feedbackCount = parsePositiveNumber(property.hostInteractionHistory?.feedbackCount) ?? 0;
+  const rating = parseFiniteNumber(property.rating) ?? 0;
+  const reviewsCount = parsePositiveNumber(property.reviewsCount) ?? 0;
+
+  let score = 0;
+
+  if (hasGoodHistory(property)) {
+    score += 20;
+  }
+
+  if (hasStableHostAccount(property)) {
+    score += 10;
+  }
+
+  score += Math.min(18, completedReservationsCount * 4);
+  score += Math.min(12, feedbackCount * 3);
+  score += Math.min(8, reviewsCount * 2);
+
+  if (rating >= 4.8) {
+    score += 8;
+  } else if (rating >= 4.5) {
+    score += 6;
+  } else if (rating >= 4.2) {
+    score += 3;
+  }
+
+  return score;
+};
+
+const getPropertyRecentActivityScore = (property: PropertySortLike) => {
+  let score = 0;
+
+  if (property.availabilityValidated) {
+    score += 8;
+  }
+
+  if (isRecentlyPublished(property)) {
+    score += 6;
+  }
+
+  return score;
 };
 
 const comparePropertiesByVerificationSignals = (left: PropertySortLike, right: PropertySortLike) => {
@@ -985,6 +1096,18 @@ const comparePropertiesByVerificationCatalogOrder = (
     return verificationDifference;
   }
 
+  const reputationDifference = getPropertyReputationScore(right) - getPropertyReputationScore(left);
+
+  if (reputationDifference !== 0) {
+    return reputationDifference;
+  }
+
+  const recentActivityDifference = getPropertyRecentActivityScore(right) - getPropertyRecentActivityScore(left);
+
+  if (recentActivityDifference !== 0) {
+    return recentActivityDifference;
+  }
+
   const valuePerGuestDifference = compareNullableAscending(getPropertyValuePerGuest(left), getPropertyValuePerGuest(right));
 
   if (valuePerGuestDifference !== 0) {
@@ -1030,8 +1153,11 @@ export const buildPropertyCatalogSections = <T extends PropertySortLike>(
   context?: PropertyCatalogSortContext,
 ): PropertyCatalogSections<T> => {
   const ordered = sortPropertiesByCatalogOrder(items, sortBy, context);
-  const topVerified = ordered.filter((property) => meetsRealVerificationFilter(property)).slice(0, TOP_VERIFIED_RESULTS_COUNT);
-  const topVerifiedKeys = new Set(topVerified.map((property) => getPropertyCatalogKey(property)));
+  const selectedKeys = new Set<string>();
+  const topVerified = takeSectionBucket(ordered, selectedKeys, (property) => meetsRealVerificationFilter(property), TOP_VERIFIED_RESULTS_COUNT);
+  const identityValidated = takeSectionBucket(ordered, selectedKeys, (property) => hasIdentityValidation(property), IDENTITY_VALIDATED_RESULTS_COUNT);
+  const nearSea = takeSectionBucket(ordered, selectedKeys, (property) => isNearSeaProperty(property), NEAR_SEA_RESULTS_COUNT);
+  const largeGroups = takeSectionBucket(ordered, selectedKeys, (property) => isLargeGroupProperty(property), LARGE_GROUP_RESULTS_COUNT);
 
   const orderedNewListings = sortPropertiesByCatalogOrder(
     items.filter((property) => isRecentlyPublished(property)),
@@ -1039,20 +1165,23 @@ export const buildPropertyCatalogSections = <T extends PropertySortLike>(
     context,
   );
 
-  let newListings = orderedNewListings
-    .filter((property) => !topVerifiedKeys.has(getPropertyCatalogKey(property)))
+  const newListings = orderedNewListings
+    .filter((property) => !selectedKeys.has(getPropertyCatalogKey(property)))
     .slice(0, NEW_PUBLICATIONS_RESULTS_COUNT);
 
   const newListingKeys = new Set(newListings.map((property) => getPropertyCatalogKey(property)));
   const comparison = ordered.filter((property) => {
     const propertyKey = getPropertyCatalogKey(property);
 
-    return !topVerifiedKeys.has(propertyKey) && !newListingKeys.has(propertyKey);
+    return !selectedKeys.has(propertyKey) && !newListingKeys.has(propertyKey);
   });
 
   return {
     ordered,
     topVerified,
+    identityValidated,
+    nearSea,
+    largeGroups,
     comparison,
     newListings,
   };

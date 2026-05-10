@@ -159,6 +159,69 @@ describe('ExplorePage', () => {
     expect(apiJsonMock).toHaveBeenCalledTimes(1);
   });
 
+  test('filters results by real availability when a complete date range is selected', async () => {
+    apiJsonMock.mockImplementation(async (url: string) => {
+      if (url.startsWith('/api/properties?')) {
+        return [
+          {
+            id: 'p1',
+            title: 'Casa ocupada',
+            location: 'Pinamar',
+            price: 65000,
+            description: 'No disponible para el rango buscado.',
+            propertyType: 'house',
+            maxGuests: 4,
+            rating: 4.3,
+            reviewsCount: 5,
+          },
+          {
+            id: 'p2',
+            title: 'Depto disponible',
+            location: 'Pinamar',
+            price: 72000,
+            description: 'Disponible para la fecha elegida.',
+            propertyType: 'apartment',
+            maxGuests: 3,
+            rating: 4.5,
+            reviewsCount: 7,
+          },
+        ];
+      }
+
+      if (url === '/api/properties/p1/availability') {
+        return [{ start: '2099-01-15', end: '2099-01-18' }];
+      }
+
+      if (url === '/api/properties/p2/availability') {
+        return [{ start: '2099-01-20', end: '2099-01-22' }];
+      }
+
+      return [];
+    });
+
+    render(<ExplorePage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('2 resultados')).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByLabelText('Ingreso'), { target: { value: '2099-01-15' } });
+    fireEvent.change(screen.getByLabelText('Salida'), { target: { value: '2099-01-18' } });
+
+    await waitFor(() => {
+      expect(apiJsonMock).toHaveBeenCalledWith('/api/properties/p1/availability');
+      expect(apiJsonMock).toHaveBeenCalledWith('/api/properties/p2/availability');
+    });
+
+    await waitFor(() => {
+      const latestCall = exploreResultsSectionMock.mock.calls.at(-1)?.[0];
+
+      expect(latestCall?.availabilityFiltering).toBe(true);
+      expect(latestCall?.filteredProperties.map((property: { id: string }) => property.id)).toEqual(['p2']);
+      expect(latestCall?.listingProperties.map((property: { id: string }) => property.id)).toEqual(['p2']);
+    });
+  });
+
   test('activates the local verification preference after saving a highly verified property', async () => {
     const toggleFavorite = vi.fn().mockResolvedValue('added');
 
@@ -313,9 +376,11 @@ describe('ExplorePage', () => {
       'presencial-2',
       'presencial-3',
     ]);
-    expect(latestCall.listingProperties.map((property: { id: string }) => property.id)).toEqual([
+    expect(latestCall.identityValidatedProperties.map((property: { id: string }) => property.id)).toEqual([
       'identity-1',
       'identity-2',
+    ]);
+    expect(latestCall.listingProperties.map((property: { id: string }) => property.id)).toEqual([
       'none-1',
     ]);
     expect(latestCall.newlyListedProperties).toEqual([]);
@@ -381,7 +446,8 @@ describe('ExplorePage', () => {
 
     expect(latestCall.showSectionedCatalog).toBe(true);
     expect(latestCall.featuredProperties.map((property: { id: string }) => property.id)).toEqual(['presencial-1']);
-    expect(latestCall.listingProperties.map((property: { id: string }) => property.id)).toEqual(['identity-1', 'none-1']);
-    expect(latestCall.visibleProperties.map((property: { id: string }) => property.id)).toEqual(['identity-1', 'none-1']);
+    expect(latestCall.identityValidatedProperties.map((property: { id: string }) => property.id)).toEqual(['identity-1']);
+    expect(latestCall.listingProperties.map((property: { id: string }) => property.id)).toEqual(['none-1']);
+    expect(latestCall.visibleProperties.map((property: { id: string }) => property.id)).toEqual(['none-1']);
   });
 });

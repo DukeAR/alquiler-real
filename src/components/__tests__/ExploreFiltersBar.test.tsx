@@ -3,10 +3,9 @@ import { describe, expect, test, vi } from 'vitest';
 import { ExploreFiltersBar, type ExploreFilters } from '../explore/ExploreFiltersBar';
 
 const baseFilters: ExploreFilters = {
-  minPrice: '',
-  maxPrice: '',
+  checkIn: '',
+  checkOut: '',
   guests: '1',
-  type: '',
   verifiedOnly: false,
 };
 
@@ -37,7 +36,10 @@ describe('ExploreFiltersBar', () => {
     expect(screen.queryByText('Ordenar por')).not.toBeInTheDocument();
     expect(screen.queryByText('Precio')).not.toBeInTheDocument();
     expect(screen.queryByText('Verificación')).not.toBeInTheDocument();
-    expect(controlsGrid).toHaveClass('grid', 'grid-cols-1', 'md:grid-cols-2', 'lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(17.5rem,1.15fr)]');
+    expect(screen.getByText('Ingreso')).toBeInTheDocument();
+    expect(screen.getByText('Salida')).toBeInTheDocument();
+    expect(screen.getByText('Huéspedes')).toBeInTheDocument();
+    expect(controlsGrid).toHaveClass('grid', 'grid-cols-1', 'md:grid-cols-2', 'xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.9fr)_minmax(17.5rem,1.15fr)]');
     expect(verifiedToggle).toHaveClass('min-h-[4.5rem]', 'rounded-[18px]', 'px-5', 'py-3');
     expect(verifiedTitle).toHaveClass('text-[0.84rem]', 'font-semibold', 'tracking-[-0.015em]');
     expect(verifiedSubtitle).toHaveClass('text-[0.72rem]', 'font-medium', 'tracking-[-0.01em]');

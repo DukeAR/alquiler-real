@@ -43,6 +43,18 @@ const getGuestCapacityLabel = (maxGuests?: number | null) => {
   return `Hasta ${maxGuests} ${maxGuests === 1 ? 'huésped' : 'huéspedes'}`;
 };
 
+const getTrustContextEyebrow = (level: ReturnType<typeof getPropertyCardVerificationState>['publicLevel']) => {
+  if (level === 'presencial') {
+    return 'Verificación presencial';
+  }
+
+  if (level === 'identity') {
+    return 'Identidad del anfitrión';
+  }
+
+  return 'Información publicada';
+};
+
 interface PropertyCardProps {
   property: Property;
   onClick?: () => void;
@@ -84,7 +96,10 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   const guestCapacityLabel = getGuestCapacityLabel(Number(property.maxGuests) || null);
   const propertyCardCtaLabel = 'Ver propiedad';
   const isCompactCard = density === 'compact';
-  const onboardingTip = getGuestCardOnboardingTip(verificationState.publicLevel);
+  const onboardingTip = {
+    ...getGuestCardOnboardingTip(verificationState.publicLevel),
+    eyebrow: getTrustContextEyebrow(verificationState.publicLevel),
+  };
   const [isNavigating, setIsNavigating] = React.useState(false);
   const navigationTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 

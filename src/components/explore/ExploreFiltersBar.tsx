@@ -7,10 +7,9 @@ import type { PropertyCatalogSort } from '../../lib/propertyVerification';
 export type ExploreSort = PropertyCatalogSort;
 
 export type ExploreFilters = {
-  minPrice: string;
-  maxPrice: string;
+  checkIn: string;
+  checkOut: string;
   guests: string;
-  type: string;
   verifiedOnly: boolean;
 };
 
@@ -35,8 +34,24 @@ export const ExploreFiltersBar = ({
   hasActiveFilters,
   onClear,
 }: ExploreFiltersBarProps) => {
+  const todayIso = new Date().toISOString().slice(0, 10);
   const sharedControlTypographyClassName = 'text-[0.98rem] font-semibold tracking-[-0.015em]';
   const sharedControlClassName = `explore-filter-control h-14 min-w-0 ${sharedControlTypographyClassName} text-slate-950`;
+
+  const handleCheckInChange = (value: string) => {
+    onFiltersChange({
+      ...filters,
+      checkIn: value,
+      checkOut: !value || (filters.checkOut && filters.checkOut < value) ? '' : filters.checkOut,
+    });
+  };
+
+  const handleCheckOutChange = (value: string) => {
+    onFiltersChange({
+      ...filters,
+      checkOut: value,
+    });
+  };
 
   return (
     <section className="relative overflow-hidden rounded-[calc(var(--app-radius-card)+10px)] border border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.96)_0%,rgba(246,249,252,0.94)_100%)] px-5 py-5 shadow-[0_20px_48px_-34px_rgba(15,23,42,0.22)] ring-1 ring-[rgba(255,255,255,0.55)] backdrop-blur-[16px] sm:px-6 sm:py-5.5 lg:px-7 lg:py-6">
@@ -63,65 +78,88 @@ export const ExploreFiltersBar = ({
             ))}
           </div>
 
-          {hasActiveFilters ? (
-            <Button
-              type="button"
-              onClick={onClear}
-              variant="ghost"
-              size="sm"
-              className="h-10 self-end rounded-[0.95rem] px-3.5 text-[0.84rem] text-slate-700 sm:absolute sm:right-0 sm:top-1/2 sm:h-10 sm:-translate-y-1/2 sm:px-3.5 sm:text-[0.86rem] sm:text-slate-900"
-            >
-              <Icons.X className="h-4 w-4" />
-              Limpiar filtros
-            </Button>
-          ) : null}
+          <div className="flex flex-col gap-3 self-stretch sm:absolute sm:right-0 sm:top-1/2 sm:w-auto sm:-translate-y-1/2 sm:flex-row sm:items-center sm:justify-end">
+            <label className="grid gap-1 text-left sm:min-w-[13rem]">
+              <span className="px-1 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-slate-500">Orden</span>
+              <select
+                aria-label="Ordenar por"
+                value={sortBy}
+                onChange={(event) => onSortChange(event.target.value as ExploreSort)}
+                className={cn('app-control h-10 rounded-[0.95rem] px-4 text-[0.88rem] font-semibold text-slate-950', 'sm:h-11')}
+              >
+                <option value="verification">Más verificadas primero</option>
+                <option value="price">Precio más bajo</option>
+                <option value="price-desc">Precio más alto</option>
+              </select>
+            </label>
+
+            {hasActiveFilters ? (
+              <Button
+                type="button"
+                onClick={onClear}
+                variant="ghost"
+                size="sm"
+                className="h-10 self-end rounded-[0.95rem] px-3.5 text-[0.84rem] text-slate-700 sm:h-11 sm:self-auto sm:px-3.5 sm:text-[0.86rem] sm:text-slate-900"
+              >
+                <Icons.X className="h-4 w-4" />
+                Limpiar filtros
+              </Button>
+            ) : null}
+          </div>
         </div>
 
         <div className="rounded-[24px] border border-white/80 bg-white/70 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] sm:p-4">
           <div
             data-testid="explore-filters-controls"
-            className="grid grid-cols-1 gap-3.5 md:grid-cols-2 md:gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(17.5rem,1.15fr)] lg:items-stretch xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(18.5rem,1.2fr)] xl:gap-5"
+            className="grid grid-cols-1 gap-3.5 md:grid-cols-2 md:gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.9fr)_minmax(17.5rem,1.15fr)] xl:items-stretch xl:gap-5"
           >
-            <div className="min-w-0 self-center">
-            <select
-              aria-label="Ordenar por"
-              value={sortBy}
-              onChange={(event) => onSortChange(event.target.value as ExploreSort)}
-              className={cn('app-control px-4.5', sharedControlClassName)}
-            >
-              <option value="verification">Más verificadas primero</option>
-              <option value="price">Precio más bajo</option>
-              <option value="price-desc">Precio más alto</option>
-            </select>
-            </div>
+            <label className="grid min-w-0 gap-1.5 text-left">
+              <span className="px-1 text-[0.72rem] font-semibold uppercase tracking-[0.14em] text-slate-500">Ingreso</span>
+              <Input
+                type="date"
+                aria-label="Ingreso"
+                value={filters.checkIn}
+                min={todayIso}
+                onChange={(event) => handleCheckInChange(event.target.value)}
+                icon={<Icons.Calendar className="h-4 w-4" />}
+                wrapperClassName="w-full"
+                className={cn(sharedControlClassName, 'py-0 pl-11 pr-4')}
+              />
+            </label>
 
-            <div className="min-w-0 self-center">
-            <Input
-              type="number"
-              inputMode="numeric"
-              aria-label="Precio desde"
-              value={filters.minPrice}
-              onChange={(event) => onFiltersChange({ ...filters, minPrice: event.target.value })}
-              placeholder="Desde"
-              icon={<span className="text-sm font-semibold text-[#64748b]">$</span>}
-              wrapperClassName="w-full"
-              className={cn(sharedControlClassName, 'py-0 pl-11 pr-4 placeholder:font-semibold placeholder:text-slate-700 placeholder:opacity-100')}
-            />
-            </div>
+            <label className="grid min-w-0 gap-1.5 text-left">
+              <span className="px-1 text-[0.72rem] font-semibold uppercase tracking-[0.14em] text-slate-500">Salida</span>
+              <Input
+                type="date"
+                aria-label="Salida"
+                value={filters.checkOut}
+                min={filters.checkIn || todayIso}
+                disabled={!filters.checkIn}
+                onChange={(event) => handleCheckOutChange(event.target.value)}
+                icon={<Icons.Calendar className="h-4 w-4" />}
+                wrapperClassName="w-full"
+                className={cn(sharedControlClassName, 'py-0 pl-11 pr-4 disabled:border-slate-200 disabled:bg-slate-50')}
+              />
+            </label>
 
-            <div className="min-w-0 self-center">
-            <Input
-              type="number"
-              inputMode="numeric"
-              aria-label="Precio hasta"
-              value={filters.maxPrice}
-              onChange={(event) => onFiltersChange({ ...filters, maxPrice: event.target.value })}
-              placeholder="Hasta"
-              icon={<span className="text-sm font-semibold text-[#64748b]">$</span>}
-              wrapperClassName="w-full"
-              className={cn(sharedControlClassName, 'py-0 pl-11 pr-4 placeholder:font-semibold placeholder:text-slate-700 placeholder:opacity-100')}
-            />
-            </div>
+            <label className="grid min-w-0 gap-1.5 text-left">
+              <span className="px-1 text-[0.72rem] font-semibold uppercase tracking-[0.14em] text-slate-500">Huéspedes</span>
+              <select
+                aria-label="Cantidad de huéspedes"
+                value={filters.guests}
+                onChange={(event) => onFiltersChange({ ...filters, guests: event.target.value })}
+                className={cn('app-control px-4.5', sharedControlClassName)}
+              >
+                <option value="1">1 huésped</option>
+                <option value="2">2 huéspedes</option>
+                <option value="3">3 huéspedes</option>
+                <option value="4">4 huéspedes</option>
+                <option value="5">5 huéspedes</option>
+                <option value="6">6 huéspedes</option>
+                <option value="8">8 huéspedes</option>
+                <option value="10">10 o más</option>
+              </select>
+            </label>
 
             <label className={cn(
               'flex min-h-[4.5rem] min-w-0 w-full items-center justify-between gap-3 rounded-[18px] border px-5 py-3 text-left shadow-[0_10px_24px_-26px_rgba(15,23,42,0.2)] transition-[border-color,background-color,box-shadow] duration-150',

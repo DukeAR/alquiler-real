@@ -93,6 +93,7 @@ describe('PropertyCard', () => {
     expect(screen.getByRole('button', { name: /Ver propiedad: Casa frente al mar/i })).toBeInTheDocument();
     expect(screen.getByTestId('property-card-price-row').firstElementChild).toHaveClass('text-[2.05rem]', 'text-slate-950');
     expect(screen.queryByText('Mejor información para decidir')).toBeNull();
+    expect(screen.getByText('Identidad del anfitrión')).toBeInTheDocument();
     expect(screen.getByText('La identidad de quien publica ya está validada. Abrí la ficha para revisar ubicación, fotos y reglas con más contexto.')).toBeInTheDocument();
   });
 
@@ -117,6 +118,7 @@ describe('PropertyCard', () => {
     expect(screen.queryByText('Identidad verificada')).toBeNull();
     expect(screen.queryByText('Anfitrión confirmado')).toBeNull();
     expect(screen.queryByRole('img', { name: 'Verificado presencialmente' })).toBeNull();
+    expect(screen.getByText('Identidad del anfitrión')).toBeInTheDocument();
     expect(screen.getByText('La identidad de quien publica ya está validada. Abrí la ficha para revisar ubicación, fotos y reglas con más contexto.')).toBeInTheDocument();
   });
 
@@ -436,6 +438,7 @@ describe('PropertyCard', () => {
     expect(screen.queryByText('Sin verificación')).toBeNull();
     expect(screen.queryByText('Datos no confirmados')).toBeNull();
     expect(screen.queryByText('Información publicada por el anfitrión')).toBeNull();
+    expect(screen.getByText('Información publicada')).toBeInTheDocument();
     expect(screen.queryByTestId('property-card-premium-badge')).toBeNull();
   });
 
