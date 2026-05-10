@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type SyntheticEvent } from 'react';
 import { apiJson } from '../lib/apiConfig';
 import { type Zone } from '../lib/constants';
 import { getPropertyListingQualityScore } from '../lib/propertyListingQuality';
@@ -14,7 +14,7 @@ import { NoticeBanner } from './ui/NoticeBanner';
 import { VerificationInfoPanel } from './verification/VerificationInfoPanel';
 
 type PropertyType = 'apartment' | 'house' | 'room';
-type WizardStepId = 'photos' | 'location' | 'type' | 'capacity' | 'price' | 'description' | 'preview';
+type WizardStepId = 'photos' | 'location' | 'type' | 'capacity' | 'price' | 'preview';
 
 type PublishPayload = {
   title: string;
@@ -50,6 +50,12 @@ type LocationOption = {
   left: string;
 };
 
+type PhotoQualitySignal = {
+  width: number;
+  height: number;
+  lowResolution: boolean;
+};
+
 const PHOTO_FIELDS = [
   {
     label: 'Foto 1',
@@ -68,6 +74,16 @@ const PHOTO_FIELDS = [
     helperText: 'Completá con baño, exterior o un detalle útil para decidir.',
   },
 ] as const;
+
+const MIN_PHOTO_COUNT_TO_PUBLISH = 3;
+
+const OBJECTIVE_TITLE_EXAMPLES = [
+  'PH con patio cerca del mar',
+  'Departamento luminoso para 4 personas',
+] as const;
+
+const TITLE_MARKETING_PATTERN = /\b(incre[ií]ble|espectacular|soñad[oa]|imperdible|lujo|premium|wow|exclusiv[oa]|[úu]nic[oa]|hermos[oa])\b/i;
+const TITLE_EMOJI_PATTERN = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u;
 
 const LOCATION_OPTIONS: LocationOption[] = [
   {
@@ -130,7 +146,7 @@ const WIZARD_STEPS: StepDefinition[] = [
     id: 'photos',
     title: 'Fotos',
     shortTitle: 'Fotos',
-    description: 'Arrancá con 4 fotos claras. Es lo único visual que pedimos para publicar.',
+    description: 'Arrancá con 3 fotos claras. La cuarta ya ayuda a que el lugar se entienda mejor sin frenarte.',
   },
   {
     id: 'location',
@@ -157,16 +173,10 @@ const WIZARD_STEPS: StepDefinition[] = [
     description: 'Definí un precio por noche y seguís. El resto lo ajustás después si hace falta.',
   },
   {
-    id: 'description',
-    title: 'Descripción',
-    shortTitle: 'Descripción',
-    description: 'Te guiamos con prompts cortos y un título sugerido para que no arranques de cero.',
-  },
-  {
     id: 'preview',
-    title: 'Preview y publicar',
-    shortTitle: 'Preview',
-    description: 'Revisá cómo lo van a ver y publicá con lo mínimo completo.',
+    title: 'Revisar y publicar',
+    shortTitle: 'Publicar',
+    description: 'Revisá lo esencial. Si querés, en este mismo paso mejorás título y claridad sin sumar otro formulario.',
   },
 ] as const;
 
@@ -192,6 +202,8 @@ const normalizePhotoUrls = (photoUrls: string[]) => {
   return [...uniqueUrls];
 };
 
+const normalizeCompactText = (value: string) => value.trim().replace(/\s+/g, ' ');
+
 const ensureSentence = (value: string) => {
   const trimmedValue = value.trim();
 
@@ -200,6 +212,13 @@ const ensureSentence = (value: string) => {
   }
 
   return /[.!?]$/.test(trimmedValue) ? trimmedValue : `${trimmedValue}.`;
+};
+
+const getUppercaseRatio = (value: string) => {
+  const letters = value.match(/[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/g) ?? [];
+  const uppercaseLetters = value.match(/[A-ZÁÉÍÓÚÜÑ]/g) ?? [];
+
+  return letters.length > 0 ? uppercaseLetters.length / letters.length : 0;
 };
 
 const getPropertyTypeLabel = (propertyType: PropertyType | null) => {
@@ -240,15 +259,41 @@ const buildTitleSuggestion = (
   return `${typeLabel} para ${guestLabel} en ${locationLabel}`;
 };
 
+const getTitleQualitySuggestion = (value: string) => {
+  const normalizedValue = normalizeCompactText(value);
+
+  if (!normalizedValue) {
+    return null;
+  }
+
+  if (TITLE_EMOJI_PATTERN.test(normalizedValue)) {
+    return 'Evitá emojis para que el título se vea más claro y confiable.';
+  }
+
+  if (getUppercaseRatio(normalizedValue) > 0.55 && normalizedValue.length >= 8) {
+    return 'Bajá las mayúsculas: un tono más natural transmite mejor la información real del aviso.';
+  }
+
+  if (TITLE_MARKETING_PATTERN.test(normalizedValue)) {
+    return 'Evitá marketing artificial o promesas exageradas. Funciona mejor un título objetivo y fácil de entender.';
+  }
+
+  const wordCount = normalizedValue.split(' ').filter(Boolean).length;
+
+  if (wordCount < 3 || normalizedValue.length < 14) {
+    return 'Sumá tipo, capacidad o una referencia concreta para que el título diga algo útil en segundos.';
+  }
+
+  return null;
+};
+
 const buildDescription = (data: {
   arrivalNote: string;
   comfortNote: string;
-  idealForNote: string;
 }) => {
   const parts = [
     ensureSentence(data.arrivalNote),
     ensureSentence(data.comfortNote),
-    data.idealForNote.trim() ? ensureSentence(`Ideal para ${data.idealForNote.trim()}`) : '',
   ].filter(Boolean);
 
   return parts.join(' ');
@@ -265,7 +310,6 @@ const buildPublishPayload = (data: {
   title: string;
   arrivalNote: string;
   comfortNote: string;
-  idealForNote: string;
 }): PublishPayload => {
   const selectedLocation = LOCATION_OPTIONS.find((option) => option.zone === data.zone) ?? null;
   const images = normalizePhotoUrls(data.photoUrls);
@@ -279,7 +323,6 @@ const buildPublishPayload = (data: {
     description: buildDescription({
       arrivalNote: data.arrivalNote,
       comfortNote: data.comfortNote,
-      idealForNote: data.idealForNote,
     }),
     imageUrl: images[0] ?? '',
     images,
@@ -303,11 +346,11 @@ export const PropertyUploadForm: React.FC<PropertyUploadFormProps> = ({ onComple
   const [title, setTitle] = useState('');
   const [arrivalNote, setArrivalNote] = useState('');
   const [comfortNote, setComfortNote] = useState('');
-  const [idealForNote, setIdealForNote] = useState('');
   const [isPublishing, setIsPublishing] = useState(false);
   const [isPublished, setIsPublished] = useState(false);
   const [publishedPropertyId, setPublishedPropertyId] = useState<string | null>(null);
   const [publishedPropertyTitle, setPublishedPropertyTitle] = useState('');
+  const [photoQualitySignals, setPhotoQualitySignals] = useState<Record<string, PhotoQualitySignal>>({});
 
   const currentStep = WIZARD_STEPS[currentStepIndex];
   const progress = percentageForStep(currentStepIndex);
@@ -324,8 +367,8 @@ export const PropertyUploadForm: React.FC<PropertyUploadFormProps> = ({ onComple
     [guests, locationReference, propertyType, zone],
   );
   const generatedDescription = useMemo(
-    () => buildDescription({ arrivalNote, comfortNote, idealForNote }),
-    [arrivalNote, comfortNote, idealForNote],
+    () => buildDescription({ arrivalNote, comfortNote }),
+    [arrivalNote, comfortNote],
   );
 
   const publishPayload = useMemo(
@@ -340,10 +383,22 @@ export const PropertyUploadForm: React.FC<PropertyUploadFormProps> = ({ onComple
       title,
       arrivalNote,
       comfortNote,
-      idealForNote,
     }),
-    [arrivalNote, beds, comfortNote, guests, idealForNote, locationReference, photoUrls, price, propertyType, title, zone],
+    [arrivalNote, beds, comfortNote, guests, locationReference, photoUrls, price, propertyType, title, zone],
   );
+
+  useEffect(() => {
+    setPhotoQualitySignals((current) => {
+      const activeUrls = new Set(normalizedPhotos);
+      const nextEntries = Object.entries(current).filter(([photoUrl]) => activeUrls.has(photoUrl));
+
+      if (nextEntries.length === Object.keys(current).length) {
+        return current;
+      }
+
+      return Object.fromEntries(nextEntries);
+    });
+  }, [normalizedPhotos]);
 
   const listingQualityScore = useMemo(
     () => getPropertyListingQualityScore(publishPayload),
@@ -352,7 +407,7 @@ export const PropertyUploadForm: React.FC<PropertyUploadFormProps> = ({ onComple
 
   const minimumHighlights = useMemo(
     () => [
-      { label: '4 fotos', done: normalizedPhotos.length >= PHOTO_FIELDS.length },
+      { label: '3 fotos', done: normalizedPhotos.length >= MIN_PHOTO_COUNT_TO_PUBLISH },
       { label: 'ubicación', done: Boolean(zone) },
       { label: 'tipo', done: Boolean(propertyType) },
       { label: 'capacidad', done: guests > 0 && beds > 0 },
@@ -362,6 +417,52 @@ export const PropertyUploadForm: React.FC<PropertyUploadFormProps> = ({ onComple
   );
 
   const missingMinimumHighlights = minimumHighlights.filter((item) => !item.done).map((item) => item.label);
+  const titleQualitySuggestion = useMemo(() => getTitleQualitySuggestion(title), [title]);
+  const lowResolutionPhotoCount = useMemo(
+    () => normalizedPhotos.filter((photoUrl) => photoQualitySignals[photoUrl]?.lowResolution).length,
+    [normalizedPhotos, photoQualitySignals],
+  );
+
+  const qualitySuggestions = useMemo(() => {
+    const suggestions: Array<{ title: string; description: string }> = [];
+
+    if (normalizedPhotos.length === MIN_PHOTO_COUNT_TO_PUBLISH) {
+      suggestions.push({
+        title: 'Sumá una cuarta foto cuando puedas',
+        description: 'Con una imagen más de cocina, exterior o baño, el aviso se entiende mejor sin cambiar la base de publicación.',
+      });
+    }
+
+    if (lowResolutionPhotoCount > 0) {
+      suggestions.push({
+        title: 'Revisá si alguna foto quedó chica o comprimida',
+        description: 'Si podés reemplazarla por una versión más nítida, la ficha transmite más confianza en pocos segundos.',
+      });
+    }
+
+    if (!locationReference.trim()) {
+      suggestions.push({
+        title: 'Agregá barrio o una referencia simple',
+        description: 'Una pista corta sobre zona o cercanía ayuda a que te consulten con menos dudas.',
+      });
+    }
+
+    if (titleQualitySuggestion) {
+      suggestions.push({
+        title: 'Ajustá el título para que sea más objetivo',
+        description: titleQualitySuggestion,
+      });
+    }
+
+    if (!generatedDescription) {
+      suggestions.push({
+        title: 'Sumá una frase corta sobre llegada o comodidad',
+        description: 'No hace falta una descripción larga: con una o dos frases ya se entiende mejor qué ofrece el lugar.',
+      });
+    }
+
+    return suggestions.slice(0, 4);
+  }, [generatedDescription, locationReference, lowResolutionPhotoCount, normalizedPhotos.length, titleQualitySuggestion]);
 
   const postPublishSuggestions = useMemo(() => {
     const suggestions = [
@@ -370,20 +471,20 @@ export const PropertyUploadForm: React.FC<PropertyUploadFormProps> = ({ onComple
         description: 'Ya saliste al aire. Sumá cocina, exterior o detalles para que el lugar se entienda mejor en segundos.',
       },
       {
-        title: 'Hacé más claro el aviso con identidad y video',
-        description: 'Desde el panel podés sumar esas validaciones para que el aviso tenga más trazabilidad sin volver a empezar la publicación.',
+        title: 'La verificación presencial te da más confianza y prioridad visual',
+        description: 'Desde el panel podés sumar esa validación para reforzar información real y destacarte mejor dentro del marketplace.',
       },
     ];
 
     if (!generatedDescription) {
       suggestions.splice(1, 0, {
-        title: 'Mejorá tu visibilidad con una descripcion corta',
-        description: 'Con dos o tres frases sobre entorno y comodidad, la ficha queda mas clara para decidir.',
+        title: 'Mejorá tu visibilidad con una frase corta',
+        description: 'Con una o dos frases sobre entorno y comodidad, la ficha queda más clara para decidir.',
       });
     } else if (!locationReference.trim()) {
       suggestions.splice(1, 0, {
-        title: 'Mejorá tu visibilidad con una ubicacion mas clara',
-        description: 'Sumá barrio, zona o una referencia simple para que te pregunten menos y entiendan mejor donde esta.',
+        title: 'Mejorá tu visibilidad con una ubicación más clara',
+        description: 'Sumá barrio, zona o una referencia simple para que te pregunten menos y entiendan mejor dónde está.',
       });
     }
 
@@ -394,11 +495,44 @@ export const PropertyUploadForm: React.FC<PropertyUploadFormProps> = ({ onComple
     setPhotoUrls((current) => current.map((photo, currentIndex) => currentIndex === index ? value : photo));
   };
 
+  const handlePhotoPreviewLoad = (photoUrl: string, event: SyntheticEvent<HTMLImageElement>) => {
+    const normalizedPhotoUrl = photoUrl.trim();
+
+    if (!normalizedPhotoUrl) {
+      return;
+    }
+
+    const { naturalWidth, naturalHeight } = event.currentTarget;
+    const lowResolution = naturalWidth > 0 && naturalHeight > 0 && (naturalWidth < 900 || naturalHeight < 700);
+
+    setPhotoQualitySignals((current) => {
+      const existingSignal = current[normalizedPhotoUrl];
+
+      if (
+        existingSignal
+        && existingSignal.width === naturalWidth
+        && existingSignal.height === naturalHeight
+        && existingSignal.lowResolution === lowResolution
+      ) {
+        return current;
+      }
+
+      return {
+        ...current,
+        [normalizedPhotoUrl]: {
+          width: naturalWidth,
+          height: naturalHeight,
+          lowResolution,
+        },
+      };
+    });
+  };
+
   const getStepError = () => {
     switch (currentStep.id) {
       case 'photos':
-        if (normalizedPhotos.length < PHOTO_FIELDS.length) {
-          return 'Sumá al menos 4 fotos claras para publicar.';
+        if (normalizedPhotos.length < MIN_PHOTO_COUNT_TO_PUBLISH) {
+          return 'Sumá al menos 3 fotos claras para avanzar.';
         }
         return null;
       case 'location':
@@ -614,8 +748,8 @@ export const PropertyUploadForm: React.FC<PropertyUploadFormProps> = ({ onComple
             <div className="space-y-6">
               <NoticeBanner
                 tone="info"
-                heading="Para publicar te pedimos 4 fotos."
-                description="Con esta base ya se entiende el lugar. Más adelante podés sumar el resto sin bloquear el alta."
+                heading="Con 3 fotos ya podés avanzar."
+                description="La cuarta sigue siendo recomendable porque ayuda a entender mejor el lugar, pero no te frena el alta."
               />
 
               <div className="grid gap-4 md:grid-cols-2">
@@ -640,7 +774,12 @@ export const PropertyUploadForm: React.FC<PropertyUploadFormProps> = ({ onComple
                     <div key={`preview-${field.label}`} className="space-y-2">
                       <div className="aspect-[4/3] overflow-hidden rounded-[24px] border border-slate-200 bg-slate-100">
                         {photoUrl ? (
-                          <img src={photoUrl} alt={field.label} className="h-full w-full object-cover" />
+                          <img
+                            src={photoUrl}
+                            alt={field.label}
+                            className="h-full w-full object-cover"
+                            onLoad={(event) => handlePhotoPreviewLoad(photoUrl, event)}
+                          />
                         ) : (
                           <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-slate-400">
                             <Icons.ImagePlus className="h-7 w-7" />
@@ -805,53 +944,6 @@ export const PropertyUploadForm: React.FC<PropertyUploadFormProps> = ({ onComple
             </div>
           ) : null}
 
-          {currentStep.id === 'description' ? (
-            <div className="space-y-6">
-              <Input
-                id="property-title"
-                label="Título sugerido"
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
-                placeholder={generatedTitle}
-                helperText="Lo generamos automáticamente con tipo, capacidad y zona. Solo editás si querés ajustar el tono."
-              />
-
-              <div className="grid gap-4 md:grid-cols-3">
-                <Input
-                  id="property-arrival-note"
-                  label="¿Qué van a encontrar apenas llegan?"
-                  value={arrivalNote}
-                  onChange={(event) => setArrivalNote(event.target.value)}
-                  placeholder="Ej: A dos cuadras de la playa y cerca del centro"
-                  helperText="Opcional. Ayuda a ubicar rápido el lugar."
-                />
-                <Input
-                  id="property-comfort-note"
-                  label="¿Qué hace cómodo el lugar?"
-                  value={comfortNote}
-                  onChange={(event) => setComfortNote(event.target.value)}
-                  placeholder="Ej: Living amplio, cocina equipada y buena luz"
-                  helperText="Opcional. Priorizá una o dos cosas concretas."
-                />
-                <Input
-                  id="property-ideal-for-note"
-                  label="¿Para quién funciona mejor?"
-                  value={idealForNote}
-                  onChange={(event) => setIdealForNote(event.target.value)}
-                  placeholder="Ej: una familia, pareja o grupo chico"
-                  helperText="Opcional. Sirve para que se identifiquen rápido."
-                />
-              </div>
-
-              <Card variant="muted" padding="lg" className="space-y-3 border-slate-200/80 bg-white/92">
-                <p className="text-sm font-semibold text-slate-900">Así queda la descripción</p>
-                <p className="text-sm leading-7 text-slate-600">
-                  {generatedDescription || 'Si dejás los prompts vacíos, podés publicar igual y completar esta parte después.'}
-                </p>
-              </Card>
-            </div>
-          ) : null}
-
           {currentStep.id === 'preview' ? (
             <div className="space-y-6">
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -861,52 +953,133 @@ export const PropertyUploadForm: React.FC<PropertyUploadFormProps> = ({ onComple
                 <SummaryTile label="Precio" value={formatCurrency(price)} />
               </div>
 
-              <Card variant="muted" padding="lg" className="space-y-4 border-slate-200/80 bg-white/92">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold text-slate-900">Así lo van a ver los huéspedes</p>
-                    <p className="mt-1 text-sm text-slate-500">Fotos, título, ubicación y precio bien visibles antes de publicar.</p>
-                  </div>
-                  <Badge variant="brand" size="md">{progress}% listo</Badge>
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {photoUrls.map((photoUrl, index) => (
-                      <div key={`summary-photo-${index + 1}`} className="aspect-[4/3] overflow-hidden rounded-[24px] bg-slate-100">
-                        {photoUrl.trim() ? (
-                          <img src={photoUrl.trim()} alt={`Foto ${index + 1}`} className="h-full w-full object-cover" />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center text-slate-400">
-                            <Icons.ImagePlus className="h-8 w-8" />
-                          </div>
-                        )}
-                      </div>
-                    ))}
+              <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+                <Card variant="muted" padding="lg" className="space-y-4 border-slate-200/80 bg-white/92">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">Así lo van a ver los huéspedes</p>
+                      <p className="mt-1 text-sm text-slate-500">Fotos, título, ubicación y precio bien visibles antes de publicar.</p>
+                    </div>
+                    <Badge variant="brand" size="md">{progress}% listo</Badge>
                   </div>
 
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <p className="text-2xl font-semibold tracking-tight text-slate-900">{publishPayload.title}</p>
-                      <div className="flex flex-wrap items-center gap-3 text-sm text-slate-600">
-                        <span className="inline-flex items-center gap-1.5">
-                          <Icons.MapPin className="h-4 w-4 text-brand" />
-                          {publishPayload.location || 'Ubicación sin definir'}
-                        </span>
-                        <span className="inline-flex items-center gap-1.5">
-                          <Icons.Users className="h-4 w-4 text-brand" />
-                          {guests} {guests === 1 ? 'persona' : 'personas'}
-                        </span>
-                      </div>
-                      <p className="text-3xl font-semibold tracking-tight text-slate-950">{formatCurrency(price)}</p>
+                  <div className="grid gap-4 md:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {photoUrls.map((photoUrl, index) => (
+                        <div key={`summary-photo-${index + 1}`} className="aspect-[4/3] overflow-hidden rounded-[24px] bg-slate-100">
+                          {photoUrl.trim() ? (
+                            <img
+                              src={photoUrl.trim()}
+                              alt={`Foto ${index + 1}`}
+                              className="h-full w-full object-cover"
+                              onLoad={(event) => handlePhotoPreviewLoad(photoUrl.trim(), event)}
+                            />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center text-slate-400">
+                              <Icons.ImagePlus className="h-8 w-8" />
+                            </div>
+                          )}
+                        </div>
+                      ))}
                     </div>
 
-                    <p className="text-sm leading-7 text-slate-600">
-                      {publishPayload.description || 'Todavía no sumaste descripción. Podés publicar igual y completarla después.'}
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <p className="text-2xl font-semibold tracking-tight text-slate-900">{publishPayload.title}</p>
+                        <div className="flex flex-wrap items-center gap-3 text-sm text-slate-600">
+                          <span className="inline-flex items-center gap-1.5">
+                            <Icons.MapPin className="h-4 w-4 text-brand" />
+                            {publishPayload.location || 'Ubicación sin definir'}
+                          </span>
+                          <span className="inline-flex items-center gap-1.5">
+                            <Icons.Users className="h-4 w-4 text-brand" />
+                            {guests} {guests === 1 ? 'persona' : 'personas'}
+                          </span>
+                        </div>
+                        <p className="text-3xl font-semibold tracking-tight text-slate-950">{formatCurrency(price)}</p>
+                      </div>
+
+                      <p className="text-sm leading-7 text-slate-600">
+                        {publishPayload.description || 'Todavía no sumaste una frase corta. Podés publicar igual y completarla después.'}
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+
+                <Card variant="muted" padding="lg" className="space-y-4 border-slate-200/80 bg-white/92">
+                  <div className="space-y-2">
+                    <p className="text-sm font-semibold text-slate-900">Mejoras rápidas opcionales</p>
+                    <p className="text-sm leading-6 text-slate-600">
+                      Ya tenés la base para publicar. Si querés mejores resultados desde el inicio, ajustá el título o sumá dos datos concretos.
                     </p>
                   </div>
-                </div>
-              </Card>
+
+                  <Input
+                    id="property-title"
+                    label="Título"
+                    value={title}
+                    onChange={(event) => setTitle(event.target.value)}
+                    placeholder={generatedTitle}
+                    helperText="Mantenelo claro y objetivo. Evitá emojis, marketing artificial y mayúsculas excesivas."
+                  />
+
+                  <div className="rounded-[24px] border border-slate-200/80 bg-slate-50/80 px-4 py-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Ejemplos claros</p>
+                    <div className="mt-3 space-y-2 text-sm text-slate-600">
+                      {OBJECTIVE_TITLE_EXAMPLES.map((example) => (
+                        <p key={example}>“{example}”</p>
+                      ))}
+                    </div>
+                  </div>
+
+                  {titleQualitySuggestion ? (
+                    <NoticeBanner
+                      tone="info"
+                      heading="Conviene ajustar el título antes de salir."
+                      description={titleQualitySuggestion}
+                    />
+                  ) : null}
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Input
+                      id="property-arrival-note"
+                      label="Qué ubica rápido el lugar"
+                      value={arrivalNote}
+                      onChange={(event) => setArrivalNote(event.target.value)}
+                      placeholder="Ej: A dos cuadras de la playa y cerca del centro"
+                      helperText="Opcional. Con una frase corta alcanza."
+                    />
+                    <Input
+                      id="property-comfort-note"
+                      label="Qué lo hace cómodo"
+                      value={comfortNote}
+                      onChange={(event) => setComfortNote(event.target.value)}
+                      placeholder="Ej: Living luminoso y cocina equipada"
+                      helperText="Opcional. Priorizá una o dos cosas concretas."
+                    />
+                  </div>
+
+                  {qualitySuggestions.length > 0 ? (
+                    <div className="space-y-3">
+                      <p className="text-sm font-semibold text-slate-900">Sugerencias suaves antes de publicar</p>
+                      <div className="grid gap-3">
+                        {qualitySuggestions.map((suggestion) => (
+                          <div key={suggestion.title} className="rounded-[22px] border border-slate-200/80 bg-white px-4 py-4">
+                            <p className="text-sm font-semibold text-slate-900">{suggestion.title}</p>
+                            <p className="mt-1 text-sm leading-6 text-slate-600">{suggestion.description}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <NoticeBanner
+                      tone="success"
+                      heading="La publicación ya quedó clara para salir."
+                      description="La base visual y la información principal ya transmiten bien de qué se trata el aviso."
+                    />
+                  )}
+                </Card>
+              </div>
 
               <NoticeBanner
                 tone={missingMinimumHighlights.length > 0 ? 'warning' : listingQualityScore >= 60 ? 'success' : 'info'}
