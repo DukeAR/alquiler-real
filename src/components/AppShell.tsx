@@ -7,7 +7,7 @@ import { NotificationsMenu } from './NotificationsMenu';
 import { AccountModeSwitch } from './ui/AccountModeSwitch';
 import { useAuth } from '../hooks/useAuth';
 import { useFavorites } from '../hooks/useFavorites';
-import { useNotifications } from '../hooks/useNotifications';
+import { NotificationsContext, useNotifications } from '../hooks/useNotifications';
 import { useSocket } from '../hooks/useSocket';
 import { cn } from '../lib/utils';
 import { showToast } from '../lib/toast';
@@ -649,11 +649,12 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   );
 
   return (
-    <div className="app-shell">
-      <NotificationToast />
-      <Suspense fallback={null}>
-        <LazyLoginModal />
-      </Suspense>
+    <NotificationsContext.Provider value={notifications}>
+      <div className="app-shell">
+        <NotificationToast />
+        <Suspense fallback={null}>
+          <LazyLoginModal />
+        </Suspense>
 
       {showHeader ? (
         <header className={cn('app-header z-50', isPropertyDetailRoute ? 'app-header-detail' : 'relative', headerOnHero && 'app-header-on-hero')}>
@@ -768,8 +769,9 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
         </nav>
       ) : null}
 
-      {showAssistant ? <AIAssistant /> : null}
-    </div>
+        {showAssistant ? <AIAssistant /> : null}
+      </div>
+    </NotificationsContext.Provider>
   );
 };
 

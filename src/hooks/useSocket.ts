@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from './useAuth';
-import { emitUserNotification, showToast, type ToastType } from '../lib/toast';
+import { emitUserNotification, showToast, type ToastType, type UserNotificationPayload } from '../lib/toast';
 
 const normalizeNotificationType = (value: string): ToastType => {
   if (value === 'success' || value === 'warning' || value === 'error') {
@@ -9,6 +9,22 @@ const normalizeNotificationType = (value: string): ToastType => {
   }
 
   return 'info';
+};
+
+const getSocketEndpoint = () => {
+  const explicitEndpoint = typeof import.meta.env.VITE_DEV_API_PROXY_TARGET === 'string'
+    ? import.meta.env.VITE_DEV_API_PROXY_TARGET.trim().replace(/\/+$/, '')
+    : '';
+
+  if (explicitEndpoint) {
+    return explicitEndpoint;
+  }
+
+  if (import.meta.env.DEV && typeof window !== 'undefined') {
+    return `${window.location.protocol}//${window.location.hostname}:3001`;
+  }
+
+  return undefined;
 };
 
 export function useSocket() {
@@ -19,23 +35,27 @@ export function useSocket() {
     if (!user) return;
 
     // Connect to the same host that served the page
-    const socket = io();
+    const socketEndpoint = getSocketEndpoint();
+    const socket = socketEndpoint
+      ? io(socketEndpoint, { withCredentials: true })
+      : io({ withCredentials: true });
     socketRef.current = socket;
 
     socket.on('connect', () => {
       console.log('Connected to WebSocket');
     });
 
-    socket.on('notification', (notification: { title: string; message: string; type: string; id?: string; createdAt?: string }) => {
+    socket.on('notification', (notification: UserNotificationPayload) => {
       const type = normalizeNotificationType(notification.type);
 
       emitUserNotification({
+        ...notification,
         id: notification.id,
         title: notification.title,
         message: notification.message,
         type,
         createdAt: notification.createdAt,
-        unread: true,
+        unread: notification.unread ?? true,
       });
       showToast(notification.title, notification.message, type);
     });

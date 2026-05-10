@@ -1,18 +1,40 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { apiFetch } from '../lib/apiConfig';
 import { APP_USER_NOTIFICATION_EVENT, showToast, type ToastPayload, type ToastType } from '../lib/toast';
 import { useAuth } from './useAuth';
+
+export type NotificationCategory = 'info' | 'action_required' | 'important_alert';
+export type NotificationAudience = 'guest' | 'host' | 'account';
+export type NotificationEmailPolicy = 'none' | 'important' | 'critical' | 'recovery';
 
 export type NotificationItem = {
   id: string;
   title: string;
   message: string;
   type: ToastType;
+  category: NotificationCategory;
+  audience: NotificationAudience;
+  actionLabel: string | null;
+  actionHref: string | null;
+  emailPolicy: NotificationEmailPolicy;
   createdAt: string;
   unread: boolean;
 };
 
 export type NotificationStatus = 'auth-loading' | 'logged-out' | 'loading' | 'ready' | 'error';
+
+export type NotificationsController = {
+  status: NotificationStatus;
+  notifications: NotificationItem[];
+  unreadCount: number;
+  errorMessage: string | null;
+  hasLoaded: boolean;
+  isMarkingAllRead: boolean;
+  loadNotifications: () => Promise<void>;
+  markAllAsRead: () => Promise<boolean>;
+};
+
+export const NotificationsContext = createContext<NotificationsController | null>(null);
 
 type NotificationResponseShape = {
   notifications?: unknown;
@@ -29,6 +51,43 @@ const normalizeNotificationType = (value: unknown): ToastType => {
   }
 
   return 'info';
+};
+
+const normalizeNotificationCategory = (value: unknown): NotificationCategory => {
+  if (value === 'action_required' || value === 'important_alert') {
+    return value;
+  }
+
+  return 'info';
+};
+
+const normalizeNotificationAudience = (value: unknown): NotificationAudience => {
+  if (value === 'guest' || value === 'host') {
+    return value;
+  }
+
+  return 'account';
+};
+
+const normalizeNotificationEmailPolicy = (value: unknown): NotificationEmailPolicy => {
+  if (value === 'important' || value === 'critical' || value === 'recovery') {
+    return value;
+  }
+
+  return 'none';
+};
+
+const normalizeNotificationActionLabel = (value: unknown) => (
+  typeof value === 'string' && value.trim() ? value.trim() : null
+);
+
+const normalizeNotificationActionHref = (value: unknown) => {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const trimmedValue = value.trim();
+  return trimmedValue.startsWith('/') && !trimmedValue.startsWith('//') ? trimmedValue : null;
 };
 
 const normalizeNotificationItem = (
@@ -48,6 +107,11 @@ const normalizeNotificationItem = (
       ? value.body
       : 'Tenemos una actualización para vos.',
   type: normalizeNotificationType(value.type),
+  category: normalizeNotificationCategory(value.category),
+  audience: normalizeNotificationAudience(value.audience),
+  actionLabel: normalizeNotificationActionLabel(value.actionLabel),
+  actionHref: normalizeNotificationActionHref(value.actionHref),
+  emailPolicy: normalizeNotificationEmailPolicy(value.emailPolicy),
   createdAt: typeof value.createdAt === 'string'
     ? value.createdAt
     : typeof value.created_at === 'string'
@@ -84,7 +148,17 @@ const parseNotificationResponse = (payload: unknown) => {
   return { items, unreadCount };
 };
 
-export const useNotifications = () => {
+export const useSharedNotifications = () => {
+  const context = useContext(NotificationsContext);
+
+  if (!context) {
+    throw new Error('useSharedNotifications must be used within NotificationsContext.Provider');
+  }
+
+  return context;
+};
+
+export const useNotifications = (): NotificationsController => {
   const { user, loading: authLoading, status: authStatus, refresh } = useAuth();
   const [status, setStatus] = useState<NotificationStatus>(authLoading ? 'auth-loading' : user ? 'loading' : authStatus === 'error' ? 'error' : 'logged-out');
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);

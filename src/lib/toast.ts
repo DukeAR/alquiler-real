@@ -14,6 +14,11 @@ export interface UserNotificationPayload extends ToastPayload {
   id?: string;
   createdAt?: string;
   unread?: boolean;
+  category?: 'info' | 'action_required' | 'important_alert';
+  audience?: 'guest' | 'host' | 'account';
+  actionLabel?: string | null;
+  actionHref?: string | null;
+  emailPolicy?: 'none' | 'important' | 'critical' | 'recovery';
 }
 
 export const emitUserNotification = (payload: UserNotificationPayload) => {

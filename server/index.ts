@@ -1,10 +1,12 @@
 import { timingSafeEqual } from 'node:crypto';
+import { createServer } from 'node:http';
 import express, { type Express } from 'express';
 import session from 'express-session';
 import pgSession from 'connect-pg-simple';
 import bcrypt from 'bcrypt';
 import cors from 'cors';
 import multer from 'multer';
+import { Server as SocketIOServer } from 'socket.io';
 import { serverEnv } from './config/env';
 import { db } from './config/db';
 import { initDB } from './updates';
@@ -70,7 +72,9 @@ declare module "express-session" {
 }
 
 const app: Express = express();
+const httpServer = createServer(app);
 const port = serverEnv.port;
+let io: SocketIOServer | null = null;
 const memoryUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 const verificationAssetUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024, files: 6 } });
 
@@ -105,6 +109,8 @@ const persistSession = (req: express.Request) => new Promise<void>((resolve, rej
     resolve();
   });
 });
+
+const getUserSocketRoom = (userId: string) => `user:${userId}`;
 
 if (serverEnv.trustProxy) {
   app.set('trust proxy', 1);
@@ -146,7 +152,7 @@ app.use(cors({
 app.use(express.json());
 
 const PgStore = pgSession(session);
-app.use(session({
+const sessionMiddleware = session({
   store: new PgStore({ conString: serverEnv.databaseUrl }),
   name: serverEnv.sessionCookieName,
   proxy: serverEnv.trustProxy,
@@ -160,7 +166,56 @@ app.use(session({
     domain: serverEnv.sessionCookieDomain,
     maxAge: 1000 * 60 * 60 * 24 * 7,
   },
-}));
+});
+
+app.use(sessionMiddleware);
+
+if (!serverEnv.isTest) {
+  io = new SocketIOServer(httpServer, {
+    cors: {
+      origin: (origin, callback) => {
+        if (isAllowedOrigin(origin)) {
+          callback(null, true);
+          return;
+        }
+
+        callback(new Error('Not allowed by CORS'));
+      },
+      credentials: true,
+    },
+  });
+
+  const wrapSessionMiddleware = (middleware: any) => (socket: any, next: (error?: Error) => void) => {
+    middleware(socket.request, {
+      getHeader: () => undefined,
+      setHeader: () => undefined,
+      end: () => undefined,
+    }, next);
+  };
+
+  io.use(wrapSessionMiddleware(sessionMiddleware));
+  io.use((socket, next) => {
+    const socketUserId = normalizeActivityUserId((socket.request as express.Request).session?.userId);
+
+    if (!socketUserId) {
+      next(new Error('Unauthorized'));
+      return;
+    }
+
+    next();
+  });
+
+  io.on('connection', (socket) => {
+    const socketUserId = normalizeActivityUserId((socket.request as express.Request).session?.userId);
+
+    if (!socketUserId) {
+      socket.disconnect(true);
+      return;
+    }
+
+    socket.join(getUserSocketRoom(socketUserId));
+  });
+}
 
 app.use((req, res, next) => {
   if (isSessionSensitiveRoute(req.path)) {
@@ -194,14 +249,40 @@ const normalizeActivityUserId = (userId: string | null | undefined) => {
   return normalizedUserId;
 };
 
+const emitRealtimeNotification = (userId: string | null | undefined, row: any) => {
+  const normalizedUserId = normalizeActivityUserId(userId);
+
+  if (!normalizedUserId || !io || !NOTIFIABLE_ACTIVITY_ACTIONS.includes(row?.action)) {
+    return;
+  }
+
+  const notification = mapActivityLogToNotification(row);
+
+  if (!notification) {
+    return;
+  }
+
+  io.to(getUserSocketRoom(normalizedUserId)).emit('notification', notification);
+};
+
 const logActivity = async (userId: string | null | undefined, action: string, metadata: any = {}, ip_address: string = '') => {
   try {
     const id = `log_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    await db.query(
+    const normalizedUserId = normalizeActivityUserId(userId);
+    const result = await db.query(
       `INSERT INTO user_activity_logs (id, user_id, action, metadata, ip_address)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [id, normalizeActivityUserId(userId), action, JSON.stringify(metadata), ip_address]
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING created_at as "createdAt"`,
+      [id, normalizedUserId, action, JSON.stringify(metadata), ip_address]
     );
+
+    emitRealtimeNotification(normalizedUserId, {
+      id,
+      action,
+      metadata,
+      createdAt: result.rows[0]?.createdAt ?? new Date().toISOString(),
+      readAt: null,
+    });
   } catch (err) {
     console.error('Error logging activity:', err);
   }
@@ -219,6 +300,13 @@ const NOTIFIABLE_ACTIVITY_ACTIONS = [
   'BOOKING_CREATED',
   'BOOKING_REQUEST_ACCEPTED',
   'BOOKING_CANCELLED',
+  'HOST_REPLIED',
+  'HOST_NEW_INQUIRY',
+  'HOST_NEW_REQUEST',
+  'PROTECTED_DEPOSIT_PAYMENT_REVIEWED',
+  'HOST_PAYMENT_PROOF_RECEIVED',
+  'GUEST_CONFIRMED_ARRIVAL',
+  'OPERATION_MANUAL_REVIEW_STARTED',
 ] as const;
 
 const FRONTEND_FUNNEL_EVENT_ACTIONS = {
@@ -704,103 +792,269 @@ const normalizeActivityMetadata = (value: unknown): Record<string, unknown> => {
   return {};
 };
 
-const mapActivityLogToNotification = (row: any) => {
-  const metadata = normalizeActivityMetadata(row?.metadata);
+type NotificationCategory = 'info' | 'action_required' | 'important_alert';
+type NotificationAudience = 'guest' | 'host' | 'account';
+type NotificationEmailPolicy = 'none' | 'important' | 'critical' | 'recovery';
+
+const getNotificationMetadataString = (metadata: Record<string, unknown>, key: string) => {
+  const value = metadata[key];
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+};
+
+const buildChatNotificationAction = (metadata: Record<string, unknown>, actionLabel = 'Abrir chat') => {
+  const conversationId = getNotificationMetadataString(metadata, 'conversationId');
+
+  return conversationId
+    ? { actionLabel, actionHref: `/chat/${conversationId}` }
+    : {};
+};
+
+const buildGuestBookingNotificationAction = (actionLabel = 'Ver reserva') => ({
+  actionLabel,
+  actionHref: '/my-bookings',
+});
+
+const buildGuestOperationsNotificationAction = (actionLabel = 'Ver operación') => ({
+  actionLabel,
+  actionHref: '/operations',
+});
+
+const buildHostDashboardNotificationAction = (actionLabel = 'Abrir panel') => ({
+  actionLabel,
+  actionHref: '/host-dashboard',
+});
+
+const buildAccountNotificationAction = (actionLabel = 'Revisar cuenta') => ({
+  actionLabel,
+  actionHref: '/profile',
+});
+
+const buildActivityNotification = (
+  row: any,
+  payload: {
+    title: string;
+    message: string;
+    type: 'info' | 'success' | 'warning' | 'error';
+    category: NotificationCategory;
+    audience: NotificationAudience;
+    emailPolicy: NotificationEmailPolicy;
+    actionLabel?: string;
+    actionHref?: string;
+  },
+) => {
   const createdAt = row?.createdAt || row?.created_at || new Date().toISOString();
   const unread = !row?.readAt && !row?.read_at;
 
+  return {
+    id: row.id,
+    ...payload,
+    createdAt,
+    unread,
+  };
+};
+
+const mapActivityLogToNotification = (row: any) => {
+  const metadata = normalizeActivityMetadata(row?.metadata);
+
   switch (row?.action) {
     case 'PASSWORD_CHANGED':
-      return {
-        id: row.id,
+      return buildActivityNotification(row, {
         title: 'Contraseña actualizada',
         message: 'Tu contraseña se actualizó correctamente.',
         type: 'success',
-        createdAt,
-        unread,
-      };
+        category: 'info',
+        audience: 'account',
+        emailPolicy: 'important',
+        ...buildAccountNotificationAction('Ver cuenta'),
+      });
     case 'IDENTITY_VERIFIED':
-      return {
-        id: row.id,
+      return buildActivityNotification(row, {
         title: 'Validación documental lista',
         message: 'Tu cuenta sumó una validación documental adicional.',
         type: 'success',
-        createdAt,
-        unread,
-      };
+        category: 'info',
+        audience: 'account',
+        emailPolicy: 'important',
+        actionLabel: 'Ver verificación',
+        actionHref: '/verification',
+      });
     case 'IDENTITY_DOCUMENTS_SUBMITTED':
-      return {
-        id: row.id,
+      return buildActivityNotification(row, {
         title: 'Documentación enviada',
         message: metadata.hasProofOfAddress
           ? 'Recibimos tu documentación opcional y el comprobante adicional.'
           : 'Recibimos tu documentación opcional para sumar respaldo a la cuenta.',
         type: 'info',
-        createdAt,
-        unread,
-      };
+        category: 'info',
+        audience: 'account',
+        emailPolicy: 'none',
+        actionLabel: 'Ver verificación',
+        actionHref: '/verification',
+      });
     case 'PREMIUM_VERIFICATION_PURCHASED':
-      return {
-        id: row.id,
+      return buildActivityNotification(row, {
         title: metadata.offerType === PREMIUM_ONSITE_OFFER_TYPE ? 'Validación presencial activada' : 'Validación documental activada',
         message: metadata.isPromotional
           ? 'La validación adicional quedó activada sin cargo y ya podés seguir con el proceso.'
           : 'La validación adicional quedó activada y ya podés seguir con el proceso.',
         type: 'success',
-        createdAt,
-        unread,
-      };
+        category: 'info',
+        audience: 'account',
+        emailPolicy: 'important',
+        actionLabel: metadata.offerType === PREMIUM_ONSITE_OFFER_TYPE ? 'Ver presencial' : 'Ver verificación',
+        actionHref: metadata.offerType === PREMIUM_ONSITE_OFFER_TYPE ? '/verificacion-presencial' : '/verification',
+      });
     case 'PROPERTY_ONSITE_VERIFIED':
-      return {
-        id: row.id,
+      return buildActivityNotification(row, {
         title: 'Revisión presencial confirmada',
         message: metadata.propertyTitle
           ? `La revisión presencial de ${metadata.propertyTitle} ya quedó confirmada.`
           : 'La revisión presencial de tu publicación ya quedó confirmada.',
         type: 'success',
-        createdAt,
-        unread,
-      };
+        category: 'info',
+        audience: 'host',
+        emailPolicy: 'important',
+        ...buildHostDashboardNotificationAction('Ver publicación'),
+      });
     case 'PROPERTY_AVAILABILITY_UPDATED':
-      return {
-        id: row.id,
+      return buildActivityNotification(row, {
         title: 'Disponibilidad actualizada',
         message: 'Guardamos los cambios de disponibilidad de tu publicación.',
         type: 'info',
-        createdAt,
-        unread,
-      };
+        category: 'info',
+        audience: 'host',
+        emailPolicy: 'none',
+        ...buildHostDashboardNotificationAction('Abrir panel'),
+      });
     case 'BOOKING_CREATED':
-      return {
-        id: row.id,
+      return buildActivityNotification(row, {
         title: metadata.requestMode === 'protected' ? 'Solicitud enviada' : 'Reserva confirmada',
         message: metadata.requestMode === 'protected'
           ? 'La solicitud ya quedó registrada en la app. Cuando el anfitrión la acepte, vas a ver cómo seguir.'
           : 'Registramos tu reserva. Revisá las fechas y los próximos pasos en Mis reservas.',
         type: metadata.requestMode === 'protected' ? 'info' : 'success',
-        createdAt,
-        unread,
-      };
+        category: 'info',
+        audience: 'guest',
+        emailPolicy: metadata.requestMode === 'protected' ? 'important' : 'recovery',
+        ...buildGuestBookingNotificationAction(metadata.requestMode === 'protected' ? 'Ver solicitud' : 'Ver reserva'),
+      });
     case 'BOOKING_REQUEST_ACCEPTED':
-      return {
-        id: row.id,
-        title: metadata.requestMode === 'protected' ? 'Solicitud aceptada' : 'Propuesta aceptada',
+      return buildActivityNotification(row, {
+        title: metadata.requestMode === 'protected' ? 'Seña pendiente' : 'Reserva aceptada',
         message: metadata.requestMode === 'protected'
-          ? 'Ya podés pagar la seña desde la app y seguir por chat con el anfitrión.'
-          : 'Tu propuesta fue aceptada. Si ya enviaste la seña, informala por chat para cerrar la reserva.',
-        type: 'success',
-        createdAt,
-        unread,
-      };
+          ? 'El anfitrión aceptó la solicitud. Pagá la seña para mantener la operación activa sin salir de la app.'
+          : 'El anfitrión confirmó la reserva. Revisá fechas, operación y próximos pasos.',
+        type: metadata.requestMode === 'protected' ? 'warning' : 'success',
+        category: metadata.requestMode === 'protected' ? 'action_required' : 'info',
+        audience: 'guest',
+        emailPolicy: 'important',
+        ...buildGuestBookingNotificationAction(metadata.requestMode === 'protected' ? 'Pagar seña' : 'Ver reserva'),
+      });
     case 'BOOKING_CANCELLED':
-      return {
-        id: row.id,
+      return buildActivityNotification(row, {
         title: 'Reserva cancelada',
-        message: 'La cancelación quedó registrada correctamente.',
+        message: 'La operación quedó cancelada. Revisá el estado de la reserva y los próximos pasos disponibles.',
         type: 'warning',
-        createdAt,
-        unread,
-      };
+        category: 'important_alert',
+        audience: 'guest',
+        emailPolicy: 'critical',
+        ...buildGuestBookingNotificationAction('Ver reserva'),
+      });
+    case 'HOST_REPLIED':
+      return buildActivityNotification(row, {
+        title: 'El anfitrión respondió',
+        message: getNotificationMetadataString(metadata, 'propertyTitle')
+          ? `Ya tenés respuesta sobre ${getNotificationMetadataString(metadata, 'propertyTitle')}. Revisá el chat para seguir.`
+          : 'Ya tenés respuesta del anfitrión. Revisá el chat para seguir la operación.',
+        type: 'info',
+        category: 'info',
+        audience: 'guest',
+        emailPolicy: 'important',
+        ...buildChatNotificationAction(metadata),
+      });
+    case 'HOST_NEW_INQUIRY':
+      return buildActivityNotification(row, {
+        title: 'Nueva consulta',
+        message: getNotificationMetadataString(metadata, 'propertyTitle')
+          ? `Tenés una consulta nueva sobre ${getNotificationMetadataString(metadata, 'propertyTitle')}.`
+          : 'Tenés una consulta nueva para responder.',
+        type: 'info',
+        category: 'action_required',
+        audience: 'host',
+        emailPolicy: 'important',
+        ...buildChatNotificationAction(metadata, 'Responder'),
+      });
+    case 'HOST_NEW_REQUEST':
+      return buildActivityNotification(row, {
+        title: 'Nueva solicitud',
+        message: getNotificationMetadataString(metadata, 'propertyTitle')
+          ? `Entró una solicitud nueva para ${getNotificationMetadataString(metadata, 'propertyTitle')}. Revisá la operación y definí cómo seguir.`
+          : 'Entró una solicitud nueva para revisar.',
+        type: 'warning',
+        category: 'action_required',
+        audience: 'host',
+        emailPolicy: 'important',
+        ...buildChatNotificationAction(metadata, 'Revisar solicitud'),
+      });
+    case 'PROTECTED_DEPOSIT_PAYMENT_REVIEWED':
+      return buildActivityNotification(row, {
+        title: 'Comprobante revisado',
+        message: 'La seña ya quedó registrada en la app y la operación puede seguir.',
+        type: 'success',
+        category: 'info',
+        audience: 'guest',
+        emailPolicy: 'recovery',
+        ...buildGuestBookingNotificationAction('Ver operación'),
+      });
+    case 'HOST_PAYMENT_PROOF_RECEIVED':
+      return buildActivityNotification(row, {
+        title: 'Comprobante recibido',
+        message: 'La seña ya quedó registrada en la app. Podés seguir la operación desde tu panel.',
+        type: 'info',
+        category: 'info',
+        audience: 'host',
+        emailPolicy: 'important',
+        ...buildHostDashboardNotificationAction('Abrir panel'),
+      });
+    case 'GUEST_CONFIRMED_ARRIVAL':
+      return buildActivityNotification(row, {
+        title: 'Huésped confirmó llegada',
+        message: 'El huésped marcó que ya llegó. Confirmá el acceso para cerrar el check-in sin fricción.',
+        type: 'warning',
+        category: 'action_required',
+        audience: 'host',
+        emailPolicy: 'important',
+        ...buildHostDashboardNotificationAction('Confirmar acceso'),
+      });
+    case 'GUEST_CHECKIN_PENDING':
+      return buildActivityNotification(row, {
+        title: 'Check-in pendiente',
+        message: getNotificationMetadataString(metadata, 'propertyTitle')
+          ? `Ya podés confirmar tu llegada en ${getNotificationMetadataString(metadata, 'propertyTitle')} para mantener la operación al día.`
+          : 'Ya podés confirmar tu llegada para mantener la operación al día.',
+        type: 'warning',
+        category: 'action_required',
+        audience: 'guest',
+        emailPolicy: 'important',
+        ...buildGuestBookingNotificationAction('Confirmar llegada'),
+      });
+    case 'OPERATION_MANUAL_REVIEW_STARTED': {
+      const viewerRole = getNotificationMetadataString(metadata, 'viewerRole');
+
+      return buildActivityNotification(row, {
+        title: viewerRole === 'host' ? 'Revisión manual iniciada' : 'Operación en revisión',
+        message: viewerRole === 'host'
+          ? 'Abrimos una revisión manual para esta operación. Revisá el estado y seguí desde tu panel.'
+          : 'Abrimos una revisión manual para cuidar esta operación. Te avisamos cuando haya una novedad.',
+        type: 'warning',
+        category: 'important_alert',
+        audience: viewerRole === 'host' ? 'host' : 'guest',
+        emailPolicy: 'critical',
+        ...(viewerRole === 'host'
+          ? buildHostDashboardNotificationAction('Abrir panel')
+          : buildGuestOperationsNotificationAction('Ver operación')),
+      });
+    }
     default:
       return null;
   }
@@ -3484,23 +3738,70 @@ app.get('/api/notifications', async (req, res) => {
   if (!userId) return res.status(401).json({ error: AUTH_REQUIRED_ERROR });
 
   try {
-    const result = await db.query(
-      `SELECT id,
-              action,
-              metadata,
-              read_at as "readAt",
-              created_at as "createdAt"
-       FROM user_activity_logs
-       WHERE user_id = $1
-         AND action = ANY($2::text[])
-       ORDER BY created_at DESC
-       LIMIT 20`,
-      [userId, [...NOTIFIABLE_ACTIVITY_ACTIONS]],
-    );
+    const [result, checkinReminderResult] = await Promise.all([
+      db.query(
+        `SELECT id,
+                action,
+                metadata,
+                read_at as "readAt",
+                created_at as "createdAt"
+         FROM user_activity_logs
+         WHERE user_id = $1
+           AND action = ANY($2::text[])
+         ORDER BY created_at DESC
+         LIMIT 20`,
+        [userId, [...NOTIFIABLE_ACTIVITY_ACTIONS]],
+      ),
+      db.query(
+        `SELECT b.id,
+                b.start_date as "startDate",
+                p.id as "propertyId",
+                p.title as "propertyTitle",
+                c.id as "conversationId",
+                reminder.read_at as "readAt"
+         FROM bookings b
+         JOIN properties p ON p.id = b."propertyId"
+         LEFT JOIN conversations c ON c.booking_id = b.id
+         LEFT JOIN LATERAL (
+           SELECT log.read_at
+           FROM user_activity_logs log
+           WHERE log.user_id = b."userId"
+             AND log.action = 'GUEST_CHECKIN_PENDING'
+             AND COALESCE(log.metadata->>'bookingId', '') = b.id
+           ORDER BY log.created_at DESC
+           LIMIT 1
+         ) reminder ON TRUE
+         WHERE b."userId" = $1
+           AND b.status = 'confirmed'
+           AND b.start_date IS NOT NULL
+           AND b.start_date <= CURRENT_DATE
+           AND COALESCE(b.guest_checkin_confirmed, FALSE) = FALSE
+         ORDER BY b.start_date DESC, b.created_at DESC
+         LIMIT 3`,
+        [userId],
+      ),
+    ]);
 
-    const notifications = result.rows
+    const derivedCheckinReminders = checkinReminderResult.rows.map((row) => ({
+      id: `derived-checkin-${row.id}`,
+      action: 'GUEST_CHECKIN_PENDING',
+      metadata: {
+        bookingId: row.id,
+        propertyId: row.propertyId,
+        propertyTitle: row.propertyTitle,
+        conversationId: row.conversationId,
+      },
+      createdAt: typeof row.startDate === 'string'
+        ? new Date(`${row.startDate}T12:00:00.000Z`).toISOString()
+        : new Date().toISOString(),
+      readAt: row.readAt ?? null,
+    }));
+
+    const notifications = [...result.rows, ...derivedCheckinReminders]
       .map((row) => mapActivityLogToNotification(row))
-      .filter(Boolean);
+      .filter((notification): notification is NonNullable<ReturnType<typeof mapActivityLogToNotification>> => notification !== null)
+      .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
+      .slice(0, 20);
 
     res.json({
       items: notifications,
@@ -3525,6 +3826,56 @@ app.post('/api/notifications/read-all', async (req, res) => {
          AND action = ANY($2::text[])
          AND read_at IS NULL`,
       [userId, [...NOTIFIABLE_ACTIVITY_ACTIONS]],
+    );
+
+    await db.query(
+      `WITH eligible_bookings AS (
+         SELECT b.id,
+                p.id as "propertyId",
+                p.title as "propertyTitle",
+                c.id as "conversationId"
+         FROM bookings b
+         JOIN properties p ON p.id = b."propertyId"
+         LEFT JOIN conversations c ON c.booking_id = b.id
+         WHERE b."userId" = $1
+           AND b.status = 'confirmed'
+           AND b.start_date IS NOT NULL
+           AND b.start_date <= CURRENT_DATE
+           AND COALESCE(b.guest_checkin_confirmed, FALSE) = FALSE
+         ORDER BY b.start_date DESC, b.created_at DESC
+         LIMIT 3
+       ),
+       updated_markers AS (
+         UPDATE user_activity_logs log
+         SET read_at = COALESCE(log.read_at, NOW())
+         FROM eligible_bookings eligible
+         WHERE log.user_id = $1
+           AND log.action = 'GUEST_CHECKIN_PENDING'
+           AND COALESCE(log.metadata->>'bookingId', '') = eligible.id
+         RETURNING COALESCE(log.metadata->>'bookingId', '') as booking_id
+       )
+       INSERT INTO user_activity_logs (id, user_id, action, metadata, ip_address, read_at)
+       SELECT
+         CONCAT('log_', FLOOR(EXTRACT(EPOCH FROM clock_timestamp()) * 1000)::bigint, '_', SUBSTRING(MD5(eligible.id || clock_timestamp()::text || random()::text) FROM 1 FOR 9)),
+         $1,
+         'GUEST_CHECKIN_PENDING',
+         jsonb_build_object(
+           'bookingId', eligible.id,
+           'propertyId', eligible."propertyId",
+           'propertyTitle', eligible."propertyTitle",
+           'conversationId', eligible."conversationId"
+         ),
+         '',
+         NOW()
+       FROM eligible_bookings eligible
+       WHERE NOT EXISTS (
+         SELECT 1
+         FROM user_activity_logs existing
+         WHERE existing.user_id = $1
+           AND existing.action = 'GUEST_CHECKIN_PENDING'
+           AND COALESCE(existing.metadata->>'bookingId', '') = eligible.id
+       )`,
+      [userId],
     );
 
     res.json({ success: true });
@@ -7011,6 +7362,24 @@ const finalizeProtectedDepositPayment = async (
     await logActivity(booking.userId, FUNNEL_DEPOSIT_COMPLETED_ACTION, funnelMetadata);
   }
 
+  await logActivity(booking.userId, 'PROTECTED_DEPOSIT_PAYMENT_REVIEWED', {
+    bookingId: booking.id,
+    propertyId: booking.propertyId ?? null,
+    conversationId: booking.conversationId ?? null,
+    requestMode: booking.requestMode ?? null,
+    depositStatus: 'held',
+  }, request?.ip ?? '');
+
+  if (booking.hostId) {
+    await logActivity(booking.hostId, 'HOST_PAYMENT_PROOF_RECEIVED', {
+      bookingId: booking.id,
+      propertyId: booking.propertyId ?? null,
+      conversationId: booking.conversationId ?? null,
+      requestMode: booking.requestMode ?? null,
+      depositStatus: 'held',
+    }, request?.ip ?? '');
+  }
+
   return {
     confirmed: true as const,
   };
@@ -7534,6 +7903,36 @@ app.post('/api/bookings/:id/report-arrival-problem', async (req, res) => {
     );
 
     await logActivity(
+      userId,
+      'OPERATION_MANUAL_REVIEW_STARTED',
+      {
+        ...buildProtectedDepositAuditMetadata(updatedBooking ?? booking, {
+          reviewReason: manualReviewReason,
+          resultingDepositStatus: updatedBooking?.depositStatus ?? 'manual_review',
+          resultingReservationState: 'manual_review',
+        }),
+        viewerRole: 'guest',
+      },
+      req.ip,
+    );
+
+    if ((updatedBooking ?? booking).hostId) {
+      await logActivity(
+        (updatedBooking ?? booking).hostId,
+        'OPERATION_MANUAL_REVIEW_STARTED',
+        {
+          ...buildProtectedDepositAuditMetadata(updatedBooking ?? booking, {
+            reviewReason: manualReviewReason,
+            resultingDepositStatus: updatedBooking?.depositStatus ?? 'manual_review',
+            resultingReservationState: 'manual_review',
+          }),
+          viewerRole: 'host',
+        },
+        req.ip,
+      );
+    }
+
+    await logActivity(
       'system',
       'PROTECTED_DEPOSIT_MANUAL_REVIEW_REQUIRED',
       buildProtectedDepositAuditMetadata(updatedBooking ?? booking, {
@@ -7614,6 +8013,34 @@ app.post('/api/bookings/:id/report-no-show', async (req, res) => {
         resultingDepositStatus: updatedBooking?.depositStatus ?? 'manual_review',
         resultingReservationState: 'manual_review',
       }),
+      req.ip,
+    );
+
+    await logActivity(
+      userId,
+      'OPERATION_MANUAL_REVIEW_STARTED',
+      {
+        ...buildProtectedDepositAuditMetadata(updatedBooking ?? booking, {
+          reviewReason: manualReviewReason,
+          resultingDepositStatus: updatedBooking?.depositStatus ?? 'manual_review',
+          resultingReservationState: 'manual_review',
+        }),
+        viewerRole: 'host',
+      },
+      req.ip,
+    );
+
+    await logActivity(
+      (updatedBooking ?? booking).userId,
+      'OPERATION_MANUAL_REVIEW_STARTED',
+      {
+        ...buildProtectedDepositAuditMetadata(updatedBooking ?? booking, {
+          reviewReason: manualReviewReason,
+          resultingDepositStatus: updatedBooking?.depositStatus ?? 'manual_review',
+          resultingReservationState: 'manual_review',
+        }),
+        viewerRole: 'guest',
+      },
       req.ip,
     );
 
@@ -7776,8 +8203,13 @@ app.post('/api/messages', filterChatMiddleware, async (req, res) => {
   
   try {
     const conversationResult = await db.query(
-      `SELECT tenant_id, host_id, property_id
-       FROM conversations
+      `SELECT c.tenant_id,
+              c.host_id,
+              c.property_id,
+              c.request_mode,
+              p.title as "propertyTitle"
+       FROM conversations c
+       LEFT JOIN properties p ON p.id = c.property_id
        WHERE id = $1
        LIMIT 1`,
       [rawConversationId],
@@ -7797,7 +8229,21 @@ app.post('/api/messages', filterChatMiddleware, async (req, res) => {
       [rawConversationId],
     );
 
+    const latestMessageResult = await db.query(
+      `SELECT sender_id as "senderId"
+       FROM messages
+       WHERE conversation_id = $1
+         AND COALESCE(is_system, FALSE) = FALSE
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [rawConversationId],
+    );
+
     const isFirstTenantMessage = toSafeNumber(priorMessageCountResult.rows[0]?.count) === 0 && conversation.tenant_id === userId;
+    const lastNonSystemSenderId = typeof latestMessageResult.rows[0]?.senderId === 'string'
+      ? latestMessageResult.rows[0].senderId
+      : null;
+    const isHostReply = conversation.host_id === userId && lastNonSystemSenderId === conversation.tenant_id;
     const id = `msg_${Date.now()}`;
     await db.query(
       `INSERT INTO messages (id, conversation_id, sender_id, receiver_id, content, is_suspicious)
@@ -7813,6 +8259,22 @@ app.post('/api/messages', filterChatMiddleware, async (req, res) => {
         propertyId: conversation.property_id,
         hostId: conversation.host_id,
       });
+
+      if (!conversation.request_mode) {
+        await logActivity(conversation.host_id, 'HOST_NEW_INQUIRY', {
+          conversationId: rawConversationId,
+          propertyId: conversation.property_id,
+          propertyTitle: conversation.propertyTitle ?? undefined,
+        }, req.ip);
+      }
+    }
+
+    if (isHostReply) {
+      await logActivity(conversation.tenant_id, 'HOST_REPLIED', {
+        conversationId: rawConversationId,
+        propertyId: conversation.property_id,
+        propertyTitle: conversation.propertyTitle ?? undefined,
+      }, req.ip);
     }
 
     res.status(201).json({
@@ -7861,7 +8323,7 @@ app.post('/api/conversations', async (req, res) => {
 
   try {
     const propertyResult = await db.query(
-      `SELECT p.id, p."hostId"
+      `SELECT p.id, p."hostId", p.title
        FROM properties p
        JOIN users u ON u.id = p."hostId"
        WHERE p.id = $1
@@ -8007,6 +8469,20 @@ app.post('/api/conversations', async (req, res) => {
           [nextBookingId, requestMode, requestStatus, requestStartDate, requestEndDate, requestGuests, requestTotalPrice, requestCreatedAt, existingConversation.id, shouldReplaceRequestContext],
         );
 
+        if (hasRequestContext && shouldReplaceRequestContext) {
+          await logActivity(hostId, 'HOST_NEW_REQUEST', {
+            conversationId: existingConversation.id,
+            propertyId,
+            propertyTitle: property.title ?? undefined,
+            bookingId: nextBookingId ?? undefined,
+            requestMode: requestMode ?? undefined,
+            startDate: requestStartDate ?? undefined,
+            endDate: requestEndDate ?? undefined,
+            guests: requestGuests ?? undefined,
+            totalPrice: requestTotalPrice ?? undefined,
+          }, req.ip);
+        }
+
         return res.json(normalizeConversationRecord(updated.rows[0]));
       }
 
@@ -8022,6 +8498,21 @@ app.post('/api/conversations', async (req, res) => {
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
       [id, userId, hostId, propertyId, bookingId, requestMode, requestStatus, requestCreatedAt, requestStartDate, requestEndDate, requestGuests, requestTotalPrice]
     );
+
+    if (hasRequestContext) {
+      await logActivity(hostId, 'HOST_NEW_REQUEST', {
+        conversationId: id,
+        propertyId,
+        propertyTitle: property.title ?? undefined,
+        bookingId: bookingId ?? undefined,
+        requestMode: requestMode ?? undefined,
+        startDate: requestStartDate ?? undefined,
+        endDate: requestEndDate ?? undefined,
+        guests: requestGuests ?? undefined,
+        totalPrice: requestTotalPrice ?? undefined,
+      }, req.ip);
+    }
+
     res.status(201).json(normalizeConversationRecord(result.rows[0]));
   } catch (err) {
     res.status(500).json({ error: 'No pudimos iniciar la conversación. Intentá de nuevo.' });
@@ -8870,6 +9361,22 @@ app.post('/api/bookings/:id/confirm-arrival', async (req, res) => {
       req.ip,
     );
 
+    if ((updatedBooking ?? booking).hostId) {
+      await logActivity(
+        (updatedBooking ?? booking).hostId,
+        'GUEST_CONFIRMED_ARRIVAL',
+        {
+          bookingId: (updatedBooking ?? booking).id,
+          propertyId: (updatedBooking ?? booking).propertyId ?? null,
+          propertyTitle: (updatedBooking ?? booking).propertyTitle ?? null,
+          conversationId: (updatedBooking ?? booking).conversationId ?? null,
+          startDate: (updatedBooking ?? booking).startDate ?? null,
+          endDate: (updatedBooking ?? booking).endDate ?? null,
+        },
+        req.ip,
+      );
+    }
+
     if (updatedBooking?.depositStatus === 'deposit_released' && updatedBooking.guestCheckinConfirmed && updatedBooking.hostAccessConfirmed) {
       await logActivity(
         'system',
@@ -9362,7 +9869,7 @@ app.get('/api/properties/:id/reviews', async (req, res) => {
 });
 
 if (!serverEnv.isTest) {
-  app.listen(port, () => {
+  httpServer.listen(port, () => {
     console.log(`✓ Servidor corriendo en puerto ${port}`);
     console.log(`✓ CORS habilitado para: ${allowedOrigins.join(', ')}`);
   });

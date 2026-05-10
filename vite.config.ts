@@ -137,6 +137,17 @@ export default defineConfig(({ mode }) => {
             });
           },
         },
+        '/socket.io': {
+          target: devApiProxyTarget,
+          changeOrigin: true,
+          secure: false,
+          ws: true,
+          configure: (proxy) => {
+            proxy.on('error', (_error, _req, res) => {
+              sendDevBackendUnavailableResponse(res as ServerResponse<IncomingMessage>);
+            });
+          },
+        },
       },
     },
     preview: {

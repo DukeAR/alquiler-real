@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import type { NotificationItem, NotificationStatus } from '../hooks/useNotifications';
 import { cn } from '../lib/utils';
 import { Icons } from './Icons';
@@ -33,6 +33,12 @@ const formatNotificationDate = (value: string) => {
   }).format(date);
 };
 
+const notificationCategoryCopy = {
+  info: { label: 'Información', className: 'border-sky-200/80 bg-sky-50 text-sky-700' },
+  action_required: { label: 'Acción requerida', className: 'border-amber-200/90 bg-amber-50 text-amber-800' },
+  important_alert: { label: 'Alerta importante', className: 'border-red-200/90 bg-red-50 text-red-700' },
+} as const;
+
 export const NotificationsMenu: React.FC<NotificationsMenuProps> = ({
   status,
   notifications,
@@ -51,7 +57,6 @@ export const NotificationsMenu: React.FC<NotificationsMenuProps> = ({
   const [panelTop, setPanelTop] = useState(72);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
-  const wasOpenRef = useRef(false);
 
   useEffect(() => {
     setIsOpen(false);
@@ -97,17 +102,6 @@ export const NotificationsMenu: React.FC<NotificationsMenuProps> = ({
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [isOpen]);
-
-  useEffect(() => {
-    const justOpened = isOpen && !wasOpenRef.current;
-    wasOpenRef.current = isOpen;
-
-    if (!justOpened || status !== 'ready' || unreadCount === 0 || isMarkingAllRead) {
-      return;
-    }
-
-    void onMarkAllAsRead();
-  }, [isMarkingAllRead, isOpen, onMarkAllAsRead, status, unreadCount]);
 
   const handleToggle = () => {
     setIsOpen((current) => !current);
@@ -181,7 +175,30 @@ export const NotificationsMenu: React.FC<NotificationsMenuProps> = ({
                   <p className="text-sm font-semibold text-slate-900">{notification.title}</p>
                   <span className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">{formatNotificationDate(notification.createdAt)}</span>
                 </div>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <span className={cn(
+                    'inline-flex items-center rounded-full border px-2 py-1 text-[0.62rem] font-bold uppercase tracking-[0.14em]',
+                    notificationCategoryCopy[notification.category].className,
+                  )}>
+                    {notificationCategoryCopy[notification.category].label}
+                  </span>
+                  {notification.unread ? (
+                    <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-[0.62rem] font-bold uppercase tracking-[0.14em] text-emerald-700">
+                      Nuevo
+                    </span>
+                  ) : null}
+                </div>
                 <p className="mt-1 text-xs leading-5 text-slate-500">{notification.message}</p>
+                {notification.actionHref && notification.actionLabel ? (
+                  <Link
+                    to={notification.actionHref}
+                    onClick={() => setIsOpen(false)}
+                    className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-slate-900 bg-slate-900 px-3 py-1.5 text-[11px] font-semibold text-white transition-colors hover:bg-slate-800"
+                  >
+                    {notification.actionLabel}
+                    <Icons.ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                ) : null}
               </div>
             </div>
           </div>
@@ -226,7 +243,7 @@ export const NotificationsMenu: React.FC<NotificationsMenuProps> = ({
           <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/70 px-4 py-3 sm:px-5 sm:py-4">
             <div>
               <h3 className="text-sm font-semibold tracking-tight text-slate-900">Notificaciones</h3>
-              <p className="mt-1 hidden text-[11px] font-medium text-slate-500 sm:block">Tu actividad reciente</p>
+              <p className="mt-1 hidden text-[11px] font-medium text-slate-500 sm:block">Cronológicas, claras y accionables</p>
             </div>
             <div className="flex items-center gap-2">
               {status !== 'logged-out' ? (
@@ -251,6 +268,19 @@ export const NotificationsMenu: React.FC<NotificationsMenuProps> = ({
             </div>
           </div>
           {panelBody}
+          {status === 'ready' ? (
+            <div className="flex items-center justify-between gap-3 border-t border-slate-100 bg-white/92 px-4 py-3 sm:px-5">
+              <p className="text-[11px] font-medium text-slate-500">Abrí el centro para seguir cada operación con más contexto.</p>
+              <Link
+                to="/notifications"
+                onClick={() => setIsOpen(false)}
+                className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-slate-950"
+              >
+                Ver centro
+                <Icons.ExternalLink className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>

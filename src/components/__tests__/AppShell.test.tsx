@@ -30,9 +30,14 @@ vi.mock('../../hooks/useAuth', () => ({
   useAuth: () => useAuthMock(),
 }));
 
-vi.mock('../../hooks/useNotifications', () => ({
-  useNotifications: () => useNotificationsMock(),
-}));
+vi.mock('../../hooks/useNotifications', async () => {
+  const React = await vi.importActual<typeof import('react')>('react');
+
+  return {
+    useNotifications: () => useNotificationsMock(),
+    NotificationsContext: React.createContext(null),
+  };
+});
 
 vi.mock('../../hooks/useFavorites', () => ({
   useFavorites: () => ({
