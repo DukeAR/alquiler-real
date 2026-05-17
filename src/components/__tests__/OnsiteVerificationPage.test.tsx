@@ -20,6 +20,7 @@ describe('OnsiteVerificationPage', () => {
     expect(screen.getByRole('heading', { name: 'Verificación presencial' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'La verificación presencial deja un protocolo claro.' })).toBeInTheDocument();
     expect(screen.getByText('Confirmamos existencia física de la propiedad, coincidencia general con la publicación, ubicación real, acceso real del anfitrión e identidad básica durante una visita presencial.')).toBeInTheDocument();
+    expect(screen.getByText('La validación presencial confirma existencia, ubicación y acceso al inmueble al momento de la visita.')).toBeInTheDocument();
     expect(screen.getAllByText('Existencia física de la propiedad').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Coincidencia general con la publicación').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Ubicación real').length).toBeGreaterThan(0);

@@ -1,5 +1,10 @@
 import { cn } from '../../lib/utils';
 import { buildOnsiteVerificationProtocol } from '../../lib/onsiteVerificationProtocol';
+import {
+  ONSITE_VALIDATION_CONTEXT_DISCLAIMER,
+  ONSITE_VALIDATION_CONTEXT_SUPPORT,
+} from '../../lib/uxDisclaimers';
+import { ContextualDisclaimer } from '../ui/ContextualDisclaimer';
 
 type VerificationInfoPanelProps = {
   className?: string;
@@ -19,6 +24,15 @@ export const VerificationInfoPanel = ({ className }: VerificationInfoPanelProps)
           Usamos una validación operativa, escalable y legalmente consistente para dejar claro qué verifica la plataforma, qué evidencia mínima se registra y cuándo corresponde reverificar.
         </p>
       </div>
+
+      <ContextualDisclaimer
+        compact
+        tone="brand"
+        className="mt-4"
+        eyebrow="Aclaración operativa"
+        body={ONSITE_VALIDATION_CONTEXT_DISCLAIMER}
+        supportingText={ONSITE_VALIDATION_CONTEXT_SUPPORT}
+      />
 
       <div className="mt-6 space-y-3">
         <p className="text-sm font-semibold text-slate-900">Qué verificamos</p>

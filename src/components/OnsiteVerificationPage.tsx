@@ -6,7 +6,12 @@ import {
   buildOnsiteVerificationProtocol,
 } from '../lib/onsiteVerificationProtocol';
 import { useAuth } from '../hooks/useAuth';
+import {
+  ONSITE_VALIDATION_CONTEXT_DISCLAIMER,
+  ONSITE_VALIDATION_CONTEXT_SUPPORT,
+} from '../lib/uxDisclaimers';
 import { Icons } from './Icons';
+import { ContextualDisclaimer } from './ui/ContextualDisclaimer';
 import { Button } from './ui/Button';
 import { PageHeader } from './ui/PageHeader';
 import { PresencialVerificationSealMark } from './ui/PresencialVerificationSealMark';
@@ -126,6 +131,13 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
                 <p className="text-[0.94rem] leading-6 text-slate-500 dark:text-slate-400">
                   Usamos “{ONSITE_VERIFICATION_LABEL}” solo cuando la revisión queda aprobada.
                 </p>
+                <ContextualDisclaimer
+                  compact
+                  tone="brand"
+                  eyebrow="Aclaración operativa"
+                  body={ONSITE_VALIDATION_CONTEXT_DISCLAIMER}
+                  supportingText={ONSITE_VALIDATION_CONTEXT_SUPPORT}
+                />
               </div>
             </div>
 

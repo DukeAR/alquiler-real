@@ -1,3 +1,5 @@
+import { maybeGetMockApiResponse } from './dataProvider';
+
 type FrontendFunnelEvent = 'availability_cta_clicked' | 'chat_composer_opened';
 
 type FrontendFunnelPayload = {
@@ -14,7 +16,7 @@ export const trackFrontendFunnelEvent = (event: FrontendFunnelEvent, payload: Fr
     return;
   }
 
-  void fetch('/api/funnel/events', {
+  const requestInit: RequestInit = {
     method: 'POST',
     credentials: 'include',
     keepalive: true,
@@ -28,5 +30,15 @@ export const trackFrontendFunnelEvent = (event: FrontendFunnelEvent, payload: Fr
       ...(payload.conversationId ? { conversationId: payload.conversationId } : {}),
       ...(payload.viewerRole ? { viewerRole: payload.viewerRole } : {}),
     }),
-  }).catch(() => undefined);
+  };
+
+  void (async () => {
+    const mockResponse = await maybeGetMockApiResponse('/api/funnel/events', requestInit);
+
+    if (mockResponse) {
+      return;
+    }
+
+    await fetch('/api/funnel/events', requestInit).catch(() => undefined);
+  })();
 };

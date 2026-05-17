@@ -58,6 +58,7 @@ describe('ContextualSupportDialog', () => {
       expect(apiJsonMock).toHaveBeenCalledWith('/api/support/cases?entryPoint=publishing');
     });
 
+    expect(screen.getByText('Vamos a revisar la información disponible dentro de esta operación.')).toBeInTheDocument();
     expect(screen.getByText(/^Recibido$/i)).toBeInTheDocument();
     expect(screen.getByText(/^Esperando respuesta$/i)).toBeInTheDocument();
 

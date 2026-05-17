@@ -9,9 +9,14 @@ import {
   type SupportEntryPoint,
 } from '../lib/contextualSupport';
 import { showToast } from '../lib/toast';
+import {
+  SUPPORT_OPERATION_REVIEW_DISCLAIMER,
+  SUPPORT_OPERATION_REVIEW_SUPPORT,
+} from '../lib/uxDisclaimers';
 import { cn } from '../lib/utils';
 import type { ReviewType } from '../types';
 import { Icons } from './Icons';
+import { ContextualDisclaimer } from './ui/ContextualDisclaimer';
 import { Button, type ButtonProps } from './ui/Button';
 
 type SupportCaseRecord = {
@@ -262,7 +267,7 @@ export const ContextualSupportDialog: React.FC<ContextualSupportDialogProps> = (
                   {title ?? `Necesito ayuda con ${ENTRY_POINT_LABELS[entryPoint]}`}
                 </h3>
                 <p className="max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">
-                  Registramos el pedido con la operacion, la conversacion, la publicacion y los horarios vinculados cuando estan disponibles. No hace falta completar un formulario largo.
+                  Abrí ayuda sin salir de la operación. Tomamos el contexto disponible para revisar mejor qué pasó y cómo seguir.
                 </p>
                 {propertyTitle ? (
                   <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Contexto actual: {propertyTitle}</p>
@@ -280,6 +285,13 @@ export const ContextualSupportDialog: React.FC<ContextualSupportDialogProps> = (
 
             <div className="grid gap-6 px-6 py-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
               <div className="space-y-6">
+                <ContextualDisclaimer
+                  eyebrow="Cómo revisamos esto"
+                  compact
+                  body={SUPPORT_OPERATION_REVIEW_DISCLAIMER}
+                  supportingText={SUPPORT_OPERATION_REVIEW_SUPPORT}
+                />
+
                 <div className="space-y-3">
                   <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Que paso</p>
                   <div className="grid gap-3 sm:grid-cols-2">

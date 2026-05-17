@@ -6,6 +6,12 @@ export type ContextualOnboardingTip = {
   tone?: 'neutral' | 'brand' | 'success';
 };
 
+import {
+  ONSITE_VALIDATION_CONTEXT_DISCLAIMER,
+  PROTECTED_DEPOSIT_SCOPE_DISCLAIMER,
+  PROTECTED_DEPOSIT_SCOPE_SUPPORT,
+} from './uxDisclaimers';
+
 type ContextualTrustItem = {
   key?: string | null;
   status?: string | null;
@@ -31,7 +37,7 @@ export const getGuestCardOnboardingTip = (
   if (trustLevel === 'presencial') {
     return {
       eyebrow: 'Antes de decidir',
-      body: 'La verificación presencial confirma identidad y ubicación. Precio, reglas y amenities los seguís revisando en la ficha.',
+      body: `${ONSITE_VALIDATION_CONTEXT_DISCLAIMER} Precio, reglas y amenities los seguís revisando en la ficha.`,
       tone: 'success',
     };
   }
@@ -79,13 +85,13 @@ export const getGuestDetailOnboardingTip = (
 
 export const getBookingFlowOnboardingTip = (): ContextualOnboardingTip => ({
   eyebrow: 'Antes de confirmar',
-  body: 'La plataforma deja registro del acuerdo y, si elegís Seña Protegida, retiene la seña hasta check-in. No evaluamos estado, calidad ni amenities.',
+  body: `Si elegís Seña Protegida, la seña queda retenida hasta check-in. ${PROTECTED_DEPOSIT_SCOPE_DISCLAIMER}`,
   tone: 'brand',
 });
 
 export const getProtectedOperationOnboardingTip = (): ContextualOnboardingTip => ({
   eyebrow: 'Seña Protegida',
-  body: 'Cubre la trazabilidad de la operación y la retención de la seña hasta check-in. No reemplaza la revisión de precio, reglas, estado ni amenities.',
+  body: `${PROTECTED_DEPOSIT_SCOPE_DISCLAIMER} ${PROTECTED_DEPOSIT_SCOPE_SUPPORT}`,
   tone: 'brand',
 });
 
@@ -96,7 +102,7 @@ export const getGuestChatOnboardingTip = (
   if (mode === 'protected') {
     return {
       eyebrow: 'Cómo sigue por acá',
-      body: 'Este chat deja registro de lo acordado y Seña Protegida suma trazabilidad hasta check-in. La plataforma no decide por vos sobre estado, calidad ni amenities.',
+      body: `Este chat deja registro de lo acordado. ${PROTECTED_DEPOSIT_SCOPE_DISCLAIMER}`,
       tone: 'brand',
     };
   }
