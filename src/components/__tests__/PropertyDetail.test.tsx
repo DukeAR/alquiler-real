@@ -133,7 +133,7 @@ const getStickyBookingBar = () => screen.getByRole('region', { name: /acceso rá
 
 const queryStickyBookingBar = () => screen.queryByRole('region', { name: /acceso rápido a disponibilidad/i });
 
-const getBookingFlowDialog = () => screen.getByRole('dialog', { name: /consultar disponibilidad/i });
+const getBookingFlowDialog = () => screen.getByRole('dialog');
 
 const findObserverForTarget = (
   observerInstances: Array<{ elements: Set<Element> }>,
@@ -253,11 +253,11 @@ const isoPlusDays = (days: number) => {
 };
 
 const openBookingFlow = async () => {
-  if (!screen.queryByRole('heading', { name: /consultar disponibilidad/i })) {
-    fireEvent.click(screen.getAllByRole('button', { name: /consultar disponibilidad/i })[0]);
+  if (!screen.queryByText('Elegí las fechas')) {
+    fireEvent.click(screen.getAllByRole('button', { name: /solicitar reserva/i })[0]);
   }
 
-  await waitFor(() => expect(getBookingFlowDialog()).toBeDefined());
+  await waitFor(() => expect(screen.getByText('Elegí las fechas')).toBeDefined());
 };
 
 const waitForCalendarDay = async (iso: string) => {
@@ -508,13 +508,13 @@ describe('PropertyDetail', () => {
 
     const desktopContext = getDesktopBookingContext();
 
-    expect(within(desktopContext).getByRole('button', { name: /consultar disponibilidad/i })).toBeDefined();
+    expect(within(desktopContext).getByRole('button', { name: /solicitar reserva/i })).toBeDefined();
     expect(within(desktopContext).getByText(/120/)).toBeDefined();
     expect(within(desktopContext).getByText('/ noche')).toBeDefined();
     expect(within(desktopContext).queryByText('No estás reservando todavía')).toBeNull();
     expect(within(desktopContext).getByText('La identidad del anfitrión fue confirmada')).toBeDefined();
 
-    fireEvent.click(within(desktopContext).getByRole('button', { name: /consultar disponibilidad/i }));
+    fireEvent.click(within(desktopContext).getByRole('button', { name: /solicitar reserva/i }));
 
     await waitFor(() => expect(getBookingFlowDialog()).toBeDefined());
     await waitFor(() => expect(screen.getByRole('dialog', { name: /selector de rango de fechas/i })).toBeDefined());
@@ -527,7 +527,7 @@ describe('PropertyDetail', () => {
 
     const desktopContext = getDesktopBookingContext();
 
-    expect(within(desktopContext).getByRole('button', { name: /consultar disponibilidad/i })).toBeDefined();
+    expect(within(desktopContext).getByRole('button', { name: /solicitar reserva/i })).toBeDefined();
     expect(within(desktopContext).getByText('/ noche')).toBeDefined();
     expect(queryStickyBookingBar()).toBeNull();
 
@@ -538,7 +538,7 @@ describe('PropertyDetail', () => {
 
     const bookingFlow = getBookingFlowDialog();
 
-    expect(within(bookingFlow).getByText('Consultar disponibilidad')).toBeDefined();
+    expect(within(bookingFlow).getByText('Elegí las fechas')).toBeDefined();
     expect(within(bookingFlow).getByText(/3 noches · 1 huésped ·/i)).toBeDefined();
     expect(within(bookingFlow).getAllByText(new RegExp('360')).length).toBeGreaterThan(0);
     expect(within(desktopContext).getByText(/\d{1,2} \w{3} al \d{1,2} \w{3}/i)).toBeDefined();
@@ -565,14 +565,14 @@ describe('PropertyDetail', () => {
 
     const mobileContext = getStickyBookingBar();
 
-    expect(within(mobileContext).getByRole('button', { name: /consultar disponibilidad/i })).toBeDefined();
+    expect(within(mobileContext).getByRole('button', { name: /solicitar reserva/i })).toBeDefined();
     expect(within(mobileContext).getByText(/120/)).toBeDefined();
     expect(screen.queryByRole('button', { name: /^siguiente$/i })).toBeNull();
 
     const checkInIso = isoPlusDays(2);
     const checkOutIso = isoPlusDays(5);
 
-    fireEvent.click(within(mobileContext).getByRole('button', { name: /consultar disponibilidad/i }));
+    fireEvent.click(within(mobileContext).getByRole('button', { name: /solicitar reserva/i }));
     await selectDateRange(checkInIso, checkOutIso);
 
     const bookingFlow = getBookingFlowDialog();
@@ -597,14 +597,14 @@ describe('PropertyDetail', () => {
     await waitForPropertyHeading();
     await waitFor(() => expect(getStickyBookingBar()).toBeDefined());
 
-    expect(within(getStickyBookingBar()).getByRole('button', { name: /consultar disponibilidad/i })).toBeDefined();
+    expect(within(getStickyBookingBar()).getByRole('button', { name: /solicitar reserva/i })).toBeDefined();
 
     await act(async () => {
       setWindowScrollY(120);
     });
 
     await waitFor(() => expect(within(getStickyBookingBar()).getByRole('button', { name: /ver disponibilidad/i })).toBeDefined());
-    expect(within(getStickyBookingBar()).queryByRole('button', { name: /consultar disponibilidad/i })).toBeNull();
+    expect(within(getStickyBookingBar()).queryByRole('button', { name: /solicitar reserva/i })).toBeNull();
   });
 
   test('shows and hides the sticky CTA on desktop based on the main CTA visibility', async () => {
@@ -615,7 +615,7 @@ describe('PropertyDetail', () => {
     await waitForPropertyHeading();
 
     const desktopContext = getDesktopBookingContext();
-    const primaryCta = within(desktopContext).getByRole('button', { name: /consultar disponibilidad/i });
+    const primaryCta = within(desktopContext).getByRole('button', { name: /solicitar reserva/i });
     const stickyObserver = await waitForObservedTarget(observerInstances, primaryCta);
 
     expect(queryStickyBookingBar()).toBeNull();
@@ -677,7 +677,7 @@ describe('PropertyDetail', () => {
     await waitForPropertyHeading();
 
     const desktopContext = getDesktopBookingContext();
-    const primaryCta = within(desktopContext).getByRole('button', { name: /consultar disponibilidad/i });
+    const primaryCta = within(desktopContext).getByRole('button', { name: /solicitar reserva/i });
     const stickyObserver = await waitForObservedTarget(observerInstances, primaryCta);
 
     await act(async () => {
@@ -712,13 +712,13 @@ describe('PropertyDetail', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /cerrar flujo de reserva/i }));
 
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: /consultar disponibilidad/i })).toBeNull());
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(within(getDesktopBookingContext()).getByText(/\d{1,2} \w{3} al \d{1,2} \w{3}/i)).toBeDefined();
     expect(within(getDesktopBookingContext()).getAllByText(new RegExp('360')).length).toBeGreaterThan(0);
 
-    fireEvent.click(screen.getAllByRole('button', { name: /consultar disponibilidad/i })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: /solicitar reserva/i })[0]);
 
-    const bookingFlow = await screen.findByRole('dialog', { name: /consultar disponibilidad/i });
+    const bookingFlow = await screen.findByRole('dialog');
     expect(within(bookingFlow).getAllByText(/3 noches · 1 huésped ·/i).length).toBeGreaterThan(0);
   });
 
@@ -852,7 +852,7 @@ describe('PropertyDetail', () => {
     const bookingContext = getDesktopBookingContext();
     expect(within(bookingContext).getByText('Verificado presencialmente')).toBeDefined();
     expect(within(bookingContext).getByText('Existencia física, coincidencia general, ubicación real, acceso e identidad básica confirmados durante una visita')).toBeDefined();
-    expect(within(bookingContext).getByText('Esta propiedad fue validada en persona')).toBeDefined();
+    expect(within(bookingContext).getByText('Esta propiedad está verificada presencialmente.')).toBeDefined();
     expect(within(bookingContext).getByAltText('Verificado presencialmente')).toHaveAttribute('src', '/verified-presencial-circular.png');
 
     const verificationPreview = screen.getByTestId('property-verification-preview');
@@ -865,7 +865,7 @@ describe('PropertyDetail', () => {
     expect(within(verificationPreview).getAllByRole('listitem')).toHaveLength(5);
     expect(within(verificationPreview).queryByText('¿Cómo funciona?')).toBeNull();
 
-    const bookingCta = screen.getByRole('button', { name: /consultar disponibilidad/i });
+    const bookingCta = screen.getByRole('button', { name: /solicitar reserva/i });
     expect(bookingCta.compareDocumentPosition(verificationPreview) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 

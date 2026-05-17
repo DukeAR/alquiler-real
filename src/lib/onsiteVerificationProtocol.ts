@@ -1,4 +1,5 @@
 import type { PremiumVerificationOffer } from './premiumVerification';
+import { VERIFIED_ONSITE_LABEL } from './productTerminology';
 
 export type OnsiteVerificationProtocolStatus = 'approved' | 'rejected' | 'requires_review';
 
@@ -50,7 +51,7 @@ type OnsiteVerificationProtocolSource = {
   premiumOnsiteOffer?: Pick<PremiumVerificationOffer, 'purchased' | 'completed'> | null;
 };
 
-export const ONSITE_VERIFICATION_LABEL = 'Verificado presencialmente';
+export const ONSITE_VERIFICATION_LABEL = VERIFIED_ONSITE_LABEL;
 
 export const ONSITE_VERIFICATION_SUMMARY = 'Confirmamos existencia física de la propiedad, coincidencia general con la publicación, ubicación real, acceso real del anfitrión e identidad básica durante una visita presencial.';
 

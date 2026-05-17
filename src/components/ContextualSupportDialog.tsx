@@ -14,6 +14,7 @@ import {
   SUPPORT_OPERATION_REVIEW_DISCLAIMER,
   SUPPORT_OPERATION_REVIEW_SUPPORT,
 } from '../lib/uxDisclaimers';
+import { HELP_ACTION_LABEL } from '../lib/productTerminology';
 import { cn } from '../lib/utils';
 import type { ReviewType } from '../types';
 import { Icons } from './Icons';
@@ -150,7 +151,7 @@ export const ContextualSupportDialog: React.FC<ContextualSupportDialogProps> = (
   propertyId = null,
   propertyTitle = null,
   reviewType = null,
-  triggerLabel = 'Necesito ayuda',
+  triggerLabel = HELP_ACTION_LABEL,
   triggerVariant = 'outline',
   triggerSize = 'sm',
   triggerClassName,
@@ -271,7 +272,7 @@ export const ContextualSupportDialog: React.FC<ContextualSupportDialogProps> = (
               <div className="space-y-2">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Ayuda contextual</p>
                 <h3 className="text-2xl font-semibold tracking-tight text-slate-950 dark:text-slate-50">
-                  {title ?? `Necesito ayuda con ${ENTRY_POINT_LABELS[entryPoint]}`}
+                  {title ?? `${HELP_ACTION_LABEL} con ${ENTRY_POINT_LABELS[entryPoint]}`}
                 </h3>
                 <p className="max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">
                   Abrí ayuda sin salir de la operación. Tomamos el contexto disponible para revisar mejor qué pasó y cómo seguir.

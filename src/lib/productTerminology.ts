@@ -1,0 +1,10 @@
+export const VERIFIED_ONSITE_LABEL = 'Verificado presencialmente';
+export const VERIFIED_ONSITE_PROCESS_LABEL = 'Verificación presencial';
+export const PROTECTED_DEPOSIT_LABEL = 'Seña Protegida';
+export const REQUEST_RESERVATION_LABEL = 'Solicitar reserva';
+export const REQUEST_SENT_LABEL = 'Solicitud enviada';
+export const REQUEST_ACCEPTED_LABEL = 'Solicitud aceptada';
+export const MANUAL_REVIEW_LABEL = 'En revisión manual';
+export const HELP_ACTION_LABEL = 'Necesito ayuda';
+export const OPERATION_COMPLETED_LABEL = 'Operación completada';
+export const FREE_OPERATION_LABEL = 'Operación libre';

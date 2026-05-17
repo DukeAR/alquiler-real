@@ -259,7 +259,7 @@ describe('MyBookings', () => {
     );
 
     expect(await screen.findByText('No tenés solicitudes abiertas ahora.')).toBeInTheDocument();
-    expect(screen.getAllByText('Finalizada').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Operación completada').length).toBeGreaterThan(0);
     expect(screen.getByText('Revisar el cierre')).toBeInTheDocument();
     expect(screen.queryByText('Propuesta enviada')).toBeNull();
     expect(screen.queryByText('Esperar respuesta')).toBeNull();
@@ -308,7 +308,7 @@ describe('MyBookings', () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText('Finalizadas')).toBeInTheDocument();
+    expect(await screen.findByText('Operaciones completadas')).toBeInTheDocument();
     expect(screen.getAllByText('No avanzó').length).toBeGreaterThan(0);
     expect(screen.getByText('No se pudo avanzar con esta reserva.')).toBeInTheDocument();
     expect(screen.getByText('El anfitrión no puede avanzar en este momento. Podés seguir conversando o buscar otras opciones.')).toBeInTheDocument();
@@ -434,7 +434,7 @@ describe('MyBookings', () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findAllByText('Seña protegida')).not.toHaveLength(0);
+    expect(await screen.findAllByText('Seña Protegida')).not.toHaveLength(0);
     expect(screen.getByText('Timeline operativo')).toBeInTheDocument();
     expect(screen.queryByText('Pendiente seña')).not.toBeInTheDocument();
     expect(screen.getByText('La reserva ya quedó marcada con seña protegida. Cuando la seña se registre, queda retenida hasta check-in. Por ahora solo ves el costo por protección de operación y el estado base: el cobro todavía no se procesa dentro de la app.')).toBeInTheDocument();
@@ -674,7 +674,7 @@ describe('MyBookings', () => {
     expect(screen.getByText('El huésped confirmó la llegada pero falta la confirmación de acceso del anfitrión')).toBeInTheDocument();
     expect(screen.getByText('Referencia dep-ref-123')).toBeInTheDocument();
     expect(showToastMock).toHaveBeenCalledWith(
-      'Seña en revisión',
+      'En revisión manual',
       'El problema quedó informado y la seña pasó a revisión manual.',
       'success',
     );

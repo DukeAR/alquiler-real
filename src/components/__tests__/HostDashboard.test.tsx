@@ -512,8 +512,8 @@ describe('HostDashboard', () => {
     expect(await screen.findAllByText('Seña pendiente')).not.toHaveLength(0);
     expect(screen.queryByText('Pendiente seña')).not.toBeInTheDocument();
     expect(showToastMock).toHaveBeenCalledWith(
-      'Seña protegida aceptada',
-      'La solicitud quedó aceptada y la reserva quedó marcada con seña protegida. Cuando la seña se registre, queda retenida hasta check-in.',
+      'Solicitud aceptada',
+      'La solicitud quedó aceptada y la reserva quedó marcada con Seña Protegida. Cuando la seña se registre, queda retenida hasta check-in.',
       'success',
     );
 
@@ -866,7 +866,7 @@ describe('HostDashboard', () => {
     expect(screen.getByText('El anfitrión reportó un no show y falta validar lo ocurrido')).toBeInTheDocument();
     expect(screen.getByText('Referencia dep-ref-host-7')).toBeInTheDocument();
     expect(showToastMock).toHaveBeenCalledWith(
-      'Llegada en revisión',
+      'En revisión manual',
       'El no show quedó informado y la seña sigue en pausa mientras la plataforma revisa qué pasó.',
       'success',
     );

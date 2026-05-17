@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { apiJson } from '../lib/apiConfig';
+import { OPERATION_COMPLETED_LABEL } from '../lib/productTerminology';
 import { showToast } from '../lib/toast';
 import DateRangePicker from './DateRangePicker';
 import { Icons } from './Icons';
@@ -281,7 +282,7 @@ export const HostAvailabilityPanel = ({ propertyId, propertyTitle }: Props) => {
                     <div key={`${entry.start}-${entry.end}-${entry.status}`} className="rounded-2xl border border-brand/10 bg-brand/5 px-3 py-3 dark:border-brand/20 dark:bg-brand/10">
                       <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{formatRange(entry.start, entry.end)}</p>
                       <p className="text-xs text-slate-600/80 dark:text-slate-300/80">
-                        {entry.status === 'completed' ? 'Estadía finalizada' : 'Reserva activa'}
+                        {entry.status === 'completed' ? OPERATION_COMPLETED_LABEL : 'Reserva activa'}
                       </p>
                     </div>
                   ))}

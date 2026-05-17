@@ -1,5 +1,6 @@
 import type { PremiumVerificationOffer } from './premiumVerification';
 import { getPropertyListingQualityScore } from './propertyListingQuality';
+import { VERIFIED_ONSITE_LABEL } from './productTerminology';
 import {
   ONSITE_VERIFICATION_LABEL,
   ONSITE_VERIFICATION_NON_SCOPE_SUMMARY,
@@ -226,7 +227,7 @@ export const getPropertyVerificationDisplayLabel = (key?: string) => {
 
 export const PRESENCIAL_VERIFICATION_LABEL = ONSITE_VERIFICATION_LABEL;
 
-export const PRESENCIAL_VERIFICATION_LEVEL_LABEL = 'Verificación presencial';
+export const PRESENCIAL_VERIFICATION_LEVEL_LABEL = VERIFIED_ONSITE_LABEL;
 
 export const HOST_IDENTITY_VALIDATED_LABEL = 'Identidad del anfitrión validada';
 
@@ -1239,7 +1240,7 @@ export const getPropertyVerificationGuidanceMessage = (property: PropertyVerific
   const verificationState = getPropertyVerificationPresentationState(property);
 
   if (verificationState.isFullyVerified) {
-    return 'Este aviso tiene verificación presencial.';
+    return 'Este aviso está verificado presencialmente.';
   }
 
   return null;

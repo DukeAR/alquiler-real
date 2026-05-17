@@ -3,6 +3,7 @@ import {
   getProtectedDepositManualReviewCard,
   type ProtectedDepositManualReviewReason,
 } from '../../lib/protectedDepositManualReview';
+import { PROTECTED_DEPOSIT_LABEL } from '../../lib/productTerminology';
 import { Icons } from '../Icons';
 import { ReservationConfirmedState } from './ReservationConfirmedState';
 
@@ -32,7 +33,7 @@ export const ProtectedDepositManualReviewState = ({ className, ...input }: Prote
 
   return (
     <ReservationConfirmedState
-      eyebrow="Seña protegida"
+      eyebrow={PROTECTED_DEPOSIT_LABEL}
       title={reviewCard.title}
       description={reviewCard.description}
       details={reviewCard.details}

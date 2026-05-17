@@ -107,7 +107,7 @@ describe('propertyVerification', () => {
   });
 
   test('derives the detail guidance message from the visible verification level', () => {
-    expect(getPropertyVerificationGuidanceMessage({ hasPresencialVerification: true })).toBe('Este aviso tiene verificación presencial.');
+    expect(getPropertyVerificationGuidanceMessage({ hasPresencialVerification: true })).toBe('Este aviso está verificado presencialmente.');
     expect(getPropertyVerificationGuidanceMessage({ identityValidated: true })).toBeNull();
     expect(getPropertyVerificationGuidanceMessage({ verificationScore: 2 })).toBeNull();
   });
@@ -175,7 +175,7 @@ describe('propertyVerification', () => {
 
     expect(fullyVerified.summaryLabel).toBe('Información publicada por el anfitrión');
     expect(fullyVerified.isFullyVerified).toBe(false);
-    expect(incompletePremiumFlag.summaryLabel).toBe('Verificación presencial');
+    expect(incompletePremiumFlag.summaryLabel).toBe('Verificado presencialmente');
     expect(incompletePremiumFlag.isFullyVerified).toBe(true);
     expect(meetsRealVerificationFilter({
       identityValidated: true,

@@ -2,6 +2,11 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { apiJson } from '../lib/apiConfig';
 import { getGuestDetailOnboardingTip } from '../lib/contextualOnboarding';
+import {
+  PROTECTED_DEPOSIT_LABEL,
+  REQUEST_RESERVATION_LABEL,
+  REQUEST_SENT_LABEL,
+} from '../lib/productTerminology';
 import { LoadingState } from './LoadingState';
 import { Icons } from './Icons';
 import DateRangePicker from './DateRangePicker';
@@ -325,21 +330,13 @@ const getDetailVerificationChecklist = (publicLevel: DetailVerificationVisibleLe
   ];
 };
 
-const getBookingEntryCtaLabel = (publicLevel: DetailVerificationVisibleLevel) => {
-  if (publicLevel === 'presencial') {
-    return 'Consultar disponibilidad segura';
-  }
-
-  if (publicLevel === 'identity') {
-    return 'Consultar disponibilidad con anfitrión verificado';
-  }
-
-  return 'Consultar disponibilidad';
+const getBookingEntryCtaLabel = (_publicLevel: DetailVerificationVisibleLevel) => {
+  return REQUEST_RESERVATION_LABEL;
 };
 
 const getBookingCtaSupportCopy = (publicLevel: DetailVerificationVisibleLevel) => {
   if (publicLevel === 'presencial') {
-    return 'Esta propiedad fue validada en persona';
+    return 'Esta propiedad está verificada presencialmente.';
   }
 
   if (publicLevel === 'identity') {
@@ -1100,7 +1097,7 @@ export const PropertyDetailShell: React.FC<{
       resetBookingDraft();
       openConversation(conversationId, { ...requestContext, requestCreatedAt });
       showToast(
-        'Operación libre iniciada',
+        REQUEST_SENT_LABEL,
         'Abrimos el chat para que coordinen por acá. La app no retiene dinero ni interviene en pagos externos en esta modalidad.',
         'success',
       );
@@ -1183,8 +1180,8 @@ export const PropertyDetailShell: React.FC<{
 
       openConversation(conversationId, { ...requestContext, requestCreatedAt });
       showToast(
-        'Seña protegida elegida',
-        `La solicitud quedó registrada por ${formatCurrency(bookedTotal)} y la reserva ya quedó marcada con seña protegida. Abrimos el chat para seguir desde ahí.`,
+        REQUEST_SENT_LABEL,
+        `La solicitud quedó registrada por ${formatCurrency(bookedTotal)} y la reserva ya quedó marcada con ${PROTECTED_DEPOSIT_LABEL}. Abrimos el chat para seguir desde ahí.`,
         'success',
       );
     } catch (error) {

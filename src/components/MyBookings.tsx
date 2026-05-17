@@ -17,6 +17,7 @@ import {
 } from '../lib/platformTerms';
 import { buildProtectedOperationMonetizationPlan, formatMarketplaceMonetizationPriceLabel } from '../lib/marketplaceMonetization';
 import { getPropertyVerificationDetails, sortPropertiesByCatalogOrder } from '../lib/propertyVerification';
+import { MANUAL_REVIEW_LABEL, OPERATION_COMPLETED_LABEL, PROTECTED_DEPOSIT_LABEL } from '../lib/productTerminology';
 import { getProtectedDepositPricingFromBooking } from '../lib/protectedDeposit';
 import { normalizeReservationDepositStatus } from '../lib/protectedDepositStatus';
 import { getReservationFlowCopy, getReservationFlowTimeline, getReservationNextActorDisplayLabel, getReservationNextStepDisplayLabel } from '../lib/reservationFlow';
@@ -391,7 +392,7 @@ const getBookingStatusText = (booking: Booking) => {
     case 'pending':
       return 'Pendiente';
     case 'completed':
-      return 'Finalizada';
+      return OPERATION_COMPLETED_LABEL;
     case 'cancelled':
       return 'Cancelada';
     default:
@@ -742,7 +743,7 @@ export const MyBookings = () => {
       const nextBooking = await selectProtectedDeposit(bookingId);
       updateBookingState(nextBooking);
       setExternalDepositChoiceBookingId((currentBookingId) => (currentBookingId === bookingId ? null : currentBookingId));
-      showToast('Seña Protegida', 'La reserva quedó lista para registrar una seña protegida. Vas a ver el costo por protección de operación antes de pagar.', 'success');
+      showToast(PROTECTED_DEPOSIT_LABEL, 'La reserva quedó lista para registrar una seña protegida. Vas a ver el costo por protección de operación antes de pagar.', 'success');
     } catch (error) {
       showToast('Seña', error instanceof Error ? error.message : 'No pudimos registrar esta elección.', 'error');
     } finally {
@@ -776,7 +777,7 @@ export const MyBookings = () => {
     try {
       const nextBooking = await reportArrivalProblem(bookingId);
       updateBookingState(nextBooking);
-      showToast('Seña en revisión', 'El problema quedó informado y la seña pasó a revisión manual.', 'success');
+      showToast(MANUAL_REVIEW_LABEL, 'El problema quedó informado y la seña pasó a revisión manual.', 'success');
     } catch (error) {
       showToast('Problema', error instanceof Error ? error.message : 'No pudimos registrar el problema. Intentá de nuevo.', 'error');
     } finally {
@@ -1011,7 +1012,7 @@ export const MyBookings = () => {
                     <Badge variant="neutral" size="md">
                       {booking.depositType === 'external' || booking.requestMode === 'direct'
                         ? 'Operación libre'
-                        : 'Seña protegida'}
+                        : PROTECTED_DEPOSIT_LABEL}
                     </Badge>
                   ) : null}
                   {booking.contractAccepted ? <Badge variant="success" size="md">Condiciones firmadas</Badge> : null}
@@ -1642,7 +1643,7 @@ export const MyBookings = () => {
               </BookingGroup>
 
               <BookingGroup
-                title="Finalizadas"
+                title="Operaciones completadas"
                 description="Quedan visibles para revisar cierre, historial o cancelaciones."
                 count={sortedClosedBookings.length}
                 emptyText="Todavía no tenés reservas cerradas."

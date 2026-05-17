@@ -9,6 +9,12 @@ import { resolveGuestRequestProfile } from '../lib/guestRequestProfile';
 import { formatMarketplaceMonetizationPriceLabel } from '../lib/marketplaceMonetization';
 import { formatPremiumPriceLabel, type PremiumVerificationOffer } from '../lib/premiumVerification';
 import { getPropertyVerificationDetails, getPropertyVerificationItems, getPropertyVerificationProgress } from '../lib/propertyVerification';
+import {
+  MANUAL_REVIEW_LABEL,
+  OPERATION_COMPLETED_LABEL,
+  PROTECTED_DEPOSIT_LABEL,
+  REQUEST_ACCEPTED_LABEL,
+} from '../lib/productTerminology';
 import { normalizeReservationDepositStatus } from '../lib/protectedDepositStatus';
 import { getReservationFlowCopy, getReservationFlowTimeline, getReservationNextActorDisplayLabel, getReservationNextStepDisplayLabel } from '../lib/reservationFlow';
 import { acceptConversationRequest, confirmAccess, confirmDirectDeposit, notAdvanceConversationRequest } from '../services/geminiService';
@@ -193,7 +199,7 @@ const getBookingStatusLabel = (booking: any) => {
   const status = booking.status;
 
   if (status === 'completed') {
-    return 'Estadía finalizada';
+    return OPERATION_COMPLETED_LABEL;
   }
 
   const flow = getBookingFlow(booking);
@@ -438,10 +444,10 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
       });
 
       showToast(
-        acceptedMode === 'direct' ? 'Operación libre aceptada' : 'Seña protegida aceptada',
+        REQUEST_ACCEPTED_LABEL,
         acceptedMode === 'direct'
-          ? 'La operación libre quedó abierta. Sigan por chat: la app no interviene en pagos externos.'
-          : 'La solicitud quedó aceptada y la reserva quedó marcada con seña protegida. Cuando la seña se registre, queda retenida hasta check-in.',
+          ? 'La solicitud quedó aceptada. Sigan por chat: la app no interviene en pagos externos.'
+          : 'La solicitud quedó aceptada y la reserva quedó marcada con Seña Protegida. Cuando la seña se registre, queda retenida hasta check-in.',
         'success',
       );
     } catch (err) {
@@ -456,7 +462,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
       return;
     }
 
-    const requestLabel = booking.requestMode === 'direct' ? 'operación libre' : 'solicitud con seña protegida';
+    const requestLabel = booking.requestMode === 'direct' ? 'operación libre' : `solicitud con ${PROTECTED_DEPOSIT_LABEL}`;
     if (!window.confirm(`¿Querés marcar que no podés avanzar con esta ${requestLabel}?`)) {
       return;
     }
@@ -568,7 +574,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
       });
 
       updateRecentBooking(response.booking);
-      showToast('Llegada en revisión', 'El no show quedó informado y la seña sigue en pausa mientras la plataforma revisa qué pasó.', 'success');
+      showToast(MANUAL_REVIEW_LABEL, 'El no show quedó informado y la seña sigue en pausa mientras la plataforma revisa qué pasó.', 'success');
     } catch (err) {
       showToast('No show', err instanceof Error ? err.message : 'No pudimos registrar el no show.', 'error');
     } finally {
@@ -1588,7 +1594,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
           </div>
 
           <p className="form-hint px-4 italic">
-            * La ficha del huésped sigue dentro del flujo real de cada solicitud o reserva. Las evaluaciones se mantienen disponibles después de una estadía finalizada.
+            * La ficha del huésped sigue dentro del flujo real de cada solicitud o reserva. Las evaluaciones se mantienen disponibles después de una operación completada.
           </p>
         </section>
 

@@ -716,7 +716,7 @@ describe('SecureChat', () => {
     expect(screen.queryByText('Por fuera (más manual)')).not.toBeInTheDocument();
     expect(showToastMock).toHaveBeenCalledWith(
       'Cierre enviado',
-      'Ya quedó acordado. La reserva quedó marcada con seña protegida y el seguimiento sigue por este chat.',
+      'La solicitud quedó aceptada. La reserva quedó marcada con Seña Protegida y el seguimiento sigue por este chat.',
       'success',
     );
   });
@@ -857,7 +857,7 @@ describe('SecureChat', () => {
     });
 
     expect(showToastMock).toHaveBeenCalledWith(
-      'Seña protegida',
+      'Seña Protegida',
       'La reserva volvió a quedar marcada con seña protegida. Cuando la seña se registre, queda retenida hasta check-in.',
       'success',
     );
@@ -981,7 +981,7 @@ describe('SecureChat', () => {
     expect(screen.getByText('El huésped confirmó la llegada pero falta la confirmación de acceso del anfitrión')).toBeInTheDocument();
     expect(screen.getByText('Referencia dep-ref-chat-1')).toBeInTheDocument();
     expect(showToastMock).toHaveBeenCalledWith(
-      'Seña en revisión',
+      'En revisión manual',
       'El problema quedó informado y la seña pasó a revisión manual.',
       'success',
     );
@@ -1226,8 +1226,8 @@ describe('SecureChat', () => {
     expect(screen.getByText('Estado: Operación libre')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Aceptar propuesta/i })).not.toBeInTheDocument();
     expect(showToastMock).toHaveBeenCalledWith(
-      'Operación libre aceptada',
-      'Ya quedó acordado. Siguen coordinando por este chat y la app no interviene en pagos externos.',
+      'Solicitud aceptada',
+      'La solicitud quedó aceptada. Siguen coordinando por este chat y la app no interviene en pagos externos.',
       'success',
     );
   });

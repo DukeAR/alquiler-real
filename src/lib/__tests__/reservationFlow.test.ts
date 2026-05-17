@@ -92,7 +92,7 @@ describe('reservationFlow milestones', () => {
 
     expect(flow.stage).toBe('protected-checkout-pending');
     expect(flow.state).toBe('deposit_pending');
-    expect(flow.modelLabel).toBe('Seña protegida');
+    expect(flow.modelLabel).toBe('Seña Protegida');
     expect(flow.statusLabel).toBe('Seña pendiente');
     expect(flow.nextActorLabel).toBe('Plataforma');
     expect(flow.trackingHint).toBe('Por ahora solo mostramos la estructura y el estado base: el cobro todavía no se procesa dentro de la app.');

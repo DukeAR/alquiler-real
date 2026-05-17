@@ -1,6 +1,7 @@
 import React from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { getGuestCardOnboardingTip } from '../lib/contextualOnboarding';
+import { VERIFIED_ONSITE_LABEL } from '../lib/productTerminology';
 import { Icons } from './Icons';
 import { cn, formatCurrency } from '../lib/utils';
 import { getPropertyCardVerificationState } from '../lib/propertyVerification';
@@ -45,7 +46,7 @@ const getGuestCapacityLabel = (maxGuests?: number | null) => {
 
 const getTrustContextEyebrow = (level: ReturnType<typeof getPropertyCardVerificationState>['publicLevel']) => {
   if (level === 'presencial') {
-    return 'Verificación presencial';
+    return VERIFIED_ONSITE_LABEL;
   }
 
   if (level === 'identity') {

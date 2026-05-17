@@ -7,6 +7,12 @@ import {
   type ReservationRequestStatus,
 } from '../types';
 import { isBookingCheckInReached } from './bookingDates';
+import {
+  FREE_OPERATION_LABEL,
+  MANUAL_REVIEW_LABEL,
+  OPERATION_COMPLETED_LABEL,
+  PROTECTED_DEPOSIT_LABEL,
+} from './productTerminology';
 import { normalizeReservationDepositStatus } from './protectedDepositStatus';
 
 export type ReservationFlowStage =
@@ -121,7 +127,7 @@ const RESERVATION_FLOW_MILESTONE_CONFIG: ReadonlyArray<Pick<ReservationFlowMiles
   { key: 'deposit', label: 'Seña reportada' },
   { key: 'confirmation', label: 'Confirmación pendiente' },
   { key: 'checkin', label: 'Check-in pendiente' },
-  { key: 'completed', label: 'Operación completada' },
+  { key: 'completed', label: OPERATION_COMPLETED_LABEL },
 ];
 
 const getRequestStatusLabel = (mode: ReservationRequestMode, viewerRole: ReservationFlowViewerRole) => {
@@ -134,14 +140,14 @@ const getRequestStatusLabel = (mode: ReservationRequestMode, viewerRole: Reserva
 
 const getModelLabel = (mode: ReservationRequestMode, depositType?: ReservationDepositType | null) => {
   if (depositType === 'protected') {
-    return 'Seña protegida';
+    return PROTECTED_DEPOSIT_LABEL;
   }
 
   if (depositType === 'external') {
-    return 'Operación libre';
+    return FREE_OPERATION_LABEL;
   }
 
-  return mode === 'protected' ? 'Seña protegida' : 'Operación libre';
+  return mode === 'protected' ? PROTECTED_DEPOSIT_LABEL : FREE_OPERATION_LABEL;
 };
 
 const getCancelledMilestoneIndex = (
@@ -231,14 +237,14 @@ const getTimelineStatus = (
 
   if (input.bookingStatus === 'completed' || stage === 'protected-deposit-released') {
     return {
-      label: 'Operación completada',
+      label: OPERATION_COMPLETED_LABEL,
       tone: 'success',
     };
   }
 
   if (stage === 'protected-deposit-review' || stage === 'protected-no-show-pending') {
     return {
-      label: 'En revisión manual',
+      label: MANUAL_REVIEW_LABEL,
       tone: 'warning',
     };
   }
@@ -521,7 +527,7 @@ export const getReservationVisibleStatus = (
   if (input.bookingStatus === 'completed') {
     return {
       key: 'confirmed',
-      label: 'Finalizada',
+      label: OPERATION_COMPLETED_LABEL,
       tone: 'success',
     };
   }
@@ -551,19 +557,19 @@ export const getReservationVisibleStatus = (
     case 'request-accepted':
       return {
         key: input.mode === 'protected' ? 'pending-deposit' : 'in-conversation',
-        label: input.mode === 'protected' ? 'Seña protegida' : 'Operación libre',
+        label: input.mode === 'protected' ? PROTECTED_DEPOSIT_LABEL : FREE_OPERATION_LABEL,
         tone: 'brand',
       };
     case 'protected-checkout-pending':
       return {
         key: 'pending-deposit',
-        label: state === 'deposit_pending' ? 'Seña pendiente' : 'Seña protegida',
+        label: state === 'deposit_pending' ? 'Seña pendiente' : PROTECTED_DEPOSIT_LABEL,
         tone: 'brand',
       };
     case 'external-deposit-pending':
       return {
         key: 'in-conversation',
-        label: 'Operación libre',
+        label: FREE_OPERATION_LABEL,
         tone: 'brand',
       };
     case 'direct-deposit-reported':
@@ -592,7 +598,7 @@ export const getReservationVisibleStatus = (
     case 'protected-no-show-pending':
       return {
         key: 'issue-reported',
-        label: state === 'manual_review' ? 'En revisión manual' : 'Problema reportado',
+        label: state === 'manual_review' ? MANUAL_REVIEW_LABEL : 'Problema reportado',
         tone: 'warning',
       };
     default:
@@ -633,7 +639,7 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
   if (input.bookingStatus === 'completed') {
     return buildFlowCopy({
       modelLabel,
-      statusLabel: visibleStatus?.label ?? 'Finalizada',
+      statusLabel: visibleStatus?.label ?? OPERATION_COMPLETED_LABEL,
       description: 'La estadía ya terminó.',
       supportText: viewerRole === 'guest'
         ? 'Podés revisar el cierre, dejar una reseña o volver al chat si necesitás contexto de esa reserva.'
@@ -651,8 +657,8 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
         statusLabel: visibleStatus?.label ?? getRequestStatusLabel(input.mode, viewerRole),
         description: input.mode === 'protected'
           ? viewerRole === 'host'
-            ? 'La solicitud de seña protegida ya quedó abierta en el chat. Cuando lo tengas claro, respondé por acá.'
-            : 'Tu solicitud de seña protegida ya quedó enviada. Si responden, siguen por acá sin salir del chat.'
+            ? 'La solicitud de Seña Protegida ya quedó abierta en el chat. Cuando lo tengas claro, respondé por acá.'
+            : 'Tu solicitud de Seña Protegida ya quedó enviada. Si responden, siguen por acá sin salir del chat.'
           : viewerRole === 'host'
             ? 'La operación libre ya quedó abierta en el chat. Cuando lo tengas claro, respondé por acá.'
             : 'Tu operación libre ya quedó abierta por chat. Las fechas no se bloquean y, si responden, siguen coordinando desde acá.',
@@ -697,7 +703,7 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
       if (input.mode === 'direct') {
         return buildFlowCopy({
           modelLabel,
-          statusLabel: visibleStatus?.label ?? 'Operación libre',
+          statusLabel: visibleStatus?.label ?? FREE_OPERATION_LABEL,
           description: viewerRole === 'host'
             ? 'Ya aceptaste seguir por operación libre.'
             : 'El anfitrión aceptó seguir por operación libre.',
@@ -710,10 +716,10 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
 
       return buildFlowCopy({
         modelLabel,
-        statusLabel: visibleStatus?.label ?? 'Seña protegida',
+        statusLabel: visibleStatus?.label ?? PROTECTED_DEPOSIT_LABEL,
         description: viewerRole === 'host'
-          ? 'La reserva ya quedó marcada con seña protegida.'
-          : 'El anfitrión ya aceptó y la reserva quedó marcada con seña protegida.',
+          ? 'La reserva ya quedó marcada con Seña Protegida.'
+          : 'El anfitrión ya aceptó y la reserva quedó marcada con Seña Protegida.',
         supportText: 'Cuando la seña se registre dentro de la app, queda retenida hasta check-in, suma un costo por operación y puede pasar a revisión manual si hace falta revisar existencia y acceso.',
         nextActor: 'platform',
         nextActorLabel: 'Plataforma',
@@ -724,7 +730,7 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
       return buildFlowCopy({
         modelLabel,
         statusLabel: visibleStatus?.label ?? 'Seña pendiente',
-        description: 'La reserva ya quedó dentro del modo de seña protegida.',
+        description: 'La reserva ya quedó dentro del modo de Seña Protegida.',
         supportText: 'La seña todavía no quedó registrada dentro de la app. Cuando se registre, queda retenida hasta check-in.',
         nextActor: 'platform',
         nextActorLabel: 'Plataforma',
@@ -873,7 +879,7 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
     case 'protected-deposit-review':
       return buildFlowCopy({
         modelLabel,
-        statusLabel: visibleStatus?.label ?? 'En revisión manual',
+        statusLabel: visibleStatus?.label ?? MANUAL_REVIEW_LABEL,
         description: 'Vamos a revisar la información disponible: chat, comprobante, confirmaciones y ubicación registrada.',
         supportText: 'La seña no se libera automáticamente mientras la revisión siga abierta.',
         nextActor: 'platform',
@@ -883,7 +889,7 @@ export const getReservationFlowCopy = (input: ReservationFlowInput): Reservation
     case 'protected-no-show-pending':
       return buildFlowCopy({
         modelLabel,
-        statusLabel: visibleStatus?.label ?? 'En revisión manual',
+        statusLabel: visibleStatus?.label ?? MANUAL_REVIEW_LABEL,
         description: 'Vamos a revisar la información disponible: chat, comprobante, confirmaciones y ubicación registrada.',
         supportText: 'La seña no se libera automáticamente mientras la revisión siga abierta.',
         nextActor: 'platform',

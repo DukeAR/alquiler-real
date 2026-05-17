@@ -1,4 +1,5 @@
 import { motion } from 'motion/react';
+import { VERIFIED_ONSITE_LABEL } from '../../lib/productTerminology';
 import { Icons } from '../Icons';
 import { LocationAutocomplete, type LocationSuggestion } from '../LocationAutocomplete';
 
@@ -17,7 +18,7 @@ const heroGeoEyebrow = 'COSTA ATLÁNTICA ARGENTINA';
 const valueProofItems = [
   'Ubicación real',
   'Identidad validada',
-  'Verificación presencial',
+  VERIFIED_ONSITE_LABEL,
 ] as const;
 
 const getRevealMotionProps = (delay: number) => ({

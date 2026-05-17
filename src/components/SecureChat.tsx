@@ -14,6 +14,11 @@ import { formatBookingDateShort, getBookingDateOnlyValue, isBookingCheckInReache
 import { getContextualTrustLevelFromItems, getGuestChatOnboardingTip } from '../lib/contextualOnboarding';
 import { buildProtectedOperationMonetizationPlan, formatMarketplaceMonetizationPriceLabel } from '../lib/marketplaceMonetization';
 import { getProtectedDepositPricingFromBooking } from '../lib/protectedDeposit';
+import {
+  MANUAL_REVIEW_LABEL,
+  PROTECTED_DEPOSIT_LABEL,
+  REQUEST_ACCEPTED_LABEL,
+} from '../lib/productTerminology';
 import { normalizeReservationDepositStatus } from '../lib/protectedDepositStatus';
 import { getReservationFlowCopy, getReservationFlowTimeline, getReservationVisibleStatus } from '../lib/reservationFlow';
 import { getHostTrust } from '../lib/hostTrust';
@@ -976,11 +981,11 @@ export const SecureChat: React.FC<SecureChatProps> = ({
       applyConversationUpdate(updatedConversation);
       await loadMessages(activeConv.id);
       showToast(
-        successTitle ?? (acceptedMode === 'protected' ? 'Seña protegida aceptada' : 'Operación libre aceptada'),
+        successTitle ?? REQUEST_ACCEPTED_LABEL,
         successDescription ?? (
           acceptedMode === 'protected'
-            ? 'Ya quedó acordado. La reserva quedó marcada con seña protegida y el seguimiento sigue por este chat.'
-            : 'Ya quedó acordado. Siguen coordinando por este chat y la app no interviene en pagos externos.'
+            ? 'La solicitud quedó aceptada. La reserva quedó marcada con Seña Protegida y el seguimiento sigue por este chat.'
+            : 'La solicitud quedó aceptada. Siguen coordinando por este chat y la app no interviene en pagos externos.'
         ),
         'success',
       );
@@ -1267,7 +1272,7 @@ export const SecureChat: React.FC<SecureChatProps> = ({
         depositPaymentReference: booking.depositPaymentReference,
       });
       await loadMessages(activeConv.id);
-      showToast('Seña protegida', 'La reserva volvió a quedar marcada con seña protegida. Cuando la seña se registre, queda retenida hasta check-in.', 'success');
+      showToast(PROTECTED_DEPOSIT_LABEL, 'La reserva volvió a quedar marcada con seña protegida. Cuando la seña se registre, queda retenida hasta check-in.', 'success');
     } catch (err) {
       showToast('Seña', err instanceof Error ? err.message : 'No pudimos registrar esta elección.', 'error');
     } finally {
@@ -1476,7 +1481,7 @@ export const SecureChat: React.FC<SecureChatProps> = ({
         hostAccessConfirmedAt: booking.hostAccessConfirmedAt,
       });
       await loadMessages(activeConv.id);
-      showToast('Seña en revisión', 'El problema quedó informado y la seña pasó a revisión manual.', 'success');
+      showToast(MANUAL_REVIEW_LABEL, 'El problema quedó informado y la seña pasó a revisión manual.', 'success');
     } catch (err) {
       showToast('Problema', err instanceof Error ? err.message : 'No pudimos registrar el problema. Intentá de nuevo.', 'error');
     } finally {
