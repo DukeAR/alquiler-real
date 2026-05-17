@@ -1430,7 +1430,7 @@ export const PropertyDetailShell: React.FC<{
           role="region"
           aria-label="Contexto de la reserva"
           data-motion-block
-          className="app-card-hover app-motion-block rounded-[20px] border border-slate-200/80 bg-white p-5 shadow-[0_24px_60px_-44px_rgba(15,23,42,0.24)] sm:rounded-[24px] sm:p-6 lg:p-8 lg:shadow-[0_30px_80px_-50px_rgba(15,23,42,0.28)]"
+          className="app-card-hover app-motion-block rounded-[20px] border border-slate-200/80 bg-white p-5 shadow-[0_18px_48px_-42px_rgba(15,23,42,0.2)] sm:rounded-[24px] sm:p-6 lg:p-8 lg:shadow-[0_22px_58px_-46px_rgba(15,23,42,0.22)]"
         >
           <div className="grid gap-5 sm:gap-6 lg:grid-cols-2 lg:items-start lg:gap-8">
             <div className="space-y-4 sm:space-y-5">
@@ -1444,21 +1444,21 @@ export const PropertyDetailShell: React.FC<{
 
                 <div
                   className={cn(
-                    'inline-flex max-w-full items-start gap-2.5 rounded-[20px] border px-4 py-3 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.22)] sm:gap-3 sm:rounded-[24px] sm:px-5 sm:py-4 sm:shadow-[0_24px_52px_-34px_rgba(15,23,42,0.28)]',
-                    isPresencialDetail && 'border-emerald-300 bg-emerald-100 text-emerald-950 shadow-[0_28px_60px_-32px_rgba(5,150,105,0.34)]',
-                    isIdentityDetail && 'border-[#D1D5DB] bg-[#F3F4F6] text-[#374151]',
-                    !isPresencialDetail && !isIdentityDetail && 'border-[#E5E7EB] bg-[#F9FAFB] text-[#4B5563]',
+                    'inline-flex max-w-full items-start gap-2 rounded-[18px] border px-3.5 py-2.5 shadow-[0_12px_26px_-24px_rgba(15,23,42,0.16)] sm:gap-2.5 sm:rounded-[20px] sm:px-4 sm:py-3',
+                    isPresencialDetail && 'border-emerald-200/80 bg-emerald-50/78 text-emerald-950 shadow-[0_16px_30px_-24px_rgba(5,150,105,0.2)]',
+                    isIdentityDetail && 'border-slate-200/85 bg-slate-50/85 text-[#374151]',
+                    !isPresencialDetail && !isIdentityDetail && 'border-slate-200/85 bg-slate-50/75 text-[#4B5563]',
                   )}
                 >
                   {isPresencialDetail ? (
                     <PresencialVerificationSealMark
                       alt="Verificado presencialmente"
-                      className="mt-0.5 h-12 w-auto shrink-0 sm:h-14"
+                      className="mt-0.5 h-10 w-auto shrink-0 sm:h-12"
                     />
                   ) : (
                     <span
                       className={cn(
-                        'mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border bg-white sm:h-10 sm:w-10',
+                        'mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border bg-white sm:h-9 sm:w-9',
                         isIdentityDetail ? 'border-[#D1D5DB] text-emerald-600' : 'border-[#E5E7EB] text-slate-400',
                       )}
                       aria-hidden="true"
@@ -1468,10 +1468,10 @@ export const PropertyDetailShell: React.FC<{
                   )}
 
                   <div className="min-w-0">
-                    <p className={cn('text-[0.92rem] font-semibold leading-5 sm:text-[0.98rem]', isPresencialDetail ? 'text-emerald-900' : isIdentityDetail ? 'text-[#374151]' : 'text-[#4B5563]')}>
+                    <p className={cn('text-[0.84rem] font-semibold leading-5 sm:text-[0.9rem]', isPresencialDetail ? 'text-emerald-900' : isIdentityDetail ? 'text-[#374151]' : 'text-[#4B5563]')}>
                       {heroVerificationCopy.title}
                     </p>
-                    <p className={cn('mt-1 text-[0.72rem] leading-5 sm:text-[0.78rem]', isPresencialDetail ? 'text-emerald-900/85' : 'text-[#6B7280]')}>
+                    <p className={cn('mt-0.5 text-[0.69rem] leading-5 sm:text-[0.74rem]', isPresencialDetail ? 'text-emerald-900/78' : 'text-[#6B7280]')}>
                       {heroVerificationCopy.description}
                     </p>
                   </div>
@@ -1479,7 +1479,7 @@ export const PropertyDetailShell: React.FC<{
 
                 <div className="flex flex-wrap items-center gap-2.5">
                   {guestCapacity ? (
-                    <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.75 text-[0.82rem] font-medium text-slate-700 sm:px-3.5 sm:py-2 sm:text-sm">
+                    <div className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white px-3 py-1.5 text-[0.78rem] font-medium text-slate-600 sm:px-3.5 sm:py-1.75 sm:text-[0.84rem]">
                       <Icons.Users className="h-4 w-4 text-slate-400" />
                       <span>{guestCapacity}</span>
                     </div>
@@ -1542,22 +1542,22 @@ export const PropertyDetailShell: React.FC<{
           data-motion-block
           className="app-motion-block mt-3 md:mt-5"
         >
-          <div className="rounded-[24px] border border-slate-200/80 bg-white px-6 py-5 shadow-[0_24px_60px_-48px_rgba(15,23,42,0.24)] sm:px-7 sm:py-6">
+          <div className="rounded-[22px] border border-slate-200/75 bg-slate-50/62 px-5 py-4 shadow-[0_14px_28px_-26px_rgba(15,23,42,0.1)] sm:px-6 sm:py-5">
             <div className="space-y-3">
               <div className="space-y-1">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#4F46E5]/65">Verificación</p>
-                <h2 className="text-xl font-semibold tracking-tight text-slate-950">Qué está confirmado</h2>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#4F46E5]/62">Verificación</p>
+                <h2 className="text-lg font-semibold tracking-tight text-slate-950 sm:text-[1.15rem]">Qué está confirmado</h2>
               </div>
 
-              <ul className="space-y-3" aria-label="Qué está confirmado">
+              <ul className="grid gap-2.5 sm:grid-cols-2" aria-label="Qué está confirmado">
                 {detailVerificationChecklist.map((item) => (
                   <li
                     key={item.key}
-                    className={cn('flex min-w-0 items-start gap-3 text-[0.98rem] font-medium leading-6', item.confirmed ? 'text-slate-900' : 'text-[#4B5563]')}
+                    className={cn('flex min-w-0 items-start gap-3 rounded-[16px] border border-slate-200/70 bg-white/78 px-3 py-2.5 text-[0.9rem] font-medium leading-5', item.confirmed ? 'text-slate-900' : 'text-[#4B5563]')}
                   >
                     <span
                       className={cn(
-                        'mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full',
+                        'mt-0.5 inline-flex h-5.5 w-5.5 shrink-0 items-center justify-center rounded-full',
                         item.confirmed ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400',
                       )}
                       aria-hidden="true"

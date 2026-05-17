@@ -150,13 +150,13 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
       onClick={handleCardActivate}
       onKeyDown={handleCardKeyDown}
       className={cn(
-        'group box-border flex h-full w-full transform-gpu flex-col overflow-hidden rounded-[22px] border border-[#E5E7EB] bg-white shadow-[0_14px_34px_-22px_rgba(15,23,42,0.16)] transition-[transform,box-shadow,border-color,opacity] duration-150 ease-[ease] sm:rounded-[24px]',
+        'group box-border flex h-full w-full transform-gpu flex-col overflow-hidden rounded-[22px] border border-[#E5E7EB] bg-white shadow-[0_12px_28px_-24px_rgba(15,23,42,0.14)] transition-[transform,box-shadow,border-color,opacity] duration-150 ease-[ease] sm:rounded-[24px]',
         onClick && 'cursor-pointer focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-brand/10',
-        onClick && !isComparisonMutedCard && 'hover:-translate-y-1 hover:border-slate-300 hover:shadow-[0_28px_54px_-26px_rgba(15,23,42,0.24)] focus-visible:-translate-y-1 focus-visible:border-slate-300 focus-visible:shadow-[0_28px_54px_-26px_rgba(15,23,42,0.24)]',
+        onClick && !isComparisonMutedCard && 'hover:-translate-y-1 hover:border-slate-300 hover:shadow-[0_22px_44px_-28px_rgba(15,23,42,0.2)] focus-visible:-translate-y-1 focus-visible:border-slate-300 focus-visible:shadow-[0_22px_44px_-28px_rgba(15,23,42,0.2)]',
         onClick && isComparisonMutedCard && 'hover:-translate-y-1 focus-visible:-translate-y-1',
-        isFavoritesVariant && 'shadow-[0_16px_36px_-24px_rgba(15,23,42,0.16)]',
-        isPresencialCard && 'border-2 border-[#22c55e] shadow-lg',
-        isPresencialCard && onClick && 'hover:border-[#22c55e] hover:shadow-[0_30px_58px_-28px_rgba(34,197,94,0.28)] focus-visible:border-[#22c55e] focus-visible:shadow-[0_30px_58px_-28px_rgba(34,197,94,0.28)]',
+        isFavoritesVariant && 'shadow-[0_14px_30px_-24px_rgba(15,23,42,0.15)]',
+        isPresencialCard && 'border-emerald-300/75 shadow-[0_14px_30px_-24px_rgba(34,197,94,0.16)]',
+        isPresencialCard && onClick && 'hover:border-emerald-400/80 hover:shadow-[0_22px_42px_-28px_rgba(34,197,94,0.22)] focus-visible:border-emerald-400/80 focus-visible:shadow-[0_22px_42px_-28px_rgba(34,197,94,0.22)]',
         isComparisonMutedCard && 'border-transparent bg-white/96',
         isComparisonIdentityCard && '!shadow-sm',
         isComparisonIdentityCard && onClick && 'hover:!shadow-[0_22px_40px_-28px_rgba(15,23,42,0.14)] focus-visible:!shadow-[0_22px_40px_-28px_rgba(15,23,42,0.14)]',
@@ -214,7 +214,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
       <div className={cn('flex h-full flex-1 flex-col p-4 md:p-6', isCompactCard && 'p-4 md:p-5')}>
         <div>
           <div>
-            <p className={cn('text-xs font-semibold uppercase tracking-[0.22em] text-slate-500', isComparisonUnverifiedCard && 'text-[#64748b]')}>
+            <p className={cn('text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500', isComparisonUnverifiedCard && 'text-[#64748b]')}>
               {propertyTypeLabel}
             </p>
             <h3 className={cn(
@@ -241,19 +241,19 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
               aria-label={verificationState.summaryTitle}
               className={cn('mt-5 px-0 py-0', isCompactCard && 'mt-4')}
             >
-              <div className="inline-flex max-w-full items-start gap-2.5 rounded-2xl border border-emerald-300/70 bg-[#ECFDF3] px-3.5 py-2.5 shadow-[0_16px_30px_-22px_rgba(22,163,74,0.28)] transition-[background-color,border-color,box-shadow] duration-150 ease-[ease] group-hover:border-emerald-400/80 group-hover:bg-emerald-200/70 group-hover:shadow-[0_20px_36px_-22px_rgba(22,163,74,0.34)] group-focus-visible:border-emerald-400/80 group-focus-visible:bg-emerald-200/70 group-focus-visible:shadow-[0_20px_36px_-22px_rgba(22,163,74,0.34)] sm:gap-3 sm:px-4 sm:py-3">
+              <div className="inline-flex max-w-full items-start gap-2 rounded-[18px] border border-emerald-200/80 bg-emerald-50/78 px-3 py-2 shadow-[0_10px_24px_-22px_rgba(22,163,74,0.18)] transition-[background-color,border-color,box-shadow] duration-150 ease-[ease] group-hover:border-emerald-300/85 group-hover:bg-emerald-50/92 group-hover:shadow-[0_14px_28px_-22px_rgba(22,163,74,0.22)] group-focus-visible:border-emerald-300/85 group-focus-visible:bg-emerald-50/92 group-focus-visible:shadow-[0_14px_28px_-22px_rgba(22,163,74,0.22)] sm:gap-2.5 sm:px-3.5 sm:py-2.5">
                 <span
                   data-testid="property-card-verification-icon"
-                  className="mt-0.5 inline-flex h-6 w-6 shrink-0 transform-gpu items-center justify-center rounded-full bg-emerald-200 text-emerald-800 transition-transform duration-150 ease-[ease] group-hover:scale-[1.05] group-focus-visible:scale-[1.05] sm:h-7 sm:w-7"
+                  className="mt-0.5 inline-flex h-5.5 w-5.5 shrink-0 transform-gpu items-center justify-center rounded-full bg-emerald-100 text-emerald-700 transition-transform duration-150 ease-[ease] group-hover:scale-[1.04] group-focus-visible:scale-[1.04] sm:h-6 sm:w-6"
                 >
                   <Icons.ShieldCheck className="h-4 w-4" aria-hidden="true" />
                 </span>
                 <div className="min-w-0">
-                  <p className="text-[0.9rem] font-semibold leading-5 text-emerald-900 sm:text-[0.98rem]">
+                  <p className="text-[0.84rem] font-semibold leading-5 text-emerald-900 sm:text-[0.9rem]">
                     {verificationState.summaryTitle}
                   </p>
                   {verificationState.summaryDescription ? (
-                    <p className="mt-1 text-[0.7rem] leading-4 text-emerald-900/80 sm:text-[0.74rem]">
+                    <p className="mt-0.5 text-[0.68rem] leading-4 text-emerald-900/75 sm:text-[0.72rem]">
                       {verificationState.summaryDescription}
                     </p>
                   ) : null}

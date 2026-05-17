@@ -226,26 +226,26 @@ describe('PropertyCard', () => {
     expect(within(verificationBlock).getByTestId('property-card-verification-icon')).toHaveClass(
       'mt-0.5',
       'inline-flex',
-      'h-6',
-      'w-6',
+      'h-5.5',
+      'w-5.5',
       'shrink-0',
       'transform-gpu',
       'items-center',
       'justify-center',
       'rounded-full',
-      'bg-emerald-200',
-      'text-emerald-800',
-      'sm:h-7',
-      'sm:w-7',
+      'bg-emerald-100',
+      'text-emerald-700',
+      'sm:h-6',
+      'sm:w-6',
     );
     expect(within(verificationBlock).getByText('Verificado presencialmente')).toBeInTheDocument();
-    expect(verificationBlock.firstElementChild).toHaveClass('bg-[#ECFDF3]', 'border-emerald-300/70', 'gap-2.5', 'px-3.5', 'py-2.5', 'rounded-2xl', 'sm:gap-3', 'sm:px-4', 'sm:py-3');
-    expect(within(verificationBlock).getByText('Verificado presencialmente')).toHaveClass('text-emerald-900', 'text-[0.9rem]', 'font-semibold', 'sm:text-[0.98rem]');
-    expect(within(verificationBlock).getByText('Existencia física, coincidencia general, ubicación real, acceso real e identidad básica confirmados')).toHaveClass('text-emerald-900/80', 'text-[0.7rem]', 'sm:text-[0.74rem]');
-    expect(screen.getByRole('button', { name: /Ver propiedad: Casa frente al mar/i })).toHaveClass('box-border', 'w-full', 'h-full', 'border-2', 'border-[#22c55e]', 'shadow-lg', 'duration-150', 'ease-[ease]', 'hover:-translate-y-1');
+    expect(verificationBlock.firstElementChild).toHaveClass('bg-emerald-50/78', 'border-emerald-200/80', 'gap-2', 'px-3', 'py-2', 'rounded-[18px]', 'sm:gap-2.5', 'sm:px-3.5', 'sm:py-2.5');
+    expect(within(verificationBlock).getByText('Verificado presencialmente')).toHaveClass('text-emerald-900', 'text-[0.84rem]', 'font-semibold', 'sm:text-[0.9rem]');
+    expect(within(verificationBlock).getByText('Existencia física, coincidencia general, ubicación real, acceso real e identidad básica confirmados')).toHaveClass('text-emerald-900/75', 'text-[0.68rem]', 'sm:text-[0.72rem]');
+    expect(screen.getByRole('button', { name: /Ver propiedad: Casa frente al mar/i })).toHaveClass('box-border', 'w-full', 'h-full', 'border-emerald-300/75', 'shadow-[0_14px_30px_-24px_rgba(34,197,94,0.16)]', 'duration-150', 'ease-[ease]', 'hover:-translate-y-1');
     expect(screen.getByAltText('Casa frente al mar')).toHaveClass('duration-150', 'group-hover:scale-[1.02]');
     expect(screen.getByTestId('property-card-cta')).toHaveClass('absolute', 'bottom-3', 'right-3', 'opacity-100', 'md:bottom-4', 'md:right-4', 'md:opacity-0', 'md:group-hover:opacity-100');
-    expect(within(verificationBlock).getByTestId('property-card-verification-icon')).toHaveClass('group-hover:scale-[1.05]');
+    expect(within(verificationBlock).getByTestId('property-card-verification-icon')).toHaveClass('group-hover:scale-[1.04]');
     expect(within(verificationBlock).queryByText('Mejor información para decidir')).toBeNull();
     expect(within(verificationBlock).queryByText('Identidad del anfitrión confirmada')).toBeNull();
     expect(screen.queryByText('(5/5)')).toBeNull();

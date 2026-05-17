@@ -125,9 +125,9 @@ export const ExploreHero = ({
               {valueProofItems.map((item) => (
                 <span
                   key={item}
-                  className="inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/90 px-3.5 py-2 text-[0.82rem] font-semibold text-slate-700 shadow-sm backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:bg-white sm:px-4.5 sm:py-2.5 sm:text-[0.95rem]"
+                  className="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/78 px-3 py-1.75 text-[0.76rem] font-medium text-slate-600 shadow-[0_10px_24px_rgba(15,23,42,0.08)] backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/88 sm:px-4 sm:py-2 sm:text-[0.88rem]"
                 >
-                  <Icons.CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                  <Icons.CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
                   <span>{item}</span>
                 </span>
               ))}

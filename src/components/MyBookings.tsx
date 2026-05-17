@@ -111,26 +111,26 @@ const getContractPlatformTerms = (contract: ContractState) => (
 );
 
 const SummaryMetric = ({ label, value, helper, icon }: SummaryMetricProps) => (
-  <div className="rounded-[22px] border border-slate-200/80 bg-white/96 p-4 shadow-[0_18px_42px_-36px_rgba(15,23,42,0.26)] dark:border-slate-800 dark:bg-slate-900/92 sm:rounded-[28px] sm:p-5">
+  <div className="rounded-[22px] border border-slate-200/75 bg-slate-50/70 p-4 shadow-[0_12px_26px_-24px_rgba(15,23,42,0.1)] dark:border-slate-800 dark:bg-slate-900/75 sm:rounded-[28px] sm:p-5">
     <div className="flex items-center justify-between gap-3">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">{label}</p>
-      <div className="flex h-9 w-9 items-center justify-center rounded-[18px] bg-brand/10 text-brand dark:bg-brand/15 dark:text-brand-light sm:h-10 sm:w-10 sm:rounded-2xl">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">{label}</p>
+      <div className="flex h-8.5 w-8.5 items-center justify-center rounded-[16px] bg-white/90 text-brand dark:bg-slate-950/85 dark:text-brand-light sm:h-9 sm:w-9 sm:rounded-[18px]">
         {icon}
       </div>
     </div>
-    <p className="mt-3 text-[2rem] font-semibold tracking-tight text-slate-950 dark:text-slate-50 sm:mt-4 sm:text-3xl">{value}</p>
-    <p className="mt-1.5 text-[0.82rem] leading-5 text-slate-500 dark:text-slate-400 sm:mt-2 sm:text-sm sm:leading-6">{helper}</p>
+    <p className="mt-3 text-[1.8rem] font-semibold tracking-tight text-slate-950 dark:text-slate-50 sm:mt-4 sm:text-[2.35rem]">{value}</p>
+    <p className="mt-1.5 text-[0.78rem] leading-5 text-slate-500 dark:text-slate-400 sm:mt-2 sm:text-[0.84rem] sm:leading-5">{helper}</p>
   </div>
 );
 
 const PriorityActionRow = ({ eyebrow, title, description, actionLabel, icon, onAction }: PriorityActionRowProps) => (
-  <div className="flex flex-col gap-3.5 rounded-[22px] border border-slate-200/80 bg-white/96 p-4 shadow-[0_18px_42px_-36px_rgba(15,23,42,0.22)] dark:border-slate-800 dark:bg-slate-900/92 sm:rounded-[28px] sm:p-5 md:flex-row md:items-center md:justify-between">
+  <div className="flex flex-col gap-3 rounded-[22px] border border-slate-200/75 bg-slate-50/68 p-4 shadow-[0_12px_26px_-24px_rgba(15,23,42,0.08)] dark:border-slate-800 dark:bg-slate-900/72 sm:rounded-[28px] sm:p-5 md:flex-row md:items-center md:justify-between">
     <div className="flex items-start gap-3 sm:gap-4">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[18px] bg-brand/10 text-brand dark:bg-brand/15 dark:text-brand-light sm:h-11 sm:w-11 sm:rounded-2xl">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[16px] bg-white/92 text-brand dark:bg-slate-950/82 dark:text-brand-light sm:h-10 sm:w-10 sm:rounded-[18px]">
         {icon}
       </div>
       <div className="space-y-1.5">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">{eyebrow}</p>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">{eyebrow}</p>
         <p className="text-[0.98rem] font-semibold text-slate-950 dark:text-slate-50 sm:text-base">{title}</p>
         <p className="text-[0.88rem] leading-5 text-slate-600 dark:text-slate-300 sm:text-sm sm:leading-6">{description}</p>
       </div>
@@ -152,7 +152,7 @@ const BookingGroup = ({ title, description, count, emptyText, children }: Bookin
           <h3 className="text-base font-semibold text-slate-950 dark:text-slate-50">{title}</h3>
           <p className="text-[0.88rem] leading-5 text-slate-500 dark:text-slate-400 sm:text-sm sm:leading-6">{description}</p>
         </div>
-        <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 sm:px-3 sm:text-[11px]">
+        <span className="rounded-full border border-slate-200/80 bg-slate-50/85 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:border-slate-700 dark:bg-slate-900/85 dark:text-slate-300 sm:px-3 sm:text-[11px]">
           {count}
         </span>
       </div>
@@ -1142,13 +1142,13 @@ export const MyBookings = () => {
           ) : null}
 
           {showReservationFlowPanel ? (
-            <div className="rounded-[20px] border border-brand/10 bg-brand/5 p-3.5 dark:border-brand/20 dark:bg-brand/10 sm:rounded-[24px] sm:p-4">
+            <div className="rounded-[20px] border border-slate-200/75 bg-slate-50/68 p-3.5 dark:border-slate-800 dark:bg-slate-900/72 sm:rounded-[24px] sm:p-4">
               <div className="flex flex-col gap-3.5 lg:flex-row lg:items-start lg:justify-between lg:gap-4">
                 <div className="space-y-2">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-brand">{bookingFlow.statusLabel}</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-brand">{bookingFlow.statusLabel}</p>
                   <p className="text-[0.92rem] font-semibold text-slate-950 dark:text-slate-50 sm:text-sm">{bookingFlow.description}</p>
-                  {bookingFlow.supportText ? <p className="text-[0.88rem] leading-5 text-slate-600 dark:text-slate-300 sm:text-sm sm:leading-6">{bookingFlow.supportText}</p> : null}
-                  {bookingFlow.trackingHint ? <p className="text-[0.82rem] leading-5 text-slate-500 dark:text-slate-400 sm:text-sm sm:leading-6">{bookingFlow.trackingHint}</p> : null}
+                  {bookingFlow.supportText ? <p className="text-[0.82rem] leading-5 text-slate-600 dark:text-slate-300 sm:text-[0.88rem] sm:leading-6">{bookingFlow.supportText}</p> : null}
+                  {bookingFlow.trackingHint ? <p className="text-[0.76rem] leading-5 text-slate-500 dark:text-slate-400 sm:text-[0.82rem] sm:leading-6">{bookingFlow.trackingHint}</p> : null}
                 </div>
 
                 <div className="flex flex-wrap gap-1.5 sm:gap-2 lg:justify-end">

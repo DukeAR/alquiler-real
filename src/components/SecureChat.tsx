@@ -2264,10 +2264,10 @@ export const SecureChat: React.FC<SecureChatProps> = ({
 
             <div className="border-b border-slate-200/80 bg-white/88 px-3.5 py-3 dark:border-slate-800 dark:bg-slate-950/90 sm:px-6 sm:py-4">
               <div className="mx-auto grid max-w-6xl gap-2.5 xl:grid-cols-[minmax(0,1.8fr)_minmax(280px,1fr)] xl:gap-3">
-                <div className="rounded-[22px] border border-slate-200/80 bg-slate-50/85 p-3.5 dark:border-slate-800 dark:bg-slate-900/60 sm:rounded-[28px] sm:p-5">
+                <div className="rounded-[22px] border border-slate-200/75 bg-slate-50/72 p-3.5 dark:border-slate-800 dark:bg-slate-900/56 sm:rounded-[28px] sm:p-4.5">
                   <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                     <div className="min-w-0 space-y-1">
-                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400 dark:text-slate-500">Contexto de la consulta</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">Contexto de la consulta</p>
                       {contextSummaryLine ? (
                         <p className="text-[0.92rem] font-medium leading-5 text-slate-800 dark:text-slate-100 sm:text-sm sm:leading-6">{contextSummaryLine}</p>
                       ) : null}
@@ -2284,9 +2284,9 @@ export const SecureChat: React.FC<SecureChatProps> = ({
                         />
                       ) : null}
                       {chatPrimaryActionTitle ? (
-                        <div className="mt-3 rounded-[18px] border border-brand/15 bg-brand/8 px-3.5 py-3 dark:border-brand/20 dark:bg-brand/10 sm:mt-4 sm:rounded-[22px] sm:px-4 sm:py-3.5">
-                          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-brand dark:text-brand-light">Qué hacer ahora</p>
-                          <p className="mt-1 text-[0.92rem] font-semibold leading-5 text-slate-950 dark:text-slate-50 sm:text-sm sm:leading-6">{chatPrimaryActionTitle}</p>
+                        <div className="mt-3 rounded-[16px] border border-brand/12 bg-brand/[0.05] px-3.5 py-2.5 dark:border-brand/18 dark:bg-brand/[0.09] sm:mt-4 sm:rounded-[20px] sm:px-4 sm:py-3">
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-brand dark:text-brand-light">Qué hacer ahora</p>
+                          <p className="mt-1 text-[0.88rem] font-semibold leading-5 text-slate-950 dark:text-slate-50 sm:text-sm sm:leading-6">{chatPrimaryActionTitle}</p>
                           {chatPrimaryActionSupport ? (
                             <p className="mt-1.5 text-[0.72rem] leading-5 text-slate-600 dark:text-slate-300 sm:text-xs">{chatPrimaryActionSupport}</p>
                           ) : null}
@@ -2307,12 +2307,12 @@ export const SecureChat: React.FC<SecureChatProps> = ({
                         <div
                           key={signal.key}
                           className={cn(
-                            'flex items-start gap-2.5 rounded-[18px] border px-3 py-2.5 text-[0.82rem] leading-5 sm:gap-3 sm:rounded-[22px] sm:px-3.5 sm:py-3 sm:text-sm',
+                            'flex items-start gap-2.5 rounded-[18px] border px-3 py-2.5 text-[0.8rem] leading-5 sm:gap-3 sm:rounded-[20px] sm:px-3.5 sm:py-3 sm:text-[0.84rem]',
                             signal.tone === 'success'
-                              ? 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/30 dark:bg-emerald-900/20 dark:text-emerald-200'
+                              ? 'border-emerald-200/75 bg-emerald-50/78 text-emerald-800 dark:border-emerald-900/30 dark:bg-emerald-900/18 dark:text-emerald-200'
                               : signal.tone === 'brand'
-                                ? 'border-brand/15 bg-brand/8 text-slate-800 dark:border-brand/20 dark:bg-brand/10 dark:text-slate-100'
-                                : 'border-slate-200 bg-white text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200',
+                                ? 'border-brand/12 bg-brand/[0.05] text-slate-700 dark:border-brand/18 dark:bg-brand/[0.09] dark:text-slate-100'
+                                : 'border-slate-200/80 bg-white/72 text-slate-700 dark:border-slate-800 dark:bg-slate-950/72 dark:text-slate-200',
                           )}
                         >
                           <span className="mt-0.5 shrink-0">{signal.icon}</span>

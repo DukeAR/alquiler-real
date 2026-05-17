@@ -5,17 +5,17 @@ type BadgeVariant = 'neutral' | 'brand' | 'success' | 'warning' | 'danger' | 'in
 type BadgeSize = 'sm' | 'md';
 
 const variantClasses: Record<BadgeVariant, string> = {
-  neutral: 'border-slate-200/90 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-300',
-  brand: 'border-brand/15 bg-brand/10 text-brand-dark dark:border-brand/20 dark:bg-brand/15 dark:text-brand-light',
-  success: 'border-emerald-200/80 bg-emerald-50 text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-900/20 dark:text-emerald-400',
-  warning: 'border-slate-200/90 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-300',
-  danger: 'border-red-200/80 bg-red-50 text-red-700 dark:border-red-900/30 dark:bg-red-900/20 dark:text-red-400',
-  info: 'border-brand/15 bg-brand/10 text-brand-dark dark:border-brand/20 dark:bg-brand/15 dark:text-brand-light',
+  neutral: 'border-slate-200/80 bg-slate-50/80 text-slate-600 dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-300',
+  brand: 'border-brand/12 bg-brand/[0.06] text-brand-dark dark:border-brand/18 dark:bg-brand/[0.1] dark:text-brand-light',
+  success: 'border-emerald-200/75 bg-emerald-50/80 text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-900/18 dark:text-emerald-400',
+  warning: 'border-slate-200/80 bg-slate-50/75 text-slate-600 dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-300',
+  danger: 'border-red-200/75 bg-red-50/80 text-red-700 dark:border-red-900/30 dark:bg-red-900/18 dark:text-red-400',
+  info: 'border-brand/12 bg-brand/[0.06] text-brand-dark dark:border-brand/18 dark:bg-brand/[0.1] dark:text-brand-light',
 };
 
 const sizeClasses: Record<BadgeSize, string> = {
-  sm: 'min-h-6 px-2.5 text-[11px]',
-  md: 'min-h-7 px-3.5 text-[11.5px]',
+  sm: 'min-h-5.5 px-2.5 text-[10.5px]',
+  md: 'min-h-6.5 px-3 text-[11px]',
 };
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
@@ -27,7 +27,7 @@ export const Badge: React.FC<BadgeProps> = ({ className, variant = 'neutral', si
   return (
     <span
       className={cn(
-        'inline-block font-semibold rounded-[var(--radius-badge)] border',
+        'inline-flex items-center font-semibold rounded-[var(--radius-badge)] border',
         variantClasses[variant],
         sizeClasses[size],
         className

@@ -209,36 +209,36 @@ const getBookingStatusLabel = (booking: any) => {
 
 const getBookingStatusClassName = (booking: any) => {
   if (booking.status === 'completed') {
-    return 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-900/20 dark:text-emerald-300';
+    return 'border-emerald-200/75 bg-emerald-50/78 text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-900/18 dark:text-emerald-300';
   }
 
   const flow = getBookingFlow(booking);
 
   if (flow.stage === 'host-cancelled') {
-    return 'border-red-200 bg-red-50 text-red-700 dark:border-red-900/30 dark:bg-red-900/20 dark:text-red-300';
+    return 'border-red-200/75 bg-red-50/78 text-red-700 dark:border-red-900/30 dark:bg-red-900/18 dark:text-red-300';
   }
 
   if (flow.stage === 'guest-cancelled' || flow.stage === 'protected-deposit-review' || flow.stage === 'protected-no-show-pending' || flow.stage === 'direct-deposit-reported') {
-    return 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/30 dark:bg-amber-900/20 dark:text-amber-300';
+    return 'border-amber-200/75 bg-amber-50/78 text-amber-700 dark:border-amber-900/30 dark:bg-amber-900/18 dark:text-amber-300';
   }
 
   if (flow.stage === 'request-accepted' || flow.stage === 'protected-checkout-pending' || flow.stage === 'protected-deposit-held') {
-    return 'border-brand/20 bg-brand/10 text-brand dark:border-brand/25 dark:bg-brand/15 dark:text-brand-light';
+    return 'border-brand/12 bg-brand/[0.06] text-brand dark:border-brand/18 dark:bg-brand/[0.1] dark:text-brand-light';
   }
 
   if (flow.stage === 'reservation-confirmed' || flow.stage === 'protected-deposit-released') {
-    return 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-900/20 dark:text-emerald-300';
+    return 'border-emerald-200/75 bg-emerald-50/78 text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-900/18 dark:text-emerald-300';
   }
 
   if (booking.status === 'pending') {
-    return 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/30 dark:bg-amber-900/20 dark:text-amber-300';
+    return 'border-amber-200/75 bg-amber-50/78 text-amber-700 dark:border-amber-900/30 dark:bg-amber-900/18 dark:text-amber-300';
   }
 
   if (booking.status === 'confirmed') {
-    return 'border-brand/20 bg-brand/10 text-brand dark:border-brand/25 dark:bg-brand/15 dark:text-brand-light';
+    return 'border-brand/12 bg-brand/[0.06] text-brand dark:border-brand/18 dark:bg-brand/[0.1] dark:text-brand-light';
   }
 
-  return 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-900/20 dark:text-emerald-300';
+  return 'border-emerald-200/75 bg-emerald-50/78 text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-900/18 dark:text-emerald-300';
 };
 
 const getBookingSummaryItems = (booking: any) => {
@@ -272,16 +272,16 @@ type PriorityActionRowProps = {
 };
 
 const PriorityActionRow = ({ eyebrow, title, description, tip, actionLabel, icon, onAction }: PriorityActionRowProps) => (
-  <div className="flex flex-col gap-3.5 rounded-[22px] border border-slate-200/80 bg-white/94 p-4 shadow-[0_18px_42px_-36px_rgba(15,23,42,0.22)] dark:border-slate-800 dark:bg-slate-900/90 sm:rounded-[28px] sm:p-5 md:flex-row md:items-center md:justify-between">
+  <div className="flex flex-col gap-3 rounded-[22px] border border-slate-200/75 bg-slate-50/68 p-4 shadow-[0_12px_26px_-24px_rgba(15,23,42,0.08)] dark:border-slate-800 dark:bg-slate-900/72 sm:rounded-[28px] sm:p-5 md:flex-row md:items-center md:justify-between">
     <div className="flex items-start gap-3 sm:gap-4">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[18px] bg-brand/10 text-brand dark:bg-brand/15 dark:text-brand-light sm:h-11 sm:w-11 sm:rounded-2xl">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[16px] bg-white/92 text-brand dark:bg-slate-950/82 dark:text-brand-light sm:h-10 sm:w-10 sm:rounded-[18px]">
         {icon}
       </div>
       <div className="space-y-1.5">
         <p className="eyebrow">{eyebrow}</p>
         <p className="text-[0.98rem] font-semibold text-slate-950 dark:text-slate-50 sm:text-base">{title}</p>
         <p className="text-[0.88rem] leading-5 text-slate-600 dark:text-slate-300 sm:text-sm sm:leading-6">{description}</p>
-        {tip ? <ContextualTip compact tone="brand" body={tip} className="mt-3 shadow-none" /> : null}
+        {tip ? <ContextualTip compact tone="brand" body={tip} className="mt-2.5 shadow-none" /> : null}
       </div>
     </div>
     <Button type="button" size="sm" onClick={onAction} className="w-full justify-center rounded-full md:w-auto md:shrink-0">
@@ -309,7 +309,7 @@ const BookingGroup = ({ title, description, count, emptyText, children }: Bookin
           <h3 className="text-base font-semibold text-slate-950 dark:text-slate-50">{title}</h3>
           <p className="text-[0.88rem] leading-5 text-slate-500 dark:text-slate-400 sm:text-sm sm:leading-6">{description}</p>
         </div>
-        <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 sm:px-3 sm:text-[11px]">
+        <span className="rounded-full border border-slate-200/80 bg-slate-50/85 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:border-slate-700 dark:bg-slate-900/85 dark:text-slate-300 sm:px-3 sm:text-[11px]">
           {count}
         </span>
       </div>
@@ -990,7 +990,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
         ) : null}
 
         {showBookingFlowPanel ? (
-          <div className="rounded-[22px] border border-brand/15 bg-brand/5 p-3.5 dark:border-brand/20 dark:bg-brand/10 sm:rounded-[26px] sm:p-4">
+          <div className="rounded-[22px] border border-slate-200/75 bg-slate-50/68 p-3.5 dark:border-slate-800 dark:bg-slate-900/72 sm:rounded-[26px] sm:p-4">
             <div className="space-y-3.5 sm:space-y-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="space-y-1">
@@ -1053,21 +1053,21 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
               {bookingTimeline ? (
                 <ReservationOperationTimeline
                   timeline={bookingTimeline}
-                  className="border-white/80 bg-white/75 dark:border-slate-800 dark:bg-slate-900/60"
+                  className="border-white/80 bg-white/72 dark:border-slate-800 dark:bg-slate-900/58"
                 />
               ) : null}
 
               <div className="grid gap-2 md:grid-cols-3">
-                <div className="rounded-[18px] bg-white/80 px-3 py-2.5 text-[0.88rem] dark:bg-slate-900/70 sm:rounded-2xl sm:py-3 sm:text-sm">
-                  <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Estado actual</p>
+                <div className="rounded-[18px] border border-slate-200/70 bg-white/70 px-3 py-2.5 text-[0.88rem] dark:border-slate-800 dark:bg-slate-900/65 sm:rounded-2xl sm:py-3 sm:text-sm">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">Estado actual</p>
                   <p className="mt-1 font-semibold text-slate-900 dark:text-white">{bookingFlow.statusLabel}</p>
                 </div>
-                <div className="rounded-[18px] bg-white/80 px-3 py-2.5 text-[0.88rem] dark:bg-slate-900/70 sm:rounded-2xl sm:py-3 sm:text-sm">
-                  <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Actúa ahora</p>
+                <div className="rounded-[18px] border border-slate-200/70 bg-white/70 px-3 py-2.5 text-[0.88rem] dark:border-slate-800 dark:bg-slate-900/65 sm:rounded-2xl sm:py-3 sm:text-sm">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">Actúa ahora</p>
                   <p className="mt-1 font-semibold text-slate-900 dark:text-white">{getReservationNextActorDisplayLabel(bookingFlow)}</p>
                 </div>
-                <div className="rounded-[18px] bg-white/80 px-3 py-2.5 text-[0.88rem] dark:bg-slate-900/70 sm:rounded-2xl sm:py-3 sm:text-sm">
-                  <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Próximo paso</p>
+                <div className="rounded-[18px] border border-slate-200/70 bg-white/70 px-3 py-2.5 text-[0.88rem] dark:border-slate-800 dark:bg-slate-900/65 sm:rounded-2xl sm:py-3 sm:text-sm">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">Próximo paso</p>
                   <p className="mt-1 font-semibold text-slate-900 dark:text-white">{getReservationNextStepDisplayLabel(bookingFlow)}</p>
                 </div>
               </div>

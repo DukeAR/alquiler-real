@@ -9,17 +9,17 @@ type ReservationOperationTimelineProps = {
 };
 
 const statusToneClasses = {
-  neutral: 'border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300',
-  brand: 'border-brand/15 bg-brand/8 text-brand dark:border-brand/20 dark:bg-brand/10 dark:text-brand-light',
-  success: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-900/20 dark:text-emerald-300',
-  warning: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/30 dark:bg-amber-900/20 dark:text-amber-300',
+  neutral: 'border-slate-200/85 bg-white/85 text-slate-600 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-300',
+  brand: 'border-brand/12 bg-brand/[0.05] text-brand dark:border-brand/18 dark:bg-brand/[0.09] dark:text-brand-light',
+  success: 'border-emerald-200/80 bg-emerald-50/80 text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-900/18 dark:text-emerald-300',
+  warning: 'border-amber-200/80 bg-amber-50/80 text-amber-700 dark:border-amber-900/30 dark:bg-amber-900/18 dark:text-amber-300',
 } as const;
 
 const currentMarkerToneClasses = {
-  neutral: 'border-slate-300 bg-slate-100 text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300',
-  brand: 'border-brand/20 bg-brand/10 text-brand dark:border-brand/25 dark:bg-brand/12 dark:text-brand-light',
-  success: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-900/20 dark:text-emerald-300',
-  warning: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/30 dark:bg-amber-900/20 dark:text-amber-300',
+  neutral: 'border-slate-300 bg-slate-100/90 text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300',
+  brand: 'border-brand/15 bg-brand/[0.07] text-brand dark:border-brand/20 dark:bg-brand/[0.1] dark:text-brand-light',
+  success: 'border-emerald-200/80 bg-emerald-50/80 text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-900/18 dark:text-emerald-300',
+  warning: 'border-amber-200/80 bg-amber-50/80 text-amber-700 dark:border-amber-900/30 dark:bg-amber-900/18 dark:text-amber-300',
 } as const;
 
 const connectorToneClasses = {
@@ -35,10 +35,10 @@ export const ReservationOperationTimeline = ({
   className,
 }: ReservationOperationTimelineProps) => {
   return (
-    <div className={cn('rounded-[24px] border border-slate-200/80 bg-white/90 p-4 dark:border-slate-800 dark:bg-slate-950/40', className)}>
+    <div className={cn('rounded-[22px] border border-slate-200/70 bg-slate-50/58 p-3.5 dark:border-slate-800 dark:bg-slate-950/35', className)}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400 dark:text-slate-500">{title}</p>
-        <p className={cn('inline-flex items-center gap-2 self-start rounded-full border px-3 py-1.5 text-[11px] font-semibold', statusToneClasses[timeline.status.tone])}>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">{title}</p>
+        <p className={cn('inline-flex items-center gap-1.5 self-start rounded-full border px-2.5 py-1 text-[10px] font-semibold', statusToneClasses[timeline.status.tone])}>
           <span className={cn(
             'h-1.5 w-1.5 rounded-full',
             timeline.status.tone === 'brand'
@@ -53,7 +53,7 @@ export const ReservationOperationTimeline = ({
         </p>
       </div>
 
-      <ol className="mt-4 space-y-3">
+      <ol className="mt-3.5 space-y-2.5">
         {timeline.steps.map((step, index) => {
           const isCompleted = step.state === 'completed';
           const isCurrent = step.state === 'current';
@@ -62,11 +62,11 @@ export const ReservationOperationTimeline = ({
           const markerLabel = isCurrent ? 'Actual' : isCompleted ? 'Completado' : 'Pendiente';
 
           return (
-            <li key={step.key} className="relative pl-10">
+            <li key={step.key} className="relative pl-9">
               {!isLast ? (
                 <span
                   className={cn(
-                    'absolute left-[15px] top-8 bottom-[-14px] w-px',
+                    'absolute left-[13px] top-7 bottom-[-12px] w-px',
                     isCompleted ? connectorToneClasses.success : isCurrent ? connectorToneClasses[markerTone] : connectorToneClasses.neutral,
                   )}
                 />
@@ -74,7 +74,7 @@ export const ReservationOperationTimeline = ({
 
               <span
                 className={cn(
-                  'absolute left-0 top-0 flex h-8 w-8 items-center justify-center rounded-full border text-xs font-semibold',
+                  'absolute left-0 top-0 flex h-7 w-7 items-center justify-center rounded-full border text-[11px] font-semibold',
                   isCompleted
                     ? currentMarkerToneClasses.success
                     : isCurrent
@@ -82,15 +82,15 @@ export const ReservationOperationTimeline = ({
                       : 'border-slate-200 bg-white text-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-500',
                 )}
               >
-                {isCompleted ? <Icons.Check className="h-3.5 w-3.5" /> : <span className="h-2.5 w-2.5 rounded-full bg-current" />}
+                {isCompleted ? <Icons.Check className="h-3.5 w-3.5" /> : <span className="h-2 w-2 rounded-full bg-current" />}
               </span>
 
-              <div className="flex min-h-8 items-center justify-between gap-3 rounded-[18px] border border-slate-200/70 bg-white/70 px-3 py-2 dark:border-slate-800 dark:bg-slate-950/50">
-                <p className={cn('text-sm', isCurrent || isCompleted ? 'font-semibold text-slate-900 dark:text-slate-50' : 'text-slate-500 dark:text-slate-400')}>
+              <div className="flex min-h-7 items-center justify-between gap-3 rounded-[16px] border border-slate-200/65 bg-white/72 px-3 py-1.75 dark:border-slate-800 dark:bg-slate-950/45">
+                <p className={cn('text-[0.88rem]', isCurrent || isCompleted ? 'font-medium text-slate-900 dark:text-slate-50' : 'text-slate-500 dark:text-slate-400')}>
                   {step.label}
                 </p>
                 <span className={cn(
-                  'text-[11px] font-semibold uppercase tracking-[0.12em]',
+                  'text-[10px] font-semibold uppercase tracking-[0.11em]',
                   isCompleted
                     ? 'text-emerald-600 dark:text-emerald-300'
                     : isCurrent
