@@ -78,6 +78,21 @@ describe('InternalSupportQueue', () => {
               contextSnapshot: {
                 propertyTitle: 'Casa frente al mar',
               },
+              reviewHistory: [
+                {
+                  id: 'history_1',
+                  eventType: 'case_opened',
+                  title: 'Apertura de caso',
+                  description: 'El caso quedo registrado con el contexto operativo disponible.',
+                  status: 'received',
+                  decision: 'Caso abierto',
+                  note: 'Llegue y no pude entrar.',
+                  actorName: 'Usuario',
+                  actorId: 'guest_1',
+                  actorType: 'user',
+                  createdAt: '2026-05-10T15:00:00.000Z',
+                },
+              ],
             },
           ],
         };
@@ -154,6 +169,34 @@ describe('InternalSupportQueue', () => {
             contextSnapshot: {
               propertyTitle: 'Casa frente al mar',
             },
+            reviewHistory: [
+              {
+                id: 'history_1',
+                eventType: 'case_opened',
+                title: 'Apertura de caso',
+                description: 'El caso quedo registrado con el contexto operativo disponible.',
+                status: 'received',
+                decision: 'Caso abierto',
+                note: 'Llegue y no pude entrar.',
+                actorName: 'Usuario',
+                actorId: 'guest_1',
+                actorType: 'user',
+                createdAt: '2026-05-10T15:00:00.000Z',
+              },
+              {
+                id: 'history_2',
+                eventType: 'status_updated',
+                title: 'Analisis de consistencia',
+                description: 'Se revisan chat, timestamps, estados y verificaciones vinculadas a la operacion.',
+                status: 'in_review',
+                decision: 'Revision activa',
+                note: 'Estamos revisando el ingreso con el anfitrion.',
+                actorName: 'ops@alquilerreal.com',
+                actorId: 'ops_self',
+                actorType: 'internal_operator',
+                createdAt: '2026-05-10T15:30:00.000Z',
+              },
+            ],
           },
         };
       }
@@ -183,6 +226,8 @@ describe('InternalSupportQueue', () => {
     });
 
     expect(screen.getByText('Casa frente al mar')).toBeInTheDocument();
+  expect(screen.getByText('Politica operativa de conflictos y revisiones')).toBeInTheDocument();
+    expect(screen.getAllByText('Historial de revision').length).toBeGreaterThan(0);
     expect(window.localStorage.getItem('ar_internal_ops_secret')).toBe('ops-secret');
 
     fireEvent.change(screen.getByLabelText(/Nota operativa/i), {

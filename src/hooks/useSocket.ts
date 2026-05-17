@@ -25,10 +25,6 @@ const getSocketEndpoint = () => {
     return API_BASE_URL;
   }
 
-  if (import.meta.env.DEV && typeof window !== 'undefined') {
-    return `${window.location.protocol}//${window.location.hostname}:3001`;
-  }
-
   return undefined;
 };
 

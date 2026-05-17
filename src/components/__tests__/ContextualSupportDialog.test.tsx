@@ -59,6 +59,7 @@ describe('ContextualSupportDialog', () => {
     });
 
     expect(screen.getByText('Vamos a revisar la información disponible dentro de esta operación.')).toBeInTheDocument();
+  expect(screen.getByText('Ver alcance de revision operativa')).toBeInTheDocument();
     expect(screen.getByText(/^Recibido$/i)).toBeInTheDocument();
     expect(screen.getByText(/^Esperando respuesta$/i)).toBeInTheDocument();
 

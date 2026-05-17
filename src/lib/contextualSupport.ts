@@ -6,6 +6,20 @@ export const SUPPORT_CASE_STATUSES = ['received', 'in_review', 'waiting_response
 
 export type SupportCaseStatus = (typeof SUPPORT_CASE_STATUSES)[number];
 
+export type SupportCaseReviewHistoryEntry = {
+  id: string;
+  eventType: 'case_opened' | 'status_updated';
+  title: string;
+  description: string;
+  status: SupportCaseStatus;
+  decision: string;
+  note: string | null;
+  actorName: string | null;
+  actorId: string | null;
+  actorType: 'user' | 'internal_operator';
+  createdAt: string;
+};
+
 export const SUPPORT_CASE_CATEGORIES = [
   'no_access',
   'deposit_issue',

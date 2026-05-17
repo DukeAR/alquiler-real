@@ -81,7 +81,12 @@ const parseOrigins = (value?: string) => value
 
 const isProduction = process.env.NODE_ENV === 'production';
 const isTest = process.env.NODE_ENV === 'test';
-const localFrontendOrigins = isProduction ? [] : ['http://localhost:3000', 'http://127.0.0.1:3000'];
+const localFrontendOrigins = isProduction ? [] : [
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+  'http://localhost:4173',
+  'http://127.0.0.1:4173',
+];
 const productionFrontendOrigins = isProduction
   ? [
       'https://alquiler-real.vercel.app',

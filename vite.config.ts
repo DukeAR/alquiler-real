@@ -9,7 +9,11 @@ const DEV_BACKEND_UNAVAILABLE_RESPONSE = JSON.stringify({
   error: 'No pudimos conectar con el backend local. Levantá npm run server o npm run dev para seguir.',
 });
 
-const sendDevBackendUnavailableResponse = (res: ServerResponse<IncomingMessage>) => {
+const sendDevBackendUnavailableResponse = (res: Partial<ServerResponse<IncomingMessage>> | undefined | null) => {
+  if (!res || typeof res.writeHead !== 'function' || typeof res.end !== 'function') {
+    return;
+  }
+
   if (!res.headersSent) {
     res.writeHead(503, {
       'Content-Type': 'application/json; charset=utf-8',

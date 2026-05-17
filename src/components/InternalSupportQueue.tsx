@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { apiJson } from '../lib/apiConfig';
+import type { SupportCaseReviewHistoryEntry } from '../lib/contextualSupport';
 import { clearInternalSupportSecret, persistInternalSupportSecret, readInternalSupportSecret } from '../lib/internalSupportAccess';
 import { showToast } from '../lib/toast';
 import { cn } from '../lib/utils';
@@ -13,6 +14,7 @@ import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 import { Input } from './ui/Input';
 import { NoticeBanner } from './ui/NoticeBanner';
+import { OperationalReviewPolicyCard } from './ui/OperationalReviewPolicyCard';
 
 type InternalSupportStatus = 'received' | 'in_review' | 'waiting_response' | 'resolved';
 type InternalSupportFilter = 'open' | 'all' | InternalSupportStatus;
@@ -35,6 +37,7 @@ type InternalSupportCase = {
   createdAt: string;
   updatedAt: string;
   lastStatusAt: string;
+  reviewHistory?: SupportCaseReviewHistoryEntry[];
   user: {
     id: string | null;
     name: string;
@@ -219,6 +222,14 @@ const formatDateTime = (value?: string | null) => {
     hour: '2-digit',
     minute: '2-digit',
   }).format(parsedDate);
+};
+
+const getSupportReviewActorLabel = (entry: SupportCaseReviewHistoryEntry) => {
+  if (entry.actorName) {
+    return entry.actorName;
+  }
+
+  return entry.actorType === 'internal_operator' ? 'Operador interno' : 'Usuario';
 };
 
 const formatLabel = (value?: string | null) => {
@@ -1264,6 +1275,10 @@ export const InternalSupportQueue: React.FC = () => {
           </div>
         </Card>
 
+        <Card variant="elevated" padding="lg" className="border-slate-200/90 bg-white/96">
+          <OperationalReviewPolicyCard title="Politica operativa de conflictos y revisiones" />
+        </Card>
+
         {cases.length === 0 ? (
           <EmptyState
             tone="soft"
@@ -1278,6 +1293,7 @@ export const InternalSupportQueue: React.FC = () => {
               const timestampSummary = buildTimestampSummary(supportCase.timestamps);
               const isSaving = savingCaseId === supportCase.id;
               const linkedPropertyVerificationItem = supportCase.propertyId ? propertyVerificationItemsById.get(supportCase.propertyId) ?? null : null;
+              const reviewHistory = Array.isArray(supportCase.reviewHistory) ? supportCase.reviewHistory : [];
 
               return (
                 <Card key={supportCase.id} variant="elevated" padding="lg" className="border-slate-200/90 bg-white/96">
@@ -1333,6 +1349,47 @@ export const InternalSupportQueue: React.FC = () => {
                             <span key={`${supportCase.id}-${item}`} className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600">
                               {item}
                             </span>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {reviewHistory.length > 0 ? (
+                      <div className="rounded-[24px] border border-slate-200/80 bg-slate-50/80 px-4 py-4">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div>
+                            <p className="text-[0.72rem] font-bold uppercase tracking-[0.18em] text-slate-400">Historial de revision</p>
+                            <p className="mt-1 text-sm leading-6 text-slate-600">Cada movimiento deja decision, operador y timestamp dentro del caso.</p>
+                          </div>
+                          <Badge variant="neutral" size="md">{reviewHistory.length} movimiento(s)</Badge>
+                        </div>
+
+                        <div className="mt-4 space-y-3">
+                          {reviewHistory.map((entry) => (
+                            <div key={entry.id} className="rounded-[20px] border border-slate-200 bg-white px-4 py-4">
+                              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                                <div className="space-y-1.5">
+                                  <p className="text-sm font-semibold text-slate-900">{entry.title}</p>
+                                  <p className="text-sm leading-6 text-slate-600">{entry.description}</p>
+                                </div>
+                                <span className={cn(
+                                  'inline-flex rounded-full border px-3 py-1 text-[0.72rem] font-semibold',
+                                  entry.actorType === 'internal_operator'
+                                    ? 'border-brand/20 bg-brand/8 text-brand'
+                                    : 'border-slate-200 bg-slate-50 text-slate-600',
+                                )}>
+                                  {entry.decision}
+                                </span>
+                              </div>
+                              <p className="mt-2 text-xs text-slate-500">
+                                {formatDateTime(entry.createdAt)} · {getSupportReviewActorLabel(entry)}
+                              </p>
+                              {entry.note ? (
+                                <p className="mt-3 rounded-[16px] border border-slate-200/80 bg-slate-50 px-3.5 py-3 text-sm leading-6 text-slate-600">
+                                  {entry.note}
+                                </p>
+                              ) : null}
+                            </div>
                           ))}
                         </div>
                       </div>

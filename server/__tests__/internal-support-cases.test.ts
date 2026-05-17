@@ -101,6 +101,21 @@ describe('Internal support case endpoints', () => {
                   checkInDate: '2026-05-20',
                 },
               },
+              reviewHistory: [
+                {
+                  id: 'history_1',
+                  eventType: 'case_opened',
+                  title: 'Apertura de caso',
+                  description: 'El caso quedo registrado con el contexto operativo disponible.',
+                  status: 'received',
+                  decision: 'Caso abierto',
+                  note: 'Llegue y no pude entrar.',
+                  actorName: 'Usuario',
+                  actorId: 'guest_1',
+                  actorType: 'user',
+                  createdAt: '2026-05-10T15:00:00.000Z',
+                },
+              ],
               statusNote: null,
               lastStatusBy: null,
               lastStatusAt: '2026-05-10T15:00:00.000Z',
@@ -120,7 +135,7 @@ describe('Internal support case endpoints', () => {
       .set('x-internal-ops-secret', internalOpsSecret);
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({
+    expect(res.body).toMatchObject({
       items: [
         {
           id: 'support_1',
@@ -175,6 +190,14 @@ describe('Internal support case endpoints', () => {
           timestamps: {
             checkInDate: '2026-05-20',
           },
+          reviewHistory: [
+            {
+              id: 'history_1',
+              eventType: 'case_opened',
+              decision: 'Caso abierto',
+              actorId: 'guest_1',
+            },
+          ],
         },
       ],
     });
@@ -212,6 +235,21 @@ describe('Internal support case endpoints', () => {
                 operationType: 'booking',
                 viewerRole: 'guest',
               },
+              reviewHistory: [
+                {
+                  id: 'history_1',
+                  eventType: 'case_opened',
+                  title: 'Apertura de caso',
+                  description: 'El caso quedo registrado con el contexto operativo disponible.',
+                  status: 'received',
+                  decision: 'Caso abierto',
+                  note: 'Llegue y no pude entrar.',
+                  actorName: 'Usuario',
+                  actorId: 'guest_1',
+                  actorType: 'user',
+                  createdAt: '2026-05-10T15:00:00.000Z',
+                },
+              ],
               statusNote: null,
               lastStatusBy: null,
               lastStatusAt: '2026-05-10T15:00:00.000Z',
@@ -222,8 +260,8 @@ describe('Internal support case endpoints', () => {
         };
       }
 
-      if (text.includes('UPDATE support_cases') && text.includes('last_status_by = $4')) {
-        expect(params).toEqual([
+      if (text.includes('UPDATE support_cases') && text.includes('review_history = $5::jsonb')) {
+        expect(params?.slice(0, 4)).toEqual([
           'support_1',
           'waiting_response',
           'Necesitamos confirmar el horario exacto de llegada.',
@@ -237,6 +275,34 @@ describe('Internal support case endpoints', () => {
               status: 'waiting_response',
               statusNote: 'Necesitamos confirmar el horario exacto de llegada.',
               lastStatusBy: 'ops_ana',
+              reviewHistory: [
+                {
+                  id: 'history_1',
+                  eventType: 'case_opened',
+                  title: 'Apertura de caso',
+                  description: 'El caso quedo registrado con el contexto operativo disponible.',
+                  status: 'received',
+                  decision: 'Caso abierto',
+                  note: 'Llegue y no pude entrar.',
+                  actorName: 'Usuario',
+                  actorId: 'guest_1',
+                  actorType: 'user',
+                  createdAt: '2026-05-10T15:00:00.000Z',
+                },
+                {
+                  id: 'history_2',
+                  eventType: 'status_updated',
+                  title: 'Pedido de informacion adicional',
+                  description: 'Falta una aclaracion para seguir con la revision operativa.',
+                  status: 'waiting_response',
+                  decision: 'Espera de respuesta',
+                  note: 'Necesitamos confirmar el horario exacto de llegada.',
+                  actorName: 'ops_ana',
+                  actorId: INTERNAL_OPS_USER_ID,
+                  actorType: 'internal_operator',
+                  createdAt: '2026-05-10T16:30:00.000Z',
+                },
+              ],
               lastStatusAt: '2026-05-10T16:30:00.000Z',
               updatedAt: '2026-05-10T16:30:00.000Z',
             },
@@ -275,6 +341,18 @@ describe('Internal support case endpoints', () => {
         id: 'prop_1',
         title: 'Casa frente al mar',
       },
+      reviewHistory: [
+        {
+          id: 'history_1',
+          eventType: 'case_opened',
+        },
+        {
+          id: 'history_2',
+          eventType: 'status_updated',
+          decision: 'Espera de respuesta',
+          actorId: INTERNAL_OPS_USER_ID,
+        },
+      ],
     });
   });
 });

@@ -1200,6 +1200,7 @@ export const initDB = async () => {
       status TEXT CHECK (status IN ('received', 'in_review', 'waiting_response', 'resolved')) DEFAULT 'received',
       review_type TEXT,
       context_snapshot JSONB DEFAULT '{}'::jsonb,
+      review_history JSONB DEFAULT '[]'::jsonb,
       status_note TEXT,
       last_status_by TEXT,
       last_status_at TIMESTAMP DEFAULT NOW(),
@@ -1219,6 +1220,7 @@ export const initDB = async () => {
       BEGIN ALTER TABLE support_cases ADD COLUMN status TEXT DEFAULT 'received'; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE support_cases ADD COLUMN review_type TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE support_cases ADD COLUMN context_snapshot JSONB DEFAULT '{}'::jsonb; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE support_cases ADD COLUMN review_history JSONB DEFAULT '[]'::jsonb; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE support_cases ADD COLUMN status_note TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE support_cases ADD COLUMN last_status_by TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE support_cases ADD COLUMN last_status_at TIMESTAMP DEFAULT NOW(); EXCEPTION WHEN duplicate_column THEN NULL; END;
@@ -1230,6 +1232,7 @@ export const initDB = async () => {
   await db.query(`
     UPDATE support_cases
     SET context_snapshot = COALESCE(context_snapshot, '{}'::jsonb),
+      review_history = COALESCE(review_history, '[]'::jsonb),
         last_status_at = COALESCE(last_status_at, created_at, NOW()),
         updated_at = COALESCE(updated_at, created_at, NOW());
   `);

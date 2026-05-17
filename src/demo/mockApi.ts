@@ -9,9 +9,15 @@ import {
 } from '../lib/premiumVerification';
 import { withDemoQuery } from '../lib/demoMode';
 import type { ProtectedDepositManualReviewReason } from '../lib/protectedDepositManualReview';
+import type {
+  SupportCaseCategory,
+  SupportCaseReviewHistoryEntry,
+  SupportCaseStatus,
+  SupportEntryPoint,
+} from '../lib/contextualSupport';
 import type { ActivityData, ReviewsData, ValidationData } from '../hooks/useUserProfile';
 import type { HostProfile } from '../services/geminiService';
-import type { BookingStatus, Property, ReservationDepositStatus } from '../types';
+import type { BookingStatus, Property, ReservationDepositStatus, ReviewType } from '../types';
 
 type DemoUser = {
   id: string;
@@ -138,6 +144,23 @@ type DemoStore = {
   availabilityByPropertyId: Record<string, Array<{ start: string; end: string; source: 'manual' | 'booking' }>>;
   hostProfiles: Record<string, HostProfile>;
   propertyReviews: Record<string, ReviewsData['received']>;
+  supportCases: Array<{
+    id: string;
+    entryPoint: SupportEntryPoint;
+    category: SupportCaseCategory;
+    description: string | null;
+    status: SupportCaseStatus;
+    statusNote: string | null;
+    propertyId: string | null;
+    bookingId: string | null;
+    conversationId: string | null;
+    reviewType: ReviewType | null;
+    contextSnapshot: Record<string, unknown>;
+    createdAt: string;
+    updatedAt: string;
+    lastStatusAt: string;
+    reviewHistory: SupportCaseReviewHistoryEntry[];
+  }>;
 };
 
 const PLACEHOLDER_PROPERTY_IMAGE = 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=1200&q=80';
@@ -1148,6 +1171,7 @@ const createDemoStore = (): DemoStore => {
     availabilityByPropertyId,
     hostProfiles,
     propertyReviews,
+    supportCases: [],
   };
 };
 
@@ -1190,6 +1214,37 @@ const getBookingById = (bookingId?: string | null) => (
 const getConversationById = (conversationId?: string | null) => (
   store.conversations.find((conversation) => conversation.id === conversationId) ?? null
 );
+
+const getSupportContext = ({
+  entryPoint,
+  bookingId,
+  conversationId,
+  propertyId,
+  reviewType,
+}: {
+  entryPoint: SupportEntryPoint;
+  bookingId?: string | null;
+  conversationId?: string | null;
+  propertyId?: string | null;
+  reviewType?: ReviewType | null;
+}) => {
+  const booking = getBookingById(bookingId);
+  const conversation = getConversationById(conversationId ?? booking?.conversationId ?? null);
+  const property = getPropertyById(propertyId ?? booking?.propertyId ?? conversation?.property_id ?? null);
+
+  return {
+    propertyId: property?.id ?? booking?.propertyId ?? conversation?.property_id ?? propertyId ?? null,
+    bookingId: booking?.id ?? bookingId ?? conversation?.booking_id ?? null,
+    conversationId: conversation?.id ?? conversationId ?? booking?.conversationId ?? null,
+    contextSnapshot: {
+      propertyTitle: property?.title ?? booking?.propertyTitle ?? conversation?.propertyTitle ?? null,
+      operationType: booking ? 'booking' : conversation ? 'conversation' : property ? 'property' : entryPoint,
+      operationId: booking?.id ?? conversation?.id ?? property?.id ?? null,
+      reviewType: reviewType ?? null,
+      viewerRole: store.user.activeMode === 'host' ? 'host' : 'guest',
+    },
+  };
+};
 
 const updateConversationFromBooking = (booking: DemoBooking) => {
   const conversation = getConversationById(booking.conversationId);
@@ -2017,6 +2072,94 @@ export const getMockApiResponse = async (
 
   if (path === '/api/bookings' && method === 'GET') {
     return jsonResponse(cloneValue(store.guestBookings));
+  }
+
+  if (path === '/api/support/cases' && method === 'GET') {
+    const entryPoint = (url.searchParams.get('entryPoint') || 'booking') as SupportEntryPoint;
+    const bookingId = url.searchParams.get('bookingId');
+    const conversationId = url.searchParams.get('conversationId');
+    const propertyId = url.searchParams.get('propertyId');
+    const reviewType = (url.searchParams.get('reviewType') || null) as ReviewType | null;
+    const context = getSupportContext({
+      entryPoint,
+      bookingId,
+      conversationId,
+      propertyId,
+      reviewType,
+    });
+
+    const items = store.supportCases.filter((supportCase) => (
+      (!context.bookingId || supportCase.bookingId === context.bookingId)
+      && (!context.conversationId || supportCase.conversationId === context.conversationId)
+      && (!context.propertyId || supportCase.propertyId === context.propertyId)
+      && (!entryPoint || supportCase.entryPoint === entryPoint)
+    ));
+
+    return jsonResponse({
+      items: cloneValue(items),
+      context: cloneValue({
+        propertyId: context.propertyId,
+        bookingId: context.bookingId,
+        conversationId: context.conversationId,
+        contextSnapshot: context.contextSnapshot,
+      }),
+    });
+  }
+
+  if (path === '/api/support/cases' && method === 'POST') {
+    const entryPoint = (typeof body.entryPoint === 'string' ? body.entryPoint : 'booking') as SupportEntryPoint;
+    const category = (typeof body.category === 'string' ? body.category : 'other') as SupportCaseCategory;
+    const bookingId = typeof body.bookingId === 'string' ? body.bookingId : null;
+    const conversationId = typeof body.conversationId === 'string' ? body.conversationId : null;
+    const propertyId = typeof body.propertyId === 'string' ? body.propertyId : null;
+    const reviewType = (typeof body.reviewType === 'string' ? body.reviewType : null) as ReviewType | null;
+    const description = typeof body.description === 'string' && body.description.trim() ? body.description.trim() : null;
+    const context = getSupportContext({
+      entryPoint,
+      bookingId,
+      conversationId,
+      propertyId,
+      reviewType,
+    });
+    const createdAt = new Date().toISOString();
+    const nextCase = {
+      id: `demo-support-${Date.now()}`,
+      entryPoint,
+      category,
+      description,
+      status: 'received' as const,
+      statusNote: null,
+      propertyId: context.propertyId,
+      bookingId: context.bookingId,
+      conversationId: context.conversationId,
+      reviewType,
+      contextSnapshot: context.contextSnapshot,
+      createdAt,
+      updatedAt: createdAt,
+      lastStatusAt: createdAt,
+      reviewHistory: [
+        {
+          id: `demo-support-history-${Date.now()}`,
+          eventType: 'case_opened' as const,
+          title: 'Apertura de caso',
+          description: `Se abrio desde ${entryPoint} y quedo asociado al contexto operativo disponible.`,
+          status: 'received' as const,
+          decision: 'Caso abierto',
+          note: description,
+          actorName: 'Usuario',
+          actorId: DEMO_USER_ID,
+          actorType: 'user' as const,
+          createdAt,
+        },
+      ],
+    };
+
+    store.supportCases = [nextCase, ...store.supportCases];
+
+    return jsonResponse({
+      case: cloneValue(nextCase),
+      message: 'Recibimos tu pedido de ayuda. Vamos a revisar el contexto disponible y te avisamos si hace falta algo mas.',
+    }, 201);
   }
 
   if (path === '/api/bookings/all' && method === 'GET') {

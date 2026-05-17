@@ -77,6 +77,7 @@ import {
   SUPPORT_CASE_STATUSES,
   SUPPORT_ENTRY_POINTS,
   SUPPORT_STATUS_COPY,
+  type SupportCaseReviewHistoryEntry,
   type SupportCaseCategory,
   type SupportCaseStatus,
   type SupportEntryPoint,
@@ -1921,6 +1922,7 @@ app.get('/api/support/cases', async (req, res) => {
               conversation_id as "conversationId",
               review_type as "reviewType",
               context_snapshot as "contextSnapshot",
+              review_history as "reviewHistory",
               created_at as "createdAt",
               updated_at as "updatedAt",
               last_status_at as "lastStatusAt"
@@ -1969,6 +1971,14 @@ app.post('/api/support/cases', async (req, res) => {
       conversationId,
       reviewType,
     });
+    const openedAt = new Date().toISOString();
+    const reviewHistory = [buildSupportCaseOpenedHistoryEntry({
+      entryPoint,
+      category,
+      note: description,
+      actorId: userId,
+      createdAt: openedAt,
+    })];
 
     const id = `support_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     const insertedCase = await db.query(
@@ -1984,10 +1994,11 @@ app.post('/api/support/cases', async (req, res) => {
          status,
          review_type,
          context_snapshot,
+         review_history,
          last_status_at,
          updated_at
        )
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'received', $9, $10::jsonb, NOW(), NOW())
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'received', $9, $10::jsonb, $11::jsonb, NOW(), NOW())
        RETURNING id,
                  entry_point as "entryPoint",
                  category,
@@ -1999,6 +2010,7 @@ app.post('/api/support/cases', async (req, res) => {
                  conversation_id as "conversationId",
                  review_type as "reviewType",
                  context_snapshot as "contextSnapshot",
+                 review_history as "reviewHistory",
                  created_at as "createdAt",
                  updated_at as "updatedAt",
                  last_status_at as "lastStatusAt"`,
@@ -2013,6 +2025,7 @@ app.post('/api/support/cases', async (req, res) => {
         description,
         reviewType,
         JSON.stringify(context.contextSnapshot),
+        JSON.stringify(reviewHistory),
       ],
     );
 
@@ -3930,6 +3943,7 @@ app.get('/api/internal/support/review-queue', async (req, res) => {
               sc.status,
               sc.review_type as "reviewType",
               sc.context_snapshot as "contextSnapshot",
+              sc.review_history as "reviewHistory",
               sc.status_note as "statusNote",
               sc.last_status_by as "lastStatusBy",
               sc.last_status_at as "lastStatusAt",
@@ -3993,6 +4007,7 @@ app.post('/api/internal/support/cases/:id/review', async (req, res) => {
               sc.status,
               sc.review_type as "reviewType",
               sc.context_snapshot as "contextSnapshot",
+              sc.review_history as "reviewHistory",
               sc.status_note as "statusNote",
               sc.last_status_by as "lastStatusBy",
               sc.last_status_at as "lastStatusAt",
@@ -4015,11 +4030,23 @@ app.post('/api/internal/support/cases/:id/review', async (req, res) => {
       return res.status(404).json({ error: 'No encontramos ese caso de soporte.' });
     }
 
+    const nextReviewHistory = [
+      ...normalizeSupportReviewHistory(existingCase.reviewHistory),
+      buildSupportCaseStatusHistoryEntry({
+        status,
+        note: statusNote,
+        actorName: reviewedBy,
+        actorId: req.session.userId ?? null,
+        createdAt: new Date().toISOString(),
+      }),
+    ];
+
     const updatedCaseResult = await db.query(
       `UPDATE support_cases
        SET status = $2,
            status_note = $3,
            last_status_by = $4,
+           review_history = $5::jsonb,
            last_status_at = NOW(),
            updated_at = NOW()
        WHERE id = $1
@@ -4027,9 +4054,10 @@ app.post('/api/internal/support/cases/:id/review', async (req, res) => {
                  status,
                  status_note as "statusNote",
                  last_status_by as "lastStatusBy",
+                 review_history as "reviewHistory",
                  last_status_at as "lastStatusAt",
                  updated_at as "updatedAt"`,
-      [req.params.id, status, statusNote, reviewedBy],
+      [req.params.id, status, statusNote, reviewedBy, JSON.stringify(nextReviewHistory)],
     );
 
     return res.json({
@@ -5734,6 +5762,143 @@ const SUPPORT_CATEGORY_LABELS = Object.fromEntries(
   SUPPORT_CATEGORY_OPTIONS.map((option) => [option.value, option.label]),
 ) as Record<SupportCaseCategory, string>;
 
+const getSupportReviewHistoryDefaults = (
+  status: SupportCaseStatus,
+  eventType: SupportCaseReviewHistoryEntry['eventType'],
+) => {
+  if (eventType === 'case_opened') {
+    return {
+      title: 'Apertura de caso',
+      description: 'El caso quedo registrado con el contexto operativo disponible.',
+      decision: 'Caso abierto',
+    };
+  }
+
+  switch (status) {
+    case 'in_review':
+      return {
+        title: 'Analisis de consistencia',
+        description: 'Se revisan chat, timestamps, estados y verificaciones vinculadas a la operacion.',
+        decision: 'Revision activa',
+      };
+    case 'waiting_response':
+      return {
+        title: 'Pedido de informacion adicional',
+        description: 'Falta una aclaracion para seguir con la revision operativa.',
+        decision: 'Espera de respuesta',
+      };
+    case 'resolved':
+      return {
+        title: 'Resolucion o escalamiento',
+        description: 'Se cerro el caso con la informacion disponible o se definio el siguiente escalamiento interno.',
+        decision: 'Cierre operativo',
+      };
+    default:
+      return {
+        title: 'Caso recibido',
+        description: 'El caso ya entro a la cola interna con su contexto operativo.',
+        decision: 'Caso recibido',
+      };
+  }
+};
+
+const normalizeSupportReviewHistory = (value: unknown): SupportCaseReviewHistoryEntry[] => {
+  const rawValue = typeof value === 'string'
+    ? (() => {
+        try {
+          return JSON.parse(value);
+        } catch {
+          return [];
+        }
+      })()
+    : value;
+
+  if (!Array.isArray(rawValue)) {
+    return [];
+  }
+
+  return rawValue.flatMap((entry) => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+      return [];
+    }
+
+    const eventType: SupportCaseReviewHistoryEntry['eventType'] = entry.eventType === 'case_opened' ? 'case_opened' : 'status_updated';
+    const status = normalizeSupportCaseStatus(entry.status);
+    const defaults = getSupportReviewHistoryDefaults(status, eventType);
+    const actorType: SupportCaseReviewHistoryEntry['actorType'] = entry.actorType === 'internal_operator' ? 'internal_operator' : 'user';
+
+    return [{
+      id: typeof entry.id === 'string' && entry.id.trim() ? entry.id : `support_history_${Math.random().toString(36).slice(2, 10)}`,
+      eventType,
+      title: typeof entry.title === 'string' && entry.title.trim() ? entry.title : defaults.title,
+      description: typeof entry.description === 'string' && entry.description.trim() ? entry.description : defaults.description,
+      status,
+      decision: typeof entry.decision === 'string' && entry.decision.trim() ? entry.decision : defaults.decision,
+      note: typeof entry.note === 'string' && entry.note.trim() ? entry.note : null,
+      actorName: typeof entry.actorName === 'string' && entry.actorName.trim() ? entry.actorName : null,
+      actorId: typeof entry.actorId === 'string' && entry.actorId.trim() ? entry.actorId : null,
+      actorType,
+      createdAt: typeof entry.createdAt === 'string' && entry.createdAt.trim() ? entry.createdAt : new Date().toISOString(),
+    }];
+  }).sort((leftEntry, rightEntry) => new Date(leftEntry.createdAt).getTime() - new Date(rightEntry.createdAt).getTime());
+};
+
+const buildSupportCaseOpenedHistoryEntry = ({
+  entryPoint,
+  category,
+  note,
+  actorId,
+  createdAt,
+}: {
+  entryPoint: SupportEntryPoint;
+  category: SupportCaseCategory;
+  note: string | null;
+  actorId: string;
+  createdAt: string;
+}): SupportCaseReviewHistoryEntry => ({
+  id: `support_history_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+  eventType: 'case_opened',
+  title: 'Apertura de caso',
+  description: `Se abrio desde ${SUPPORT_ENTRY_POINT_LABELS[entryPoint].toLowerCase()} y quedo asociado a ${SUPPORT_CATEGORY_LABELS[category].toLowerCase()}.`,
+  status: 'received',
+  decision: 'Caso abierto',
+  note,
+  actorName: 'Usuario',
+  actorId,
+  actorType: 'user',
+  createdAt,
+});
+
+const buildSupportCaseStatusHistoryEntry = ({
+  status,
+  note,
+  actorName,
+  actorId,
+  createdAt,
+}: {
+  status: SupportCaseStatus;
+  note: string | null;
+  actorName: string | null;
+  actorId: string | null;
+  createdAt: string;
+}): SupportCaseReviewHistoryEntry => {
+  const defaults = getSupportReviewHistoryDefaults(status, 'status_updated');
+
+  return {
+    id: `support_history_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    eventType: 'status_updated',
+    title: defaults.title,
+    description: defaults.description,
+    status,
+    decision: defaults.decision,
+    note,
+    actorName,
+    actorId,
+    actorType: 'internal_operator',
+    createdAt,
+  };
+};
+
 const normalizeInternalSupportQueueFilter = (value: unknown): InternalSupportQueueFilter => {
   if (typeof value !== 'string') {
     return 'open';
@@ -5988,6 +6153,7 @@ const mapSupportCaseRecord = (row: any) => ({
   createdAt: row.createdAt ?? row.created_at ?? new Date().toISOString(),
   updatedAt: row.updatedAt ?? row.updated_at ?? row.createdAt ?? row.created_at ?? new Date().toISOString(),
   lastStatusAt: row.lastStatusAt ?? row.last_status_at ?? row.updatedAt ?? row.updated_at ?? row.createdAt ?? row.created_at ?? new Date().toISOString(),
+  reviewHistory: normalizeSupportReviewHistory(row.reviewHistory ?? row.review_history),
 });
 
 const mapInternalSupportCaseRecord = (row: any) => {

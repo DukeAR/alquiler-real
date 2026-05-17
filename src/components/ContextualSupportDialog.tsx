@@ -4,6 +4,7 @@ import {
   SUPPORT_CATEGORY_OPTIONS,
   SUPPORT_CASE_STATUSES,
   SUPPORT_STATUS_COPY,
+  type SupportCaseReviewHistoryEntry,
   type SupportCaseCategory,
   type SupportCaseStatus,
   type SupportEntryPoint,
@@ -17,6 +18,7 @@ import { cn } from '../lib/utils';
 import type { ReviewType } from '../types';
 import { Icons } from './Icons';
 import { ContextualDisclaimer } from './ui/ContextualDisclaimer';
+import { OperationalReviewPolicyCard } from './ui/OperationalReviewPolicyCard';
 import { Button, type ButtonProps } from './ui/Button';
 
 type SupportCaseRecord = {
@@ -34,6 +36,7 @@ type SupportCaseRecord = {
   createdAt: string;
   updatedAt: string;
   lastStatusAt: string;
+  reviewHistory?: SupportCaseReviewHistoryEntry[];
 };
 
 type SupportCasesResponse = {
@@ -171,6 +174,10 @@ export const ContextualSupportDialog: React.FC<ContextualSupportDialogProps> = (
 
   const latestCase = cases[0] ?? null;
   const latestStatusIndex = latestCase ? STATUS_INDEX.get(latestCase.status) ?? -1 : -1;
+  const latestCaseReviewHistory = useMemo(
+    () => (Array.isArray(latestCase?.reviewHistory) ? latestCase.reviewHistory.slice(-3).reverse() : []),
+    [latestCase],
+  );
 
   useEffect(() => {
     if (!isOpen) {
@@ -290,6 +297,12 @@ export const ContextualSupportDialog: React.FC<ContextualSupportDialogProps> = (
                   compact
                   body={SUPPORT_OPERATION_REVIEW_DISCLAIMER}
                   supportingText={SUPPORT_OPERATION_REVIEW_SUPPORT}
+                />
+
+                <OperationalReviewPolicyCard
+                  compact
+                  collapsible
+                  title="Ver alcance de revision operativa"
                 />
 
                 <div className="space-y-3">
@@ -437,6 +450,34 @@ export const ContextualSupportDialog: React.FC<ContextualSupportDialogProps> = (
                       {latestCase.statusNote ? (
                         <div className="rounded-[20px] border border-slate-200/80 bg-slate-50/80 px-4 py-3 text-sm leading-6 text-slate-600 dark:border-slate-800 dark:bg-slate-950/50 dark:text-slate-300">
                           {latestCase.statusNote}
+                        </div>
+                      ) : null}
+
+                      {latestCaseReviewHistory.length > 0 ? (
+                        <div className="space-y-2.5">
+                          <p className="text-[0.68rem] font-bold uppercase tracking-[0.18em] text-slate-400">Historial reciente</p>
+                          <div className="space-y-2.5">
+                            {latestCaseReviewHistory.map((entry) => (
+                              <div key={entry.id} className="rounded-[18px] border border-slate-200/80 bg-slate-50/80 px-3.5 py-3 dark:border-slate-800 dark:bg-slate-950/45">
+                                <div className="flex items-start justify-between gap-3">
+                                  <div>
+                                    <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{entry.title}</p>
+                                    <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">{entry.description}</p>
+                                  </div>
+                                  <span className="inline-flex rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[0.68rem] font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                                    {entry.decision}
+                                  </span>
+                                </div>
+                                <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
+                                  {formatSupportDate(entry.createdAt) ?? 'sin fecha'}
+                                  {entry.actorName ? ` · ${entry.actorName}` : ''}
+                                </p>
+                                {entry.note ? (
+                                  <p className="mt-2 text-xs leading-5 text-slate-600 dark:text-slate-300">{entry.note}</p>
+                                ) : null}
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       ) : null}
 
