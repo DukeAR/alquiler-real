@@ -184,6 +184,7 @@ describe('AppShell', () => {
 
     expect(screen.getAllByRole('button', { name: 'Guardados' })).not.toHaveLength(0);
     expect(screen.getAllByRole('button', { name: 'Mis operaciones' })).not.toHaveLength(0);
+    expect(screen.queryByRole('button', { name: 'Soporte interno' })).not.toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'Guardados' })[0]).not.toHaveClass('rounded-full');
     expect(screen.getByTestId('notifications-menu')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Publicar propiedad' })).not.toBeInTheDocument();
@@ -332,6 +333,28 @@ describe('AppShell', () => {
     expect(modeSwitch.getAttribute('data-inactive-button-class-name') ?? '').toContain('!bg-transparent');
   });
 
+  test('shows soporte interno in desktop navigation only when this browser already has internal access', async () => {
+    useAuthMock.mockReturnValue({
+      user: {
+        id: 'u1',
+        name: 'Ana',
+        email: 'ana@test.com',
+        role: 'tenant',
+        canGuest: true,
+        canHost: false,
+        canInternalOps: true,
+        activeMode: 'guest',
+      },
+      loading: false,
+      status: 'authenticated',
+      refresh: vi.fn(async () => undefined),
+    });
+
+    await renderShell();
+
+    expect(screen.getByRole('button', { name: 'Soporte interno' })).toBeInTheDocument();
+  });
+
   test('replaces the authenticated mobile bottom nav with a menu drawer', async () => {
     useAuthMock.mockReturnValue({
       user: {
@@ -341,6 +364,7 @@ describe('AppShell', () => {
         role: 'tenant',
         canGuest: true,
         canHost: false,
+        canInternalOps: true,
         activeMode: 'guest',
       },
       loading: false,
@@ -359,6 +383,7 @@ describe('AppShell', () => {
 
     expect(mobileMenu).toBeInTheDocument();
     expect(within(mobileMenu).getByRole('button', { name: 'Mis operaciones' })).toBeInTheDocument();
+    expect(within(mobileMenu).getByRole('button', { name: 'Soporte interno' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Cómo funciona' })).toBeInTheDocument();
   });
 

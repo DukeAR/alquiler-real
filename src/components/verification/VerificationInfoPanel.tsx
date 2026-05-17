@@ -1,38 +1,11 @@
 import { cn } from '../../lib/utils';
+import { buildOnsiteVerificationProtocol } from '../../lib/onsiteVerificationProtocol';
 
 type VerificationInfoPanelProps = {
   className?: string;
 };
 
-const VERIFICATION_INFO_ITEMS = [
-  {
-    title: 'Identidad del anfitrión verificada',
-    description: 'Durante la visita confirmamos la identidad del anfitrión asociada al aviso.',
-  },
-  {
-    title: 'Acceso real a la propiedad confirmado',
-    description: 'La visita confirmó que existe acceso real a la propiedad publicada.',
-  },
-  {
-    title: 'Ubicación validada durante visita',
-    description: 'La ubicación quedó validada durante la visita presencial al lugar.',
-  },
-] as const;
-
-const VERIFICATION_BENEFIT_ITEMS = [
-  {
-    title: 'Más confianza antes de coordinar',
-    description: 'La visita reduce dudas sobre identidad, ubicación y acceso real del aviso.',
-  },
-  {
-    title: 'Mejor prioridad visual dentro del marketplace',
-    description: 'Cuando una persona compara opciones, el aviso presencialmente verificado queda mejor respaldado por información real.',
-  },
-  {
-    title: 'Consultas más enfocadas',
-    description: 'Con datos clave ya confirmados, la conversación arranca con menos incertidumbre básica.',
-  },
-] as const;
+const ONSITE_PROTOCOL = buildOnsiteVerificationProtocol();
 
 export const VerificationInfoPanel = ({ className }: VerificationInfoPanelProps) => {
   return (
@@ -41,18 +14,18 @@ export const VerificationInfoPanel = ({ className }: VerificationInfoPanelProps)
       className={cn('rounded-[30px] border border-slate-200/80 bg-white/96 p-6 sm:p-7', className)}
     >
       <div className="space-y-2">
-        <h2 className="text-2xl font-semibold tracking-tight text-slate-950">Lo que suma la verificación presencial</h2>
+        <h2 className="text-2xl font-semibold tracking-tight text-slate-950">Protocolo base de verificación presencial</h2>
         <p className="max-w-3xl text-sm leading-7 text-slate-600">
-          No hace falta para publicar. Sí sirve para generar más confianza y ganar mejor prioridad visual dentro del marketplace.
+          Usamos una validación operativa, escalable y legalmente consistente para dejar claro qué verifica la plataforma, qué evidencia mínima se registra y cuándo corresponde reverificar.
         </p>
       </div>
 
       <div className="mt-6 space-y-3">
-        <p className="text-sm font-semibold text-slate-900">Qué confirma</p>
+        <p className="text-sm font-semibold text-slate-900">Qué verificamos</p>
       </div>
 
       <div className="mt-4 grid gap-3.5 sm:grid-cols-2 xl:grid-cols-3">
-        {VERIFICATION_INFO_ITEMS.map((item, index) => (
+        {ONSITE_PROTOCOL.scopeItems.map((item, index) => (
           <div
             key={item.title}
             className="flex gap-3 rounded-[24px] border border-slate-200/70 bg-slate-50/70 px-4 py-4"
@@ -69,9 +42,24 @@ export const VerificationInfoPanel = ({ className }: VerificationInfoPanelProps)
       </div>
 
       <div className="mt-6 border-t border-slate-200/80 pt-5">
-        <p className="text-sm font-semibold text-slate-900">Qué mejora</p>
+        <p className="text-sm font-semibold text-slate-900">Qué no verificamos</p>
         <div className="mt-4 grid gap-3.5 sm:grid-cols-2 xl:grid-cols-3">
-          {VERIFICATION_BENEFIT_ITEMS.map((item) => (
+          {ONSITE_PROTOCOL.excludedItems.map((item) => (
+            <div
+              key={item.title}
+              className="rounded-[24px] border border-slate-200/80 bg-slate-50/70 px-4 py-4"
+            >
+              <p className="text-sm font-semibold text-slate-900">{item.title}</p>
+              <p className="mt-1.5 text-sm leading-6 text-slate-600">{item.description}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-6 border-t border-slate-200/80 pt-5">
+        <p className="text-sm font-semibold text-slate-900">Evidencia mínima</p>
+        <div className="mt-4 grid gap-3.5 sm:grid-cols-2 xl:grid-cols-3">
+          {ONSITE_PROTOCOL.minimumEvidence.map((item) => (
             <div
               key={item.title}
               className="rounded-[24px] border border-emerald-200/80 bg-emerald-50/70 px-4 py-4"
@@ -84,10 +72,38 @@ export const VerificationInfoPanel = ({ className }: VerificationInfoPanelProps)
       </div>
 
       <div className="mt-6 border-t border-slate-200/80 pt-5">
-        <div className="space-y-2">
-          <p className="text-base font-semibold text-slate-900">La verificación suma confianza, no marketing exagerado.</p>
-          <p className="text-sm leading-6 text-slate-600">La visita deja identidad, ubicación y acceso confirmados para que el aviso tenga mejor respaldo antes de decidir.</p>
-          <p className="text-sm leading-6 text-slate-600">No evaluamos estado, calidad ni amenities del inmueble.</p>
+        <p className="text-sm font-semibold text-slate-900">Estados operativos</p>
+        <div className="mt-4 grid gap-3.5 sm:grid-cols-3">
+          {ONSITE_PROTOCOL.statusOptions.map((item) => (
+            <div key={item.key} className="rounded-[24px] border border-slate-200/80 bg-white px-4 py-4">
+              <p className="text-sm font-semibold text-slate-900">{item.label}</p>
+              <p className="mt-1.5 text-sm leading-6 text-slate-600">{item.description}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-6 border-t border-slate-200/80 pt-5">
+        <div className="grid gap-4 lg:grid-cols-3">
+          <div className="space-y-2 rounded-[24px] border border-slate-200/80 bg-slate-50/70 px-4 py-4">
+            <p className="text-base font-semibold text-slate-900">Vigencia recomendada</p>
+            <p className="text-sm leading-6 text-slate-600">{ONSITE_PROTOCOL.recommendedValidityMonths} meses. Después corresponde marcar {ONSITE_PROTOCOL.reverificationLabel.toLowerCase()}.</p>
+          </div>
+          <div className="space-y-2 rounded-[24px] border border-slate-200/80 bg-slate-50/70 px-4 py-4">
+            <p className="text-base font-semibold text-slate-900">Copy visible</p>
+            <p className="text-sm leading-6 text-slate-600">Usamos “{ONSITE_PROTOCOL.preferredCopy}” solo cuando la revisión queda aprobada.</p>
+          </div>
+          <div className="space-y-2 rounded-[24px] border border-slate-200/80 bg-slate-50/70 px-4 py-4">
+            <p className="text-base font-semibold text-slate-900">Términos que evitamos</p>
+            <p className="text-sm leading-6 text-slate-600">No usamos {ONSITE_PROTOCOL.avoidedTerms.map((term) => `“${term}”`).join(', ')}.</p>
+          </div>
+        </div>
+
+        <div className="mt-4 space-y-2">
+          <p className="text-base font-semibold text-slate-900">Enfoque del protocolo</p>
+          <p className="text-sm leading-6 text-slate-600">{ONSITE_PROTOCOL.summary}</p>
+          <p className="text-sm leading-6 text-slate-600">{ONSITE_PROTOCOL.exclusionsSummary}</p>
+          <p className="text-sm leading-6 text-slate-600">Principios: {ONSITE_PROTOCOL.operatingPrinciples.join(' · ')}.</p>
         </div>
       </div>
     </section>

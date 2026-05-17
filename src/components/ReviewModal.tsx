@@ -3,6 +3,7 @@ import { apiFetch } from '../lib/apiConfig';
 import { Icons } from './Icons';
 import { cn } from '../lib/utils';
 import type { ReviewType } from '../types';
+import { ContextualSupportDialog } from './ContextualSupportDialog';
 
 interface ReviewModalProps {
   bookingId: string;
@@ -167,6 +168,14 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
         </div>
 
         <div className="flex gap-3">
+          <ContextualSupportDialog
+            entryPoint="review"
+            bookingId={bookingId}
+            reviewType={type}
+            triggerVariant="secondary"
+            triggerSize="lg"
+            triggerClassName="flex-1 justify-center rounded-2xl"
+          />
           <button
             onClick={onClose}
             className="flex-1 py-4 text-slate-500 font-bold hover:bg-slate-50 dark:hover:bg-slate-800 rounded-2xl transition-all"

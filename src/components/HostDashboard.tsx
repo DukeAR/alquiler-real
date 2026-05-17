@@ -17,6 +17,7 @@ import { cn } from '../lib/utils';
 import { AccountModeSwitch } from './ui/AccountModeSwitch';
 import { Badge } from './ui/Badge';
 import { Button } from './ui/Button';
+import { ContextualSupportDialog } from './ContextualSupportDialog';
 import { ContextualTip } from './ui/ContextualTip';
 import { ProtectedDepositManualReviewState } from './ui/ProtectedDepositManualReviewState';
 import { ReservationOperationTimeline } from './ui/ReservationOperationTimeline';
@@ -37,7 +38,7 @@ interface HostDashboardProps {
   disableAutoLoad?: boolean;
 }
 
-const dashboardSectionClass = 'card space-y-6 p-6 md:p-8 dark:border-slate-800 dark:bg-slate-900';
+const dashboardSectionClass = 'card space-y-5 p-4 sm:p-6 md:p-8 dark:border-slate-800 dark:bg-slate-900';
 const PROPERTIES_SECTION_ID = 'host-dashboard-properties';
 const REQUESTS_SECTION_ID = 'host-dashboard-requests';
 
@@ -271,19 +272,19 @@ type PriorityActionRowProps = {
 };
 
 const PriorityActionRow = ({ eyebrow, title, description, tip, actionLabel, icon, onAction }: PriorityActionRowProps) => (
-  <div className="flex flex-col gap-4 rounded-[28px] border border-slate-200/80 bg-white/94 p-5 shadow-[0_18px_42px_-36px_rgba(15,23,42,0.22)] dark:border-slate-800 dark:bg-slate-900/90 md:flex-row md:items-center md:justify-between">
-    <div className="flex items-start gap-4">
-      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand/10 text-brand dark:bg-brand/15 dark:text-brand-light">
+  <div className="flex flex-col gap-3.5 rounded-[22px] border border-slate-200/80 bg-white/94 p-4 shadow-[0_18px_42px_-36px_rgba(15,23,42,0.22)] dark:border-slate-800 dark:bg-slate-900/90 sm:rounded-[28px] sm:p-5 md:flex-row md:items-center md:justify-between">
+    <div className="flex items-start gap-3 sm:gap-4">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[18px] bg-brand/10 text-brand dark:bg-brand/15 dark:text-brand-light sm:h-11 sm:w-11 sm:rounded-2xl">
         {icon}
       </div>
       <div className="space-y-1.5">
         <p className="eyebrow">{eyebrow}</p>
-        <p className="text-base font-semibold text-slate-950 dark:text-slate-50">{title}</p>
-        <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">{description}</p>
+        <p className="text-[0.98rem] font-semibold text-slate-950 dark:text-slate-50 sm:text-base">{title}</p>
+        <p className="text-[0.88rem] leading-5 text-slate-600 dark:text-slate-300 sm:text-sm sm:leading-6">{description}</p>
         {tip ? <ContextualTip compact tone="brand" body={tip} className="mt-3 shadow-none" /> : null}
       </div>
     </div>
-    <Button type="button" variant="secondary" size="sm" onClick={onAction} className="shrink-0 rounded-full">
+    <Button type="button" variant="secondary" size="sm" onClick={onAction} className="w-full justify-center rounded-full md:w-auto md:shrink-0">
       <>
         {actionLabel}
         <Icons.ArrowRight className="h-4 w-4" />
@@ -302,13 +303,13 @@ type BookingGroupProps = {
 
 const BookingGroup = ({ title, description, count, emptyText, children }: BookingGroupProps) => (
   <div className="card overflow-hidden dark:border-slate-800 dark:bg-slate-900">
-    <div className="border-b border-slate-100 bg-slate-50/70 px-5 py-4 dark:border-slate-800 dark:bg-slate-800/50 sm:px-6">
+    <div className="border-b border-slate-100 bg-slate-50/70 px-4 py-3.5 dark:border-slate-800 dark:bg-slate-800/50 sm:px-6 sm:py-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="space-y-1">
           <h3 className="text-base font-semibold text-slate-950 dark:text-slate-50">{title}</h3>
-          <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">{description}</p>
+          <p className="text-[0.88rem] leading-5 text-slate-500 dark:text-slate-400 sm:text-sm sm:leading-6">{description}</p>
         </div>
-        <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+        <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 sm:px-3 sm:text-[11px]">
           {count}
         </span>
       </div>
@@ -611,6 +612,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
         body: JSON.stringify({
           offerType: activePremiumOffer.offerType,
           propertyId: activePremiumOffer.propertyId,
+          requestSource: 'dashboard',
         }),
       });
 
@@ -951,21 +953,24 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
     const isConfirmingProtectedAccess = processingBookingAction?.bookingId === booking.id && processingBookingAction?.action === 'confirm-access';
     const isCancelingAsHost = processingBookingAction?.bookingId === booking.id && processingBookingAction?.action === 'cancel-host';
     const isReportingNoShow = processingBookingAction?.bookingId === booking.id && processingBookingAction?.action === 'report-no-show';
+    const supportEntryPoint = arrivalActionsAvailable || bookingFlow.stage === 'protected-deposit-review' || bookingFlow.stage === 'protected-no-show-pending'
+      ? 'checkin'
+      : 'booking';
 
     return (
-      <div key={booking.id} className="space-y-4 px-5 py-5 sm:px-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="flex items-start gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800">
+      <div key={booking.id} className="space-y-3.5 px-4 py-4 sm:px-6 sm:py-5">
+        <div className="flex flex-col gap-3.5 lg:flex-row lg:items-start lg:justify-between lg:gap-4">
+          <div className="flex items-start gap-3 sm:gap-4">
+            <div className="flex h-11 w-11 items-center justify-center rounded-[18px] bg-slate-100 dark:bg-slate-800 sm:h-12 sm:w-12 sm:rounded-2xl">
               <Icons.User className="h-6 w-6 text-slate-400" />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1.5 sm:space-y-2">
               <p className="section-title dark:text-white">{booking.userName || 'Huésped'}</p>
-              <p className="body-sm text-muted">{booking.propertyTitle}</p>
+              <p className="text-[0.88rem] text-slate-500 dark:text-slate-400 sm:text-sm">{booking.propertyTitle}</p>
               {bookingSummaryItems.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1.5 sm:gap-2">
                   {bookingSummaryItems.map((item) => (
-                    <span key={`${booking.id}-${item}`} className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                    <span key={`${booking.id}-${item}`} className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-[0.72rem] font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300 sm:px-3 sm:text-xs">
                       {item}
                     </span>
                   ))}
@@ -985,14 +990,14 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
         ) : null}
 
         {showBookingFlowPanel ? (
-          <div className="rounded-[26px] border border-brand/15 bg-brand/5 p-4 dark:border-brand/20 dark:bg-brand/10">
-            <div className="space-y-4">
+          <div className="rounded-[22px] border border-brand/15 bg-brand/5 p-3.5 dark:border-brand/20 dark:bg-brand/10 sm:rounded-[26px] sm:p-4">
+            <div className="space-y-3.5 sm:space-y-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="space-y-1">
                   <p className="text-[10px] font-black uppercase tracking-[0.14em] text-brand">{bookingFlow.statusLabel}</p>
-                  <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">{bookingFlow.description}</p>
-                  {bookingFlow.supportText ? <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">{bookingFlow.supportText}</p> : null}
-                  {bookingFlow.trackingHint ? <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">{bookingFlow.trackingHint}</p> : null}
+                  <p className="text-[0.92rem] font-semibold text-slate-900 dark:text-slate-50 sm:text-sm">{bookingFlow.description}</p>
+                  {bookingFlow.supportText ? <p className="text-[0.78rem] font-semibold text-slate-600 dark:text-slate-300 sm:text-xs">{bookingFlow.supportText}</p> : null}
+                  {bookingFlow.trackingHint ? <p className="text-[0.72rem] leading-5 text-slate-500 dark:text-slate-400 sm:text-xs">{bookingFlow.trackingHint}</p> : null}
                 </div>
 
                 {canAcceptRequest ? (
@@ -1053,15 +1058,15 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
               ) : null}
 
               <div className="grid gap-2 md:grid-cols-3">
-                <div className="rounded-2xl bg-white/80 px-3 py-3 text-sm dark:bg-slate-900/70">
+                <div className="rounded-[18px] bg-white/80 px-3 py-2.5 text-[0.88rem] dark:bg-slate-900/70 sm:rounded-2xl sm:py-3 sm:text-sm">
                   <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Estado actual</p>
                   <p className="mt-1 font-semibold text-slate-900 dark:text-white">{bookingFlow.statusLabel}</p>
                 </div>
-                <div className="rounded-2xl bg-white/80 px-3 py-3 text-sm dark:bg-slate-900/70">
+                <div className="rounded-[18px] bg-white/80 px-3 py-2.5 text-[0.88rem] dark:bg-slate-900/70 sm:rounded-2xl sm:py-3 sm:text-sm">
                   <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Actúa ahora</p>
                   <p className="mt-1 font-semibold text-slate-900 dark:text-white">{getReservationNextActorDisplayLabel(bookingFlow)}</p>
                 </div>
-                <div className="rounded-2xl bg-white/80 px-3 py-3 text-sm dark:bg-slate-900/70">
+                <div className="rounded-[18px] bg-white/80 px-3 py-2.5 text-[0.88rem] dark:bg-slate-900/70 sm:rounded-2xl sm:py-3 sm:text-sm">
                   <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Próximo paso</p>
                   <p className="mt-1 font-semibold text-slate-900 dark:text-white">{getReservationNextStepDisplayLabel(bookingFlow)}</p>
                 </div>
@@ -1093,7 +1098,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
         ) : null}
 
         {!isDecisionStage || canReviewBooking || canCancelAsHost || canConfirmProtectedAccess || canReportProtectedNoShow || canOpenChat ? (
-          <div className="flex flex-wrap gap-2 pt-1 lg:justify-end">
+          <div className="flex flex-wrap gap-1.5 pt-1 sm:gap-2 lg:justify-end">
             {canOpenChat ? (
               <Button
                 type="button"
@@ -1151,7 +1156,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
               </Button>
             ) : null}
             {bookingFlow.stage === 'protected-deposit-held' && !arrivalActionsAvailable ? (
-              <div className="rounded-full bg-slate-100 px-4 py-2 text-xs font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+              <div className="rounded-full bg-slate-100 px-3.5 py-2 text-[0.72rem] font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-300 sm:px-4 sm:text-xs">
                 {bookingFlow.pendingActionHint}
               </div>
             ) : null}
@@ -1186,6 +1191,19 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
             ) : null}
           </div>
         ) : null}
+
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200/80 pt-3.5 dark:border-slate-800 sm:pt-4">
+          <p className="text-[0.72rem] leading-5 text-slate-500 dark:text-slate-400 sm:text-xs">
+            Si surge un problema operativo, podés pedir ayuda con la reserva, el chat y los hitos del ingreso ya vinculados.
+          </p>
+          <ContextualSupportDialog
+            entryPoint={supportEntryPoint}
+            bookingId={booking.id}
+            conversationId={booking.conversationId ?? null}
+            propertyId={booking.propertyId ?? null}
+            propertyTitle={booking.propertyTitle ?? null}
+          />
+        </div>
       </div>
     );
   };
@@ -1260,10 +1278,10 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
   return (
     <div className="min-h-screen bg-slate-50 pb-20 dark:bg-slate-950">
       <header className="border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-        <div className="mx-auto flex min-h-16 max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">
+        <div className="mx-auto flex min-h-14 max-w-6xl flex-wrap items-center justify-between gap-3 px-3.5 py-2.5 sm:min-h-16 sm:px-4 sm:py-3">
           <button
             onClick={onBack}
-            className="btn-secondary rounded-full px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 hover:text-brand dark:text-slate-400 dark:hover:bg-slate-800"
+            className="btn-secondary rounded-full px-3 py-1.75 text-[0.88rem] text-slate-600 hover:bg-slate-100 hover:text-brand dark:text-slate-400 dark:hover:bg-slate-800 sm:py-2 sm:text-sm"
           >
             <Icons.ArrowLeft className="h-4 w-4" />
             Volver a explorar
@@ -1281,16 +1299,16 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl space-y-8 px-4 py-8">
+      <main className="mx-auto max-w-6xl space-y-6 px-4 py-6 sm:space-y-8 sm:py-8">
         <section className={dashboardSectionClass}>
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="flex flex-col gap-3.5 lg:flex-row lg:items-end lg:justify-between lg:gap-4">
             <div className="space-y-2">
               <p className="eyebrow">Panel de anfitrion</p>
-              <h1 className="section-title text-2xl font-semibold tracking-tight text-slate-950 dark:text-slate-50">Publica, responde y mejora sin complicarte</h1>
-              <p className="max-w-3xl body-sm leading-7 text-slate-600 dark:text-slate-300">
+              <h1 className="section-title text-[1.55rem] font-semibold tracking-tight text-slate-950 dark:text-slate-50 sm:text-2xl">Publica, responde y mejora sin complicarte</h1>
+              <p className="max-w-3xl text-[0.92rem] leading-6 text-slate-600 dark:text-slate-300 sm:text-sm sm:leading-7">
                 Primero ves el estado de cada aviso, despues la actividad reciente y al final solo las sugerencias que hoy pueden mover mas consultas.
               </p>
-              <div className="flex flex-wrap gap-2 pt-1 text-xs">
+              <div className="flex flex-wrap gap-1.5 pt-1 text-[0.72rem] sm:gap-2 sm:text-xs">
                 <span className="badge">
                   {dashboardOverview.activePropertiesCount > 0
                     ? formatCountLabel(dashboardOverview.activePropertiesCount, 'aviso activo', 'avisos activos')
@@ -1308,7 +1326,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
                 </span>
               </div>
             </div>
-            <Button type="button" onClick={openPublishingFlow} className="rounded-full">
+            <Button type="button" onClick={openPublishingFlow} className="w-full rounded-full sm:w-auto">
               <>
                 <Icons.Home className="h-4 w-4" />
                 Publicar propiedad
@@ -1344,23 +1362,23 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
                 <div key={property.id}>
                   <div
                     className={cn(
-                      'grid gap-5 px-5 py-5 transition-colors sm:px-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_auto]',
+                      'grid gap-4 px-4 py-4 transition-colors sm:px-6 sm:py-5 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_auto] xl:gap-5',
                       index > 0 && 'border-t border-slate-100 dark:border-slate-800',
                       focusedPropertyId === property.id && 'bg-brand/5 dark:bg-brand/10',
                     )}
                   >
-                    <div className="flex items-start gap-4">
-                      <div className="h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-slate-100 dark:bg-slate-800">
+                    <div className="flex items-start gap-3 sm:gap-4">
+                      <div className="h-14 w-14 shrink-0 overflow-hidden rounded-[18px] bg-slate-100 dark:bg-slate-800 sm:h-16 sm:w-16 sm:rounded-2xl">
                         <img src={property.imageUrl || 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=200'} alt={property.title} className="h-full w-full object-cover" />
                       </div>
 
-                      <div className="min-w-0 space-y-3">
+                      <div className="min-w-0 space-y-2.5 sm:space-y-3">
                         <div className="space-y-1">
                           <div className="flex flex-wrap items-center gap-2">
-                            <h3 className="text-base font-semibold text-slate-950 dark:text-slate-50">{property.title}</h3>
+                            <h3 className="text-[0.98rem] font-semibold text-slate-950 dark:text-slate-50 sm:text-base">{property.title}</h3>
                             <span
                               className={cn(
-                                'rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em]',
+                                'rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] sm:px-3 sm:text-[11px]',
                                 property.status === 'active'
                                   ? 'bg-brand/10 text-brand dark:bg-brand/15 dark:text-brand-light'
                                   : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300',
@@ -1369,15 +1387,15 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
                               {property.status === 'active' ? 'Activo' : 'Pausado'}
                             </span>
                           </div>
-                          <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">{property.location}</p>
+                          <p className="text-[0.88rem] leading-5 text-slate-500 dark:text-slate-400 sm:text-sm sm:leading-6">{property.location}</p>
                         </div>
 
-                        <div className="rounded-[22px] border border-slate-200/80 bg-slate-50/90 p-4 dark:border-slate-800 dark:bg-slate-900/70">
+                        <div className="rounded-[20px] border border-slate-200/80 bg-slate-50/90 p-3.5 dark:border-slate-800 dark:bg-slate-900/70 sm:rounded-[22px] sm:p-4">
                           <p className="eyebrow dark:text-slate-500">Estado del aviso</p>
-                          <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-50">
+                          <p className="mt-1.5 text-[0.92rem] font-semibold text-slate-900 dark:text-slate-50 sm:mt-2 sm:text-sm">
                             {property.status === 'active' ? 'Tu publicacion ya esta activa' : 'Tu publicacion esta pausada'}
                           </p>
-                          <p className="mt-1 text-sm leading-6 text-slate-500 dark:text-slate-400">
+                          <p className="mt-1 text-[0.88rem] leading-5 text-slate-500 dark:text-slate-400 sm:text-sm sm:leading-6">
                             {property.status === 'active'
                               ? property.pendingRequestsCount > 0
                                 ? 'Tenes consultas esperando respuesta en este aviso.'
@@ -1387,7 +1405,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
                               : 'Revisalo y activalo cuando quieras volver a mostrarlo.'}
                           </p>
 
-                          <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                          <div className="mt-2.5 flex flex-wrap gap-1.5 text-[0.72rem] sm:mt-3 sm:gap-2 sm:text-xs">
                             <span className="badge">
                               {property.pendingRequestsCount > 0 ? formatCountLabel(property.pendingRequestsCount, 'solicitud pendiente', 'solicitudes pendientes') : 'Sin solicitudes pendientes'}
                             </span>
@@ -1417,9 +1435,9 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
                       />
 
                       {showDocumentsAction ? (
-                        <div className="rounded-[22px] border border-slate-200/80 bg-white/92 p-4 dark:border-slate-800 dark:bg-slate-900/80">
+                        <div className="rounded-[20px] border border-slate-200/80 bg-white/92 p-3.5 dark:border-slate-800 dark:bg-slate-900/80 sm:rounded-[22px] sm:p-4">
                           <p className="eyebrow dark:text-slate-500">Respaldo privado</p>
-                          <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-100">Si querés sumar documentación interna, podés cargarla desde la ficha del aviso sin tocar el score visible.</p>
+                          <p className="mt-2 text-[0.92rem] font-semibold text-slate-900 dark:text-slate-100 sm:text-sm">Si querés sumar documentación interna, podés cargarla desde la ficha del aviso sin tocar el score visible.</p>
                           <Button
                             type="button"
                             variant="secondary"
@@ -1436,10 +1454,10 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
                       ) : null}
 
                       {showOnsiteAction ? (
-                        <div className="rounded-[20px] border border-indigo-200/70 bg-indigo-50/70 p-3 dark:border-indigo-900/40 dark:bg-indigo-950/30">
+                        <div className="rounded-[18px] border border-indigo-200/70 bg-indigo-50/70 p-3 dark:border-indigo-900/40 dark:bg-indigo-950/30 sm:rounded-[20px]">
                           <p className="eyebrow text-indigo-700 dark:text-indigo-300">Validación adicional</p>
-                          <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-100">Podés solicitar una verificación presencial para que el aviso muestre el sello completo cuando se confirme la visita.</p>
-                          <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                          <p className="mt-2 text-[0.92rem] font-semibold text-slate-900 dark:text-slate-100 sm:text-sm">Podés solicitar una verificación presencial para que el aviso muestre el sello completo cuando se confirme la visita.</p>
+                          <p className="mt-2 text-[0.72rem] leading-5 text-slate-500 dark:text-slate-400 sm:text-xs">
                             {property.premiumOnsiteOffer.monetization?.price?.complimentaryReason
                               || property.premiumOnsiteOffer.complimentaryReason
                               || `${property.premiumOnsiteOffer.monetization?.price?.label ?? 'Costo actual'} ${formatMarketplaceMonetizationPriceLabel(property.premiumOnsiteOffer.monetization?.price ?? null) ?? formatPremiumPriceLabel(property.premiumOnsiteOffer.priceArs, property.premiumOnsiteOffer.isComplimentary)}.`}
@@ -1452,12 +1470,12 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
                             className="mt-3 shadow-none"
                           />
                           {property.premiumOnsiteOffer.monetization?.schedule ? (
-                            <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                            <p className="mt-2 text-[0.72rem] leading-5 text-slate-500 dark:text-slate-400 sm:text-xs">
                               {property.premiumOnsiteOffer.monetization.schedule.label}. {property.premiumOnsiteOffer.monetization.schedule.detail}
                             </p>
                           ) : null}
                           {property.premiumOnsiteOffer.monetization?.renewal ? (
-                            <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                            <p className="mt-2 text-[0.72rem] leading-5 text-slate-500 dark:text-slate-400 sm:text-xs">
                               {property.premiumOnsiteOffer.monetization.renewal.label}. {property.premiumOnsiteOffer.monetization.renewal.detail}
                             </p>
                           ) : null}
@@ -1468,13 +1486,13 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
                             onClick={() => setActivePremiumOffer(property.premiumOnsiteOffer)}
                           >
                             <Icons.ShieldCheck className="h-4 w-4" />
-                            Solicitar verificación presencial
+                            {property.premiumOnsiteOffer.ctaLabel}
                           </Button>
                         </div>
                       ) : null}
                     </div>
 
-                    <div className="flex flex-wrap gap-2 xl:justify-end">
+                    <div className="flex flex-wrap gap-1.5 sm:gap-2 xl:justify-end">
                       <Button
                         type="button"
                         variant="secondary"
@@ -1515,7 +1533,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
                   </div>
 
                   {availabilityPropertyId === property.id ? (
-                    <div className="border-t border-slate-100 bg-slate-50/70 px-5 py-5 dark:border-slate-800 dark:bg-slate-950/60 sm:px-6">
+                    <div className="border-t border-slate-100 bg-slate-50/70 px-4 py-4 dark:border-slate-800 dark:bg-slate-950/60 sm:px-6 sm:py-5">
                       <HostAvailabilityPanel propertyId={property.id} propertyTitle={property.title} />
                     </div>
                   ) : null}
@@ -1525,7 +1543,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
           </div>
         </section>
 
-        <section id={REQUESTS_SECTION_ID} className="space-y-5">
+        <section id={REQUESTS_SECTION_ID} className="space-y-4 sm:space-y-5">
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <Icons.UserCheck className="h-5 w-5 text-brand" />
@@ -1534,7 +1552,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
             <p className="body-sm text-muted">Consultas, reservas y proximas llegadas ordenadas por lo que conviene mirar primero.</p>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-3.5 sm:space-y-4">
             <BookingGroup
               title="Consultas por responder"
               description="Lo que hoy necesita una respuesta directa para no perder ritmo."
@@ -1582,7 +1600,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
           </div>
 
           {priorityActions.length > 0 ? (
-            <div className="space-y-3">
+            <div className="space-y-2.5 sm:space-y-3">
               {priorityActions.map((action) => (
                 <PriorityActionRow
                   key={action.id}
@@ -1597,7 +1615,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
               ))}
             </div>
           ) : (
-            <div className="rounded-[28px] border border-slate-200/80 bg-white/92 p-5 text-sm leading-6 text-slate-500 shadow-[0_18px_46px_-38px_rgba(15,23,42,0.3)] dark:border-slate-800 dark:bg-slate-900/90 dark:text-slate-300">
+            <div className="rounded-[22px] border border-slate-200/80 bg-white/92 p-4 text-[0.88rem] leading-5 text-slate-500 shadow-[0_18px_46px_-38px_rgba(15,23,42,0.3)] dark:border-slate-800 dark:bg-slate-900/90 dark:text-slate-300 sm:rounded-[28px] sm:p-5 sm:text-sm sm:leading-6">
               Hoy no hay acciones urgentes. Tus avisos ya estan ordenados y podes seguir desde la actividad reciente cuando aparezca algo nuevo.
             </div>
           )}
@@ -1611,31 +1629,31 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
               <p className="body-sm text-muted">Preparamos boosts suaves para dar más visibilidad temporal sin desplazar el ranking de confianza, reputación y operaciones exitosas.</p>
             </div>
 
-            <div className="rounded-[28px] border border-slate-200/80 bg-white/92 p-5 shadow-[0_18px_46px_-38px_rgba(15,23,42,0.3)] dark:border-slate-800 dark:bg-slate-900/90">
+            <div className="rounded-[22px] border border-slate-200/80 bg-white/92 p-4 shadow-[0_18px_46px_-38px_rgba(15,23,42,0.3)] dark:border-slate-800 dark:bg-slate-900/90 sm:rounded-[28px] sm:p-5">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <div className="space-y-2">
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-sm font-semibold text-slate-950 dark:text-slate-50">{dashboardData.softBoostPlan.title}</p>
+                    <p className="text-[0.92rem] font-semibold text-slate-950 dark:text-slate-50 sm:text-sm">{dashboardData.softBoostPlan.title}</p>
                     <Badge variant="neutral" size="md">{dashboardData.softBoostPlan.stateLabel}</Badge>
                   </div>
-                  <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">{dashboardData.softBoostPlan.summary}</p>
+                  <p className="text-[0.88rem] leading-5 text-slate-600 dark:text-slate-300 sm:text-sm sm:leading-6">{dashboardData.softBoostPlan.summary}</p>
                   {dashboardData.softBoostPlan.note ? (
-                    <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">{dashboardData.softBoostPlan.note}</p>
+                    <p className="text-[0.72rem] leading-5 text-slate-500 dark:text-slate-400 sm:text-xs">{dashboardData.softBoostPlan.note}</p>
                   ) : null}
                 </div>
-                <div className="rounded-2xl border border-slate-200/80 bg-slate-50/90 px-4 py-3 text-sm leading-6 text-slate-600 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-300">
+                <div className="rounded-[18px] border border-slate-200/80 bg-slate-50/90 px-3.5 py-3 text-[0.88rem] leading-5 text-slate-600 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-300 sm:rounded-2xl sm:px-4 sm:text-sm sm:leading-6">
                   {dashboardData.softBoostPlan.price
                     ? `${dashboardData.softBoostPlan.price.label}: ${formatMarketplaceMonetizationPriceLabel(dashboardData.softBoostPlan.price)}`
                     : 'Sin precio activo todavía'}
                 </div>
               </div>
 
-              <div className="mt-4 grid gap-3 md:grid-cols-3">
+              <div className="mt-3 grid gap-2.5 md:grid-cols-3 sm:mt-4 sm:gap-3">
                 {dashboardData.softBoostPlan.featurePreview.map((feature: any) => (
-                  <div key={feature.key} className="rounded-2xl border border-slate-200/80 bg-slate-50/90 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/50">
+                  <div key={feature.key} className="rounded-[18px] border border-slate-200/80 bg-slate-50/90 px-3.5 py-3 dark:border-slate-800 dark:bg-slate-950/50 sm:rounded-2xl sm:px-4">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">{feature.state === 'coming_soon' ? 'Próximo' : 'Incluido'}</p>
-                    <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-100">{feature.label}</p>
-                    <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">{feature.description}</p>
+                    <p className="mt-1.5 text-[0.92rem] font-semibold text-slate-900 dark:text-slate-100 sm:mt-2 sm:text-sm">{feature.label}</p>
+                    <p className="mt-1.5 text-[0.72rem] leading-5 text-slate-500 dark:text-slate-400 sm:mt-2 sm:text-xs">{feature.description}</p>
                   </div>
                 ))}
               </div>

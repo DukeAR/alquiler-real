@@ -1,6 +1,6 @@
 import { Suspense, lazy, useEffect, useState, type ReactNode } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { RequireAuth } from './app/guards/AuthGuards';
+import { RequireAuth, RequireRole } from './app/guards/AuthGuards';
 import { apiJson } from './lib/apiConfig';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { AppShell } from './components/AppShell';
@@ -20,6 +20,7 @@ const LazyFavoritesView = lazy(() => import('./components/FavoritesView').then((
 const LazyFAQPage = lazy(() => import('./components/FAQPage').then((module) => ({ default: module.FAQPage })));
 const LazyHostDashboard = lazy(() => import('./components/HostDashboard').then((module) => ({ default: module.HostDashboard })));
 const LazyHostProfileView = lazy(() => import('./components/HostProfileView').then((module) => ({ default: module.HostProfileView })));
+const LazyInternalSupportQueue = lazy(() => import('./components/InternalSupportQueue').then((module) => ({ default: module.InternalSupportQueue })));
 const LazyMyBookings = lazy(() => import('./components/MyBookings').then((module) => ({ default: module.MyBookings })));
 const LazyMyOperations = lazy(() => import('./components/MyOperations').then((module) => ({ default: module.MyOperations })));
 const LazyNotificationsCenter = lazy(() => import('./components/NotificationsCenter').then((module) => ({ default: module.NotificationsCenter })));
@@ -102,6 +103,7 @@ export default function App() {
               <Route path="/verify" element={<Navigate to="/verification" replace />} />
               <Route path="/chat/:id" element={<RequireAuth><SecureChatWrapper /></RequireAuth>} />
               <Route path="/notifications" element={<RequireAuth><LazyNotificationsCenter /></RequireAuth>} />
+              <Route path="/internal/support" element={<RequireRole allowedRoles={['internal_ops']}><LazyInternalSupportQueue /></RequireRole>} />
               <Route path="/operations" element={<RequireAuth><LazyMyOperations /></RequireAuth>} />
               <Route path="/my-bookings" element={<RequireAuth><LazyMyBookings /></RequireAuth>} />
               <Route path="/host-dashboard" element={<RequireAuth><HostDashboardWrapper /></RequireAuth>} />
@@ -121,8 +123,8 @@ const SecureChatWrapper = () => {
   const initialRequestContext = (location.state as { requestContext?: ReservationRequestContext } | null)?.requestContext ?? null;
 
   return (
-    <div className="flex h-screen flex-col pt-4 md:pt-0">
-      <div className="flex-1 overflow-hidden">
+    <div className="flex min-h-0 flex-1 flex-col pt-4 md:pt-0">
+      <div className="min-h-0 flex-1 overflow-hidden">
         <LazySecureChat initialConversationId={id === 'all' ? undefined : id} initialRequestContext={initialRequestContext} />
       </div>
     </div>

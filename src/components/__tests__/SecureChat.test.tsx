@@ -64,6 +64,12 @@ vi.mock('../ReportModal', () => ({
   ReportModal: () => <div>ReportModal</div>,
 }));
 
+vi.mock('../ContextualSupportDialog', () => ({
+  ContextualSupportDialog: ({ triggerLabel = 'Necesito ayuda' }: { triggerLabel?: string }) => (
+    <button type="button">{triggerLabel}</button>
+  ),
+}));
+
 import { SecureChat } from '../SecureChat';
 
 const baseConversation = {
@@ -856,6 +862,9 @@ describe('SecureChat', () => {
   });
 
   test('shows the host-specific custody message when the protected deposit is already held', async () => {
+    const arrivalDate = getRelativeArgentinaDate(1);
+    const departureDate = getRelativeArgentinaDate(5);
+
     useAuthMock.mockReturnValue({ user: { id: 'host-1' } });
     fetchConversationsMock.mockResolvedValue([
       {
@@ -865,8 +874,8 @@ describe('SecureChat', () => {
         requestMode: 'protected',
         requestStatus: 'accepted',
         depositStatus: 'held',
-        requestStartDate: '2026-05-10',
-        requestEndDate: '2026-05-14',
+        requestStartDate: arrivalDate,
+        requestEndDate: departureDate,
         requestGuests: 2,
         requestTotalPrice: 410000,
       },

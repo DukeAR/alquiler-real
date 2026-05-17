@@ -10,6 +10,7 @@ export interface User {
     role: 'tenant' | 'host';
     canGuest: boolean;
     canHost: boolean;
+    canInternalOps?: boolean;
     activeMode: UserMode;
     memberSince?: string;
     createdAt?: string;
@@ -87,6 +88,7 @@ const normalizeUser = (user: any): User => ({
     role: user?.role === 'host' ? 'host' : 'tenant',
     canGuest: user?.canGuest !== false,
     canHost: Boolean(user?.canHost || user?.role === 'host'),
+    canInternalOps: Boolean(user?.canInternalOps || user?.isInternalOperator),
     activeMode: user?.activeMode === 'host' ? 'host' : user?.activeMode === 'guest' ? 'guest' : user?.role === 'host' ? 'host' : 'guest',
     interests: normalizeInterests(user?.interests),
 });

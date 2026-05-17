@@ -16,7 +16,15 @@ export type PremiumVerificationTargetType = 'user' | 'property';
 
 export type PremiumVerificationPaymentStatus = 'pending' | 'confirmed' | 'waived';
 
-export type PremiumVerificationProcessStatus = 'pending' | 'in_progress' | 'completed';
+export type PremiumVerificationProcessStatus =
+  | 'pending'
+  | 'pending_schedule'
+  | 'scheduled'
+  | 'in_progress'
+  | 'completed'
+  | 'approved'
+  | 'requires_review'
+  | 'not_completed';
 
 export interface PremiumVerificationOffer {
   offerType: PremiumVerificationOfferType;

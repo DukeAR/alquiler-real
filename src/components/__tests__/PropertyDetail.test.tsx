@@ -135,6 +135,19 @@ const queryStickyBookingBar = () => screen.queryByRole('region', { name: /acceso
 
 const getBookingFlowDialog = () => screen.getByRole('dialog', { name: /consultar disponibilidad/i });
 
+const findObserverForTarget = (
+  observerInstances: Array<{ elements: Set<Element> }>,
+  target: Element,
+) => observerInstances.find((instance) => instance.elements.has(target));
+
+const waitForObservedTarget = async (
+  observerInstances: Array<{ elements: Set<Element> }>,
+  target: Element,
+) => {
+  await waitFor(() => expect(findObserverForTarget(observerInstances, target)).toBeDefined());
+  return findObserverForTarget(observerInstances, target)!;
+};
+
 const DEFAULT_WINDOW_WIDTH = window.innerWidth;
 
 const installIntersectionObserverMock = () => {
@@ -402,9 +415,9 @@ describe('PropertyDetail', () => {
 
     expect(heading.className).toContain('text-balance');
     expect(heading.className).toContain('max-w-full');
-    expect(heroImage.parentElement?.className).toContain('min-h-[26rem]');
-    expect(heroImage.parentElement?.className).toContain('aspect-[9/10]');
-    expect(backButton.parentElement?.className).toContain('pt-12');
+    expect(heroImage.parentElement?.className).toContain('min-h-[22.5rem]');
+    expect(heroImage.parentElement?.className).toContain('aspect-[4/5]');
+    expect(backButton.parentElement?.className).toContain('pt-9');
   });
 
   test('uses singular photo copy when the property only has one image', async () => {
@@ -603,10 +616,9 @@ describe('PropertyDetail', () => {
 
     const desktopContext = getDesktopBookingContext();
     const primaryCta = within(desktopContext).getByRole('button', { name: /consultar disponibilidad/i });
-    const stickyObserver = observerInstances.find((instance) => instance.elements.has(primaryCta));
+    const stickyObserver = await waitForObservedTarget(observerInstances, primaryCta);
 
     expect(queryStickyBookingBar()).toBeNull();
-    expect(stickyObserver).toBeDefined();
 
     await act(async () => {
       stickyObserver?.trigger(primaryCta, false);
@@ -666,7 +678,7 @@ describe('PropertyDetail', () => {
 
     const desktopContext = getDesktopBookingContext();
     const primaryCta = within(desktopContext).getByRole('button', { name: /consultar disponibilidad/i });
-    const stickyObserver = observerInstances.find((instance) => instance.elements.has(primaryCta));
+    const stickyObserver = await waitForObservedTarget(observerInstances, primaryCta);
 
     await act(async () => {
       stickyObserver?.trigger(primaryCta, false);
@@ -727,9 +739,11 @@ describe('PropertyDetail', () => {
     const verificationPreview = screen.getByTestId('property-verification-preview');
     expect(within(verificationPreview).getByRole('heading', { name: 'Qué está confirmado' })).toBeDefined();
     expect(within(verificationPreview).getByText('Identidad del anfitrión')).toBeDefined();
-    expect(within(verificationPreview).getByText('Ubicación no verificada')).toBeDefined();
-    expect(within(verificationPreview).getByText('Acceso no verificado')).toBeDefined();
-    expect(within(verificationPreview).getAllByRole('listitem')).toHaveLength(3);
+    expect(within(verificationPreview).getByText('Existencia física no confirmada')).toBeDefined();
+    expect(within(verificationPreview).getByText('Coincidencia general no validada')).toBeDefined();
+    expect(within(verificationPreview).getByText('Ubicación real no verificada')).toBeDefined();
+    expect(within(verificationPreview).getByText('Acceso real no verificado')).toBeDefined();
+    expect(within(verificationPreview).getAllByRole('listitem')).toHaveLength(5);
     expect(screen.queryByText('¿Cómo funciona?')).toBeNull();
     expect(screen.queryByText('Más comprobaciones, menos dudas al decidir')).toBeNull();
     expect(screen.queryByText('Los avisos más completos aparecen primero.')).toBeNull();
@@ -817,7 +831,7 @@ describe('PropertyDetail', () => {
     await waitFor(() => expect(screen.getByText('Revisá el resumen y elegí si querés seguir con operación libre o con seña protegida.')).toBeDefined());
   });
 
-  test('shows a compact presencial seal and a three-point confirmed list for presencial properties', async () => {
+  test('shows a compact presencial seal and a five-point confirmed list for presencial properties', async () => {
     (apiJson as any).mockImplementation(async (url: string) => {
       if (url.endsWith('/reviews')) return [{ id: 'r1', reviewer_id: 'u1', rating: 5, comment: 'Buen lugar' }];
       if (url === '/api/bookings') return [];
@@ -836,17 +850,19 @@ describe('PropertyDetail', () => {
     await waitForPropertyHeading();
 
     const bookingContext = getDesktopBookingContext();
-    expect(within(bookingContext).getByText('Verificado en persona')).toBeDefined();
-    expect(within(bookingContext).getByText('Identidad, ubicación y acceso confirmados durante una visita real')).toBeDefined();
+    expect(within(bookingContext).getByText('Verificado presencialmente')).toBeDefined();
+    expect(within(bookingContext).getByText('Existencia física, coincidencia general, ubicación real, acceso e identidad básica confirmados durante una visita')).toBeDefined();
     expect(within(bookingContext).getByText('Esta propiedad fue validada en persona')).toBeDefined();
-    expect(within(bookingContext).getByAltText('Verificado en persona')).toHaveAttribute('src', '/verified-presencial-circular.png');
+    expect(within(bookingContext).getByAltText('Verificado presencialmente')).toHaveAttribute('src', '/verified-presencial-circular.png');
 
     const verificationPreview = screen.getByTestId('property-verification-preview');
     expect(within(verificationPreview).getByRole('heading', { name: 'Qué está confirmado' })).toBeDefined();
+    expect(within(verificationPreview).getByText('Existencia física confirmada')).toBeDefined();
+    expect(within(verificationPreview).getByText('Coincidencia general con la publicación')).toBeDefined();
+    expect(within(verificationPreview).getByText('Ubicación real confirmada')).toBeDefined();
+    expect(within(verificationPreview).getByText('Acceso real del anfitrión')).toBeDefined();
     expect(within(verificationPreview).getByText('Identidad del anfitrión')).toBeDefined();
-    expect(within(verificationPreview).getByText('Ubicación confirmada')).toBeDefined();
-    expect(within(verificationPreview).getByText('Acceso validado')).toBeDefined();
-    expect(within(verificationPreview).getAllByRole('listitem')).toHaveLength(3);
+    expect(within(verificationPreview).getAllByRole('listitem')).toHaveLength(5);
     expect(within(verificationPreview).queryByText('¿Cómo funciona?')).toBeNull();
 
     const bookingCta = screen.getByRole('button', { name: /consultar disponibilidad/i });
@@ -878,9 +894,11 @@ describe('PropertyDetail', () => {
     expect(within(verificationPreview).queryByRole('heading', { name: /Verificado en persona/i })).toBeNull();
     expect(within(verificationPreview).queryByText('¿Cómo funciona?')).toBeNull();
     expect(within(verificationPreview).getByText('Identidad del anfitrión')).toBeDefined();
-    expect(within(verificationPreview).getByText('Ubicación no verificada')).toBeDefined();
-    expect(within(verificationPreview).getByText('Acceso no verificado')).toBeDefined();
-    expect(within(verificationPreview).getAllByRole('listitem')).toHaveLength(3);
+    expect(within(verificationPreview).getByText('Existencia física no confirmada')).toBeDefined();
+    expect(within(verificationPreview).getByText('Coincidencia general no validada')).toBeDefined();
+    expect(within(verificationPreview).getByText('Ubicación real no verificada')).toBeDefined();
+    expect(within(verificationPreview).getByText('Acceso real no verificado')).toBeDefined();
+    expect(within(verificationPreview).getAllByRole('listitem')).toHaveLength(5);
   });
 
   test('keeps the same identity-first checklist for medium trust listings', async () => {
@@ -905,8 +923,10 @@ describe('PropertyDetail', () => {
     expect(within(bookingContext).getByText('Identidad verificada')).toBeDefined();
     const verificationPreview = screen.getByTestId('property-verification-preview');
     expect(within(verificationPreview).getByText('Identidad del anfitrión')).toBeDefined();
-    expect(within(verificationPreview).getByText('Ubicación no verificada')).toBeDefined();
-    expect(within(verificationPreview).getByText('Acceso no verificado')).toBeDefined();
+    expect(within(verificationPreview).getByText('Existencia física no confirmada')).toBeDefined();
+    expect(within(verificationPreview).getByText('Coincidencia general no validada')).toBeDefined();
+    expect(within(verificationPreview).getByText('Ubicación real no verificada')).toBeDefined();
+    expect(within(verificationPreview).getByText('Acceso real no verificado')).toBeDefined();
     expect(within(verificationPreview).queryByText('Listo para coordinar')).toBeNull();
   });
 
@@ -952,9 +972,11 @@ describe('PropertyDetail', () => {
     expect(within(bookingContext).getByText('Datos no confirmados')).toBeDefined();
     const verificationPreview = screen.getByTestId('property-verification-preview');
     expect(within(verificationPreview).getByText('Identidad no confirmada')).toBeDefined();
-    expect(within(verificationPreview).getByText('Ubicación no confirmada')).toBeDefined();
-    expect(within(verificationPreview).getByText('Acceso no confirmado')).toBeDefined();
-    expect(within(verificationPreview).getAllByRole('listitem')).toHaveLength(3);
+    expect(within(verificationPreview).getByText('Existencia física no confirmada')).toBeDefined();
+    expect(within(verificationPreview).getByText('Coincidencia general no confirmada')).toBeDefined();
+    expect(within(verificationPreview).getByText('Ubicación real no confirmada')).toBeDefined();
+    expect(within(verificationPreview).getByText('Acceso real no confirmado')).toBeDefined();
+    expect(within(verificationPreview).getAllByRole('listitem')).toHaveLength(5);
     expect(within(verificationPreview).queryByText('Listo para coordinar')).toBeNull();
   });
 

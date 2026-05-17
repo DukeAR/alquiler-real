@@ -1,6 +1,10 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
+import {
+  ONSITE_VERIFICATION_LABEL,
+  buildOnsiteVerificationProtocol,
+} from '../lib/onsiteVerificationProtocol';
 import { useAuth } from '../hooks/useAuth';
 import { Icons } from './Icons';
 import { Button } from './ui/Button';
@@ -11,39 +15,17 @@ interface OnsiteVerificationPageProps {
   onBack: () => void;
 }
 
-const trustOutcomePoints = [
-  'Existencia y acceso confirmados',
-  'Identidad registrada durante la visita',
-  'Menor riesgo de fraude',
-  'Mayor confianza para decidir',
-];
+const onsiteVerificationProtocol = buildOnsiteVerificationProtocol();
 
-const heroBenefitPoints = [
-  'Identidad del anfitrión verificada',
-  'Acceso real a la propiedad confirmado',
-  'Vínculo comprobable con el lugar',
-  'Ubicación validada durante visita',
-];
+const heroBenefitPoints = onsiteVerificationProtocol.scopeItems.map((item) => item.title);
 
-const nonValidationItems = [
-  'Estado del inmueble',
-  'Calidad general del lugar',
-  'Amenities y servicios del lugar',
-];
+const nonValidationItems = onsiteVerificationProtocol.excludedItems.map((item) => item.title);
 
-const validationItems = [
-  'Identidad del anfitrión verificada',
-  'Acceso real a la propiedad confirmado',
-  'Vínculo comprobable con el lugar',
-  'Ubicación validada durante visita',
-];
+const validationItems = onsiteVerificationProtocol.scopeItems.map((item) => item.title);
 
-const verifierVisitChecks = [
-  'Identidad del anfitrión verificada',
-  'Acceso real a la propiedad confirmado',
-  'Vínculo comprobable con el lugar',
-  'Ubicación validada durante visita',
-];
+const minimumEvidenceItems = onsiteVerificationProtocol.minimumEvidence.map((item) => item.title);
+
+const verifierVisitChecks = onsiteVerificationProtocol.minimumEvidence.map((item) => item.title);
 
 const verifierIdentityPoints = [
   'Se identifica antes de la visita',
@@ -66,15 +48,15 @@ const flowSteps = [
   },
   {
     id: 'verify',
-    label: 'Validamos identidad y acceso',
-    title: 'Validamos identidad y acceso',
-    description: 'Dejamos identidad, ubicación y acceso confirmados, con respaldo de vínculo comprobable con el lugar.',
+    label: 'Registramos evidencia mínima',
+    title: 'Registramos evidencia mínima',
+    description: 'Guardamos fotos mínimas, geolocalización, timestamp y estado operativo para la revisión.',
   },
   {
     id: 'seal',
-    label: 'Recibís el sello',
-    title: 'Recibís el sello',
-    description: 'La publicación se muestra como verificada.',
+    label: 'Cerramos el estado',
+    title: 'Cerramos el estado',
+    description: 'La revisión puede quedar aprobada, rechazada o requiere revisión. El sello visible solo aparece si se aprueba.',
   },
 ];
 
@@ -82,7 +64,7 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
   const navigate = useNavigate();
   const { user } = useAuth();
   const howItWorksRef = React.useRef<HTMLElement | null>(null);
-  const onsiteVerificationTarget = '/verification?mode=onsite&returnTo=/host-dashboard';
+  const onsiteVerificationTarget = '/host-dashboard';
   const [activeFlowStep, setActiveFlowStep] = React.useState(flowSteps[0].id);
 
   const navigateWithAuthTarget = (target: string) => {
@@ -124,11 +106,11 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
           <div className="grid gap-8 md:grid-cols-[minmax(0,1.18fr)_minmax(280px,0.82fr)] md:items-start md:gap-10">
             <div className="space-y-5 md:self-center md:space-y-6">
               <h1 className="max-w-[12ch] text-[clamp(2.35rem,5vw,3.7rem)] font-semibold leading-[0.98] tracking-[-0.06em] text-slate-950 dark:text-slate-50">
-                La verificación reduce dudas antes de reservar.
+                La verificación presencial deja un protocolo claro.
               </h1>
 
               <p className="max-w-2xl text-[1rem] leading-7 text-slate-700 dark:text-slate-300 md:text-[1.05rem]">
-                La visita deja identidad, ubicación y acceso confirmados, con respaldo de existencia y vínculo con el lugar.
+                {onsiteVerificationProtocol.summary}
               </p>
 
               <div className="space-y-3">
@@ -142,7 +124,7 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
                   </Button>
                 </div>
                 <p className="text-[0.94rem] leading-6 text-slate-500 dark:text-slate-400">
-                  Se coordina una visita, no lleva más de unos minutos.
+                  Usamos “{ONSITE_VERIFICATION_LABEL}” solo cuando la revisión queda aprobada.
                 </p>
               </div>
             </div>
@@ -150,7 +132,7 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
             <div className="space-y-4 md:space-y-5">
               <div className="rounded-[28px] border border-emerald-100/80 bg-white/88 p-5 shadow-[0_22px_50px_-38px_rgba(15,23,42,0.38)] backdrop-blur-sm dark:border-emerald-500/10 dark:bg-white/5">
                 <p className="text-[0.74rem] font-semibold uppercase tracking-[0.26em] text-emerald-700 dark:text-emerald-300">
-                  Lo que transmite
+                  Qué sí validamos
                 </p>
 
                 <ul className="mt-4 grid gap-3 text-[0.95rem] font-medium leading-6 text-slate-700 dark:text-slate-200">
@@ -164,7 +146,7 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
               </div>
 
               <p className="rounded-[24px] border border-slate-950/10 bg-slate-950/[0.045] px-5 py-4 text-[1rem] font-semibold leading-7 text-black shadow-[0_16px_36px_-30px_rgba(15,23,42,0.45)] dark:border-slate-50/10 dark:bg-white/10 dark:text-white">
-                Las propiedades verificadas se destacan automáticamente en los resultados.
+                {onsiteVerificationProtocol.operatingPrinciples.join(' · ')}.
               </p>
             </div>
           </div>
@@ -175,15 +157,15 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
 
           <div className="space-y-2">
             <h2 className="text-[1.62rem] font-semibold leading-[1.08] tracking-[-0.04em] text-slate-950 dark:text-slate-50">
-              Qué cambia cuando verificás
+              Qué deja registrado el protocolo
             </h2>
           </div>
 
           <div className="grid gap-8 md:grid-cols-[minmax(0,1fr)_1px_minmax(0,1fr)] md:items-start md:gap-7">
             <div className="space-y-4">
-              <h3 className="text-[0.98rem] font-semibold text-slate-900 dark:text-slate-100">Respaldo real</h3>
+              <h3 className="text-[0.98rem] font-semibold text-slate-900 dark:text-slate-100">Evidencia mínima</h3>
               <ul className="space-y-3 text-[0.96rem] leading-7 text-slate-700 dark:text-slate-300">
-                {trustOutcomePoints.slice(0, 2).map((point) => (
+                {minimumEvidenceItems.map((point) => (
                   <li key={point} className="flex items-start gap-3">
                     <Icons.CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-emerald-500" />
                     <span>{point}</span>
@@ -195,20 +177,20 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
             <div aria-hidden="true" className="hidden h-full bg-slate-300/80 dark:bg-slate-700/80 md:block" />
 
             <div className="space-y-4 md:pl-1">
-              <h3 className="text-[0.98rem] font-semibold text-slate-900 dark:text-slate-100">Impacto en la decisión</h3>
-              <ul className="space-y-3 text-[0.96rem] leading-7 text-slate-700 dark:text-slate-300">
-                {trustOutcomePoints.slice(2).map((point) => (
-                  <li key={point} className="flex items-start gap-3">
-                    <Icons.CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-emerald-500" />
-                    <span>{point}</span>
-                  </li>
+              <h3 className="text-[0.98rem] font-semibold text-slate-900 dark:text-slate-100">Estados operativos</h3>
+              <div className="space-y-3">
+                {onsiteVerificationProtocol.statusOptions.map((item) => (
+                  <div key={item.key} className="rounded-[22px] border border-slate-200/80 bg-white/90 px-4 py-4 dark:border-slate-700/80 dark:bg-slate-950/45">
+                    <p className="text-[0.95rem] font-semibold text-slate-900 dark:text-slate-100">{item.label}</p>
+                    <p className="mt-1.5 text-[0.92rem] leading-6 text-slate-600 dark:text-slate-400">{item.description}</p>
+                  </div>
                 ))}
-              </ul>
+              </div>
             </div>
           </div>
 
           <p className="mx-auto max-w-3xl text-center text-[0.98rem] font-semibold leading-7 text-slate-900 dark:text-slate-100">
-            Esto impacta directamente en cómo te contactan y qué tipo de consultas recibís.
+            Vigencia recomendada: {onsiteVerificationProtocol.recommendedValidityMonths} meses. Después: {onsiteVerificationProtocol.reverificationLabel.toLowerCase()}.
           </p>
         </section>
 
@@ -218,7 +200,7 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
 
             <div className="space-y-2">
               <h2 className="text-[1.62rem] font-semibold leading-[1.08] tracking-[-0.04em] text-slate-950 dark:text-slate-50">
-                Qué revisa esta verificación
+                Qué entra y qué queda afuera
               </h2>
             </div>
 
@@ -249,14 +231,14 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
                     ))}
                   </ul>
                   <p className="text-[0.92rem] leading-6 text-slate-500 dark:text-slate-400">
-                    No evaluamos estado, calidad ni amenities del inmueble.
+                    {onsiteVerificationProtocol.exclusionsSummary}
                   </p>
                 </div>
               </div>
 
               <div className="grid gap-5 rounded-[28px] border border-slate-200/80 bg-white/88 p-5 shadow-[0_22px_48px_-36px_rgba(15,23,42,0.16)] backdrop-blur-sm dark:border-slate-700/80 dark:bg-white/5 md:grid-cols-[minmax(0,1fr)_1px_minmax(0,1fr)] md:gap-0 md:p-0">
                 <div className="space-y-3 md:p-6">
-                  <h3 className="text-[1rem] font-semibold text-slate-900 dark:text-slate-100">Cómo es la visita</h3>
+                  <h3 className="text-[1rem] font-semibold text-slate-900 dark:text-slate-100">Cómo se valida</h3>
                   <ul className="space-y-3 text-[0.96rem] leading-7 text-slate-700 dark:text-slate-300">
                     {verifierVisitChecks.map((item) => (
                       <li key={item} className="flex items-start gap-3">
@@ -266,19 +248,19 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
                     ))}
                   </ul>
                   <p className="text-[0.92rem] leading-6 text-slate-500 dark:text-slate-400">
-                    No se realiza inspección técnica ni evaluación de estado, calidad o amenities del inmueble.
+                    La aprobación final depende de revisar la evidencia mínima y cerrar el estado operativo.
                   </p>
                 </div>
 
                 <div aria-hidden="true" className="hidden h-full bg-slate-200/85 dark:bg-slate-700/70 md:block" />
 
                 <div className="space-y-3 border-t border-slate-200/80 pt-5 dark:border-slate-700/80 md:border-t-0 md:p-6 md:pt-6">
-                  <h3 className="text-[1rem] font-semibold text-slate-900 dark:text-slate-100">Quién verifica</h3>
+                  <h3 className="text-[1rem] font-semibold text-slate-900 dark:text-slate-100">Enfoque y copy</h3>
                   <p className="text-[0.96rem] leading-7 text-slate-600 dark:text-slate-400">
-                    La verificación la realiza una persona del equipo o un verificador autorizado por la plataforma.
+                    La verificación la realiza una persona del equipo o un verificador autorizado por la plataforma siguiendo un protocolo operativo y repetible.
                   </p>
                   <ul className="space-y-3 text-[0.96rem] leading-7 text-slate-700 dark:text-slate-300">
-                    {verifierIdentityPoints.map((item) => (
+                    {[...verifierIdentityPoints, `Duración recomendada: ${onsiteVerificationProtocol.recommendedValidityMonths} meses`, `Copy visible: ${ONSITE_VERIFICATION_LABEL}`].map((item) => (
                       <li key={item} className="flex items-start gap-3">
                         <Icons.CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-brand" />
                         <span>{item}</span>
@@ -286,14 +268,14 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
                     ))}
                   </ul>
                   <p className="text-[0.92rem] leading-6 text-slate-500 dark:text-slate-400">
-                    La validación queda registrada dentro de la plataforma.
+                    No usamos {onsiteVerificationProtocol.avoidedTerms.map((term) => `“${term}”`).join(', ')}.
                   </p>
                 </div>
               </div>
             </div>
 
             <p className="mx-auto mt-6 max-w-3xl text-center text-[0.98rem] font-semibold leading-7 text-slate-900 dark:text-slate-100">
-              No necesitás preparar nada. Solo mostrar la propiedad y acreditar tu vínculo.
+              No necesitás preparar nada más que mostrar la propiedad y acreditar tu vínculo básico con el aviso.
             </p>
           </div>
         </section>
@@ -313,13 +295,13 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
                 Un respaldo visible desde el primer vistazo
               </h2>
               <p className="text-[1rem] leading-7 text-slate-600 dark:text-slate-400">
-                Indica que la propiedad fue visitada en persona y que el anfitrión fue identificado.
+                Mostramos “{ONSITE_VERIFICATION_LABEL}” solo cuando el estado queda aprobado después de revisar la evidencia mínima.
               </p>
               <p className="text-[0.95rem] leading-6 text-slate-600 dark:text-slate-400">
-                Es lo primero que ve un huésped al comparar opciones.
+                La vigencia recomendada es de {onsiteVerificationProtocol.recommendedValidityMonths} meses. Después corresponde marcar {onsiteVerificationProtocol.reverificationLabel.toLowerCase()}.
               </p>
               <p className="text-[0.92rem] leading-6 text-slate-500 dark:text-slate-400">
-                No evaluamos estado, calidad ni amenities del inmueble.
+                {onsiteVerificationProtocol.exclusionsSummary}
               </p>
             </div>
           </div>
@@ -343,7 +325,7 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
               </h2>
               <div className="max-w-xl border-l-4 border-emerald-200/90 pl-4 dark:border-emerald-800/80">
                 <p className="text-[1.04rem] leading-7 text-slate-600 dark:text-slate-300 md:text-[1.14rem]">
-                  El proceso es simple y lo coordinamos con vos.
+                  El proceso es simple, repetible y deja un estado operativo claro.
                 </p>
               </div>
             </div>
@@ -463,7 +445,7 @@ export const OnsiteVerificationPage: React.FC<OnsiteVerificationPageProps> = ({ 
               Quiero verificar mi propiedad
             </Button>
             <p className="text-[0.93rem] leading-6 text-slate-500 dark:text-slate-400">
-              Coordinamos la visita en pocos pasos.
+              Coordinamos la visita y cerramos la revisión con evidencia mínima.
             </p>
           </div>
         </section>

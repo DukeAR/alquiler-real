@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from './useAuth';
+import { API_BASE_URL } from '../lib/apiConfig';
 import { emitUserNotification, showToast, type ToastType, type UserNotificationPayload } from '../lib/toast';
 
 const normalizeNotificationType = (value: string): ToastType => {
@@ -18,6 +19,10 @@ const getSocketEndpoint = () => {
 
   if (explicitEndpoint) {
     return explicitEndpoint;
+  }
+
+  if (API_BASE_URL) {
+    return API_BASE_URL;
   }
 
   if (import.meta.env.DEV && typeof window !== 'undefined') {

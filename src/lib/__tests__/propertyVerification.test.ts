@@ -11,6 +11,7 @@ import {
   sortPropertiesByCatalogOrder,
   withPropertyVerificationScore,
 } from '../propertyVerification';
+import { ONSITE_VERIFICATION_RECOMMENDED_VALIDITY_MONTHS } from '../onsiteVerificationProtocol';
 
 describe('propertyVerification', () => {
   test('derives a frontend verification score when the API does not send one', () => {
@@ -66,7 +67,7 @@ describe('propertyVerification', () => {
     expect(details.summaryLabel).toBe('Información publicada por el anfitrión');
     expect(details.compactLabel).toBe('Información publicada por el anfitrión');
     expect(details.description).toBe('La información visible de este aviso fue publicada por el anfitrión.');
-    expect(details.helperText).toBe('No evaluamos estado, calidad ni amenities del inmueble.');
+    expect(details.helperText).toBe('No verificamos calidad del inmueble, limpieza, amenities, funcionamiento técnico, seguridad edilicia ni exactitud absoluta de fotos.');
     expect(details.items).toEqual([]);
   });
 
@@ -109,6 +110,48 @@ describe('propertyVerification', () => {
     expect(getPropertyVerificationGuidanceMessage({ hasPresencialVerification: true })).toBe('Este aviso tiene verificación presencial.');
     expect(getPropertyVerificationGuidanceMessage({ identityValidated: true })).toBeNull();
     expect(getPropertyVerificationGuidanceMessage({ verificationScore: 2 })).toBeNull();
+  });
+
+  test('treats expired onsite verification as needing reverification instead of an active seal', () => {
+    const expiredVerificationDate = new Date();
+    expiredVerificationDate.setMonth(expiredVerificationDate.getMonth() - (ONSITE_VERIFICATION_RECOMMENDED_VALIDITY_MONTHS + 1));
+
+    const expiredProperty = {
+      hasPresencialVerification: true,
+      onsiteVerifiedAt: expiredVerificationDate.toISOString(),
+    };
+
+    expect(getPropertyVerificationBadge(expiredProperty).summaryLabel).toBe('Información publicada por el anfitrión');
+    expect(getPropertyVerificationGuidanceLabel(expiredProperty, { isTopResult: true })).toBeNull();
+    expect(getPropertyVerificationGuidanceMessage(expiredProperty)).toBeNull();
+    expect(meetsRealVerificationFilter(expiredProperty)).toBe(false);
+  });
+
+  test('keeps reverification-pending listings out of the active presencial tier', () => {
+    const sorted = sortPropertiesByCatalogOrder([
+      {
+        id: 'reverification-pending',
+        hasPresencialVerification: true,
+        onsiteVerifiedAt: new Date().toISOString(),
+        onsiteVerificationMaintenanceStatus: 'reverification_pending',
+        identityValidated: true,
+        price: 90_000,
+      },
+      {
+        id: 'verified-current',
+        hasPresencialVerification: true,
+        onsiteVerifiedAt: new Date().toISOString(),
+        identityValidated: true,
+        price: 110_000,
+      },
+      {
+        id: 'identity-only',
+        identityValidated: true,
+        price: 70_000,
+      },
+    ], 'verification');
+
+    expect(sorted.map((property) => property.id)).toEqual(['verified-current', 'identity-only', 'reverification-pending']);
   });
 
   test('requires explicit presencial verification and never infers it from partial signals', () => {

@@ -2,6 +2,12 @@ import React from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import {
+  ONSITE_VERIFICATION_LABEL,
+  ONSITE_VERIFICATION_NON_SCOPE_SUMMARY,
+  ONSITE_VERIFICATION_SUMMARY,
+  buildOnsiteVerificationProtocol,
+} from '../lib/onsiteVerificationProtocol';
 import { cn } from '../lib/utils';
 import { Icons } from './Icons';
 import { Button } from './ui/Button';
@@ -73,6 +79,7 @@ const aboutFeatureCardClass = 'space-y-3 rounded-[24px] border-slate-200/85 bg-w
 const projectCardTitleClass = 'text-[0.95rem] font-semibold leading-6 tracking-[-0.015em] text-slate-950 dark:text-slate-50';
 const projectCardBodyClass = 'text-[0.88rem] leading-6 text-slate-600 dark:text-slate-300';
 const projectCardIconShellClass = 'inline-flex h-10 w-10 items-center justify-center rounded-[18px]';
+const onsiteVerificationProtocol = buildOnsiteVerificationProtocol();
 
 const projectScopeCards: ScopeCard[] = [
   {
@@ -110,7 +117,7 @@ const projectScopeCards: ScopeCard[] = [
 const verificationLevels: VerificationLevel[] = [
   {
     title: 'Verificación presencial',
-    description: 'La visita deja identidad, ubicación y acceso confirmados, con respaldo de vínculo real con el lugar.',
+    description: ONSITE_VERIFICATION_SUMMARY,
     icon: Icons.Home,
     cardClassName: 'rounded-[24px] border border-brand/15 bg-brand/[0.06] p-5 shadow-[0_16px_34px_-28px_rgba(67,56,202,0.14)] dark:border-brand/20 dark:bg-brand/10',
     accentClassName: 'hidden',
@@ -146,12 +153,7 @@ const hostDifferentiators: RoleBenefit[] = [
   },
 ];
 
-const hostVerificationChecklist = [
-  'Identidad del anfitrión verificada',
-  'Acceso real a la propiedad confirmado',
-  'Vínculo comprobable con el lugar',
-  'Ubicación validada durante visita',
-];
+const hostVerificationChecklist = onsiteVerificationProtocol.scopeItems.map((item) => item.title);
 
 const guestBenefits: RoleBenefit[] = [
   {
@@ -183,8 +185,8 @@ const guestVerificationLevels: GuestVerificationLevel[] = [
     tone: 'identity',
   },
   {
-    title: 'Verificado presencialmente',
-    description: 'Identidad, ubicación y acceso confirmados durante una visita.',
+    title: ONSITE_VERIFICATION_LABEL,
+    description: 'Existencia física, coincidencia general, ubicación real, acceso e identidad básica confirmados durante una visita.',
     tone: 'presencial',
   },
 ];
@@ -682,7 +684,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                         La verificación reduce dudas antes de reservar.
                       </h3>
                       <p className="w-full text-[1.02rem] leading-8 text-slate-700 dark:text-slate-300">
-                        La visita deja identidad, ubicación y acceso confirmados, con respaldo de existencia y vínculo con el lugar.
+                        {ONSITE_VERIFICATION_SUMMARY}
                       </p>
                     </div>
 
@@ -698,7 +700,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                     </div>
 
                     <p className="text-[0.94rem] leading-7 text-slate-500 dark:text-slate-400">
-                      No evaluamos estado, calidad ni amenities del inmueble.
+                      {ONSITE_VERIFICATION_NON_SCOPE_SUMMARY}
                     </p>
 
                   </div>
@@ -708,7 +710,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                       <div className="space-y-5">
                         <p className="text-[0.7rem] font-semibold uppercase tracking-[0.28em] text-brand-light/80">Mayor impacto</p>
                         <p className="max-w-[16ch] text-[1.55rem] font-semibold leading-[1.16] tracking-[-0.03em] text-white md:text-[1.95rem]">
-                          Más visibilidad, mejores consultas y menos dudas antes de aceptar.
+                          Protocolo claro, evidencia mínima y un sello visible solo cuando la revisión queda aprobada.
                         </p>
                       </div>
                     </div>
@@ -798,7 +800,7 @@ export const AboutPage: React.FC<AboutPageProps> = ({ onBack }) => {
                   </div>
 
                   <p className="text-xs leading-6 text-slate-500 dark:text-slate-400">
-                    *No evaluamos estado, calidad ni amenities del inmueble*
+                    *{ONSITE_VERIFICATION_NON_SCOPE_SUMMARY}*
                   </p>
                 </div>
               </section>

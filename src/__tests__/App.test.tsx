@@ -123,6 +123,11 @@ vi.mock('../components/HostDashboard', () => ({
   HostDashboard: () => <div>Host dashboard</div>,
 }));
 
+vi.mock('../components/InternalSupportQueue', () => ({
+  InternalSupportQueue: () => <div>Internal support queue</div>,
+  default: () => <div>Internal support queue</div>,
+}));
+
 vi.mock('../components/TenantProfileView', () => ({
   TenantProfileView: () => <div>Tenant profile</div>,
 }));
@@ -289,6 +294,82 @@ describe('App routing states', () => {
     );
 
     expect(await screen.findByText('Host dashboard')).toBeInTheDocument();
+  });
+
+  test('redirects authenticated users without internal permission away from internal support', async () => {
+    useAuthMock.mockReturnValue({
+      loading: false,
+      user: {
+        id: 'tenant-1',
+        name: 'Tenant User',
+        email: 'tenant@test.com',
+        role: 'tenant',
+        canGuest: true,
+        canHost: false,
+        activeMode: 'guest',
+      },
+      status: 'authenticated',
+      refresh: vi.fn(async () => ({
+        user: {
+          id: 'tenant-1',
+          name: 'Tenant User',
+          email: 'tenant@test.com',
+          role: 'tenant',
+          canGuest: true,
+          canHost: false,
+          activeMode: 'guest',
+        },
+        status: 'authenticated',
+        error: null,
+      })),
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/internal/support']}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('Profile page')).toBeInTheDocument();
+  });
+
+  test('allows authenticated internal operators into internal support', async () => {
+    useAuthMock.mockReturnValue({
+      loading: false,
+      user: {
+        id: 'ops-1',
+        name: 'Ops User',
+        email: 'ops@test.com',
+        role: 'tenant',
+        canGuest: true,
+        canHost: false,
+        canInternalOps: true,
+        activeMode: 'guest',
+      },
+      status: 'authenticated',
+      refresh: vi.fn(async () => ({
+        user: {
+          id: 'ops-1',
+          name: 'Ops User',
+          email: 'ops@test.com',
+          role: 'tenant',
+          canGuest: true,
+          canHost: false,
+          canInternalOps: true,
+          activeMode: 'guest',
+        },
+        status: 'authenticated',
+        error: null,
+      })),
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/internal/support']}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('Internal support queue')).toBeInTheDocument();
   });
 
   test('falls back to about when the onsite verification page is opened directly and the user presses back', async () => {

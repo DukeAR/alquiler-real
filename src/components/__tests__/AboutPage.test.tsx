@@ -39,7 +39,7 @@ describe('AboutPage', () => {
     expect(screen.getByText('Si hubo verificación presencial')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Qué sigue dependiendo de vos' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Qué significa cada nivel de respaldo' })).toBeInTheDocument();
-    expect(screen.getByText('La visita deja identidad, ubicación y acceso confirmados, con respaldo de vínculo real con el lugar.')).toBeInTheDocument();
+    expect(screen.getByText('Confirmamos existencia física de la propiedad, coincidencia general con la publicación, ubicación real, acceso real del anfitrión e identidad básica durante una visita presencial.')).toBeInTheDocument();
     expect(screen.getByText('El aviso muestra datos cargados por quien publica, sin checks presenciales.')).toBeInTheDocument();
     expect(screen.getByText('Aunque un aviso tenga verificación presencial, hay cosas que siguen siendo decisión tuya: precio, reglas y experiencias de otros.')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Alquilar debería ser simple.' })).toBeInTheDocument();
@@ -71,13 +71,14 @@ describe('AboutPage', () => {
     expect(screen.getByText('Ver historial del usuario')).toBeInTheDocument();
     expect(screen.getByText('Decidir con más contexto')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'La verificación reduce dudas antes de reservar.' })).toBeInTheDocument();
-    expect(screen.getByText('La visita deja identidad, ubicación y acceso confirmados, con respaldo de existencia y vínculo con el lugar.')).toBeInTheDocument();
-    expect(screen.getByText('Identidad del anfitrión verificada')).toBeInTheDocument();
-    expect(screen.getByText('Acceso real a la propiedad confirmado')).toBeInTheDocument();
-    expect(screen.getByText('Vínculo comprobable con el lugar')).toBeInTheDocument();
-    expect(screen.getByText('Ubicación validada durante visita')).toBeInTheDocument();
-    expect(screen.getByText('No evaluamos estado, calidad ni amenities del inmueble.')).toBeInTheDocument();
-    expect(screen.getByText('Más visibilidad, mejores consultas y menos dudas antes de aceptar.')).toBeInTheDocument();
+    expect(screen.getByText('Confirmamos existencia física de la propiedad, coincidencia general con la publicación, ubicación real, acceso real del anfitrión e identidad básica durante una visita presencial.')).toBeInTheDocument();
+    expect(screen.getByText('Existencia física de la propiedad')).toBeInTheDocument();
+    expect(screen.getByText('Coincidencia general con la publicación')).toBeInTheDocument();
+    expect(screen.getByText('Ubicación real')).toBeInTheDocument();
+    expect(screen.getByText('Acceso real del anfitrión')).toBeInTheDocument();
+    expect(screen.getByText('Identidad básica del anfitrión')).toBeInTheDocument();
+    expect(screen.getByText('No verificamos calidad del inmueble, limpieza, amenities, funcionamiento técnico, seguridad edilicia ni exactitud absoluta de fotos.')).toBeInTheDocument();
+    expect(screen.getByText('Protocolo claro, evidencia mínima y un sello visible solo cuando la revisión queda aprobada.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Entender cómo funciona la verificación' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Cómo lograr la verificación máxima' })).toBeInTheDocument();
     expect(screen.getByText('Próximamente: guía paso a paso para publicar con verificación presencial y mejorar tu exposición.')).toBeInTheDocument();
@@ -100,8 +101,8 @@ describe('AboutPage', () => {
     expect(screen.getByText('El anfitrión confirmó su identidad.')).toBeInTheDocument();
     expect(screen.getAllByText('Verificado presencialmente').length).toBeGreaterThan(0);
     expect(screen.getAllByRole('img', { name: 'Verificado presencialmente' }).length).toBeGreaterThan(0);
-    expect(screen.getByText('Identidad, ubicación y acceso confirmados durante una visita.')).toBeInTheDocument();
-    expect(screen.getByText('*No evaluamos estado, calidad ni amenities del inmueble*')).toBeInTheDocument();
+    expect(screen.getByText('Existencia física, coincidencia general, ubicación real, acceso e identidad básica confirmados durante una visita.')).toBeInTheDocument();
+    expect(screen.getByText('*No verificamos calidad del inmueble, limpieza, amenities, funcionamiento técnico, seguridad edilicia ni exactitud absoluta de fotos.*')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Antes de reservar, sabé qué es real.' })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Proyecto' }));

@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { mapPropertyRecord } from '../propertySerializer';
+import { ONSITE_VERIFICATION_RECOMMENDED_VALIDITY_MONTHS } from '../../src/lib/onsiteVerificationProtocol';
 
 describe('mapPropertyRecord', () => {
   test('builds the verification model from concrete backend fields', () => {
@@ -145,5 +146,47 @@ describe('mapPropertyRecord', () => {
     expect(property.verificationLevel).toBe('none');
     expect(property.isIdentityVerified).toBe(false);
     expect(property.isPresentiallyVerified).toBe(false);
+  });
+
+  test('keeps the last onsite validation date but drops the active presencial flag when it is expired', () => {
+    const expiredOnsiteDate = new Date();
+    expiredOnsiteDate.setMonth(expiredOnsiteDate.getMonth() - (ONSITE_VERIFICATION_RECOMMENDED_VALIDITY_MONTHS + 1));
+
+    const property = mapPropertyRecord({
+      id: 'prop-4',
+      title: 'Casa con validacion vencida',
+      location: 'San Bernardo',
+      price: '91000',
+      hasPresencialVerification: 1,
+      onsiteVerifiedAt: expiredOnsiteDate.toISOString(),
+    });
+
+    expect(property.hasPresencialVerification).toBe(false);
+    expect(property.isPresentiallyVerified).toBe(false);
+    expect(property.onsiteVerifiedAt).toBe(expiredOnsiteDate.toISOString());
+    expect(property.onsiteVerificationMaintenanceStatus).toBe('requires_reverification');
+  });
+
+  test('surfaces reverification pending without treating it as an active presencial seal', () => {
+    const property = mapPropertyRecord({
+      id: 'prop-5',
+      title: 'Casa con reverificacion pendiente',
+      location: 'Mar de Ajo',
+      price: '98000',
+      hasPresencialVerification: 1,
+      onsiteVerifiedAt: '2026-04-10T15:00:00.000Z',
+      onsiteVerificationMaintenance: {
+        status: 'reverification_pending',
+        lastValidatedAt: '2026-04-10T15:00:00.000Z',
+        expiresAt: '2026-10-10T15:00:00.000Z',
+        triggerReason: 'detected_inconsistency',
+        history: [],
+      },
+    });
+
+    expect(property.hasPresencialVerification).toBe(false);
+    expect(property.isPresentiallyVerified).toBe(false);
+    expect(property.onsiteVerificationMaintenanceStatus).toBe('reverification_pending');
+    expect(property.onsiteVerificationTriggerReason).toBe('detected_inconsistency');
   });
 });

@@ -29,8 +29,8 @@ describe('PropertyUploadForm', () => {
     expect(screen.getByText('5 pasos más hasta publicar.')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Fotos' })).toBeInTheDocument();
     expect(screen.getByText('Publicar')).toBeInTheDocument();
-    expect(screen.getByText('Lo que suma la verificación presencial')).toBeInTheDocument();
-    expect(screen.getByText('No hace falta para publicar. Sí sirve para generar más confianza y ganar mejor prioridad visual dentro del marketplace.')).toBeInTheDocument();
+    expect(screen.getByText('Protocolo base de verificación presencial')).toBeInTheDocument();
+    expect(screen.getByText('Usamos una validación operativa, escalable y legalmente consistente para dejar claro qué verifica la plataforma, qué evidencia mínima se registra y cuándo corresponde reverificar.')).toBeInTheDocument();
   });
 
   test('publishes a first property through the compact guided flow', async () => {
@@ -98,10 +98,51 @@ describe('PropertyUploadForm', () => {
       'success',
     );
     expect(screen.getByText('Recibí más consultas con mejores fotos')).toBeInTheDocument();
-    expect(screen.getByText('La verificación presencial te da más confianza y prioridad visual')).toBeInTheDocument();
+    expect(screen.getByText('Sumá verificación presencial con un protocolo claro')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Mejorar publicacion' }));
     expect(onComplete).toHaveBeenCalledTimes(1);
+  });
+
+  test('allows requesting onsite verification directly from the published listing screen', async () => {
+    apiJsonMock
+      .mockResolvedValueOnce({ id: 'prop-1' })
+      .mockResolvedValueOnce({ redirectTo: '/verification?mode=onsite&propertyId=prop-1&returnTo=/host-dashboard' });
+
+    render(<PropertyUploadForm onComplete={vi.fn()} />);
+
+    fireEvent.change(screen.getByLabelText('Foto 1'), {
+      target: { value: 'https://example.com/front.jpg' },
+    });
+    fireEvent.change(screen.getByLabelText('Foto 2'), {
+      target: { value: 'https://example.com/living.jpg' },
+    });
+    fireEvent.change(screen.getByLabelText('Foto 3'), {
+      target: { value: 'https://example.com/room.jpg' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Empezar' }));
+
+    fireEvent.click(screen.getByRole('button', { name: /Santa Teresita/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Siguiente paso' }));
+    fireEvent.click(screen.getByRole('button', { name: /Casa/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Siguiente paso' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Siguiente paso' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Siguiente paso' }));
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Publicar propiedad' })).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'Publicar propiedad' }));
+
+    expect(await screen.findByText('Tu publicacion ya esta activa')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Solicitar verificacion presencial' }));
+
+    await waitFor(() => expect(apiJsonMock).toHaveBeenCalledTimes(2));
+    expect(JSON.parse(String(apiJsonMock.mock.calls[1]?.[1]?.body))).toMatchObject({
+      offerType: 'onsite-property',
+      propertyId: 'prop-1',
+      requestSource: 'listing',
+    });
+    expect(await screen.findByRole('button', { name: 'Continuar verificacion presencial' })).toBeInTheDocument();
   });
 
   test('blocks the flow until there are at least 3 photos', () => {

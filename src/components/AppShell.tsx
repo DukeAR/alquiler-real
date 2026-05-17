@@ -91,6 +91,7 @@ const authGuardedPrefixes = [
   '/verification',
   '/verify',
   '/chat',
+  '/internal/support',
   '/operations',
   '/my-bookings',
   '/host-dashboard',
@@ -299,6 +300,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   const [isAuthenticatedMobileMenuOpen, setIsAuthenticatedMobileMenuOpen] = useState(false);
   const isAuthGuardedRoute = authGuardedPrefixes.some((prefix) => matchesPath(location.pathname, prefix));
   const showGuestAuthActions = !user && (isUnauthenticated || (hasSessionError && !isAuthGuardedRoute));
+  const canAccessInternalSupport = Boolean(user?.canInternalOps);
   const favoritesAction: NavAction = {
     label: 'Guardados',
     shortLabel: 'Guardados',
@@ -446,10 +448,10 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   );
   const guestDesktopActionsClass = 'flex shrink-0 items-center justify-end gap-4 sm:gap-5 lg:pl-3 lg:gap-6 xl:pl-4 xl:gap-7';
   const accountDesktopActionsClass = 'flex shrink-0 items-center justify-end gap-2 sm:gap-2.5 lg:gap-3 xl:gap-3.5';
-  const guestDesktopHeaderRowClass = 'flex items-center justify-between gap-5 py-4 sm:gap-6 sm:py-5 lg:gap-8 xl:gap-10';
-  const accountDesktopHeaderRowClass = 'flex items-center justify-between gap-4 py-3 sm:gap-5 sm:py-4 lg:gap-6 xl:gap-7';
+  const guestDesktopHeaderRowClass = 'flex items-center justify-between gap-4 py-3 sm:gap-6 sm:py-5 lg:gap-8 xl:gap-10';
+  const accountDesktopHeaderRowClass = 'flex items-center justify-between gap-3 py-2.5 sm:gap-5 sm:py-4 lg:gap-6 xl:gap-7';
   const accountHeaderUtilityButtonClass = cn(
-    '!h-11 !w-11 !rounded-full !border !p-0 !shadow-none transition-[color,background-color,border-color] duration-150 ease-out hover:translate-y-0 active:translate-y-0',
+    '!h-10 !w-10 sm:!h-11 sm:!w-11 !rounded-full !border !p-0 !shadow-none transition-[color,background-color,border-color] duration-150 ease-out hover:translate-y-0 active:translate-y-0',
     headerOnHero
       ? '!border-white/16 !bg-black/18 !text-white/84 hover:!border-white/24 hover:!bg-black/26 hover:!text-white'
       : '!border-slate-200/90 !bg-white/96 !text-slate-500 hover:!border-slate-300 hover:!bg-white hover:!text-slate-900',
@@ -468,6 +470,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
     { label: 'Explorar', shortLabel: 'Explorar', path: '/', icon: Icons.Search },
     ...(isAuthenticated ? [favoritesAction] : []),
     ...(isAuthenticated ? [{ label: 'Mis operaciones', shortLabel: 'Operaciones', path: '/operations', protected: true, icon: Icons.Activity }] : []),
+    ...(isAuthenticated && canAccessInternalSupport ? [{ label: 'Soporte interno', shortLabel: 'Soporte', path: '/internal/support', protected: true, icon: Icons.ShieldAlert }] : []),
     { label: 'Cómo funciona', shortLabel: 'Cómo', path: '/about', icon: Icons.Info, desktopAccent: !isAuthenticated },
     { label: 'Ayuda', shortLabel: 'Ayuda', path: '/faq', icon: Icons.Lightbulb, desktopAccent: !isAuthenticated }
   ];
@@ -477,6 +480,8 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
         { label: 'Explorar', shortLabel: 'Explorar', path: '/', icon: Icons.Search },
         favoritesAction,
         { label: 'Mis operaciones', shortLabel: 'Operaciones', path: '/operations', protected: true, icon: Icons.Activity },
+        { label: 'Perfil', shortLabel: 'Perfil', path: '/profile', protected: true, icon: Icons.User },
+        ...(canAccessInternalSupport ? [{ label: 'Soporte interno', shortLabel: 'Soporte interno', path: '/internal/support', protected: true, icon: Icons.ShieldAlert }] : []),
         { label: 'Cómo funciona', shortLabel: 'Cómo funciona', path: '/about', icon: Icons.Info },
         { label: 'Ayuda', shortLabel: 'Ayuda', path: '/faq', icon: Icons.Lightbulb },
       ]
@@ -585,7 +590,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
         <button
           type="button"
           onClick={() => navigate('/profile')}
-          className={accountHeaderUtilityButtonClass}
+          className={cn(accountHeaderUtilityButtonClass, 'hidden sm:inline-flex')}
           aria-label="Ir al perfil"
         >
           <div className={cn('h-full w-full overflow-hidden rounded-full', headerOnHero ? 'bg-white/16' : 'bg-slate-100')}>
@@ -691,7 +696,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
             role="dialog"
             aria-modal="true"
             aria-label="Menú principal"
-            className="absolute inset-x-4 top-[calc(env(safe-area-inset-top)+4.85rem)] rounded-[28px] border border-slate-200/90 bg-white/98 p-4 shadow-[0_28px_60px_-30px_rgba(15,23,42,0.26)] backdrop-blur-xl"
+            className="absolute inset-x-3 top-[calc(env(safe-area-inset-top)+4.15rem)] max-h-[calc(100dvh-env(safe-area-inset-top)-5rem)] overflow-y-auto rounded-[26px] border border-slate-200/90 bg-white/98 p-4 shadow-[0_28px_60px_-30px_rgba(15,23,42,0.26)] backdrop-blur-xl sm:inset-x-4 sm:top-[calc(env(safe-area-inset-top)+4.75rem)] sm:max-h-[calc(100dvh-env(safe-area-inset-top)-6rem)] sm:rounded-[28px]"
           >
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
@@ -752,11 +757,11 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
         </div>
       ) : null}
 
-      <div className={cn('min-h-screen', showBottomMobileNav ? 'pb-[calc(env(safe-area-inset-bottom)+5.75rem)] md:pb-10' : '')}>{children}</div>
+      <div className={cn('min-h-screen', showBottomMobileNav ? 'pb-[calc(env(safe-area-inset-bottom)+5.35rem)] md:pb-10' : '')}>{children}</div>
 
       {showBottomMobileNav ? (
         <nav aria-label="Navegación principal" className="fixed inset-x-0 bottom-0 z-50 md:hidden">
-          <div className="mx-auto flex max-w-md items-center gap-1 rounded-t-[30px] border border-b-0 border-slate-200/85 bg-white/95 px-4 pb-[calc(env(safe-area-inset-bottom)+0.8rem)] pt-3 shadow-[0_-18px_40px_-30px_rgba(15,23,42,0.22)] backdrop-blur-xl">
+          <div className="mx-auto flex max-w-md items-center gap-1 rounded-t-[26px] border border-b-0 border-slate-200/85 bg-white/95 px-3.5 pb-[calc(env(safe-area-inset-bottom)+0.7rem)] pt-2.5 shadow-[0_-18px_40px_-30px_rgba(15,23,42,0.22)] backdrop-blur-xl">
             {mobileActions.map((action) => (
               <MobileNavButton
                 key={action.label}

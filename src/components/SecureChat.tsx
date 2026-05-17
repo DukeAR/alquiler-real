@@ -26,6 +26,7 @@ import { ReservationOperationTimeline } from './ui/ReservationOperationTimeline'
 import { ReservationConfirmedState } from './ui/ReservationConfirmedState';
 import { SystemEventMessage } from './ui/SystemEventMessage';
 import { getTrustSignalsFromItems, type TrustSignal } from './ui/TrustSignalsInline';
+import { ContextualSupportDialog } from './ContextualSupportDialog';
 
 type InlineThreadNoticeTone = 'neutral' | 'warning' | 'brand';
 
@@ -1564,6 +1565,9 @@ export const SecureChat: React.FC<SecureChatProps> = ({
   const canConfirmArrival = Boolean(isTenantConversation && activeRequestContext?.depositType === 'protected' && flowCopy?.stage === 'protected-deposit-held' && flowCopy?.state !== 'guest_checkin_confirmed' && activeRequestContext.bookingId && arrivalActionsAvailable);
   const canConfirmAccess = Boolean(isHostConversation && activeRequestContext?.depositType === 'protected' && flowCopy?.state === 'guest_checkin_confirmed' && activeRequestContext.bookingId && arrivalActionsAvailable);
   const canReportArrivalProblem = Boolean(isTenantConversation && activeRequestContext?.depositType === 'protected' && flowCopy?.stage === 'protected-deposit-held' && flowCopy?.state !== 'guest_checkin_confirmed' && activeRequestContext.bookingId && arrivalActionsAvailable);
+  const chatSupportEntryPoint = canConfirmArrival || canConfirmAccess || canReportArrivalProblem || flowCopy?.stage === 'protected-deposit-review' || flowCopy?.stage === 'protected-no-show-pending'
+    ? 'checkin'
+    : 'conversation';
   const canCoordinateArrival = Boolean(
     activeRequestContext
     && (flowCopy?.stage === 'protected-deposit-held'
@@ -1976,18 +1980,18 @@ export const SecureChat: React.FC<SecureChatProps> = ({
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50/80 pt-2 dark:bg-slate-950 sm:pt-4 md:pt-0">
+    <div className="flex h-[100dvh] overflow-hidden bg-slate-50/80 pt-1.5 dark:bg-slate-950 sm:pt-4 md:pt-0">
       {/* Sidebar List */}
       <div className={cn(
         "flex w-full flex-col border-r border-slate-200/80 bg-white/94 transition-all dark:border-slate-800 dark:bg-slate-950/92 md:w-[22rem] xl:w-[24rem]",
         activeConv ? "hidden md:flex" : "flex"
       )}>
-        <div className="border-b border-slate-100/90 p-4 dark:border-slate-800 sm:p-6">
+        <div className="border-b border-slate-100/90 px-3.5 py-3 dark:border-slate-800 sm:p-6">
           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">Chat interno</p>
-          <h2 className="mt-1 text-xl font-black uppercase tracking-tight text-slate-950 dark:text-white">Mensajes</h2>
-          <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">Seguí la consulta, verificá el contexto y cerrá todo sin salir de Alquiler Real.</p>
+          <h2 className="mt-1 text-lg font-black uppercase tracking-tight text-slate-950 dark:text-white sm:text-xl">Mensajes</h2>
+          <p className="mt-1.5 text-[0.88rem] leading-5 text-slate-500 dark:text-slate-400 sm:mt-2 sm:text-sm sm:leading-6">Seguí la consulta, verificá el contexto y cerrá todo sin salir de Alquiler Real.</p>
         </div>
-        <div className="flex-1 space-y-2 overflow-y-auto p-3 sm:p-4">
+        <div className="flex-1 space-y-2 overflow-y-auto p-2.5 sm:p-4">
           {conversations.map((c) => {
             const previewCounterpartyName = user?.id === c.tenant_id ? c.hostName : c.tenantName;
             const preview = getConversationListPreview(
@@ -2011,13 +2015,13 @@ export const SecureChat: React.FC<SecureChatProps> = ({
                 aria-label={previewLabel}
                 onClick={() => setActiveConv(c)}
                 className={cn(
-                  'flex w-full items-start gap-4 rounded-[28px] border p-3.5 text-left transition-all sm:p-4',
+                  'flex w-full items-start gap-3 rounded-[22px] border p-3 text-left transition-all sm:gap-4 sm:rounded-[28px] sm:p-4',
                   activeConv?.id === c.id
                     ? 'border-brand/15 bg-brand/8 text-slate-900 shadow-[0_22px_46px_-36px_rgba(67,56,202,0.38)] dark:border-brand/20 dark:bg-brand/10 dark:text-white'
                     : 'border-slate-200/70 bg-white hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:hover:border-slate-700 dark:hover:bg-slate-900',
                 )}
               >
-                <div className="h-14 w-14 shrink-0 overflow-hidden rounded-[22px] bg-slate-100 dark:bg-slate-800">
+                <div className="h-12 w-12 shrink-0 overflow-hidden rounded-[18px] bg-slate-100 dark:bg-slate-800 sm:h-14 sm:w-14 sm:rounded-[22px]">
                   {c.propertyImage ? (
                     <img src={c.propertyImage} alt={c.propertyTitle || 'Propiedad'} className="h-full w-full object-cover" />
                   ) : (
@@ -2026,10 +2030,10 @@ export const SecureChat: React.FC<SecureChatProps> = ({
                     </div>
                   )}
                 </div>
-                <div className="min-w-0 flex-1 space-y-2">
+                <div className="min-w-0 flex-1 space-y-1.5 sm:space-y-2">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 space-y-1">
-                      <p className="truncate text-sm font-semibold tracking-tight text-slate-950 dark:text-white">
+                      <p className="truncate text-[0.92rem] font-semibold tracking-tight text-slate-950 dark:text-white sm:text-sm">
                         {c.propertyTitle || 'Propiedad'}
                       </p>
                       <p className={cn(
@@ -2047,7 +2051,7 @@ export const SecureChat: React.FC<SecureChatProps> = ({
                     </span>
                   </div>
                   <p className={cn(
-                    'truncate text-sm leading-6',
+                    'truncate text-[0.88rem] leading-5 sm:text-sm sm:leading-6',
                     preview.readState.unread
                       ? 'font-semibold text-slate-900 dark:text-white'
                       : 'text-slate-500 dark:text-slate-300',
@@ -2086,30 +2090,30 @@ export const SecureChat: React.FC<SecureChatProps> = ({
         ) : (
           <>
             {/* Header */}
-            <div className="border-b border-slate-200/80 bg-white/92 px-4 py-3.5 backdrop-blur dark:border-slate-800 dark:bg-slate-950/92 sm:px-6 sm:py-4">
-              <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
-                <div className="flex min-w-0 items-center gap-3 sm:gap-4">
-                <button onClick={() => setActiveConv(null)} className="rounded-full p-2 md:hidden">
+            <div className="border-b border-slate-200/80 bg-white/92 px-3.5 py-3 backdrop-blur dark:border-slate-800 dark:bg-slate-950/92 sm:px-6 sm:py-4">
+              <div className="mx-auto flex max-w-6xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                <div className="flex min-w-0 items-center gap-2.5 sm:gap-4">
+                <button onClick={() => setActiveConv(null)} className="rounded-full p-1.5 md:hidden">
                   <Icons.ChevronLeft className="w-6 h-6" />
                 </button>
-                <div className="flex min-w-0 items-center gap-3.5">
-                  <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-[22px] bg-slate-100 dark:bg-slate-800">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-[18px] bg-slate-100 dark:bg-slate-800 sm:h-14 sm:w-14 sm:rounded-[22px]">
                     {activeConv.propertyImage ? (
                       <img src={activeConv.propertyImage} alt={activeConv.propertyTitle || 'Propiedad'} className="h-full w-full object-cover" />
                     ) : (
                       <Icons.Home className="h-5 w-5 text-slate-400" />
                     )}
                   </div>
-                  <div className="min-w-0 space-y-1.5">
+                  <div className="min-w-0 space-y-1">
                     <p className="truncate text-[10px] font-black uppercase tracking-[0.16em] text-slate-400 dark:text-slate-500">
                       Conversación con {counterpartyName}
                     </p>
-                    <h3 className="truncate text-base font-semibold tracking-tight text-slate-950 dark:text-white sm:text-lg">
+                    <h3 className="truncate text-[0.98rem] font-semibold tracking-tight text-slate-950 dark:text-white sm:text-lg">
                       {activeConv.propertyTitle || 'Propiedad'}
                     </h3>
                     <div className="flex flex-wrap gap-2">
                       {headerNightlyPrice ? (
-                        <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200">
+                        <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 sm:px-3 sm:text-[11px]">
                           {headerNightlyPrice}
                         </span>
                       ) : null}
@@ -2117,28 +2121,39 @@ export const SecureChat: React.FC<SecureChatProps> = ({
                   </div>
                 </div>
               </div>
-                <button
-                  type="button"
-                  onClick={() => navigate(`/detail/${activeConv.property_id}`)}
-                  className="inline-flex shrink-0 items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 transition-colors hover:border-brand/30 hover:text-brand dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
-                >
-                  <Icons.Home className="h-3.5 w-3.5" />
-                  <span>Ver propiedad</span>
-                </button>
+                <div className="flex shrink-0 flex-wrap justify-start gap-2 sm:justify-end">
+                  <ContextualSupportDialog
+                    entryPoint={chatSupportEntryPoint}
+                    bookingId={activeRequestContext?.bookingId ?? activeConv.booking_id ?? null}
+                    conversationId={activeConv.id}
+                    propertyId={activeConv.property_id}
+                    propertyTitle={activeConv.propertyTitle ?? null}
+                    triggerVariant="secondary"
+                    triggerClassName="border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-950"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/detail/${activeConv.property_id}`)}
+                    className="inline-flex shrink-0 items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.75 text-[0.72rem] font-semibold text-slate-700 transition-colors hover:border-brand/30 hover:text-brand dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 sm:px-3.5 sm:py-2 sm:text-xs"
+                  >
+                    <Icons.Home className="h-3.5 w-3.5" />
+                    <span>Ver propiedad</span>
+                  </button>
+                </div>
               </div>
             </div>
 
-            <div className="border-b border-slate-200/80 bg-white/88 px-4 py-4 dark:border-slate-800 dark:bg-slate-950/90 sm:px-6">
-              <div className="mx-auto grid max-w-6xl gap-3 xl:grid-cols-[minmax(0,1.8fr)_minmax(280px,1fr)]">
-                <div className="rounded-[28px] border border-slate-200/80 bg-slate-50/85 p-4 dark:border-slate-800 dark:bg-slate-900/60 sm:p-5">
+            <div className="border-b border-slate-200/80 bg-white/88 px-3.5 py-3 dark:border-slate-800 dark:bg-slate-950/90 sm:px-6 sm:py-4">
+              <div className="mx-auto grid max-w-6xl gap-2.5 xl:grid-cols-[minmax(0,1.8fr)_minmax(280px,1fr)] xl:gap-3">
+                <div className="rounded-[22px] border border-slate-200/80 bg-slate-50/85 p-3.5 dark:border-slate-800 dark:bg-slate-900/60 sm:rounded-[28px] sm:p-5">
                   <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                     <div className="min-w-0 space-y-1">
                       <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400 dark:text-slate-500">Contexto de la consulta</p>
                       {contextSummaryLine ? (
-                        <p className="text-sm font-medium leading-6 text-slate-800 dark:text-slate-100">{contextSummaryLine}</p>
+                        <p className="text-[0.92rem] font-medium leading-5 text-slate-800 dark:text-slate-100 sm:text-sm sm:leading-6">{contextSummaryLine}</p>
                       ) : null}
                       {chatContextHelper ? (
-                        <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">{chatContextHelper}</p>
+                        <p className="text-[0.72rem] leading-5 text-slate-500 dark:text-slate-400 sm:text-xs">{chatContextHelper}</p>
                       ) : null}
                       {chatOnboardingTip ? (
                         <ContextualTip
@@ -2151,7 +2166,7 @@ export const SecureChat: React.FC<SecureChatProps> = ({
                       ) : null}
                     </div>
                     {headerReservationStatus ? (
-                      <p className={cn('inline-flex items-center gap-2 self-start rounded-full border px-3 py-1.5 text-[11px] font-semibold', compactReservationStatusToneClasses[headerReservationStatus.tone])}>
+                      <p className={cn('inline-flex items-center gap-2 self-start rounded-full border px-2.5 py-1.5 text-[10px] font-semibold sm:px-3 sm:text-[11px]', compactReservationStatusToneClasses[headerReservationStatus.tone])}>
                         <span className={cn('h-1.5 w-1.5 rounded-full', headerReservationStatus.tone === 'brand' ? 'bg-brand' : headerReservationStatus.tone === 'success' ? 'bg-emerald-500' : headerReservationStatus.tone === 'warning' ? 'bg-amber-500' : 'bg-slate-400')} />
                         <span>Estado: {headerReservationStatus.label}</span>
                       </p>
@@ -2159,12 +2174,12 @@ export const SecureChat: React.FC<SecureChatProps> = ({
                   </div>
 
                   {hostContextSignals.length > 0 ? (
-                    <div className="mt-4 grid gap-2 sm:grid-cols-3">
+                    <div className="mt-3 grid gap-2 sm:mt-4 sm:grid-cols-3">
                       {hostContextSignals.map((signal) => (
                         <div
                           key={signal.key}
                           className={cn(
-                            'flex items-start gap-3 rounded-[22px] border px-3.5 py-3 text-sm leading-5',
+                            'flex items-start gap-2.5 rounded-[18px] border px-3 py-2.5 text-[0.82rem] leading-5 sm:gap-3 sm:rounded-[22px] sm:px-3.5 sm:py-3 sm:text-sm',
                             signal.tone === 'success'
                               ? 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/30 dark:bg-emerald-900/20 dark:text-emerald-200'
                               : signal.tone === 'brand'
@@ -2182,26 +2197,26 @@ export const SecureChat: React.FC<SecureChatProps> = ({
                   {reservationTimeline ? (
                     <ReservationOperationTimeline
                       timeline={reservationTimeline}
-                      className="mt-4 border-slate-200/80 bg-white/82 dark:border-slate-800 dark:bg-slate-950/55"
+                      className="mt-3 border-slate-200/80 bg-white/82 dark:border-slate-800 dark:bg-slate-950/55 sm:mt-4"
                     />
                   ) : null}
                 </div>
 
-                <div className="rounded-[28px] border border-slate-200/80 bg-white p-4 dark:border-slate-800 dark:bg-slate-950/85 sm:p-5">
+                <div className="rounded-[22px] border border-slate-200/80 bg-white p-3.5 dark:border-slate-800 dark:bg-slate-950/85 sm:rounded-[28px] sm:p-5">
                   <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400 dark:text-slate-500">Seguridad</p>
-                  <div className="mt-3 flex items-start gap-3">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-500 dark:bg-slate-900 dark:text-slate-300">
+                  <div className="mt-2.5 flex items-start gap-3 sm:mt-3">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[18px] bg-slate-100 text-slate-500 dark:bg-slate-900 dark:text-slate-300 sm:h-10 sm:w-10 sm:rounded-2xl">
                       <Icons.ShieldCheck className="h-4 w-4" />
                     </span>
-                    <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">{CHAT_SECURITY_REMINDER}</p>
+                    <p className="text-[0.88rem] leading-5 text-slate-600 dark:text-slate-300 sm:text-sm sm:leading-6">{CHAT_SECURITY_REMINDER}</p>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Messages */}
-            <div ref={scrollRef} className="flex-1 overflow-y-auto bg-[linear-gradient(180deg,rgba(248,250,252,0.72),rgba(255,255,255,1))] px-4 py-5 no-scrollbar dark:bg-slate-950 sm:px-6 sm:py-6">
-              <div className="mx-auto flex w-full max-w-5xl flex-col gap-5">
+            <div ref={scrollRef} className="flex-1 overflow-y-auto bg-[linear-gradient(180deg,rgba(248,250,252,0.72),rgba(255,255,255,1))] px-3.5 py-4 no-scrollbar dark:bg-slate-950 sm:px-6 sm:py-6">
+              <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 sm:gap-5">
                 {error && activeConv && (
                   <div className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 dark:border-red-900/30 dark:bg-red-900/20">
                     <Icons.AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
@@ -2247,9 +2262,9 @@ export const SecureChat: React.FC<SecureChatProps> = ({
                 ))}
 
                 {showInitialGuestStarter ? (
-                  <div className="mx-auto w-full max-w-2xl rounded-[28px] border border-slate-200/80 bg-white/96 p-4 shadow-[0_24px_48px_-40px_rgba(15,23,42,0.28)] dark:border-slate-800 dark:bg-slate-900/92 sm:p-5">
-                    <div className="flex items-start gap-4">
-                      <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-slate-100 dark:bg-slate-800">
+                  <div className="mx-auto w-full max-w-2xl rounded-[22px] border border-slate-200/80 bg-white/96 p-3.5 shadow-[0_24px_48px_-40px_rgba(15,23,42,0.28)] dark:border-slate-800 dark:bg-slate-900/92 sm:rounded-[28px] sm:p-5">
+                    <div className="flex items-start gap-3 sm:gap-4">
+                      <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-[18px] bg-slate-100 dark:bg-slate-800 sm:h-14 sm:w-14 sm:rounded-2xl">
                         {activeConv.propertyImage ? (
                           <img src={activeConv.propertyImage} alt={activeConv.propertyTitle || 'Propiedad'} className="h-full w-full object-cover" />
                         ) : (
@@ -2260,16 +2275,16 @@ export const SecureChat: React.FC<SecureChatProps> = ({
                         <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400 dark:text-slate-500">
                           Primer mensaje
                         </p>
-                        <h4 className="text-sm font-semibold text-slate-900 dark:text-white sm:text-base">
+                        <h4 className="text-[0.92rem] font-semibold text-slate-900 dark:text-white sm:text-base">
                           {activeConv.propertyTitle || 'Propiedad'}
                         </h4>
-                        <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">
+                        <p className="text-[0.88rem] leading-5 text-slate-600 dark:text-slate-300 sm:text-sm sm:leading-6">
                           Consultá disponibilidad o hacé preguntas antes de decidir.
                         </p>
                       </div>
                     </div>
 
-                    <div className="mt-4 flex flex-wrap gap-2">
+                    <div className="mt-3 flex flex-wrap gap-1.5 sm:mt-4 sm:gap-2">
                       {starterQuickQuestions.map((question) => (
                         <button
                           key={question.key}
@@ -2279,7 +2294,7 @@ export const SecureChat: React.FC<SecureChatProps> = ({
                             setComposerWarning(null);
                             composerInputRef.current?.focus();
                           }}
-                          className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 transition-colors hover:border-brand/30 hover:text-brand dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
+                          className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.75 text-[0.72rem] font-semibold text-slate-700 transition-colors hover:border-brand/30 hover:text-brand dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 sm:px-3.5 sm:py-2 sm:text-xs"
                         >
                           <Icons.MessageSquare className="h-3.5 w-3.5" />
                           <span>{question.label}</span>
@@ -2331,11 +2346,11 @@ export const SecureChat: React.FC<SecureChatProps> = ({
 
                   return (
                     <div key={msg.id} className={cn(
-                      'flex max-w-[82%] flex-col gap-1 sm:max-w-[76%]',
+                      'flex max-w-[88%] flex-col gap-1 sm:max-w-[82%] md:max-w-[76%]',
                       msg.sender_id === user?.id ? 'self-end' : 'self-start'
                     )}>
                       <div className={cn(
-                        'relative rounded-[26px] px-4 py-3.5 text-sm font-medium leading-7 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.18)]',
+                        'relative rounded-[22px] px-3.5 py-3 text-[0.92rem] font-medium leading-6 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.18)] sm:rounded-[26px] sm:px-4 sm:py-3.5 sm:text-sm sm:leading-7',
                         msg.sender_id === user?.id
                           ? 'rounded-br-md bg-brand text-white'
                           : 'rounded-bl-md border border-slate-200/80 bg-white text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-white'
@@ -2388,9 +2403,9 @@ export const SecureChat: React.FC<SecureChatProps> = ({
             </div>
 
             {/* Input */}
-            <div className="sticky bottom-0 z-10 border-t border-slate-200/80 bg-white/96 px-4 py-4 backdrop-blur dark:border-slate-800 dark:bg-slate-950/96 sm:px-6">
-              <div className="mx-auto max-w-6xl space-y-3">
-                <div className="flex items-end gap-3">
+            <div className="sticky bottom-0 z-10 border-t border-slate-200/80 bg-white/96 px-3.5 py-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] backdrop-blur dark:border-slate-800 dark:bg-slate-950/96 sm:px-6 sm:py-4">
+              <div className="mx-auto max-w-6xl space-y-2.5 sm:space-y-3">
+                <div className="flex flex-col gap-2.5 sm:flex-row sm:items-end sm:gap-3">
                   <input
                     ref={composerInputRef}
                     type="text"
@@ -2409,13 +2424,13 @@ export const SecureChat: React.FC<SecureChatProps> = ({
                     }}
                     onKeyDown={(e) => e.key === 'Enter' && handleSend()}
                     placeholder="Escribí tu consulta..."
-                    className="flex-1 rounded-[22px] border border-slate-200 bg-white px-5 py-3.5 text-sm font-medium text-slate-900 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.18)] outline-none transition-all placeholder:text-slate-400 focus:border-brand/30 focus:ring-2 focus:ring-brand/12 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
+                    className="min-h-[3.2rem] flex-1 rounded-[18px] border border-slate-200 bg-white px-4 py-3 text-[0.95rem] font-medium text-slate-900 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.18)] outline-none transition-all placeholder:text-slate-400 focus:border-brand/30 focus:ring-2 focus:ring-brand/12 dark:border-slate-800 dark:bg-slate-900 dark:text-white sm:min-h-0 sm:rounded-[22px] sm:px-5 sm:py-3.5 sm:text-sm"
                   />
                   <button
                     aria-label="Enviar mensaje"
                     onClick={handleSend}
                     disabled={!inputText.trim() || sendingMessageId !== null}
-                    className="inline-flex items-center gap-2 rounded-[20px] bg-brand px-4 py-3.5 text-sm font-semibold text-white shadow-[0_18px_38px_-24px_rgba(67,56,202,0.42)] transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="inline-flex min-h-[3.2rem] w-full items-center justify-center gap-2 rounded-[18px] bg-brand px-4 py-3 text-[0.95rem] font-semibold text-white shadow-[0_18px_38px_-24px_rgba(67,56,202,0.42)] transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-0 sm:w-auto sm:rounded-[20px] sm:px-4 sm:py-3.5 sm:text-sm"
                   >
                     {sendingMessageId !== null ? (
                       <>
@@ -2432,14 +2447,14 @@ export const SecureChat: React.FC<SecureChatProps> = ({
                 </div>
 
                 {composerWarning ? (
-                  <div className="rounded-[18px] border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-xs leading-5 text-amber-800 dark:border-amber-900/30 dark:bg-amber-900/20 dark:text-amber-200">
+                  <div className="rounded-[16px] border border-amber-200 bg-amber-50 px-3 py-2.5 text-[0.72rem] leading-5 text-amber-800 dark:border-amber-900/30 dark:bg-amber-900/20 dark:text-amber-200 sm:rounded-[18px] sm:px-3.5 sm:text-xs">
                     <p className="font-medium">{composerWarning}</p>
                     <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-300">{EXTERNAL_CONTACT_EDIT_HINT}</p>
                   </div>
                 ) : null}
 
                 {showDepositChoiceBlock || hasInlineComposerActions ? (
-                  <div className="space-y-3">
+                  <div className="space-y-2.5 sm:space-y-3">
                     {showDepositChoiceComposer ? (
                       <ProtectedDepositRefundRules />
                     ) : null}
@@ -2503,7 +2518,7 @@ export const SecureChat: React.FC<SecureChatProps> = ({
 
                     {hasInlineComposerActions ? (
                       <div className="space-y-2">
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap gap-1.5 sm:gap-2">
                           {hostAdvanceAction ? (
                             <button
                               type="button"
@@ -2592,7 +2607,7 @@ export const SecureChat: React.FC<SecureChatProps> = ({
                         </div>
 
                         {reservationProgressHint ? (
-                          <div className="rounded-[18px] border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs leading-5 text-slate-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-300">
+                          <div className="rounded-[16px] border border-slate-200 bg-slate-50 px-3 py-2.5 text-[0.72rem] leading-5 text-slate-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-300 sm:rounded-[18px] sm:px-3.5 sm:text-xs">
                             {reservationProgressHint}
                           </div>
                         ) : null}
@@ -2602,7 +2617,7 @@ export const SecureChat: React.FC<SecureChatProps> = ({
                 ) : null}
 
                 {canNotAdvanceRequest && showNotAdvanceComposer ? (
-                  <div className="rounded-[24px] border border-slate-200 bg-slate-50 px-4 py-4 dark:border-slate-800 dark:bg-slate-900/70">
+                  <div className="rounded-[20px] border border-slate-200 bg-slate-50 px-3.5 py-3.5 dark:border-slate-800 dark:bg-slate-900/70 sm:rounded-[24px] sm:px-4 sm:py-4">
                     <div className="space-y-3">
                       <div className="space-y-1">
                         <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">

@@ -40,6 +40,30 @@ vi.mock('connect-pg-simple', () => ({
 import app from '../index';
 
 const internalOpsSecret = process.env.INTERNAL_OPS_SECRET || process.env.SESSION_SECRET || 'dev-secret-change-in-production';
+const INTERNAL_OPS_USER_ID = 'ops_user_1';
+
+const buildInternalOpsAuthRow = () => ({
+  id: INTERNAL_OPS_USER_ID,
+  email: 'ops@alquilerreal.com',
+  role: 'tenant',
+  isHost: false,
+  isInternalOperator: true,
+  activeMode: 'guest',
+  name: 'Ops Ana',
+  zone: null,
+  phone: null,
+  bio: null,
+  interests: '[]',
+  memberSince: '2026-01-01T00:00:00.000Z',
+  createdAt: '2026-01-01T00:00:00.000Z',
+  profilePhoto: null,
+  rating: 0,
+  totalReviews: 0,
+  hostRating: 0,
+  totalProperties: 0,
+  totalBookingsHosted: 0,
+  badge: 'Operaciones',
+});
 
 describe('Internal moderation endpoints', () => {
   beforeEach(() => {
@@ -52,6 +76,11 @@ describe('Internal moderation endpoints', () => {
 
   test('GET /api/internal/moderation/review-queue returns user, property, reason, history and strikes', async () => {
     queryMock.mockImplementation(async (text: string, params?: unknown[]) => {
+      if (text.includes('FROM users WHERE id = $1')) {
+        expect(params).toEqual([INTERNAL_OPS_USER_ID]);
+        return { rows: [buildInternalOpsAuthRow()] };
+      }
+
       if (text.includes('FROM reports r') && text.includes('recentModerationEvents')) {
         expect(params).toEqual(['pending']);
         return {
@@ -93,6 +122,7 @@ describe('Internal moderation endpoints', () => {
 
     const res = await request(app)
       .get('/api/internal/moderation/review-queue')
+      .set('x-test-user-id', INTERNAL_OPS_USER_ID)
       .set('x-internal-ops-secret', internalOpsSecret);
 
     expect(res.status).toBe(200);
@@ -143,6 +173,11 @@ describe('Internal moderation endpoints', () => {
 
   test('POST /api/internal/reports/:id/review applies a medium action with strike and pause', async () => {
     queryMock.mockImplementation(async (text: string, params?: unknown[]) => {
+      if (text.includes('FROM users WHERE id = $1')) {
+        expect(params).toEqual([INTERNAL_OPS_USER_ID]);
+        return { rows: [buildInternalOpsAuthRow()] };
+      }
+
       if (text.includes('FROM reports r') && text.includes('currentStrikesCount')) {
         expect(params).toEqual(['rep-1']);
         return {
@@ -204,6 +239,7 @@ describe('Internal moderation endpoints', () => {
 
     const res = await request(app)
       .post('/api/internal/reports/rep-1/review')
+      .set('x-test-user-id', INTERNAL_OPS_USER_ID)
       .set('x-internal-ops-secret', internalOpsSecret)
       .send({
         action: 'confirm_medium',

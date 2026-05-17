@@ -193,7 +193,7 @@ const seedDemoCatalog = async () => {
     for (const user of demoData.users) {
       await client.query(
         `INSERT INTO users (
-          id, email, password_hash, role, name, zone, phone, bio, interests,
+          id, email, password_hash, role, is_internal_operator, name, zone, phone, bio, interests,
           member_since, created_at, identity_validated, email_verified, phone_verified,
           validation_level, active_mode, profile_photo, rating, total_reviews, is_host, host_verified,
           host_rating, total_properties, total_bookings_hosted, badge, trust_score, risk_score,
@@ -201,17 +201,18 @@ const seedDemoCatalog = async () => {
           identity_verification_status, identity_verification_provider, identity_verified_at
         )
         VALUES (
-          $1, $2, $3, $4, $5, $6, $7, $8, $9,
-          $10, $11, $12, $13, $14,
-          $15, $16, $17, 0, 0, $18, $19,
-          0, 0, 0, $20, $21, $22,
-          $23, $24, $25,
-          $26, $27, $28
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+          $11, $12, $13, $14, $15,
+          $16, $17, $18, 0, 0, $19, $20,
+          0, 0, 0, $21, $22, $23,
+          $24, $25, $26,
+          $27, $28, $29
         )
         ON CONFLICT (id) DO UPDATE SET
           email = EXCLUDED.email,
           password_hash = EXCLUDED.password_hash,
           role = EXCLUDED.role,
+          is_internal_operator = EXCLUDED.is_internal_operator,
           name = EXCLUDED.name,
           zone = EXCLUDED.zone,
           phone = EXCLUDED.phone,
@@ -250,6 +251,7 @@ const seedDemoCatalog = async () => {
           user.email,
           passwordHashes.get(user.id) ?? '',
           user.role,
+          Boolean(user.isInternalOperator),
           user.name,
           user.zone,
           user.phone,
@@ -539,6 +541,7 @@ export const initDB = async () => {
       email TEXT UNIQUE NOT NULL,
       password_hash TEXT NOT NULL,
       role TEXT CHECK (role IN ('tenant', 'host')) NOT NULL DEFAULT 'tenant',
+      is_internal_operator BOOLEAN DEFAULT FALSE,
       active_mode TEXT CHECK (active_mode IN ('guest', 'host')) NOT NULL DEFAULT 'guest',
       name TEXT NOT NULL DEFAULT 'Usuario',
       zone TEXT,
@@ -581,6 +584,7 @@ export const initDB = async () => {
       BEGIN ALTER TABLE users ADD COLUMN password_hash TEXT DEFAULT ''; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE users ADD COLUMN zone TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'tenant'; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE users ADD COLUMN is_internal_operator BOOLEAN DEFAULT FALSE; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE users ADD COLUMN active_mode TEXT DEFAULT 'guest'; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE users ADD COLUMN email_verified BOOLEAN DEFAULT FALSE; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE users ADD COLUMN phone_verified BOOLEAN DEFAULT FALSE; EXCEPTION WHEN duplicate_column THEN NULL; END;
@@ -763,6 +767,7 @@ export const initDB = async () => {
       BEGIN ALTER TABLE premium_verification_orders ADD COLUMN payment_status TEXT DEFAULT 'pending'; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE premium_verification_orders ADD COLUMN verification_status TEXT DEFAULT 'pending'; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE premium_verification_orders ADD COLUMN is_promotional BOOLEAN DEFAULT FALSE; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE premium_verification_orders ADD COLUMN metadata JSONB DEFAULT '{}'::jsonb; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE premium_verification_orders ADD COLUMN updated_at TIMESTAMP DEFAULT NOW(); EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE premium_verification_orders ADD COLUMN completed_at TIMESTAMP; EXCEPTION WHEN duplicate_column THEN NULL; END;
     END $$;
@@ -810,6 +815,7 @@ export const initDB = async () => {
       beds INTEGER,
       "hasPresencialVerification" INTEGER DEFAULT 0,
       "onsiteVerifiedAt" TIMESTAMP,
+      "onsiteVerificationMaintenance" JSONB DEFAULT '{}'::jsonb,
       "hasDigitalVerification" INTEGER DEFAULT 0,
       lat DOUBLE PRECISION DEFAULT -36.3536,
       lng DOUBLE PRECISION DEFAULT -56.7196,
@@ -837,6 +843,7 @@ export const initDB = async () => {
       BEGIN ALTER TABLE properties ADD COLUMN created_at TIMESTAMP DEFAULT NOW(); EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE properties ADD COLUMN "materialVerified" INTEGER DEFAULT 0; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE properties ADD COLUMN "onsiteVerifiedAt" TIMESTAMP; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE properties ADD COLUMN "onsiteVerificationMaintenance" JSONB DEFAULT '{}'::jsonb; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE properties ADD COLUMN manual_blocked_dates TEXT DEFAULT '[]'; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE properties ADD COLUMN internal_moderation_status TEXT DEFAULT 'clear'; EXCEPTION WHEN duplicate_column THEN NULL; END;
       BEGIN ALTER TABLE properties ADD COLUMN internal_moderation_reason TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
@@ -1175,6 +1182,81 @@ export const initDB = async () => {
   await db.query(`
     CREATE INDEX IF NOT EXISTS idx_reports_reported_user_status
       ON reports (reported_user_id, status, created_at DESC);
+  `);
+
+  // ============================================================
+  // SUPPORT CASES TABLE
+  // ============================================================
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS support_cases (
+      id TEXT PRIMARY KEY,
+      user_id TEXT REFERENCES users(id) ON DELETE CASCADE,
+      property_id TEXT REFERENCES properties(id) ON DELETE SET NULL,
+      booking_id TEXT REFERENCES bookings(id) ON DELETE SET NULL,
+      conversation_id TEXT REFERENCES conversations(id) ON DELETE SET NULL,
+      entry_point TEXT NOT NULL,
+      category TEXT NOT NULL,
+      description TEXT,
+      status TEXT CHECK (status IN ('received', 'in_review', 'waiting_response', 'resolved')) DEFAULT 'received',
+      review_type TEXT,
+      context_snapshot JSONB DEFAULT '{}'::jsonb,
+      status_note TEXT,
+      last_status_by TEXT,
+      last_status_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW(),
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
+
+  await db.query(`
+    DO $$ BEGIN
+      BEGIN ALTER TABLE support_cases ADD COLUMN property_id TEXT REFERENCES properties(id) ON DELETE SET NULL; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE support_cases ADD COLUMN booking_id TEXT REFERENCES bookings(id) ON DELETE SET NULL; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE support_cases ADD COLUMN conversation_id TEXT REFERENCES conversations(id) ON DELETE SET NULL; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE support_cases ADD COLUMN entry_point TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE support_cases ADD COLUMN category TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE support_cases ADD COLUMN description TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE support_cases ADD COLUMN status TEXT DEFAULT 'received'; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE support_cases ADD COLUMN review_type TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE support_cases ADD COLUMN context_snapshot JSONB DEFAULT '{}'::jsonb; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE support_cases ADD COLUMN status_note TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE support_cases ADD COLUMN last_status_by TEXT; EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE support_cases ADD COLUMN last_status_at TIMESTAMP DEFAULT NOW(); EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE support_cases ADD COLUMN updated_at TIMESTAMP DEFAULT NOW(); EXCEPTION WHEN duplicate_column THEN NULL; END;
+      BEGIN ALTER TABLE support_cases ADD COLUMN created_at TIMESTAMP DEFAULT NOW(); EXCEPTION WHEN duplicate_column THEN NULL; END;
+    END $$;
+  `);
+
+  await db.query(`
+    UPDATE support_cases
+    SET context_snapshot = COALESCE(context_snapshot, '{}'::jsonb),
+        last_status_at = COALESCE(last_status_at, created_at, NOW()),
+        updated_at = COALESCE(updated_at, created_at, NOW());
+  `);
+
+  await db.query(`
+    CREATE INDEX IF NOT EXISTS idx_support_cases_user_created_at
+      ON support_cases (user_id, created_at DESC);
+  `);
+
+  await db.query(`
+    CREATE INDEX IF NOT EXISTS idx_support_cases_booking_created_at
+      ON support_cases (booking_id, created_at DESC);
+  `);
+
+  await db.query(`
+    CREATE INDEX IF NOT EXISTS idx_support_cases_conversation_created_at
+      ON support_cases (conversation_id, created_at DESC);
+  `);
+
+  await db.query(`
+    CREATE INDEX IF NOT EXISTS idx_support_cases_property_created_at
+      ON support_cases (property_id, created_at DESC);
+  `);
+
+  await db.query(`
+    CREATE INDEX IF NOT EXISTS idx_support_cases_status_last_status_at
+      ON support_cases (status, last_status_at DESC);
   `);
 
   await db.query(`

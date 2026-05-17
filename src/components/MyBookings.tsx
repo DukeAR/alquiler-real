@@ -51,6 +51,7 @@ import { ProtectedDepositRefundRules } from './ui/ProtectedDepositRefundRules';
 import { ReservationConfirmedState } from './ui/ReservationConfirmedState';
 import { ReservationOperationTimeline } from './ui/ReservationOperationTimeline';
 import { ReviewModal } from './ReviewModal';
+import { ContextualSupportDialog } from './ContextualSupportDialog';
 import { SectionTitle } from './ui/SectionTitle';
 import { AccountModeSwitch } from './ui/AccountModeSwitch';
 
@@ -110,31 +111,31 @@ const getContractPlatformTerms = (contract: ContractState) => (
 );
 
 const SummaryMetric = ({ label, value, helper, icon }: SummaryMetricProps) => (
-  <div className="rounded-[28px] border border-slate-200/80 bg-white/96 p-5 shadow-[0_18px_42px_-36px_rgba(15,23,42,0.26)] dark:border-slate-800 dark:bg-slate-900/92">
+  <div className="rounded-[22px] border border-slate-200/80 bg-white/96 p-4 shadow-[0_18px_42px_-36px_rgba(15,23,42,0.26)] dark:border-slate-800 dark:bg-slate-900/92 sm:rounded-[28px] sm:p-5">
     <div className="flex items-center justify-between gap-3">
       <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">{label}</p>
-      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-brand/10 text-brand dark:bg-brand/15 dark:text-brand-light">
+      <div className="flex h-9 w-9 items-center justify-center rounded-[18px] bg-brand/10 text-brand dark:bg-brand/15 dark:text-brand-light sm:h-10 sm:w-10 sm:rounded-2xl">
         {icon}
       </div>
     </div>
-    <p className="mt-4 text-3xl font-semibold tracking-tight text-slate-950 dark:text-slate-50">{value}</p>
-    <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">{helper}</p>
+    <p className="mt-3 text-[2rem] font-semibold tracking-tight text-slate-950 dark:text-slate-50 sm:mt-4 sm:text-3xl">{value}</p>
+    <p className="mt-1.5 text-[0.82rem] leading-5 text-slate-500 dark:text-slate-400 sm:mt-2 sm:text-sm sm:leading-6">{helper}</p>
   </div>
 );
 
 const PriorityActionRow = ({ eyebrow, title, description, actionLabel, icon, onAction }: PriorityActionRowProps) => (
-  <div className="flex flex-col gap-4 rounded-[28px] border border-slate-200/80 bg-white/96 p-5 shadow-[0_18px_42px_-36px_rgba(15,23,42,0.22)] dark:border-slate-800 dark:bg-slate-900/92 md:flex-row md:items-center md:justify-between">
-    <div className="flex items-start gap-4">
-      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand/10 text-brand dark:bg-brand/15 dark:text-brand-light">
+  <div className="flex flex-col gap-3.5 rounded-[22px] border border-slate-200/80 bg-white/96 p-4 shadow-[0_18px_42px_-36px_rgba(15,23,42,0.22)] dark:border-slate-800 dark:bg-slate-900/92 sm:rounded-[28px] sm:p-5 md:flex-row md:items-center md:justify-between">
+    <div className="flex items-start gap-3 sm:gap-4">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[18px] bg-brand/10 text-brand dark:bg-brand/15 dark:text-brand-light sm:h-11 sm:w-11 sm:rounded-2xl">
         {icon}
       </div>
       <div className="space-y-1.5">
         <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">{eyebrow}</p>
-        <p className="text-base font-semibold text-slate-950 dark:text-slate-50">{title}</p>
-        <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">{description}</p>
+        <p className="text-[0.98rem] font-semibold text-slate-950 dark:text-slate-50 sm:text-base">{title}</p>
+        <p className="text-[0.88rem] leading-5 text-slate-600 dark:text-slate-300 sm:text-sm sm:leading-6">{description}</p>
       </div>
     </div>
-    <Button type="button" variant="secondary" size="sm" onClick={onAction} className="shrink-0 rounded-full">
+    <Button type="button" variant="secondary" size="sm" onClick={onAction} className="w-full justify-center rounded-full md:w-auto md:shrink-0">
       <>
         {actionLabel}
         <Icons.ArrowRight className="h-4 w-4" />
@@ -145,13 +146,13 @@ const PriorityActionRow = ({ eyebrow, title, description, actionLabel, icon, onA
 
 const BookingGroup = ({ title, description, count, emptyText, children }: BookingGroupProps) => (
   <Card padding="none" className="overflow-hidden">
-    <div className="border-b border-slate-100 bg-slate-50/70 px-5 py-4 dark:border-slate-800 dark:bg-slate-800/50 sm:px-6">
+    <div className="border-b border-slate-100 bg-slate-50/70 px-4 py-3.5 dark:border-slate-800 dark:bg-slate-800/50 sm:px-6 sm:py-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="space-y-1">
           <h3 className="text-base font-semibold text-slate-950 dark:text-slate-50">{title}</h3>
-          <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">{description}</p>
+          <p className="text-[0.88rem] leading-5 text-slate-500 dark:text-slate-400 sm:text-sm sm:leading-6">{description}</p>
         </div>
-        <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+        <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 sm:px-3 sm:text-[11px]">
           {count}
         </span>
       </div>
@@ -977,6 +978,9 @@ export const MyBookings = () => {
     const isReviewingExternalDepositChoice = externalDepositChoiceBookingId === booking.id;
     const arrivalActionsAvailable = isBookingCheckInReached(booking.startDate);
     const canReviewBooking = booking.status === 'completed' && !booking.guestReviewSubmitted && Boolean(booking.hostId);
+    const supportEntryPoint = arrivalActionsAvailable || bookingFlow.stage === 'protected-deposit-review' || bookingFlow.stage === 'protected-no-show-pending'
+      ? 'checkin'
+      : 'booking';
     const protectedDepositPriceLines = protectedDepositPricing ? [
       { label: 'Seña', value: formatCurrency(protectedDepositPricing.depositAmount) },
       {
@@ -990,17 +994,17 @@ export const MyBookings = () => {
       <div
         key={booking.id}
         id={getBookingElementId(booking.id)}
-        className="border-t border-slate-100 px-5 py-5 first:border-t-0 dark:border-slate-800 sm:px-6"
+        className="border-t border-slate-100 px-4 py-4 first:border-t-0 dark:border-slate-800 sm:px-6 sm:py-5"
       >
-        <div className="flex flex-col gap-5">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+        <div className="flex flex-col gap-4 sm:gap-5">
+          <div className="flex flex-col gap-3.5 lg:flex-row lg:items-start lg:justify-between lg:gap-4">
+            <div className="flex flex-col gap-3.5 sm:flex-row sm:items-start sm:gap-4">
               <img
                 src={booking.imageUrl || 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=600&q=80'}
                 alt={booking.propertyTitle || 'Propiedad'}
-                className="h-24 w-full rounded-[24px] object-cover sm:w-36"
+                className="h-20 w-full rounded-[20px] object-cover sm:h-24 sm:w-36 sm:rounded-[24px]"
               />
-              <div className="space-y-3">
+              <div className="space-y-2.5 sm:space-y-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge variant={getBookingStatusVariant(booking)} size="md">{getBookingStatusText(booking)}</Badge>
                   {booking.requestMode ? (
@@ -1014,8 +1018,8 @@ export const MyBookings = () => {
                 </div>
 
                 <div className="space-y-1">
-                  <h3 className="text-lg font-semibold tracking-tight text-slate-950 dark:text-slate-50">{booking.propertyTitle || 'Propiedad'}</h3>
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-slate-500 dark:text-slate-400">
+                  <h3 className="text-[1rem] font-semibold tracking-tight text-slate-950 dark:text-slate-50 sm:text-lg">{booking.propertyTitle || 'Propiedad'}</h3>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-[0.88rem] text-slate-500 dark:text-slate-400 sm:gap-x-4 sm:text-sm">
                     {booking.location ? (
                       <span className="inline-flex items-center gap-1.5">
                         <Icons.MapPin className="h-4 w-4" />
@@ -1035,25 +1039,25 @@ export const MyBookings = () => {
               </div>
             </div>
 
-            <div className="min-w-[12rem] rounded-[24px] border border-slate-200/80 bg-slate-50/80 px-4 py-4 text-left dark:border-slate-700 dark:bg-slate-800/60 lg:text-right">
+            <div className="min-w-0 rounded-[20px] border border-slate-200/80 bg-slate-50/80 px-3.5 py-3.5 text-left dark:border-slate-700 dark:bg-slate-800/60 sm:min-w-[12rem] sm:rounded-[24px] sm:px-4 sm:py-4 lg:text-right">
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Costo total</p>
-              <p className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">{formatCurrency(booking.totalPrice)}</p>
-              <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">Etapa: {bookingFlow.statusLabel || getBookingStatusText(booking)}</p>
+              <p className="mt-1.5 text-[1.55rem] font-semibold tracking-tight text-slate-950 sm:mt-2 sm:text-2xl">{formatCurrency(booking.totalPrice)}</p>
+              <p className="mt-1.5 text-[0.88rem] leading-5 text-slate-500 dark:text-slate-400 sm:mt-2 sm:text-sm sm:leading-6">Etapa: {bookingFlow.statusLabel || getBookingStatusText(booking)}</p>
             </div>
           </div>
 
           <div className="grid gap-3 md:grid-cols-2">
-            <div className="rounded-[24px] border border-slate-200/80 bg-white/90 px-4 py-4 dark:border-slate-800 dark:bg-slate-950/30">
+            <div className="rounded-[20px] border border-slate-200/80 bg-white/90 px-3.5 py-3.5 dark:border-slate-800 dark:bg-slate-950/30 sm:rounded-[24px] sm:px-4 sm:py-4">
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Quién sigue</p>
-              <p className="mt-2 text-sm font-semibold text-slate-950 dark:text-slate-50">{getReservationNextActorDisplayLabel(bookingFlow)}</p>
+              <p className="mt-1.5 text-[0.92rem] font-semibold text-slate-950 dark:text-slate-50 sm:mt-2 sm:text-sm">{getReservationNextActorDisplayLabel(bookingFlow)}</p>
             </div>
-            <div className="rounded-[24px] border border-slate-200/80 bg-white/90 px-4 py-4 dark:border-slate-800 dark:bg-slate-950/30">
+            <div className="rounded-[20px] border border-slate-200/80 bg-white/90 px-3.5 py-3.5 dark:border-slate-800 dark:bg-slate-950/30 sm:rounded-[24px] sm:px-4 sm:py-4">
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Qué conviene hacer</p>
-              <p className="mt-2 text-sm font-semibold text-slate-950 dark:text-slate-50">{getReservationNextStepDisplayLabel(bookingFlow)}</p>
+              <p className="mt-1.5 text-[0.92rem] font-semibold text-slate-950 dark:text-slate-50 sm:mt-2 sm:text-sm">{getReservationNextStepDisplayLabel(bookingFlow)}</p>
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-1.5 sm:gap-2">
             {booking.conversationId ? (
               <Button
                 type="button"
@@ -1124,7 +1128,7 @@ export const MyBookings = () => {
 
           {(booking.status === 'pending' || booking.status === 'confirmed') && booking.startDate && bookingFlow.stage !== 'protected-deposit-review' && bookingFlow.stage !== 'protected-no-show-pending' ? (
             <div className={cn(
-              'rounded-[24px] border px-4 py-3 text-sm leading-6',
+              'rounded-[20px] border px-3.5 py-3 text-[0.88rem] leading-5 sm:rounded-[24px] sm:px-4 sm:text-sm sm:leading-6',
               isCancelable
                 ? 'border-brand/10 bg-brand/5 text-slate-700 dark:border-brand/20 dark:bg-brand/10 dark:text-slate-200'
                 : 'border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-800 dark:bg-slate-800/40 dark:text-slate-300',
@@ -1138,16 +1142,16 @@ export const MyBookings = () => {
           ) : null}
 
           {showReservationFlowPanel ? (
-            <div className="rounded-[24px] border border-brand/10 bg-brand/5 p-4 dark:border-brand/20 dark:bg-brand/10">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="rounded-[20px] border border-brand/10 bg-brand/5 p-3.5 dark:border-brand/20 dark:bg-brand/10 sm:rounded-[24px] sm:p-4">
+              <div className="flex flex-col gap-3.5 lg:flex-row lg:items-start lg:justify-between lg:gap-4">
                 <div className="space-y-2">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-brand">{bookingFlow.statusLabel}</p>
-                  <p className="text-sm font-semibold text-slate-950 dark:text-slate-50">{bookingFlow.description}</p>
-                  {bookingFlow.supportText ? <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">{bookingFlow.supportText}</p> : null}
-                  {bookingFlow.trackingHint ? <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">{bookingFlow.trackingHint}</p> : null}
+                  <p className="text-[0.92rem] font-semibold text-slate-950 dark:text-slate-50 sm:text-sm">{bookingFlow.description}</p>
+                  {bookingFlow.supportText ? <p className="text-[0.88rem] leading-5 text-slate-600 dark:text-slate-300 sm:text-sm sm:leading-6">{bookingFlow.supportText}</p> : null}
+                  {bookingFlow.trackingHint ? <p className="text-[0.82rem] leading-5 text-slate-500 dark:text-slate-400 sm:text-sm sm:leading-6">{bookingFlow.trackingHint}</p> : null}
                 </div>
 
-                <div className="flex flex-wrap gap-2 lg:justify-end">
+                <div className="flex flex-wrap gap-1.5 sm:gap-2 lg:justify-end">
                   {bookingFlow.stage === 'deposit-choice' ? (
                     <div className="w-full lg:max-w-[38rem]">
                       <ProtectedDepositRefundRules className="mb-4" />
@@ -1291,7 +1295,7 @@ export const MyBookings = () => {
               {bookingTimeline ? (
                 <ReservationOperationTimeline
                   timeline={bookingTimeline}
-                  className="mt-4 border-white/80 bg-white/75 dark:border-slate-800 dark:bg-slate-900/60"
+                  className="mt-3 border-white/80 bg-white/75 dark:border-slate-800 dark:bg-slate-900/60 sm:mt-4"
                 />
               ) : null}
 
@@ -1323,13 +1327,13 @@ export const MyBookings = () => {
               ) : null}
 
               {bookingFlow.stage === 'protected-checkout-pending' && !PROTECTED_DEPOSIT_PAYMENT_ENABLED ? (
-                <div className="mt-4 rounded-[20px] border border-white/80 bg-white/80 px-4 py-3 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-300">
+                <div className="mt-3 rounded-[18px] border border-white/80 bg-white/80 px-3.5 py-3 text-[0.88rem] text-slate-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-300 sm:mt-4 sm:rounded-[20px] sm:px-4 sm:text-sm">
                   La reserva ya quedó marcada con seña protegida. Cuando la seña se registre, queda retenida hasta check-in. Por ahora solo ves el costo por protección de operación y el estado base: el cobro todavía no se procesa dentro de la app.
                 </div>
               ) : null}
 
               {bookingFlow.stage === 'protected-deposit-held' && !arrivalActionsAvailable ? (
-                <div className="mt-4 rounded-[20px] border border-white/80 bg-white/80 px-4 py-3 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-300">
+                <div className="mt-3 rounded-[18px] border border-white/80 bg-white/80 px-3.5 py-3 text-[0.88rem] text-slate-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-300 sm:mt-4 sm:rounded-[20px] sm:px-4 sm:text-sm">
                   {bookingFlow.pendingActionHint}
                 </div>
               ) : null}
@@ -1390,6 +1394,19 @@ export const MyBookings = () => {
               <p className="mt-2">Las fechas se liberaron y ya no hay ingreso asociado a esta estadía.</p>
             </div>
           ) : null}
+
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200/80 pt-4 dark:border-slate-800">
+            <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">
+              Si necesitás ayuda operativa, la registramos con la reserva, el chat y los horarios vinculados cuando existan.
+            </p>
+            <ContextualSupportDialog
+              entryPoint={supportEntryPoint}
+              bookingId={booking.id}
+              conversationId={booking.conversationId ?? null}
+              propertyId={booking.propertyId ?? null}
+              propertyTitle={booking.propertyTitle ?? null}
+            />
+          </div>
         </div>
       </div>
     );
@@ -1444,8 +1461,8 @@ export const MyBookings = () => {
               <AccountModeSwitch compact />
             </div>
 
-            <div className="mt-6 grid gap-6 xl:grid-cols-[1.5fr,1fr]">
-              <div className="space-y-5">
+            <div className="mt-5 grid gap-4 xl:grid-cols-[1.5fr,1fr] xl:gap-6">
+              <div className="space-y-4 sm:space-y-5">
                 <SectionTitle
                   eyebrow="Mis reservas"
                   heading="Tus reservas, tus chats y tu próximo paso en un solo lugar."
@@ -1455,17 +1472,17 @@ export const MyBookings = () => {
                   className="max-w-3xl"
                 />
 
-                <div className="rounded-[32px] border border-white/80 bg-white/88 p-5 shadow-[0_20px_42px_-34px_rgba(15,23,42,0.3)] dark:border-slate-800 dark:bg-slate-900/88">
+                <div className="rounded-[24px] border border-white/80 bg-white/88 p-4 shadow-[0_20px_42px_-34px_rgba(15,23,42,0.3)] dark:border-slate-800 dark:bg-slate-900/88 sm:rounded-[32px] sm:p-5">
                   {highlightedStay ? (
-                    <div className="space-y-4">
+                    <div className="space-y-3.5 sm:space-y-4">
                       <div className="flex flex-wrap items-center gap-2">
                         <Badge variant="brand" size="md">{currentStay ? 'Estadía en curso' : 'Próxima estadía'}</Badge>
                         <Badge variant={getBookingStatusVariant(highlightedStay)} size="md">{getBookingStatusText(highlightedStay)}</Badge>
                       </div>
 
                       <div className="space-y-2">
-                        <h2 className="text-2xl font-semibold tracking-tight text-slate-950 dark:text-slate-50">{highlightedStay.propertyTitle || 'Tu próxima reserva'}</h2>
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-slate-600 dark:text-slate-300">
+                        <h2 className="text-[1.55rem] font-semibold tracking-tight text-slate-950 dark:text-slate-50 sm:text-2xl">{highlightedStay.propertyTitle || 'Tu próxima reserva'}</h2>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-[0.88rem] text-slate-600 dark:text-slate-300 sm:gap-x-4 sm:text-sm">
                           {highlightedStay.location ? (
                             <span className="inline-flex items-center gap-1.5">
                               <Icons.MapPin className="h-4 w-4 text-brand" />
@@ -1479,9 +1496,9 @@ export const MyBookings = () => {
                         </div>
                       </div>
 
-                      <p className="max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">{getHighlightedStayDescription(highlightedStay)}</p>
+                      <p className="max-w-2xl text-[0.92rem] leading-5 text-slate-600 dark:text-slate-300 sm:text-sm sm:leading-6">{getHighlightedStayDescription(highlightedStay)}</p>
 
-                      <div className="flex flex-wrap gap-2">
+                      <div className="grid gap-2 sm:flex sm:flex-wrap">
                         {highlightedStay.conversationId ? (
                           <Button type="button" variant="secondary" onClick={() => navigate(`/chat/${highlightedStay.conversationId}`)}>
                             <>
@@ -1499,15 +1516,15 @@ export const MyBookings = () => {
                       </div>
                     </div>
                   ) : (
-                    <div className="space-y-4">
+                    <div className="space-y-3.5 sm:space-y-4">
                       <Badge variant="neutral" size="md">Sin próxima estadía confirmada</Badge>
                       <div className="space-y-2">
-                        <h2 className="text-2xl font-semibold tracking-tight text-slate-950 dark:text-slate-50">Todavía no tenés una próxima estadía activa</h2>
-                        <p className="max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">
+                        <h2 className="text-[1.55rem] font-semibold tracking-tight text-slate-950 dark:text-slate-50 sm:text-2xl">Todavía no tenés una próxima estadía activa</h2>
+                        <p className="max-w-2xl text-[0.92rem] leading-5 text-slate-600 dark:text-slate-300 sm:text-sm sm:leading-6">
                           Cuando avances una solicitud o cierres una reserva, acá vas a ver el próximo ingreso, el estado real y la acción que más conviene retomar primero.
                         </p>
                       </div>
-                      <div className="flex flex-wrap gap-2">
+                      <div className="grid gap-2 sm:flex sm:flex-wrap">
                         <Button type="button" variant="secondary" onClick={() => navigate('/')}>
                           <>
                             <Icons.Search className="h-4 w-4" />
@@ -1528,7 +1545,7 @@ export const MyBookings = () => {
                 </div>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
+              <div className="grid gap-2.5 sm:grid-cols-3 xl:grid-cols-1 xl:gap-3">
                 <SummaryMetric
                   label="Solicitudes pendientes"
                   value={String(pendingRequestsCount)}
@@ -1552,7 +1569,7 @@ export const MyBookings = () => {
           </div>
         </Card>
 
-        <section className="space-y-4" aria-labelledby="guest-dashboard-priorities">
+        <section className="space-y-3.5 sm:space-y-4" aria-labelledby="guest-dashboard-priorities">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <SectionTitle
               eyebrow="Qué conviene hacer ahora"
@@ -1564,14 +1581,14 @@ export const MyBookings = () => {
             />
           </div>
 
-          <div className="grid gap-4">
+          <div className="grid gap-3 sm:gap-4">
             {priorityActions.slice(0, 3).map((action) => (
               <PriorityActionRow key={action.id} {...action} />
             ))}
           </div>
         </section>
 
-        <section id={RESERVATIONS_SECTION_ID} className="space-y-4" aria-labelledby="guest-dashboard-bookings">
+        <section id={RESERVATIONS_SECTION_ID} className="space-y-3.5 sm:space-y-4" aria-labelledby="guest-dashboard-bookings">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <SectionTitle
               eyebrow="Mis reservas"
@@ -1636,7 +1653,7 @@ export const MyBookings = () => {
           )}
         </section>
 
-        <section id={SAVED_SECTION_ID} className="space-y-4" aria-labelledby="guest-dashboard-saved">
+        <section id={SAVED_SECTION_ID} className="space-y-3.5 sm:space-y-4" aria-labelledby="guest-dashboard-saved">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <SectionTitle
               eyebrow="Guardados útiles"
@@ -1647,7 +1664,7 @@ export const MyBookings = () => {
               className="max-w-3xl"
             />
 
-            <Button type="button" variant="secondary" size="sm" onClick={() => navigate('/favorites')} className="rounded-full">
+            <Button type="button" variant="secondary" size="sm" onClick={() => navigate('/favorites')} className="w-full justify-center rounded-full sm:w-auto">
               <>
                 <Icons.Heart className="h-4 w-4" />
                 Ver todos
@@ -1666,15 +1683,15 @@ export const MyBookings = () => {
               const verificationDetails = getPropertyVerificationDetails(property);
 
               return (
-                <div key={property.id} className={cn('flex flex-col gap-4 px-5 py-5 sm:px-6 md:flex-row md:items-center md:justify-between', index > 0 && 'border-t border-slate-100 dark:border-slate-800')}>
-                  <div className="flex items-start gap-4">
+                <div key={property.id} className={cn('flex flex-col gap-3.5 px-4 py-4 sm:px-6 md:flex-row md:items-center md:justify-between md:gap-4', index > 0 && 'border-t border-slate-100 dark:border-slate-800')}>
+                  <div className="flex items-start gap-3 sm:gap-4">
                     <img
                       src={property.imageUrl}
                       alt={property.title}
-                      className="h-20 w-28 rounded-[20px] object-cover"
+                      className="h-18 w-24 rounded-[18px] object-cover sm:h-20 sm:w-28 sm:rounded-[20px]"
                     />
                     <div className="space-y-2">
-                      <div className="flex flex-wrap items-start gap-3">
+                      <div className="flex flex-wrap items-start gap-2.5 sm:gap-3">
                         <VerificationSeal
                           score={verificationDetails.score}
                           maxScore={verificationDetails.max}
@@ -1687,18 +1704,18 @@ export const MyBookings = () => {
                         <Badge variant="neutral" size="md">{formatCurrency(property.price)}</Badge>
                       </div>
                       <div>
-                        <h3 className="text-base font-semibold text-slate-950 dark:text-slate-50">{property.title}</h3>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">{property.location}</p>
+                        <h3 className="text-[0.98rem] font-semibold text-slate-950 dark:text-slate-50 sm:text-base">{property.title}</h3>
+                        <p className="text-[0.88rem] text-slate-500 dark:text-slate-400 sm:text-sm">{property.location}</p>
                       </div>
                       {verificationDetails.items.length > 0 ? (
                         <PropertyVerificationChecklist items={verificationDetails.items} size="sm" columns={2} />
                       ) : (
-                        <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">{verificationDetails.countLabel}.</p>
+                        <p className="text-[0.88rem] leading-5 text-slate-500 dark:text-slate-400 sm:text-sm sm:leading-6">{verificationDetails.countLabel}.</p>
                       )}
                     </div>
                   </div>
 
-                  <Button type="button" variant="secondary" size="sm" onClick={() => navigate(`/detail/${property.id}`)} className="rounded-full">
+                  <Button type="button" variant="secondary" size="sm" onClick={() => navigate(`/detail/${property.id}`)} className="w-full justify-center rounded-full md:w-auto">
                     <>
                       <Icons.ArrowRight className="h-4 w-4" />
                       Ver propiedad
@@ -1710,7 +1727,7 @@ export const MyBookings = () => {
           </Card>
         </section>
 
-        <section id={CONVERSATIONS_SECTION_ID} className="space-y-4" aria-labelledby="guest-dashboard-conversations">
+        <section id={CONVERSATIONS_SECTION_ID} className="space-y-3.5 sm:space-y-4" aria-labelledby="guest-dashboard-conversations">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <SectionTitle
               eyebrow="Conversaciones"
@@ -1721,7 +1738,7 @@ export const MyBookings = () => {
               className="max-w-3xl"
             />
 
-            <Button type="button" variant="secondary" size="sm" onClick={() => navigate('/chat/all')} className="rounded-full">
+            <Button type="button" variant="secondary" size="sm" onClick={() => navigate('/chat/all')} className="w-full justify-center rounded-full sm:w-auto">
               <>
                 <Icons.MessageSquare className="h-4 w-4" />
                 Ver chats
@@ -1743,27 +1760,27 @@ export const MyBookings = () => {
               const conversationVariant = relatedBooking ? getBookingStatusVariant(relatedBooking) : 'neutral';
 
               return (
-                <div key={conversation.id} className={cn('flex flex-col gap-4 px-5 py-5 sm:px-6 md:flex-row md:items-start md:justify-between', index > 0 && 'border-t border-slate-100 dark:border-slate-800')}>
-                  <div className="space-y-3">
-                    <div className="flex flex-wrap items-center gap-2">
+                <div key={conversation.id} className={cn('flex flex-col gap-3.5 px-4 py-4 sm:px-6 md:flex-row md:items-start md:justify-between md:gap-4', index > 0 && 'border-t border-slate-100 dark:border-slate-800')}>
+                  <div className="space-y-2.5 sm:space-y-3">
+                    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                       <Badge variant={conversationVariant} size="md">{conversationStatus}</Badge>
                       <Badge variant="neutral" size="md">Actualizada {formatConversationUpdatedAt(conversation.updated_at)}</Badge>
                     </div>
 
                     <div className="space-y-1">
-                      <h3 className="text-base font-semibold text-slate-950 dark:text-slate-50">{conversation.propertyTitle || 'Conversación activa'}</h3>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">
+                      <h3 className="text-[0.98rem] font-semibold text-slate-950 dark:text-slate-50 sm:text-base">{conversation.propertyTitle || 'Conversación activa'}</h3>
+                      <p className="text-[0.88rem] text-slate-500 dark:text-slate-400 sm:text-sm">
                         {conversation.hostName ? `Con ${conversation.hostName}` : 'Con tu anfitrión'}
                         {relatedBooking?.startDate ? ` · Ingreso ${formatBookingDateShort(relatedBooking.startDate)}` : ''}
                       </p>
                     </div>
 
-                    <p className="max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">
+                    <p className="max-w-2xl text-[0.88rem] leading-5 text-slate-600 dark:text-slate-300 sm:text-sm sm:leading-6">
                       {conversation.last_message || conversationFlow.description || 'Abrí el chat para retomar la conversación desde el último intercambio.'}
                     </p>
                   </div>
 
-                  <Button type="button" variant="secondary" size="sm" onClick={() => navigate(`/chat/${conversation.id}`)} className="rounded-full">
+                  <Button type="button" variant="secondary" size="sm" onClick={() => navigate(`/chat/${conversation.id}`)} className="w-full justify-center rounded-full md:w-auto">
                     <>
                       <Icons.ArrowRight className="h-4 w-4" />
                       Abrir chat

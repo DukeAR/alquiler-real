@@ -20,6 +20,7 @@ Credenciales listas para probar los dos recorridos principales:
 
 - Huésped: lucia@demo.com / 123456
 - Anfitrión: valeria@demo.com / 123456
+- Operaciones internas demo: valeria@demo.com / 123456
 
 La seed demo se carga desde el backend al iniciar y deja pobladas propiedades, reservas, reseñas, conversaciones, favoritos, preferencias y panel de anfitrión.
 

@@ -130,15 +130,15 @@ export const FavoritesView: React.FC = () => {
   const favoritesCountLabel = properties.length === 1 ? '1 propiedad guardada' : `${properties.length} propiedades guardadas`;
 
   return (
-    <div className="app-page py-6 md:py-8">
-      <div className="space-y-6 md:space-y-8">
+    <div className="app-page py-5 md:py-8">
+      <div className="space-y-5 md:space-y-8">
         <Card
           variant="elevated"
           padding="none"
-          className="overflow-hidden border-slate-200/80 bg-[radial-gradient(circle_at_top_right,rgba(79,70,229,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.98))] p-6 shadow-[0_30px_70px_-42px_rgba(15,23,42,0.38)] md:p-7"
+          className="overflow-hidden border-slate-200/80 bg-[radial-gradient(circle_at_top_right,rgba(79,70,229,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.98))] p-4 shadow-[0_26px_60px_-40px_rgba(15,23,42,0.34)] sm:p-5 md:p-7 md:shadow-[0_30px_70px_-42px_rgba(15,23,42,0.38)]"
         >
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <div className="space-y-4">
+          <div className="flex flex-col gap-4 sm:gap-5 lg:flex-row lg:items-end lg:justify-between lg:gap-6">
+            <div className="space-y-3 sm:space-y-4">
               <div className="flex flex-wrap items-center gap-2.5">
                 <Badge variant="brand" size="md">
                   <Icons.Heart className="h-3.5 w-3.5 fill-current" />
@@ -163,22 +163,22 @@ export const FavoritesView: React.FC = () => {
               />
             </div>
 
-            <div className="flex flex-wrap gap-2 lg:justify-end">
-              <Button type="button" variant="ghost" onClick={() => navigate('/')}>
+            <div className="grid gap-2 sm:flex sm:flex-wrap lg:justify-end">
+              <Button type="button" variant="ghost" onClick={() => navigate('/')} className="w-full justify-center sm:w-auto">
                 <Icons.Search className="h-4 w-4" />
                 Seguir explorando
               </Button>
               {confirmingClear ? (
                 <>
-                  <Button type="button" variant="ghost" onClick={() => setConfirmingClear(false)}>
+                  <Button type="button" variant="ghost" onClick={() => setConfirmingClear(false)} className="w-full justify-center sm:w-auto">
                     Cancelar
                   </Button>
-                  <Button type="button" variant="secondary" onClick={() => void handleClearAll()}>
+                  <Button type="button" variant="secondary" onClick={() => void handleClearAll()} className="w-full justify-center sm:w-auto">
                     Confirmar vaciado
                   </Button>
                 </>
               ) : (
-                <Button type="button" variant="secondary" onClick={() => setConfirmingClear(true)}>
+                <Button type="button" variant="secondary" onClick={() => setConfirmingClear(true)} className="w-full justify-center sm:w-auto">
                   <Icons.X className="h-4 w-4" />
                   Vaciar guardados
                 </Button>
@@ -193,25 +193,25 @@ export const FavoritesView: React.FC = () => {
             padding="none"
             role="status"
             aria-live="polite"
-            className="border-brand/10 bg-brand/5 p-4 shadow-[var(--app-shadow-subtle)]"
+            className="border-brand/10 bg-brand/5 p-3.5 shadow-[var(--app-shadow-subtle)] sm:p-4"
           >
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
               <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white text-brand shadow-[var(--app-shadow-subtle)]">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[18px] bg-white text-brand shadow-[var(--app-shadow-subtle)] sm:h-10 sm:w-10 sm:rounded-2xl">
                   <Icons.Check className="h-5 w-5" />
                 </div>
                 <div className="min-w-0 space-y-1">
-                  <p className="text-sm font-semibold tracking-tight text-slate-900">Quitamos una propiedad de tus guardados.</p>
-                  <p className="line-clamp-1 text-sm text-slate-600">{recentRemoval.title}</p>
-                  <p className="text-sm text-slate-600">Si fue sin querer, podés deshacerlo ahora mismo.</p>
+                  <p className="text-[0.92rem] font-semibold tracking-tight text-slate-900 sm:text-sm">Quitamos una propiedad de tus guardados.</p>
+                  <p className="line-clamp-1 text-[0.88rem] text-slate-600 sm:text-sm">{recentRemoval.title}</p>
+                  <p className="text-[0.88rem] text-slate-600 sm:text-sm">Si fue sin querer, podés deshacerlo ahora mismo.</p>
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-2">
-                <Button type="button" variant="secondary" size="sm" onClick={() => void handleUndoRemoval()}>
+              <div className="grid gap-2 sm:flex sm:flex-wrap">
+                <Button type="button" variant="secondary" size="sm" onClick={() => void handleUndoRemoval()} className="w-full justify-center sm:w-auto">
                   Deshacer
                 </Button>
-                <Button type="button" variant="ghost" size="sm" onClick={dismissRemovalFeedback}>
+                <Button type="button" variant="ghost" size="sm" onClick={dismissRemovalFeedback} className="w-full justify-center sm:w-auto">
                   Cerrar
                 </Button>
               </div>
@@ -219,7 +219,7 @@ export const FavoritesView: React.FC = () => {
           </Card>
         ) : null}
 
-        <div className="grid grid-cols-1 auto-rows-fr items-stretch gap-5 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 auto-rows-fr items-stretch gap-4 md:grid-cols-2 lg:grid-cols-3 lg:gap-5">
           {sortedProperties.map((property) => (
             <PropertyCard
               key={property.id}

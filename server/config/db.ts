@@ -1,8 +1,28 @@
 import { Pool } from 'pg';
 import { serverEnv } from './env';
 
+const normalizeDatabaseUrl = (value: string) => {
+    try {
+        const parsed = new URL(value);
+        const sslMode = parsed.searchParams.get('sslmode')?.trim().toLowerCase();
+
+        if (!sslMode || parsed.searchParams.has('uselibpqcompat')) {
+            return value;
+        }
+
+        if (sslMode === 'prefer' || sslMode === 'require' || sslMode === 'verify-ca') {
+            parsed.searchParams.set('uselibpqcompat', 'true');
+            return parsed.toString();
+        }
+    } catch {
+        return value;
+    }
+
+    return value;
+};
+
 const pool = new Pool({
-    connectionString: serverEnv.databaseUrl,
+    connectionString: normalizeDatabaseUrl(serverEnv.databaseUrl),
     ssl: serverEnv.databaseSsl ? { rejectUnauthorized: false } : undefined,
 });
 

@@ -1,6 +1,7 @@
 import { buildHostTrust } from './hostTrust';
 import { buildHostInteractionHistory } from './interactionHistory';
 import { buildPropertyVerification } from './propertyVerification';
+import { getOnsiteVerificationMaintenanceState } from '../src/lib/onsiteVerificationProtocol';
 
 const PROPERTY_COORDINATE_FALLBACK = {
   lat: -36.3536,
@@ -43,6 +44,7 @@ type PropertyQueryRow = Record<string, unknown> & {
   videoValidated?: unknown;
   hasPresencialVerification?: unknown;
   onsiteVerifiedAt?: unknown;
+  onsiteVerificationMaintenance?: unknown;
   hasDigitalVerification?: unknown;
   isVerifiedProperty?: unknown;
   is_verified_property?: unknown;
@@ -64,6 +66,23 @@ type PropertyQueryRow = Record<string, unknown> & {
 };
 
 const hasOwn = (value: object, key: string) => Object.prototype.hasOwnProperty.call(value, key);
+
+const normalizeRecord = (value: unknown): Record<string, unknown> => {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+
+  if (typeof value === 'string' && value.trim().length > 0) {
+    try {
+      const parsedValue = JSON.parse(value);
+      return normalizeRecord(parsedValue);
+    } catch {
+      return {};
+    }
+  }
+
+  return {};
+};
 
 const toSafeNumber = (value: unknown, fallback = 0) => {
   const numericValue = typeof value === 'number' ? value : Number(value);
@@ -137,7 +156,7 @@ const buildPropertyVerificationAliases = (property: {
   hasPresencialVerification?: boolean;
   onsiteVerifiedAt?: string;
 }) => {
-  const isPresentiallyVerified = Boolean(property.hasPresencialVerification || property.onsiteVerifiedAt);
+  const isPresentiallyVerified = property.hasPresencialVerification === true;
   const isIdentityVerified = isPresentiallyVerified || property.identityValidated === true;
   const verificationLevel = isPresentiallyVerified
     ? 'presencial'
@@ -163,6 +182,19 @@ export const mapPropertyRecord = (row: PropertyQueryRow) => {
   };
   const resolvedLat = toNullableNumber(row.lat);
   const resolvedLng = toNullableNumber(row.lng);
+  const normalizedMaintenance = normalizeRecord(row.onsiteVerificationMaintenance);
+  const rawHistoricalPresencialVerification = toBoolean(row.hasPresencialVerification);
+  const maintenanceState = getOnsiteVerificationMaintenanceState({
+    hasPresencialVerification: rawHistoricalPresencialVerification,
+    onsiteVerifiedAt: toDateString(row.onsiteVerifiedAt),
+    onsiteVerificationMaintenanceStatus: typeof normalizedMaintenance.status === 'string' ? normalizedMaintenance.status : null,
+    onsiteVerificationLastValidatedAt: toDateString(normalizedMaintenance.lastValidatedAt) || toDateString(row.onsiteVerifiedAt),
+    onsiteVerificationExpiresAt: toDateString(normalizedMaintenance.expiresAt),
+    onsiteVerificationTriggerReason: typeof normalizedMaintenance.triggerReason === 'string' ? normalizedMaintenance.triggerReason : null,
+    onsiteVerificationMaintenanceHistory: Array.isArray(normalizedMaintenance.history)
+      ? normalizedMaintenance.history as Parameters<typeof getOnsiteVerificationMaintenanceState>[0]['onsiteVerificationMaintenanceHistory']
+      : null,
+  });
 
   const normalizedProperty = {
     ...safeRow,
@@ -180,8 +212,14 @@ export const mapPropertyRecord = (row: PropertyQueryRow) => {
     materialVerified: toBoolean(row.materialVerified),
     videoValidated: toBoolean(row.videoValidated),
     propertyRelationshipVerified: toBoolean(row.propertyRelationshipVerified),
-    hasPresencialVerification: toBoolean(row.hasPresencialVerification),
-    onsiteVerifiedAt: toDateString(row.onsiteVerifiedAt),
+    hasPresencialVerification: maintenanceState.isCurrentlyValid,
+    onsiteVerifiedAt: maintenanceState.lastValidatedAt ?? toDateString(row.onsiteVerifiedAt),
+    onsiteVerificationStatus: maintenanceState.currentStatus ?? undefined,
+    onsiteVerificationMaintenanceStatus: maintenanceState.currentStatus ?? undefined,
+    onsiteVerificationLastValidatedAt: maintenanceState.lastValidatedAt ?? undefined,
+    onsiteVerificationExpiresAt: maintenanceState.expiresAt ?? undefined,
+    onsiteVerificationTriggerReason: maintenanceState.triggerReason ?? undefined,
+    onsiteVerificationMaintenanceHistory: maintenanceState.history.length > 0 ? maintenanceState.history : undefined,
     hasDigitalVerification: toBoolean(row.hasDigitalVerification),
     hostPremiumDocumentaryVerified: toBoolean(row.hostPremiumDocumentaryVerified),
     verificationPhotoCount: toSafeInteger(row.verificationPhotoCount),
@@ -190,8 +228,8 @@ export const mapPropertyRecord = (row: PropertyQueryRow) => {
     verificationDocumentsReviewedCount: toSafeInteger(row.verificationDocumentsReviewedCount),
     documentationSubmitted: toBoolean(row.documentationSubmitted) || toSafeInteger(row.verificationDocumentCount) > 0,
     documentationVerified: toBoolean(row.documentationVerified) || toSafeInteger(row.verificationDocumentsReviewedCount) > 0,
-    manualReviewReady: toBoolean(row.manualReviewReady),
-    manualReviewCompleted: toBoolean(row.manualReviewCompleted) || toBoolean(row.hasPresencialVerification),
+    manualReviewReady: toBoolean(row.manualReviewReady) || maintenanceState.needsRefresh,
+    manualReviewCompleted: maintenanceState.isCurrentlyValid,
     availabilityValidated: toBoolean(row.availabilityValidated)
       || toSafeInteger(row.activeReservationsCount) > 0
       || (typeof row.nextArrivalDate === 'string' && row.nextArrivalDate.trim().length > 0),

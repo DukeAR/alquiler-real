@@ -1407,25 +1407,20 @@ const updatePropertyAfterOnsiteCompletion = (propertyId: string, appointmentDate
 
     return {
       ...property,
-      locationVerified: true,
-      propertyRelationshipVerified: true,
-      hasPresencialVerification: true,
-      availabilityValidated: true,
-      isVerifiedProperty: true,
-      onsiteVerifiedAt: new Date().toISOString(),
       status: 'active',
       premiumOnsiteOffer: offer
         ? {
             ...offer,
             purchased: true,
-            completed: true,
-            ctaLabel: 'Revisar validación presencial',
+            completed: false,
+            ctaLabel: 'Ver estado de revisión presencial',
+            processLabel: 'Ver estado de revisión',
           }
         : offer,
     };
   });
 
-  addNotification('Validación presencial confirmada', `La revisión presencial de la propiedad quedó agendada para ${appointmentDate}.`, 'success');
+  addNotification('Revisión presencial en curso', `La revisión presencial de la propiedad quedó coordinada para ${appointmentDate} y ahora requiere revisión.`, 'success');
 };
 
 const updateManagedProperty = (propertyId: string, updates: Partial<DemoManagedProperty>) => {

@@ -183,7 +183,7 @@ describe('HostDashboard', () => {
     expect(screen.getByText('Cada señal visible reduce dudas antes de la reserva. La verificación suma contexto; no reemplaza tu historial real.')).toBeInTheDocument();
     expect(screen.getByText('La verificación presencial baja dudas antes de reservar, ordena mejores consultas y deja más claro quién publica sin tocar reglas ocultas.')).toBeInTheDocument();
     expect(screen.getByText('Cómo impacta en tu publicación')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Solicitar verificación presencial/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Activar validación presencial sin cargo/i })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Confirmar disponibilidad' }));
 

@@ -55,6 +55,13 @@ import {
   type PremiumVerificationTargetType,
 } from '../src/lib/premiumVerification';
 import {
+  getOnsiteVerificationExpiryDate,
+  getOnsiteVerificationMaintenanceState,
+  type OnsiteVerificationMaintenanceHistoryEntry,
+  type OnsiteVerificationMaintenanceReason,
+  type OnsiteVerificationMaintenanceStatus,
+} from '../src/lib/onsiteVerificationProtocol';
+import {
   createSignedFileUrl,
   getCanonicalFileUrl,
   openStoredFileStream,
@@ -64,10 +71,20 @@ import {
   type StoredFileType,
   type StoredFileVisibility,
 } from './storageService';
+import {
+  SUPPORT_CATEGORY_OPTIONS,
+  SUPPORT_CASE_CATEGORIES,
+  SUPPORT_CASE_STATUSES,
+  SUPPORT_ENTRY_POINTS,
+  SUPPORT_STATUS_COPY,
+  type SupportCaseCategory,
+  type SupportCaseStatus,
+  type SupportEntryPoint,
+} from '../src/lib/contextualSupport';
 
 declare module "express-session" {
   interface SessionData {
-    userId: string;
+    userId?: string;
   }
 }
 
@@ -378,8 +395,61 @@ type PremiumVerificationOrderRow = {
   paymentStatus: PremiumVerificationPaymentStatus;
   verificationStatus: PremiumVerificationProcessStatus;
   isPromotional?: boolean | null;
+  metadata?: Record<string, unknown> | null;
+  createdAt?: string | Date | null;
+  updatedAt?: string | Date | null;
   completedAt?: string | Date | null;
 };
+
+type OnsiteVerificationRequestSource = 'dashboard' | 'listing' | 'onsite-page' | 'unknown';
+
+type OnsiteOperationalStatus = 'pending_schedule' | 'scheduled' | 'in_progress' | 'approved' | 'requires_review' | 'not_completed';
+
+type OnsiteOrderHistoryEntry = {
+  id: string;
+  date: string;
+  status: OnsiteOperationalStatus;
+  actorLabel: string;
+  verifierName: string | null;
+  notes: string | null;
+};
+
+type OnsiteChecklistState = {
+  propertyExists: boolean;
+  locationMatches: boolean;
+  realAccessAvailable: boolean;
+  hostLinkedToProperty: boolean;
+};
+
+type OnsiteEvidenceState = {
+  photoCount: number;
+  geolocation: string | null;
+  timestamp: string | null;
+  notes: string | null;
+};
+
+type OnsiteOrderMetadata = {
+  requestSource: OnsiteVerificationRequestSource;
+  coordinationMode: 'manual';
+  appointmentDate: string | null;
+  coordinationNotes: string | null;
+  verifierName: string | null;
+  checklist: OnsiteChecklistState;
+  evidence: OnsiteEvidenceState;
+  history: OnsiteOrderHistoryEntry[];
+};
+
+type OnsiteVerificationMaintenanceRecord = {
+  status: OnsiteVerificationMaintenanceStatus | null;
+  lastValidatedAt: string | null;
+  expiresAt: string | null;
+  triggerReason: OnsiteVerificationMaintenanceReason | null;
+  triggeredAt: string | null;
+  notes: string | null;
+  history: OnsiteVerificationMaintenanceHistoryEntry[];
+};
+
+const ONSITE_EVIDENCE_PHOTO_SCOPE = 'onsite-evidence-photo';
 
 type PremiumPromotionalUsageRow = {
   offerType: PremiumVerificationOfferType;
@@ -394,6 +464,9 @@ const PREMIUM_VERIFICATION_ORDER_SELECT = `id,
   payment_status as "paymentStatus",
   verification_status as "verificationStatus",
   is_promotional as "isPromotional",
+  metadata,
+  created_at as "createdAt",
+  updated_at as "updatedAt",
   completed_at as "completedAt"`;
 
 const getPremiumBasePrice = (offerType: PremiumVerificationOfferType) => (
@@ -418,8 +491,412 @@ const isPremiumOrderUnlocked = (order?: PremiumVerificationOrderRow | null) => (
 );
 
 const isPremiumOrderCompleted = (order?: PremiumVerificationOrderRow | null) => (
-  Boolean(order && order.verificationStatus === 'completed')
+  Boolean(order && (order.verificationStatus === 'completed' || order.verificationStatus === 'approved'))
 );
+
+const normalizeRecord = (value: unknown): Record<string, unknown> => (
+  value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {}
+);
+
+const normalizeOnsiteRequestSource = (value: unknown): OnsiteVerificationRequestSource => {
+  const normalizedValue = typeof value === 'string' ? value.trim().toLowerCase() : '';
+
+  if (normalizedValue === 'dashboard' || normalizedValue === 'listing' || normalizedValue === 'onsite-page') {
+    return normalizedValue as OnsiteVerificationRequestSource;
+  }
+
+  return 'unknown';
+};
+
+const normalizeOnsiteOperationalStatus = (value: unknown): OnsiteOperationalStatus | null => {
+  const normalizedValue = typeof value === 'string' ? value.trim().toLowerCase() : '';
+
+  if (
+    normalizedValue === 'pending_schedule'
+    || normalizedValue === 'scheduled'
+    || normalizedValue === 'in_progress'
+    || normalizedValue === 'approved'
+    || normalizedValue === 'requires_review'
+    || normalizedValue === 'not_completed'
+  ) {
+    return normalizedValue as OnsiteOperationalStatus;
+  }
+
+  return normalizedValue === 'completed' ? 'approved' : null;
+};
+
+const createEmptyOnsiteChecklist = (): OnsiteChecklistState => ({
+  propertyExists: false,
+  locationMatches: false,
+  realAccessAvailable: false,
+  hostLinkedToProperty: false,
+});
+
+const createEmptyOnsiteEvidence = (): OnsiteEvidenceState => ({
+  photoCount: 0,
+  geolocation: null,
+  timestamp: null,
+  notes: null,
+});
+
+const normalizeOnsiteChecklist = (value: unknown): OnsiteChecklistState => {
+  const record = normalizeRecord(value);
+
+  return {
+    propertyExists: record.propertyExists === true,
+    locationMatches: record.locationMatches === true,
+    realAccessAvailable: record.realAccessAvailable === true,
+    hostLinkedToProperty: record.hostLinkedToProperty === true,
+  };
+};
+
+const normalizeOnsiteEvidence = (value: unknown): OnsiteEvidenceState => {
+  const record = normalizeRecord(value);
+
+  return {
+    photoCount: toSafeInteger(record.photoCount),
+    geolocation: typeof record.geolocation === 'string' && record.geolocation.trim().length > 0 ? record.geolocation.trim() : null,
+    timestamp: typeof record.timestamp === 'string' && record.timestamp.trim().length > 0 ? record.timestamp.trim() : null,
+    notes: typeof record.notes === 'string' && record.notes.trim().length > 0 ? record.notes.trim() : null,
+  };
+};
+
+const getOnsiteOperationalStatusCopy = (status: OnsiteOperationalStatus) => {
+  switch (status) {
+    case 'pending_schedule':
+      return {
+        label: 'Pendiente de agenda',
+        description: 'La solicitud ya quedó abierta. Falta definir el horario o la referencia operativa de la visita.',
+      };
+    case 'scheduled':
+      return {
+        label: 'Visita programada',
+        description: 'La coordinación manual ya quedó registrada y la visita está lista para ejecutarse.',
+      };
+    case 'in_progress':
+      return {
+        label: 'Validación en proceso',
+        description: 'La visita ya empezó y ahora se está cargando el registro operativo mínimo.',
+      };
+    case 'approved':
+      return {
+        label: 'Aprobada',
+        description: 'La revisión interna aprobó la visita y el sello visible ya está activo.',
+      };
+    case 'requires_review':
+      return {
+        label: 'Requiere revisión',
+        description: 'La visita dejó respaldo suficiente para pasar a revisión interna antes de cerrar el resultado.',
+      };
+    case 'not_completed':
+      return {
+        label: 'No completada',
+        description: 'La visita no cerró una validación usable y la publicación sigue sin sello presencial.',
+      };
+  }
+};
+
+const normalizeBooleanFlag = (value: unknown) => (
+  value === true
+  || value === 1
+  || value === '1'
+  || value === 'true'
+  || value === 'on'
+);
+
+const normalizeOnsiteMaintenanceStatus = (value: unknown): OnsiteVerificationMaintenanceStatus | null => {
+  const normalizedValue = typeof value === 'string' ? value.trim().toLowerCase() : '';
+
+  if (normalizedValue === 'verified' || normalizedValue === 'verificada') {
+    return 'verified';
+  }
+
+  if (normalizedValue === 'requires_reverification' || normalizedValue === 'requiere_reverificacion' || normalizedValue === 'requires-reverification') {
+    return 'requires_reverification';
+  }
+
+  if (normalizedValue === 'reverification_pending' || normalizedValue === 'reverificacion_pendiente' || normalizedValue === 'reverification-pending') {
+    return 'reverification_pending';
+  }
+
+  return null;
+};
+
+const normalizeOnsiteMaintenanceReason = (value: unknown): OnsiteVerificationMaintenanceReason | null => {
+  const normalizedValue = typeof value === 'string' ? value.trim().toLowerCase() : '';
+
+  if (normalizedValue === 'expiration' || normalizedValue === 'vencimiento') {
+    return 'expiration';
+  }
+
+  if (normalizedValue === 'address_change' || normalizedValue === 'important_address_change' || normalizedValue === 'cambio_importante_direccion') {
+    return 'address_change';
+  }
+
+  if (normalizedValue === 'relevant_report' || normalizedValue === 'relevant_reports' || normalizedValue === 'reportes_relevantes') {
+    return 'relevant_report';
+  }
+
+  if (normalizedValue === 'detected_inconsistency' || normalizedValue === 'inconsistency' || normalizedValue === 'inconsistencias_detectadas') {
+    return 'detected_inconsistency';
+  }
+
+  return null;
+};
+
+const createOnsiteHistoryEntry = (status: OnsiteOperationalStatus, input?: {
+  actorLabel?: string | null;
+  verifierName?: string | null;
+  notes?: string | null;
+  date?: string | null;
+}): OnsiteOrderHistoryEntry => ({
+  id: `ovh_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+  date: typeof input?.date === 'string' && input.date.trim().length > 0 && !Number.isNaN(Date.parse(input.date))
+    ? new Date(input.date).toISOString()
+    : new Date().toISOString(),
+  status,
+  actorLabel: typeof input?.actorLabel === 'string' && input.actorLabel.trim().length > 0
+    ? input.actorLabel.trim()
+    : 'Equipo Alquiler Real',
+  verifierName: typeof input?.verifierName === 'string' && input.verifierName.trim().length > 0 ? input.verifierName.trim() : null,
+  notes: typeof input?.notes === 'string' && input.notes.trim().length > 0 ? input.notes.trim() : null,
+});
+
+const createOnsiteMaintenanceHistoryEntry = (status: OnsiteVerificationMaintenanceStatus, input?: {
+  reason?: OnsiteVerificationMaintenanceReason | null;
+  actorLabel?: string | null;
+  notes?: string | null;
+  date?: string | null;
+}): OnsiteVerificationMaintenanceHistoryEntry => ({
+  id: `ovm_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+  date: typeof input?.date === 'string' && input.date.trim().length > 0 && !Number.isNaN(Date.parse(input.date))
+    ? new Date(input.date).toISOString()
+    : new Date().toISOString(),
+  status,
+  reason: input?.reason ?? null,
+  actorLabel: typeof input?.actorLabel === 'string' && input.actorLabel.trim().length > 0
+    ? input.actorLabel.trim()
+    : 'Equipo Alquiler Real',
+  notes: typeof input?.notes === 'string' && input.notes.trim().length > 0 ? input.notes.trim() : null,
+});
+
+const getOnsiteMaintenanceReasonCopy = (reason: OnsiteVerificationMaintenanceReason) => {
+  switch (reason) {
+    case 'address_change':
+      return 'Se detectó un cambio importante de dirección y conviene actualizar la visita presencial.';
+    case 'relevant_report':
+      return 'Entraron reportes relevantes y conviene revisar otra vez la validación presencial.';
+    case 'detected_inconsistency':
+      return 'Aparecieron inconsistencias operativas y conviene actualizar la validación presencial.';
+    case 'expiration':
+      return 'La ventana recomendada de 6 meses ya venció y conviene actualizar la validación presencial.';
+  }
+};
+
+const getOnsiteVerificationMaintenance = (property?: {
+  onsiteVerificationMaintenance?: unknown;
+  hasPresencialVerification?: unknown;
+  onsiteVerifiedAt?: unknown;
+}) => {
+  const maintenance = normalizeRecord(property?.onsiteVerificationMaintenance);
+  const fallbackLastValidatedAt = typeof property?.onsiteVerifiedAt === 'string' && property.onsiteVerifiedAt.trim().length > 0 && !Number.isNaN(Date.parse(property.onsiteVerifiedAt))
+    ? new Date(property.onsiteVerifiedAt).toISOString()
+    : property?.onsiteVerifiedAt instanceof Date && !Number.isNaN(property.onsiteVerifiedAt.getTime())
+      ? property.onsiteVerifiedAt.toISOString()
+      : null;
+  const history = (Array.isArray(maintenance.history) ? maintenance.history : [])
+    .map((entry) => {
+      const normalizedEntry = normalizeRecord(entry);
+      const status = normalizeOnsiteMaintenanceStatus(normalizedEntry.status);
+
+      if (!status) {
+        return null;
+      }
+
+      const date = typeof normalizedEntry.date === 'string' && normalizedEntry.date.trim().length > 0 && !Number.isNaN(Date.parse(normalizedEntry.date))
+        ? new Date(normalizedEntry.date).toISOString()
+        : new Date().toISOString();
+
+      return {
+        id: typeof normalizedEntry.id === 'string' && normalizedEntry.id.trim().length > 0 ? normalizedEntry.id.trim() : `ovm_${date}`,
+        date,
+        status,
+        reason: normalizeOnsiteMaintenanceReason(normalizedEntry.reason),
+        actorLabel: typeof normalizedEntry.actorLabel === 'string' && normalizedEntry.actorLabel.trim().length > 0 ? normalizedEntry.actorLabel.trim() : 'Equipo Alquiler Real',
+        notes: typeof normalizedEntry.notes === 'string' && normalizedEntry.notes.trim().length > 0 ? normalizedEntry.notes.trim() : null,
+      } satisfies OnsiteVerificationMaintenanceHistoryEntry;
+    })
+    .filter((entry): entry is OnsiteVerificationMaintenanceHistoryEntry => Boolean(entry));
+  const lastValidatedAt = typeof maintenance.lastValidatedAt === 'string' && maintenance.lastValidatedAt.trim().length > 0 && !Number.isNaN(Date.parse(maintenance.lastValidatedAt))
+    ? new Date(maintenance.lastValidatedAt).toISOString()
+    : fallbackLastValidatedAt;
+
+  if (history.length === 0 && lastValidatedAt) {
+    history.push(createOnsiteMaintenanceHistoryEntry('verified', {
+      actorLabel: 'Historial previo',
+      date: lastValidatedAt,
+      notes: 'Última validación presencial registrada.',
+    }));
+  }
+
+  const expiresAt = typeof maintenance.expiresAt === 'string' && maintenance.expiresAt.trim().length > 0 && !Number.isNaN(Date.parse(maintenance.expiresAt))
+    ? new Date(maintenance.expiresAt).toISOString()
+    : lastValidatedAt
+      ? getOnsiteVerificationExpiryDate(lastValidatedAt)
+      : null;
+  const triggerReason = normalizeOnsiteMaintenanceReason(maintenance.triggerReason);
+  const triggeredAt = typeof maintenance.triggeredAt === 'string' && maintenance.triggeredAt.trim().length > 0 && !Number.isNaN(Date.parse(maintenance.triggeredAt))
+    ? new Date(maintenance.triggeredAt).toISOString()
+    : null;
+  const notes = typeof maintenance.notes === 'string' && maintenance.notes.trim().length > 0 ? maintenance.notes.trim() : null;
+  const derivedState = getOnsiteVerificationMaintenanceState({
+    hasPresencialVerification: normalizeBooleanFlag(property?.hasPresencialVerification),
+    onsiteVerifiedAt: lastValidatedAt,
+    onsiteVerificationMaintenanceStatus: normalizeOnsiteMaintenanceStatus(maintenance.status),
+    onsiteVerificationLastValidatedAt: lastValidatedAt,
+    onsiteVerificationExpiresAt: expiresAt,
+    onsiteVerificationTriggerReason: triggerReason,
+    onsiteVerificationMaintenanceHistory: history,
+    manualReviewCompleted: normalizeBooleanFlag(property?.hasPresencialVerification),
+  });
+
+  return {
+    status: normalizeOnsiteMaintenanceStatus(maintenance.status),
+    currentStatus: derivedState.currentStatus,
+    label: derivedState.label,
+    description: derivedState.description,
+    lastValidatedAt: derivedState.lastValidatedAt,
+    expiresAt: derivedState.expiresAt,
+    triggerReason: derivedState.triggerReason,
+    triggeredAt,
+    notes,
+    history,
+    isCurrentlyValid: derivedState.isCurrentlyValid,
+    needsRefresh: derivedState.needsRefresh,
+  };
+};
+
+const buildStoredOnsiteVerificationMaintenance = (input: {
+  status: OnsiteVerificationMaintenanceStatus | null;
+  lastValidatedAt?: string | null;
+  expiresAt?: string | null;
+  triggerReason?: OnsiteVerificationMaintenanceReason | null;
+  triggeredAt?: string | null;
+  notes?: string | null;
+  history?: OnsiteVerificationMaintenanceHistoryEntry[];
+}): OnsiteVerificationMaintenanceRecord => ({
+  status: input.status ?? null,
+  lastValidatedAt: typeof input.lastValidatedAt === 'string' && input.lastValidatedAt.trim().length > 0 ? input.lastValidatedAt : null,
+  expiresAt: typeof input.expiresAt === 'string' && input.expiresAt.trim().length > 0 ? input.expiresAt : null,
+  triggerReason: input.triggerReason ?? null,
+  triggeredAt: typeof input.triggeredAt === 'string' && input.triggeredAt.trim().length > 0 ? input.triggeredAt : null,
+  notes: typeof input.notes === 'string' && input.notes.trim().length > 0 ? input.notes.trim() : null,
+  history: Array.isArray(input.history) ? input.history : [],
+});
+
+const getOnsiteOrderMetadata = (order?: PremiumVerificationOrderRow | null): OnsiteOrderMetadata => {
+  const metadata = normalizeRecord(order?.metadata);
+  const history = Array.isArray(metadata.history)
+    ? metadata.history
+        .map((entry) => {
+          const normalizedEntry = normalizeRecord(entry);
+          const status = normalizeOnsiteOperationalStatus(normalizedEntry.status);
+
+          if (!status) {
+            return null;
+          }
+
+          const date = typeof normalizedEntry.date === 'string' && normalizedEntry.date.trim().length > 0 && !Number.isNaN(Date.parse(normalizedEntry.date))
+            ? new Date(normalizedEntry.date).toISOString()
+            : new Date().toISOString();
+
+          return {
+            id: typeof normalizedEntry.id === 'string' && normalizedEntry.id.trim().length > 0 ? normalizedEntry.id.trim() : `ovh_${date}`,
+            date,
+            status,
+            actorLabel: typeof normalizedEntry.actorLabel === 'string' && normalizedEntry.actorLabel.trim().length > 0 ? normalizedEntry.actorLabel.trim() : 'Equipo Alquiler Real',
+            verifierName: typeof normalizedEntry.verifierName === 'string' && normalizedEntry.verifierName.trim().length > 0 ? normalizedEntry.verifierName.trim() : null,
+            notes: typeof normalizedEntry.notes === 'string' && normalizedEntry.notes.trim().length > 0 ? normalizedEntry.notes.trim() : null,
+          } satisfies OnsiteOrderHistoryEntry;
+        })
+        .filter((entry): entry is OnsiteOrderHistoryEntry => Boolean(entry))
+    : [];
+
+  return {
+    requestSource: normalizeOnsiteRequestSource(metadata.requestSource),
+    coordinationMode: 'manual',
+    appointmentDate: typeof metadata.appointmentDate === 'string' && metadata.appointmentDate.trim().length > 0 ? metadata.appointmentDate.trim() : null,
+    coordinationNotes: typeof metadata.coordinationNotes === 'string' && metadata.coordinationNotes.trim().length > 0 ? metadata.coordinationNotes.trim() : null,
+    verifierName: typeof metadata.verifierName === 'string' && metadata.verifierName.trim().length > 0 ? metadata.verifierName.trim() : null,
+    checklist: normalizeOnsiteChecklist(metadata.checklist),
+    evidence: normalizeOnsiteEvidence(metadata.evidence),
+    history,
+  };
+};
+
+const getOnsiteOperationalStatus = (order?: PremiumVerificationOrderRow | null, onsiteVerified = false): OnsiteOperationalStatus | null => {
+  if (onsiteVerified) {
+    return 'approved';
+  }
+
+  const explicitStatus = normalizeOnsiteOperationalStatus(order?.verificationStatus);
+
+  if (explicitStatus) {
+    return explicitStatus;
+  }
+
+  return isPremiumOrderUnlocked(order) ? 'pending_schedule' : null;
+};
+
+const updateOnsiteOrderRecord = async (input: {
+  orderId: string;
+  verificationStatus: PremiumVerificationProcessStatus;
+  metadata: OnsiteOrderMetadata;
+  completedAt?: string | null;
+}) => {
+  await db.query(
+    `UPDATE premium_verification_orders
+     SET verification_status = $1,
+         metadata = $2::jsonb,
+         updated_at = NOW(),
+         completed_at = CASE
+           WHEN $1 IN ('approved', 'completed') THEN COALESCE($4::timestamp, NOW())
+           WHEN $1 = 'not_completed' THEN NULL
+           ELSE completed_at
+         END
+     WHERE id = $3`,
+    [input.verificationStatus, JSON.stringify(input.metadata), input.orderId, input.completedAt ?? null],
+  );
+};
+
+const getLatestOnsitePremiumOrderForProperty = async (propertyId: string) => {
+  const result = await db.query(
+    `SELECT ${PREMIUM_VERIFICATION_ORDER_SELECT}
+     FROM premium_verification_orders
+     WHERE property_id = $1
+       AND offer_type = $2
+     ORDER BY created_at DESC
+     LIMIT 1`,
+    [propertyId, PREMIUM_ONSITE_OFFER_TYPE],
+  );
+
+  return (result?.rows?.[0] as PremiumVerificationOrderRow | undefined) ?? null;
+};
+
+const getOnsiteEvidencePhotoAssets = async (propertyId: string) => {
+  const result = await db.query(
+    `SELECT ${VERIFICATION_FILE_SELECT}
+     FROM verification_files
+     WHERE property_id = $1
+       AND verification_scope = $2
+     ORDER BY created_at DESC`,
+    [propertyId, ONSITE_EVIDENCE_PHOTO_SCOPE],
+  );
+
+  return (result.rows as VerificationFileRow[]).map((row) => mapVerificationFileToAsset(row, { signedExpirySeconds: 60 * 60 * 24 }));
+};
 
 const getPremiumPromotionalUsageCount = (
   rows: PremiumPromotionalUsageRow[],
@@ -568,67 +1045,139 @@ const buildOnsitePremiumOffer = (input: {
   propertyId: string;
   propertyTitle: string;
   onsiteVerified: boolean;
+  onsiteVerifiedAt?: string | null;
+  onsiteVerificationMaintenance?: unknown;
   returnTo?: string;
 }): PremiumVerificationOffer => {
   const pricing = getPremiumOfferPricing(PREMIUM_ONSITE_OFFER_TYPE, input.usageRows, input.order);
-  const purchased = input.onsiteVerified || isPremiumOrderUnlocked(input.order);
-  const completed = input.onsiteVerified || isPremiumOrderCompleted(input.order);
+  const maintenance = getOnsiteVerificationMaintenance({
+    hasPresencialVerification: input.onsiteVerified,
+    onsiteVerifiedAt: input.onsiteVerifiedAt,
+    onsiteVerificationMaintenance: input.onsiteVerificationMaintenance,
+  });
+  const operationalStatus = getOnsiteOperationalStatus(input.order, input.onsiteVerified);
+  const hasOpenWorkflow = Boolean(
+    input.order
+    && isPremiumOrderUnlocked(input.order)
+    && operationalStatus
+    && operationalStatus !== 'approved'
+  );
+  const purchased = input.onsiteVerified || hasOpenWorkflow;
+  const completed = input.onsiteVerified;
+  const orderMetadata = getOnsiteOrderMetadata(input.order);
+  const appointmentDetail = orderMetadata.appointmentDate;
   const monetization = buildVerificationMonetizationPlan({
     key: 'onsite-verification',
     title: 'Validación presencial adicional',
-    summary: 'Activa una visita para dejar identidad, acceso y ubicación confirmados en el aviso sin reemplazar el ranking de confianza.',
+    summary: 'Activa una coordinación manual simple para dejar trazabilidad, evidencia mínima y un cierre operativo claro en el aviso.',
     priceArs: pricing.priceArs,
     isComplimentary: pricing.isComplimentary,
     complimentaryReason: pricing.complimentaryReason,
     state: completed || purchased ? 'active' : 'available',
-    stateLabel: completed ? 'Activa' : purchased ? 'En coordinación' : 'Disponible ahora',
+    stateLabel: completed
+      ? 'Verificada'
+      : maintenance.currentStatus === 'reverification_pending'
+        ? 'Reverificación pendiente'
+        : maintenance.currentStatus === 'requires_reverification'
+          ? 'Requiere reverificación'
+      : operationalStatus === 'requires_review'
+        ? 'Requiere revisión'
+        : operationalStatus === 'not_completed'
+          ? 'No completada'
+          : operationalStatus === 'in_progress'
+            ? 'Validación en proceso'
+            : operationalStatus === 'scheduled'
+              ? 'Visita programada'
+              : purchased
+                ? 'Pendiente de agenda'
+                : 'Disponible ahora',
     featurePreview: [
       {
         key: 'request',
         label: 'Solicitud de verificación',
-        description: 'El anfitrión confirma el servicio desde el dashboard y la publicación entra en flujo de coordinación.',
+        description: 'El anfitrión puede pedir la verificación desde el dashboard o después de publicar el aviso.',
         state: 'included',
       },
       {
         key: 'agenda',
-        label: 'Agenda de visita',
-        description: 'La visita conserva su propio estado para saber si falta coordinar o si ya quedó completada.',
+        label: 'Coordinación manual',
+        description: 'La agenda se lleva en forma simple, con estado visible para saber si falta coordinar o si la visita ya quedó programada.',
         state: 'included',
       },
       {
-        key: 'renewal',
-        label: 'Renovación opcional',
-        description: 'Más adelante se podrá revalidar la visita si querés actualizar el respaldo del aviso.',
-        state: 'coming_soon',
+        key: 'history',
+        label: 'Historial básico',
+        description: 'La orden guarda fecha, verificador, resultado y evidencia mínima para mantener trazabilidad operativa.',
+        state: 'included',
       },
     ],
     schedule: completed
       ? {
           state: 'completed',
-          label: 'Agenda cerrada',
-          detail: 'La visita ya se completó y el sello quedó visible en la publicación.',
+          label: 'Verificación vigente',
+          detail: maintenance.expiresAt
+            ? `La revisión quedó vigente hasta ${maintenance.expiresAt}.`
+            : 'La revisión quedó aprobada y el sello visible ya está activo en la publicación.',
         }
-      : input.order?.verificationStatus === 'in_progress'
+      : maintenance.currentStatus === 'reverification_pending'
         ? {
-            state: 'scheduled',
-            label: 'Agenda en coordinación',
-            detail: 'La solicitud ya está abierta y falta cerrar día y horario de la visita.',
+            state: 'pending_schedule',
+            label: 'Reverificación pendiente',
+            detail: maintenance.notes || 'La verificación presencial necesita actualizarse. Ya quedó marcada para una nueva revisión.',
           }
-        : purchased
+        : maintenance.currentStatus === 'requires_reverification'
           ? {
               state: 'pending_schedule',
-              label: 'Agenda pendiente',
-              detail: 'Después de confirmar el servicio, la visita queda lista para coordinar.',
+              label: 'Requiere reverificación',
+              detail: 'La verificación presencial necesita actualizarse. El historial sigue disponible y podés coordinar una nueva visita cuando quieras.',
+            }
+      : operationalStatus === 'requires_review'
+        ? {
+            state: 'scheduled',
+            label: 'Revisión requerida',
+            detail: 'La visita ya dejó un registro operativo. Falta la revisión interna para cerrar el resultado.',
+          }
+        : operationalStatus === 'not_completed'
+          ? {
+              state: 'pending_schedule',
+              label: 'Visita no completada',
+              detail: 'La publicación sigue sin validación presencial. Podés reabrir la coordinación manual cuando quieras.',
+            }
+          : operationalStatus === 'in_progress'
+            ? {
+                state: 'scheduled',
+                label: 'Validación en proceso',
+                detail: appointmentDetail
+                  ? `La visita quedó registrada para ${appointmentDetail} y ahora se está cargando el respaldo básico.`
+                  : 'La visita ya empezó y ahora se está cargando el respaldo básico.',
+              }
+            : operationalStatus === 'scheduled'
+              ? {
+                  state: 'scheduled',
+                  label: 'Visita programada',
+                  detail: appointmentDetail
+                    ? `La coordinación manual ya quedó programada para ${appointmentDetail}.`
+                    : 'La coordinación manual ya quedó programada y sigue pendiente de ejecución.',
+                }
+              : purchased
+          ? {
+              state: 'pending_schedule',
+              label: 'Pendiente de agenda',
+              detail: 'La solicitud ya está abierta. Falta definir el día y la referencia operativa de la visita.',
             }
           : {
               state: 'not_requested',
               label: 'Sin agenda todavía',
-              detail: 'La agenda aparece recién cuando confirmás esta validación.',
+              detail: 'La coordinación aparece recién cuando pedís esta verificación presencial.',
             },
     renewal: {
       optional: true,
-      label: 'Renovación futura opcional',
-      detail: 'La estructura queda lista para ofrecer una nueva visita sin volver obligatoria la renovación.',
+      label: maintenance.currentStatus === 'requires_reverification' || maintenance.currentStatus === 'reverification_pending'
+        ? 'Actualización recomendada'
+        : 'Renovación futura opcional',
+      detail: maintenance.currentStatus === 'requires_reverification' || maintenance.currentStatus === 'reverification_pending'
+        ? 'La visita previa se conserva en historial, pero conviene actualizar la verificación presencial para mantenerla vigente.'
+        : 'La estructura queda lista para ofrecer una nueva visita sin volver obligatoria la renovación.',
     },
     note: 'La exposición adicional que trae esta validación siempre acompaña al ranking principal; no lo reemplaza.',
   });
@@ -637,18 +1186,42 @@ const buildOnsitePremiumOffer = (input: {
     offerType: PREMIUM_ONSITE_OFFER_TYPE,
     targetType: 'property',
     title: 'Validación presencial adicional',
-    summary: 'Podés pedir una revisión presencial para sumar información validada extra en este aviso.',
+    summary: 'Podés pedir una verificación presencial para coordinar una visita, registrar evidencia mínima y cerrar un estado operativo claro en este aviso.',
     contextHint: 'Mostramos qué ya está validado para que se entienda mejor el aviso. Esta revisión es opcional y no reemplaza las otras validaciones.',
-    visibilityHint: 'Cuando se completa, deja una validación presencial visible dentro de la ficha del aviso.',
+    visibilityHint: maintenance.currentStatus === 'requires_reverification' || maintenance.currentStatus === 'reverification_pending'
+      ? 'La verificación anterior queda en historial, pero el sello visible necesita actualizarse antes de volver a contar como presencial vigente.'
+      : 'Cuando se aprueba, deja una validación presencial visible dentro de la ficha del aviso.',
     ctaLabel: completed
-      ? 'Validación presencial lista'
-      : purchased
-        ? 'Continuar revisión presencial'
-        : pricing.isComplimentary
-          ? 'Activar validación presencial sin cargo'
-          : 'Activar validación presencial',
+      ? 'Ver verificación presencial'
+      : maintenance.currentStatus === 'reverification_pending' || maintenance.currentStatus === 'requires_reverification'
+        ? 'Actualizar verificación presencial'
+      : operationalStatus === 'requires_review'
+        ? 'Ver revisión presencial'
+        : operationalStatus === 'scheduled'
+          ? 'Continuar visita programada'
+          : operationalStatus === 'in_progress'
+            ? 'Continuar validación presencial'
+            : operationalStatus === 'not_completed'
+              ? 'Reabrir coordinación presencial'
+              : purchased
+                ? 'Coordinar verificación presencial'
+                : pricing.isComplimentary
+                  ? 'Activar validación presencial sin cargo'
+                  : 'Activar validación presencial',
     checkoutLabel: pricing.isComplimentary ? 'Activar sin cargo' : 'Confirmar validación',
-    processLabel: completed ? 'Ver estado de la validación' : 'Ir a la coordinación',
+    processLabel: completed
+      ? 'Ver estado de la validación'
+      : maintenance.currentStatus === 'reverification_pending' || maintenance.currentStatus === 'requires_reverification'
+        ? 'Ir a la reverificación'
+      : operationalStatus === 'requires_review'
+        ? 'Ver estado de revisión'
+        : operationalStatus === 'scheduled'
+          ? 'Ver visita programada'
+          : operationalStatus === 'in_progress'
+            ? 'Ver validación en proceso'
+            : operationalStatus === 'not_completed'
+              ? 'Ver visita no completada'
+              : 'Ir a la coordinación',
     priceArs: pricing.priceArs,
     currency: PREMIUM_VERIFICATION_CURRENCY,
     isComplimentary: pricing.isComplimentary,
@@ -1312,6 +1885,146 @@ app.post('/api/reports', async (req, res) => {
   }
 });
 
+app.get('/api/support/cases', async (req, res) => {
+  const userId = req.session.userId;
+  if (!userId) return res.status(401).json({ error: AUTH_REQUIRED_ERROR });
+
+  const entryPoint = normalizeSupportEntryPoint(req.query?.entryPoint ?? req.query?.entry_point);
+  const propertyId = normalizeSupportCaseId(req.query?.propertyId ?? req.query?.property_id);
+  const bookingId = normalizeSupportCaseId(req.query?.bookingId ?? req.query?.booking_id);
+  const conversationId = normalizeSupportCaseId(req.query?.conversationId ?? req.query?.conversation_id);
+  const reviewType = req.query?.reviewType ?? req.query?.review_type ? toCanonicalReviewType(req.query?.reviewType ?? req.query?.review_type) : null;
+
+  if (!entryPoint && !propertyId && !bookingId && !conversationId) {
+    return res.status(400).json({ error: 'Necesitamos saber desde donde queres pedir ayuda.' });
+  }
+
+  try {
+    const context = await resolveSupportContext({
+      userId,
+      entryPoint: entryPoint ?? 'booking',
+      propertyId,
+      bookingId,
+      conversationId,
+      reviewType,
+    });
+
+    const result = await db.query(
+      `SELECT id,
+              entry_point as "entryPoint",
+              category,
+              description,
+              status,
+              status_note as "statusNote",
+              property_id as "propertyId",
+              booking_id as "bookingId",
+              conversation_id as "conversationId",
+              review_type as "reviewType",
+              context_snapshot as "contextSnapshot",
+              created_at as "createdAt",
+              updated_at as "updatedAt",
+              last_status_at as "lastStatusAt"
+       FROM support_cases
+       WHERE user_id = $1
+         AND ($2::text IS NULL OR booking_id = $2)
+         AND ($3::text IS NULL OR conversation_id = $3)
+         AND ($4::text IS NULL OR property_id = $4)
+         AND ($5::text IS NULL OR entry_point = $5)
+       ORDER BY created_at DESC
+       LIMIT 6`,
+      [userId, context.bookingId, context.conversationId, context.propertyId, entryPoint],
+    );
+
+    res.json({
+      items: result.rows.map((row) => mapSupportCaseRecord(row)),
+      context,
+    });
+  } catch (error: any) {
+    res.status(error?.statusCode || 500).json({ error: error?.message || 'No pudimos cargar los casos de ayuda.' });
+  }
+});
+
+app.post('/api/support/cases', async (req, res) => {
+  const userId = req.session.userId;
+  if (!userId) return res.status(401).json({ error: AUTH_REQUIRED_ERROR });
+
+  const entryPoint = normalizeSupportEntryPoint(req.body?.entryPoint ?? req.body?.entry_point);
+  const category = normalizeSupportCaseCategory(req.body?.category);
+  const propertyId = normalizeSupportCaseId(req.body?.propertyId ?? req.body?.property_id);
+  const bookingId = normalizeSupportCaseId(req.body?.bookingId ?? req.body?.booking_id);
+  const conversationId = normalizeSupportCaseId(req.body?.conversationId ?? req.body?.conversation_id);
+  const reviewType = req.body?.reviewType ?? req.body?.review_type ? toCanonicalReviewType(req.body?.reviewType ?? req.body?.review_type) : null;
+  const description = normalizeSupportDescription(req.body?.description);
+
+  if (!entryPoint || !category) {
+    return res.status(400).json({ error: 'Elegi el tipo de ayuda para seguir.' });
+  }
+
+  try {
+    const context = await resolveSupportContext({
+      userId,
+      entryPoint,
+      propertyId,
+      bookingId,
+      conversationId,
+      reviewType,
+    });
+
+    const id = `support_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const insertedCase = await db.query(
+      `INSERT INTO support_cases (
+         id,
+         user_id,
+         property_id,
+         booking_id,
+         conversation_id,
+         entry_point,
+         category,
+         description,
+         status,
+         review_type,
+         context_snapshot,
+         last_status_at,
+         updated_at
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'received', $9, $10::jsonb, NOW(), NOW())
+       RETURNING id,
+                 entry_point as "entryPoint",
+                 category,
+                 description,
+                 status,
+                 status_note as "statusNote",
+                 property_id as "propertyId",
+                 booking_id as "bookingId",
+                 conversation_id as "conversationId",
+                 review_type as "reviewType",
+                 context_snapshot as "contextSnapshot",
+                 created_at as "createdAt",
+                 updated_at as "updatedAt",
+                 last_status_at as "lastStatusAt"`,
+      [
+        id,
+        userId,
+        context.propertyId,
+        context.bookingId,
+        context.conversationId,
+        entryPoint,
+        category,
+        description,
+        reviewType,
+        JSON.stringify(context.contextSnapshot),
+      ],
+    );
+
+    res.status(201).json({
+      case: mapSupportCaseRecord(insertedCase.rows[0]),
+      message: 'Recibimos tu pedido de ayuda. Vamos a revisar el contexto disponible y te avisamos si hace falta algo mas.',
+    });
+  } catch (error: any) {
+    res.status(error?.statusCode || 500).json({ error: error?.message || 'No pudimos registrar tu pedido de ayuda.' });
+  }
+});
+
 // POST /api/chat/analyze - Gemini-powered but with local filter
 app.post('/api/chat/analyze', filterChatMiddleware, async (req, res) => {
   const { message } = req.body;
@@ -1359,7 +2072,7 @@ const checkUserRisk = async (userId: string, action: InternalRiskAction) => {
   };
 };
 
-const AUTH_USER_SELECT = `id, email, role, is_host as "isHost", active_mode as "activeMode", name, zone, phone, bio, interests,
+const AUTH_USER_SELECT = `id, email, role, is_host as "isHost", is_internal_operator as "isInternalOperator", active_mode as "activeMode", name, zone, phone, bio, interests,
   member_since as "memberSince",
   created_at as "createdAt",
         profile_photo as "profilePhoto",
@@ -1376,6 +2089,7 @@ const normalizeAuthUser = (user: any) => ({
   role: user?.role === 'host' ? 'host' : user?.role === 'blocked' ? 'blocked' : 'tenant',
   canGuest: user?.role !== 'blocked',
   canHost: Boolean(user?.isHost || user?.role === 'host'),
+  canInternalOps: Boolean(user?.isInternalOperator),
   activeMode: user?.activeMode === 'host' ? 'host' : user?.activeMode === 'guest' ? 'guest' : user?.role === 'host' ? 'host' : 'guest',
   interests: (() => {
     if (!user?.interests) return [];
@@ -1568,7 +2282,7 @@ const PROPERTY_LIST_SELECT = `p.id, p.title, p.location, p.price, p."hostId", p.
         p.description, p."imageUrl", p.images, p.rating, p."reviewsCount",
         p."identityValidated", p."locationVerified", p."materialVerified", p."videoValidated",
         COALESCE(u.internal_visibility_penalty, 0) as "internalVisibilityPenalty",
-        p."traceabilityLevel", p."maxGuests", p."hasPresencialVerification", p."onsiteVerifiedAt", p."hasDigitalVerification", p.lat, p.lng,
+  p."traceabilityLevel", p."maxGuests", p."hasPresencialVerification", p."onsiteVerifiedAt", p."onsiteVerificationMaintenance", p."hasDigitalVerification", p.lat, p.lng,
         p.beds, p.bedrooms, p.bathrooms, p.property_type as "propertyType",
         p.is_verified_property as "isVerifiedProperty",
         ${PROPERTY_AVAILABILITY_VALIDATED_SELECT},
@@ -1584,7 +2298,7 @@ const PUBLIC_PROPERTY_VISIBILITY_WHERE = `COALESCE(u.internal_manual_review_requ
 
 type VerificationAssetKind = 'photo' | 'video' | 'document';
 
-type PropertyVerificationReviewAction = 'approve-documents' | 'reject-documents' | 'complete-manual-review' | 'clear-manual-review';
+type PropertyVerificationReviewAction = 'approve-documents' | 'reject-documents' | 'complete-manual-review' | 'clear-manual-review' | 'mark-reverification-pending';
 
 const INTERNAL_OPS_SECRET_HEADER = 'x-internal-ops-secret';
 
@@ -1610,6 +2324,42 @@ type InternalPropertyVerificationQueueRow = VerificationFileRow & {
   propertyTitle?: string | null;
   propertyHostId?: string | null;
   propertyHostName?: string | null;
+};
+
+type InternalPropertyVerificationOnsiteRow = {
+  id: string;
+  propertyTitle?: string | null;
+  propertyHostId?: string | null;
+  propertyHostName?: string | null;
+  hasPresencialVerification?: unknown;
+  onsiteVerifiedAt?: unknown;
+  onsiteVerificationMaintenance?: unknown;
+  onsiteOrderId?: string | null;
+  onsiteOrderVerificationStatus?: unknown;
+  onsiteOrderMetadata?: unknown;
+};
+
+type InternalPropertyVerificationQueueItem = {
+  propertyId: string;
+  propertyTitle: string | null;
+  hostId: string | null;
+  hostName: string | null;
+  pendingDocumentsCount: number;
+  documents: ReturnType<typeof mapVerificationFileToInternalAsset>[];
+  onsiteOrderId: string | null;
+  onsiteOperationalStatus: OnsiteOperationalStatus | null;
+  onsiteOperationalLabel: string | null;
+  onsiteOperationalDescription: string | null;
+  onsiteAppointmentDate: string | null;
+  onsiteVerifierName: string | null;
+  onsiteMaintenanceStatus: OnsiteVerificationMaintenanceStatus | null;
+  onsiteMaintenanceLabel: string | null;
+  onsiteMaintenanceDescription: string | null;
+  onsiteLastValidatedAt: string | null;
+  onsiteExpiresAt: string | null;
+  onsiteTriggerReason: OnsiteVerificationMaintenanceReason | null;
+  onsiteNeedsRefresh: boolean;
+  onsiteCurrentlyValid: boolean;
 };
 
 const getVerificationFileSelect = (tableAlias?: string) => {
@@ -1641,7 +2391,7 @@ const secureCompareText = (left: string, right: string) => {
   return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
 };
 
-const hasInternalOpsAccess = (req: express.Request) => {
+const hasValidInternalOpsSecret = (req: express.Request) => {
   const providedSecret = req.header(INTERNAL_OPS_SECRET_HEADER)?.trim();
 
   if (!providedSecret || !serverEnv.internalOpsSecret) {
@@ -1651,8 +2401,21 @@ const hasInternalOpsAccess = (req: express.Request) => {
   return secureCompareText(providedSecret, serverEnv.internalOpsSecret);
 };
 
-const requireInternalOpsAccess = (req: express.Request, res: express.Response) => {
-  if (hasInternalOpsAccess(req)) {
+const requireInternalOpsAccess = async (req: express.Request, res: express.Response) => {
+  if (!req.session.userId) {
+    res.status(401).json({ error: AUTH_REQUIRED_ERROR });
+    return false;
+  }
+
+  const user = await getAuthUserById(req.session.userId);
+
+  if (!user) {
+    req.session.userId = undefined;
+    res.status(401).json({ error: AUTH_REQUIRED_ERROR });
+    return false;
+  }
+
+  if (user.canInternalOps && hasValidInternalOpsSecret(req)) {
     return true;
   }
 
@@ -1665,6 +2428,7 @@ const isPropertyVerificationReviewAction = (value: unknown): value is PropertyVe
   || value === 'reject-documents'
   || value === 'complete-manual-review'
   || value === 'clear-manual-review'
+  || value === 'mark-reverification-pending'
 );
 
 const createVerificationFileId = () => `vfile_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -1906,16 +2670,35 @@ const storePropertyVerificationAsset = async (input: {
   userId: string;
   file: Express.Multer.File;
   assetKind: VerificationAssetKind;
+  workflowContext?: 'default' | 'onsite-evidence';
+  metadata?: Record<string, unknown>;
 }) => {
   const fileId = createVerificationFileId();
-  const visibility: StoredFileVisibility = input.assetKind === 'photo' ? 'public' : input.assetKind === 'video' ? 'semi-public' : 'private';
+  const workflowContext = input.workflowContext ?? 'default';
+  const visibility: StoredFileVisibility = workflowContext === 'onsite-evidence'
+    ? 'private'
+    : input.assetKind === 'photo'
+      ? 'public'
+      : input.assetKind === 'video'
+        ? 'semi-public'
+        : 'private';
   const fileType: StoredFileType = input.assetKind === 'video'
     ? 'video'
     : input.assetKind === 'document' && !isImageMimeType(input.file.mimetype)
       ? 'document'
       : 'image';
-  const verificationScope = input.assetKind === 'photo' ? 'property-photo' : input.assetKind === 'video' ? 'property-video' : 'property-document';
-  const verificationStatus = input.assetKind === 'document' ? 'pending_review' : 'verified';
+  const verificationScope = workflowContext === 'onsite-evidence'
+    ? ONSITE_EVIDENCE_PHOTO_SCOPE
+    : input.assetKind === 'photo'
+      ? 'property-photo'
+      : input.assetKind === 'video'
+        ? 'property-video'
+        : 'property-document';
+  const verificationStatus = workflowContext === 'onsite-evidence'
+    ? 'pending_review'
+    : input.assetKind === 'document'
+      ? 'pending_review'
+      : 'verified';
 
   const storedFile = await storeAndPersistVerificationFile({
     fileId,
@@ -1929,6 +2712,7 @@ const storePropertyVerificationAsset = async (input: {
     userId: input.userId,
     propertyId: input.propertyId,
     createThumbnail: input.assetKind === 'photo' || (input.assetKind === 'document' && isImageMimeType(input.file.mimetype)),
+    metadata: input.metadata,
   });
 
   return mapVerificationFileToAsset({
@@ -2664,7 +3448,7 @@ app.get('/api/files/access/:token', async (req, res) => {
 });
 
 app.get('/api/internal/property-verification/review-queue', async (req, res) => {
-  if (!requireInternalOpsAccess(req, res)) {
+  if (!(await requireInternalOpsAccess(req, res))) {
     return;
   }
 
@@ -2677,73 +3461,214 @@ app.get('/api/internal/property-verification/review-queue', async (req, res) => 
       : 'pending_review';
 
   try {
-    const params: string[] = [];
-    const whereClauses = [
+    const groupedItems = new Map<string, InternalPropertyVerificationQueueItem>();
+    const ensureQueueItem = (input: {
+      propertyId: string;
+      propertyTitle?: string | null;
+      hostId?: string | null;
+      hostName?: string | null;
+    }) => {
+      if (!groupedItems.has(input.propertyId)) {
+        groupedItems.set(input.propertyId, {
+          propertyId: input.propertyId,
+          propertyTitle: input.propertyTitle ?? null,
+          hostId: input.hostId ?? null,
+          hostName: input.hostName ?? null,
+          pendingDocumentsCount: 0,
+          documents: [],
+          onsiteOrderId: null,
+          onsiteOperationalStatus: null,
+          onsiteOperationalLabel: null,
+          onsiteOperationalDescription: null,
+          onsiteAppointmentDate: null,
+          onsiteVerifierName: null,
+          onsiteMaintenanceStatus: null,
+          onsiteMaintenanceLabel: null,
+          onsiteMaintenanceDescription: null,
+          onsiteLastValidatedAt: null,
+          onsiteExpiresAt: null,
+          onsiteTriggerReason: null,
+          onsiteNeedsRefresh: false,
+          onsiteCurrentlyValid: false,
+        });
+      }
+
+      return groupedItems.get(input.propertyId)!;
+    };
+
+    const documentParams: string[] = [];
+    const documentWhereClauses = [
       'vf.property_id IS NOT NULL',
       "vf.verification_scope = 'property-document'",
     ];
 
     if (normalizedStatus !== 'all') {
-      params.push(normalizedStatus);
-      whereClauses.push(`vf.verification_status = $${params.length}`);
+      documentParams.push(normalizedStatus);
+      documentWhereClauses.push(`vf.verification_status = $${documentParams.length}`);
     }
 
     if (propertyId) {
-      params.push(propertyId);
-      whereClauses.push(`vf.property_id = $${params.length}`);
+      documentParams.push(propertyId);
+      documentWhereClauses.push(`vf.property_id = $${documentParams.length}`);
     }
 
-    const result = await db.query(
+    const documentResult = await db.query(
       `SELECT ${getVerificationFileSelect('vf')},
               p.title as "propertyTitle",
               p."hostId" as "propertyHostId",
               p."hostName" as "propertyHostName"
        FROM verification_files vf
        JOIN properties p ON p.id = vf.property_id
-       WHERE ${whereClauses.join(' AND ')}
+       WHERE ${documentWhereClauses.join(' AND ')}
        ORDER BY vf.created_at DESC`,
-      params,
+      documentParams,
     );
 
-    const groupedItems = new Map<string, {
-      propertyId: string;
-      propertyTitle: string | null;
-      hostId: string | null;
-      hostName: string | null;
-      pendingDocumentsCount: number;
-      documents: ReturnType<typeof mapVerificationFileToInternalAsset>[];
-    }>();
-
-    (result.rows as InternalPropertyVerificationQueueRow[]).forEach((row) => {
+    (documentResult.rows as InternalPropertyVerificationQueueRow[]).forEach((row) => {
       if (!row.propertyId) {
         return;
       }
 
-      if (!groupedItems.has(row.propertyId)) {
-        groupedItems.set(row.propertyId, {
-          propertyId: row.propertyId,
+      const item = ensureQueueItem({
+        propertyId: row.propertyId,
+        propertyTitle: row.propertyTitle ?? null,
+        hostId: row.propertyHostId ?? null,
+        hostName: row.propertyHostName ?? null,
+      });
+
+      if (row.verificationStatus === 'pending_review') {
+        item.pendingDocumentsCount += 1;
+      }
+
+      item.documents.push(mapVerificationFileToInternalAsset(row, { signedExpirySeconds: 60 * 60 * 12 }));
+    });
+
+    if (normalizedStatus === 'all' || normalizedStatus === 'pending_review') {
+      const onsiteParams: string[] = [PREMIUM_ONSITE_OFFER_TYPE];
+      const onsiteWhereClause = propertyId
+        ? `p.id = $2`
+        : `(
+            COALESCE(p."hasPresencialVerification", 0) = 1
+            OR p."onsiteVerifiedAt" IS NOT NULL
+            OR COALESCE(p."onsiteVerificationMaintenance", '{}'::jsonb) <> '{}'::jsonb
+            OR latest_order.id IS NOT NULL
+          )`;
+
+      if (propertyId) {
+        onsiteParams.push(propertyId);
+      }
+
+      const onsiteResult = await db.query(
+        `SELECT p.id,
+                p.title as "propertyTitle",
+                p."hostId" as "propertyHostId",
+                p."hostName" as "propertyHostName",
+                p."hasPresencialVerification",
+                p."onsiteVerifiedAt",
+                p."onsiteVerificationMaintenance",
+                latest_order.id as "onsiteOrderId",
+                latest_order.verification_status as "onsiteOrderVerificationStatus",
+                latest_order.metadata as "onsiteOrderMetadata"
+         FROM properties p
+         LEFT JOIN LATERAL (
+           SELECT id, verification_status, metadata
+           FROM premium_verification_orders
+           WHERE property_id = p.id
+             AND offer_type = $1
+           ORDER BY created_at DESC
+           LIMIT 1
+         ) latest_order ON TRUE
+         WHERE ${onsiteWhereClause}
+         ORDER BY COALESCE(p."onsiteVerifiedAt", p.created_at) DESC, p.id ASC`,
+        onsiteParams,
+      );
+
+      (onsiteResult.rows as InternalPropertyVerificationOnsiteRow[]).forEach((row) => {
+        const maintenance = getOnsiteVerificationMaintenance({
+          hasPresencialVerification: row.hasPresencialVerification,
+          onsiteVerifiedAt: row.onsiteVerifiedAt,
+          onsiteVerificationMaintenance: row.onsiteVerificationMaintenance,
+        });
+        const onsiteOrder = row.onsiteOrderId
+          ? {
+              id: row.onsiteOrderId,
+              verificationStatus: typeof row.onsiteOrderVerificationStatus === 'string'
+                ? row.onsiteOrderVerificationStatus as PremiumVerificationProcessStatus
+                : 'pending',
+              metadata: row.onsiteOrderMetadata,
+            } as PremiumVerificationOrderRow
+          : null;
+        const operationalStatus = getOnsiteOperationalStatus(onsiteOrder, maintenance.isCurrentlyValid);
+        const operationalCopy = operationalStatus ? getOnsiteOperationalStatusCopy(operationalStatus) : null;
+        const orderMetadata = getOnsiteOrderMetadata(onsiteOrder);
+        const hasRelevantOnsiteContext = Boolean(
+          operationalStatus
+          || maintenance.lastValidatedAt
+          || maintenance.history.length > 0
+        );
+
+        if (!propertyId && !hasRelevantOnsiteContext) {
+          return;
+        }
+
+        const item = ensureQueueItem({
+          propertyId: row.id,
           propertyTitle: row.propertyTitle ?? null,
           hostId: row.propertyHostId ?? null,
           hostName: row.propertyHostName ?? null,
-          pendingDocumentsCount: 0,
-          documents: [],
         });
-      }
 
-      const group = groupedItems.get(row.propertyId);
+        item.onsiteOrderId = row.onsiteOrderId ?? null;
+        item.onsiteOperationalStatus = operationalStatus;
+        item.onsiteOperationalLabel = operationalCopy?.label ?? null;
+        item.onsiteOperationalDescription = operationalCopy?.description ?? null;
+        item.onsiteAppointmentDate = orderMetadata.appointmentDate;
+        item.onsiteVerifierName = orderMetadata.verifierName;
+        item.onsiteMaintenanceStatus = maintenance.currentStatus;
+        item.onsiteMaintenanceLabel = maintenance.label;
+        item.onsiteMaintenanceDescription = maintenance.description;
+        item.onsiteLastValidatedAt = maintenance.lastValidatedAt;
+        item.onsiteExpiresAt = maintenance.expiresAt;
+        item.onsiteTriggerReason = maintenance.triggerReason;
+        item.onsiteNeedsRefresh = maintenance.needsRefresh;
+        item.onsiteCurrentlyValid = maintenance.isCurrentlyValid;
+      });
+    }
 
-      if (!group) {
-        return;
-      }
+    const items = Array.from(groupedItems.values())
+      .filter((item) => (
+        item.pendingDocumentsCount > 0
+        || item.onsiteOperationalStatus === 'requires_review'
+        || item.onsiteNeedsRefresh
+        || (Boolean(propertyId) && Boolean(item.onsiteOrderId || item.onsiteLastValidatedAt || item.documents.length > 0))
+      ))
+      .sort((leftItem, rightItem) => {
+        const getPriority = (item: InternalPropertyVerificationQueueItem) => {
+          if (item.pendingDocumentsCount > 0) {
+            return 0;
+          }
 
-      if (row.verificationStatus === 'pending_review') {
-        group.pendingDocumentsCount += 1;
-      }
+          if (item.onsiteOperationalStatus === 'requires_review') {
+            return 1;
+          }
 
-      group.documents.push(mapVerificationFileToInternalAsset(row, { signedExpirySeconds: 60 * 60 * 12 }));
-    });
+          if (item.onsiteMaintenanceStatus === 'reverification_pending') {
+            return 2;
+          }
 
-    return res.json({ items: Array.from(groupedItems.values()) });
+          if (item.onsiteMaintenanceStatus === 'requires_reverification') {
+            return 3;
+          }
+
+          return 4;
+        };
+
+        return getPriority(leftItem) - getPriority(rightItem)
+          || rightItem.pendingDocumentsCount - leftItem.pendingDocumentsCount
+          || (leftItem.propertyTitle ?? '').localeCompare(rightItem.propertyTitle ?? '', 'es');
+      });
+
+    return res.json({ items });
   } catch (err) {
     console.error('Error loading internal verification review queue:', err);
     return res.status(500).json({ error: 'No pudimos cargar la cola interna de revisión.' });
@@ -2751,12 +3676,13 @@ app.get('/api/internal/property-verification/review-queue', async (req, res) => 
 });
 
 app.post('/api/internal/properties/:id/verification/review', async (req, res) => {
-  if (!requireInternalOpsAccess(req, res)) {
+  if (!(await requireInternalOpsAccess(req, res))) {
     return;
   }
 
   const action = req.body?.action;
   const notes = typeof req.body?.notes === 'string' ? req.body.notes.trim() : '';
+  const triggerReason = normalizeOnsiteMaintenanceReason(req.body?.triggerReason);
   const fileIds = Array.isArray(req.body?.fileIds)
     ? req.body.fileIds.filter((value: unknown): value is string => typeof value === 'string' && value.trim().length > 0)
     : [];
@@ -2767,13 +3693,21 @@ app.post('/api/internal/properties/:id/verification/review', async (req, res) =>
 
   try {
     const propertyResult = await db.query(
-      `SELECT id, title, "hostId", "hostName"
+      `SELECT id, title, "hostId", "hostName", "hasPresencialVerification", "onsiteVerifiedAt", "onsiteVerificationMaintenance"
        FROM properties
        WHERE id = $1
        LIMIT 1`,
       [req.params.id],
     );
-    const property = propertyResult.rows[0] as { id: string; title?: string | null; hostId?: string | null; hostName?: string | null } | undefined;
+    const property = propertyResult.rows[0] as {
+      id: string;
+      title?: string | null;
+      hostId?: string | null;
+      hostName?: string | null;
+      hasPresencialVerification?: unknown;
+      onsiteVerifiedAt?: unknown;
+      onsiteVerificationMaintenance?: unknown;
+    } | undefined;
 
     if (!property) {
       return res.status(404).json({ error: 'No encontramos esa propiedad para revisar.' });
@@ -2782,6 +3716,7 @@ app.post('/api/internal/properties/:id/verification/review', async (req, res) =>
     let reviewedDocuments: ReturnType<typeof mapVerificationFileToInternalAsset>[] = [];
     let manualReviewCompleted: boolean | null = null;
     let manualReviewUpdatedAt: string | null = null;
+  const currentMaintenance = getOnsiteVerificationMaintenance(property);
 
     if (action === 'approve-documents' || action === 'reject-documents') {
       const selectQuery = fileIds.length > 0
@@ -2835,6 +3770,42 @@ app.post('/api/internal/properties/:id/verification/review', async (req, res) =>
       ));
     }
 
+    if (action === 'mark-reverification-pending') {
+      if (!triggerReason) {
+        return res.status(400).json({ error: 'Elegí el motivo operativo que dispara la reverificación.' });
+      }
+
+      if (!currentMaintenance.lastValidatedAt) {
+        return res.status(422).json({ error: 'Todavía no hay una verificación presencial previa para actualizar en esta propiedad.' });
+      }
+
+      const triggeredAt = new Date().toISOString();
+      const nextMaintenance = buildStoredOnsiteVerificationMaintenance({
+        status: 'reverification_pending',
+        lastValidatedAt: currentMaintenance.lastValidatedAt,
+        expiresAt: currentMaintenance.expiresAt ?? getOnsiteVerificationExpiryDate(currentMaintenance.lastValidatedAt),
+        triggerReason,
+        triggeredAt,
+        notes: notes || getOnsiteMaintenanceReasonCopy(triggerReason),
+        history: [
+          ...currentMaintenance.history,
+          createOnsiteMaintenanceHistoryEntry('reverification_pending', {
+            reason: triggerReason,
+            actorLabel: 'Revisión interna',
+            date: triggeredAt,
+            notes: notes || getOnsiteMaintenanceReasonCopy(triggerReason),
+          }),
+        ],
+      });
+
+      await db.query(
+        `UPDATE properties
+         SET "onsiteVerificationMaintenance" = $2::jsonb
+         WHERE id = $1`,
+        [req.params.id, JSON.stringify(nextMaintenance)],
+      );
+    }
+
     if (action === 'complete-manual-review' || action === 'clear-manual-review') {
       manualReviewCompleted = action === 'complete-manual-review';
       manualReviewUpdatedAt = manualReviewCompleted
@@ -2843,13 +3814,74 @@ app.post('/api/internal/properties/:id/verification/review', async (req, res) =>
             : new Date().toISOString())
         : null;
 
+      const nextMaintenance = manualReviewCompleted
+        ? buildStoredOnsiteVerificationMaintenance({
+            status: 'verified',
+            lastValidatedAt: manualReviewUpdatedAt,
+            expiresAt: getOnsiteVerificationExpiryDate(manualReviewUpdatedAt),
+            triggerReason: null,
+            triggeredAt: null,
+            notes: null,
+            history: [
+              ...currentMaintenance.history,
+              createOnsiteMaintenanceHistoryEntry('verified', {
+                actorLabel: 'Revisión interna',
+                date: manualReviewUpdatedAt,
+                notes: notes || 'La verificación presencial quedó vigente y ahora cuenta como validación activa.',
+              }),
+            ],
+          })
+        : buildStoredOnsiteVerificationMaintenance({
+            status: null,
+            lastValidatedAt: null,
+            expiresAt: null,
+            triggerReason: null,
+            triggeredAt: null,
+            notes: null,
+            history: [
+              ...currentMaintenance.history,
+              createOnsiteMaintenanceHistoryEntry('requires_reverification', {
+                actorLabel: 'Revisión interna',
+                notes: notes || 'La validación presencial dejó de contar como estado vigente, pero el historial se conserva.',
+              }),
+            ],
+          });
+
       await db.query(
         `UPDATE properties
          SET "hasPresencialVerification" = $2,
-             "onsiteVerifiedAt" = CASE WHEN $2 = 1 THEN COALESCE($3, "onsiteVerifiedAt") ELSE NULL END
+             "onsiteVerifiedAt" = CASE WHEN $2 = 1 THEN COALESCE($3, "onsiteVerifiedAt") ELSE NULL END,
+             "onsiteVerificationMaintenance" = $4::jsonb
          WHERE id = $1`,
-        [req.params.id, manualReviewCompleted ? 1 : 0, manualReviewUpdatedAt],
+        [req.params.id, manualReviewCompleted ? 1 : 0, manualReviewUpdatedAt, JSON.stringify(nextMaintenance)],
       );
+
+      const onsiteOrder = await getLatestOnsitePremiumOrderForProperty(req.params.id);
+
+      if (onsiteOrder) {
+        const existingMetadata = getOnsiteOrderMetadata(onsiteOrder);
+        const nextStatus: PremiumVerificationProcessStatus = manualReviewCompleted ? 'approved' : 'not_completed';
+        const nextMetadata = {
+          ...existingMetadata,
+          history: [
+            ...existingMetadata.history,
+            createOnsiteHistoryEntry(manualReviewCompleted ? 'approved' : 'not_completed', {
+              actorLabel: 'Revisión interna',
+              date: manualReviewUpdatedAt,
+              notes: notes || (manualReviewCompleted
+                ? 'La verificación presencial quedó aprobada y el sello ya está activo.'
+                : 'La revisión interna cerró la visita sin aprobar la validación presencial.'),
+            }),
+          ],
+        } satisfies OnsiteOrderMetadata;
+
+        await updateOnsiteOrderRecord({
+          orderId: onsiteOrder.id,
+          verificationStatus: nextStatus,
+          metadata: nextMetadata,
+          completedAt: manualReviewCompleted ? manualReviewUpdatedAt : null,
+        });
+      }
     }
 
     return res.json({
@@ -2868,8 +3900,244 @@ app.post('/api/internal/properties/:id/verification/review', async (req, res) =>
   }
 });
 
+app.get('/api/internal/support/review-queue', async (req, res) => {
+  if (!(await requireInternalOpsAccess(req, res))) {
+    return;
+  }
+
+  const statusFilter = normalizeInternalSupportQueueFilter(req.query.status);
+
+  try {
+    const params: string[] = [];
+    const whereClauses = ['1 = 1'];
+
+    if (statusFilter === 'open') {
+      whereClauses.push(`sc.status <> 'resolved'`);
+    } else if (statusFilter !== 'all') {
+      params.push(statusFilter);
+      whereClauses.push(`sc.status = $${params.length}`);
+    }
+
+    const result = await db.query(
+      `SELECT sc.id,
+              sc.user_id as "userId",
+              sc.property_id as "propertyId",
+              sc.booking_id as "bookingId",
+              sc.conversation_id as "conversationId",
+              sc.entry_point as "entryPoint",
+              sc.category,
+              sc.description,
+              sc.status,
+              sc.review_type as "reviewType",
+              sc.context_snapshot as "contextSnapshot",
+              sc.status_note as "statusNote",
+              sc.last_status_by as "lastStatusBy",
+              sc.last_status_at as "lastStatusAt",
+              sc.updated_at as "updatedAt",
+              sc.created_at as "createdAt",
+              COALESCE(u.name, 'Usuario') as "userName",
+              u.role as "userRole",
+              p.title as "propertyTitle"
+       FROM support_cases sc
+       LEFT JOIN users u ON u.id = sc.user_id
+       LEFT JOIN properties p ON p.id = sc.property_id
+       WHERE ${whereClauses.join(' AND ')}
+       ORDER BY CASE sc.status
+                  WHEN 'received' THEN 0
+                  WHEN 'in_review' THEN 1
+                  WHEN 'waiting_response' THEN 2
+                  ELSE 3
+                END ASC,
+                sc.last_status_at DESC,
+                sc.created_at DESC`,
+      params,
+    );
+
+    return res.json({
+      items: result.rows.map((row) => mapInternalSupportCaseRecord(row)),
+    });
+  } catch (err) {
+    console.error('Error loading internal support queue:', err);
+    return res.status(500).json({ error: 'No pudimos cargar la cola interna de soporte.' });
+  }
+});
+
+app.post('/api/internal/support/cases/:id/review', async (req, res) => {
+  if (!(await requireInternalOpsAccess(req, res))) {
+    return;
+  }
+
+  const requestedStatus = typeof req.body?.status === 'string' ? req.body.status.trim().toLowerCase() : null;
+  const status = requestedStatus && isSupportCaseStatus(requestedStatus)
+    ? requestedStatus
+    : null;
+  const statusNote = normalizeSupportDescription(req.body?.statusNote ?? req.body?.notes);
+  const reviewedBy = typeof req.body?.reviewedBy === 'string' && req.body.reviewedBy.trim().length > 0
+    ? req.body.reviewedBy.trim().slice(0, 80)
+    : 'internal_ops';
+
+  if (!status) {
+    return res.status(400).json({ error: 'Elegi un estado interno valido.' });
+  }
+
+  try {
+    const existingCaseResult = await db.query(
+      `SELECT sc.id,
+              sc.user_id as "userId",
+              sc.property_id as "propertyId",
+              sc.booking_id as "bookingId",
+              sc.conversation_id as "conversationId",
+              sc.entry_point as "entryPoint",
+              sc.category,
+              sc.description,
+              sc.status,
+              sc.review_type as "reviewType",
+              sc.context_snapshot as "contextSnapshot",
+              sc.status_note as "statusNote",
+              sc.last_status_by as "lastStatusBy",
+              sc.last_status_at as "lastStatusAt",
+              sc.updated_at as "updatedAt",
+              sc.created_at as "createdAt",
+              COALESCE(u.name, 'Usuario') as "userName",
+              u.role as "userRole",
+              p.title as "propertyTitle"
+       FROM support_cases sc
+       LEFT JOIN users u ON u.id = sc.user_id
+       LEFT JOIN properties p ON p.id = sc.property_id
+       WHERE sc.id = $1
+       LIMIT 1`,
+      [req.params.id],
+    );
+
+    const existingCase = existingCaseResult.rows[0];
+
+    if (!existingCase) {
+      return res.status(404).json({ error: 'No encontramos ese caso de soporte.' });
+    }
+
+    const updatedCaseResult = await db.query(
+      `UPDATE support_cases
+       SET status = $2,
+           status_note = $3,
+           last_status_by = $4,
+           last_status_at = NOW(),
+           updated_at = NOW()
+       WHERE id = $1
+       RETURNING id,
+                 status,
+                 status_note as "statusNote",
+                 last_status_by as "lastStatusBy",
+                 last_status_at as "lastStatusAt",
+                 updated_at as "updatedAt"`,
+      [req.params.id, status, statusNote, reviewedBy],
+    );
+
+    return res.json({
+      success: true,
+      case: mapInternalSupportCaseRecord({
+        ...existingCase,
+        ...updatedCaseResult.rows[0],
+      }),
+    });
+  } catch (err) {
+    console.error('Error updating internal support case status:', err);
+    return res.status(500).json({ error: 'No pudimos actualizar ese caso de soporte.' });
+  }
+});
+
+app.get('/api/internal/operators', async (req, res) => {
+  if (!(await requireInternalOpsAccess(req, res))) {
+    return;
+  }
+
+  try {
+    const result = await db.query(
+      `SELECT id,
+              email,
+              name,
+              role,
+              is_internal_operator as "isInternalOperator",
+              created_at as "createdAt"
+       FROM users
+       WHERE is_internal_operator = TRUE
+       ORDER BY LOWER(COALESCE(NULLIF(name, ''), email)) ASC,
+                created_at ASC`,
+    );
+
+    return res.json({
+      items: result.rows.map((row) => mapInternalOperatorRecord(row)),
+    });
+  } catch (err) {
+    console.error('Error loading internal operators:', err);
+    return res.status(500).json({ error: 'No pudimos cargar los operadores internos.' });
+  }
+});
+
+app.post('/api/internal/operators/access', async (req, res) => {
+  if (!(await requireInternalOpsAccess(req, res))) {
+    return;
+  }
+
+  const email = normalizeEmailAddress(req.body?.email);
+  const enabled = typeof req.body?.enabled === 'boolean' ? req.body.enabled : null;
+
+  if (!email) {
+    return res.status(400).json({ error: 'Ingresá un email válido.' });
+  }
+
+  if (enabled === null) {
+    return res.status(400).json({ error: 'Indicá si querés activar o revocar el acceso interno.' });
+  }
+
+  try {
+    const existingUserResult = await db.query(
+      `SELECT id,
+              email,
+              name,
+              role,
+              is_internal_operator as "isInternalOperator",
+              created_at as "createdAt"
+       FROM users
+       WHERE email = $1
+       LIMIT 1`,
+      [email],
+    );
+
+    const existingUser = existingUserResult.rows[0];
+
+    if (!existingUser) {
+      return res.status(404).json({ error: 'No encontramos un usuario con ese email.' });
+    }
+
+    if (!enabled && existingUser.id === req.session.userId) {
+      return res.status(400).json({ error: 'No podés revocarte tu propio acceso interno desde esta sesión.' });
+    }
+
+    const updatedUserResult = await db.query(
+      `UPDATE users
+       SET is_internal_operator = $2
+       WHERE id = $1
+       RETURNING id,
+                 email,
+                 name,
+                 role,
+                 is_internal_operator as "isInternalOperator",
+                 created_at as "createdAt"`,
+      [existingUser.id, enabled],
+    );
+
+    return res.json({
+      success: true,
+      user: mapInternalOperatorRecord(updatedUserResult.rows[0]),
+    });
+  } catch (err) {
+    console.error('Error updating internal operator access:', err);
+    return res.status(500).json({ error: 'No pudimos actualizar ese acceso interno.' });
+  }
+});
+
 app.get('/api/internal/moderation/review-queue', async (req, res) => {
-  if (!requireInternalOpsAccess(req, res)) {
+  if (!(await requireInternalOpsAccess(req, res))) {
     return;
   }
 
@@ -2993,7 +4261,7 @@ app.get('/api/internal/moderation/review-queue', async (req, res) => {
 });
 
 app.post('/api/internal/reports/:id/review', async (req, res) => {
-  if (!requireInternalOpsAccess(req, res)) {
+  if (!(await requireInternalOpsAccess(req, res))) {
     return;
   }
 
@@ -3184,6 +4452,8 @@ app.post('/api/properties/:id/verification/assets', verificationAssetUpload.arra
     : req.body?.assetKind === 'document'
       ? 'document'
       : 'photo';
+  const workflowContext = req.body?.workflowContext === 'onsite-evidence' ? 'onsite-evidence' : 'default';
+  const onsiteOrderId = typeof req.body?.orderId === 'string' ? req.body.orderId.trim() : '';
   const files = Array.isArray(req.files) ? req.files : [];
 
   if (files.length === 0) {
@@ -3192,6 +4462,10 @@ app.post('/api/properties/:id/verification/assets', verificationAssetUpload.arra
 
   if (assetKind === 'video' && files.length !== 1) {
     return res.status(400).json({ error: 'Subí un solo video por vez para mantener esta validación clara.' });
+  }
+
+  if (workflowContext === 'onsite-evidence' && assetKind !== 'photo') {
+    return res.status(422).json({ error: 'Para la evidencia presencial subí fotos claras y breves, sin tocar otros respaldos del aviso.' });
   }
 
   const mimeTypeValidator = assetKind === 'photo'
@@ -3226,10 +4500,17 @@ app.post('/api/properties/:id/verification/assets', verificationAssetUpload.arra
         userId: req.session.userId,
         file,
         assetKind,
+        workflowContext,
+        metadata: workflowContext === 'onsite-evidence'
+          ? {
+              onsiteOrderId: onsiteOrderId || null,
+              workflowContext,
+            }
+          : undefined,
       }));
     }
 
-    if (assetKind === 'photo') {
+    if (workflowContext === 'default' && assetKind === 'photo') {
       const existingImages = normalizeStoredFileUrlList(property.images);
       const mergedImages = uniqueFileUrls([...existingImages, ...uploadedFiles.map((file) => file.url)]);
       const nextImageUrl = typeof property.imageUrl === 'string' && property.imageUrl.trim().length > 0
@@ -3247,7 +4528,7 @@ app.post('/api/properties/:id/verification/assets', verificationAssetUpload.arra
       );
     }
 
-    if (assetKind === 'video') {
+    if (workflowContext === 'default' && assetKind === 'video') {
       await db.query(
         `UPDATE properties
          SET "videoValidated" = 1,
@@ -3260,6 +4541,7 @@ app.post('/api/properties/:id/verification/assets', verificationAssetUpload.arra
     await logActivity(req.session.userId, 'PROPERTY_AVAILABILITY_UPDATED', {
       propertyId: req.params.id,
       verificationAssetKind: assetKind,
+      workflowContext,
       filesUploaded: uploadedFiles.length,
     });
 
@@ -3281,6 +4563,7 @@ app.post('/api/verification/premium-checkout', async (req, res) => {
       ? PREMIUM_DOCUMENTARY_OFFER_TYPE
       : null;
   const propertyId = typeof req.body?.propertyId === 'string' ? req.body.propertyId.trim() : '';
+  const requestSource = normalizeOnsiteRequestSource(req.body?.requestSource);
 
   if (!offerType) {
     return res.status(400).json({ error: 'Elegí una validación adicional válida.' });
@@ -3368,7 +4651,7 @@ app.post('/api/verification/premium-checkout', async (req, res) => {
 
     const [propertyResult, usageRows, existingOrder] = await Promise.all([
       db.query(
-        `SELECT id, title, "hasPresencialVerification"
+        `SELECT id, title, "hasPresencialVerification", "onsiteVerifiedAt", "onsiteVerificationMaintenance"
          FROM properties
          WHERE id = $1 AND "hostId" = $2`,
         [propertyId, req.session.userId],
@@ -3382,7 +4665,8 @@ app.post('/api/verification/premium-checkout', async (req, res) => {
       return res.status(404).json({ error: 'No encontramos esa propiedad o no te pertenece.' });
     }
 
-    const onsiteVerified = property.hasPresencialVerification === true || property.hasPresencialVerification === 1 || property.hasPresencialVerification === '1';
+    const onsiteMaintenance = getOnsiteVerificationMaintenance(property);
+    const onsiteVerified = onsiteMaintenance.isCurrentlyValid;
 
     if (onsiteVerified && !existingOrder) {
       const offer = buildOnsitePremiumOffer({
@@ -3390,6 +4674,8 @@ app.post('/api/verification/premium-checkout', async (req, res) => {
         propertyId: property.id,
         propertyTitle: property.title || 'Tu propiedad',
         onsiteVerified: true,
+        onsiteVerifiedAt: onsiteMaintenance.lastValidatedAt,
+        onsiteVerificationMaintenance: property.onsiteVerificationMaintenance,
         returnTo: '/host-dashboard',
       });
 
@@ -3398,17 +4684,35 @@ app.post('/api/verification/premium-checkout', async (req, res) => {
 
     let order = existingOrder;
 
-    if (!isPremiumOrderUnlocked(order)) {
+    const shouldCreateFreshOnsiteOrder = !isPremiumOrderUnlocked(order)
+      || (isPremiumOrderCompleted(order) && onsiteMaintenance.needsRefresh);
+
+    if (shouldCreateFreshOnsiteOrder) {
       const pricing = getPremiumOfferPricing(offerType, usageRows);
       const paymentStatus: PremiumVerificationPaymentStatus = pricing.isComplimentary || pricing.priceArs === 0 ? 'waived' : 'confirmed';
       const nextOrderId = `pvo_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      const onsiteOrderMetadata = {
+        requestSource,
+        coordinationMode: 'manual',
+        appointmentDate: null,
+        coordinationNotes: null,
+        verifierName: null,
+        checklist: createEmptyOnsiteChecklist(),
+        evidence: createEmptyOnsiteEvidence(),
+        history: [createOnsiteHistoryEntry('pending_schedule', {
+          actorLabel: requestSource === 'listing' ? 'Publicación' : requestSource === 'dashboard' ? 'Dashboard' : 'Alquiler Real',
+          notes: onsiteMaintenance.needsRefresh
+            ? 'La verificación presencial necesita actualizarse y ya quedó abierta una nueva coordinación manual.'
+            : 'La solicitud de verificación presencial quedó abierta y espera coordinación manual.',
+        })],
+      } satisfies OnsiteOrderMetadata;
 
       await db.query(
         `INSERT INTO premium_verification_orders (
-           id, user_id, property_id, offer_type, target_type, price_ars, currency, payment_status, verification_status, is_promotional
+           id, user_id, property_id, offer_type, target_type, price_ars, currency, payment_status, verification_status, is_promotional, metadata
          )
-         VALUES ($1, $2, $3, $4, 'property', $5, $6, $7, 'pending', $8)`,
-        [nextOrderId, req.session.userId, propertyId, offerType, pricing.priceArs, PREMIUM_VERIFICATION_CURRENCY, paymentStatus, pricing.isComplimentary],
+         VALUES ($1, $2, $3, $4, 'property', $5, $6, $7, 'pending_schedule', $8, $9::jsonb)`,
+        [nextOrderId, req.session.userId, propertyId, offerType, pricing.priceArs, PREMIUM_VERIFICATION_CURRENCY, paymentStatus, pricing.isComplimentary, JSON.stringify(onsiteOrderMetadata)],
       );
 
       order = {
@@ -3418,14 +4722,16 @@ app.post('/api/verification/premium-checkout', async (req, res) => {
         propertyId,
         priceArs: pricing.priceArs,
         paymentStatus,
-        verificationStatus: 'pending',
+        verificationStatus: 'pending_schedule',
         isPromotional: pricing.isComplimentary,
+        metadata: onsiteOrderMetadata,
       };
 
       await logActivity(req.session.userId, 'PREMIUM_VERIFICATION_PURCHASED', {
         offerType,
         propertyId,
         propertyTitle: property.title,
+        requestSource,
         priceArs: pricing.priceArs,
         isPromotional: pricing.isComplimentary,
       });
@@ -3437,6 +4743,8 @@ app.post('/api/verification/premium-checkout', async (req, res) => {
       propertyId: property.id,
       propertyTitle: property.title || 'Tu propiedad',
       onsiteVerified,
+      onsiteVerifiedAt: onsiteMaintenance.lastValidatedAt,
+      onsiteVerificationMaintenance: property.onsiteVerificationMaintenance,
       returnTo: '/host-dashboard',
     });
 
@@ -3455,6 +4763,7 @@ app.post('/api/verification/onsite/complete', async (req, res) => {
   const propertyId = typeof req.body?.propertyId === 'string' ? req.body.propertyId.trim() : '';
   const orderId = typeof req.body?.orderId === 'string' ? req.body.orderId.trim() : '';
   const appointmentDate = typeof req.body?.appointmentDate === 'string' ? req.body.appointmentDate.trim() : '';
+  const coordinationNotes = typeof req.body?.coordinationNotes === 'string' ? req.body.coordinationNotes.trim() : '';
 
   if (!propertyId || !appointmentDate) {
     return res.status(400).json({ error: 'Elegí una propiedad y un horario para continuar.' });
@@ -3490,26 +4799,310 @@ app.post('/api/verification/onsite/complete', async (req, res) => {
     }
 
     const verifiedOrder = order as PremiumVerificationOrderRow;
+    const existingMetadata = getOnsiteOrderMetadata(verifiedOrder);
+    const nextMetadata = {
+      ...existingMetadata,
+      appointmentDate: normalizedOnsiteVerifiedAt ?? appointmentDate,
+      coordinationNotes: coordinationNotes || existingMetadata.coordinationNotes,
+      history: [
+        ...existingMetadata.history,
+        createOnsiteHistoryEntry('scheduled', {
+          actorLabel: 'Coordinación manual',
+          date: normalizedOnsiteVerifiedAt ?? null,
+          notes: coordinationNotes || 'La visita quedó programada y lista para pasar a validación en proceso.',
+        }),
+      ],
+    } satisfies OnsiteOrderMetadata;
 
-    await db.query(
-      `UPDATE properties
-       SET "hasPresencialVerification" = 1,
-           "onsiteVerifiedAt" = COALESCE($3, "onsiteVerifiedAt")
-       WHERE id = $1 AND "hostId" = $2`,
-      [propertyId, req.session.userId, normalizedOnsiteVerifiedAt],
-    );
-
-    await markPremiumOrderState(verifiedOrder.id, 'completed');
-    await logActivity(req.session.userId, 'PROPERTY_ONSITE_VERIFIED', {
-      propertyId,
-      propertyTitle: property.title,
-      appointmentDate,
+    await updateOnsiteOrderRecord({
+      orderId: verifiedOrder.id,
+      verificationStatus: 'scheduled',
+      metadata: nextMetadata,
     });
 
-    return res.json({ success: true, propertyId, appointmentDate });
+    return res.json({
+      success: true,
+      propertyId,
+      appointmentDate,
+      scheduledAt: normalizedOnsiteVerifiedAt,
+      coordinationNotes: coordinationNotes || null,
+      verificationStatus: 'scheduled',
+    });
   } catch (err) {
     console.error('Error en onsite-complete:', err);
     return res.status(500).json({ error: 'No pudimos confirmar la revisión presencial ahora.' });
+  }
+});
+
+app.get('/api/verification/onsite/status', async (req, res) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ error: AUTH_REQUIRED_ERROR });
+  }
+
+  const propertyId = typeof req.query?.propertyId === 'string' ? req.query.propertyId.trim() : '';
+  const orderId = typeof req.query?.orderId === 'string' ? req.query.orderId.trim() : '';
+
+  if (!propertyId) {
+    return res.status(400).json({ error: 'Elegí la propiedad que querés seguir.' });
+  }
+
+  try {
+    const [propertyResult, order, evidencePhotos] = await Promise.all([
+      db.query(
+        `SELECT id, title, "hasPresencialVerification", "onsiteVerifiedAt", "onsiteVerificationMaintenance"
+         FROM properties
+         WHERE id = $1 AND "hostId" = $2
+         LIMIT 1`,
+        [propertyId, req.session.userId],
+      ),
+      getLatestPremiumOrder({
+        userId: req.session.userId,
+        offerType: PREMIUM_ONSITE_OFFER_TYPE,
+        propertyId,
+        orderId: orderId || null,
+      }),
+      getOnsiteEvidencePhotoAssets(propertyId),
+    ]);
+    const property = propertyResult.rows[0];
+
+    if (!property) {
+      return res.status(404).json({ error: 'No encontramos esa propiedad o no te pertenece.' });
+    }
+
+    const onsiteMaintenance = getOnsiteVerificationMaintenance(property);
+    const onsiteVerified = onsiteMaintenance.isCurrentlyValid;
+
+    if (!order && !onsiteMaintenance.lastValidatedAt) {
+      return res.status(404).json({ error: 'Todavía no hay una solicitud presencial abierta para esta propiedad.' });
+    }
+
+    const metadata = getOnsiteOrderMetadata(order);
+    const status = getOnsiteOperationalStatus(order, onsiteVerified) ?? (onsiteMaintenance.lastValidatedAt ? 'approved' : 'pending_schedule');
+    const statusCopy = getOnsiteOperationalStatusCopy(status);
+
+    return res.json({
+      propertyId,
+      propertyTitle: property.title ?? 'Tu propiedad',
+      orderId: order?.id ?? null,
+      requestedAt: typeof order?.createdAt === 'string' ? order.createdAt : null,
+      updatedAt: typeof order?.updatedAt === 'string' ? order.updatedAt : null,
+      status,
+      statusLabel: statusCopy.label,
+      statusDescription: statusCopy.description,
+      requestSource: metadata.requestSource,
+      coordinationMode: metadata.coordinationMode,
+      appointmentDate: metadata.appointmentDate,
+      coordinationNotes: metadata.coordinationNotes,
+      verifierName: metadata.verifierName,
+      checklist: metadata.checklist,
+      evidence: {
+        ...metadata.evidence,
+        photoCount: evidencePhotos.length,
+      },
+      evidencePhotos,
+      history: metadata.history,
+      maintenanceStatus: onsiteMaintenance.currentStatus,
+      maintenanceLabel: onsiteMaintenance.label,
+      maintenanceDescription: onsiteMaintenance.description,
+      lastValidatedAt: onsiteMaintenance.lastValidatedAt,
+      expiresAt: onsiteMaintenance.expiresAt,
+      maintenanceTriggerReason: onsiteMaintenance.triggerReason,
+      maintenanceHistory: onsiteMaintenance.history,
+    });
+  } catch (err) {
+    console.error('Error loading onsite verification status:', err);
+    return res.status(500).json({ error: 'No pudimos cargar el estado operativo de esta verificación ahora.' });
+  }
+});
+
+app.post('/api/verification/onsite/start', async (req, res) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ error: AUTH_REQUIRED_ERROR });
+  }
+
+  const propertyId = typeof req.body?.propertyId === 'string' ? req.body.propertyId.trim() : '';
+  const orderId = typeof req.body?.orderId === 'string' ? req.body.orderId.trim() : '';
+
+  if (!propertyId) {
+    return res.status(400).json({ error: 'Elegí la propiedad que querés revisar.' });
+  }
+
+  try {
+    const [propertyResult, order] = await Promise.all([
+      db.query(
+        `SELECT id, title
+         FROM properties
+         WHERE id = $1 AND "hostId" = $2
+         LIMIT 1`,
+        [propertyId, req.session.userId],
+      ),
+      getLatestPremiumOrder({
+        userId: req.session.userId,
+        offerType: PREMIUM_ONSITE_OFFER_TYPE,
+        propertyId,
+        orderId: orderId || null,
+      }),
+    ]);
+    const property = propertyResult.rows[0];
+
+    if (!property) {
+      return res.status(404).json({ error: 'No encontramos esa propiedad o no te pertenece.' });
+    }
+
+    if (!isPremiumOrderUnlocked(order)) {
+      return res.status(422).json({ error: 'Primero abrí la solicitud presencial desde tu panel o desde la publicación.' });
+    }
+
+    const onsiteOrder = order as PremiumVerificationOrderRow;
+    const existingMetadata = getOnsiteOrderMetadata(onsiteOrder);
+
+    if (!existingMetadata.appointmentDate) {
+      return res.status(422).json({ error: 'Primero definí la agenda manual antes de pasar la visita a proceso.' });
+    }
+
+    const nextMetadata = {
+      ...existingMetadata,
+      history: [
+        ...existingMetadata.history,
+        createOnsiteHistoryEntry('in_progress', {
+          actorLabel: 'Visita presencial',
+          notes: 'La visita ya empezó y ahora se está cargando el respaldo operativo mínimo.',
+        }),
+      ],
+    } satisfies OnsiteOrderMetadata;
+
+    await updateOnsiteOrderRecord({
+      orderId: onsiteOrder.id,
+      verificationStatus: 'in_progress',
+      metadata: nextMetadata,
+    });
+
+    return res.json({
+      success: true,
+      propertyId,
+      verificationStatus: 'in_progress',
+    });
+  } catch (err) {
+    console.error('Error starting onsite verification:', err);
+    return res.status(500).json({ error: 'No pudimos pasar la visita a validación en proceso ahora.' });
+  }
+});
+
+app.post('/api/verification/onsite/report', async (req, res) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ error: AUTH_REQUIRED_ERROR });
+  }
+
+  const propertyId = typeof req.body?.propertyId === 'string' ? req.body.propertyId.trim() : '';
+  const orderId = typeof req.body?.orderId === 'string' ? req.body.orderId.trim() : '';
+  const verifierName = typeof req.body?.verifierName === 'string' ? req.body.verifierName.trim() : '';
+  const notes = typeof req.body?.notes === 'string' ? req.body.notes.trim() : '';
+  const geolocation = typeof req.body?.geolocation === 'string' ? req.body.geolocation.trim() : '';
+  const requestedTimestamp = typeof req.body?.timestamp === 'string' ? req.body.timestamp.trim() : '';
+  const result = req.body?.result === 'not_completed' ? 'not_completed' : 'requires_review';
+  const evidencePhotoIds = Array.isArray(req.body?.evidencePhotoIds)
+    ? req.body.evidencePhotoIds.filter((value: unknown): value is string => typeof value === 'string' && value.trim().length > 0)
+    : [];
+
+  if (!propertyId) {
+    return res.status(400).json({ error: 'Elegí la propiedad que querés cerrar.' });
+  }
+
+  try {
+    const [propertyResult, order, evidencePhotosResult] = await Promise.all([
+      db.query(
+        `SELECT id, title
+         FROM properties
+         WHERE id = $1 AND "hostId" = $2
+         LIMIT 1`,
+        [propertyId, req.session.userId],
+      ),
+      getLatestPremiumOrder({
+        userId: req.session.userId,
+        offerType: PREMIUM_ONSITE_OFFER_TYPE,
+        propertyId,
+        orderId: orderId || null,
+      }),
+      evidencePhotoIds.length > 0
+        ? db.query(
+            `SELECT ${VERIFICATION_FILE_SELECT}
+             FROM verification_files
+             WHERE property_id = $1
+               AND user_id = $2
+               AND verification_scope = $3
+               AND id = ANY($4::text[])
+             ORDER BY created_at DESC`,
+            [propertyId, req.session.userId, ONSITE_EVIDENCE_PHOTO_SCOPE, evidencePhotoIds],
+          )
+        : Promise.resolve({ rows: [] }),
+    ]);
+    const property = propertyResult.rows[0];
+
+    if (!property) {
+      return res.status(404).json({ error: 'No encontramos esa propiedad o no te pertenece.' });
+    }
+
+    if (!isPremiumOrderUnlocked(order)) {
+      return res.status(422).json({ error: 'Primero abrí la solicitud presencial desde tu panel o desde la publicación.' });
+    }
+
+    const evidencePhotos = evidencePhotosResult.rows as VerificationFileRow[];
+
+    if (result === 'requires_review' && evidencePhotos.length === 0) {
+      return res.status(422).json({ error: 'Subí al menos una foto breve de respaldo antes de enviarla a revisión interna.' });
+    }
+
+    const onsiteOrder = order as PremiumVerificationOrderRow;
+    const existingMetadata = getOnsiteOrderMetadata(onsiteOrder);
+    const normalizedTimestamp = requestedTimestamp && !Number.isNaN(Date.parse(requestedTimestamp))
+      ? new Date(requestedTimestamp).toISOString()
+      : new Date().toISOString();
+    const nextChecklist = {
+      propertyExists: normalizeBooleanFlag(req.body?.checklist?.propertyExists),
+      locationMatches: normalizeBooleanFlag(req.body?.checklist?.locationMatches),
+      realAccessAvailable: normalizeBooleanFlag(req.body?.checklist?.realAccessAvailable),
+      hostLinkedToProperty: normalizeBooleanFlag(req.body?.checklist?.hostLinkedToProperty),
+    } satisfies OnsiteChecklistState;
+    const nextMetadata = {
+      ...existingMetadata,
+      verifierName: verifierName || existingMetadata.verifierName,
+      checklist: nextChecklist,
+      evidence: {
+        photoCount: evidencePhotos.length,
+        geolocation: geolocation || existingMetadata.evidence.geolocation,
+        timestamp: normalizedTimestamp,
+        notes: notes || existingMetadata.evidence.notes,
+      },
+      history: [
+        ...existingMetadata.history,
+        createOnsiteHistoryEntry(result, {
+          actorLabel: result === 'requires_review' ? 'Registro de visita' : 'Visita no completada',
+          verifierName: verifierName || null,
+          date: normalizedTimestamp,
+          notes: notes || (result === 'requires_review'
+            ? 'La visita quedó cargada y ahora pasa a revisión interna.'
+            : 'La visita no se pudo completar y la publicación sigue sin validación presencial.'),
+        }),
+      ],
+    } satisfies OnsiteOrderMetadata;
+
+    await updateOnsiteOrderRecord({
+      orderId: onsiteOrder.id,
+      verificationStatus: result,
+      metadata: nextMetadata,
+    });
+
+    return res.json({
+      success: true,
+      propertyId,
+      verificationStatus: result,
+      verifierName: verifierName || null,
+      evidencePhotoCount: evidencePhotos.length,
+      timestamp: normalizedTimestamp,
+    });
+  } catch (err) {
+    console.error('Error submitting onsite verification report:', err);
+    return res.status(500).json({ error: 'No pudimos guardar el registro operativo de la visita ahora.' });
   }
 });
 
@@ -3973,6 +5566,32 @@ type CanonicalReviewType = 'host_review' | 'guest_review';
 type ReportReason = 'suspicious_listing' | 'false_information' | 'off_platform_attempt' | 'inappropriate_conduct' | 'not_as_listed' | 'other';
 type ReportSeverity = 'standard' | 'severe';
 type ModerationReviewAction = 'dismiss' | 'confirm_low' | 'confirm_medium' | 'confirm_high';
+type SupportContextPayload = {
+  userId: string;
+  entryPoint: SupportEntryPoint;
+  propertyId: string | null;
+  bookingId: string | null;
+  conversationId: string | null;
+  reviewType: CanonicalReviewType | null;
+};
+
+type SupportContextResolution = {
+  propertyId: string | null;
+  bookingId: string | null;
+  conversationId: string | null;
+  contextSnapshot: Record<string, unknown>;
+};
+
+type InternalSupportQueueFilter = 'open' | 'all' | SupportCaseStatus;
+
+type InternalOperatorRecord = {
+  id: string;
+  email: string;
+  name: string;
+  role: string | null;
+  isInternalOperator: boolean;
+  createdAt: string;
+};
 
 type ReviewCategoryScore = {
   key: string;
@@ -4026,6 +5645,419 @@ const normalizeStoredReviewType = (value: unknown): StoredReviewType | null => {
 const toCanonicalReviewType = (value: unknown): CanonicalReviewType => (
   normalizeStoredReviewType(value) === 'host_to_guest' ? 'host_review' : 'guest_review'
 );
+
+const compactRecord = (value: Record<string, unknown>) => Object.fromEntries(
+  Object.entries(value).filter(([, entry]) => {
+    if (entry === null || entry === undefined) {
+      return false;
+    }
+
+    if (typeof entry === 'string') {
+      return entry.trim().length > 0;
+    }
+
+    if (typeof entry === 'object' && !Array.isArray(entry)) {
+      return Object.keys(entry as Record<string, unknown>).length > 0;
+    }
+
+    return true;
+  }),
+);
+
+const normalizeSupportEntryPoint = (value: unknown): SupportEntryPoint | null => {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const normalizedValue = value.trim().toLowerCase();
+  return SUPPORT_ENTRY_POINTS.includes(normalizedValue as SupportEntryPoint)
+    ? normalizedValue as SupportEntryPoint
+    : null;
+};
+
+const normalizeSupportCaseCategory = (value: unknown): SupportCaseCategory | null => {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const normalizedValue = value.trim().toLowerCase();
+
+  const aliasMap: Record<string, SupportCaseCategory> = {
+    no_access: 'no_access',
+    'no pude ingresar': 'no_access',
+    deposit_issue: 'deposit_issue',
+    'problema con la sena': 'deposit_issue',
+    'problema con la seña': 'deposit_issue',
+    inappropriate_behavior: 'inappropriate_behavior',
+    'comportamiento inapropiado': 'inappropriate_behavior',
+    listing_error: 'listing_error',
+    'error en publicacion': 'listing_error',
+    'error en publicación': 'listing_error',
+    other: 'other',
+    'otro problema': 'other',
+  };
+
+  const resolvedCategory = aliasMap[normalizedValue] ?? null;
+  return resolvedCategory && SUPPORT_CASE_CATEGORIES.includes(resolvedCategory)
+    ? resolvedCategory
+    : null;
+};
+
+const normalizeSupportCaseStatus = (value: unknown): SupportCaseStatus => {
+  if (typeof value !== 'string') {
+    return 'received';
+  }
+
+  const normalizedValue = value.trim().toLowerCase();
+  return SUPPORT_CASE_STATUSES.includes(normalizedValue as SupportCaseStatus)
+    ? normalizedValue as SupportCaseStatus
+    : 'received';
+};
+
+const isSupportCaseStatus = (value: unknown): value is SupportCaseStatus => {
+  if (typeof value !== 'string') {
+    return false;
+  }
+
+  return SUPPORT_CASE_STATUSES.includes(value.trim().toLowerCase() as SupportCaseStatus);
+};
+
+const SUPPORT_ENTRY_POINT_LABELS: Record<SupportEntryPoint, string> = {
+  booking: 'Reserva',
+  conversation: 'Conversacion',
+  checkin: 'Check-in',
+  review: 'Revision',
+  publishing: 'Publicacion',
+};
+
+const SUPPORT_CATEGORY_LABELS = Object.fromEntries(
+  SUPPORT_CATEGORY_OPTIONS.map((option) => [option.value, option.label]),
+) as Record<SupportCaseCategory, string>;
+
+const normalizeInternalSupportQueueFilter = (value: unknown): InternalSupportQueueFilter => {
+  if (typeof value !== 'string') {
+    return 'open';
+  }
+
+  const normalizedValue = value.trim().toLowerCase();
+
+  if (normalizedValue === 'all') {
+    return 'all';
+  }
+
+  if (normalizedValue === 'open') {
+    return 'open';
+  }
+
+  return isSupportCaseStatus(normalizedValue) ? normalizedValue : 'open';
+};
+
+const normalizeSupportDescription = (value: unknown) => {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const trimmedValue = value.trim();
+  if (!trimmedValue) {
+    return null;
+  }
+
+  return trimmedValue.slice(0, 500);
+};
+
+const normalizeSupportCaseId = (value: unknown) => {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const trimmedValue = value.trim();
+  return trimmedValue.length > 0 ? trimmedValue : null;
+};
+
+const normalizeEmailAddress = (value: unknown) => {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const normalizedValue = value.trim().toLowerCase();
+  return normalizedValue.length > 0 ? normalizedValue : null;
+};
+
+const buildSupportTimestamps = (entries: Array<[string, unknown]>) => compactRecord(
+  Object.fromEntries(entries.map(([key, value]) => [key, typeof value === 'string' ? value : null])) as Record<string, unknown>,
+);
+
+const resolveSupportContext = async (input: SupportContextPayload): Promise<SupportContextResolution> => {
+  let resolvedPropertyId = input.propertyId;
+  let resolvedBookingId = input.bookingId;
+  let resolvedConversationId = input.conversationId;
+  let propertyTitle: string | null = null;
+  let viewerRole: 'guest' | 'host' | 'account' = 'account';
+  const snapshot: Record<string, unknown> = {
+    entryPoint: input.entryPoint,
+  };
+  const timestamps: Record<string, unknown> = {};
+
+  if (resolvedBookingId) {
+    const bookingResult = await db.query(
+      `SELECT b.id,
+              b."userId" as "guestId",
+              p."hostId" as "hostId",
+              b."propertyId" as "propertyId",
+              p.title as "propertyTitle",
+              b.status,
+              b.request_mode as "requestMode",
+              b.deposit_status as "depositStatus",
+              b.created_at as "bookingCreatedAt",
+              b.start_date as "startDate",
+              b.end_date as "endDate",
+              b.guest_checkin_confirmed_at as "guestCheckinConfirmedAt",
+              b.host_access_confirmed_at as "hostAccessConfirmedAt",
+              b.manual_review_opened_at as "manualReviewOpenedAt"
+       FROM bookings b
+       JOIN properties p ON p.id = b."propertyId"
+       WHERE b.id = $1
+       LIMIT 1`,
+      [resolvedBookingId],
+    );
+
+    const booking = bookingResult.rows[0];
+
+    if (!booking || (booking.guestId !== input.userId && booking.hostId !== input.userId)) {
+      throw { statusCode: 404, message: 'No encontramos esa operacion.' };
+    }
+
+    resolvedPropertyId = typeof booking.propertyId === 'string' ? booking.propertyId : resolvedPropertyId;
+    propertyTitle = typeof booking.propertyTitle === 'string' ? booking.propertyTitle : propertyTitle;
+    viewerRole = booking.hostId === input.userId ? 'host' : 'guest';
+
+    Object.assign(snapshot, compactRecord({
+      operationId: booking.id,
+      operationType: 'booking',
+      operationStatus: booking.status,
+      requestMode: booking.requestMode,
+      depositStatus: booking.depositStatus,
+      propertyTitle,
+      viewerRole,
+    }));
+
+    Object.assign(timestamps, buildSupportTimestamps([
+      ['bookingCreatedAt', booking.bookingCreatedAt],
+      ['checkInDate', booking.startDate],
+      ['checkOutDate', booking.endDate],
+      ['guestCheckinConfirmedAt', booking.guestCheckinConfirmedAt],
+      ['hostAccessConfirmedAt', booking.hostAccessConfirmedAt],
+      ['manualReviewOpenedAt', booking.manualReviewOpenedAt],
+    ]));
+  }
+
+  if (resolvedConversationId) {
+    const conversationResult = await db.query(
+      `SELECT c.id,
+              c.property_id as "propertyId",
+              c.booking_id as "bookingId",
+              c.tenant_id as "tenantId",
+              c.host_id as "hostId",
+              c.request_mode as "requestMode",
+              c.request_status as "requestStatus",
+              c.request_created_at as "requestCreatedAt",
+              c.created_at as "createdAt",
+              c.updated_at as "updatedAt",
+              p.title as "propertyTitle",
+              (
+                SELECT MAX(m.created_at)
+                FROM messages m
+                WHERE m.conversation_id = c.id
+              ) as "lastMessageCreatedAt"
+       FROM conversations c
+       LEFT JOIN properties p ON p.id = c.property_id
+       WHERE c.id = $1
+       LIMIT 1`,
+      [resolvedConversationId],
+    );
+
+    const conversation = conversationResult.rows[0];
+
+    if (!conversation || (conversation.tenantId !== input.userId && conversation.hostId !== input.userId)) {
+      throw { statusCode: 404, message: 'No encontramos esa conversacion.' };
+    }
+
+    if (resolvedBookingId && typeof conversation.bookingId === 'string' && conversation.bookingId !== resolvedBookingId) {
+      throw { statusCode: 400, message: 'La conversacion no coincide con la operacion elegida.' };
+    }
+
+    if (resolvedPropertyId && typeof conversation.propertyId === 'string' && conversation.propertyId !== resolvedPropertyId) {
+      throw { statusCode: 400, message: 'La conversacion no coincide con la publicacion elegida.' };
+    }
+
+    resolvedBookingId = typeof conversation.bookingId === 'string' ? conversation.bookingId : resolvedBookingId;
+    resolvedPropertyId = typeof conversation.propertyId === 'string' ? conversation.propertyId : resolvedPropertyId;
+    propertyTitle = typeof conversation.propertyTitle === 'string' ? conversation.propertyTitle : propertyTitle;
+    viewerRole = conversation.hostId === input.userId ? 'host' : 'guest';
+
+    Object.assign(snapshot, compactRecord({
+      operationId: resolvedBookingId ?? conversation.id,
+      operationType: resolvedBookingId ? 'booking' : 'conversation',
+      requestMode: conversation.requestMode,
+      requestStatus: conversation.requestStatus,
+      propertyTitle,
+      viewerRole,
+    }));
+
+    Object.assign(timestamps, buildSupportTimestamps([
+      ['conversationCreatedAt', conversation.createdAt],
+      ['conversationUpdatedAt', conversation.updatedAt],
+      ['requestCreatedAt', conversation.requestCreatedAt],
+      ['lastMessageCreatedAt', conversation.lastMessageCreatedAt],
+    ]));
+  }
+
+  if (resolvedPropertyId) {
+    const propertyResult = await db.query(
+      `SELECT p.id,
+              p.title,
+              p."hostId" as "hostId",
+              p.created_at as "createdAt"
+       FROM properties p
+       WHERE p.id = $1
+       LIMIT 1`,
+      [resolvedPropertyId],
+    );
+
+    const property = propertyResult.rows[0];
+
+    if (!property) {
+      throw { statusCode: 404, message: 'No encontramos esa publicacion.' };
+    }
+
+    if (!resolvedBookingId && !resolvedConversationId && property.hostId !== input.userId) {
+      throw { statusCode: 404, message: 'No encontramos esa publicacion.' };
+    }
+
+    propertyTitle = typeof property.title === 'string' ? property.title : propertyTitle;
+    if (viewerRole === 'account') {
+      viewerRole = property.hostId === input.userId ? 'host' : 'guest';
+    }
+
+    Object.assign(snapshot, compactRecord({
+      propertyTitle,
+      propertyId: property.id,
+      viewerRole,
+    }));
+    Object.assign(timestamps, buildSupportTimestamps([
+      ['propertyCreatedAt', property.createdAt],
+    ]));
+  }
+
+  if (!resolvedPropertyId && !resolvedBookingId && !resolvedConversationId && input.entryPoint !== 'publishing') {
+    throw { statusCode: 400, message: 'Necesitamos vincular el caso con una operacion o una publicacion.' };
+  }
+
+  if (input.reviewType) {
+    snapshot.reviewType = input.reviewType;
+  }
+
+  if (Object.keys(timestamps).length > 0) {
+    snapshot.timestamps = timestamps;
+  }
+
+  return {
+    propertyId: resolvedPropertyId,
+    bookingId: resolvedBookingId,
+    conversationId: resolvedConversationId,
+    contextSnapshot: compactRecord(snapshot),
+  };
+};
+
+const mapSupportCaseRecord = (row: any) => ({
+  id: row.id,
+  entryPoint: normalizeSupportEntryPoint(row.entryPoint ?? row.entry_point) ?? 'booking',
+  category: normalizeSupportCaseCategory(row.category) ?? 'other',
+  description: typeof row.description === 'string' && row.description.trim() ? row.description : null,
+  status: normalizeSupportCaseStatus(row.status),
+  statusNote: typeof row.statusNote === 'string' && row.statusNote.trim()
+    ? row.statusNote
+    : typeof row.status_note === 'string' && row.status_note.trim()
+      ? row.status_note
+      : null,
+  propertyId: normalizeSupportCaseId(row.propertyId ?? row.property_id),
+  bookingId: normalizeSupportCaseId(row.bookingId ?? row.booking_id),
+  conversationId: normalizeSupportCaseId(row.conversationId ?? row.conversation_id),
+  reviewType: row.reviewType ?? row.review_type ? toCanonicalReviewType(row.reviewType ?? row.review_type) : null,
+  contextSnapshot: normalizeActivityMetadata(row.contextSnapshot ?? row.context_snapshot),
+  createdAt: row.createdAt ?? row.created_at ?? new Date().toISOString(),
+  updatedAt: row.updatedAt ?? row.updated_at ?? row.createdAt ?? row.created_at ?? new Date().toISOString(),
+  lastStatusAt: row.lastStatusAt ?? row.last_status_at ?? row.updatedAt ?? row.updated_at ?? row.createdAt ?? row.created_at ?? new Date().toISOString(),
+});
+
+const mapInternalSupportCaseRecord = (row: any) => {
+  const baseRecord = mapSupportCaseRecord(row);
+  const contextSnapshot = normalizeActivityMetadata(row.contextSnapshot ?? row.context_snapshot);
+
+  return {
+    ...baseRecord,
+    statusLabel: SUPPORT_STATUS_COPY[baseRecord.status].label,
+    entryPointLabel: SUPPORT_ENTRY_POINT_LABELS[baseRecord.entryPoint],
+    categoryLabel: SUPPORT_CATEGORY_LABELS[baseRecord.category],
+    lastStatusBy: typeof row.lastStatusBy === 'string' && row.lastStatusBy.trim()
+      ? row.lastStatusBy
+      : typeof row.last_status_by === 'string' && row.last_status_by.trim()
+        ? row.last_status_by
+        : null,
+    user: {
+      id: typeof row.userId === 'string' ? row.userId : typeof row.user_id === 'string' ? row.user_id : null,
+      name: typeof row.userName === 'string' && row.userName.trim()
+        ? row.userName
+        : typeof row.user_name === 'string' && row.user_name.trim()
+          ? row.user_name
+          : 'Usuario',
+      role: typeof row.userRole === 'string' && row.userRole.trim()
+        ? row.userRole
+        : typeof row.user_role === 'string' && row.user_role.trim()
+          ? row.user_role
+          : null,
+    },
+    property: baseRecord.propertyId
+      ? {
+          id: baseRecord.propertyId,
+          title: typeof row.propertyTitle === 'string' && row.propertyTitle.trim()
+            ? row.propertyTitle
+            : typeof row.property_title === 'string' && row.property_title.trim()
+              ? row.property_title
+              : typeof contextSnapshot.propertyTitle === 'string' && contextSnapshot.propertyTitle.trim()
+                ? contextSnapshot.propertyTitle
+                : 'Publicacion',
+        }
+      : null,
+    operation: {
+      bookingId: baseRecord.bookingId,
+      conversationId: baseRecord.conversationId,
+      reviewType: baseRecord.reviewType,
+      operationId: typeof contextSnapshot.operationId === 'string' ? contextSnapshot.operationId : null,
+      operationType: typeof contextSnapshot.operationType === 'string' ? contextSnapshot.operationType : null,
+      viewerRole: typeof contextSnapshot.viewerRole === 'string' ? contextSnapshot.viewerRole : null,
+      requestMode: typeof contextSnapshot.requestMode === 'string' ? contextSnapshot.requestMode : null,
+      requestStatus: typeof contextSnapshot.requestStatus === 'string' ? contextSnapshot.requestStatus : null,
+      depositStatus: typeof contextSnapshot.depositStatus === 'string' ? contextSnapshot.depositStatus : null,
+      operationStatus: typeof contextSnapshot.operationStatus === 'string' ? contextSnapshot.operationStatus : null,
+    },
+    timestamps: normalizeActivityMetadata(contextSnapshot.timestamps),
+    contextSnapshot,
+  };
+};
+
+const mapInternalOperatorRecord = (row: any): InternalOperatorRecord => ({
+  id: typeof row.id === 'string' ? row.id : '',
+  email: typeof row.email === 'string' ? row.email : '',
+  name: typeof row.name === 'string' && row.name.trim().length > 0 ? row.name : 'Usuario',
+  role: typeof row.role === 'string' && row.role.trim().length > 0 ? row.role : null,
+  isInternalOperator: Boolean(row.isInternalOperator ?? row.is_internal_operator),
+  createdAt: typeof row.createdAt === 'string'
+    ? row.createdAt
+    : typeof row.created_at === 'string'
+      ? row.created_at
+      : new Date().toISOString(),
+});
 
 const normalizeReportReason = (value: unknown): ReportReason | null => {
   if (typeof value !== 'string') {
@@ -4558,7 +6590,8 @@ const getHostProfileData = async (hostId: string) => {
     ),
     db.query(
       `SELECT id, status, created_at as "createdAt",
-              "hasPresencialVerification", "locationVerified", "materialVerified", "videoValidated"
+              "hasPresencialVerification", "onsiteVerifiedAt", "onsiteVerificationMaintenance",
+              "locationVerified", "materialVerified", "videoValidated"
        FROM properties
        WHERE "hostId" = $1`,
       [hostId],
@@ -4601,7 +6634,10 @@ const getHostProfileData = async (hostId: string) => {
   }
 
   const host = hostResult.rows[0];
-  const properties = propertiesResult.rows;
+  const properties = propertiesResult.rows.map((property) => ({
+    ...property,
+    hasPresencialVerification: getOnsiteVerificationMaintenance(property).isCurrentlyValid,
+  }));
 
   if (!host.isHost && host.role !== 'host' && Number(host.totalProperties || 0) <= 0 && properties.length === 0) {
     return null;
@@ -5099,7 +7135,7 @@ app.get('/api/host/dashboard', async (req, res) => {
         `SELECT p.id, p.title, p.location, p.price, p.status, p."reviewsCount", p.rating, p."imageUrl", p.images,
           p.description, p."maxGuests", p.lat, p.lng,
           p."hostId", p."hostName", p."identityValidated", p."locationVerified", p."materialVerified", p."videoValidated",
-          p."hasPresencialVerification", p."onsiteVerifiedAt", p."hasDigitalVerification", p.property_type as "propertyType",
+          p."hasPresencialVerification", p."onsiteVerifiedAt", p."onsiteVerificationMaintenance", p."hasDigitalVerification", p.property_type as "propertyType",
                 p.is_verified_property as "isVerifiedProperty",
                 COALESCE(booking_summary.pending_requests_count, 0)::int as "pendingRequestsCount",
                 COALESCE(booking_summary.active_reservations_count, 0)::int as "activeReservationsCount",
@@ -5259,6 +7295,8 @@ app.get('/api/host/dashboard', async (req, res) => {
         propertyId: property.id,
         propertyTitle: property.title || 'Tu propiedad',
         onsiteVerified: property.hasPresencialVerification === true || property.hasPresencialVerification === 1 || property.hasPresencialVerification === '1',
+        onsiteVerifiedAt: typeof property.onsiteVerifiedAt === 'string' ? property.onsiteVerifiedAt : null,
+        onsiteVerificationMaintenance: property.onsiteVerificationMaintenance,
         returnTo: '/host-dashboard',
       }),
     }));
@@ -5729,7 +7767,7 @@ app.get('/api/properties', async (req, res) => {
         const mappedProperty = mapPropertyRecord(property);
         const hostReputationScore = buildHostTrustInternalRanking({
           identityValidated: Boolean(property.hostIdentityValidated) || Boolean(property.hostIdentityVerified),
-          hasPresencialVerification: property.hasPresencialVerification === true || property.hasPresencialVerification === 1 || property.hasPresencialVerification === '1',
+          hasPresencialVerification: Boolean(mappedProperty.hasPresencialVerification),
           hostCompletedReservationsCount: Number(property.hostCompletedReservationsCount ?? 0),
           hostGuestReviewsCount: Number(property.hostGuestReviewsCount ?? 0),
           hostGuestFeedbackCount: Number(property.hostGuestFeedbackCount ?? 0),
@@ -8229,20 +10267,25 @@ app.post('/api/messages', filterChatMiddleware, async (req, res) => {
       [rawConversationId],
     );
 
-    const latestMessageResult = await db.query(
-      `SELECT sender_id as "senderId"
-       FROM messages
-       WHERE conversation_id = $1
-         AND COALESCE(is_system, FALSE) = FALSE
-       ORDER BY created_at DESC
-       LIMIT 1`,
-      [rawConversationId],
-    );
-
     const isFirstTenantMessage = toSafeNumber(priorMessageCountResult.rows[0]?.count) === 0 && conversation.tenant_id === userId;
-    const lastNonSystemSenderId = typeof latestMessageResult.rows[0]?.senderId === 'string'
-      ? latestMessageResult.rows[0].senderId
-      : null;
+    let lastNonSystemSenderId: string | null = null;
+
+    if (conversation.host_id === userId) {
+      const latestMessageResult = await db.query(
+        `SELECT sender_id as "senderId"
+         FROM messages
+         WHERE conversation_id = $1
+           AND COALESCE(is_system, FALSE) = FALSE
+         ORDER BY created_at DESC
+         LIMIT 1`,
+        [rawConversationId],
+      );
+
+      lastNonSystemSenderId = typeof latestMessageResult.rows[0]?.senderId === 'string'
+        ? latestMessageResult.rows[0].senderId
+        : null;
+    }
+
     const isHostReply = conversation.host_id === userId && lastNonSystemSenderId === conversation.tenant_id;
     const id = `msg_${Date.now()}`;
     await db.query(

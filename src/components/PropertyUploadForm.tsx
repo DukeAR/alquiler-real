@@ -12,6 +12,7 @@ import { Card } from './ui/Card';
 import { Input } from './ui/Input';
 import { NoticeBanner } from './ui/NoticeBanner';
 import { VerificationInfoPanel } from './verification/VerificationInfoPanel';
+import { ContextualSupportDialog } from './ContextualSupportDialog';
 
 type PropertyType = 'apartment' | 'house' | 'room';
 type WizardStepId = 'photos' | 'location' | 'type' | 'capacity' | 'price' | 'preview';
@@ -350,6 +351,8 @@ export const PropertyUploadForm: React.FC<PropertyUploadFormProps> = ({ onComple
   const [isPublished, setIsPublished] = useState(false);
   const [publishedPropertyId, setPublishedPropertyId] = useState<string | null>(null);
   const [publishedPropertyTitle, setPublishedPropertyTitle] = useState('');
+  const [isRequestingOnsiteVerification, setIsRequestingOnsiteVerification] = useState(false);
+  const [onsiteVerificationRedirectTo, setOnsiteVerificationRedirectTo] = useState<string | null>(null);
   const [photoQualitySignals, setPhotoQualitySignals] = useState<Record<string, PhotoQualitySignal>>({});
 
   const currentStep = WIZARD_STEPS[currentStepIndex];
@@ -471,8 +474,8 @@ export const PropertyUploadForm: React.FC<PropertyUploadFormProps> = ({ onComple
         description: 'Ya saliste al aire. Sumá cocina, exterior o detalles para que el lugar se entienda mejor en segundos.',
       },
       {
-        title: 'La verificación presencial te da más confianza y prioridad visual',
-        description: 'Desde el panel podés sumar esa validación para reforzar información real y destacarte mejor dentro del marketplace.',
+        title: 'Sumá verificación presencial con un protocolo claro',
+        description: 'Desde el panel podés activar la revisión presencial para dejar evidencia mínima, estado operativo y vencimiento definidos con claridad.',
       },
     ];
 
@@ -608,6 +611,39 @@ export const PropertyUploadForm: React.FC<PropertyUploadFormProps> = ({ onComple
     }
   };
 
+  const handleRequestOnsiteVerification = async () => {
+    if (!publishedPropertyId) {
+      showToast('Verificacion presencial', 'Primero necesitamos una publicacion activa para abrir la solicitud presencial.', 'warning');
+      return;
+    }
+
+    setIsRequestingOnsiteVerification(true);
+
+    try {
+      const response = await apiJson<{ redirectTo?: string }>('/api/verification/premium-checkout', {
+        method: 'POST',
+        includeCredentials: true,
+        body: JSON.stringify({
+          offerType: 'onsite-property',
+          propertyId: publishedPropertyId,
+          requestSource: 'listing',
+        }),
+      });
+
+      const fallbackRedirect = `/verification?mode=onsite&propertyId=${encodeURIComponent(publishedPropertyId)}&returnTo=/host-dashboard`;
+      setOnsiteVerificationRedirectTo(
+        typeof response?.redirectTo === 'string' && response.redirectTo.trim().length > 0
+          ? response.redirectTo
+          : fallbackRedirect,
+      );
+      showToast('Verificacion presencial', 'La solicitud ya quedo creada desde esta publicacion. Podes seguirla desde este acceso o desde el panel.', 'success');
+    } catch (error) {
+      showToast('Verificacion presencial', error instanceof Error ? error.message : 'No pudimos abrir la solicitud presencial ahora.', 'error');
+    } finally {
+      setIsRequestingOnsiteVerification(false);
+    }
+  };
+
   if (isPublished) {
     return (
       <div className="mx-auto max-w-4xl px-4">
@@ -640,10 +676,39 @@ export const PropertyUploadForm: React.FC<PropertyUploadFormProps> = ({ onComple
               ))}
             </div>
 
-            <Button type="button" onClick={() => onComplete(publishedPropertyId ?? undefined)}>
-              <Icons.LayoutDashboard className="h-4 w-4" />
-              Mejorar publicacion
-            </Button>
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+              <Button
+                type="button"
+                variant={onsiteVerificationRedirectTo ? 'secondary' : 'primary'}
+                onClick={onsiteVerificationRedirectTo
+                  ? () => window.location.assign(onsiteVerificationRedirectTo)
+                  : () => void handleRequestOnsiteVerification()}
+                loading={isRequestingOnsiteVerification}
+                loadingLabel="Abriendo solicitud..."
+              >
+                <Icons.ShieldCheck className="h-4 w-4" />
+                {onsiteVerificationRedirectTo ? 'Continuar verificacion presencial' : 'Solicitar verificacion presencial'}
+              </Button>
+
+              <Button type="button" variant="secondary" onClick={() => onComplete(publishedPropertyId ?? undefined)}>
+                <Icons.LayoutDashboard className="h-4 w-4" />
+                Mejorar publicacion
+              </Button>
+            </div>
+
+            {onsiteVerificationRedirectTo ? (
+              <p className="text-sm leading-6 text-slate-600">
+                La solicitud presencial ya quedo abierta. Desde este acceso podes continuar con la agenda manual, la evidencia minima y el cierre operativo.
+              </p>
+            ) : null}
+
+            <ContextualSupportDialog
+              entryPoint="publishing"
+              propertyId={publishedPropertyId ?? null}
+              propertyTitle={publishedPropertyTitle ?? title ?? null}
+              triggerVariant="secondary"
+              triggerSize="md"
+            />
           </div>
         </Card>
       </div>
@@ -1101,6 +1166,14 @@ export const PropertyUploadForm: React.FC<PropertyUploadFormProps> = ({ onComple
             </div>
 
             <div className="flex flex-wrap gap-3">
+              <ContextualSupportDialog
+                entryPoint="publishing"
+                propertyId={publishedPropertyId ?? null}
+                propertyTitle={publishedPropertyTitle ?? title ?? null}
+                triggerVariant="outline"
+                triggerSize="md"
+              />
+
               {currentStepIndex > 0 ? (
                 <Button type="button" variant="secondary" onClick={goBack}>
                   <Icons.ArrowLeft className="h-4 w-4" />

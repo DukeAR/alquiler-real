@@ -37,7 +37,7 @@ export const RequireAuth = ({ children }: { children: ReactNode }) => {
   return <>{children}</>;
 };
 
-export const RequireRole = ({ children, allowedRoles }: { children: ReactNode; allowedRoles: Array<'tenant' | 'host'> }) => {
+export const RequireRole = ({ children, allowedRoles }: { children: ReactNode; allowedRoles: Array<'tenant' | 'host' | 'internal_ops'> }) => {
   const { user, loading, status, refresh } = useAuth();
   const location = useLocation();
   const authViewState = getResolvedAuthViewState({ user, loading, status });
@@ -67,6 +67,10 @@ export const RequireRole = ({ children, allowedRoles }: { children: ReactNode; a
   }
 
   const canAccess = allowedRoles.some((role) => {
+    if (role === 'internal_ops') {
+      return Boolean(user.canInternalOps);
+    }
+
     if (role === 'host') {
       return user.canHost || user.activeMode === 'host' || user.role === 'host';
     }

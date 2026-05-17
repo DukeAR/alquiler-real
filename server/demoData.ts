@@ -23,6 +23,7 @@ export type DemoUser = {
   email: string;
   password: string;
   role: DemoUserRole;
+  isInternalOperator?: boolean;
   name: string;
   zone: string;
   phone: string;
@@ -310,6 +311,7 @@ export const buildDemoData = (referenceDate = new Date()): DemoSeedCatalog => {
       email: 'valeria@demo.com',
       password: DEMO_PASSWORD,
       role: 'host',
+      isInternalOperator: true,
       name: 'Valeria Soria',
       zone: 'Costa del Este',
       phone: '+54 2257 48 1192',

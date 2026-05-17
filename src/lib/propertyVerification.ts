@@ -1,6 +1,13 @@
 import type { PremiumVerificationOffer } from './premiumVerification';
 import { getPropertyListingQualityScore } from './propertyListingQuality';
 import {
+  ONSITE_VERIFICATION_LABEL,
+  ONSITE_VERIFICATION_NON_SCOPE_SUMMARY,
+  ONSITE_VERIFICATION_SCOPE_ITEMS,
+  ONSITE_VERIFICATION_SUMMARY,
+  getOnsiteVerificationMaintenanceState,
+} from './onsiteVerificationProtocol';
+import {
   PROPERTY_VERIFICATION_KEYS,
   buildPropertyAdvancedVerificationItems,
   buildPropertyVerificationItem,
@@ -105,6 +112,19 @@ type PropertyVerificationLike = {
   hostPremiumDocumentaryVerified?: boolean;
   premiumVisibilityBoost?: number;
   premiumOnsiteOffer?: PremiumVerificationOffer | null;
+  onsiteVerificationStatus?: string | null;
+  onsiteVerificationMaintenanceStatus?: string | null;
+  onsiteVerificationLastValidatedAt?: string | Date | null;
+  onsiteVerificationExpiresAt?: string | Date | null;
+  onsiteVerificationTriggerReason?: string | null;
+  onsiteVerificationMaintenanceHistory?: Array<{
+    id: string;
+    date: string;
+    status: string;
+    reason?: string | null;
+    actorLabel?: string;
+    notes?: string | null;
+  }> | null;
 };
 
 type PropertySortLike = Omit<PropertyVerificationLike, 'title' | 'location' | 'description' | 'price' | 'maxGuests' | 'propertyType' | 'imageUrl' | 'images' | 'verificationPhotoCount' | 'verificationVideoCount' | 'verificationDocumentCount' | 'verificationDocumentsReviewedCount' | 'lat' | 'lng'> & {
@@ -204,7 +224,7 @@ export const getPropertyVerificationDisplayLabel = (key?: string) => {
   return normalizedKey ? PROPERTY_VERIFICATION_DISPLAY_LABELS[normalizedKey] : 'Verificación pendiente';
 };
 
-export const PRESENCIAL_VERIFICATION_LABEL = 'Verificado presencialmente';
+export const PRESENCIAL_VERIFICATION_LABEL = ONSITE_VERIFICATION_LABEL;
 
 export const PRESENCIAL_VERIFICATION_LEVEL_LABEL = 'Verificación presencial';
 
@@ -214,7 +234,7 @@ const PROPERTY_CARD_IDENTITY_VALIDATED_LABEL = 'Identidad verificada';
 
 export const HOST_PUBLISHED_INFO_LABEL = 'Información publicada por el anfitrión';
 
-export const PROPERTY_VERIFICATION_QUALITY_NOTE = 'No evaluamos estado, calidad ni amenities del inmueble.';
+export const PROPERTY_VERIFICATION_QUALITY_NOTE = ONSITE_VERIFICATION_NON_SCOPE_SUMMARY;
 
 type PublicPropertyVerificationLevel = 'none' | 'presencial';
 
@@ -223,7 +243,7 @@ const getPropertyVerificationStateCopy = (level: PublicPropertyVerificationLevel
     return {
       title: PRESENCIAL_VERIFICATION_LEVEL_LABEL,
       compactLabel: PRESENCIAL_VERIFICATION_LABEL,
-      description: 'Confirmamos identidad, acceso, vínculo y ubicación durante una visita presencial.',
+      description: ONSITE_VERIFICATION_SUMMARY,
       countLabel: null,
       summaryLabel: PRESENCIAL_VERIFICATION_LEVEL_LABEL,
       levelLabel: PRESENCIAL_VERIFICATION_LEVEL_LABEL,
@@ -270,7 +290,7 @@ const getPropertyVerificationDisplayItems = (items: PropertyVerificationItem[]) 
   });
 };
 
-type PublicPropertyVerificationDetailKey = 'hostIdentityValidated' | 'realPropertyAccess' | 'relationshipProof' | 'locationConfirmed';
+type PublicPropertyVerificationDetailKey = 'physicalExistence' | 'listingMatch' | 'realLocation' | 'hostAccess' | 'hostIdentity';
 
 type PublicPropertyVerificationDetailItem = {
   key: PublicPropertyVerificationDetailKey;
@@ -284,41 +304,49 @@ type PublicPropertyVerificationDetailItem = {
 const buildPublicPropertyVerificationDetailItems = (
   property: PropertyVerificationLike,
 ): PublicPropertyVerificationDetailItem[] => {
-  const hasPresencialVerification = Boolean(property.hasPresencialVerification || property.onsiteVerifiedAt);
+  const hasPresencialVerification = getOnsiteVerificationMaintenanceState(property).isCurrentlyValid;
 
   if (hasPresencialVerification) {
     return [
       {
-        key: 'hostIdentityValidated',
-        label: 'Identidad del anfitrión verificada',
-        detailLabel: 'Identidad del anfitrión verificada',
-        shortLabel: 'Identidad',
+        key: 'physicalExistence',
+        label: ONSITE_VERIFICATION_SCOPE_ITEMS[0].title,
+        detailLabel: ONSITE_VERIFICATION_SCOPE_ITEMS[0].title,
+        shortLabel: ONSITE_VERIFICATION_SCOPE_ITEMS[0].shortLabel,
         status: 'complete',
-        description: 'Durante la visita confirmamos la identidad del anfitrión asociada al aviso.',
+        description: ONSITE_VERIFICATION_SCOPE_ITEMS[0].description,
       },
       {
-        key: 'realPropertyAccess',
-        label: 'Acceso real a la propiedad confirmado',
-        detailLabel: 'Acceso real a la propiedad confirmado',
-        shortLabel: 'Acceso real',
+        key: 'listingMatch',
+        label: ONSITE_VERIFICATION_SCOPE_ITEMS[1].title,
+        detailLabel: ONSITE_VERIFICATION_SCOPE_ITEMS[1].title,
+        shortLabel: ONSITE_VERIFICATION_SCOPE_ITEMS[1].shortLabel,
         status: 'complete',
-        description: 'La visita confirmó que existe acceso real a la propiedad publicada.',
+        description: ONSITE_VERIFICATION_SCOPE_ITEMS[1].description,
       },
       {
-        key: 'relationshipProof',
-        label: 'Vínculo comprobable con el lugar',
-        detailLabel: 'Vínculo comprobable con el lugar',
-        shortLabel: 'Vínculo',
+        key: 'realLocation',
+        label: ONSITE_VERIFICATION_SCOPE_ITEMS[2].title,
+        detailLabel: ONSITE_VERIFICATION_SCOPE_ITEMS[2].title,
+        shortLabel: ONSITE_VERIFICATION_SCOPE_ITEMS[2].shortLabel,
         status: 'complete',
-        description: 'La visita dejó respaldo comprobable del vínculo entre el anfitrión y el lugar.',
+        description: ONSITE_VERIFICATION_SCOPE_ITEMS[2].description,
       },
       {
-        key: 'locationConfirmed',
-        label: 'Ubicación validada durante visita',
-        detailLabel: 'Ubicación validada durante visita',
-        shortLabel: 'Ubicación',
+        key: 'hostAccess',
+        label: ONSITE_VERIFICATION_SCOPE_ITEMS[3].title,
+        detailLabel: ONSITE_VERIFICATION_SCOPE_ITEMS[3].title,
+        shortLabel: ONSITE_VERIFICATION_SCOPE_ITEMS[3].shortLabel,
         status: 'complete',
-        description: 'La ubicación quedó validada durante la visita presencial al lugar.',
+        description: ONSITE_VERIFICATION_SCOPE_ITEMS[3].description,
+      },
+      {
+        key: 'hostIdentity',
+        label: ONSITE_VERIFICATION_SCOPE_ITEMS[4].title,
+        detailLabel: ONSITE_VERIFICATION_SCOPE_ITEMS[4].title,
+        shortLabel: ONSITE_VERIFICATION_SCOPE_ITEMS[4].shortLabel,
+        status: 'complete',
+        description: ONSITE_VERIFICATION_SCOPE_ITEMS[4].description,
       },
     ];
   }
@@ -550,6 +578,7 @@ const hasDerivedVerificationSignals = (property: PropertyVerificationLike) => (
   || typeof property.verificationVideoCount === 'number'
   || typeof property.verificationDocumentCount === 'number'
   || typeof property.hasPresencialVerification === 'boolean'
+  || typeof property.onsiteVerificationMaintenanceStatus === 'string'
   || typeof property.documentationSubmitted === 'boolean'
   || typeof property.documentationVerified === 'boolean'
   || typeof property.manualReviewReady === 'boolean'
@@ -565,6 +594,8 @@ export const getPropertyVerificationSummary = (property: PropertyVerificationLik
   const normalizedImages = normalizeVerificationImages(property.images);
   const resolvedLat = parseFiniteNumber(property.lat) ?? parseFiniteNumber(property.coordinates?.lat ?? null);
   const resolvedLng = parseFiniteNumber(property.lng) ?? parseFiniteNumber(property.coordinates?.lng ?? null);
+  const onsiteMaintenanceState = getOnsiteVerificationMaintenanceState(property);
+  const hasActivePresencialVerification = onsiteMaintenanceState.isCurrentlyValid;
 
   if (Array.isArray(property.verificationSummary?.items) && property.verificationSummary.items.length > 0) {
     if (hasLegacyVerificationItems(property.verificationSummary.items) && hasDerivedVerificationSignals(property)) {
@@ -585,12 +616,12 @@ export const getPropertyVerificationSummary = (property: PropertyVerificationLik
         locationVerified: property.locationVerified,
         materialVerified: property.materialVerified,
         videoValidated: property.videoValidated,
-        hasPresencialVerification: property.hasPresencialVerification,
+        hasPresencialVerification: hasActivePresencialVerification,
         onsiteVerifiedAt: property.onsiteVerifiedAt,
         documentationSubmitted: property.documentationSubmitted,
         documentationVerified: property.documentationVerified || property.hostPremiumDocumentaryVerified,
-        manualReviewReady: property.manualReviewReady || Boolean(property.premiumOnsiteOffer),
-        manualReviewCompleted: property.manualReviewCompleted || property.hasPresencialVerification,
+        manualReviewReady: property.manualReviewReady || Boolean(property.premiumOnsiteOffer) || onsiteMaintenanceState.needsRefresh,
+        manualReviewCompleted: property.manualReviewCompleted || hasActivePresencialVerification,
         availabilityValidated: property.availabilityValidated,
         lat: resolvedLat,
         lng: resolvedLng,
@@ -619,12 +650,12 @@ export const getPropertyVerificationSummary = (property: PropertyVerificationLik
         locationVerified: property.locationVerified,
         materialVerified: property.materialVerified,
         videoValidated: property.videoValidated,
-        hasPresencialVerification: property.hasPresencialVerification,
+        hasPresencialVerification: hasActivePresencialVerification,
         onsiteVerifiedAt: property.onsiteVerifiedAt,
         documentationSubmitted: property.documentationSubmitted,
         documentationVerified: property.documentationVerified || property.hostPremiumDocumentaryVerified,
-        manualReviewReady: property.manualReviewReady || Boolean(property.premiumOnsiteOffer),
-        manualReviewCompleted: property.manualReviewCompleted || property.hasPresencialVerification,
+        manualReviewReady: property.manualReviewReady || Boolean(property.premiumOnsiteOffer) || onsiteMaintenanceState.needsRefresh,
+        manualReviewCompleted: property.manualReviewCompleted || hasActivePresencialVerification,
         availabilityValidated: property.availabilityValidated,
         lat: resolvedLat,
         lng: resolvedLng,
@@ -651,12 +682,12 @@ export const getPropertyVerificationSummary = (property: PropertyVerificationLik
     locationVerified: property.locationVerified,
     materialVerified: property.materialVerified,
     videoValidated: property.videoValidated,
-    hasPresencialVerification: property.hasPresencialVerification,
+    hasPresencialVerification: hasActivePresencialVerification,
     onsiteVerifiedAt: property.onsiteVerifiedAt,
     documentationSubmitted: property.documentationSubmitted,
     documentationVerified: property.documentationVerified || property.hostPremiumDocumentaryVerified,
-    manualReviewReady: property.manualReviewReady || Boolean(property.premiumOnsiteOffer),
-    manualReviewCompleted: property.manualReviewCompleted || property.hasPresencialVerification,
+    manualReviewReady: property.manualReviewReady || Boolean(property.premiumOnsiteOffer) || onsiteMaintenanceState.needsRefresh,
+    manualReviewCompleted: property.manualReviewCompleted || hasActivePresencialVerification,
     availabilityValidated: property.availabilityValidated,
     lat: resolvedLat,
     lng: resolvedLng,
@@ -669,6 +700,8 @@ export const getPropertyVerificationItems = (property: PropertyVerificationLike)
 
 export const getPropertyAdvancedVerificationItems = (property: PropertyVerificationLike): PropertyAdvancedVerificationItem[] => {
   const normalizedImages = normalizeVerificationImages(property.images);
+  const onsiteMaintenanceState = getOnsiteVerificationMaintenanceState(property);
+  const hasActivePresencialVerification = onsiteMaintenanceState.isCurrentlyValid;
 
   if (Array.isArray(property.advancedVerificationItems) && property.advancedVerificationItems.length > 0) {
     return property.advancedVerificationItems;
@@ -691,12 +724,12 @@ export const getPropertyAdvancedVerificationItems = (property: PropertyVerificat
     locationVerified: property.locationVerified,
     materialVerified: property.materialVerified,
     videoValidated: property.videoValidated,
-    hasPresencialVerification: property.hasPresencialVerification,
+    hasPresencialVerification: hasActivePresencialVerification,
     onsiteVerifiedAt: property.onsiteVerifiedAt,
     documentationSubmitted: property.documentationSubmitted,
     documentationVerified: property.documentationVerified || property.hostPremiumDocumentaryVerified,
-    manualReviewReady: property.manualReviewReady || Boolean(property.premiumOnsiteOffer),
-    manualReviewCompleted: property.manualReviewCompleted || property.hasPresencialVerification,
+    manualReviewReady: property.manualReviewReady || Boolean(property.premiumOnsiteOffer) || onsiteMaintenanceState.needsRefresh,
+    manualReviewCompleted: property.manualReviewCompleted || hasActivePresencialVerification,
     availabilityValidated: property.availabilityValidated,
     lat: parseFiniteNumber(property.lat) ?? parseFiniteNumber(property.coordinates?.lat ?? null),
     lng: parseFiniteNumber(property.lng) ?? parseFiniteNumber(property.coordinates?.lng ?? null),
@@ -705,6 +738,8 @@ export const getPropertyAdvancedVerificationItems = (property: PropertyVerificat
 
 export const getPropertyVerificationProgress = (property: PropertyVerificationLike): PropertyVerificationProgress => {
   const normalizedImages = normalizeVerificationImages(property.images);
+  const onsiteMaintenanceState = getOnsiteVerificationMaintenanceState(property);
+  const hasActivePresencialVerification = onsiteMaintenanceState.isCurrentlyValid;
 
   if (property.verificationProgress?.level && property.verificationProgress.label && property.verificationProgress.summary && property.verificationProgress.nextStep) {
     return {
@@ -732,12 +767,12 @@ export const getPropertyVerificationProgress = (property: PropertyVerificationLi
     locationVerified: property.locationVerified,
     materialVerified: property.materialVerified,
     videoValidated: property.videoValidated,
-    hasPresencialVerification: property.hasPresencialVerification,
+    hasPresencialVerification: hasActivePresencialVerification,
     onsiteVerifiedAt: property.onsiteVerifiedAt,
     documentationSubmitted: property.documentationSubmitted,
     documentationVerified: property.documentationVerified || property.hostPremiumDocumentaryVerified,
-    manualReviewReady: property.manualReviewReady || Boolean(property.premiumOnsiteOffer),
-    manualReviewCompleted: property.manualReviewCompleted || property.hasPresencialVerification,
+    manualReviewReady: property.manualReviewReady || Boolean(property.premiumOnsiteOffer) || onsiteMaintenanceState.needsRefresh,
+    manualReviewCompleted: property.manualReviewCompleted || hasActivePresencialVerification,
     availabilityValidated: property.availabilityValidated,
     lat: parseFiniteNumber(property.lat) ?? parseFiniteNumber(property.coordinates?.lat ?? null),
     lng: parseFiniteNumber(property.lng) ?? parseFiniteNumber(property.coordinates?.lng ?? null),
@@ -959,7 +994,7 @@ const getPropertyCatalogPriorityScore = (property: PropertySortLike) => {
 };
 
 const getVisibleVerificationLevelRank = (property: PropertySortLike) => {
-  if (Boolean(property.hasPresencialVerification || property.onsiteVerifiedAt)) {
+  if (getOnsiteVerificationMaintenanceState(property).isCurrentlyValid) {
     return 2;
   }
 
@@ -1253,7 +1288,7 @@ export const getPropertyVerificationDetails = (property: PropertyVerificationLik
   return {
     publicLevel: verificationState.publicLevel,
     score: verificationState.score,
-    max: VERIFICATION_SCORE_MAX - 1,
+    max: displayItems.length > 0 ? displayItems.length : VERIFICATION_SCORE_MAX - 1,
     label: displayStateCopy.levelLabel,
     summaryLabel: displayStateCopy.summaryLabel,
     compactLabel: displayStateCopy.compactLabel,
@@ -1265,10 +1300,10 @@ export const getPropertyVerificationDetails = (property: PropertyVerificationLik
     items: displayItems,
     detailItems: displayItems,
     compactItems: displayItems,
-    compactSummary: displayItems.slice(0, 4).map((item) => item.shortLabel).join(' · '),
+    compactSummary: displayItems.slice(0, 5).map((item) => item.shortLabel).join(' · '),
     previewMode: displayStateCopy.isFullyVerified ? 'premium' : 'standard',
     premiumTitle: PRESENCIAL_VERIFICATION_LEVEL_LABEL,
-    premiumDescription: 'La visita confirma identidad, acceso real, vínculo comprobable y ubicación del lugar.',
+    premiumDescription: ONSITE_VERIFICATION_SUMMARY,
     premiumSupportingText: PROPERTY_VERIFICATION_QUALITY_NOTE,
     helperText: PROPERTY_VERIFICATION_QUALITY_NOTE,
   };
@@ -1393,7 +1428,7 @@ const getPropertyVerificationPresentationState = (property: PropertyVerification
     publicLevel,
     rankingScore,
     score: count,
-    max: VERIFICATION_SCORE_MAX - 1,
+    max: count > 0 ? count : VERIFICATION_SCORE_MAX - 1,
     model: isFullyVerified ? 'premium' : 'standard',
     presencialVerified: isFullyVerified,
     verificationChecks: buildPropertyCardVerificationChecks(checks),
@@ -1433,11 +1468,11 @@ export const getPropertyCardVerificationState = (property: PropertyVerificationL
       presencialVerified: true,
       publicLevel: 'presencial',
       verificationChecks: verificationState.verificationChecks,
-      count: 4,
+      count: verificationState.count,
       checks: verificationState.checks,
       badgeText: PRESENCIAL_VERIFICATION_LABEL,
       summaryTitle: PRESENCIAL_VERIFICATION_LABEL,
-      summaryDescription: 'Identidad, ubicación y acceso confirmados',
+      summaryDescription: 'Existencia física, coincidencia general, ubicación real, acceso real e identidad básica confirmados',
       countLabel: null,
     };
   }

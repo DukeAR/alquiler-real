@@ -39,6 +39,22 @@ const notificationCategoryCopy = {
   important_alert: { label: 'Alerta importante', className: 'border-red-200/90 bg-red-50 text-red-700' },
 } as const;
 
+const getNotificationCategoryMeta = (notification: Partial<NotificationItem>) => {
+  if (notification.category && notification.category in notificationCategoryCopy) {
+    return notificationCategoryCopy[notification.category as keyof typeof notificationCategoryCopy];
+  }
+
+  if (notification.type === 'error') {
+    return notificationCategoryCopy.important_alert;
+  }
+
+  if (notification.type === 'warning') {
+    return notificationCategoryCopy.action_required;
+  }
+
+  return notificationCategoryCopy.info;
+};
+
 export const NotificationsMenu: React.FC<NotificationsMenuProps> = ({
   status,
   notifications,
@@ -104,7 +120,15 @@ export const NotificationsMenu: React.FC<NotificationsMenuProps> = ({
   }, [isOpen]);
 
   const handleToggle = () => {
-    setIsOpen((current) => !current);
+    setIsOpen((current) => {
+      const next = !current;
+
+      if (next && status === 'ready' && unreadCount > 0 && !isMarkingAllRead) {
+        void onMarkAllAsRead();
+      }
+
+      return next;
+    });
   };
 
   const buttonLabel = unreadCount > 0 ? `Notificaciones, ${unreadCount} nuevas` : 'Notificaciones';
@@ -165,6 +189,11 @@ export const NotificationsMenu: React.FC<NotificationsMenuProps> = ({
         {notifications.map((notification) => (
           <div key={notification.id} className="border-b border-slate-100/90 px-5 py-4 transition-colors hover:bg-slate-50/70 last:border-b-0">
             <div className="flex items-start gap-3">
+              {(() => {
+                const categoryMeta = getNotificationCategoryMeta(notification);
+
+                return (
+                  <>
               <span className={cn(
                 'mt-1 h-2.5 w-2.5 shrink-0 rounded-full',
                 notification.unread ? 'bg-red-500' : 'bg-slate-200',
@@ -178,9 +207,9 @@ export const NotificationsMenu: React.FC<NotificationsMenuProps> = ({
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <span className={cn(
                     'inline-flex items-center rounded-full border px-2 py-1 text-[0.62rem] font-bold uppercase tracking-[0.14em]',
-                    notificationCategoryCopy[notification.category].className,
+                    categoryMeta.className,
                   )}>
-                    {notificationCategoryCopy[notification.category].label}
+                    {categoryMeta.label}
                   </span>
                   {notification.unread ? (
                     <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-[0.62rem] font-bold uppercase tracking-[0.14em] text-emerald-700">
@@ -200,6 +229,9 @@ export const NotificationsMenu: React.FC<NotificationsMenuProps> = ({
                   </Link>
                 ) : null}
               </div>
+                  </>
+                );
+              })()}
             </div>
           </div>
         ))}

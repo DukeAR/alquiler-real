@@ -40,9 +40,9 @@ describe('ExploreFiltersBar', () => {
     expect(screen.getByText('Salida')).toBeInTheDocument();
     expect(screen.getByText('Huéspedes')).toBeInTheDocument();
     expect(controlsGrid).toHaveClass('grid', 'grid-cols-1', 'md:grid-cols-2', 'xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.9fr)_minmax(17.5rem,1.15fr)]');
-    expect(verifiedToggle).toHaveClass('min-h-[4.5rem]', 'rounded-[18px]', 'px-5', 'py-3');
+    expect(verifiedToggle).toHaveClass('min-h-[4rem]', 'rounded-[16px]', 'px-4', 'py-3', 'sm:min-h-[4.5rem]', 'sm:rounded-[18px]', 'sm:px-5');
     expect(verifiedTitle).toHaveClass('text-[0.84rem]', 'font-semibold', 'tracking-[-0.015em]');
-    expect(verifiedSubtitle).toHaveClass('text-[0.72rem]', 'font-medium', 'tracking-[-0.01em]');
+    expect(verifiedSubtitle).toHaveClass('text-[0.68rem]', 'font-medium', 'tracking-[-0.01em]', 'sm:text-[0.72rem]');
     expect(screen.getByRole('option', { name: 'Más verificadas primero' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'Precio más bajo' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'Precio más alto' })).toBeInTheDocument();

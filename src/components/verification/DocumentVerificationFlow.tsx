@@ -5,6 +5,7 @@ import { VERIFICATION_PRIVACY_NOTICES } from '../../lib/privacyPolicy';
 import { showToast } from '../../lib/toast';
 import { cn } from '../../lib/utils';
 import { Icons } from '../Icons';
+import { OnsiteVerificationWorkflow } from './OnsiteVerificationWorkflow';
 
 type VerificationFlowMode = 'documentary' | 'onsite';
 
@@ -260,19 +261,11 @@ export const DocumentVerificationFlow: React.FC<DocumentVerificationFlowProps> =
 }) => {
   const [step, setStep] = useState(1);
   const [isVerifying, setIsVerifying] = useState(false);
-  const [appointmentDate, setAppointmentDate] = useState('');
   const [dni, setDni] = useState('');
   const [idFile, setIdFile] = useState<File | null>(null);
 
-  const totalSteps = mode === 'onsite' ? 2 : 3;
   const showPurchaseHint = mode === 'documentary' && !orderId;
-  const primaryButtonLabel = useMemo(() => {
-    if (mode === 'onsite') {
-      return step === 1 ? 'Confirmar horario' : 'Volver';
-    }
-
-    return step === 3 ? 'Finalizar validación' : 'Continuar';
-  }, [mode, step]);
+  const primaryButtonLabel = useMemo(() => (step === 3 ? 'Finalizar validación' : 'Continuar'), [step]);
 
   const handleDocumentaryNext = async () => {
     if (step === 1) {
@@ -331,43 +324,7 @@ export const DocumentVerificationFlow: React.FC<DocumentVerificationFlowProps> =
     }
   };
 
-  const handleOnsiteNext = async () => {
-    if (step === 1) {
-      if (!propertyId) {
-        showToast('Verificación', 'No encontramos la propiedad para esta revisión presencial.', 'error');
-        return;
-      }
-
-      if (!appointmentDate) {
-        showToast('Verificación', 'Elegí un horario para continuar.', 'warning');
-        return;
-      }
-
-      setIsVerifying(true);
-      try {
-        await apiJson('/api/verification/onsite/complete', {
-          method: 'POST',
-          body: JSON.stringify({ propertyId, orderId, appointmentDate }),
-          includeCredentials: true,
-        });
-        setStep(2);
-      } catch (error) {
-        showToast('Verificación', error instanceof Error ? error.message : 'No pudimos confirmar la revisión presencial.', 'error');
-      } finally {
-        setIsVerifying(false);
-      }
-      return;
-    }
-
-    await onComplete();
-  };
-
   const handleNext = async () => {
-    if (mode === 'onsite') {
-      await handleOnsiteNext();
-      return;
-    }
-
     await handleDocumentaryNext();
   };
 
@@ -376,6 +333,17 @@ export const DocumentVerificationFlow: React.FC<DocumentVerificationFlowProps> =
       setStep((currentStep) => currentStep - 1);
     }
   };
+
+  if (mode === 'onsite') {
+    return (
+      <OnsiteVerificationWorkflow
+        onComplete={onComplete}
+        orderId={orderId}
+        propertyId={propertyId}
+        propertyTitle={propertyTitle}
+      />
+    );
+  }
 
   return (
     <div className="mx-auto flex min-h-screen max-w-md flex-col bg-white dark:bg-slate-950">
@@ -392,7 +360,7 @@ export const DocumentVerificationFlow: React.FC<DocumentVerificationFlowProps> =
         <div className="w-10" />
       </div>
 
-      <StepIndicator currentStep={step} totalSteps={totalSteps} />
+      <StepIndicator currentStep={step} totalSteps={3} />
 
       <div className="flex-1 px-8 py-4">
         <AnimatePresence mode="wait">
@@ -408,17 +376,6 @@ export const DocumentVerificationFlow: React.FC<DocumentVerificationFlowProps> =
           ) : null}
           {mode === 'documentary' && step === 2 ? <BiometryStep key="documentary-step-2" /> : null}
           {mode === 'documentary' && step === 3 ? <DocumentaryReadyStep key="documentary-step-3" /> : null}
-          {mode === 'onsite' && step === 1 ? (
-            <OnsiteSchedulingStep
-              key="onsite-step-1"
-              appointmentDate={appointmentDate}
-              onSelect={setAppointmentDate}
-              propertyTitle={propertyTitle}
-            />
-          ) : null}
-          {mode === 'onsite' && step === 2 ? (
-            <OnsiteSuccessStep key="onsite-step-2" appointmentDate={appointmentDate} propertyTitle={propertyTitle} />
-          ) : null}
         </AnimatePresence>
       </div>
 

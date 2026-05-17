@@ -76,4 +76,12 @@ describe('Protected auth and verification endpoints - unauthenticated', () => {
     const res = await request(app).post('/api/verification/confirm-contact').send({ field: 'email' });
     expect(res.status).toBe(401);
   });
+
+  test('GET /api/internal/support/review-queue -> 401 when not logged in', async () => {
+    const res = await request(app)
+      .get('/api/internal/support/review-queue')
+      .set('x-internal-ops-secret', 'dev-secret-change-in-production');
+
+    expect(res.status).toBe(401);
+  });
 });

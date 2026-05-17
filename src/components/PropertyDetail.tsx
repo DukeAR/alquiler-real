@@ -9,6 +9,7 @@ import {
   getPropertyCardVerificationState,
   getPropertyVerificationDetails,
 } from '../lib/propertyVerification';
+import { ONSITE_VERIFICATION_LABEL } from '../lib/onsiteVerificationProtocol';
 import { getHostResponseSignal } from '../lib/positiveIncentives';
 import { showToast } from '../lib/toast';
 import { cn, formatCurrency } from '../lib/utils';
@@ -268,7 +269,7 @@ const REQUEST_CONFIRMATION_NOTICE: BookingConfirmationNotice = {
 type DetailVerificationVisibleLevel = 'none' | 'identity' | 'presencial';
 
 type DetailVerificationChecklistItem = {
-  key: 'identity' | 'location' | 'access';
+  key: 'existence' | 'listingMatch' | 'location' | 'access' | 'identity';
   confirmed: boolean;
   label: string;
 };
@@ -276,8 +277,8 @@ type DetailVerificationChecklistItem = {
 const getHeroVerificationCopy = (publicLevel: DetailVerificationVisibleLevel) => {
   if (publicLevel === 'presencial') {
     return {
-      title: 'Verificado en persona',
-      description: 'Identidad, ubicación y acceso confirmados durante una visita real',
+      title: ONSITE_VERIFICATION_LABEL,
+      description: 'Existencia física, coincidencia general, ubicación real, acceso e identidad básica confirmados durante una visita',
     };
   }
 
@@ -297,24 +298,30 @@ const getHeroVerificationCopy = (publicLevel: DetailVerificationVisibleLevel) =>
 const getDetailVerificationChecklist = (publicLevel: DetailVerificationVisibleLevel): DetailVerificationChecklistItem[] => {
   if (publicLevel === 'presencial') {
     return [
+      { key: 'existence', confirmed: true, label: 'Existencia física confirmada' },
+      { key: 'listingMatch', confirmed: true, label: 'Coincidencia general con la publicación' },
+      { key: 'location', confirmed: true, label: 'Ubicación real confirmada' },
+      { key: 'access', confirmed: true, label: 'Acceso real del anfitrión' },
       { key: 'identity', confirmed: true, label: 'Identidad del anfitrión' },
-      { key: 'location', confirmed: true, label: 'Ubicación confirmada' },
-      { key: 'access', confirmed: true, label: 'Acceso validado' },
     ];
   }
 
   if (publicLevel === 'identity') {
     return [
+      { key: 'existence', confirmed: false, label: 'Existencia física no confirmada' },
+      { key: 'listingMatch', confirmed: false, label: 'Coincidencia general no validada' },
+      { key: 'location', confirmed: false, label: 'Ubicación real no verificada' },
+      { key: 'access', confirmed: false, label: 'Acceso real no verificado' },
       { key: 'identity', confirmed: true, label: 'Identidad del anfitrión' },
-      { key: 'location', confirmed: false, label: 'Ubicación no verificada' },
-      { key: 'access', confirmed: false, label: 'Acceso no verificado' },
     ];
   }
 
   return [
+    { key: 'existence', confirmed: false, label: 'Existencia física no confirmada' },
+    { key: 'listingMatch', confirmed: false, label: 'Coincidencia general no confirmada' },
+    { key: 'location', confirmed: false, label: 'Ubicación real no confirmada' },
+    { key: 'access', confirmed: false, label: 'Acceso real no confirmado' },
     { key: 'identity', confirmed: false, label: 'Identidad no confirmada' },
-    { key: 'location', confirmed: false, label: 'Ubicación no confirmada' },
-    { key: 'access', confirmed: false, label: 'Acceso no confirmado' },
   ];
 };
 
@@ -1296,14 +1303,14 @@ export const PropertyDetailShell: React.FC<{
   }, [property.id, images.length]);
 
   return (
-    <div ref={detailMotionRootRef} className="app-page pb-[calc(env(safe-area-inset-bottom)+11rem)] lg:pb-16">
-      <div className="space-y-6 md:space-y-8">
-        <section data-property-detail-hero className="space-y-6 md:space-y-8">
-          <Card padding="none" variant="elevated" className="overflow-hidden rounded-[32px] border-slate-200/80 bg-white shadow-[0_34px_80px_-50px_rgba(15,23,42,0.35)]">
-            <div className="min-w-0 overflow-hidden rounded-[32px]">
+    <div ref={detailMotionRootRef} className="app-page pb-[calc(env(safe-area-inset-bottom)+9.25rem)] lg:pb-16">
+      <div className="space-y-5 md:space-y-8">
+        <section data-property-detail-hero className="space-y-5 md:space-y-8">
+          <Card padding="none" variant="elevated" className="overflow-hidden rounded-[24px] border-slate-200/80 bg-white shadow-[0_28px_64px_-46px_rgba(15,23,42,0.28)] sm:rounded-[28px] lg:rounded-[32px] lg:shadow-[0_34px_80px_-50px_rgba(15,23,42,0.35)]">
+            <div className="min-w-0 overflow-hidden rounded-[24px] sm:rounded-[28px] lg:rounded-[32px]">
               <div ref={heroSceneRef} className="property-hero-scene group relative isolate overflow-hidden bg-slate-950">
                 <div
-                  className="property-hero-image-reveal aspect-[9/10] min-h-[26rem] sm:min-h-0 sm:aspect-[16/11] lg:aspect-[16/10]"
+                  className="property-hero-image-reveal aspect-[4/5] min-h-[22.5rem] sm:min-h-0 sm:aspect-[16/11] lg:aspect-[16/10]"
                   onTouchStart={onTouchStart}
                   onTouchEnd={onTouchEnd}
                 >
@@ -1318,20 +1325,20 @@ export const PropertyDetailShell: React.FC<{
 
                 <div className="property-hero-overlay pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.05)_0%,rgba(0,0,0,0.14)_34%,rgba(0,0,0,0.3)_62%,rgba(0,0,0,0.55)_100%)]" />
 
-                <div className="property-hero-copy-reveal absolute inset-0 z-10 flex flex-col justify-between p-6">
+                <div className="property-hero-copy-reveal absolute inset-0 z-10 flex flex-col justify-between p-4 sm:p-5 lg:p-6">
                   <div className="flex items-start justify-between gap-4">
-                    <div className="flex min-w-0 flex-col items-start gap-3 pt-12 sm:gap-4 sm:pt-14">
+                    <div className="flex min-w-0 flex-col items-start gap-2.5 pt-9 sm:gap-4 sm:pt-12 lg:pt-14">
                       <button
                         type="button"
                         onClick={() => navigate(-1)}
-                        className="inline-flex items-center gap-2 rounded-full border border-white/18 bg-black/28 px-3.5 py-2 text-sm font-semibold text-white backdrop-blur-[10px] shadow-[0_18px_28px_-18px_rgba(15,23,42,0.52)] transition-[background-color,border-color,color,transform] duration-200 ease-out hover:border-white/28 hover:bg-black/38 hover:text-white focus-visible:outline-none focus-visible:shadow-[var(--app-focus-ring)] md:hover:-translate-y-[1px]"
+                        className="inline-flex items-center gap-1.5 rounded-full border border-white/18 bg-black/28 px-3 py-1.75 text-[0.82rem] font-semibold text-white backdrop-blur-[10px] shadow-[0_18px_28px_-18px_rgba(15,23,42,0.52)] transition-[background-color,border-color,color,transform] duration-200 ease-out hover:border-white/28 hover:bg-black/38 hover:text-white focus-visible:outline-none focus-visible:shadow-[var(--app-focus-ring)] sm:px-3.5 sm:py-2 sm:text-sm md:hover:-translate-y-[1px]"
                       >
                         <Icons.ArrowLeft className="h-4 w-4" />
                         <span>Volver</span>
                       </button>
 
                       <div className="flex flex-wrap items-center gap-2 text-white">
-                        <span className="inline-flex items-center rounded-full border border-white/18 bg-black/28 px-3.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/90 backdrop-blur-[10px] shadow-[0_16px_24px_-18px_rgba(15,23,42,0.42)]">
+                        <span className="inline-flex items-center rounded-full border border-white/18 bg-black/28 px-3 py-1.25 text-[9px] font-semibold uppercase tracking-[0.15em] text-white/90 backdrop-blur-[10px] shadow-[0_16px_24px_-18px_rgba(15,23,42,0.42)] sm:px-3.5 sm:py-1.5 sm:text-[10px] sm:tracking-[0.16em]">
                           {propertyTypeLabel}
                         </span>
                         {hasMultipleImages ? (
@@ -1345,17 +1352,17 @@ export const PropertyDetailShell: React.FC<{
 
                   <div className="flex flex-1 items-center">
                     <div className="max-w-full text-white sm:max-w-[34rem] lg:max-w-[38rem]">
-                      <h1 className="max-w-full text-balance text-[clamp(1.24rem,5vw,1.56rem)] font-semibold leading-[1.08] tracking-[-0.035em] text-white line-clamp-2 sm:max-w-[30rem] sm:text-[2.32rem] sm:leading-[1.08] lg:max-w-[35rem] lg:text-[2.72rem] lg:leading-[1.08]">
+                      <h1 className="max-w-full text-balance text-[clamp(1.18rem,5.1vw,1.46rem)] font-semibold leading-[1.06] tracking-[-0.035em] text-white line-clamp-2 sm:max-w-[30rem] sm:text-[2.32rem] sm:leading-[1.08] lg:max-w-[35rem] lg:text-[2.72rem] lg:leading-[1.08]">
                         {property.title}
                       </h1>
-                      <div className="mt-2 inline-flex max-w-full items-center gap-2 text-[0.8rem] font-medium tracking-[-0.01em] text-white/90 sm:mt-3 sm:text-[0.9rem] sm:text-white/92">
+                      <div className="mt-2 inline-flex max-w-full items-center gap-2 text-[0.76rem] font-medium tracking-[-0.01em] text-white/90 sm:mt-3 sm:text-[0.9rem] sm:text-white/92">
                         <Icons.MapPin className="h-4 w-4 shrink-0" />
                         <span className="truncate">{property.location}</span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="absolute top-6 right-6 z-20 flex flex-col items-end gap-3">
+                  <div className="absolute right-4 top-4 z-20 flex flex-col items-end gap-2.5 sm:right-5 sm:top-5 sm:gap-3 lg:right-6 lg:top-6">
                     {user ? (
                       <Button
                         onClick={toggleFav}
@@ -1364,7 +1371,7 @@ export const PropertyDetailShell: React.FC<{
                         variant="secondary"
                         size="icon"
                         className={cn(
-                          'border-white/18 bg-black/28 text-white backdrop-blur-[10px] shadow-[0_16px_28px_-18px_rgba(15,23,42,0.48)] hover:border-white/26 hover:bg-black/42 hover:text-white',
+                          'h-9 w-9 border-white/18 bg-black/28 text-white backdrop-blur-[10px] shadow-[0_16px_28px_-18px_rgba(15,23,42,0.48)] hover:border-white/26 hover:bg-black/42 hover:text-white sm:h-10 sm:w-10',
                           isFav && 'border-brand/85 bg-brand/92 text-white shadow-[0_18px_30px_-18px_rgba(67,56,202,0.6)] hover:border-brand hover:bg-brand-dark hover:text-white',
                         )}
                       >
@@ -1377,7 +1384,7 @@ export const PropertyDetailShell: React.FC<{
                     <button
                       type="button"
                       onClick={openLightbox}
-                      className="inline-flex shrink-0 items-center gap-2 rounded-full border border-white/14 bg-black/20 px-3 py-1.75 text-[0.76rem] font-medium text-white/82 backdrop-blur-[10px] shadow-[0_14px_24px_-22px_rgba(15,23,42,0.42)] transition-[background-color,border-color,color,transform] duration-200 ease-out hover:border-white/22 hover:bg-black/28 hover:text-white sm:px-4 sm:py-2 sm:text-[0.82rem] md:hover:-translate-y-[1px]"
+                      className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-white/14 bg-black/20 px-2.75 py-1.5 text-[0.72rem] font-medium text-white/82 backdrop-blur-[10px] shadow-[0_14px_24px_-22px_rgba(15,23,42,0.42)] transition-[background-color,border-color,color,transform] duration-200 ease-out hover:border-white/22 hover:bg-black/28 hover:text-white sm:gap-2 sm:px-4 sm:py-2 sm:text-[0.82rem] md:hover:-translate-y-[1px]"
                     >
                       <Icons.Camera className="h-4 w-4" />
                       {hasMultipleImages ? (
@@ -1393,8 +1400,8 @@ export const PropertyDetailShell: React.FC<{
                 </div>
               </div>
 
-              <div className="border-t border-slate-200/70 bg-white px-4 py-4 sm:px-6 sm:py-5">
-                <div className="flex gap-3 overflow-x-auto no-scrollbar" role="list" aria-label="Galería de imágenes">
+              <div className="border-t border-slate-200/70 bg-white px-3 py-3 sm:px-6 sm:py-5">
+                <div className="flex gap-2.5 overflow-x-auto no-scrollbar sm:gap-3" role="list" aria-label="Galería de imágenes">
                   {images.map((src, i) => (
                     <button
                       key={i}
@@ -1402,13 +1409,13 @@ export const PropertyDetailShell: React.FC<{
                       onClick={() => setMainIndex(i)}
                       onKeyDown={(e) => onKeyDownThumb(e, i)}
                       aria-label={`Ver imagen ${i + 1}`}
-                      className={`overflow-hidden rounded-[20px] border transition-all duration-200 ${i === mainIndex ? 'border-brand shadow-[0_22px_48px_-34px_rgba(14,116,144,0.7)] ring-2 ring-brand/20' : 'border-slate-200 hover:border-slate-300 hover:shadow-[0_20px_42px_-34px_rgba(15,23,42,0.2)]'}`}
+                      className={`overflow-hidden rounded-[16px] border transition-all duration-200 sm:rounded-[20px] ${i === mainIndex ? 'border-brand shadow-[0_22px_48px_-34px_rgba(14,116,144,0.7)] ring-2 ring-brand/20' : 'border-slate-200 hover:border-slate-300 hover:shadow-[0_20px_42px_-34px_rgba(15,23,42,0.2)]'}`}
                       role="listitem"
                     >
                       <img
                         src={src || FALLBACK}
                         alt={`${property.title} thumbnail ${i + 1}`}
-                        className="h-24 w-32 object-cover sm:h-24 sm:w-36 lg:h-24 lg:w-40"
+                        className="h-20 w-28 object-cover sm:h-24 sm:w-36 lg:h-24 lg:w-40"
                         referrerPolicy="no-referrer"
                       />
                     </button>
@@ -1423,21 +1430,21 @@ export const PropertyDetailShell: React.FC<{
           role="region"
           aria-label="Contexto de la reserva"
           data-motion-block
-          className="app-card-hover app-motion-block rounded-[24px] border border-slate-200/80 bg-white p-8 shadow-[0_30px_80px_-50px_rgba(15,23,42,0.28)]"
+          className="app-card-hover app-motion-block rounded-[20px] border border-slate-200/80 bg-white p-5 shadow-[0_24px_60px_-44px_rgba(15,23,42,0.24)] sm:rounded-[24px] sm:p-6 lg:p-8 lg:shadow-[0_30px_80px_-50px_rgba(15,23,42,0.28)]"
         >
-          <div className="grid gap-8 lg:grid-cols-2 lg:items-start">
-            <div className="space-y-5">
-              <div className="space-y-3.5">
+          <div className="grid gap-5 sm:gap-6 lg:grid-cols-2 lg:items-start lg:gap-8">
+            <div className="space-y-4 sm:space-y-5">
+              <div className="space-y-3">
                 <div className="flex flex-wrap items-end gap-x-3 gap-y-2 text-slate-950">
-                  <span className="text-[3rem] font-black leading-none tracking-[-0.08em] sm:text-[3.35rem]">
+                  <span className="text-[2.35rem] font-black leading-none tracking-[-0.07em] sm:text-[3rem] lg:text-[3.35rem]">
                     {nightly ? formatCurrency(nightly) : '—'}
                   </span>
-                  <span className="pb-1 text-base font-semibold text-slate-500">/ noche</span>
+                  <span className="pb-1 text-[0.92rem] font-semibold text-slate-500 sm:text-base">/ noche</span>
                 </div>
 
                 <div
                   className={cn(
-                    'inline-flex max-w-full items-start gap-3 rounded-[24px] border px-5 py-4 shadow-[0_24px_52px_-34px_rgba(15,23,42,0.28)]',
+                    'inline-flex max-w-full items-start gap-2.5 rounded-[20px] border px-4 py-3 shadow-[0_18px_40px_-32px_rgba(15,23,42,0.22)] sm:gap-3 sm:rounded-[24px] sm:px-5 sm:py-4 sm:shadow-[0_24px_52px_-34px_rgba(15,23,42,0.28)]',
                     isPresencialDetail && 'border-emerald-300 bg-emerald-100 text-emerald-950 shadow-[0_28px_60px_-32px_rgba(5,150,105,0.34)]',
                     isIdentityDetail && 'border-[#D1D5DB] bg-[#F3F4F6] text-[#374151]',
                     !isPresencialDetail && !isIdentityDetail && 'border-[#E5E7EB] bg-[#F9FAFB] text-[#4B5563]',
@@ -1445,13 +1452,13 @@ export const PropertyDetailShell: React.FC<{
                 >
                   {isPresencialDetail ? (
                     <PresencialVerificationSealMark
-                      alt="Verificado en persona"
-                      className="mt-0.5 h-14 w-auto shrink-0"
+                      alt="Verificado presencialmente"
+                      className="mt-0.5 h-12 w-auto shrink-0 sm:h-14"
                     />
                   ) : (
                     <span
                       className={cn(
-                        'mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border bg-white',
+                        'mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border bg-white sm:h-10 sm:w-10',
                         isIdentityDetail ? 'border-[#D1D5DB] text-emerald-600' : 'border-[#E5E7EB] text-slate-400',
                       )}
                       aria-hidden="true"
@@ -1461,10 +1468,10 @@ export const PropertyDetailShell: React.FC<{
                   )}
 
                   <div className="min-w-0">
-                    <p className={cn('text-[0.98rem] font-semibold leading-5', isPresencialDetail ? 'text-emerald-900' : isIdentityDetail ? 'text-[#374151]' : 'text-[#4B5563]')}>
+                    <p className={cn('text-[0.92rem] font-semibold leading-5 sm:text-[0.98rem]', isPresencialDetail ? 'text-emerald-900' : isIdentityDetail ? 'text-[#374151]' : 'text-[#4B5563]')}>
                       {heroVerificationCopy.title}
                     </p>
-                    <p className={cn('mt-1 text-[0.78rem] leading-5', isPresencialDetail ? 'text-emerald-900/85' : 'text-[#6B7280]')}>
+                    <p className={cn('mt-1 text-[0.72rem] leading-5 sm:text-[0.78rem]', isPresencialDetail ? 'text-emerald-900/85' : 'text-[#6B7280]')}>
                       {heroVerificationCopy.description}
                     </p>
                   </div>
@@ -1472,7 +1479,7 @@ export const PropertyDetailShell: React.FC<{
 
                 <div className="flex flex-wrap items-center gap-2.5">
                   {guestCapacity ? (
-                    <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm font-medium text-slate-700">
+                    <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.75 text-[0.82rem] font-medium text-slate-700 sm:px-3.5 sm:py-2 sm:text-sm">
                       <Icons.Users className="h-4 w-4 text-slate-400" />
                       <span>{guestCapacity}</span>
                     </div>
@@ -1481,21 +1488,21 @@ export const PropertyDetailShell: React.FC<{
               </div>
 
               {hasSelectedDates || guestCount > 1 ? (
-                <div className="flex flex-wrap gap-3 border-t border-slate-200/70 pt-5">
-                  <div className="rounded-full border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm font-medium text-slate-700">
+                <div className="flex flex-wrap gap-2.5 border-t border-slate-200/70 pt-4 sm:gap-3 sm:pt-5">
+                  <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.75 text-[0.82rem] font-medium text-slate-700 sm:px-3.5 sm:py-2 sm:text-sm">
                     {dateSelectionSummary}
                   </div>
-                  <div className="rounded-full border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm font-medium text-slate-700">
+                  <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.75 text-[0.82rem] font-medium text-slate-700 sm:px-3.5 sm:py-2 sm:text-sm">
                     {guestCountLabel}
                   </div>
-                  <div className="rounded-full border border-slate-200 bg-slate-50 px-3.5 py-2 text-sm font-medium text-slate-700">
+                  <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.75 text-[0.82rem] font-medium text-slate-700 sm:px-3.5 sm:py-2 sm:text-sm">
                     {totalSummaryLabel}
                   </div>
                 </div>
               ) : null}
             </div>
 
-            <div className="space-y-4 lg:pt-1">
+            <div className="space-y-3.5 sm:space-y-4 lg:pt-1">
               <div className="space-y-3">
                 <Button
                   ref={primaryBookingCtaRef}
@@ -1503,7 +1510,7 @@ export const PropertyDetailShell: React.FC<{
                   variant="primary"
                   size="lg"
                   onClick={handleOpenBookingEntry}
-                  className="min-h-[3.65rem] w-full rounded-[22px] px-6 text-[0.98rem] font-extrabold shadow-[0_28px_52px_-30px_rgba(67,56,202,0.48)]"
+                  className="min-h-[3.35rem] w-full rounded-[20px] px-5 text-[0.94rem] font-extrabold shadow-[0_24px_44px_-28px_rgba(67,56,202,0.44)] sm:min-h-[3.65rem] sm:rounded-[22px] sm:px-6 sm:text-[0.98rem] sm:shadow-[0_28px_52px_-30px_rgba(67,56,202,0.48)]"
                 >
                   <>
                     <Icons.Calendar className="h-4 w-4" />
@@ -1512,7 +1519,7 @@ export const PropertyDetailShell: React.FC<{
                 </Button>
 
                 {bookingCtaSupportCopy ? (
-                  <p className="text-center text-[0.76rem] font-medium leading-5 text-slate-500">
+                  <p className="text-center text-[0.72rem] font-medium leading-5 text-slate-500 sm:text-[0.76rem]">
                     {bookingCtaSupportCopy}
                   </p>
                 ) : null}
@@ -1804,14 +1811,14 @@ export const PropertyDetailShell: React.FC<{
               aria-labelledby="booking-flow-title"
               aria-describedby="booking-flow-description"
               tabIndex={-1}
-              className="relative z-10 flex h-full w-full max-w-4xl flex-col overflow-hidden border border-slate-200/80 bg-white shadow-[0_36px_100px_-60px_rgba(15,23,42,0.5)] outline-none sm:h-auto sm:max-h-[92vh] sm:rounded-[32px]"
+              className="relative z-10 flex h-full w-full max-w-4xl flex-col overflow-hidden rounded-t-[28px] border border-slate-200/80 bg-white shadow-[0_36px_100px_-60px_rgba(15,23,42,0.5)] outline-none sm:h-auto sm:max-h-[92vh] sm:rounded-[28px] lg:sm:rounded-[32px]"
             >
-              <div className="border-b border-slate-200/70 px-4 py-4 sm:px-6 sm:py-5">
+              <div className="border-b border-slate-200/70 px-4 py-3.5 sm:px-6 sm:py-5">
                 <div className="flex items-start justify-between gap-4">
                   <div className="space-y-1.5">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Reserva</p>
-                    <h2 id="booking-flow-title" className="text-2xl font-semibold tracking-tight text-slate-950">Consultar disponibilidad</h2>
-                    <p id="booking-flow-description" className="text-sm leading-6 text-slate-600">
+                    <h2 id="booking-flow-title" className="text-[1.35rem] font-semibold tracking-tight text-slate-950 sm:text-2xl">Consultar disponibilidad</h2>
+                    <p id="booking-flow-description" className="text-[0.92rem] leading-5 text-slate-600 sm:text-sm sm:leading-6">
                       Elegí fechas y huéspedes desde esta ficha. Después definís si querés operar libremente por chat o dejar la reserva lista para una seña protegida.
                     </p>
                   </div>
@@ -1822,7 +1829,7 @@ export const PropertyDetailShell: React.FC<{
                     onClick={handleCloseBookingEntry}
                     aria-label="Cerrar flujo de reserva"
                     disabled={bookingSubmitMode !== null}
-                    className="h-10 w-10 rounded-full p-0 text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+                    className="h-9 w-9 rounded-full p-0 text-slate-500 hover:bg-slate-100 hover:text-slate-700 sm:h-10 sm:w-10"
                   >
                     <Icons.X className="h-5 w-5" />
                   </Button>
@@ -1830,10 +1837,10 @@ export const PropertyDetailShell: React.FC<{
               </div>
 
               <form className="flex min-h-0 flex-1 flex-col" onSubmit={handleReserve}>
-                <div className="flex-1 overflow-y-auto px-4 py-5 sm:px-6 sm:py-6">
-                  <div className="space-y-6">
-                    <div className="rounded-[24px] border border-slate-200/80 bg-slate-50/80 px-4 py-4 shadow-[0_18px_36px_-34px_rgba(15,23,42,0.14)]">
-                      <div className="grid gap-4 sm:grid-cols-3">
+                <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
+                  <div className="space-y-5 sm:space-y-6">
+                    <div className="rounded-[20px] border border-slate-200/80 bg-slate-50/80 px-3.5 py-3.5 shadow-[0_18px_36px_-34px_rgba(15,23,42,0.14)] sm:rounded-[24px] sm:px-4 sm:py-4">
+                      <div className="grid gap-3 sm:grid-cols-3 sm:gap-4">
                         <div>
                           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Fechas</p>
                           <p className="mt-1 text-sm font-semibold leading-6 text-slate-900">{dateSelectionSummary}</p>
@@ -1849,16 +1856,16 @@ export const PropertyDetailShell: React.FC<{
                       </div>
                     </div>
 
-                    <div className="animate-[booking-step-in_220ms_var(--app-interaction-ease)] rounded-[26px] border border-slate-200/80 bg-slate-50/70 p-4 shadow-[0_24px_56px_-42px_rgba(15,23,42,0.16)] sm:p-5">
+                    <div className="animate-[booking-step-in_220ms_var(--app-interaction-ease)] rounded-[22px] border border-slate-200/80 bg-slate-50/70 p-3.5 shadow-[0_24px_56px_-42px_rgba(15,23,42,0.16)] sm:rounded-[26px] sm:p-5">
                       <div className="space-y-1.5">
                         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{currentBookingStep.shortLabel}</p>
-                        <h3 className="text-xl font-semibold tracking-tight text-slate-950">{currentBookingStep.title}</h3>
-                        <p className="text-sm leading-6 text-slate-600">{currentBookingStep.description}</p>
-                        {isMobileBookingLayout && mobileStepStatusLabel ? <p className="text-sm font-medium text-slate-600">{mobileStepStatusLabel}</p> : null}
+                        <h3 className="text-lg font-semibold tracking-tight text-slate-950 sm:text-xl">{currentBookingStep.title}</h3>
+                        <p className="text-[0.92rem] leading-5 text-slate-600 sm:text-sm sm:leading-6">{currentBookingStep.description}</p>
+                        {isMobileBookingLayout && mobileStepStatusLabel ? <p className="text-[0.9rem] font-medium text-slate-600 sm:text-sm">{mobileStepStatusLabel}</p> : null}
                       </div>
 
                       {bookingStep === 'dates' ? (
-                        <div className="mt-5 space-y-4">
+                        <div className="mt-4 space-y-3.5 sm:mt-5 sm:space-y-4">
                           <DateRangePicker
                             checkIn={checkIn}
                             checkOut={checkOut}
@@ -1879,11 +1886,11 @@ export const PropertyDetailShell: React.FC<{
                           />
 
                           {bookingError?.field === 'dates' ? (
-                            <p className="rounded-[20px] border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                            <p className="rounded-[18px] border border-red-200 bg-red-50 px-3.5 py-2.5 text-[0.92rem] font-medium text-red-700 sm:rounded-[20px] sm:px-4 sm:py-3 sm:text-sm">
                               {bookingError.message}
                             </p>
                           ) : hasCompleteDates ? (
-                            <div className="rounded-[18px] border border-brand/10 bg-white px-4 py-3 text-sm font-medium text-slate-700 shadow-[0_18px_36px_-34px_rgba(15,23,42,0.18)]">
+                            <div className="rounded-[16px] border border-brand/10 bg-white px-3.5 py-2.5 text-[0.92rem] font-medium text-slate-700 shadow-[0_18px_36px_-34px_rgba(15,23,42,0.18)] sm:rounded-[18px] sm:px-4 sm:py-3 sm:text-sm">
                               {mobileBookingSummary}
                             </div>
                           ) : null}
@@ -1891,9 +1898,9 @@ export const PropertyDetailShell: React.FC<{
                       ) : null}
 
                       {bookingStep === 'guests' ? (
-                        <div className="mt-5 space-y-4">
-                          <div className="overflow-hidden rounded-[24px] border border-slate-200/80 bg-white shadow-[0_18px_36px_-30px_rgba(15,23,42,0.14)]">
-                            <div className="space-y-0 px-4 py-3.5">
+                        <div className="mt-4 space-y-3.5 sm:mt-5 sm:space-y-4">
+                          <div className="overflow-hidden rounded-[20px] border border-slate-200/80 bg-white shadow-[0_18px_36px_-30px_rgba(15,23,42,0.14)] sm:rounded-[24px]">
+                            <div className="space-y-0 px-3.5 py-3 sm:px-4 sm:py-3.5">
                               <GuestCounterCard
                                 label="Adultos"
                                 helper="Mayores de 18"
@@ -1922,7 +1929,7 @@ export const PropertyDetailShell: React.FC<{
                             </div>
                           </div>
 
-                          <div className="rounded-[18px] bg-slate-900/[0.03] px-4 py-3 text-sm text-slate-600">
+                          <div className="rounded-[16px] bg-slate-900/[0.03] px-3.5 py-2.5 text-[0.92rem] text-slate-600 sm:rounded-[18px] sm:px-4 sm:py-3 sm:text-sm">
                             <p className="font-semibold text-slate-950">{formatGuestSelection(adults, childrenCount)}</p>
                             <p className="mt-1 text-xs leading-5 text-slate-500">
                               {maxGuestsNumber
@@ -1934,7 +1941,7 @@ export const PropertyDetailShell: React.FC<{
                           </div>
 
                           {bookingError?.field === 'guests' ? (
-                            <p className="rounded-[20px] border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                            <p className="rounded-[18px] border border-red-200 bg-red-50 px-3.5 py-2.5 text-[0.92rem] font-medium text-red-700 sm:rounded-[20px] sm:px-4 sm:py-3 sm:text-sm">
                               {bookingError.message}
                             </p>
                           ) : null}
@@ -1942,8 +1949,8 @@ export const PropertyDetailShell: React.FC<{
                       ) : null}
 
                       {bookingStep === 'confirm' ? (
-                        <div className="mt-5 space-y-4">
-                          <div className="space-y-3 rounded-[24px] border border-slate-200/80 bg-white p-4 shadow-[0_18px_36px_-30px_rgba(15,23,42,0.14)]">
+                        <div className="mt-4 space-y-3.5 sm:mt-5 sm:space-y-4">
+                          <div className="space-y-3 rounded-[20px] border border-slate-200/80 bg-white p-3.5 shadow-[0_18px_36px_-30px_rgba(15,23,42,0.14)] sm:rounded-[24px] sm:p-4">
                             <div className="flex items-end justify-between gap-4 border-b border-slate-200/70 pb-3">
                               <div>
                                 <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Antes de enviarla</p>
@@ -2004,16 +2011,16 @@ export const PropertyDetailShell: React.FC<{
                   </div>
                 </div>
 
-                <div className="border-t border-slate-200/70 px-4 py-4 sm:px-6">
+                <div className="border-t border-slate-200/70 px-4 py-3.5 sm:px-6 sm:py-4">
                   <div className="space-y-3">
                     {isMobileBookingLayout ? (
                       <div className="flex flex-col gap-2">
                         <div className="flex items-center justify-between gap-3">
                           <div className="min-w-0">
                             <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">{bookingStepProgressLabel}</p>
-                            <p className="mt-1 truncate text-xs font-medium leading-5 text-slate-600">{mobileBookingSummary}</p>
+                            <p className="mt-1 truncate text-[0.72rem] font-medium leading-5 text-slate-600 sm:text-xs">{mobileBookingSummary}</p>
                           </div>
-                          <p className="shrink-0 text-sm font-bold text-slate-950">{nightly ? `${formatCurrency(nightly)} / noche` : '—'}</p>
+                          <p className="shrink-0 text-[0.88rem] font-bold text-slate-950 sm:text-sm">{nightly ? `${formatCurrency(nightly)} / noche` : '—'}</p>
                         </div>
 
                         <div className="flex items-center gap-2">
@@ -2023,7 +2030,7 @@ export const PropertyDetailShell: React.FC<{
                               variant="secondary"
                               size="lg"
                               onClick={handleRetreatBookingStep}
-                              className="rounded-2xl border-slate-200 bg-white px-4"
+                              className="rounded-[18px] border-slate-200 bg-white px-3.5 sm:rounded-2xl sm:px-4"
                             >
                               Atrás
                             </Button>
@@ -2036,7 +2043,7 @@ export const PropertyDetailShell: React.FC<{
                             onClick={bookingStep === 'confirm' ? undefined : () => {
                               void handleMobilePrimaryAction();
                             }}
-                            className="rounded-2xl shadow-[0_24px_46px_-28px_rgba(67,56,202,0.42)]"
+                            className="min-h-[3.2rem] rounded-[18px] shadow-[0_24px_46px_-28px_rgba(67,56,202,0.42)] sm:rounded-2xl"
                             disabled={mobilePrimaryActionDisabled}
                             aria-disabled={mobilePrimaryActionDisabled}
                             loading={bookingStep === 'confirm' && bookingSubmitMode !== null}
@@ -2104,19 +2111,19 @@ export const PropertyDetailShell: React.FC<{
         </div>
       ) : null}
 
-      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:px-4 lg:px-6">
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-2.5 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] sm:px-4 lg:px-6">
         <section
           role="region"
           aria-label="Acceso rápido a disponibilidad"
           aria-hidden={shouldShowStickyBookingBar ? undefined : true}
           className={cn(
-            'pointer-events-auto mx-auto max-w-3xl rounded-[24px] border border-slate-200/90 bg-white/96 px-4 py-3 shadow-[0_-18px_40px_-30px_rgba(15,23,42,0.28)] backdrop-blur transition-[opacity,transform] duration-200 ease-out sm:px-5 sm:py-3.5',
+            'pointer-events-auto mx-auto max-w-2xl rounded-[20px] border border-slate-200/90 bg-white/96 px-3.5 py-2.75 shadow-[0_-18px_40px_-30px_rgba(15,23,42,0.28)] backdrop-blur transition-[opacity,transform] duration-200 ease-out sm:max-w-3xl sm:rounded-[24px] sm:px-5 sm:py-3.5',
             shouldShowStickyBookingBar ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0 pointer-events-none',
           )}
         >
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
             <div className="min-w-0">
-              <p className="text-[1.05rem] font-black tracking-[-0.03em] text-slate-950 sm:text-[1.12rem]">{stickyBookingPriceLabel}</p>
+              <p className="text-[0.98rem] font-black tracking-[-0.03em] text-slate-950 sm:text-[1.12rem]">{stickyBookingPriceLabel}</p>
             </div>
 
             <Button
@@ -2125,7 +2132,7 @@ export const PropertyDetailShell: React.FC<{
               size="lg"
               fullWidth={isMobileBookingLayout}
               onClick={handleOpenBookingEntry}
-              className="min-h-[3.35rem] rounded-[22px] px-5 text-[0.95rem] font-extrabold shadow-[0_24px_46px_-28px_rgba(67,56,202,0.42)] sm:w-auto sm:min-w-[240px]"
+              className="min-h-[3.15rem] rounded-[18px] px-4.5 text-[0.92rem] font-extrabold shadow-[0_24px_46px_-28px_rgba(67,56,202,0.42)] sm:w-auto sm:min-w-[240px] sm:min-h-[3.35rem] sm:rounded-[22px] sm:px-5 sm:text-[0.95rem]"
             >
               <>
                 <Icons.Calendar className="h-4 w-4" />
