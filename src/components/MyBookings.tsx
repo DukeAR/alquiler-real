@@ -135,7 +135,7 @@ const PriorityActionRow = ({ eyebrow, title, description, actionLabel, icon, onA
         <p className="text-[0.88rem] leading-5 text-slate-600 dark:text-slate-300 sm:text-sm sm:leading-6">{description}</p>
       </div>
     </div>
-    <Button type="button" variant="secondary" size="sm" onClick={onAction} className="w-full justify-center rounded-full md:w-auto md:shrink-0">
+    <Button type="button" size="sm" onClick={onAction} className="w-full justify-center rounded-full md:w-auto md:shrink-0">
       <>
         {actionLabel}
         <Icons.ArrowRight className="h-4 w-4" />
@@ -1525,14 +1525,14 @@ export const MyBookings = () => {
                         </p>
                       </div>
                       <div className="grid gap-2 sm:flex sm:flex-wrap">
-                        <Button type="button" variant="secondary" onClick={() => navigate('/')}>
+                        <Button type="button" onClick={() => navigate('/')}>
                           <>
                             <Icons.Search className="h-4 w-4" />
                             Explorar propiedades
                           </>
                         </Button>
                         {usefulSavedProperties.length > 0 ? (
-                          <Button type="button" onClick={() => scrollToTarget(SAVED_SECTION_ID)}>
+                          <Button type="button" variant="secondary" onClick={() => scrollToTarget(SAVED_SECTION_ID)}>
                             <>
                               <Icons.Heart className="h-4 w-4" />
                               Ver guardados

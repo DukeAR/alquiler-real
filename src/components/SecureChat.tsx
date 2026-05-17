@@ -355,6 +355,90 @@ const getNightCount = (startDate?: string, endDate?: string) => {
 
 const REQUEST_RESPONSE_WINDOW_MS = 24 * 60 * 60 * 1000;
 
+const getChatPrimaryActionTitle = ({
+  hostAdvanceAction,
+  canAcceptRequest,
+  canConfirmAccess,
+  canConfirmArrival,
+  canConfirmDirectDeposit,
+  canCoordinateArrival,
+  canPayProtectedDeposit,
+  canReportArrivalProblem,
+  canReportDirectDeposit,
+  showDepositChoiceBlock,
+  showGuestNoAdvanceActions,
+  flowCopy,
+  activeRequestContext,
+}: {
+  hostAdvanceAction: HostClosingChip | null;
+  canAcceptRequest: boolean;
+  canConfirmAccess: boolean;
+  canConfirmArrival: boolean;
+  canConfirmDirectDeposit: boolean;
+  canCoordinateArrival: boolean;
+  canPayProtectedDeposit: boolean;
+  canReportArrivalProblem: boolean;
+  canReportDirectDeposit: boolean;
+  showDepositChoiceBlock: boolean;
+  showGuestNoAdvanceActions: boolean;
+  flowCopy: ReturnType<typeof getReservationFlowCopy> | null;
+  activeRequestContext: ReservationRequestContext | null;
+}) => {
+  if (hostAdvanceAction) {
+    return hostAdvanceAction.label;
+  }
+
+  if (canAcceptRequest) {
+    return activeRequestContext?.mode === 'protected' ? 'Aceptar solicitud' : 'Aceptar propuesta';
+  }
+
+  if (showDepositChoiceBlock) {
+    return 'Elegir cómo seguir';
+  }
+
+  if (canPayProtectedDeposit) {
+    return flowCopy?.primaryActionLabel || 'Registrar seña';
+  }
+
+  if (canReportDirectDeposit) {
+    return 'Registrar seña';
+  }
+
+  if (canConfirmDirectDeposit) {
+    return 'Confirmar recepción';
+  }
+
+  if (canConfirmArrival) {
+    return flowCopy?.primaryActionLabel || 'Confirmar llegada';
+  }
+
+  if (canConfirmAccess) {
+    return 'Confirmar acceso';
+  }
+
+  if (canReportArrivalProblem) {
+    return flowCopy?.secondaryActionLabel || 'Reportar problema';
+  }
+
+  if (canCoordinateArrival) {
+    return 'Coordinar llegada';
+  }
+
+  if (showGuestNoAdvanceActions) {
+    return 'Reactivar la conversación';
+  }
+
+  if (flowCopy?.primaryActionLabel) {
+    return flowCopy.primaryActionLabel;
+  }
+
+  if (flowCopy?.nextStepLabel) {
+    return flowCopy.nextStepLabel;
+  }
+
+  return null;
+};
+
 const parseTimestampValue = (value?: string | null) => {
   if (!value) {
     return null;
@@ -1623,6 +1707,41 @@ export const SecureChat: React.FC<SecureChatProps> = ({
               : flowCopy?.stage === 'request-not-advanced'
                 ? 'La reserva no avanzó, pero el chat sigue abierto si quieren recoordinar.'
                 : reservationProgressHint;
+  const chatPrimaryActionTitle = getChatPrimaryActionTitle({
+    hostAdvanceAction,
+    canAcceptRequest,
+    canConfirmAccess,
+    canConfirmArrival,
+    canConfirmDirectDeposit,
+    canCoordinateArrival,
+    canPayProtectedDeposit,
+    canReportArrivalProblem,
+    canReportDirectDeposit,
+    showDepositChoiceBlock,
+    showGuestNoAdvanceActions,
+    flowCopy,
+    activeRequestContext,
+  });
+  const chatPrimaryActionHasInlineControl = Boolean(
+    hostAdvanceAction
+    || canAcceptRequest
+    || showDepositChoiceBlock
+    || canPayProtectedDeposit
+    || canReportDirectDeposit
+    || canConfirmDirectDeposit
+    || canConfirmArrival
+    || canConfirmAccess
+    || canReportArrivalProblem
+    || canCoordinateArrival
+    || showGuestNoAdvanceActions,
+  );
+  const chatPrimaryActionSupport = chatPrimaryActionTitle
+    ? showDepositChoiceBlock
+      ? 'Lo resolvés desde la barra inferior, sin salir del chat.'
+      : chatPrimaryActionHasInlineControl
+        ? 'La acción operativa principal queda disponible abajo y el resto queda como apoyo.'
+        : 'Este es el siguiente paso operativo según el estado actual de la reserva.'
+    : null;
 
   useEffect(() => {
     if (!activeConv || !isTenantConversation || loadedMessagesConversationId !== activeConv.id || hasNonSystemConversationMessages) {
@@ -2128,13 +2247,13 @@ export const SecureChat: React.FC<SecureChatProps> = ({
                     conversationId={activeConv.id}
                     propertyId={activeConv.property_id}
                     propertyTitle={activeConv.propertyTitle ?? null}
-                    triggerVariant="secondary"
-                    triggerClassName="border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-950"
+                    triggerVariant="ghost"
+                    triggerClassName="text-slate-500 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-50"
                   />
                   <button
                     type="button"
                     onClick={() => navigate(`/detail/${activeConv.property_id}`)}
-                    className="inline-flex shrink-0 items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.75 text-[0.72rem] font-semibold text-slate-700 transition-colors hover:border-brand/30 hover:text-brand dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 sm:px-3.5 sm:py-2 sm:text-xs"
+                    className="inline-flex shrink-0 items-center gap-2 rounded-full border border-slate-200/80 bg-white/85 px-3 py-1.75 text-[0.72rem] font-semibold text-slate-600 transition-colors hover:border-slate-300 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:text-slate-50 sm:px-3.5 sm:py-2 sm:text-xs"
                   >
                     <Icons.Home className="h-3.5 w-3.5" />
                     <span>Ver propiedad</span>
@@ -2163,6 +2282,15 @@ export const SecureChat: React.FC<SecureChatProps> = ({
                           tone={chatOnboardingTip.tone}
                           className="mt-3 shadow-none"
                         />
+                      ) : null}
+                      {chatPrimaryActionTitle ? (
+                        <div className="mt-3 rounded-[18px] border border-brand/15 bg-brand/8 px-3.5 py-3 dark:border-brand/20 dark:bg-brand/10 sm:mt-4 sm:rounded-[22px] sm:px-4 sm:py-3.5">
+                          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-brand dark:text-brand-light">Qué hacer ahora</p>
+                          <p className="mt-1 text-[0.92rem] font-semibold leading-5 text-slate-950 dark:text-slate-50 sm:text-sm sm:leading-6">{chatPrimaryActionTitle}</p>
+                          {chatPrimaryActionSupport ? (
+                            <p className="mt-1.5 text-[0.72rem] leading-5 text-slate-600 dark:text-slate-300 sm:text-xs">{chatPrimaryActionSupport}</p>
+                          ) : null}
+                        </div>
                       ) : null}
                     </div>
                     {headerReservationStatus ? (

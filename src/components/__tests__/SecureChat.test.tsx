@@ -808,6 +808,8 @@ describe('SecureChat', () => {
     expect(screen.getByText(/La reserva ya quedó marcada con seña protegida\./i)).toBeInTheDocument();
     expect(screen.getByText(/Por ahora no procesamos el cobro dentro de la app\./i)).toBeInTheDocument();
     expect(screen.getByText('Estado: Seña pendiente')).toBeInTheDocument();
+    expect(screen.getByText('Qué hacer ahora')).toBeInTheDocument();
+    expect(screen.getByText('Esperar confirmación de seña')).toBeInTheDocument();
     expect(screen.queryByText('Elegí cómo querés avanzar')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Pagar seña/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Usar Seña Protegida/i })).not.toBeInTheDocument();

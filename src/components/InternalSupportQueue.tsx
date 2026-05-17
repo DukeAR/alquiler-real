@@ -192,6 +192,15 @@ const STATUS_ACTIONS: Array<{ value: InternalSupportStatus; label: string; helpe
   { value: 'resolved', label: 'Resolver', helper: 'Cierra el caso con la información operativa disponible.' },
 ];
 
+const RECOMMENDED_NEXT_STATUS: Record<InternalSupportStatus, InternalSupportStatus> = {
+  received: 'in_review',
+  in_review: 'waiting_response',
+  waiting_response: 'resolved',
+  resolved: 'resolved',
+};
+
+const STATUS_ACTION_ORDER = new Map(STATUS_ACTIONS.map((action, index) => [action.value, index]));
+
 const STATUS_VARIANTS: Record<InternalSupportStatus, React.ComponentProps<typeof Badge>['variant']> = {
   received: 'info',
   in_review: 'brand',
@@ -279,6 +288,21 @@ const buildTimestampSummary = (timestamps: Record<string, unknown>) => {
       return `${label}: ${content}`;
     })
     .filter(Boolean) as string[];
+};
+
+const getOrderedStatusActions = (currentStatus: InternalSupportStatus) => {
+  const recommendedStatus = RECOMMENDED_NEXT_STATUS[currentStatus];
+
+  return [...STATUS_ACTIONS].sort((leftAction, rightAction) => {
+    const leftPriority = leftAction.value === recommendedStatus ? 0 : leftAction.value === currentStatus ? 2 : 1;
+    const rightPriority = rightAction.value === recommendedStatus ? 0 : rightAction.value === currentStatus ? 2 : 1;
+
+    if (leftPriority !== rightPriority) {
+      return leftPriority - rightPriority;
+    }
+
+    return (STATUS_ACTION_ORDER.get(leftAction.value) ?? 0) - (STATUS_ACTION_ORDER.get(rightAction.value) ?? 0);
+  });
 };
 
 const sortInternalOperators = (operators: InternalOperator[]) => [...operators].sort((leftOperator, rightOperator) => {
@@ -1294,6 +1318,8 @@ export const InternalSupportQueue: React.FC = () => {
               const isSaving = savingCaseId === supportCase.id;
               const linkedPropertyVerificationItem = supportCase.propertyId ? propertyVerificationItemsById.get(supportCase.propertyId) ?? null : null;
               const reviewHistory = Array.isArray(supportCase.reviewHistory) ? supportCase.reviewHistory : [];
+              const recommendedNextStatus = RECOMMENDED_NEXT_STATUS[supportCase.status];
+              const orderedStatusActions = getOrderedStatusActions(supportCase.status);
 
               return (
                 <Card key={supportCase.id} variant="elevated" padding="lg" className="border-slate-200/90 bg-white/96">
@@ -1424,7 +1450,11 @@ export const InternalSupportQueue: React.FC = () => {
 
                     <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(340px,0.95fr)]">
                       <div className="grid gap-3 sm:grid-cols-2">
-                        {STATUS_ACTIONS.map((action) => (
+                        {orderedStatusActions.map((action) => {
+                          const isCurrentStatus = supportCase.status === action.value;
+                          const isRecommendedNextStep = action.value === recommendedNextStatus && !isCurrentStatus;
+
+                          return (
                           <button
                             key={`${supportCase.id}-${action.value}`}
                             type="button"
@@ -1432,15 +1462,34 @@ export const InternalSupportQueue: React.FC = () => {
                             disabled={isSaving}
                             className={cn(
                               'rounded-[22px] border px-4 py-4 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60',
-                              supportCase.status === action.value
-                                ? 'border-brand/20 bg-brand/10 text-slate-900'
-                                : 'border-slate-200/90 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50',
+                              isRecommendedNextStep
+                                ? 'border-brand bg-brand text-white shadow-[0_22px_44px_-32px_rgba(67,56,202,0.45)] hover:bg-brand-dark'
+                                : isCurrentStatus
+                                  ? 'border-slate-300 bg-slate-100 text-slate-700 hover:border-slate-300 hover:bg-slate-100'
+                                  : 'border-slate-200/90 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50',
                             )}
                           >
-                            <p className="text-sm font-semibold">{action.label}</p>
-                            <p className="mt-2 text-xs leading-5 text-slate-500">{action.helper}</p>
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <p className="text-sm font-semibold">{action.label}</p>
+                              {isRecommendedNextStep ? (
+                                <span className="rounded-full border border-white/20 bg-white/15 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-white">
+                                  Siguiente paso
+                                </span>
+                              ) : isCurrentStatus ? (
+                                <span className="rounded-full border border-slate-300 bg-white px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                                  Estado actual
+                                </span>
+                              ) : null}
+                            </div>
+                            <p className={cn(
+                              'mt-2 text-xs leading-5',
+                              isRecommendedNextStep ? 'text-white/88' : 'text-slate-500',
+                            )}>
+                              {action.helper}
+                            </p>
                           </button>
-                        ))}
+                          );
+                        })}
                       </div>
 
                       <div className="space-y-3 rounded-[24px] border border-slate-200/90 bg-slate-50/80 px-4 py-4">

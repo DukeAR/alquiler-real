@@ -284,7 +284,7 @@ const PriorityActionRow = ({ eyebrow, title, description, tip, actionLabel, icon
         {tip ? <ContextualTip compact tone="brand" body={tip} className="mt-3 shadow-none" /> : null}
       </div>
     </div>
-    <Button type="button" variant="secondary" size="sm" onClick={onAction} className="w-full justify-center rounded-full md:w-auto md:shrink-0">
+    <Button type="button" size="sm" onClick={onAction} className="w-full justify-center rounded-full md:w-auto md:shrink-0">
       <>
         {actionLabel}
         <Icons.ArrowRight className="h-4 w-4" />
@@ -1507,7 +1507,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
                       </Button>
                       <Button
                         type="button"
-                        variant="secondary"
+                        variant={property.status === 'active' ? 'primary' : 'secondary'}
                         size="sm"
                         onClick={() => {
                           setFocusedPropertyId(property.id);
@@ -1522,7 +1522,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
                       </Button>
                       <Button
                         type="button"
-                        variant="outline"
+                        variant={property.status === 'active' ? 'outline' : 'primary'}
                         size="sm"
                         onClick={() => void handleToggleStatus(property.id, property.status)}
                         className="rounded-full"

@@ -716,7 +716,7 @@ export const ExploreResultsSection = ({
                 {hasMoreResults ? (
                   <div className="flex flex-col items-center gap-4 pt-3 md:pt-4">
                     <p className="text-sm text-slate-500">Mostrando {visibleCount} de {listingProperties.length} propiedades.</p>
-                    <Button type="button" className="rounded-full px-6 md:px-8" onClick={onLoadMore}>
+                    <Button type="button" variant="secondary" className="rounded-full px-6 md:px-8" onClick={onLoadMore}>
                       Ver más propiedades
                     </Button>
                   </div>
@@ -855,7 +855,7 @@ export const ExploreResultsSection = ({
           {!loading && hasMoreResults ? (
             <div className="flex flex-col items-center gap-4 pt-3 md:pt-4">
               <p className="text-sm text-slate-500">Mostrando {visibleCount} de {listingProperties.length} propiedades.</p>
-              <Button type="button" className="rounded-full px-6 md:px-8" onClick={onLoadMore}>
+              <Button type="button" variant="secondary" className="rounded-full px-6 md:px-8" onClick={onLoadMore}>
                 Ver más propiedades
               </Button>
             </div>

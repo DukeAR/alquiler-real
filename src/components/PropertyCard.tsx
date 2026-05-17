@@ -200,10 +200,10 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
               aria-pressed={isFavorite}
               aria-label={isFavorite ? 'Quitar de guardados' : 'Guardar propiedad'}
               className={cn(
-                'h-10 w-10 rounded-full border-white/80 bg-white/94 text-slate-700 shadow-[0_16px_30px_-22px_rgba(15,23,42,0.24)] backdrop-blur-sm transition-[background-color,border-color,color,box-shadow,transform] duration-150',
+                'h-9 w-9 rounded-full border-white/72 bg-white/88 text-slate-500 shadow-[0_14px_26px_-22px_rgba(15,23,42,0.2)] backdrop-blur-sm transition-[background-color,border-color,color,box-shadow,transform,opacity] duration-150 md:opacity-80 md:group-hover:opacity-100 md:group-focus-visible:opacity-100',
                 isFavorite
-                  ? 'border-brand bg-brand text-white hover:border-brand hover:bg-brand-dark hover:text-white'
-                  : 'hover:border-brand/30 hover:bg-white hover:text-brand',
+                  ? 'border-brand bg-brand text-white opacity-100 hover:border-brand hover:bg-brand-dark hover:text-white'
+                  : 'hover:border-brand/20 hover:bg-white hover:text-brand',
               )}
             >
               <Icons.Heart className={`h-4 w-4 ${isFavorite ? 'fill-current' : ''}`} />
